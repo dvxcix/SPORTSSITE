@@ -365,12 +365,15 @@ function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
                 <tr
                   key={r.pitch_type}
                   onClick={() => onTogglePin(hand, r.pitch_type)}
-                  title={isPinned ? 'Click to unpin' : 'Click to pin this pitch\'s batter breakdown below'}
                   style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: isPinned ? 'var(--accent-dim)' : undefined }}
                 >
                   <td style={{ padding: '6px 8px', fontWeight: 700, color: isPinned ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
-                    <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitch_type), marginRight: 6 }} />
-                    {pitchLabel(r.pitch_type)}{isPinned ? ' 📌' : ''}
+                    <Tooltip content={isPinned ? 'Click to unpin' : 'Click to pin this pitch\'s batter breakdown below'}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitch_type), marginRight: 6 }} />
+                        {pitchLabel(r.pitch_type)}{isPinned ? ' 📌' : ''}
+                      </span>
+                    </Tooltip>
                   </td>
                   <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', fontWeight: 700 }}>{pct(r.usage_pct)}</td>
                   {COLS.map(c => (
@@ -581,17 +584,18 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                 <tr style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)', opacity: row ? 1 : 0.45 }}>
                   <td style={{ padding: '5px 8px' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : batter.mlb_id)}
-                        title={isExpanded ? 'Hide Statcast/HR odds' : 'Show Statcast/bat-tracking + HR odds'}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 20, flexShrink: 0, border: 'none', background: 'none', color: isExpanded ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 9, padding: 0 }}
-                      >
-                        {isExpanded ? '▾' : '▸'}
-                      </button>
+                      <Tooltip content={isExpanded ? 'Hide Statcast/HR odds' : 'Show Statcast/bat-tracking + HR odds'}>
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : batter.mlb_id)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 20, flexShrink: 0, border: 'none', background: 'none', color: isExpanded ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 9, padding: 0 }}
+                        >
+                          {isExpanded ? '▾' : '▸'}
+                        </button>
+                      </Tooltip>
                       <div>
+                        <Tooltip content={`Open ${batter.name} in The Dugout`}>
                         <Link
                           href={`/dugout?date=${date}&highlight=${batter.mlb_id}`}
-                          title={`Open ${batter.name} in The Dugout`}
                           style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit' }}
                           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
@@ -599,17 +603,22 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                           <PlayerAvatar headshot={mlbHeadshot(batter.mlb_id)} teamLogo={getTeamLogoUrl(batter.team)} teamAbbr={batter.team} name={batter.name} size={20} />
                           <span style={{ fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{batter.name}</span>
                         </Link>
+                        </Tooltip>
                         {(sa?.fanduel != null || sa?.caesars != null || sa?.betmgm != null || picks != null) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2, marginLeft: 26 }}>
                             {(['fanduel', 'caesars', 'betmgm'] as const).map(book => sa?.[book] != null && (
-                              <span key={book} title={`Anytime HR — ${book}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, color: 'var(--text-2)' }}>
-                                <BookLogo vendor={book} size={10} />{oStr(sa[book])}
-                              </span>
+                              <Tooltip key={book} content={`Anytime HR — ${book}`}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, color: 'var(--text-2)' }}>
+                                  <BookLogo vendor={book} size={10} />{oStr(sa[book])}
+                                </span>
+                              </Tooltip>
                             ))}
                             {picks != null && (
-                              <span title={`${picks.toLocaleString()} community Anytime HR picks (Pikkit)`} style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>
-                                🎟{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
-                              </span>
+                              <Tooltip content={`${picks.toLocaleString()} community Anytime HR picks (Pikkit)`}>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>
+                                  🎟{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
+                                </span>
+                              </Tooltip>
                             )}
                           </div>
                         )}
@@ -944,13 +953,14 @@ export function PitcherReportClient() {
                               ({pct(row.hard_hit_pct)} hard-hit · {pct(row.barrel_pct)} barrel · {row.pitches} pitches)
                             </span>
                             {isManual && (
-                              <button
-                                onClick={() => onTogglePin(hand, pitchType)}
-                                title="Unpin"
-                                style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 99, padding: '2px 7px', cursor: 'pointer' }}
-                              >
-                                📌 pinned ✕
-                              </button>
+                              <Tooltip content="Unpin">
+                                <button
+                                  onClick={() => onTogglePin(hand, pitchType)}
+                                  style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 99, padding: '2px 7px', cursor: 'pointer' }}
+                                >
+                                  📌 pinned ✕
+                                </button>
+                              </Tooltip>
                             )}
                           </div>
                           {batters.length === 0 ? (

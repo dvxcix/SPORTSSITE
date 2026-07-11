@@ -7,6 +7,7 @@ import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe } from 'lucid
 import { PickComposer, type ComposedPick } from './PickComposer'
 import { PROP_META } from '@/lib/watchlist'
 import { combineOdds, calcPayout, fmtUsd } from '@/lib/parlayCalc'
+import { Tooltip } from '@/components/ui/tooltip-card'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -305,8 +306,8 @@ export function FeedComposer({ onPost }: FeedComposerProps) {
               {(() => {
                 const pickIncomplete = showPickForm && legs.length === 0
                 const disabled = !content.trim() || posting || pickIncomplete
-                return (
-                  <button onClick={handlePost} disabled={disabled} title={pickIncomplete ? 'Finish selecting a player and market first' : undefined} style={{
+                const button = (
+                  <button onClick={handlePost} disabled={disabled} style={{
                     padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 800,
                     background: disabled ? 'var(--surface-3)' : 'var(--accent)',
                     color: disabled ? 'var(--text-3)' : 'var(--accent-fg)',
@@ -316,6 +317,7 @@ export function FeedComposer({ onPost }: FeedComposerProps) {
                     {posting ? 'Posting…' : 'Post'}
                   </button>
                 )
+                return pickIncomplete ? <Tooltip content="Finish selecting a player and market first">{button}</Tooltip> : button
               })()}
             </div>
           </div>

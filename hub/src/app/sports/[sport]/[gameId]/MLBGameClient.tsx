@@ -6,6 +6,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { BaseDiamond } from '@/components/sports/BaseDiamond'
 import { StrikeZonePlot } from '@/components/sports/StrikeZonePlot'
+import { Tooltip } from '@/components/ui/tooltip-card'
 import { createClient } from '@/lib/supabase/client'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel, pitchOutcomeColor, pitchOutcomeLabel } from '@/lib/mlb-api'
 import type { MLBGameFeed, MLBPlay, MLBBoxPlayer } from '@/lib/mlb-api'
@@ -518,14 +519,16 @@ function PlayRow({
                 const code = p.details.type?.code ?? ''
                 const call = pitchOutcomeLabel(p)
                 return (
-                  <div key={i} title={`${i + 1}. ${pitchLabel(code)} · ${call}${p.pitchData?.startSpeed ? ` · ${fmt(p.pitchData.startSpeed, 1)} mph` : ''}`}
-                    style={{
-                      width: 11, height: 11, borderRadius: '50%', cursor: 'help',
-                      background: pitchOutcomeColor(p),
-                      border: `2px solid ${pitchColor(code)}`,
-                      boxSizing: 'border-box',
-                    }}
-                  />
+                  <Tooltip key={i} content={`${i + 1}. ${pitchLabel(code)} · ${call}${p.pitchData?.startSpeed ? ` · ${fmt(p.pitchData.startSpeed, 1)} mph` : ''}`}>
+                    <div
+                      style={{
+                        width: 11, height: 11, borderRadius: '50%', cursor: 'help',
+                        background: pitchOutcomeColor(p),
+                        border: `2px solid ${pitchColor(code)}`,
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </Tooltip>
                 )
               })}
               <span style={{ fontSize: 9, color: 'var(--text-3)', marginLeft: 4 }}>

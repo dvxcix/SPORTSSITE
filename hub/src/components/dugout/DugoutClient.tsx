@@ -752,10 +752,9 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
     }
   }
 
-  return (
+  const pill = (
     <div
       onClick={handleClick}
-      title={wl.signedIn ? (saved ? 'Saved to watchlist' : 'Click to add to watchlist') : undefined}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
         padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)',
@@ -768,6 +767,10 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
       {saved && <span style={{ fontSize: 9 }}>★ saved</span>}
     </div>
   )
+
+  return wl.signedIn ? (
+    <Tooltip content={saved ? 'Saved to watchlist' : 'Click to add to watchlist'}>{pill}</Tooltip>
+  ) : pill
 }
 
 function PlayerDrillDown({
@@ -896,8 +899,12 @@ function PlayerDrillDown({
                 <tr>
                   <th style={{ ...STH, textAlign: 'left', width: 90 }}>Pitch</th>
                   <th style={{ ...STH, width: 40 }}>Mix%</th>
-                  <th style={{ ...STH, width: 44 }} title="Batter's own hard-hit% on this exact pitch type, last 14 days">Bat·HH%</th>
-                  <th style={{ ...STH, width: 44 }} title="This pitcher's hard-hit% allowed on this exact pitch type, last 14 days">Pit·HH%</th>
+                  <th style={{ ...STH, width: 44 }}>
+                    <Tooltip content="Batter's own hard-hit% on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>Bat·HH%</span></Tooltip>
+                  </th>
+                  <th style={{ ...STH, width: 44 }}>
+                    <Tooltip content="This pitcher's hard-hit% allowed on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>Pit·HH%</span></Tooltip>
+                  </th>
                   <th style={{ ...STH, width: 40 }}>OnTime%</th>
                   <th style={{ ...STH, width: 40 }}>R·OT%</th>
                   <th style={{ ...STH, width: 40 }}>Miss</th>
@@ -928,13 +935,15 @@ function PlayerDrillDown({
                       {events.length > 0 && <span style={{ marginLeft: 3, fontSize: 8, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>}
                     </td>
                     <td style={{ ...STD }}>{pct.toFixed(0)}%</td>
-                    <td style={{ ...STD, color: batEdge?.hard_hit_pct != null ? '#4ade80' : 'var(--text-3)', fontWeight: batEdge?.hard_hit_pct != null ? 700 : 400 }}
-                        title={batEdge ? `${batEdge.pitches} pitches seen · ${f1(batEdge.whiff_pct)}% whiff · ${batEdge.home_runs ?? 0} HR — click row for the pitch-by-pitch log` : 'No pitches seen off this pitch type recently'}>
-                      {batEdge?.hard_hit_pct != null ? `${f1(batEdge.hard_hit_pct)}` : '—'}
+                    <td style={{ ...STD, color: batEdge?.hard_hit_pct != null ? '#4ade80' : 'var(--text-3)', fontWeight: batEdge?.hard_hit_pct != null ? 700 : 400 }}>
+                      <Tooltip content={batEdge ? `${batEdge.pitches} pitches seen · ${f1(batEdge.whiff_pct)}% whiff · ${batEdge.home_runs ?? 0} HR — click row for the pitch-by-pitch log` : 'No pitches seen off this pitch type recently'} containerClassName="w-full h-full flex items-center justify-center">
+                        <span style={{ cursor: 'help' }}>{batEdge?.hard_hit_pct != null ? `${f1(batEdge.hard_hit_pct)}` : '—'}</span>
+                      </Tooltip>
                     </td>
-                    <td style={{ ...STD, color: pitEdge?.hard_hit_pct != null ? '#f87171' : 'var(--text-3)', fontWeight: pitEdge?.hard_hit_pct != null ? 700 : 400 }}
-                        title={pitEdge ? `${pitEdge.pitches} pitches thrown · ${f1(pitEdge.whiff_pct)}% whiff induced · ${pitEdge.home_runs_allowed ?? 0} HR allowed` : 'No pitches thrown of this type recently'}>
-                      {pitEdge?.hard_hit_pct != null ? `${f1(pitEdge.hard_hit_pct)}` : '—'}
+                    <td style={{ ...STD, color: pitEdge?.hard_hit_pct != null ? '#f87171' : 'var(--text-3)', fontWeight: pitEdge?.hard_hit_pct != null ? 700 : 400 }}>
+                      <Tooltip content={pitEdge ? `${pitEdge.pitches} pitches thrown · ${f1(pitEdge.whiff_pct)}% whiff induced · ${pitEdge.home_runs_allowed ?? 0} HR allowed` : 'No pitches thrown of this type recently'} containerClassName="w-full h-full flex items-center justify-center">
+                        <span style={{ cursor: 'help' }}>{pitEdge?.hard_hit_pct != null ? `${f1(pitEdge.hard_hit_pct)}` : '—'}</span>
+                      </Tooltip>
                     </td>
                     <td style={{ ...STD, color: se?.on_time_percent != null ? 'var(--text-1)' : 'var(--text-3)' }}>
                       {se?.on_time_percent != null ? `${(se.on_time_percent * 100).toFixed(1)}` : '—'}
@@ -1151,22 +1160,14 @@ function OddsCell({
     deltaTitle,
   ].filter(Boolean).join(' · ') || undefined
 
-  return (
-    <td
-      onClick={handleClick}
-      title={title}
-      style={{
-        ...style,
-        cursor: wl.signedIn ? 'pointer' : style.cursor,
-        position: 'relative',
-        color: saved ? 'var(--accent)' : style.color,
-        fontWeight: saved ? 700 : style.fontWeight,
-      }}
-    >
+  const cellContent = (
+    <>
       {badge && (
-        <div title={badge.title} style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, marginBottom: 1 }}>
-          {badge.label}
-        </div>
+        <Tooltip content={badge.title}>
+          <div style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, marginBottom: 1, cursor: 'help' }}>
+            {badge.label}
+          </div>
+        </Tooltip>
       )}
       {display ?? oStr(odds)}
       {hasDelta && (
@@ -1175,6 +1176,25 @@ function OddsCell({
         </span>
       )}
       {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
+    </>
+  )
+
+  return (
+    <td
+      onClick={handleClick}
+      style={{
+        ...style,
+        cursor: wl.signedIn ? 'pointer' : style.cursor,
+        position: 'relative',
+        color: saved ? 'var(--accent)' : style.color,
+        fontWeight: saved ? 700 : style.fontWeight,
+      }}
+    >
+      {title ? (
+        <Tooltip content={title} containerClassName="w-full h-full flex items-center justify-center">
+          {cellContent}
+        </Tooltip>
+      ) : cellContent}
     </td>
   )
 }
@@ -1212,14 +1232,15 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
           <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right', flexShrink: 0, marginTop: 2 }}>{row.batting_order}</span>
-          <span
-            title={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}
-            style={{
-              flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
-              color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
-            }}
-          >{row.bats || '?'}</span>
+          <Tooltip content={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}>
+            <span
+              style={{
+                flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2, cursor: 'help',
+                color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
+              }}
+            >{row.bats || '?'}</span>
+          </Tooltip>
           <PlayerAvatar mlbId={row.mlb_id} size={22} teamAbbr={row.team} name={row.name} />
           <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
             {/* Name always gets its own full-width line now — badges used to
@@ -1230,8 +1251,11 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
               {row.name}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{row.position} · {row.bats}HB</div>
-            {(hasLiveMatchup || hasFirst || hasHr || (!hasHr && row.near_hr)) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
+            {/* Always rendered (not conditional) with a fixed minHeight so
+                every row reserves the same vertical space whether or not
+                this player has any badges — otherwise rows with badges grow
+                taller than empty ones and the table looks visually uneven. */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3, minHeight: 15 }}>
                 {hasLiveMatchup && (
                   <Tooltip content="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too">
                     <span style={{
@@ -1277,19 +1301,19 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
                     >🎯 {row.near_hr.parks_hr_count}</span>
                   </Tooltip>
                 )}
-              </div>
-            )}
+            </div>
           </div>
           <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
       </td>
 
       {/* pk */}
-      <td
-        title={row.pk?.picks != null ? `${row.pk.picks.toLocaleString()} community HR picks (Pikkit)` : undefined}
-        style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}
-      >
-        {row.pk?.picks != null ? (row.pk.picks >= 1000 ? `${(row.pk.picks / 1000).toFixed(1)}k` : row.pk.picks) : '—'}
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
+        {row.pk?.picks != null ? (
+          <Tooltip content={`${row.pk.picks.toLocaleString()} community HR picks (Pikkit)`} containerClassName="w-full h-full flex items-center justify-center">
+            <span style={{ cursor: 'help' }}>{row.pk.picks >= 1000 ? `${(row.pk.picks / 1000).toFixed(1)}k` : row.pk.picks}</span>
+          </Tooltip>
+        ) : '—'}
       </td>
 
       <td style={SDIV_D} />
@@ -1361,14 +1385,20 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderRight: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
       />
-      <td
-        title={row.combo1_partners ? `Cheapest of ${row.combo1_count} pairing(s): ${(row.combo1_partners as any[]).slice().sort((a, b) => a.price - b.price).slice(0, 3).map(p => `${p.partner} (${p.price >= 0 ? '+' : ''}${p.price})`).join(', ')}` : undefined}
-        style={{ ...STD, width: 40, minWidth: 40, ...heat(row.sa_div_c1, g('sa_div_c1')) }}
-      >{f2(row.sa_div_c1)}</td>
-      <td
-        title={row.combo2_partners ? `Cheapest of ${row.combo2_count} pairing(s): ${(row.combo2_partners as any[]).slice().sort((a, b) => a.price - b.price).slice(0, 3).map(p => `${p.partner} (${p.price >= 0 ? '+' : ''}${p.price})`).join(', ')}` : undefined}
-        style={{ ...STD, width: 40, minWidth: 40, ...heat(row.sa_div_c2, g('sa_div_c2')) }}
-      >{f2(row.sa_div_c2)}</td>
+      <td style={{ ...STD, width: 40, minWidth: 40, ...heat(row.sa_div_c1, g('sa_div_c1')) }}>
+        {row.combo1_partners ? (
+          <Tooltip content={`Cheapest of ${row.combo1_count} pairing(s): ${(row.combo1_partners as any[]).slice().sort((a, b) => a.price - b.price).slice(0, 3).map(p => `${p.partner} (${p.price >= 0 ? '+' : ''}${p.price})`).join(', ')}`} containerClassName="w-full h-full flex items-center justify-center">
+            <span style={{ cursor: 'help' }}>{f2(row.sa_div_c1)}</span>
+          </Tooltip>
+        ) : f2(row.sa_div_c1)}
+      </td>
+      <td style={{ ...STD, width: 40, minWidth: 40, ...heat(row.sa_div_c2, g('sa_div_c2')) }}>
+        {row.combo2_partners ? (
+          <Tooltip content={`Cheapest of ${row.combo2_count} pairing(s): ${(row.combo2_partners as any[]).slice().sort((a, b) => a.price - b.price).slice(0, 3).map(p => `${p.partner} (${p.price >= 0 ? '+' : ''}${p.price})`).join(', ')}`} containerClassName="w-full h-full flex items-center justify-center">
+            <span style={{ cursor: 'help' }}>{f2(row.sa_div_c2)}</span>
+          </Tooltip>
+        ) : f2(row.sa_div_c2)}
+      </td>
 
       <td style={SDIV_D} />
 
