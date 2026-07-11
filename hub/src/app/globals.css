@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* This site is always dark (no light mode), and <html> already carries a
+   literal `dark` class (see layout.tsx) — but Tailwind v4 defaults the
+   dark: variant to the prefers-color-scheme media query, not that class.
+   Without this, any dark:-prefixed utility (ours or a vendored component's)
+   would silently fall back to its light-mode styling on a light-OS device,
+   which for an all-black design means stray white boxes. This makes dark:
+   key off the .dark class instead, matching shadcn/Aceternity components'
+   own convention. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tailwind v4 CSS-first theme registration for vendored Aceternity UI
+   components (src/components/ui/*.tsx, pulled via `npx shadcn add
+   @aceternity/...`) — this project has no tailwind.config.js for their
+   usual theme.extend.animation entries, so the animate-* utilities they
+   reference (animate-meteor-effect, animate-spotlight) are registered here
+   instead, via Tailwind v4's --animate-* theme variables. */
+@theme {
+  --animate-meteor-effect: meteor 5s linear infinite;
+  --animate-spotlight: spotlight 2s ease .75s 1 forwards;
+}
+
 /* ─────────────────────────────────────────────
    SLIPSURGE DESIGN SYSTEM
    Brand: electric lime on deep black
@@ -210,6 +231,17 @@ img { max-width: 100%; }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Aceternity UI (Meteors / Spotlight) ────── */
+@keyframes meteor {
+  0%   { transform: rotate(215deg) translateX(0); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: rotate(215deg) translateX(-500px); opacity: 0; }
+}
+@keyframes spotlight {
+  0%   { opacity: 0; transform: translate(-72%, -62%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -40%) scale(1); }
 }
 
 /* ── Mobile safe areas (iOS/Android) ───────── */

@@ -4,6 +4,15 @@ import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { motion } from 'motion/react'
+import { BackgroundBeams } from '@/components/ui/background-beams'
+import { Meteors } from '@/components/ui/meteors'
+import { Highlight } from '@/components/ui/hero-highlight'
+
+const featureVariants = {
+  hidden: { opacity: 0, x: -8 },
+  show: (i: number) => ({ opacity: 1, x: 0, transition: { delay: 0.5 + i * 0.09, duration: 0.35 } }),
+}
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   whop_no_access: "That Whop account doesn't have an active subscription for SlipSurge access. Check your subscription on Whop and try again.",
@@ -56,13 +65,17 @@ function LoginForm() {
         borderRight: '1px solid var(--border)',
         position: 'relative', overflow: 'hidden',
       }} className="lg:flex">
-        {/* Background glow */}
+        {/* Background glow + animated beams/meteors */}
         <div style={{
           position: 'absolute', top: '30%', left: '20%',
           width: 400, height: 400, borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(180,255,77,0.08) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
+        <BackgroundBeams className="opacity-40" />
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <Meteors number={14} className="opacity-70" />
+        </div>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
             <img src="/logo.png" alt="SlipSurge" style={{ width: 44, height: 44, objectFit: 'contain' }} />
@@ -71,16 +84,20 @@ function LoginForm() {
             </div>
           </div>
           <h2 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: 16 }}>
-            The social hub<br />for sports & picks.
+            The social hub for{' '}
+            <Highlight className="text-black bg-gradient-to-r from-[#B4FF4D] to-[#E8FF9E] dark:from-[#B4FF4D] dark:to-[#E8FF9E]">
+              sports & picks.
+            </Highlight>
           </h2>
           <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 360 }}>
             Drop picks, follow cappers, watch live scores, join channels — all in one place.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 40 }}>
-            {['🏆 Follow top cappers & track their records', '📊 Share picks with odds & get graded', '⚡ Live scores, channels & community feeds', '💰 Subscribe to premium creators'].map(f => (
-              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
+            {['🏆 Follow top cappers & track their records', '📊 Share picks with odds & get graded', '⚡ Live scores, channels & community feeds', '💰 Subscribe to premium creators'].map((f, i) => (
+              <motion.div key={f} custom={i} initial="hidden" animate="show" variants={featureVariants}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
                 {f}
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

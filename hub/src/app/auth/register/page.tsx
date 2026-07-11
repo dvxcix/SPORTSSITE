@@ -4,8 +4,16 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion } from 'motion/react'
+import { Spotlight } from '@/components/ui/spotlight'
+import { Meteors } from '@/components/ui/meteors'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
+
+const statVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: 0.4 + i * 0.1, duration: 0.35 } }),
+}
 
 export default function RegisterPage() {
   const [step, setStep] = useState<'account' | 'profile'>('account')
@@ -50,6 +58,10 @@ export default function RegisterPage() {
         position: 'relative', overflow: 'hidden',
       }} className="lg:flex">
         <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,255,77,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <Spotlight className="left-0 top-0" fill="#B4FF4D" />
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <Meteors number={14} className="opacity-70" />
+        </div>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
             <img src="/logo.png" alt="SlipSurge" style={{ width: 44, height: 44, objectFit: 'contain' }} />
@@ -62,11 +74,11 @@ export default function RegisterPage() {
             Get in before the crowd. Share picks, build a following, and win together.
           </p>
           <div style={{ display: 'flex', gap: 24, marginTop: 48 }}>
-            {[['10K+', 'Members'], ['85%', 'Win rate tracking'], ['$0', 'Free to join']].map(([val, lbl]) => (
-              <div key={lbl}>
+            {[['10K+', 'Members'], ['85%', 'Win rate tracking'], ['$0', 'Free to join']].map(([val, lbl], i) => (
+              <motion.div key={lbl} custom={i} initial="hidden" animate="show" variants={statVariants}>
                 <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.03em' }}>{val}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{lbl}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
