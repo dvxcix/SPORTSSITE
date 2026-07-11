@@ -4,6 +4,8 @@ import { FeedComposer } from '@/components/social/FeedComposer'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { StoriesBar } from '@/components/social/StoriesBar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
+import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
+import { FEATURE_FLAGS } from '@/lib/featureFlags'
 import { Zap, TrendingUp, Clock, Users } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -69,7 +71,10 @@ export default async function FeedPage({
   const { filter = 'latest' } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const rawPosts = await getPosts(filter, user?.id)
+  const [rawPosts, storiesEnabled] = await Promise.all([
+    getPosts(filter, user?.id),
+    isFeatureEnabledServer(FEATURE_FLAGS.stories),
+  ])
   const posts = await attachUserReactions(rawPosts, user?.id)
 
   const filters = [
@@ -82,8 +87,10 @@ export default async function FeedPage({
   return (
     <div className="flex gap-6 px-4 py-6 max-w-5xl mx-auto">
       <div className="flex-1 min-w-0">
-        {/* Stories */}
-        <StoriesBar />
+        {/* Stories — admin's Feature Flags toggle saved to site_settings but
+            nothing ever read it back out, so turning "Stories" off there had
+            zero effect on this bar. */}
+        {storiesEnabled && <StoriesBar />}
 
         {/* Filter tabs */}
         <div className="flex gap-1 mb-4 bg-zinc-900 border border-zinc-800 rounded-xl p-1">

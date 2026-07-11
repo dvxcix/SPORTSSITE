@@ -18,7 +18,7 @@ export default function AdminFeaturesSettingsPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-xl font-black text-white mb-1">Feature Flags</h1>
       <p className="text-xs text-zinc-500 mb-6">
-        The first five below (Marketplace, Pages, Blog, Forum, Pro) are fully wired: turning one off hides it from the sidebar and blocks the route for everyone except admins, who see a preview banner instead. The rest still just save to site_settings without changing site behavior yet.
+        Marketplace, Pages, Blog, Forum, and Pro are fully wired: turning one off hides it from the sidebar and blocks the route for everyone except admins, who see a preview banner instead. Stories is also wired — turning it off hides the story bar from /feed for everyone, no admin exception. The rest still just save to site_settings without changing site behavior yet.
       </p>
       <AdminKeyValueSettings fields={FIELDS} />
     </div>
