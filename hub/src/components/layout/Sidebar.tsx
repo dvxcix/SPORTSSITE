@@ -8,19 +8,28 @@ import {
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair
 } from 'lucide-react'
 
+// MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
+// app already uses for team logos (mlbstatic.com) rather than self-hosting.
+const MLB_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png'
+
 const nav = [
   { href: '/feed',        icon: Home,          label: 'Feed' },
   { href: '/explore',     icon: Compass,       label: 'Explore' },
   { href: '/search',      icon: Search,        label: 'Search' },
-  { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
-  { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout', badge: 'MLB' },
-  { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab', badge: 'MLB' },
-  { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report', badge: 'MLB' },
   { href: '/picks',       icon: TrendingUp,    label: 'Picks' },
   { href: '/pro',         icon: Sparkles,      label: 'Go Pro' },
   { href: '/messages',    icon: MessageCircle, label: 'Messages' },
   { href: '/notifications',icon: Bell,         label: 'Notifications' },
   null, // divider
+  // A labeled section (logo header, no per-item red "MLB" badge needed
+  // anymore) so these read as a distinct tool group, not just more generic
+  // pages mixed in with Groups/Explore/etc.
+  { section: 'MLB', logo: MLB_LOGO_URL },
+  { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
+  { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
+  { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
+  { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
+  null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages' },
   { href: '/events',      icon: Calendar,      label: 'Events' },
@@ -78,6 +87,14 @@ export function Sidebar() {
         {nav.map((item, i) => {
           if (item === null) {
             return <div key={`div-${i}`} style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
+          }
+          if ('section' in item) {
+            return (
+              <div key={`section-${item.section}`} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 10px 4px' }}>
+                <img src={item.logo} alt={item.section} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>
+              </div>
+            )
           }
           const Icon = item.icon
           const isActive = active(item.href)

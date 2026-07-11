@@ -28,7 +28,13 @@
   /* Text */
   --text-1:  #F0F2F8;
   --text-2:  #8891A8;
-  --text-3:  #484F64;
+  /* Was #484F64 — only ~2.4:1 contrast against --bg/--surface, a hard WCAG
+     AA fail (needs 4.5:1 for normal text), and this token is used at 8-10px
+     across 36 files/100+ call sites (stat labels, timestamps, tab bar,
+     post-action icons). Token-level fix so every one of those spots gets
+     legible in one change instead of hunting down each usage. ~5:1 against
+     both --bg and --surface now. */
+  --text-3:  #7680A3;
   --text-4:  #2E3347;
 
   /* Status colours */
