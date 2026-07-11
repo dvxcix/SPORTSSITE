@@ -1,29 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export function AdminUserActions({ userId, currentType, isVerified, bannedUntil }: {
   userId: string; currentType: string; isVerified: boolean; bannedUntil?: string | null
 }) {
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
   const router = useRouter()
   const isBanned = !!bannedUntil && new Date(bannedUntil) > new Date()
 
-  async function setType(type: string) {
+  // users.UPDATE/DELETE RLS only allows auth.uid() = id — a direct
+  // supabase.from('users').update(...) here silently no-ops for any OTHER
+  // user with no error surfaced (which is exactly why "Verify" looked like
+  // it did nothing). Routes through the service-role admin API instead,
+  // same fix "Ban" already needed.
+  async function callManage(body: Record<string, unknown>) {
     setLoading(true)
-    await supabase.from('users').update({ account_type: type }).eq('id', userId)
-    router.refresh()
-    setLoading(false)
+    try {
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(data?.error || 'Action failed'); return }
+      router.refresh()
+    } finally {
+      setLoading(false)
+    }
   }
 
-  async function toggleVerify() {
-    setLoading(true)
-    await supabase.from('users').update({ is_verified: !isVerified }).eq('id', userId)
-    router.refresh()
-    setLoading(false)
+  const setType = (type: string) => callManage({ userId, action: 'setType', value: type })
+  const toggleVerify = () => callManage({ userId, action: 'verify', value: !isVerified })
+  const deleteUser = () => {
+    if (!confirm('Permanently delete this user? This cannot be undone.')) return
+    callManage({ userId, action: 'delete' })
   }
 
   async function toggleBan() {
@@ -31,19 +43,13 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil 
     // Ban state lives in Supabase Auth (auth.users.banned_until), not a
     // plain public.users column — needs the service-role Admin Auth API,
     // not a table update, so this goes through a server route.
-    await fetch('/api/admin/users/ban', {
+    const res = await fetch('/api/admin/users/ban', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, ban: !isBanned }),
     })
-    router.refresh()
-    setLoading(false)
-  }
-
-  async function deleteUser() {
-    if (!confirm('Permanently delete this user? This cannot be undone.')) return
-    setLoading(true)
-    await supabase.from('users').delete().eq('id', userId)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) alert(data?.error || 'Action failed')
     router.refresh()
     setLoading(false)
   }

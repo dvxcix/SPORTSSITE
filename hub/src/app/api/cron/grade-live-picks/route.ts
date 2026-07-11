@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PROP_META } from '@/lib/watchlist'
-import { fetchLiveFeed, checkEarlyWin, settleFinalPick } from '@/lib/pickGrading'
+import { fetchLiveFeed, checkEarlyWin, settleFinalPick, applyLegResultToPost } from '@/lib/pickGrading'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -109,24 +109,13 @@ export async function GET(req: Request) {
       const nowIso = new Date().toISOString()
       await admin.from('picks').update({ result: 'win', graded_at: nowIso }).eq('id', pick.id)
 
-      let playerName = ''
-      if (post.pick_data && Array.isArray(post.pick_data.legs)) {
-        const legs = post.pick_data.legs.map((leg: any) => {
-          const legPickType = PROP_META[leg.prop_key]?.pickType ?? leg.prop_key
-          if (leg.mlb_id === pick.mlb_id && legPickType === pick.pick_type && leg.result === 'pending') {
-            playerName = leg.player_name
-            return { ...leg, result: 'win' }
-          }
-          return leg
-        })
-        // Overall parlay result is NOT rolled up here — it only resolves
-        // once every leg is graded, which happens once this same cron sees
-        // the game go Final (above), or the daily settle-picks backstop.
-        await admin.from('posts').update({ pick_data: { ...post.pick_data, legs } }).eq('id', post.id)
-      } else if (post.pick_data) {
-        playerName = post.pick_data.player_name ?? ''
-        await admin.from('posts').update({ pick_data: { ...post.pick_data, result: 'win' } }).eq('id', post.id)
-      }
+      // Uses the same compare-and-swap helper settleFinalPick does — two
+      // legs of the same parlay grading close together (this one early via
+      // Live, another via a Final game in the same run) both touch the same
+      // pick_data blob, and a plain read-then-write would let one silently
+      // clobber the other.
+      const { legPlayerName } = await applyLegResultToPost(admin, post.id, pick.mlb_id!, pick.pick_type, 'win', PROP_META)
+      const playerName = legPlayerName ?? ''
 
       won++
       if (post.author_id) {

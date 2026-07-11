@@ -29,6 +29,7 @@ export default function RegisterPage() {
   const [accountType, setAccountType] = useState<'user' | 'creator'>('user')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmationSent, setConfirmationSent] = useState(false)
   const router = useRouter()
 
   function toggleSport(s: string) {
@@ -41,7 +42,16 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+    // Without emailRedirectTo, Supabase falls back to the project's Site
+    // URL for the confirmation link — worth double-checking that's set to
+    // https://www.slipsurge.com (not a leftover localhost) in the Supabase
+    // dashboard under Authentication > URL Configuration, since this can
+    // only steer the redirect target, not fix a Site URL/allowed-redirects
+    // misconfiguration on Supabase's side.
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email, password,
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/onboarding` },
+    })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }
     if (data.user) {
       await supabase.from('users').upsert({
@@ -50,7 +60,17 @@ export default function RegisterPage() {
         sport_preferences: sports, account_type: accountType,
       })
     }
-    router.push('/onboarding')
+    setLoading(false)
+    if (data.session) {
+      // Email confirmation is off (or already auto-confirmed) — real
+      // session already exists, safe to go straight in.
+      router.push('/onboarding')
+    } else {
+      // Confirmation required — no session yet, so navigating anywhere
+      // gated would just bounce straight back to login. Tell them to check
+      // their email instead of pretending signup finished.
+      setConfirmationSent(true)
+    }
   }
 
   return (
@@ -96,6 +116,23 @@ export default function RegisterPage() {
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
         </div>
 
+        {confirmationSent ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>📬</div>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Check your email</h1>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 340, margin: '0 auto' }}>
+              We sent a confirmation link to <strong style={{ color: 'var(--text-1)' }}>{email}</strong>. Click it to activate your account, then sign in.
+            </p>
+            <Link href="/auth/login" style={{
+              display: 'inline-block', marginTop: 24,
+              background: 'var(--accent)', color: 'var(--accent-fg)',
+              fontWeight: 800, padding: '10px 24px', borderRadius: 99, fontSize: 13, textDecoration: 'none',
+            }}>
+              Back to sign in
+            </Link>
+          </div>
+        ) : (
+        <>
         {/* Progress */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 32 }}>
           {(['account', 'profile'] as const).map((s, i) => (
@@ -194,6 +231,8 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   )

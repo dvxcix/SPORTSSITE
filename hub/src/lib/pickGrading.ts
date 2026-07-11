@@ -95,34 +95,71 @@ export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, 
   let overallResult: 'win' | 'loss' | 'push' | null = null
 
   if (pick.post_id) {
-    const { data: post } = await admin.from('posts').select('pick_data').eq('id', pick.post_id).single()
-    if (post?.pick_data) {
-      if (Array.isArray(post.pick_data.legs)) {
-        const legs = post.pick_data.legs.map((leg: any) => {
-          const legPickType = propMeta[leg.prop_key]?.pickType ?? leg.prop_key
-          if (leg.mlb_id === pick.mlb_id && legPickType === pick.pick_type && leg.result === 'pending') {
-            legPlayerName = leg.player_name
-            return { ...leg, result }
-          }
-          return leg
-        })
-        const wasAlreadyFinal = post.pick_data.result && post.pick_data.result !== 'pending'
-        const allGraded = legs.every((l: any) => l.result !== 'pending')
-        const overall = !allGraded ? post.pick_data.result
-          : legs.some((l: any) => l.result === 'loss') ? 'loss'
-          : legs.every((l: any) => l.result === 'push') ? 'push'
-          : 'win'
-        if (allGraded && !wasAlreadyFinal) overallResult = overall
-        await admin.from('posts').update({ pick_data: { ...post.pick_data, legs, result: overall } }).eq('id', pick.post_id)
-      } else {
-        legPlayerName = post.pick_data.player_name ?? null
-        overallResult = result
-        await admin.from('posts').update({ pick_data: { ...post.pick_data, result } }).eq('id', pick.post_id)
-      }
-    }
+    const applied = await applyLegResultToPost(admin, pick.post_id, pick.mlb_id, pick.pick_type, result, propMeta)
+    legPlayerName = applied.legPlayerName
+    overallResult = applied.overallResult
   }
 
   return { result, postId: pick.post_id, legPlayerName, overallResult }
+}
+
+// posts.pick_data is one JSON blob shared across every leg — a plain
+// read-modify-write races when two legs of the SAME post grade close
+// together (e.g. one leg's game goes Live→early-win while another leg's
+// separate game goes Final in the same or an overlapping cron run): both
+// read the old blob, both write their own version back, and whichever
+// write lands second silently erases the first leg's result. Confirmed
+// this actually happened in production (a leg's `picks` row said 'loss'
+// while its post's pick_data still showed 'pending' for that same leg).
+// Postgres compares jsonb by value, so .eq('pick_data', before) works as a
+// compare-and-swap: the write only lands if nothing else changed the row
+// since we read it, and we retry against the fresh copy if it did.
+export async function applyLegResultToPost(
+  admin: any, postId: string, mlbId: number, pickType: string, result: 'win' | 'loss' | 'push',
+  propMeta: Record<string, { pickType: string }>,
+): Promise<{ legPlayerName: string | null; overallResult: 'win' | 'loss' | 'push' | null }> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: post } = await admin.from('posts').select('pick_data').eq('id', postId).single()
+    if (!post?.pick_data) return { legPlayerName: null, overallResult: null }
+    const before = post.pick_data
+
+    let legPlayerName: string | null = null
+    let overallResult: 'win' | 'loss' | 'push' | null = null
+    let updated: any
+
+    if (Array.isArray(before.legs)) {
+      const legs = before.legs.map((leg: any) => {
+        const legPickType = propMeta[leg.prop_key]?.pickType ?? leg.prop_key
+        if (leg.mlb_id === mlbId && legPickType === pickType && leg.result === 'pending') {
+          legPlayerName = leg.player_name
+          return { ...leg, result }
+        }
+        return leg
+      })
+      const wasAlreadyFinal = before.result && before.result !== 'pending'
+      const allGraded = legs.every((l: any) => l.result !== 'pending')
+      const overall = !allGraded ? before.result
+        : legs.some((l: any) => l.result === 'loss') ? 'loss'
+        : legs.every((l: any) => l.result === 'push') ? 'push'
+        : 'win'
+      if (allGraded && !wasAlreadyFinal) overallResult = overall
+      updated = { ...before, legs, result: overall }
+    } else {
+      legPlayerName = before.player_name ?? null
+      overallResult = result
+      updated = { ...before, result }
+    }
+
+    const { data: written, error } = await admin.from('posts')
+      .update({ pick_data: updated })
+      .eq('id', postId)
+      .eq('pick_data', before)
+      .select('id')
+    if (!error && written?.length) return { legPlayerName, overallResult }
+    // Someone else updated pick_data between our read and write (another
+    // leg graded concurrently) — loop and retry against the fresh copy.
+  }
+  return { legPlayerName: null, overallResult: null }
 }
 
 // Checks whether a pick has ALREADY clinched a win against the current feed
