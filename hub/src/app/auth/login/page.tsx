@@ -119,17 +119,18 @@ function LoginForm() {
           Continue with Google
         </button>
 
-        {/* Whop */}
+        {/* Whop — branded orange, matches Whop's own accent color */}
         <button onClick={handleWhop} style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           padding: '11px 20px', borderRadius: 10,
-          background: 'var(--surface-2)', border: '1px solid var(--border-2)',
-          fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
+          background: 'linear-gradient(135deg, #FF6243, #E5432A)', border: '1px solid rgba(255,255,255,0.12)',
+          fontSize: 14, fontWeight: 700, color: '#fff',
           cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
+          boxShadow: '0 4px 14px rgba(229,67,42,0.35)',
         }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-3)')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-2)')}>
-          <img src="https://whop.com/apple-touch-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
+        onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #FF7355, #EF4E33)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #FF6243, #E5432A)')}>
+          <img src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
           Continue with Whop
         </button>
 
