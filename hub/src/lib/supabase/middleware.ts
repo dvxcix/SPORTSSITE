@@ -2,6 +2,16 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // Cron routes carry no browser session (Vercel invokes them directly with
+  // a CRON_SECRET bearer header, which each route checks itself) — without
+  // this, every cron hit got redirected to /auth/login before its handler
+  // ever ran, since the proxy matcher covers /api too. That silently broke
+  // both settle-picks and grade-live-picks; neither one has ever actually
+  // executed in production until this exemption.
+  if (request.nextUrl.pathname.startsWith('/api/cron/')) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
