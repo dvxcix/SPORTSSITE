@@ -4,10 +4,17 @@ import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
-import { Meteors } from '@/components/ui/meteors'
 import { Highlight } from '@/components/ui/hero-highlight'
+
+// Meteors picks random delays/durations at render time — fine for a purely
+// decorative background, but that randomness differs between the server
+// render and the client render and React flags it as a hydration mismatch.
+// Client-only (no SSR) sidesteps that entirely rather than trying to seed
+// matching randomness on both sides.
+const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 const featureVariants = {
   hidden: { opacity: 0, x: -8 },

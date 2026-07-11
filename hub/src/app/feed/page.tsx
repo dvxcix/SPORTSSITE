@@ -82,8 +82,8 @@ export default async function FeedPage({
           </div>
         ) : (
           <div className="space-y-3">
-            {posts.map(post => (
-              <PostCardClient key={post.id} post={post} />
+            {posts.map((post, i) => (
+              <PostCardClient key={post.id} post={post} index={i} />
             ))}
           </div>
         )}

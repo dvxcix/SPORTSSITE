@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Heart, MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
@@ -14,6 +15,7 @@ import { fmtUsd } from '@/lib/parlayCalc'
 
 interface PostCardClientProps {
   post: Post & { author: { username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
+  index?: number
 }
 
 function timeAgo(date: string) {
@@ -26,7 +28,7 @@ function timeAgo(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function PostCardClient({ post }: PostCardClientProps) {
+export function PostCardClient({ post, index = 0 }: PostCardClientProps) {
   const { user } = useAuth()
   const [liked, setLiked] = useState(post.user_reacted ?? false)
   const [likeCount, setLikeCount] = useState(post.reaction_count)
@@ -42,6 +44,19 @@ export function PostCardClient({ post }: PostCardClientProps) {
     (post.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
   )
   const supabase = createClient()
+
+  // Mouse-following spotlight glow on hover (adapted from Aceternity's
+  // CardSpotlight technique — same mask-follows-cursor idea, without its
+  // three.js canvas reveal, which isn't worth the bundle weight repeated
+  // across every card in a scrolling feed).
+  const [isHovering, setIsHovering] = useState(false)
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  function handleCardMouseMove(e: React.MouseEvent<HTMLElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    mouseX.set(e.clientX - rect.left)
+    mouseY.set(e.clientY - rect.top)
+  }
 
   const pickResult = post.pick_data?.result
   const totalPollVotes = pollCounts.reduce((a, b) => a + b, 0)
@@ -108,15 +123,30 @@ export function PostCardClient({ post }: PostCardClientProps) {
 
   return (
     <>
-      <article style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        transition: 'border-color 150ms',
-      }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-2)'}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}>
-        <div style={{ padding: '14px 16px' }}>
+      <motion.article
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.04 }}
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          transition: 'border-color 150ms',
+          position: 'relative',
+        }}
+        onMouseMove={handleCardMouseMove}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-2)'; setIsHovering(true) }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; setIsHovering(false) }}>
+        <motion.div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 0, borderRadius: 'var(--radius)',
+            pointerEvents: 'none', opacity: isHovering ? 1 : 0, transition: 'opacity 300ms',
+            background: 'radial-gradient(circle, rgba(180,255,77,0.05), transparent 70%)',
+            maskImage: useMotionTemplate`radial-gradient(220px circle at ${mouseX}px ${mouseY}px, white, transparent 80%)`,
+            WebkitMaskImage: useMotionTemplate`radial-gradient(220px circle at ${mouseX}px ${mouseY}px, white, transparent 80%)`,
+          }}
+        />
+        <div style={{ padding: '14px 16px', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Avatar */}
             <Link href={`/profile/${post.author.username}`} style={{ flexShrink: 0 }}>
@@ -417,7 +447,7 @@ export function PostCardClient({ post }: PostCardClientProps) {
             )}
           </div>
         )}
-      </article>
+      </motion.article>
 
       {showReport && user && (
         <ReportModal targetId={post.id} targetType="post" onClose={() => setShowReport(false)} />

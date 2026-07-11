@@ -4,9 +4,13 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { Spotlight } from '@/components/ui/spotlight'
-import { Meteors } from '@/components/ui/meteors'
+
+// Client-only — Meteors' random delays/durations differ between server and
+// client render, which React flags as a hydration mismatch otherwise.
+const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
 
