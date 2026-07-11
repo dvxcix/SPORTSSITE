@@ -331,6 +331,17 @@ export async function GET(req: Request) {
     fetchBatterPitchEvents(lineupBatterIdList),
   ])
 
+  // TEMP DEBUG — verifying the Range-header pagination fix actually pulls
+  // full row counts in production (statSplits should be ~2148, timingSplits
+  // ~10691, batterPitchRecent ~6331, pitcherPitchRecent ~3942). Remove after
+  // confirming in runtime logs.
+  console.log('[pagination-fix-check]', JSON.stringify({
+    statSplits: statSplits.length,
+    timingSplits: timingSplits.length,
+    batterPitchRecent: batterPitchRecent.length,
+    pitcherPitchRecent: pitcherPitchRecent.length,
+  }))
+
   // Manually-imported FanDuel markets BDL doesn't carry at all (FHR, Laser
   // 105+/110+, Moonshot, 1st PA HR, HR/ML Parlay) — see /admin/fanduel-import.
   // Scoped by game_key, NOT just name_norm: a player whose name got tagged
