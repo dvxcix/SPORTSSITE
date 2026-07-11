@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
@@ -54,6 +54,15 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     (initialPost.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
   )
   const supabase = createClient()
+  // The Supabase client caches/reuses a RealtimeChannel by its topic string
+  // — two components subscribing with the SAME name collide (the second
+  // .on() call throws "cannot add postgres_changes callbacks... after
+  // subscribe()", crashing the page). The same post can now render more
+  // than once on a page since reposts were merged into feeds/profiles
+  // (original + one repost entry per reposter), so a channel keyed only on
+  // post id was no longer safe — this instance id makes it unique per
+  // mounted card regardless of how many times the same post appears.
+  const instanceId = useId()
 
   // Live-graded pick_data — the grade-live-picks cron flips a leg to
   // win/loss the moment its stat threshold is crossed, mid-game, not just
@@ -69,7 +78,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
   useEffect(() => {
     const channel = supabase
-      .channel(`post-live:${initialPost.id}`)
+      .channel(`post-live:${initialPost.id}:${instanceId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${initialPost.id}` },
         (payload: any) => {
           if (payload.new?.pick_data) setPickData(payload.new.pick_data)
