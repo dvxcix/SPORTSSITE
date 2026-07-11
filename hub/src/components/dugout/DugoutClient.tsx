@@ -1208,69 +1208,79 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       {/* sticky player cell */}
       <td
         onClick={onToggle}
-        style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', width: 162, minWidth: 162, maxWidth: 162, cursor: 'pointer' }}
+        style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', width: 190, minWidth: 190, maxWidth: 190, cursor: 'pointer' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px' }}>
-          <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right', flexShrink: 0 }}>{row.batting_order}</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
+          <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right', flexShrink: 0, marginTop: 2 }}>{row.batting_order}</span>
           <span
             title={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}
             style={{
               flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
               color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
             }}
           >{row.bats || '?'}</span>
           <PlayerAvatar mlbId={row.mlb_id} size={22} teamAbbr={row.team} name={row.name} />
           <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
-              {hasLiveMatchup && (
-                <span
-                  title="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too"
-                  style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 1, fontSize: 8, fontWeight: 800,
-                    color: '#4ade80', background: 'rgba(74,222,128,0.15)',
-                    padding: '1px 4px', borderRadius: 3,
-                  }}
-                >⚡EDGE</span>
-              )}
-              {hasFirst && (
-                <span
-                  onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
-                  title={`First HR of the game — click for details${hits.length > 1 ? ` (${hits.length} HRs today)` : ''}`}
-                  style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 1, fontSize: 8, fontWeight: 800,
-                    color: '#fde047', background: 'rgba(253,224,71,0.15)',
-                    padding: '1px 4px', borderRadius: 3, cursor: 'pointer',
-                  }}
-                >🔥FHR</span>
-              )}
-              {hasHr && (hits.length > 1 || !hasFirst) && (
-                <span
-                  onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
-                  title={`${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`}
-                  style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 1, fontSize: 8, fontWeight: 800,
-                    color: '#fb923c', background: 'rgba(251,146,60,0.12)',
-                    padding: '1px 4px', borderRadius: 3, cursor: 'pointer',
-                  }}
-                >🔥{hits.length > 1 ? `${hits.length}HR` : 'HR'}</span>
-              )}
-              {!hasHr && row.near_hr && (
-                <span
-                  onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
-                  title={`Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`}
-                  style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 1, fontSize: 8, fontWeight: 800,
-                    color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
-                    padding: '1px 4px', borderRadius: 3, cursor: 'pointer',
-                  }}
-                >🎯{row.near_hr.parks_hr_count}</span>
-              )}
+            {/* Name always gets its own full-width line now — badges used to
+                share this line with flexShrink:0, which squeezed the name
+                down to almost nothing (e.g. "E.") whenever 2+ badges were
+                present. They wrap onto their own row below instead. */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {row.name}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{row.position} · {row.bats}HB</div>
+            {(hasLiveMatchup || hasFirst || hasHr || (!hasHr && row.near_hr)) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
+                {hasLiveMatchup && (
+                  <Tooltip content="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too">
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
+                      color: '#4ade80', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
+                      padding: '2px 5px', borderRadius: 4, cursor: 'help',
+                    }}>⚡ EDGE</span>
+                  </Tooltip>
+                )}
+                {hasFirst && (
+                  <Tooltip content={`First HR of the game — click for details${hits.length > 1 ? ` (${hits.length} HRs today)` : ''}`}>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
+                        color: '#fde047', background: 'rgba(253,224,71,0.15)', border: '1px solid rgba(253,224,71,0.3)',
+                        padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
+                      }}
+                    >🥇 FHR</span>
+                  </Tooltip>
+                )}
+                {hasHr && (hits.length > 1 || !hasFirst) && (
+                  <Tooltip content={`${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`}>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
+                        color: '#fb923c', background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.3)',
+                        padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
+                      }}
+                    >🔥 {hits.length > 1 ? `${hits.length}HR` : 'HR'}</span>
+                  </Tooltip>
+                )}
+                {!hasHr && row.near_hr && (
+                  <Tooltip content={`Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`}>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
+                        color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
+                        padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
+                      }}
+                    >🎯 {row.near_hr.parks_hr_count}</span>
+                  </Tooltip>
+                )}
+              </div>
+            )}
           </div>
-          <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
+          <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
       </td>
 
@@ -1724,7 +1734,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
         <thead>
           <tr>
-            <TH label="Player" w={162} sticky />
+            <TH label="Player" w={190} sticky />
             {H('pk', 'Pikkit community HR pick count', 34)}
             <th style={SDIV_H} />
             {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
