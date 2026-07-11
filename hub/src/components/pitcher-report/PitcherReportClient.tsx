@@ -92,6 +92,35 @@ function windowLabel(rows: any[]): string {
   return `Last ${days} days (${fmt(start)} – ${fmt(end)})`
 }
 
+// ─── sortable headers — same click-to-sort / arrow-indicator convention as
+// Dugout's TH component (not exported there, so replicated here). ──────────
+type SortState = { col: string; dir: 'desc' | 'asc' } | null
+
+function toggleSortState(prev: SortState, col: string): SortState {
+  return prev?.col === col ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { col, dir: 'desc' }
+}
+
+function cmpNullsLast(a: number | null | undefined, b: number | null | undefined, dir: 'desc' | 'asc'): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return dir === 'desc' ? b - a : a - b
+}
+
+function SortableTH({ label, colKey, sort, onSort, align = 'right' }: {
+  label: string; colKey: string; sort: SortState; onSort: (key: string) => void; align?: 'left' | 'right'
+}) {
+  const active = sort?.col === colKey
+  return (
+    <th
+      onClick={() => onSort(colKey)}
+      style={{ textAlign: align, padding: '6px 8px', color: active ? 'var(--accent)' : 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+    >
+      {label}{active ? (sort!.dir === 'desc' ? ' ▼' : ' ▲') : ''}
+    </th>
+  )
+}
+
 const COLS: { key: string; label: string; dir?: 'hi' | 'lo' }[] = [
   { key: 'pitches', label: 'PITCHES' },
   { key: 'in_play', label: 'BBE' },
@@ -151,6 +180,9 @@ function TeamLogoImg({ abbr, size = 20 }: { abbr: string; size?: number }) {
 
 // ─── pitch-mix table (one pitcher, one batter-hand bucket) ─────────────────
 function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
+  const [sort, setSort] = useState<SortState>(null)
+  const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
+
   if (!rows.length) {
     return (
       <div style={{ flex: 1, minWidth: 280 }}>
@@ -159,7 +191,14 @@ function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
       </div>
     )
   }
-  const sorted = [...rows].sort((a, b) => (b.usage_pct ?? 0) - (a.usage_pct ?? 0))
+  const activeSort = sort ?? { col: 'usage_pct', dir: 'desc' as const }
+  const sorted = [...rows].sort((a, b) => {
+    if (activeSort.col === 'pitch_type') {
+      const cmp = pitchLabel(a.pitch_type).localeCompare(pitchLabel(b.pitch_type))
+      return activeSort.dir === 'desc' ? -cmp : cmp
+    }
+    return cmpNullsLast(a[activeSort.col], b[activeSort.col], activeSort.dir)
+  })
   return (
     <div style={{ flex: 1, minWidth: 320 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
@@ -167,9 +206,9 @@ function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>TYPE</th>
-              <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>USAGE%</th>
-              {COLS.map(c => <th key={c.key} style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>{c.label}</th>)}
+              <SortableTH label="TYPE" colKey="pitch_type" sort={activeSort} onSort={onSort} align="left" />
+              <SortableTH label="USAGE%" colKey="usage_pct" sort={activeSort} onSort={onSort} />
+              {COLS.map(c => <SortableTH key={c.key} label={c.label} colKey={c.key} sort={activeSort} onSort={onSort} />)}
             </tr>
           </thead>
           <tbody>
@@ -202,12 +241,20 @@ function BatterVsPitchTable({ batters, getRow }: {
   batters: LineupPlayer[]
   getRow: (batter: LineupPlayer) => any | null
 }) {
+  const [sort, setSort] = useState<SortState>(null)
+  const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
+  const activeSort = sort ?? { col: 'hard_hit_pct', dir: 'desc' as const }
+
   const withRows = batters.map(b => ({ batter: b, row: getRow(b) }))
   withRows.sort((a, b) => {
     if (a.row && !b.row) return -1
     if (!a.row && b.row) return 1
     if (!a.row || !b.row) return 0
-    return (b.row.hard_hit_pct ?? -1) - (a.row.hard_hit_pct ?? -1)
+    if (activeSort.col === 'name') {
+      const cmp = a.batter.name.localeCompare(b.batter.name)
+      return activeSort.dir === 'desc' ? -cmp : cmp
+    }
+    return cmpNullsLast(a.row[activeSort.col], b.row[activeSort.col], activeSort.dir)
   })
   const withData = withRows.filter(x => x.row).map(x => x.row)
 
@@ -216,9 +263,9 @@ function BatterVsPitchTable({ batters, getRow }: {
       <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
-            <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>BATTER</th>
-            {COLS.filter(c => c.key !== 'in_play').map(c => <th key={c.key} style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>{c.label}</th>)}
-            <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>BBE</th>
+            <SortableTH label="BATTER" colKey="name" sort={activeSort} onSort={onSort} align="left" />
+            {COLS.filter(c => c.key !== 'in_play').map(c => <SortableTH key={c.key} label={c.label} colKey={c.key} sort={activeSort} onSort={onSort} />)}
+            <SortableTH label="BBE" colKey="in_play" sort={activeSort} onSort={onSort} />
           </tr>
         </thead>
         <tbody>
