@@ -11,6 +11,33 @@ const normName = (s: string) =>
     .replace(/[^a-z ]/g, '')
     .replace(/\s+/g, ' ').trim()
 
+// MLB's own schedule API isn't stable about which abbreviation it returns
+// for a handful of teams — confirmed directly: Arizona came back as "ARI"
+// at one point today and "AZ" a couple hours later from the exact same
+// endpoint/hydration this route and the admin import dropdowns both use.
+// That drift is invisible until it silently breaks a game_key match: the
+// FanDuel gap-odds paste for AZ@LAD got stored under "ARI@LAD" while a
+// later page load computes "AZ@LAD", so the two never look up as the same
+// game and the admin's real, correctly-saved data just never merges in.
+// Canonicalizing both sides (the live gameKey AND the stored game_key read
+// back from the gap tables) to the same form fixes it regardless of which
+// variant either side happened to use, without touching any stored rows.
+const TEAM_ABBR_ALIASES: Record<string, string> = {
+  ARI: 'AZ', AZ: 'AZ',
+  TBR: 'TB', TB: 'TB',
+  SDP: 'SD', SD: 'SD',
+  SFG: 'SF', SF: 'SF',
+  KCR: 'KC', KC: 'KC',
+  CHW: 'CWS', CWS: 'CWS',
+  WSN: 'WSH', WSH: 'WSH',
+}
+const canonAbbr = (a: string) => TEAM_ABBR_ALIASES[(a || '').toUpperCase()] ?? (a || '').toUpperCase()
+const canonGameKey = (key: string) => {
+  const m = key.match(/^([A-Za-z]+)@([A-Za-z]+)(-G\d+)?$/)
+  if (!m) return key
+  return `${canonAbbr(m[1])}@${canonAbbr(m[2])}${m[3] ?? ''}`
+}
+
 // ── mlb-party Supabase ────────────────────────────────────────────────────────
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 // Was hardcoded here (and in api/admin/pikkit-import/route.ts) — a live
@@ -363,7 +390,7 @@ export async function GET(req: Request) {
       .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
       .eq('game_date', date)
       .range(0, 19999)
-    for (const r of gapRows ?? []) (fanduelGapByGameKey[r.game_key] ??= {})[r.name_norm] = r
+    for (const r of gapRows ?? []) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
   // Manually-imported BetMGM anytime-HR odds — backs up/fills sa.betmgm and
@@ -375,7 +402,7 @@ export async function GET(req: Request) {
       .select('game_key, name_norm, sa_mgm, hr2_mgm')
       .eq('game_date', date)
       .range(0, 19999)
-    for (const r of mgmRows ?? []) (mgmGapByGameKey[r.game_key] ??= {})[r.name_norm] = r
+    for (const r of mgmRows ?? []) (mgmGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
   // Opening/early baselines for the gap markets — permanent first-of-the-day
@@ -394,8 +421,8 @@ export async function GET(req: Request) {
         .eq('game_date', date)
         .range(0, 19999),
     ])
-    for (const r of fdOpenRows ?? []) (fanduelGapOpeningByGameKey[r.game_key] ??= {})[r.name_norm] = r
-    for (const r of mgmOpenRows ?? []) (mgmGapOpeningByGameKey[r.game_key] ??= {})[r.name_norm] = r
+    for (const r of fdOpenRows ?? []) (fanduelGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+    for (const r of mgmOpenRows ?? []) (mgmGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
   const bdlGamesById = new Map<number, BDLGame>()
@@ -483,7 +510,7 @@ export async function GET(req: Request) {
     const gameNum  = g.gameNumber ?? 1
     // Computed early (moved ahead of the old inline definition further down)
     // so the gap-market merge below can scope its lookups to this exact game.
-    const gameKey = gameNum > 1 ? `${awayAbbr}@${homeAbbr}-G${gameNum}` : `${awayAbbr}@${homeAbbr}`
+    const gameKey = canonGameKey(gameNum > 1 ? `${awayAbbr}@${homeAbbr}-G${gameNum}` : `${awayAbbr}@${homeAbbr}`)
     const fanduelGapByName = fanduelGapByGameKey[gameKey] ?? {}
     const mgmGapByName = mgmGapByGameKey[gameKey] ?? {}
     const fanduelGapOpeningByName = fanduelGapOpeningByGameKey[gameKey] ?? {}

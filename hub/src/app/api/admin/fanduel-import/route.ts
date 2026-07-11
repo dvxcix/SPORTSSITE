@@ -21,7 +21,7 @@ const normName = (s: string) =>
 // "Chicago White Sox" matches before a hypothetical shorter overlapping
 // name would.
 const TEAM_NAME_TO_ABBR_RAW: [string, string][] = [
-  ['Arizona Diamondbacks', 'ARI'], ['Atlanta Braves', 'ATL'], ['Baltimore Orioles', 'BAL'],
+  ['Arizona Diamondbacks', 'AZ'], ['Atlanta Braves', 'ATL'], ['Baltimore Orioles', 'BAL'],
   ['Boston Red Sox', 'BOS'], ['Chicago Cubs', 'CHC'], ['Chicago White Sox', 'CWS'],
   ['Cincinnati Reds', 'CIN'], ['Cleveland Guardians', 'CLE'], ['Colorado Rockies', 'COL'],
   ['Detroit Tigers', 'DET'], ['Houston Astros', 'HOU'], ['Kansas City Royals', 'KC'],
