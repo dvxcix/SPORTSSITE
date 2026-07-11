@@ -180,7 +180,16 @@ function TeamLogoImg({ abbr, size = 20 }: { abbr: string; size?: number }) {
 }
 
 // ─── pitch-mix table (one pitcher, one batter-hand bucket) ─────────────────
-function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
+// Rows are clickable — pins that exact pitch/hand combo into the cross-
+// reference section below, on top of whatever the top-2-by-damage auto-pick
+// already surfaced. The auto-pick is a curation shortcut, not a claim that
+// nothing else matters — a real HR off a pitch that didn't crack the top 2
+// (small sample, edged out by a worse-looking but higher-scored pitch) is
+// exactly the case a human needs to be able to override, not just trust.
+function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
+  title: string; rows: any[]; hand: 'R' | 'L'
+  pinned: Set<string>; onTogglePin: (hand: 'R' | 'L', pitchType: string) => void
+}) {
   const [sort, setSort] = useState<SortState>(null)
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
 
@@ -203,6 +212,7 @@ function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
   return (
     <div style={{ flex: 1, minWidth: 320 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
+      <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 4 }}>Click a pitch to pin its opposing-batter breakdown below</div>
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
           <thead>
@@ -213,20 +223,28 @@ function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map(r => (
-              <tr key={r.pitch_type} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitch_type), marginRight: 6 }} />
-                  {pitchLabel(r.pitch_type)}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', fontWeight: 700 }}>{pct(r.usage_pct)}</td>
-                {COLS.map(c => (
-                  <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r[c.key], sorted.map(x => x[c.key]), c.dir ?? 'hi') }}>
-                    {c.key === 'home_runs' ? int(r[c.key]) : c.key === 'avg_exit_velo' || c.key === 'avg_launch_angle' ? num(r[c.key]) : pct(r[c.key])}
+            {sorted.map(r => {
+              const isPinned = pinned.has(r.pitch_type)
+              return (
+                <tr
+                  key={r.pitch_type}
+                  onClick={() => onTogglePin(hand, r.pitch_type)}
+                  title={isPinned ? 'Click to unpin' : 'Click to pin this pitch\'s batter breakdown below'}
+                  style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: isPinned ? 'var(--accent-dim)' : undefined }}
+                >
+                  <td style={{ padding: '6px 8px', fontWeight: 700, color: isPinned ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitch_type), marginRight: 6 }} />
+                    {pitchLabel(r.pitch_type)}{isPinned ? ' 📌' : ''}
                   </td>
-                ))}
-              </tr>
-            ))}
+                  <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', fontWeight: 700 }}>{pct(r.usage_pct)}</td>
+                  {COLS.map(c => (
+                    <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r[c.key], sorted.map(x => x[c.key]), c.dir ?? 'hi') }}>
+                      {c.key === 'home_runs' ? int(r[c.key]) : c.key === 'avg_exit_velo' || c.key === 'avg_launch_angle' ? num(r[c.key]) : pct(r[c.key])}
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -419,6 +437,31 @@ export function PitcherReportClient() {
     return out
   }, [activeRows, selected])
 
+  // Manual overrides — a pitch that didn't crack the auto top-2 (e.g. a
+  // real HR on a small sample that scored lower than two higher-volume
+  // pitches) shouldn't be unreachable just because the auto-ranker didn't
+  // pick it. Click any pitch-mix row to pin/unpin its breakdown here too.
+  const [pinned, setPinned] = useState<{ hand: 'R' | 'L'; pitchType: string }[]>([])
+  useEffect(() => { setPinned([]) }, [selected?.key, windowMode, liveN])
+  const onTogglePin = (hand: 'R' | 'L', pitchType: string) => {
+    setPinned(prev => prev.some(p => p.hand === hand && p.pitchType === pitchType)
+      ? prev.filter(p => !(p.hand === hand && p.pitchType === pitchType))
+      : [...prev, { hand, pitchType }])
+  }
+  const pinnedByHand = {
+    R: new Set(pinned.filter(p => p.hand === 'R').map(p => p.pitchType)),
+    L: new Set(pinned.filter(p => p.hand === 'L').map(p => p.pitchType)),
+  }
+  const shownPitches = useMemo(() => {
+    const out = [...hotPitches]
+    for (const p of pinned) {
+      if (out.some(h => h.hand === p.hand && h.pitchType === p.pitchType)) continue
+      const row = activeRows[p.hand].find(r => r.pitch_type === p.pitchType)
+      if (row) out.push({ hand: p.hand, pitchType: p.pitchType, row })
+    }
+    return out
+  }, [hotPitches, pinned, activeRows])
+
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
       <div style={{ marginBottom: 18 }}>
@@ -508,23 +551,24 @@ export function PitcherReportClient() {
 
               {/* pitch mix */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-                <PitchMixTable title="VS RHB" rows={activeRows.R} />
-                <PitchMixTable title="VS LHB" rows={activeRows.L} />
+                <PitchMixTable title="VS RHB" rows={activeRows.R} hand="R" pinned={pinnedByHand.R} onTogglePin={onTogglePin} />
+                <PitchMixTable title="VS LHB" rows={activeRows.L} hand="L" pinned={pinnedByHand.L} onTogglePin={onTogglePin} />
               </div>
 
               {/* getting-hit-on-lately cross reference */}
-              {hotPitches.length > 0 && (
+              {shownPitches.length > 0 && (
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', marginBottom: 4 }}>Getting hit on these pitches lately</div>
                   <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
-                    Ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches) — then the opposing lineup's own recent numbers against that exact pitch/hand combo, hardest-hit first.
+                    Auto-picked: ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches), top 2 per hand — plus anything you've pinned yourself from the tables above (📌). Opposing lineup's own recent numbers shown against that exact pitch/hand combo, hardest-hit first.
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                    {hotPitches.map(({ hand, pitchType, row }) => {
+                    {shownPitches.map(({ hand, pitchType, row }) => {
                       const batters = selected.oppLineup.filter(p => {
                         const effective = p.bats === 'S' ? (selected.pitcher.hand === 'L' ? 'R' : 'L') : (p.bats || 'R')
                         return effective === hand
                       })
+                      const isManual = pinnedByHand[hand].has(pitchType)
                       return (
                         <div key={`${hand}-${pitchType}`}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -533,6 +577,15 @@ export function PitcherReportClient() {
                             <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
                               ({pct(row.hard_hit_pct)} hard-hit · {pct(row.barrel_pct)} barrel · {row.pitches} pitches)
                             </span>
+                            {isManual && (
+                              <button
+                                onClick={() => onTogglePin(hand, pitchType)}
+                                title="Unpin"
+                                style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 99, padding: '2px 7px', cursor: 'pointer' }}
+                              >
+                                📌 pinned ✕
+                              </button>
+                            )}
                           </div>
                           {batters.length === 0 ? (
                             <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
