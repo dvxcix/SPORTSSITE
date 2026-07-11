@@ -52,6 +52,79 @@ export function findBattingLine(liveFeed: any, mlbId: number): any | null {
   return null // player not in either team's box score = did not play
 }
 
+export type PendingPick = { id: string; post_id: string | null; mlb_id: number; pick_type: string }
+
+export type SettleOutcome = {
+  result: 'win' | 'loss' | 'push'
+  postId: string | null
+  legPlayerName: string | null
+  // Set only when this leg completed the LAST pending leg on its post,
+  // i.e. the overall pick/parlay just became final — useful for firing a
+  // one-time "your pick settled" notification instead of one per leg.
+  overallResult: 'win' | 'loss' | 'push' | null
+}
+
+// Full final-game settlement for one pick: determines win/loss/push against
+// the Final box score (a DNP push, first_hr play-by-play order, or a batting-
+// stat threshold) and writes it to both `picks` and the post's `pick_data`
+// (single pick, or the matching leg + parlay rollup). Shared by settle-picks
+// (daily, the backstop) and grade-live-picks (every ~2min, the primary path
+// now that it also settles Final games instead of only early live wins) so
+// a game can never grade differently depending on which cron reached it
+// first. Returns null when the pick_type isn't supported — left pending
+// rather than guessed, same as before.
+export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, propMeta: Record<string, { pickType: string }>): Promise<SettleOutcome | null> {
+  const battingLine = findBattingLine(feed, pick.mlb_id)
+  let result: 'win' | 'loss' | 'push'
+
+  if (!battingLine) {
+    result = 'push' // scratched/DNP — standard sportsbook convention is void
+  } else if (pick.pick_type === 'first_hr') {
+    const firstHrBatterId = findFirstHrBatterId(feed)
+    result = firstHrBatterId === pick.mlb_id ? 'win' : 'loss'
+  } else {
+    const check = THRESHOLDS[pick.pick_type]
+    if (!check) return null
+    result = check(battingLine) ? 'win' : 'loss'
+  }
+
+  const nowIso = new Date().toISOString()
+  await admin.from('picks').update({ result, graded_at: nowIso }).eq('id', pick.id)
+
+  let legPlayerName: string | null = null
+  let overallResult: 'win' | 'loss' | 'push' | null = null
+
+  if (pick.post_id) {
+    const { data: post } = await admin.from('posts').select('pick_data').eq('id', pick.post_id).single()
+    if (post?.pick_data) {
+      if (Array.isArray(post.pick_data.legs)) {
+        const legs = post.pick_data.legs.map((leg: any) => {
+          const legPickType = propMeta[leg.prop_key]?.pickType ?? leg.prop_key
+          if (leg.mlb_id === pick.mlb_id && legPickType === pick.pick_type && leg.result === 'pending') {
+            legPlayerName = leg.player_name
+            return { ...leg, result }
+          }
+          return leg
+        })
+        const wasAlreadyFinal = post.pick_data.result && post.pick_data.result !== 'pending'
+        const allGraded = legs.every((l: any) => l.result !== 'pending')
+        const overall = !allGraded ? post.pick_data.result
+          : legs.some((l: any) => l.result === 'loss') ? 'loss'
+          : legs.every((l: any) => l.result === 'push') ? 'push'
+          : 'win'
+        if (allGraded && !wasAlreadyFinal) overallResult = overall
+        await admin.from('posts').update({ pick_data: { ...post.pick_data, legs, result: overall } }).eq('id', pick.post_id)
+      } else {
+        legPlayerName = post.pick_data.player_name ?? null
+        overallResult = result
+        await admin.from('posts').update({ pick_data: { ...post.pick_data, result } }).eq('id', pick.post_id)
+      }
+    }
+  }
+
+  return { result, postId: pick.post_id, legPlayerName, overallResult }
+}
+
 // Checks whether a pick has ALREADY clinched a win against the current feed
 // state — safe to call against a still-in-progress game, since a stat that
 // has already happened can't be undone. Returns null when the threshold

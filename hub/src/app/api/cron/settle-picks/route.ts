@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PROP_META } from '@/lib/watchlist'
-import { THRESHOLDS, fetchLiveFeed, findFirstHrBatterId, findBattingLine } from '@/lib/pickGrading'
+import { fetchLiveFeed, settleFinalPick } from '@/lib/pickGrading'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -55,58 +55,15 @@ export async function GET(req: Request) {
       continue
     }
 
-    let firstHrBatterId: number | null | undefined // lazy, only computed if a first_hr pick shows up
     for (const pick of picks) {
-      const battingLine = findBattingLine(feed, pick.mlb_id!)
-      let result: 'win' | 'loss' | 'push'
-
-      if (!battingLine) {
-        // Player never appeared in the box score (scratched/DNP) — standard
-        // sportsbook convention is to void/push the prop.
-        result = 'push'
-      } else if (pick.pick_type === 'first_hr') {
-        if (firstHrBatterId === undefined) firstHrBatterId = findFirstHrBatterId(feed)
-        result = firstHrBatterId === pick.mlb_id ? 'win' : 'loss'
-      } else {
-        const check = THRESHOLDS[pick.pick_type]
-        if (!check) {
-          // Unknown/unsupported pick_type (e.g. pitcher_strikeouts — our
-          // composer only offers batter props right now) — leave pending
-          // rather than guess.
-          skipped++
-          skipped_reasons[`unsupported:${pick.pick_type}`] = (skipped_reasons[`unsupported:${pick.pick_type}`] ?? 0) + 1
-          continue
-        }
-        result = check(battingLine) ? 'win' : 'loss'
-      }
-
-      const nowIso = new Date().toISOString()
-      await admin.from('picks').update({ result, graded_at: nowIso }).eq('id', pick.id)
-      if (pick.post_id) {
-        const { data: post } = await admin.from('posts').select('pick_data').eq('id', pick.post_id).single()
-        if (post?.pick_data) {
-          if (Array.isArray(post.pick_data.legs)) {
-            // Parlay post — update just the matching leg (by mlb_id + pick
-            // type, since the leg stores prop_key not pick_type). Overall
-            // result only resolves once every leg has graded: any loss wins
-            // out, all-push is a push, otherwise it's a win.
-            const legs = post.pick_data.legs.map((leg: any) => {
-              const legPickType = PROP_META[leg.prop_key]?.pickType ?? leg.prop_key
-              if (leg.mlb_id === pick.mlb_id && legPickType === pick.pick_type && leg.result === 'pending') {
-                return { ...leg, result }
-              }
-              return leg
-            })
-            const allGraded = legs.every((l: any) => l.result !== 'pending')
-            const overall = !allGraded ? post.pick_data.result
-              : legs.some((l: any) => l.result === 'loss') ? 'loss'
-              : legs.every((l: any) => l.result === 'push') ? 'push'
-              : 'win'
-            await admin.from('posts').update({ pick_data: { ...post.pick_data, legs, result: overall } }).eq('id', pick.post_id)
-          } else {
-            await admin.from('posts').update({ pick_data: { ...post.pick_data, result } }).eq('id', pick.post_id)
-          }
-        }
+      const outcome = await settleFinalPick(admin, pick as any, feed, PROP_META)
+      if (!outcome) {
+        // Unknown/unsupported pick_type (e.g. pitcher_strikeouts — our
+        // composer only offers batter props right now) — left pending
+        // rather than guessed.
+        skipped++
+        skipped_reasons[`unsupported:${pick.pick_type}`] = (skipped_reasons[`unsupported:${pick.pick_type}`] ?? 0) + 1
+        continue
       }
       graded++
       graded_ids.push(pick.id)
