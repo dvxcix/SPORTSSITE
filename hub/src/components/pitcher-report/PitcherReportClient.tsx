@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -236,10 +237,11 @@ function PitchMixTable({ title, rows }: { title: string; rows: any[] }) {
 // ─── batter cross-reference table for one hot pitch type ───────────────────
 // `getRow` is source-agnostic — the caller decides whether it's reading the
 // 14-day pre-aggregated batterPitchMap or the live N-games-computed map.
-function BatterVsPitchTable({ batters, getRow }: {
+function BatterVsPitchTable({ batters, getRow, date }: {
   pitchType: string
   batters: LineupPlayer[]
   getRow: (batter: LineupPlayer) => any | null
+  date: string
 }) {
   const [sort, setSort] = useState<SortState>(null)
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
@@ -272,10 +274,16 @@ function BatterVsPitchTable({ batters, getRow }: {
           {withRows.map(({ batter, row }) => (
             <tr key={batter.mlb_id} style={{ borderBottom: '1px solid var(--border)', opacity: row ? 1 : 0.45 }}>
               <td style={{ padding: '5px 8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Link
+                  href={`/dugout?date=${date}&highlight=${batter.mlb_id}`}
+                  title={`Open ${batter.name} in The Dugout`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
+                >
                   <PlayerAvatar headshot={mlbHeadshot(batter.mlb_id)} teamLogo={getTeamLogoUrl(batter.team)} teamAbbr={batter.team} name={batter.name} size={20} />
                   <span style={{ fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{batter.name}</span>
-                </div>
+                </Link>
               </td>
               {COLS.filter(c => c.key !== 'in_play').map(c => (
                 <td key={c.key} style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)', ...(row ? heat(row[c.key], withData.map(x => x[c.key]), c.dir ?? 'hi') : {}) }}>
@@ -534,6 +542,7 @@ export function PitcherReportClient() {
                             <BatterVsPitchTable
                               pitchType={pitchType}
                               batters={batters}
+                              date={date}
                               getRow={b => windowMode === 'live'
                                 ? liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null
                                 : batterPitchMap[b.name_norm]?.[pitchType]?.[selected.pitcher.hand] ?? null}
