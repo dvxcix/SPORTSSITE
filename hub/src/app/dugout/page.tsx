@@ -41,11 +41,12 @@ export default async function DugoutPage({
     <div style={{ padding: '20px 16px' }}>
       <WatchlistButton />
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+      <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 10 }}>
             The Dugout
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', fontFamily: "'SF Mono',monospace" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', fontFamily: "'SF Mono',monospace", display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="live-dot" />
               MLB ANALYTICS
             </span>
           </h1>

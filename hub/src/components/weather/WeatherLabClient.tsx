@@ -386,7 +386,9 @@ function GameCard({ game }: { game: WeatherGame }) {
   const [showParkHr, setShowParkHr] = useState(false)
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', transition: 'border-color 150ms' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-2)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}>
       {/* header — click to see who on both rosters has gone deep at this park */}
       <button
         onClick={() => setShowParkHr(true)}
@@ -613,9 +615,10 @@ export function WeatherLabClient() {
 
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
-      <div style={{ marginBottom: 18 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
+      <div className="fade-in" style={{ marginBottom: 18 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           Weather <span style={{ color: 'var(--accent)' }}>Lab</span>
+          <span className="live-dot" />
         </h1>
         <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
           Live park-by-park conditions for every game — wind, temp, humidity, and roof status.

@@ -810,7 +810,7 @@ export function PitcherReportClient() {
 
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
-      <div style={{ marginBottom: 18 }}>
+      <div className="fade-in" style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
           Pitcher <span style={{ color: 'var(--accent)' }}>Report</span>
         </h1>
