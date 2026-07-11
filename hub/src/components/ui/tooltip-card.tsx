@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -13,8 +14,14 @@ export const Tooltip = ({
   containerClassName?: string;
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [mouse, setMouse] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [height, setHeight] = useState(0);
+  // Position is tracked in VIEWPORT (fixed) coordinates, not relative to the
+  // trigger, because the popup is portaled to document.body — see below for
+  // why: rendering it inside the trigger's own DOM subtree let ancestor
+  // elements with overflow/stacking rules (e.g. the horizontally-scrollable
+  // Dugout table) clip or bury the popup behind sibling cells.
   const [position, setPosition] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
@@ -23,16 +30,18 @@ export const Tooltip = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (isVisible && contentRef.current) {
       setHeight(contentRef.current.scrollHeight);
     }
   }, [isVisible, content]);
 
   const calculatePosition = (mouseX: number, mouseY: number) => {
-    if (!contentRef.current || !containerRef.current)
-      return { x: mouseX + 12, y: mouseY + 12 };
+    if (!containerRef.current) return { x: mouseX + 12, y: mouseY + 12 };
 
-    const tooltip = contentRef.current;
     const container = containerRef.current;
     const containerRect = container.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
@@ -40,34 +49,28 @@ export const Tooltip = ({
 
     // Get tooltip dimensions
     const tooltipWidth = 240; // min-w-[15rem] = 240px
-    const tooltipHeight = tooltip.scrollHeight;
+    const tooltipHeight = contentRef.current?.scrollHeight ?? 0;
 
-    // Calculate absolute position relative to viewport
+    // mouseX/mouseY are relative to the trigger; convert to viewport coords
+    // since the popup now renders in a portal at document.body, positioned
+    // with `position: fixed`.
     const absoluteX = containerRect.left + mouseX;
     const absoluteY = containerRect.top + mouseY;
 
-    let finalX = mouseX + 12;
-    let finalY = mouseY + 12;
+    let finalX = absoluteX + 12;
+    let finalY = absoluteY + 12;
 
     // Check if tooltip goes beyond right edge
-    if (absoluteX + 12 + tooltipWidth > viewportWidth) {
-      finalX = mouseX - tooltipWidth - 12;
+    if (finalX + tooltipWidth > viewportWidth) {
+      finalX = absoluteX - tooltipWidth - 12;
     }
-
-    // Check if tooltip goes beyond left edge
-    if (absoluteX + finalX < 0) {
-      finalX = -containerRect.left + 12;
-    }
+    if (finalX < 4) finalX = 4;
 
     // Check if tooltip goes beyond bottom edge
-    if (absoluteY + 12 + tooltipHeight > viewportHeight) {
-      finalY = mouseY - tooltipHeight - 12;
+    if (finalY + tooltipHeight > viewportHeight) {
+      finalY = absoluteY - tooltipHeight - 12;
     }
-
-    // Check if tooltip goes beyond top edge
-    if (absoluteY + finalY < 0) {
-      finalY = -containerRect.top + 12;
-    }
+    if (finalY < 4) finalY = 4;
 
     return { x: finalX, y: finalY };
   };
@@ -156,33 +159,37 @@ export const Tooltip = ({
       onClick={handleClick}
     >
       {children}
-      <AnimatePresence>
-        {isVisible && (
-          <motion.div
-            key={String(isVisible)}
-            initial={{ height: 0, opacity: 1 }}
-            animate={{ height, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 200,
-              damping: 20,
-            }}
-            className="pointer-events-none absolute z-50 min-w-[15rem] overflow-hidden rounded-md border border-transparent bg-white shadow-sm ring-1 shadow-black/5 ring-black/5 dark:bg-neutral-900 dark:shadow-white/10 dark:ring-white/5"
-            style={{
-              top: position.y,
-              left: position.x,
-            }}
-          >
-            <div
-              ref={contentRef}
-              className="p-2 text-sm text-neutral-600 md:p-4 dark:text-neutral-400"
-            >
-              {content}
-            </div>
-          </motion.div>
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {isVisible && (
+              <motion.div
+                key={String(isVisible)}
+                initial={{ height: 0, opacity: 1 }}
+                animate={{ height, opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 20,
+                }}
+                className="pointer-events-none fixed z-[999] min-w-[15rem] overflow-hidden rounded-md border border-transparent bg-white shadow-sm ring-1 shadow-black/5 ring-black/5 dark:bg-neutral-900 dark:shadow-white/10 dark:ring-white/5"
+                style={{
+                  top: position.y,
+                  left: position.x,
+                }}
+              >
+                <div
+                  ref={contentRef}
+                  className="p-2 text-sm text-neutral-600 md:p-4 dark:text-neutral-400"
+                >
+                  {content}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

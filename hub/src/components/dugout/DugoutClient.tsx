@@ -1223,6 +1223,39 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   const edgeAvg = edgePool.length ? edgePool.reduce((a, b) => a + b, 0) / edgePool.length : 0
   const hasLiveMatchup = row.matchup_edge != null && row.matchup_edge > edgeAvg + 8
 
+  // Collapsed into a single chip (see below) so an arbitrary number of active
+  // signals never grows wider than one badge — ordered most-concrete-first
+  // (an HR that already happened beats a predictive matchup edge).
+  const badgeSignals: { icon: string; label: string; detail: string; color: string; bg: string; border: string; clickable: boolean }[] = []
+  if (hasFirst) {
+    badgeSignals.push({
+      icon: '🥇', label: 'FHR', clickable: true,
+      color: '#fde047', bg: 'rgba(253,224,71,0.15)', border: 'rgba(253,224,71,0.3)',
+      detail: `First HR of the game${hits.length > 1 ? ` (${hits.length} HRs today)` : ''} — click for details`,
+    })
+  }
+  if (hasHr && (hits.length > 1 || !hasFirst)) {
+    badgeSignals.push({
+      icon: '🔥', label: hits.length > 1 ? `${hits.length}HR` : 'HR', clickable: true,
+      color: '#fb923c', bg: 'rgba(251,146,60,0.12)', border: 'rgba(251,146,60,0.3)',
+      detail: `${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`,
+    })
+  }
+  if (hasLiveMatchup) {
+    badgeSignals.push({
+      icon: '⚡', label: 'EDGE', clickable: false,
+      color: '#4ade80', bg: 'rgba(74,222,128,0.15)', border: 'rgba(74,222,128,0.3)',
+      detail: "Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too",
+    })
+  }
+  if (!hasHr && row.near_hr) {
+    badgeSignals.push({
+      icon: '🎯', label: String(row.near_hr.parks_hr_count), clickable: true,
+      color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.3)',
+      detail: `Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`,
+    })
+  }
+
   return (
     <tr id={id} style={hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}>
       {/* sticky player cell */}
@@ -1241,67 +1274,32 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
               }}
             >{row.bats || '?'}</span>
           </Tooltip>
-          <PlayerAvatar mlbId={row.mlb_id} size={22} teamAbbr={row.team} name={row.name} />
+          <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
           <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
-            {/* Name always gets its own full-width line now — badges used to
-                share this line with flexShrink:0, which squeezed the name
-                down to almost nothing (e.g. "E.") whenever 2+ badges were
-                present. They wrap onto their own row below instead. */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {row.name}
+            {/* Badges used to each render as their own flexShrink:0 chip on
+                this same line, so 2+ active signals could squeeze the name
+                down to almost nothing (e.g. "E."). They're now collapsed
+                into a single capped-width chip (worst case "+N" more,
+                full detail in the tooltip) so the name always keeps a
+                guaranteed minimum of readable width. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
+                {row.name}
+              </span>
+              {badgeSignals.length > 0 && (
+                <Tooltip content={badgeSignals.map(s => s.detail).join(' · ')}>
+                  <span
+                    onClick={badgeSignals[0].clickable ? (e) => { e.stopPropagation(); onShowHr?.() } : undefined}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800, flexShrink: 0, whiteSpace: 'nowrap',
+                      color: badgeSignals[0].color, background: badgeSignals[0].bg, border: `1px solid ${badgeSignals[0].border}`,
+                      padding: '1px 4px', borderRadius: 4, cursor: badgeSignals[0].clickable ? 'pointer' : 'help',
+                    }}
+                  >{badgeSignals[0].icon} {badgeSignals[0].label}{badgeSignals.length > 1 ? ` +${badgeSignals.length - 1}` : ''}</span>
+                </Tooltip>
+              )}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{row.position} · {row.bats}HB</div>
-            {/* Always rendered (not conditional) with a fixed minHeight so
-                every row reserves the same vertical space whether or not
-                this player has any badges — otherwise rows with badges grow
-                taller than empty ones and the table looks visually uneven. */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3, minHeight: 15 }}>
-                {hasLiveMatchup && (
-                  <Tooltip content="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too">
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
-                      color: '#4ade80', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
-                      padding: '2px 5px', borderRadius: 4, cursor: 'help',
-                    }}>⚡ EDGE</span>
-                  </Tooltip>
-                )}
-                {hasFirst && (
-                  <Tooltip content={`First HR of the game — click for details${hits.length > 1 ? ` (${hits.length} HRs today)` : ''}`}>
-                    <span
-                      onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
-                        color: '#fde047', background: 'rgba(253,224,71,0.15)', border: '1px solid rgba(253,224,71,0.3)',
-                        padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
-                      }}
-                    >🥇 FHR</span>
-                  </Tooltip>
-                )}
-                {hasHr && (hits.length > 1 || !hasFirst) && (
-                  <Tooltip content={`${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`}>
-                    <span
-                      onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
-                        color: '#fb923c', background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.3)',
-                        padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
-                      }}
-                    >🔥 {hits.length > 1 ? `${hits.length}HR` : 'HR'}</span>
-                  </Tooltip>
-                )}
-                {!hasHr && row.near_hr && (
-                  <Tooltip content={`Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`}>
-                    <span
-                      onClick={(e) => { e.stopPropagation(); onShowHr?.() }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800,
-                        color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
-                        padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
-                      }}
-                    >🎯 {row.near_hr.parks_hr_count}</span>
-                  </Tooltip>
-                )}
-            </div>
           </div>
           <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
