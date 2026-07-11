@@ -81,13 +81,20 @@ export async function GET(request: Request) {
       // Anything else genuinely wrong falls through to the error redirect.
       const { data: byEmail } = await admin
         .from('users')
-        .select('id, email')
+        .select('id, email, avatar_url, display_name')
         .eq('email', whopUser.email)
         .maybeSingle()
       if (!byEmail) return loginFailed('whop_auth_failed')
       authUserId = byEmail.id
       authUserEmail = byEmail.email
-      await admin.from('users').update({ whop_user_id: whopUser.sub }).eq('id', authUserId)
+      // Fill in profile gaps from Whop (avatar/display name) without
+      // overwriting anything the person already customized on-site —
+      // username isn't touched at all here, existing handles stay put.
+      await admin.from('users').update({
+        whop_user_id: whopUser.sub,
+        avatar_url: byEmail.avatar_url || whopUser.picture,
+        display_name: byEmail.display_name || whopUser.name || whopUser.preferred_username,
+      }).eq('id', authUserId)
     } else {
       authUserId = created.user.id
       authUserEmail = whopUser.email
