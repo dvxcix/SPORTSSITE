@@ -30,6 +30,25 @@ async function mpGet(path: string, cache = 3600, range?: string): Promise<any[]>
   } catch { return [] }
 }
 
+// A `Range` header does NOT bypass this project's real per-request cap —
+// verified against production logs: every one of the "big" mlb-party
+// fetches came back at EXACTLY 1000 rows regardless of what Range was
+// requested (a prior fix here for fetchBatterPitchEvents assumed Range
+// worked and was apparently never actually checked against a large-enough
+// result set to notice it didn't). The only thing that reliably proves
+// you've reached the end is a page coming back SHORTER than the page size
+// — so loop on that instead of guessing a big-enough single request.
+async function mpGetAll(path: string, cache = 3600): Promise<any[]> {
+  const PAGE = 1000
+  const out: any[] = []
+  for (let offset = 0; offset < 100_000; offset += PAGE) {
+    const page = await mpGet(path, cache, `${offset}-${offset + PAGE - 1}`)
+    out.push(...page)
+    if (page.length < PAGE) break
+  }
+  return out
+}
+
 async function mpRpc(fn: string, body: any): Promise<any[]> {
   try {
     const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
@@ -47,19 +66,12 @@ async function mpRpc(fn: string, body: any): Promise<any[]> {
 const STAT_COLS = 'mlb_id,name_norm,pitch_hand,win,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,ideal_attack_angle_rate,swing_tilt,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,pull_air_rate,fb_rate,xhr,hr_total,avg_hr_distance'
 const TIME_COLS = 'mlb_id,name_norm,pitch_hand,pitch_type,win,miss_distance,on_time_percent,n_swings'
 
-// Same query-param-pagination-doesn't-bypass-the-1000-row-cap issue as
-// fetchBatterPitchTypeRecent/fetchPitcherPitchTypeRecent above — these were
-// requesting exactly enough 1000-row "pages" to cover what these tables held
-// at some earlier, smaller size, but never grew with the data. Real gaps:
-// batter_statcast_splits (2148 rows) was missing its last 148; batter_timing_
-// splits (10691 rows) was only fetching the first 3000 — over 70% missing,
-// silently, feeding straight into Dugout's bat-speed/swing-timing columns.
 async function fetchStatSplits() {
-  return mpGet(`/rest/v1/batter_statcast_splits?select=${STAT_COLS}`, 3600, '0-9999')
+  return mpGetAll(`/rest/v1/batter_statcast_splits?select=${STAT_COLS}`, 3600)
 }
 
 async function fetchTimingSplits() {
-  return mpGet(`/rest/v1/batter_timing_splits?select=${TIME_COLS}`, 3600, '0-19999')
+  return mpGetAll(`/rest/v1/batter_timing_splits?select=${TIME_COLS}`, 3600)
 }
 
 async function fetchPitcherSplits(mlbIds: number[]) {
@@ -84,19 +96,12 @@ async function fetchPitcherSplits(mlbIds: number[]) {
 const PITCH_RECENT_BATTER_COLS = 'mlb_id,name_norm,pitch_type,pitcher_hand,pitches,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs,avg_exit_velo,avg_launch_angle,window_start,window_end'
 const PITCH_RECENT_PITCHER_COLS = 'mlb_id,name_norm,pitch_type,bat_hand,pitches,usage_pct,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs_allowed,avg_exit_velo_against,avg_launch_angle_against,window_start,window_end'
 
-// `limit=`/`offset=` query params do NOT reliably bypass PostgREST's default
-// 1000-row-per-request cap (same issue already diagnosed and fixed for
-// fetchBatterPitchEvents below via an explicit Range header) — each of the
-// two "pages" here was silently truncating to ~1000 rows regardless of the
-// requested limit, leaving large unfetched gaps in the middle (6331 batter /
-// 3942 pitcher rows total, so a real chunk of players/pitchers were missing
-// entirely with no error). Explicit Range header fixes it the same way.
 async function fetchBatterPitchTypeRecent() {
-  return mpGet(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}&win=eq.recent`, 900, '0-9999')
+  return mpGetAll(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}&win=eq.recent`, 900)
 }
 
 async function fetchPitcherPitchTypeRecent() {
-  return mpGet(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent`, 900, '0-9999')
+  return mpGetAll(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent`, 900)
 }
 
 // Per-game batting logs (lets the client compute a real "last N games
@@ -120,10 +125,12 @@ async function fetchBatterPlatoonSplits(mlbIds: number[]) {
 async function fetchBatterPitchEvents(mlbIds: number[]) {
   if (!mlbIds.length) return []
   // A full slate's lineups can easily carry 4000-6000+ rows here (up to ~20
-  // per pitch-type/hand bucket per player) — well past PostgREST's default
-  // 1000-row cap, which was silently truncating this to whatever page came
-  // back first and dropping most players' events with no error at all.
-  return mpGet(`/rest/v1/batter_recent_pitch_events?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,pitch_type,pitcher_hand,seq,game_date,description,event_label,bb_type,exit_velocity,launch_angle,is_home_run&order=mlb_id.asc,seq.asc`, 900, '0-19999')
+  // per pitch-type/hand bucket per player) — past the real per-request row
+  // cap (see mpGetAll — a single big Range header does NOT bypass it,
+  // confirmed against production logs; this call's old single-request
+  // '0-19999' Range only ever looked safe because typical lineup sizes
+  // happened to land under 1000 rows, not because it actually worked).
+  return mpGetAll(`/rest/v1/batter_recent_pitch_events?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,pitch_type,pitcher_hand,seq,game_date,description,event_label,bb_type,exit_velocity,launch_angle,is_home_run&order=mlb_id.asc,seq.asc`, 900)
 }
 
 // Live HR feed — pulled fresh from MLB's playByPlay per live/final game, same
@@ -331,15 +338,17 @@ export async function GET(req: Request) {
     fetchBatterPitchEvents(lineupBatterIdList),
   ])
 
-  // TEMP DEBUG — verifying the Range-header pagination fix actually pulls
+  // TEMP DEBUG — verifying the real mpGetAll pagination loop actually pulls
   // full row counts in production (statSplits should be ~2148, timingSplits
-  // ~10691, batterPitchRecent ~6331, pitcherPitchRecent ~3942). Remove after
-  // confirming in runtime logs.
+  // ~10691, batterPitchRecent ~6331, pitcherPitchRecent ~3942 — none of
+  // these should land on a suspiciously round multiple of 1000 anymore).
+  // Remove after confirming in runtime logs.
   console.log('[pagination-fix-check]', JSON.stringify({
     statSplits: statSplits.length,
     timingSplits: timingSplits.length,
     batterPitchRecent: batterPitchRecent.length,
     pitcherPitchRecent: pitcherPitchRecent.length,
+    batterPitchEvents: batterPitchEvents.length,
   }))
 
   // Manually-imported FanDuel markets BDL doesn't carry at all (FHR, Laser
