@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 import { useAuth } from '@/context/AuthContext'
 import { Heart, MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
 import Link from 'next/link'
@@ -28,11 +29,11 @@ function timeAgo(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function PostCardClient({ post, index = 0 }: PostCardClientProps) {
+export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientProps) {
   const { user } = useAuth()
-  const [liked, setLiked] = useState(post.user_reacted ?? false)
-  const [likeCount, setLikeCount] = useState(post.reaction_count)
-  const [bookmarked, setBookmarked] = useState(post.user_bookmarked ?? false)
+  const [liked, setLiked] = useState(initialPost.user_reacted ?? false)
+  const [likeCount, setLikeCount] = useState(initialPost.reaction_count)
+  const [bookmarked, setBookmarked] = useState(initialPost.user_bookmarked ?? false)
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<{ id: string; content: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string }[]>([])
   const [commentText, setCommentText] = useState('')
@@ -41,9 +42,27 @@ export function PostCardClient({ post, index = 0 }: PostCardClientProps) {
   const [showReport, setShowReport] = useState(false)
   const [pollVoted, setPollVoted] = useState<number | null>(null)
   const [pollCounts, setPollCounts] = useState<number[]>(
-    (post.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
+    (initialPost.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
   )
   const supabase = createClient()
+
+  // Live-graded pick_data — the grade-live-picks cron flips a leg to
+  // win/loss the moment its stat threshold is crossed, mid-game, not just
+  // once the game ends. Subscribing here means anyone with this card open
+  // sees the ✓ appear without reloading. Only pick_data is stateful/live;
+  // everything else on the post is static from the initial fetch.
+  const [pickData, setPickData] = useState(initialPost.pick_data)
+  const post = { ...initialPost, pick_data: pickData }
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`post-pickdata:${initialPost.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${initialPost.id}` },
+        (payload: any) => { if (payload.new?.pick_data) setPickData(payload.new.pick_data) })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPost.id])
 
   // Mouse-following spotlight glow on hover (adapted from Aceternity's
   // CardSpotlight technique — same mask-follows-cursor idea, without its
@@ -71,6 +90,10 @@ export function PostCardClient({ post, index = 0 }: PostCardClientProps) {
     } else {
       await supabase.from('reactions').insert({ user_id: user.id, target_id: post.id, target_type: 'post', emoji: '❤️' })
       setLikeCount(c => c + 1)
+      await notify(supabase, {
+        userId: post.author_id, actorId: user.id, type: 'reaction',
+        message: 'liked your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+      })
     }
     setLiked(v => !v)
   }
@@ -107,6 +130,10 @@ export function PostCardClient({ post, index = 0 }: PostCardClientProps) {
       .single()
     if (data) setComments(c => [...c, data as unknown as typeof comments[0]])
     setCommentText('')
+    await notify(supabase, {
+      userId: post.author_id, actorId: user.id, type: 'comment',
+      message: 'commented on your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+    })
   }
 
   async function votePoll(idx: number) {

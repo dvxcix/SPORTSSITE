@@ -319,6 +319,7 @@ img { max-width: 100%; }
 .ss-dropdown-item:hover { background: var(--surface-3); color: var(--text-1); }
 .ss-dropdown-item.danger { color: var(--red); }
 .ss-dropdown-item.danger:hover { background: var(--red-dim); }
+.notif-dropdown-item:hover { background: var(--surface-3); }
 
 /* ── Tab bar ────────────────────────────────── */
 .tab-bar {

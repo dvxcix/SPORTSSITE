@@ -1,31 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PROP_META } from '@/lib/watchlist'
+import { THRESHOLDS, fetchLiveFeed, findFirstHrBatterId, findBattingLine } from '@/lib/pickGrading'
 
 export const revalidate = 0
 export const maxDuration = 60
-
-// Batting-stat threshold per pick_type (matches PROP_META's pickType values
-// in hub/src/lib/watchlist.ts). "first_hr" is handled separately below since
-// it needs play-by-play order, not just the final box score line.
-const THRESHOLDS: Record<string, (b: any) => boolean> = {
-  anytime_hr:    (b) => (b.homeRuns ?? 0) >= 1,
-  hr_2plus:      (b) => (b.homeRuns ?? 0) >= 2,
-  hits:          (b) => (b.hits ?? 0) >= 1,
-  single:        (b) => ((b.hits ?? 0) - (b.doubles ?? 0) - (b.triples ?? 0) - (b.homeRuns ?? 0)) >= 1,
-  double:        (b) => (b.doubles ?? 0) >= 1,
-  triple:        (b) => (b.triples ?? 0) >= 1,
-  rbi:           (b) => (b.rbi ?? 0) >= 1,
-  rbi_2plus:     (b) => (b.rbi ?? 0) >= 2,
-  rbi_3plus:     (b) => (b.rbi ?? 0) >= 3,
-  total_bases:   (b) => (b.totalBases ?? 0) >= 2,
-  total_bases_4plus: (b) => (b.totalBases ?? 0) >= 4,
-  total_bases_5plus: (b) => (b.totalBases ?? 0) >= 5,
-  run_scored:    (b) => (b.runs ?? 0) >= 1,
-  stolen_base:   (b) => (b.stolenBases ?? 0) >= 1,
-  batter_strikeout: (b) => (b.strikeOuts ?? 0) >= 1,
-  hits_runs_rbis: (b) => ((b.hits ?? 0) + (b.runs ?? 0) + (b.rbi ?? 0)) >= 1,
-}
 
 function requireCronAuth(req: Request): NextResponse | null {
   const secret = process.env.CRON_SECRET
@@ -37,31 +16,6 @@ function requireCronAuth(req: Request): NextResponse | null {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return null
-}
-
-async function fetchLiveFeed(gamePk: string) {
-  const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store' })
-  if (!res.ok) return null
-  return res.json()
-}
-
-// The first HR of the game, by earliest at-bat index across both teams.
-function findFirstHrBatterId(liveFeed: any): number | null {
-  const plays: any[] = liveFeed?.liveData?.plays?.allPlays ?? []
-  const hrPlays = plays
-    .filter(p => p.result?.eventType === 'home_run')
-    .sort((a, b) => (a.atBatIndex ?? 0) - (b.atBatIndex ?? 0))
-  return hrPlays[0]?.matchup?.batter?.id ?? null
-}
-
-function findBattingLine(liveFeed: any, mlbId: number): any | null {
-  const teams = liveFeed?.liveData?.boxscore?.teams
-  if (!teams) return null
-  for (const side of ['home', 'away']) {
-    const p = teams[side]?.players?.[`ID${mlbId}`]
-    if (p) return p.stats?.batting ?? null
-  }
-  return null // player not in either team's box score = did not play
 }
 
 export async function GET(req: Request) {

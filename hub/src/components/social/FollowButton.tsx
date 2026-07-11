@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 import { UserPlus, UserCheck } from 'lucide-react'
 
 interface FollowButtonProps {
@@ -22,6 +23,14 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing }: 
         .match({ follower_id: currentUserId, following_id: targetUserId })
     } else {
       await supabase.from('follows').insert({ follower_id: currentUserId, following_id: targetUserId })
+      const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
+      await notify(supabase, {
+        userId: targetUserId,
+        actorId: currentUserId,
+        type: 'follow',
+        message: 'started following you',
+        link: me?.username ? `/profile/${me.username}` : null,
+      })
     }
     setFollowing(v => !v)
     setLoading(false)
