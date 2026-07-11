@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { FollowButton } from '@/components/social/FollowButton'
+import { ProfileStats } from '@/components/profile/ProfileStats'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp } from 'lucide-react'
 
@@ -63,11 +64,13 @@ export default async function ProfilePage({ params }: Props) {
       {/* Profile header */}
       <div className="px-4 pb-4">
         <div className="relative z-10 flex items-end justify-between -mt-12 mb-4">
-          <div className="w-24 h-24 rounded-full bg-zinc-700 border-4 border-zinc-950 flex items-center justify-center text-3xl font-black text-white overflow-hidden shadow-xl">
-            {profile.avatar_url
-              ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              : (profile.display_name || profile.username)[0].toUpperCase()
-            }
+          <div className="relative avatar-glow-ring w-24 h-24 rounded-full">
+            <div className="w-full h-full rounded-full bg-zinc-700 border-4 border-zinc-950 flex items-center justify-center text-3xl font-black text-white overflow-hidden shadow-xl">
+              {profile.avatar_url
+                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                : (profile.display_name || profile.username)[0].toUpperCase()
+              }
+            </div>
           </div>
           {isOwnProfile ? (
             <a href="/settings/profile"
@@ -121,28 +124,14 @@ export default async function ProfilePage({ params }: Props) {
           </div>
 
           {/* Stats */}
-          <div className="flex gap-6 pt-2">
-            <div>
-              <p className="font-black text-white text-lg leading-none">{profile.following_count ?? 0}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Following</p>
-            </div>
-            <div>
-              <p className="font-black text-white text-lg leading-none">{profile.follower_count ?? 0}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Followers</p>
-            </div>
-            {total > 0 && (
-              <>
-                <div>
-                  <p className="font-black text-green-400 text-lg leading-none">{wins}–{losses}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">Pick Record</p>
-                </div>
-                <div>
-                  <p className="font-black text-white text-lg leading-none">{winPct}%</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">Win Rate</p>
-                </div>
-              </>
-            )}
-          </div>
+          <ProfileStats stats={[
+            { value: String(profile.following_count ?? 0), label: 'Following' },
+            { value: String(profile.follower_count ?? 0), label: 'Followers' },
+            ...(total > 0 ? [
+              { value: `${wins}–${losses}`, label: 'Pick Record', accent: true },
+              { value: `${winPct}%`, label: 'Win Rate' },
+            ] : []),
+          ]} />
 
           {/* Sport badges */}
           {profile.sport_preferences?.length > 0 && (
@@ -166,7 +155,7 @@ export default async function ProfilePage({ params }: Props) {
             )}
           </div>
         ) : (
-          mappedPosts.map((p: any) => <PostCardClient key={p.id} post={p} />)
+          mappedPosts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)
         )}
       </div>
     </div>

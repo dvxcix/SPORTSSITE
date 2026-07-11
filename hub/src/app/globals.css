@@ -233,6 +233,25 @@ img { max-width: 100%; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Profile avatar glow ring ────────────────── */
+.avatar-glow-ring::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(from var(--ring-angle, 0deg), var(--accent), transparent 30%, transparent 70%, var(--accent));
+  animation: ring-spin 4s linear infinite;
+  z-index: -1;
+}
+@property --ring-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes ring-spin {
+  to { --ring-angle: 360deg; }
+}
+
 /* ── Aceternity UI (Meteors / Spotlight) ────── */
 @keyframes meteor {
   0%   { transform: rotate(215deg) translateX(0); opacity: 1; }
