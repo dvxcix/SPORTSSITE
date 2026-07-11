@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { PageFollowButton } from '@/components/pages/PageFollowButton'
@@ -23,12 +24,13 @@ export default async function PageDetailPage({ params }: { params: Promise<{ slu
     isFollowing = !!data
   }
 
-  const { data: posts } = await supabase
+  const { data: rawPosts } = await supabase
     .from('posts')
     .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .eq('page_id', page.id)
     .order('created_at', { ascending: false })
     .limit(20)
+  const posts = await attachUserReactions(rawPosts ?? [], user?.id)
 
   return (
     <div className="max-w-2xl mx-auto">

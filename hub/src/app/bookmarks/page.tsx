@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { redirect } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { Bookmark } from 'lucide-react'
@@ -22,7 +23,8 @@ export default async function BookmarksPage() {
     .order('created_at', { ascending: false })
     .limit(30)
 
-  const posts = (bookmarks ?? []).map((b: any) => ({ ...b.post, user_bookmarked: true })).filter(Boolean)
+  const bookmarkedPosts = (bookmarks ?? []).map((b: any) => b.post).filter(Boolean)
+  const posts = (await attachUserReactions(bookmarkedPosts, user.id)).map(p => ({ ...p, user_bookmarked: true }))
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">

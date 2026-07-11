@@ -84,6 +84,7 @@ export interface Post {
   created_at: string
   user_reacted?: boolean
   user_bookmarked?: boolean
+  user_reposted?: boolean
 }
 
 export interface Comment {

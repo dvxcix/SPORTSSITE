@@ -5,7 +5,7 @@ import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
-import { InfoTooltip } from '@/components/InfoTooltip'
+import { Tooltip } from '@/components/ui/tooltip-card'
 
 // ─── shapes from /api/dugout/data ──────────────────────────────────────────
 interface PitcherInfo { id: number; name: string; hand: string }
@@ -436,12 +436,12 @@ type BatterStatcastStats = ReturnType<typeof computeBatterStatcastStats>
 // heat-map, just laid out as tiles instead of a full-width spreadsheet row).
 function StatTile({ label, value, title, heatStyle }: { label: string; value: string; title?: string; heatStyle?: React.CSSProperties }) {
   return (
-    <InfoTooltip content={title ?? ''}>
+    <Tooltip content={title ?? ''}>
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 46, padding: '4px 6px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'help', ...heatStyle }}>
         <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{value}</span>
       </div>
-    </InfoTooltip>
+    </Tooltip>
   )
 }
 

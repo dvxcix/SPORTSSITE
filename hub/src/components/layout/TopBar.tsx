@@ -3,19 +3,20 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap } from 'lucide-react'
+import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 
 const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart, comment: MessageCircle, follow: UserPlus,
-  mention: AtSign, pick_result: Trophy, message: MessageCircle, subscription: Zap,
+  mention: AtSign, pick_result: Trophy, message: MessageCircle, subscription: Zap, repost: Repeat2,
 }
 
 type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
   link: string | null; read: boolean; created_at: string
   actor?: { username: string; display_name?: string; avatar_url?: string } | null
+  data?: { avatar_url?: string } | null
 }
 
 export function TopBar() {
@@ -53,7 +54,7 @@ export function TopBar() {
     if (!notifLoaded && user) {
       const { data } = await supabase
         .from('notifications')
-        .select('id, type, message, body, link, read, created_at, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
+        .select('id, type, message, body, link, read, created_at, data, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
@@ -166,7 +167,9 @@ export function TopBar() {
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px' }}>
                           <div style={{ position: 'relative', flexShrink: 0 }}>
                             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
-                              {n.actor?.avatar_url && <img src={n.actor.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                              {(n.actor?.avatar_url || n.data?.avatar_url) && (
+                                <img src={n.actor?.avatar_url || n.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              )}
                             </div>
                             <div style={{ position: 'absolute', bottom: -3, right: -3, width: 16, height: 16, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <Icon size={8} style={{ color: 'var(--accent)' }} />

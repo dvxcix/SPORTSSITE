@@ -1,4 +1,4 @@
-import { getUserProfile, getUserPosts } from '@/lib/queries'
+import { getUserProfile, getUserPosts, attachUserReactions } from '@/lib/queries'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
@@ -37,7 +37,8 @@ export default async function ProfilePage({ params }: Props) {
   const winPct = total > 0 ? Math.round((wins / total) * 100) : 0
 
   // Map posts to PostCardClient shape
-  const mappedPosts = posts.map((p: any) => ({
+  const postsWithReactions = await attachUserReactions(posts, authUser?.id)
+  const mappedPosts = postsWithReactions.map((p: any) => ({
     ...p,
     author: {
       username: profile.username,
@@ -47,7 +48,6 @@ export default async function ProfilePage({ params }: Props) {
       account_type: profile.account_type,
       pick_record: profile.pick_record,
     },
-    user_reacted: false,
     user_bookmarked: false,
   }))
 

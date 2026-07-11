@@ -58,6 +58,7 @@ export type SettleOutcome = {
   result: 'win' | 'loss' | 'push'
   postId: string | null
   legPlayerName: string | null
+  legHeadshotUrl: string | null
   // Set only when this leg completed the LAST pending leg on its post,
   // i.e. the overall pick/parlay just became final — useful for firing a
   // one-time "your pick settled" notification instead of one per leg.
@@ -92,15 +93,17 @@ export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, 
   await admin.from('picks').update({ result, graded_at: nowIso }).eq('id', pick.id)
 
   let legPlayerName: string | null = null
+  let legHeadshotUrl: string | null = null
   let overallResult: 'win' | 'loss' | 'push' | null = null
 
   if (pick.post_id) {
     const applied = await applyLegResultToPost(admin, pick.post_id, pick.mlb_id, pick.pick_type, result, propMeta)
     legPlayerName = applied.legPlayerName
+    legHeadshotUrl = applied.legHeadshotUrl
     overallResult = applied.overallResult
   }
 
-  return { result, postId: pick.post_id, legPlayerName, overallResult }
+  return { result, postId: pick.post_id, legPlayerName, legHeadshotUrl, overallResult }
 }
 
 // posts.pick_data is one JSON blob shared across every leg — a plain
@@ -117,13 +120,14 @@ export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, 
 export async function applyLegResultToPost(
   admin: any, postId: string, mlbId: number, pickType: string, result: 'win' | 'loss' | 'push',
   propMeta: Record<string, { pickType: string }>,
-): Promise<{ legPlayerName: string | null; overallResult: 'win' | 'loss' | 'push' | null }> {
+): Promise<{ legPlayerName: string | null; legHeadshotUrl: string | null; overallResult: 'win' | 'loss' | 'push' | null }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const { data: post } = await admin.from('posts').select('pick_data').eq('id', postId).single()
-    if (!post?.pick_data) return { legPlayerName: null, overallResult: null }
+    if (!post?.pick_data) return { legPlayerName: null, legHeadshotUrl: null, overallResult: null }
     const before = post.pick_data
 
     let legPlayerName: string | null = null
+    let legHeadshotUrl: string | null = null
     let overallResult: 'win' | 'loss' | 'push' | null = null
     let updated: any
 
@@ -132,6 +136,7 @@ export async function applyLegResultToPost(
         const legPickType = propMeta[leg.prop_key]?.pickType ?? leg.prop_key
         if (leg.mlb_id === mlbId && legPickType === pickType && leg.result === 'pending') {
           legPlayerName = leg.player_name
+          legHeadshotUrl = leg.headshot_url ?? null
           return { ...leg, result }
         }
         return leg
@@ -146,6 +151,7 @@ export async function applyLegResultToPost(
       updated = { ...before, legs, result: overall }
     } else {
       legPlayerName = before.player_name ?? null
+      legHeadshotUrl = before.headshot_url ?? null
       overallResult = result
       updated = { ...before, result }
     }
@@ -155,11 +161,11 @@ export async function applyLegResultToPost(
       .eq('id', postId)
       .eq('pick_data', before)
       .select('id')
-    if (!error && written?.length) return { legPlayerName, overallResult }
+    if (!error && written?.length) return { legPlayerName, legHeadshotUrl, overallResult }
     // Someone else updated pick_data between our read and write (another
     // leg graded concurrently) — loop and retry against the fresh copy.
   }
-  return { legPlayerName: null, overallResult: null }
+  return { legPlayerName: null, legHeadshotUrl: null, overallResult: null }
 }
 
 // Checks whether a pick has ALREADY clinched a win against the current feed

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { TrendingUp, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { PostCardClient } from '@/components/social/PostCardClient'
@@ -38,7 +39,8 @@ export default async function PicksPage({
     .order('created_at', { ascending: false })
     .limit(30)
   if (activeSport !== 'All') picksQuery = picksQuery.eq('sport', activeSport)
-  const { data: picks } = await picksQuery
+  const { data: rawPicks } = await picksQuery
+  const picks = await attachUserReactions(rawPicks ?? [], user?.id)
 
   const { data: hotPicks } = await supabase
     .from('posts')

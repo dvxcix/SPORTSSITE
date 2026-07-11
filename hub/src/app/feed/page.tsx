@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { StoriesBar } from '@/components/social/StoriesBar'
@@ -32,7 +33,10 @@ export default async function FeedPage({
   searchParams: Promise<{ filter?: string }>
 }) {
   const { filter = 'latest' } = await searchParams
-  const posts = await getPosts(filter)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const rawPosts = await getPosts(filter)
+  const posts = await attachUserReactions(rawPosts, user?.id)
 
   const filters = [
     { key: 'latest', label: 'Latest', icon: Clock },

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PostCardClient } from '@/components/social/PostCardClient'
@@ -35,12 +36,13 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
     .eq('group_id', group.id)
     .limit(8)
 
-  const { data: posts } = await supabase
+  const { data: rawPosts } = await supabase
     .from('posts')
     .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .eq('group_id', group.id)
     .order('created_at', { ascending: false })
     .limit(20)
+  const posts = await attachUserReactions(rawPosts ?? [], user?.id)
 
   const canPost = isMember || group.is_public
 

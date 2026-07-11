@@ -34,6 +34,10 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [liked, setLiked] = useState(initialPost.user_reacted ?? false)
   const [likeCount, setLikeCount] = useState(initialPost.reaction_count)
   const [bookmarked, setBookmarked] = useState(initialPost.user_bookmarked ?? false)
+  const [reposted, setReposted] = useState(initialPost.user_reposted ?? false)
+  const [repostCount, setRepostCount] = useState(initialPost.repost_count)
+  const [showLikers, setShowLikers] = useState(false)
+  const [likers, setLikers] = useState<{ username: string; display_name?: string; avatar_url?: string }[] | null>(null)
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<{ id: string; content: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string }[]>([])
   const [commentText, setCommentText] = useState('')
@@ -96,6 +100,33 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       })
     }
     setLiked(v => !v)
+  }
+
+  async function toggleRepost() {
+    if (!user) return
+    if (reposted) {
+      await supabase.from('reposts').delete().match({ user_id: user.id, post_id: post.id })
+      setRepostCount(c => c - 1)
+    } else {
+      await supabase.from('reposts').insert({ user_id: user.id, post_id: post.id })
+      setRepostCount(c => c + 1)
+      await notify(supabase, {
+        userId: post.author_id, actorId: user.id, type: 'repost',
+        message: 'reposted your pick', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+      })
+    }
+    setReposted(v => !v)
+  }
+
+  async function openLikers() {
+    setShowLikers(true)
+    if (likers) return
+    const { data } = await supabase
+      .from('reactions')
+      .select('user:users(username, display_name, avatar_url)')
+      .eq('target_id', post.id).eq('target_type', 'post').eq('emoji', '❤️')
+      .limit(100)
+    setLikers(((data ?? []).map((r: any) => r.user).filter(Boolean)) as any)
   }
 
   async function toggleBookmark() {
@@ -389,12 +420,21 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
               <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 12, marginLeft: -6 }}>
                 <ActionBtn
                   icon={<Heart size={15} fill={liked ? 'currentColor' : 'none'} />}
-                  label={likeCount > 0 ? String(likeCount) : ''}
                   active={liked}
                   activeColor="var(--red)"
                   hoverBg="rgba(255,77,106,0.08)"
                   onClick={toggleLike}
                 />
+                {likeCount > 0 && (
+                  <button onClick={openLikers} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 600, color: 'var(--text-3)', padding: '0 4px', marginLeft: -6,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                  onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
+                    {likeCount}
+                  </button>
+                )}
                 <ActionBtn
                   icon={<MessageCircle size={15} />}
                   label={post.comment_count > 0 ? String(post.comment_count) : ''}
@@ -404,10 +444,12 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                 />
                 <ActionBtn
                   icon={<Repeat2 size={15} />}
-                  label={post.repost_count > 0 ? String(post.repost_count) : ''}
+                  label={repostCount > 0 ? String(repostCount) : ''}
+                  active={reposted}
+                  activeColor="var(--green)"
                   hoverBg="rgba(46,213,115,0.08)"
                   hoverColor="var(--green)"
-                  onClick={() => {}}
+                  onClick={toggleRepost}
                 />
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                   <ActionBtn
@@ -478,6 +520,36 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
       {showReport && user && (
         <ReportModal targetId={post.id} targetType="post" onClose={() => setShowReport(false)} />
+      )}
+
+      {showLikers && (
+        <div onClick={() => setShowLikers(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 'min(360px, 100%)', maxHeight: '70vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Liked by</span>
+              <button onClick={() => setShowLikers(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
+            </div>
+            {likers === null ? (
+              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Loading…</p>
+            ) : likers.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>No likes yet</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {likers.map(l => (
+                  <Link key={l.username} href={`/profile/${l.username}`} onClick={() => setShowLikers(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, textDecoration: 'none' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden', flexShrink: 0 }}>
+                      {l.avatar_url && <img src={l.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{l.display_name || l.username}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </>
   )

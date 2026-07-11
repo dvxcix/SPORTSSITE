@@ -81,6 +81,7 @@ export async function GET(req: Request) {
             user_id: post.author_id, type: 'pick_result',
             message: `🎉 ${outcome.legPlayerName} came through — that leg hit!`,
             link: `/posts/${outcome.postId}`, target_id: outcome.postId, target_type: 'post',
+            data: outcome.legHeadshotUrl ? { avatar_url: outcome.legHeadshotUrl } : null,
           })
           notified.push(outcome.postId!)
         }
@@ -114,7 +115,7 @@ export async function GET(req: Request) {
       // Live, another via a Final game in the same run) both touch the same
       // pick_data blob, and a plain read-then-write would let one silently
       // clobber the other.
-      const { legPlayerName } = await applyLegResultToPost(admin, post.id, pick.mlb_id!, pick.pick_type, 'win', PROP_META)
+      const { legPlayerName, legHeadshotUrl } = await applyLegResultToPost(admin, post.id, pick.mlb_id!, pick.pick_type, 'win', PROP_META)
       const playerName = legPlayerName ?? ''
 
       won++
@@ -126,6 +127,7 @@ export async function GET(req: Request) {
           link: `/posts/${post.id}`,
           target_id: post.id,
           target_type: 'post',
+          data: legHeadshotUrl ? { avatar_url: legHeadshotUrl } : null,
         })
         notified.push(post.id)
       }

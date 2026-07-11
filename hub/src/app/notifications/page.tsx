@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap } from 'lucide-react'
+import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2 } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +13,7 @@ const iconMap: Record<string, any> = {
   pick_result: Trophy,
   dm: MessageCircle,
   subscription: Zap,
+  repost: Repeat2,
 }
 
 export default async function NotificationsPage() {
@@ -65,7 +66,9 @@ export default async function NotificationsPage() {
                     <>
                       <div className="relative shrink-0">
                         <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
-                          {n.actor?.avatar_url && <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />}
+                          {(n.actor?.avatar_url || n.data?.avatar_url) && (
+                            <img src={n.actor?.avatar_url || n.data?.avatar_url} alt="" className="w-full h-full object-cover" />
+                          )}
                         </div>
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center">
                           <Icon size={10} className="text-green-400" />

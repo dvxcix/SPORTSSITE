@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BookLogo } from '@/components/BookLogo'
-import { InfoTooltip } from '@/components/InfoTooltip'
+import { Tooltip } from '@/components/ui/tooltip-card'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -698,9 +698,9 @@ function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }
         color: active ? 'var(--accent)' : 'var(--text-2)',
       }}
     >
-      <InfoTooltip content={title ?? ''}>
+      <Tooltip content={title ?? ''}>
         <span>{label}{active ? (sortState!.dir === 'desc' ? '▼' : '▲') : ''}</span>
-      </InfoTooltip>
+      </Tooltip>
     </th>
   )
 }

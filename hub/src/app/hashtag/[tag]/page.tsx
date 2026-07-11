@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { Hash } from 'lucide-react'
 
@@ -7,14 +8,16 @@ export const revalidate = 60
 export default async function HashtagPage({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: posts } = await supabase
+  const { data: rawPosts } = await supabase
     .from('posts')
     .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .eq('visibility', 'public')
     .or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`)
     .order('created_at', { ascending: false })
     .limit(30)
+  const posts = await attachUserReactions(rawPosts ?? [], user?.id)
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
