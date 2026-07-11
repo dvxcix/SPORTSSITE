@@ -47,21 +47,19 @@ async function mpRpc(fn: string, body: any): Promise<any[]> {
 const STAT_COLS = 'mlb_id,name_norm,pitch_hand,win,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,ideal_attack_angle_rate,swing_tilt,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,pull_air_rate,fb_rate,xhr,hr_total,avg_hr_distance'
 const TIME_COLS = 'mlb_id,name_norm,pitch_hand,pitch_type,win,miss_distance,on_time_percent,n_swings'
 
+// Same query-param-pagination-doesn't-bypass-the-1000-row-cap issue as
+// fetchBatterPitchTypeRecent/fetchPitcherPitchTypeRecent above — these were
+// requesting exactly enough 1000-row "pages" to cover what these tables held
+// at some earlier, smaller size, but never grew with the data. Real gaps:
+// batter_statcast_splits (2148 rows) was missing its last 148; batter_timing_
+// splits (10691 rows) was only fetching the first 3000 — over 70% missing,
+// silently, feeding straight into Dugout's bat-speed/swing-timing columns.
 async function fetchStatSplits() {
-  const [a, b] = await Promise.all([
-    mpGet(`/rest/v1/batter_statcast_splits?select=${STAT_COLS}&limit=1000&offset=0`),
-    mpGet(`/rest/v1/batter_statcast_splits?select=${STAT_COLS}&limit=1000&offset=1000`),
-  ])
-  return [...a, ...b]
+  return mpGet(`/rest/v1/batter_statcast_splits?select=${STAT_COLS}`, 3600, '0-9999')
 }
 
 async function fetchTimingSplits() {
-  const [a, b, c] = await Promise.all([
-    mpGet(`/rest/v1/batter_timing_splits?select=${TIME_COLS}&limit=1000&offset=0`),
-    mpGet(`/rest/v1/batter_timing_splits?select=${TIME_COLS}&limit=1000&offset=1000`),
-    mpGet(`/rest/v1/batter_timing_splits?select=${TIME_COLS}&limit=1000&offset=2000`),
-  ])
-  return [...a, ...b, ...c]
+  return mpGet(`/rest/v1/batter_timing_splits?select=${TIME_COLS}`, 3600, '0-19999')
 }
 
 async function fetchPitcherSplits(mlbIds: number[]) {
@@ -86,20 +84,19 @@ async function fetchPitcherSplits(mlbIds: number[]) {
 const PITCH_RECENT_BATTER_COLS = 'mlb_id,name_norm,pitch_type,pitcher_hand,pitches,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs,avg_exit_velo,avg_launch_angle,window_start,window_end'
 const PITCH_RECENT_PITCHER_COLS = 'mlb_id,name_norm,pitch_type,bat_hand,pitches,usage_pct,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs_allowed,avg_exit_velo_against,avg_launch_angle_against,window_start,window_end'
 
+// `limit=`/`offset=` query params do NOT reliably bypass PostgREST's default
+// 1000-row-per-request cap (same issue already diagnosed and fixed for
+// fetchBatterPitchEvents below via an explicit Range header) — each of the
+// two "pages" here was silently truncating to ~1000 rows regardless of the
+// requested limit, leaving large unfetched gaps in the middle (6331 batter /
+// 3942 pitcher rows total, so a real chunk of players/pitchers were missing
+// entirely with no error). Explicit Range header fixes it the same way.
 async function fetchBatterPitchTypeRecent() {
-  const [a, b] = await Promise.all([
-    mpGet(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}&win=eq.recent&limit=3000&offset=0`, 900),
-    mpGet(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}&win=eq.recent&limit=3000&offset=3000`, 900),
-  ])
-  return [...a, ...b]
+  return mpGet(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}&win=eq.recent`, 900, '0-9999')
 }
 
 async function fetchPitcherPitchTypeRecent() {
-  const [a, b] = await Promise.all([
-    mpGet(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent&limit=2000&offset=0`, 900),
-    mpGet(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent&limit=2000&offset=2000`, 900),
-  ])
-  return [...a, ...b]
+  return mpGet(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent`, 900, '0-9999')
 }
 
 // Per-game batting logs (lets the client compute a real "last N games
