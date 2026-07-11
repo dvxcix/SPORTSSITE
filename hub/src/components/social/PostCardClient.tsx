@@ -37,6 +37,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [bookmarkCount, setBookmarkCount] = useState(initialPost.bookmark_count)
   const [reposted, setReposted] = useState(initialPost.user_reposted ?? false)
   const [repostCount, setRepostCount] = useState(initialPost.repost_count)
+  const [commentCount, setCommentCount] = useState(initialPost.comment_count)
   const [showLikers, setShowLikers] = useState(false)
   const [likers, setLikers] = useState<{ username: string; display_name?: string; avatar_url?: string }[] | null>(null)
   const [showComments, setShowComments] = useState(false)
@@ -57,16 +58,26 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   // Live-graded pick_data — the grade-live-picks cron flips a leg to
   // win/loss the moment its stat threshold is crossed, mid-game, not just
   // once the game ends. Subscribing here means anyone with this card open
-  // sees the ✓ appear without reloading. Only pick_data is stateful/live;
-  // everything else on the post is static from the initial fetch.
+  // sees the ✓ appear without reloading. The same subscription also keeps
+  // engagement counts live: they're seeded from the server-rendered
+  // snapshot and never updated again otherwise, so a card left open would
+  // keep showing a stale count while OTHER users liked/reposted/commented/
+  // bookmarked in the background (visible symptom: opening a post's
+  // comments and finding more comments there than the badge showed).
   const [pickData, setPickData] = useState(initialPost.pick_data)
   const post = { ...initialPost, pick_data: pickData }
 
   useEffect(() => {
     const channel = supabase
-      .channel(`post-pickdata:${initialPost.id}`)
+      .channel(`post-live:${initialPost.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${initialPost.id}` },
-        (payload: any) => { if (payload.new?.pick_data) setPickData(payload.new.pick_data) })
+        (payload: any) => {
+          if (payload.new?.pick_data) setPickData(payload.new.pick_data)
+          if (typeof payload.new?.reaction_count === 'number') setLikeCount(payload.new.reaction_count)
+          if (typeof payload.new?.repost_count === 'number') setRepostCount(payload.new.repost_count)
+          if (typeof payload.new?.comment_count === 'number') setCommentCount(payload.new.comment_count)
+          if (typeof payload.new?.bookmark_count === 'number') setBookmarkCount(payload.new.bookmark_count)
+        })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,7 +176,10 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       .insert({ post_id: post.id, author_id: user.id, content: commentText.trim() })
       .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
       .single()
-    if (data) setComments(c => [...c, data as unknown as typeof comments[0]])
+    if (data) {
+      setComments(c => [...c, data as unknown as typeof comments[0]])
+      setCommentCount(c => c + 1)
+    }
     setCommentText('')
     await notify(supabase, {
       userId: post.author_id, actorId: user.id, type: 'comment',
@@ -191,6 +205,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     if (!confirm('Delete this comment?')) return
     await supabase.from('comments').delete().eq('id', id)
     setComments(cs => cs.filter(c => c.id !== id))
+    setCommentCount(c => Math.max(0, c - 1))
   }
 
   async function votePoll(idx: number) {
@@ -474,7 +489,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                 )}
                 <ActionBtn
                   icon={<MessageCircle size={15} />}
-                  label={post.comment_count > 0 ? String(post.comment_count) : ''}
+                  label={commentCount > 0 ? String(commentCount) : ''}
                   hoverBg="rgba(77,158,255,0.08)"
                   hoverColor="var(--blue)"
                   onClick={loadComments}
