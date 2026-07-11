@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { BookLogo } from '@/components/BookLogo'
 
 // ─── shapes from /api/dugout/data ──────────────────────────────────────────
 interface PitcherInfo { id: number; name: string; hand: string }
@@ -11,6 +12,7 @@ interface LineupPlayer {
   mlb_id: number; name: string; name_norm: string
   batting_order: number; position: string; bats: string
   team: string; team_name: string; projected: boolean
+  props?: any
 }
 interface Game {
   gamePk: number; gameKey: string; gameNum: number
@@ -20,7 +22,10 @@ interface Game {
   homeLineupConfirmed: boolean; awayLineupConfirmed: boolean
   homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
 }
-interface DugoutData { date: string; games: Game[]; pitcherPitchRecent: any[]; batterPitchRecent: any[] }
+interface DugoutData {
+  date: string; games: Game[]; pitcherPitchRecent: any[]; batterPitchRecent: any[]
+  statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]
+}
 
 interface StarterOption {
   key: string
@@ -62,6 +67,111 @@ function buildBatterPitchMap(rows: any[]) {
   return map
 }
 
+// ─── full Statcast/bat-tracking builders — same shape/logic as DugoutClient's
+// (not exported there either), needed to power the same BSpd/R·Spd/Timing/
+// Sq/Blast/SwLen/Atk/Brl%/HH%/PullAir/FB%/EV/LA/xHR/HR section on player
+// expand here. ────────────────────────────────────────────────────────────
+function buildSplitMap(rows: any[]) {
+  const byId: Record<string, Record<string, { season?: any; recent?: any }>> = {}
+  const byName: Record<string, Record<string, { season?: any; recent?: any }>> = {}
+  for (const r of rows) {
+    const id = String(r.mlb_id || '')
+    const hand = r.pitch_hand || 'R'
+    const win = r.win || 'season'
+    if (id) {
+      if (!byId[id]) byId[id] = {}
+      if (!byId[id][hand]) byId[id][hand] = {}
+      ;(byId[id][hand] as any)[win] = r
+    }
+    const nn = r.name_norm || ''
+    if (nn) {
+      if (!byName[nn]) byName[nn] = {}
+      if (!byName[nn][hand]) byName[nn][hand] = {}
+      ;(byName[nn][hand] as any)[win] = r
+    }
+  }
+  return { byId, byName }
+}
+
+function buildTimingMap(rows: any[]) {
+  const byId: Record<string, Record<string, Record<string, { season?: any; recent?: any }>>> = {}
+  const byName: Record<string, Record<string, Record<string, { season?: any; recent?: any }>>> = {}
+  for (const r of rows) {
+    const id = String(r.mlb_id || '')
+    const hand = r.pitch_hand || 'R'
+    const pt = r.pitch_type || ''
+    const win = r.win || 'season'
+    if (id && pt) {
+      if (!byId[id]) byId[id] = {}
+      if (!byId[id][hand]) byId[id][hand] = {}
+      if (!byId[id][hand][pt]) byId[id][hand][pt] = {}
+      ;(byId[id][hand][pt] as any)[win] = r
+    }
+    const nn = r.name_norm || ''
+    if (nn && pt) {
+      if (!byName[nn]) byName[nn] = {}
+      if (!byName[nn][hand]) byName[nn][hand] = {}
+      if (!byName[nn][hand][pt]) byName[nn][hand][pt] = {}
+      ;(byName[nn][hand][pt] as any)[win] = r
+    }
+  }
+  return { byId, byName }
+}
+
+function buildPitcherMap(rows: any[]) {
+  const map: Record<string, Record<string, { season?: any; recent?: any }>> = {}
+  for (const r of rows) {
+    const id = String(r.mlb_id || '')
+    if (!id) continue
+    const hand = r.bat_hand || 'R'
+    const win = r.win || 'season'
+    if (!map[id]) map[id] = {}
+    if (!map[id][hand]) map[id][hand] = {}
+    ;(map[id][hand] as any)[win] = r
+  }
+  return map
+}
+
+function pickPitcherRow(pitcherMap: ReturnType<typeof buildPitcherMap>, pitcherId: string | number | null | undefined, batterHand: string | null | undefined) {
+  if (!pitcherId) return null
+  const byHand = pitcherMap[String(pitcherId)]
+  if (!byHand) return null
+  const hand = (batterHand || 'R') as string
+  const row = byHand[hand] ?? byHand['R'] ?? Object.values(byHand)[0]
+  return row ? (row.season ?? row.recent) : null
+}
+
+function computeTiming(batterId: string, batterName: string, pitcherHand: string, pitcherRow: any, timingMap: ReturnType<typeof buildTimingMap>) {
+  if (!pitcherRow) return { s_timing: null as number | null, r_timing: null as number | null, s_miss: null as number | null, r_miss: null as number | null }
+  const mix = ([
+    ['FF', pitcherRow.pct_fastball || 0],
+    ['SI', pitcherRow.pct_sinker || 0],
+    ['FC', pitcherRow.pct_cutter || 0],
+    ['SL', pitcherRow.pct_slider || 0],
+    ['ST', pitcherRow.pct_slider || 0],
+    ['CU', pitcherRow.pct_curveball || 0],
+    ['CH', pitcherRow.pct_changeup || 0],
+    ['FS', pitcherRow.pct_splitter || 0],
+  ] as [string, number][]).filter(([, p]) => p > 0.08)
+  if (!mix.length) return { s_timing: null, r_timing: null, s_miss: null, r_miss: null }
+  let st = 0, rt = 0, sm = 0, rm = 0, sw = 0, rw = 0, smw = 0, rmw = 0
+  for (const [pt, w] of mix) {
+    const tRows = timingMap.byId[batterId]?.[pitcherHand]?.[pt] || timingMap.byName[batterName]?.[pitcherHand]?.[pt]
+    if (!tRows) continue
+    const { season: tse, recent: tre } = tRows as { season?: any; recent?: any }
+    if (tse?.on_time_percent != null) { st += w * tse.on_time_percent; sw += w }
+    if (tre?.on_time_percent != null) { rt += w * tre.on_time_percent; rw += w }
+    if (tse?.miss_distance != null) { sm += w * tse.miss_distance; smw += w }
+    if (tre?.miss_distance != null) { rm += w * tre.miss_distance; rmw += w }
+  }
+  return {
+    s_timing: sw > 0 ? st / sw : null,
+    r_timing: rw > 0 ? rt / rw : null,
+    s_miss: smw > 0 ? sm / smw : null,
+    r_miss: rmw > 0 ? rm / rmw : null,
+  }
+}
+
 // ─── formatting / heat ──────────────────────────────────────────────────────
 // Every rate field on batter_pitch_type_recent/pitcher_pitch_type_recent
 // already comes out of mlb-party on a 0-100 scale (41.3 meaning 41.3%), not
@@ -69,6 +179,15 @@ function buildBatterPitchMap(rows: any[]) {
 const pct = (v: any) => v != null ? `${Number(v).toFixed(1)}%` : '—'
 const num = (v: any, dp = 1) => v != null ? Number(v).toFixed(dp) : '—'
 const int = (v: any) => v != null ? String(v) : '—'
+// batter_statcast_splits' rate fields are 0-1 FRACTIONS (unlike
+// pitch_type_recent's already-0-100-scaled ones above) — matches
+// DugoutClient's own nv/f1/pp/ppRaw distinction exactly.
+const nv = (v: any): number | null => { const x = parseFloat(v); return isNaN(x) ? null : x }
+const f1 = (v: number | null | undefined) => v != null ? v.toFixed(1) : '—'
+const pp = (v: number | null | undefined) => v != null ? `${(v * 100).toFixed(1)}%` : '—'
+const ppRaw = (v: number | null | undefined) => v != null ? `${v.toFixed(1)}%` : '—'
+const dlt = (v: number | null | undefined, scale = 1) => v != null ? (v >= 0 ? '+' : '') + (v * scale).toFixed(scale === 100 ? 1 : 2) : '—'
+const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
 
 function heat(v: number | null | undefined, all: (number | null | undefined)[], dir: 'hi' | 'lo' = 'hi'): React.CSSProperties {
   if (v == null) return {}
@@ -252,18 +371,139 @@ function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
   )
 }
 
+// ─── inline expand panel — same Statcast/bat-tracking section (and HR odds)
+// as Dugout's own batter row, computed the same way, just laid out for a
+// narrower inline panel instead of Dugout's full-width spreadsheet table.
+function StatTile({ label, value, title }: { label: string; value: string; title?: string }) {
+  return (
+    <div title={title} style={{ display: 'flex', flexDirection: 'column', minWidth: 46, padding: '4px 6px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6 }}>
+      <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{value}</span>
+    </div>
+  )
+}
+
+function PlayerStatcastDetail({ player, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap }: {
+  player: LineupPlayer
+  pitcherId: number
+  pitcherHand: string
+  splitMap: ReturnType<typeof buildSplitMap>
+  timingMap: ReturnType<typeof buildTimingMap>
+  pitcherMap: ReturnType<typeof buildPitcherMap>
+}) {
+  const idKey = String(player.mlb_id || '')
+  const nn = player.name_norm || ''
+  const playerSplits = splitMap.byId[idKey] ?? splitMap.byName[nn]
+  const handSplits = playerSplits?.[pitcherHand] ?? playerSplits?.['R'] ?? (playerSplits ? Object.values(playerSplits)[0] : null)
+  const se = (handSplits as any)?.season ?? null
+  const re = (handSplits as any)?.recent ?? null
+
+  const s_spd = nv(se?.avg_bat_speed), r_spd = nv(re?.avg_bat_speed)
+  const d_spd = r_spd != null && s_spd != null ? r_spd - s_spd : null
+  const s_hrd = nv(se?.hard_swing_rate)
+  const s_sq = nv(se?.squared_up_per_swing), r_sq = nv(re?.squared_up_per_swing)
+  const d_sq = r_sq != null && s_sq != null ? r_sq - s_sq : null
+  const s_bla = nv(se?.blast_per_swing), r_bla = nv(re?.blast_per_swing)
+  const s_len = nv(se?.swing_length)
+  const s_atk = nv(se?.attack_angle), r_atk = nv(re?.attack_angle)
+  const s_iaa = nv(se?.ideal_attack_angle_rate)
+  const s_tlt = nv(se?.swing_tilt)
+  const s_ev = nv(se?.exit_velocity_avg)
+  const s_la = nv(se?.launch_angle_avg)
+  const s_brl = nv(se?.barrel_batted_rate)
+  const s_hh = nv(se?.hard_hit_pct)
+  const s_pa = nv(se?.pull_air_rate)
+  const s_fb = nv(se?.fb_rate)
+  const s_xhr = nv(se?.xhr)
+  const s_hr = nv(se?.hr_total)
+
+  const effectiveBats = player.bats === 'S' ? (pitcherHand === 'L' ? 'R' : 'L') : (player.bats || 'R')
+  const pitRow = pickPitcherRow(pitcherMap, pitcherId, effectiveBats)
+  const { s_timing, r_timing, s_miss, r_miss } = computeTiming(idKey, nn, pitcherHand, pitRow, timingMap)
+
+  const sa = player.props?.sa
+  const hasOdds = sa && (sa.fanduel != null || sa.caesars != null || sa.betmgm != null)
+  const noSplits = s_spd == null && s_brl == null
+
+  return (
+    <tr>
+      <td colSpan={13} style={{ padding: '10px 12px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+        {noSplits ? (
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>No Statcast/bat-tracking data available for {player.name}.</div>
+        ) : (
+          <>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BAT TRACKING</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+              <StatTile label="BSPD" value={f1(s_spd)} title="Season bat speed" />
+              <StatTile label="R·SPD" value={f1(r_spd)} title="Recent bat speed" />
+              <StatTile label="ΔSPD" value={dlt(d_spd)} title="Recent − season bat speed" />
+              <StatTile label="TIMING" value={pp(s_timing)} title="Season on-time % (pitch-mix weighted vs this pitcher)" />
+              <StatTile label="R·TIMING" value={pp(r_timing)} title="Recent timing" />
+              <StatTile label="MISS" value={f1(s_miss)} title="Season miss distance" />
+              <StatTile label="R·MISS" value={f1(r_miss)} title="Recent miss distance" />
+              <StatTile label="HARDSW" value={pp(s_hrd)} title="Hard swing rate" />
+              <StatTile label="SQ" value={pp(s_sq)} title="Squared-up per swing" />
+              <StatTile label="R·SQ" value={pp(r_sq)} title="Recent squared-up" />
+              <StatTile label="ΔSQ" value={dlt(d_sq, 100)} title="Squared-up delta ×100" />
+              <StatTile label="BLAST" value={pp(s_bla)} title="Blast per swing" />
+              <StatTile label="R·BLA" value={pp(r_bla)} title="Recent blast per swing" />
+              <StatTile label="SWLEN" value={f1(s_len)} title="Swing length" />
+              <StatTile label="ATK°" value={f1(s_atk)} title="Attack angle" />
+              <StatTile label="R·ATK" value={f1(r_atk)} title="Recent attack angle" />
+              <StatTile label="IDLAA" value={pp(s_iaa)} title="Ideal attack angle rate" />
+              <StatTile label="TILT" value={f1(s_tlt)} title="Swing tilt" />
+            </div>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: hasOdds ? 10 : 0 }}>
+              <StatTile label="BRL%" value={ppRaw(s_brl)} title="Barrel batted rate" />
+              <StatTile label="HH%" value={ppRaw(s_hh)} title="Hard hit rate" />
+              <StatTile label="PULLAIR" value={pp(s_pa)} title="Pull air rate" />
+              <StatTile label="FB%" value={pp(s_fb)} title="Flyball rate" />
+              <StatTile label="EV" value={f1(s_ev)} title="Exit velocity" />
+              <StatTile label="LA" value={f1(s_la)} title="Launch angle" />
+              <StatTile label="XHR" value={f1(s_xhr)} title="Expected HR (season)" />
+              <StatTile label="HR" value={s_hr != null ? String(Math.round(s_hr)) : '—'} title="Season HR total" />
+            </div>
+          </>
+        )}
+        {hasOdds && (
+          <>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>ANYTIME HR ODDS</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {(['fanduel', 'caesars', 'betmgm'] as const).map(book => (
+                sa[book] != null && (
+                  <div key={book} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6 }}>
+                    <BookLogo vendor={book} size={13} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{oStr(sa[book])}</span>
+                  </div>
+                )
+              ))}
+            </div>
+          </>
+        )}
+      </td>
+    </tr>
+  )
+}
+
 // ─── batter cross-reference table for one hot pitch type ───────────────────
 // `getRow` is source-agnostic — the caller decides whether it's reading the
 // 14-day pre-aggregated batterPitchMap or the live N-games-computed map.
-function BatterVsPitchTable({ batters, getRow, date }: {
+function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap }: {
   pitchType: string
   batters: LineupPlayer[]
   getRow: (batter: LineupPlayer) => any | null
   date: string
+  pitcherId: number
+  pitcherHand: string
+  splitMap: ReturnType<typeof buildSplitMap>
+  timingMap: ReturnType<typeof buildTimingMap>
+  pitcherMap: ReturnType<typeof buildPitcherMap>
 }) {
   const [sort, setSort] = useState<SortState>(null)
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
   const activeSort = sort ?? { col: 'hard_hit_pct', dir: 'desc' as const }
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const withRows = batters.map(b => ({ batter: b, row: getRow(b) }))
   withRows.sort((a, b) => {
@@ -289,28 +529,53 @@ function BatterVsPitchTable({ batters, getRow, date }: {
           </tr>
         </thead>
         <tbody>
-          {withRows.map(({ batter, row }) => (
-            <tr key={batter.mlb_id} style={{ borderBottom: '1px solid var(--border)', opacity: row ? 1 : 0.45 }}>
-              <td style={{ padding: '5px 8px' }}>
-                <Link
-                  href={`/dugout?date=${date}&highlight=${batter.mlb_id}`}
-                  title={`Open ${batter.name} in The Dugout`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
-                >
-                  <PlayerAvatar headshot={mlbHeadshot(batter.mlb_id)} teamLogo={getTeamLogoUrl(batter.team)} teamAbbr={batter.team} name={batter.name} size={20} />
-                  <span style={{ fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{batter.name}</span>
-                </Link>
-              </td>
-              {COLS.filter(c => c.key !== 'in_play').map(c => (
-                <td key={c.key} style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)', ...(row ? heat(row[c.key], withData.map(x => x[c.key]), c.dir ?? 'hi') : {}) }}>
-                  {!row ? '—' : c.key === 'home_runs' ? int(row[c.key]) : c.key === 'avg_exit_velo' || c.key === 'avg_launch_angle' ? num(row[c.key]) : pct(row[c.key])}
-                </td>
-              ))}
-              <td style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)' }}>{row ? int(row.in_play) : '—'}</td>
-            </tr>
-          ))}
+          {withRows.map(({ batter, row }) => {
+            const isExpanded = expandedId === batter.mlb_id
+            return (
+              <Fragment key={batter.mlb_id}>
+                <tr style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)', opacity: row ? 1 : 0.45 }}>
+                  <td style={{ padding: '5px 8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : batter.mlb_id)}
+                        title={isExpanded ? 'Hide Statcast/HR odds' : 'Show Statcast/bat-tracking + HR odds'}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, flexShrink: 0, border: 'none', background: 'none', color: isExpanded ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 9, padding: 0 }}
+                      >
+                        {isExpanded ? '▾' : '▸'}
+                      </button>
+                      <Link
+                        href={`/dugout?date=${date}&highlight=${batter.mlb_id}`}
+                        title={`Open ${batter.name} in The Dugout`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
+                      >
+                        <PlayerAvatar headshot={mlbHeadshot(batter.mlb_id)} teamLogo={getTeamLogoUrl(batter.team)} teamAbbr={batter.team} name={batter.name} size={20} />
+                        <span style={{ fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{batter.name}</span>
+                      </Link>
+                    </div>
+                  </td>
+                  {COLS.filter(c => c.key !== 'in_play').map(c => (
+                    <td key={c.key} style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)', ...(row ? heat(row[c.key], withData.map(x => x[c.key]), c.dir ?? 'hi') : {}) }}>
+                      {!row ? '—' : c.key === 'home_runs' ? int(row[c.key]) : c.key === 'avg_exit_velo' || c.key === 'avg_launch_angle' ? num(row[c.key]) : pct(row[c.key])}
+                    </td>
+                  ))}
+                  <td style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)' }}>{row ? int(row.in_play) : '—'}</td>
+                </tr>
+                {isExpanded && (
+                  <PlayerStatcastDetail
+                    key={`${batter.mlb_id}-detail`}
+                    player={batter}
+                    pitcherId={pitcherId}
+                    pitcherHand={pitcherHand}
+                    splitMap={splitMap}
+                    timingMap={timingMap}
+                    pitcherMap={pitcherMap}
+                  />
+                )}
+              </Fragment>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -367,6 +632,9 @@ export function PitcherReportClient() {
 
   const pitcherPitchMap = useMemo(() => buildPitcherPitchMap(data?.pitcherPitchRecent ?? []), [data?.pitcherPitchRecent])
   const batterPitchMap = useMemo(() => buildBatterPitchMap(data?.batterPitchRecent ?? []), [data?.batterPitchRecent])
+  const splitMap = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
+  const timingMap = useMemo(() => buildTimingMap(data?.timingSplits ?? []), [data?.timingSplits])
+  const statcastPitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
 
   // 14-day pre-aggregated window (mlb-party) — the default, cheap source.
   const dayWindowRows = useMemo(() => {
@@ -627,6 +895,11 @@ export function PitcherReportClient() {
                               pitchType={pitchType}
                               batters={batters}
                               date={date}
+                              pitcherId={selected.pitcher.id}
+                              pitcherHand={selected.pitcher.hand}
+                              splitMap={splitMap}
+                              timingMap={timingMap}
+                              pitcherMap={statcastPitcherMap}
                               getRow={b => windowMode === 'live'
                                 ? liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null
                                 : batterPitchMap[b.name_norm]?.[pitchType]?.[selected.pitcher.hand] ?? null}
