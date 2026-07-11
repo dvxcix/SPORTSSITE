@@ -452,7 +452,18 @@ export function PitcherReportClient() {
     R: new Set(pinned.filter(p => p.hand === 'R').map(p => p.pitchType)),
     L: new Set(pinned.filter(p => p.hand === 'L').map(p => p.pitchType)),
   }
+  // "Show all" bypasses curation entirely — every pitch/hand combo the
+  // pitcher has thrown at all, full stop. What "we should be able to see
+  // all" actually means: don't make me discover pitches one click at a
+  // time, give me the option to just see everything.
+  const [showAll, setShowAll] = useState(false)
+  useEffect(() => { setShowAll(false) }, [selected?.key, windowMode, liveN])
   const shownPitches = useMemo(() => {
+    if (showAll) {
+      const out: { hand: 'R' | 'L'; pitchType: string; row: any }[] = []
+      for (const hand of ['R', 'L'] as const) for (const row of activeRows[hand]) out.push({ hand, pitchType: row.pitch_type, row })
+      return out
+    }
     const out = [...hotPitches]
     for (const p of pinned) {
       if (out.some(h => h.hand === p.hand && h.pitchType === p.pitchType)) continue
@@ -460,7 +471,7 @@ export function PitcherReportClient() {
       if (row) out.push({ hand: p.hand, pitchType: p.pitchType, row })
     }
     return out
-  }, [hotPitches, pinned, activeRows])
+  }, [hotPitches, pinned, activeRows, showAll])
 
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
@@ -555,13 +566,33 @@ export function PitcherReportClient() {
                 <PitchMixTable title="VS LHB" rows={activeRows.L} hand="L" pinned={pinnedByHand.L} onTogglePin={onTogglePin} />
               </div>
 
-              {/* getting-hit-on-lately cross reference */}
-              {shownPitches.length > 0 && (
+              {/* getting-hit-on-lately cross reference — gated on there being
+                  any pitch data at all, not on shownPitches specifically, so
+                  the "Show all pitches" toggle stays reachable even when no
+                  single pitch clears the auto top-2's 10-pitch threshold. */}
+              {allRows.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', marginBottom: 4 }}>Getting hit on these pitches lately</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
-                    Auto-picked: ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches), top 2 per hand — plus anything you've pinned yourself from the tables above (📌). Opposing lineup's own recent numbers shown against that exact pitch/hand combo, hardest-hit first.
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>
+                      {showAll ? 'Every pitch vs every batter' : 'Getting hit on these pitches lately'}
+                    </div>
+                    <button
+                      onClick={() => setShowAll(v => !v)}
+                      style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${showAll ? 'var(--accent)' : 'var(--border)'}`, background: showAll ? 'var(--accent)' : 'var(--surface)', color: showAll ? 'var(--accent-fg)' : 'var(--text-2)' }}
+                    >
+                      {showAll ? '✓ Showing all pitches' : 'Show all pitches'}
+                    </button>
                   </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
+                    {showAll
+                      ? 'Every pitch this pitcher has thrown vs each hand, matched against the opposing lineup\'s own recent numbers for that exact combo — no curation.'
+                      : 'Auto-picked: ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches), top 2 per hand — plus anything you\'ve pinned yourself from the tables above (📌). Opposing lineup\'s own recent numbers shown against that exact pitch/hand combo, hardest-hit first.'}
+                  </div>
+                  {shownPitches.length === 0 && (
+                    <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 12 }}>
+                      No pitch cleared the 10-pitch auto-pick threshold and nothing's pinned yet — click "Show all pitches" above, or click any row in the tables above to pin it.
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                     {shownPitches.map(({ hand, pitchType, row }) => {
                       const batters = selected.oppLineup.filter(p => {
