@@ -80,16 +80,38 @@ export async function getUserProfile(username: string): Promise<User | null> {
   return data
 }
 
+const POST_WITH_AUTHOR = `*, author:users(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`
+
+// A profile's post list is authored posts UNION what that user reposted —
+// reposting previously had zero visible effect anywhere (it only bumped a
+// counter on the original post), so a user's own reposts never actually
+// showed up on their own profile. Reposts are annotated with reposted_by/
+// repost_created_at and merged in, timeline-sorted by whichever timestamp
+// is relevant (repost time for reposts, post time for original posts).
 export async function getUserPosts(userId: string): Promise<Post[]> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('posts')
-    .select(`*, author:users(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`)
-    .eq('author_id', userId)
-    .eq('visibility', 'public')
-    .order('created_at', { ascending: false })
-    .limit(20)
-  return data ?? []
+  const [{ data: authored }, { data: repostRows }] = await Promise.all([
+    supabase.from('posts')
+      .select(POST_WITH_AUTHOR)
+      .eq('author_id', userId)
+      .eq('visibility', 'public')
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase.from('reposts')
+      .select(`created_at, reposted_by:users!reposts_user_id_fkey(username,display_name,avatar_url), post:posts(${POST_WITH_AUTHOR})`)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ])
+
+  const reposted = ((repostRows ?? []) as any[])
+    .filter(r => r.post && r.post.visibility === 'public')
+    .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
+
+  return [...(authored ?? []), ...reposted]
+    .sort((a: any, b: any) =>
+      new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
+    .slice(0, 20)
 }
 
 export async function getLeaderboard(sport = 'MLB', limit = 50) {

@@ -230,6 +230,17 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
             WebkitMaskImage: useMotionTemplate`radial-gradient(220px circle at ${mouseX}px ${mouseY}px, white, transparent 80%)`,
           }}
         />
+        {post.reposted_by && (
+          <div style={{ padding: '10px 16px 0', position: 'relative', zIndex: 1 }}>
+            <Link
+              href={`/profile/${post.reposted_by.username}`}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}
+            >
+              <Repeat2 size={13} style={{ color: 'var(--green)' }} />
+              {post.reposted_by.display_name || post.reposted_by.username} reposted
+            </Link>
+          </div>
+        )}
         <div style={{ padding: '14px 16px', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Avatar */}

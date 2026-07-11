@@ -36,18 +36,13 @@ export default async function ProfilePage({ params }: Props) {
   const total = wins + losses
   const winPct = total > 0 ? Math.round((wins / total) * 100) : 0
 
-  // Map posts to PostCardClient shape
+  // Map posts to PostCardClient shape. `author` comes straight from the
+  // query now (getUserPosts embeds it per-post) rather than being forced to
+  // this profile's own info — that forcing was wrong for reposts, where the
+  // post's real author is whoever originally posted it, not this profile.
   const postsWithReactions = await attachUserReactions(posts, authUser?.id)
   const mappedPosts = postsWithReactions.map((p: any) => ({
     ...p,
-    author: {
-      username: profile.username,
-      display_name: profile.display_name,
-      avatar_url: profile.avatar_url,
-      is_verified: profile.is_verified,
-      account_type: profile.account_type,
-      pick_record: profile.pick_record,
-    },
     user_bookmarked: false,
   }))
 
@@ -155,7 +150,9 @@ export default async function ProfilePage({ params }: Props) {
             )}
           </div>
         ) : (
-          mappedPosts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)
+          mappedPosts.map((p: any, i: number) => (
+            <PostCardClient key={p.reposted_by ? `repost-${p.id}-${p.reposted_by.username}` : p.id} post={p} index={i} />
+          ))
         )}
       </div>
     </div>

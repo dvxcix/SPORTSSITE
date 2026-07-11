@@ -86,6 +86,14 @@ export interface Post {
   user_reacted?: boolean
   user_bookmarked?: boolean
   user_reposted?: boolean
+  // Present only when this Post object represents someone's REPOST of the
+  // underlying post (as opposed to the original post itself) — set by
+  // getUserPosts/getFeedPosts when merging in rows from `reposts`. The
+  // card renders a "reposted_by reposted" banner above the normal content
+  // when this is set, and timeline ordering uses repost_created_at instead
+  // of created_at.
+  reposted_by?: { username: string; display_name: string | null; avatar_url: string | null } | null
+  repost_created_at?: string | null
 }
 
 export interface Comment {
