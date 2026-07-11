@@ -57,7 +57,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       </div>
 
       <div className="px-4 pb-4">
-        <div className="flex items-end justify-between -mt-8 mb-4">
+        <div className="relative z-10 flex items-end justify-between -mt-8 mb-4">
           <div className="w-16 h-16 rounded-xl bg-zinc-800 border-4 border-zinc-950 flex items-center justify-center text-2xl shadow-lg">
             {group.avatar_url ? <img src={group.avatar_url} alt="" className="w-full h-full object-cover rounded-lg" /> : (group.sport === 'MLB' ? '⚾' : group.sport === 'NFL' ? '🏈' : group.sport === 'NBA' ? '🏀' : group.sport === 'NHL' ? '🏒' : '👥')}
           </div>

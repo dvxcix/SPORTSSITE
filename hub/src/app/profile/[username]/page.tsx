@@ -62,7 +62,7 @@ export default async function ProfilePage({ params }: Props) {
 
       {/* Profile header */}
       <div className="px-4 pb-4">
-        <div className="flex items-end justify-between -mt-12 mb-4">
+        <div className="relative z-10 flex items-end justify-between -mt-12 mb-4">
           <div className="w-24 h-24 rounded-full bg-zinc-700 border-4 border-zinc-950 flex items-center justify-center text-3xl font-black text-white overflow-hidden shadow-xl">
             {profile.avatar_url
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />

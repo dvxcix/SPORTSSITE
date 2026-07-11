@@ -38,7 +38,7 @@ export default async function PageDetailPage({ params }: { params: Promise<{ slu
       </div>
 
       <div className="px-4 pb-4">
-        <div className="flex items-end justify-between -mt-10 mb-4">
+        <div className="relative z-10 flex items-end justify-between -mt-10 mb-4">
           <div className="w-20 h-20 rounded-2xl bg-zinc-800 border-4 border-zinc-950 flex items-center justify-center text-3xl overflow-hidden shadow-xl">
             {page.avatar_url ? <img src={page.avatar_url} alt="" className="w-full h-full object-cover" /> : page.emoji ?? '⭐'}
           </div>
