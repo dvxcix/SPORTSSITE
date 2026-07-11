@@ -16,21 +16,34 @@ function espnTeamLogo(sport: string, abbr: string): string | null {
   return `https://a.espncdn.com/i/teamlogos/${path}/500/${abbr.toLowerCase()}.png`
 }
 
-export default async function PicksPage() {
+export default async function PicksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sport?: string }>
+}) {
+  const { sport: sportParam } = await searchParams
+  const activeSport = sportParam ?? 'All'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: picks } = await supabase
+  // Parlays are picks too (multi-leg instead of single) — filtering to only
+  // post_type 'pick' was silently excluding every parlay post from this page
+  // (they still showed up on the poster's own profile and in live-score
+  // play-by-play, which don't filter by post_type at all).
+  let picksQuery = supabase
     .from('posts')
     .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
-    .eq('post_type', 'pick')
+    .in('post_type', ['pick', 'parlay'])
     .order('created_at', { ascending: false })
     .limit(30)
+  if (activeSport !== 'All') picksQuery = picksQuery.eq('sport', activeSport)
+  const { data: picks } = await picksQuery
 
   const { data: hotPicks } = await supabase
     .from('posts')
     .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
-    .eq('post_type', 'pick')
+    .in('post_type', ['pick', 'parlay'])
     .gte('created_at', new Date(Date.now() - 86400000).toISOString())
     .order('reaction_count', { ascending: false })
     .limit(5)
@@ -120,17 +133,20 @@ export default async function PicksPage() {
 
       {/* Sport filter pills */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 20 }}>
-        {SPORTS.map((s, i) => (
-          <button key={s} style={{
-            padding: '5px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-            background: i === 0 ? 'var(--accent)' : 'var(--surface)',
-            color: i === 0 ? 'var(--accent-fg)' : 'var(--text-3)',
-            border: `1px solid ${i === 0 ? 'var(--accent)' : 'var(--border)'}`,
-            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-          }}>
-            {s}
-          </button>
-        ))}
+        {SPORTS.map(s => {
+          const isActive = s === activeSport
+          return (
+            <Link key={s} href={s === 'All' ? '/picks' : `/picks?sport=${s}`} style={{
+              padding: '5px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+              background: isActive ? 'var(--accent)' : 'var(--surface)',
+              color: isActive ? 'var(--accent-fg)' : 'var(--text-3)',
+              border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
+              whiteSpace: 'nowrap', flexShrink: 0, textDecoration: 'none',
+            }}>
+              {s}
+            </Link>
+          )
+        })}
       </div>
 
       {/* Picks feed */}

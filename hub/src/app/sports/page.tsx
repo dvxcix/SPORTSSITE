@@ -82,10 +82,6 @@ export default async function SportsPage({
     ...activeNonMLB.map(({ key }) => getScoreboard(key, date)),
   ])
 
-  const totalLive =
-    mlbGames.filter(mlbGameIsLive).length +
-    espnResults.flat().filter(g => getGameStatus(g).isLive).length
-
   // 7-day strip centered on selected date
   const stripDates = [-3, -2, -1, 0, 1, 2, 3].map(offset => {
     const d = offsetDate(date, offset)
@@ -104,21 +100,6 @@ export default async function SportsPage({
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px' }}>
-
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', flex: 1 }}>
-          Sports Hub
-          {totalLive > 0 && (
-            <span style={{ marginLeft: 10, fontSize: 11, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,77,106,0.12)', color: 'var(--red)', border: '1px solid rgba(255,77,106,0.25)', verticalAlign: 'middle' }}>
-              {totalLive} LIVE
-            </span>
-          )}
-        </h1>
-        <Link href="/picks" style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 12, fontWeight: 800, textDecoration: 'none', flexShrink: 0 }}>
-          Drop a Pick →
-        </Link>
-      </div>
 
       {/* 7-day date strip */}
       <div style={{ display: 'flex', alignItems: 'stretch', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
