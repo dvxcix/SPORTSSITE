@@ -1,0 +1,71 @@
+{
+  "project_info": {
+    "project_number": "373312229541",
+    "firebase_url": "https://wowonder-messenger-f6dd4.firebaseio.com",
+    "project_id": "wowonder-messenger-f6dd4",
+    "storage_bucket": "wowonder-messenger-f6dd4.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373312229541:android:f300f85cc4bb9836263d4c",
+        "android_client_info": {
+          "package_name": "com.wowonderandroid.messenger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "373312229541-ao737kv28mi0j4eapdodse0r152lscio.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdeXPbr2S8gLGrruhPsDHaFik6hPrVN1g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "373312229541-ao737kv28mi0j4eapdodse0r152lscio.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-5135691635931982~4077881706"
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373312229541:android:761f574f7c7989d8263d4c",
+        "android_client_info": {
+          "package_name": "com.wowondermessenger.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "373312229541-ao737kv28mi0j4eapdodse0r152lscio.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdeXPbr2S8gLGrruhPsDHaFik6hPrVN1g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "373312229541-ao737kv28mi0j4eapdodse0r152lscio.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-5135691635931982~1957332004"
+    }
+  ],
+  "configuration_version": "1"
+}

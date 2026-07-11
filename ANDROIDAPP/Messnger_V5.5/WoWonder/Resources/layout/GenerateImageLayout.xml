@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
+              android:orientation="vertical"
+              android:fitsSystemWindows="true"
+              android:layout_width="match_parent"
+              android:background="@drawable/rounded_dialog"
+              android:layout_height="wrap_content">
+	<!--Head Page -->
+	<LinearLayout
+		android:id="@+id/mainLayout"
+		android:layout_width="match_parent"
+		android:layout_gravity="center_horizontal"
+		android:gravity="center_horizontal"
+		android:layout_height="20dp">
+		<View
+			android:layout_width="80dp" 
+			android:layout_height="4dp"
+			android:layout_gravity="center"
+			android:gravity="center"
+			android:background="@color/gnt_grayLight" />
+	</LinearLayout> 
+	<LinearLayout
+		android:id="@+id/titleLayout"
+		android:layout_width="match_parent"
+		android:orientation="horizontal"
+		android:layout_margin="8dp"
+		android:padding="5dp"
+		android:layout_height="wrap_content">
+		<TextView
+			android:id="@+id/titleText"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:gravity="start|center"
+			android:layout_centerVertical="true" 
+			android:text="@string/Lbl_AiImageGenerator"
+			android:textSize="20sp" />
+		<View
+			android:layout_width="0dp"
+			android:layout_height="1dp"
+			android:layout_weight="1"/>
+		<ImageView
+			android:layout_width="25dp"
+			android:layout_height="25dp"
+			android:padding="5dp"
+			android:id="@+id/iconClose"
+			android:layout_alignParentEnd="true"
+			android:src="@drawable/ic_close" />
+	</LinearLayout>
+	<TextView
+		android:id="@+id/sec_titleText"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content" 
+		android:gravity="start|center"
+		android:layout_margin="8dp"
+		android:textColor="@color/gnt_gray"
+		android:text="@string/Lbl_AiImageGenerator_msg"
+		android:textSize="16sp" />
+	  
+	<EditText
+		android:id="@+id/TextEditText" 
+		android:singleLine="false"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:minHeight="200dp"
+		android:layout_marginTop="8dp"
+		android:background="@drawable/EditTextStyleOne"
+		android:padding="10dp"
+		android:maxLength="5000"
+		android:inputType="textMultiLine"
+		android:hint="@string/Lbl_TypeSomething"
+		android:layout_margin="15dp"
+		android:textColorHint="@color/gnt_gray" 
+		android:textColor="@color/gnt_black"
+		android:scrollbars="vertical"
+		android:textSize="18sp"
+		android:scrollHorizontally="false"
+		android:maxLines="20"
+		android:textAllCaps="false"
+		android:gravity="top|center_vertical" />
+	  
+	<View
+		android:layout_width="match_parent"
+		android:layout_height="30dp"/>
+	 
+	<androidx.appcompat.widget.AppCompatButton
+		android:id="@+id/bntGenerate"
+		style="?android:attr/borderlessButtonStyle"
+		android:layout_width="match_parent"
+		android:layout_height="50dp"
+		android:layout_margin="20dp"
+		android:background="@drawable/round_button_pressed"
+		android:textStyle="bold"
+		android:text="@string/Lbl_Generate"
+		android:textAppearance="?android:attr/textAppearanceSmall"
+		android:textColor="@color/gnt_white"
+		android:textSize="18sp" />
+	 
+	<View
+		android:layout_width="match_parent"
+		android:layout_height="30dp"/>
+
+</LinearLayout> 

@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/brushLayout"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:background="@drawable/rounded_dialog"
+	android:layout_gravity="bottom"
+	android:elevation="100dp"
+	android:orientation="vertical" >
+	 
+	<LinearLayout
+		android:id="@+id/brushMenu"
+		android:layout_width="match_parent"
+		android:layout_height="50dp"
+		android:orientation="horizontal"
+		android:background="@drawable/rounded_dialog"
+		android:backgroundTint="@color/accentLight"
+		android:gravity="center_vertical"
+		android:elevation="50dp" >
+		 
+		<ImageView
+			android:id="@+id/imgCloseBrush"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:padding="8dp" 
+			android:layout_marginHorizontal="15dp"
+			android:src="@drawable/ic_close"
+			android:tint="@color/gnt_black" />
+		
+		<View
+			android:layout_width="wrap_content"
+			android:layout_height="1dp"
+			android:layout_weight="1"/>
+
+		<TextView
+			android:id="@+id/brush_draw"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"  
+			android:gravity="center"
+			android:paddingHorizontal="8dp" 
+			android:paddingVertical="5dp"  
+			android:layout_marginHorizontal="5dp"
+			android:text="@string/Lbl_brush"
+			android:textStyle="bold"
+			android:textColor="@color/accent"  />
+		 
+		<View
+			android:layout_width="wrap_content"
+			android:layout_height="1dp"
+			android:layout_weight="1"/>
+		
+		<de.hdodenhof.circleimageview.CircleImageView
+			android:id="@+id/imgEraser"
+			android:layout_width="32dp"
+			android:layout_height="32dp"  
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:layout_marginHorizontal="10dp"
+			android:src="@drawable/ic_eraser" 
+			android:tint="@color/gnt_black" />
+
+		<ImageView
+			android:id="@+id/imgSaveBrush"
+			android:layout_width="32dp"
+			android:layout_height="32dp"  
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:layout_marginHorizontal="15dp"
+			android:visibility="gone"
+			android:src="@drawable/ic_yes" 
+			android:tint="@color/gnt_black" />
+	</LinearLayout>
+	 
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginVertical="8dp"
+		android:layout_marginHorizontal="10dp">
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="16dp"
+			android:textStyle="bold"
+			android:text="Size"/>
+
+		<androidx.appcompat.widget.AppCompatSeekBar
+			android:id="@+id/brushSize"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:background="@null"
+			android:progress="25"
+			android:padding="7dp"
+			android:layout_marginHorizontal="10dp" 
+			android:thumb="@drawable/custom_thumb" />
+
+	</LinearLayout>
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginVertical="8dp"
+		android:layout_marginHorizontal="10dp">
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="16dp"
+			android:textStyle="bold"
+			android:text="@string/Lbl_Opacity"/>
+
+		<androidx.appcompat.widget.AppCompatSeekBar
+			android:id="@+id/brushOpacity"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:background="@null"
+			android:max="255"
+			android:progress="255"
+			android:padding="7dp"
+			android:layout_marginHorizontal="10dp" 
+			android:thumb="@drawable/custom_thumb" />
+
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginVertical="8dp"
+		android:layout_marginHorizontal="10dp">
+		
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="16dp"
+			android:textStyle="bold"
+			android:text="@string/Lbl_Color"/>
+		
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/rvColorBush"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" 
+			android:layout_marginHorizontal="10dp"
+			android:orientation="horizontal"
+			tools:listitem="@layout/item_color_picker"
+			android:scrollbars="none" />
+
+	</LinearLayout>
+	 
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginVertical="8dp"
+		android:layout_marginHorizontal="10dp">
+		 
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="16dp"
+			android:textStyle="bold"
+			android:text="@string/Lbl_Shape"/>
+		
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/rvMagicBush"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" 
+			android:layout_marginHorizontal="10dp" 
+			android:orientation="horizontal"
+			tools:listitem="@layout/item_magic_brush"
+			android:scrollbars="none" />
+
+	</LinearLayout>
+	 
+</LinearLayout>

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "SportHub Dev",
+      "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
+      "runtimeArgs": ["hub/node_modules/next/dist/bin/next", "dev", "hub"],
+      "autoPort": true,
+      "port": 3000
+    }
+  ]
+}

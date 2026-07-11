@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/bold"
+        android:title="Bold" />
+    <item
+        android:id="@+id/italic"
+        android:title="Italic" />
+    <item
+        android:id="@+id/underline"
+        android:title="Underline" />
+    <item
+        android:id="@+id/strikethrough"
+        android:title="Strikethrough" />
+    <item
+        android:id="@+id/makeHyperlink"
+        android:title="Create Link" />
+</menu>

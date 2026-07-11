@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:id="@+id/main"
+	android:layout_width="match_parent"
+	android:layout_height="70dp"
+	android:clickable="false"
+	android:focusable="false"
+	android:paddingTop="8dp"
+	android:orientation="vertical"
+	android:gravity="center"
+	android:layout_gravity="top"
+	android:background="?attr/selectableItemBackground">
+	
+	<FrameLayout
+		android:id="@+id/ImageLayout"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="15dp"
+		app:layout_constraintStart_toStartOf="parent">
+		 
+		<ImageView
+			android:id="@+id/ImageAvatar"
+			android:scaleType="centerCrop"
+			android:layout_width="52dp"
+			android:layout_height="52dp" 
+			android:focusable="false"
+			android:clickable="false"
+			android:src="@drawable/no_profile_image_circle" />
+	
+		<View
+			android:id="@+id/ImageLastseen"
+			android:layout_width="15dp"
+			android:layout_height="15dp"  
+			android:layout_marginStart="0dp" 
+			android:layout_gravity="bottom|end"
+			android:background="@drawable/icon_offline_vector" />
+		 
+	</FrameLayout>
+
+	<TextView
+		android:id="@+id/Txt_Username"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:ellipsize="end"
+		android:lines="1"
+		android:layout_marginTop="5dp"
+		android:layout_marginStart="12dp"
+		android:drawablePadding="5dp"
+		android:textSize="@dimen/msg_text_primary"
+		android:textStyle="normal"
+		android:clickable="false"
+		android:paddingEnd="10dp"
+		android:focusable="false"
+		android:textFontWeight="600"
+		android:textAlignment="textStart" 
+		app:layout_constraintTop_toTopOf="parent"
+		app:layout_constraintStart_toEndOf="@id/ImageLayout"/>
+
+	<LinearLayout
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="12dp"
+		android:layout_marginEnd="6dp"
+		android:gravity="center_vertical"
+		android:layout_gravity="center_vertical"
+		android:layout_marginTop="5dp"
+		app:layout_constraintStart_toEndOf="@id/ImageLayout"
+		app:layout_constraintTop_toBottomOf="@id/Txt_Username">
+
+		<ImageView
+			android:id="@+id/IconLastMessages"
+			android:visibility="gone"
+			android:src="@drawable/icon_image_vector"
+			android:tint="?attr/colorReact"
+			android:layout_marginEnd="8dp" 
+			android:layout_width="14dp"
+			android:layout_height="14dp" />
+
+		<TextView
+			android:id="@+id/Txt_LastMessages"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:ellipsize="end"
+			android:lines="1"
+			android:textColor="@color/text_color_in_between"
+			android:textSize="@dimen/msg_text_secondary"
+			android:focusable="false"
+			android:paddingEnd="10dp"
+			android:layout_marginEnd="10dp"
+			android:clickable="false"
+			android:textFontWeight="300"
+			android:textAlignment="textStart" />
+		 
+	</LinearLayout>
+	 
+	<TextView
+		android:id="@+id/Txt_timestamp"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:textColor="@color/text_color_in_between"
+		android:textSize="12dp"
+		android:textStyle="normal"
+		android:textFontWeight="600"
+		android:layout_marginTop="5dp"
+		android:layout_marginEnd="15dp"
+		android:focusable="false"
+		android:clickable="false"  
+		app:layout_constraintEnd_toEndOf="parent" />
+	  
+	<LinearLayout
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal" 
+		android:layout_alignParentEnd="true"
+		android:layout_centerVertical="true"
+		android:gravity="center_vertical"
+		android:layout_gravity="center_vertical"
+		android:layout_marginTop="5dp"
+		android:layout_marginEnd="15dp"
+		android:clickable="false"
+		android:focusable="false"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/Txt_timestamp">
+
+		<ImageView
+			android:layout_width="15dp"
+			android:layout_height="15dp"
+			android:id="@+id/IconMute"
+			android:foregroundGravity="center_horizontal"
+			android:gravity="center"
+			android:src="@drawable/icon_mute_vector"
+			android:tint="@color/text_color_in_between"
+			android:layout_marginEnd="7dp"
+			android:visibility="gone"
+			android:clickable="false"
+			android:focusable="false" />
+
+		<ImageView
+			android:layout_width="15dp"
+			android:layout_height="15dp"
+			android:id="@+id/IconPin"
+			android:foregroundGravity="center_horizontal"
+			android:gravity="center"
+			android:src="@drawable/icon_pin_vector"
+			android:tint="@color/text_color_in_between"
+			android:layout_marginEnd="7dp"
+			android:visibility="gone"
+			android:clickable="false"
+			android:focusable="false" />
+
+		<ImageView
+			android:layout_width="18dp"
+			android:layout_height="18dp"
+			android:id="@+id/IconCheckRead"
+			android:foregroundGravity="center_horizontal"
+			android:gravity="center"
+			android:src="@drawable/icon_tick_vector"
+			android:tint="@color/accent"
+			android:layout_marginEnd="3dp"
+			android:visibility="gone"
+			android:clickable="false"
+			android:focusable="false" />
+
+	</LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

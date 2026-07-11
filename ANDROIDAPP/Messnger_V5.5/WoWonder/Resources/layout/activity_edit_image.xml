@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gnt_white"
+    android:orientation="vertical">
+
+    <RelativeLayout
+        android:id="@+id/saveControl"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:animateLayoutChanges="true"
+        android:background="@color/gnt_white"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <ImageView
+            android:id="@+id/ImgExit"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_centerVertical="true"
+			android:layout_marginHorizontal="5dp"
+			android:padding="5dp"
+            android:foreground="@drawable/custom_ripple"
+			android:tint="@color/gnt_black"
+            android:src="@drawable/ic_close" />
+         
+        <ImageView
+	        android:id="@+id/ImgUndo"
+			android:layout_toEndOf="@+id/ImgExit"
+	        android:layout_width="30dp"
+	        android:layout_height="30dp"
+	        android:layout_centerVertical="true"
+	        android:layout_marginHorizontal="5dp"
+	        android:padding="3dp"
+	        android:foreground="@drawable/custom_ripple"
+	        android:tint="@color/gnt_black"
+	        android:src="@drawable/ic_undo" />
+
+         
+        <ImageView
+	        android:id="@+id/ImgRedo"
+	        android:layout_toEndOf="@+id/ImgUndo"
+	        android:layout_width="30dp"
+	        android:layout_height="30dp"
+	        android:layout_centerVertical="true"
+	        android:layout_marginHorizontal="5dp"
+	        android:padding="3dp"
+	        android:foreground="@drawable/custom_ripple"
+	        android:tint="@color/gnt_black"
+	        android:src="@drawable/ic_redo" />
+         
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:text="PHOTO EDITOR"
+            android:textColor="@color/gnt_black"
+            android:textSize="18sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnSave"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/round_button_pressed"
+            android:text="save"
+            android:textColor="@color/gnt_white" />
+    </RelativeLayout>
+
+    <FrameLayout
+        android:id="@+id/rootView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+		android:orientation="vertical"  >
+    
+        <RelativeLayout
+            android:id="@+id/wrap_photo_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp" 
+            android:background="@color/lite_transparent" >
+              
+            <ja.burhanrashid52.photoeditor.PhotoEditorView
+                android:id="@+id/photoEditorView" 
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"/>
+            
+        </RelativeLayout>
+          
+	    <View
+		    android:layout_width="1dp"
+		    android:layout_height="wrap_content"
+		    android:layout_weight="1"/>
+         
+        <include 
+	        android:id="@+id/brushLayout"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="bottom"
+			android:visibility="gone"
+	        layout="@layout/view_tools_brush" />
+            
+        <include 
+	        android:id="@+id/textLayout"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="bottom"
+	        android:visibility="gone"
+	        layout="@layout/view_tools_text" />
+            
+        <include 
+	        android:id="@+id/stickerLayout"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="bottom"
+	        android:visibility="gone"
+	        layout="@layout/view_tools_sticker" />
+             
+        <include 
+	        android:id="@+id/filterLayout"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="bottom"
+	        android:visibility="gone"
+	        layout="@layout/view_tools_filter" />
+             
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvConstraintTools"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/gnt_white"
+			android:layout_gravity="bottom"
+            android:orientation="horizontal"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+          
+    </FrameLayout>
+</LinearLayout>

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:orientation="vertical"
+	android:fitsSystemWindows="true"
+	android:layout_width="match_parent"
+	android:background="@drawable/rounded_dialog"
+	android:layout_height="wrap_content">
+	<!--Head Page -->
+	<RelativeLayout
+		android:id="@+id/mainLayout"
+		android:layout_width="match_parent"
+		android:layout_height="20dp">
+		<View
+			android:layout_width="80dp"
+			android:layout_height="4dp"
+			android:layout_centerInParent="true"
+			android:background="?attr/colorDivider" />
+	</RelativeLayout>
+	<RelativeLayout
+		android:id="@+id/ViewStoryLayout"
+		android:layout_width="match_parent"
+		android:layout_marginEnd="5dp"
+		android:layout_marginStart="5dp"
+		android:layout_marginTop="8dp"
+		android:padding="7dp"
+		android:clickable="true"
+		android:background="?attr/selectableItemBackground"
+		android:gravity="center_vertical"
+		android:layout_height="wrap_content">
+		<TextView
+			android:id="@+id/ViewStoryIcon"
+			android:layout_width="40dp"
+			android:layout_height="wrap_content"
+			android:text="Ic"
+			android:textSize="20sp"
+			android:layout_marginEnd="5dp"
+			android:gravity="center" />
+		<TextView
+			android:id="@+id/ViewStoryText"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_toEndOf="@+id/ViewStoryIcon"
+			android:layout_marginEnd="15dp"
+			android:text="@string/Lbl_ViewStory"
+			android:gravity="start|center"
+			android:layout_centerVertical="true"
+			android:textSize="18sp"
+			android:layout_marginBottom="0dp" />
+	</RelativeLayout>
+	<RelativeLayout
+		android:id="@+id/ResetAvatarLayout"
+		android:layout_width="match_parent"
+		android:layout_marginEnd="5dp"
+		android:layout_marginStart="5dp"
+		android:layout_marginTop="8dp"
+		android:padding="7dp"
+		android:clickable="true"
+		android:background="?attr/selectableItemBackground"
+		android:gravity="center_vertical"
+		android:layout_height="wrap_content">
+		<TextView
+			android:id="@+id/ResetAvatarIcon"
+			android:layout_width="40dp"
+			android:layout_height="wrap_content"
+			android:text="Ic"
+			android:textSize="20sp"
+			android:layout_marginEnd="5dp"
+			android:gravity="center" />
+		<TextView
+			android:id="@+id/ResetAvatarText"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_toEndOf="@+id/ResetAvatarIcon"
+			android:layout_marginEnd="15dp"
+			android:text="@string/Lbl_ResetAvatar"
+			android:gravity="start|center"
+			android:layout_centerVertical="true"
+			android:textSize="18sp"
+			android:layout_marginBottom="0dp" />
+	</RelativeLayout>
+	<RelativeLayout
+		android:id="@+id/SelectAvatarLayout"
+		android:layout_width="match_parent"
+		android:layout_marginEnd="5dp"
+		android:layout_marginStart="5dp"
+		android:layout_marginTop="8dp"
+		android:padding="7dp"
+		android:clickable="true"
+		android:background="?attr/selectableItemBackground"
+		android:gravity="center_vertical"
+		android:layout_height="wrap_content">
+		<TextView
+			android:id="@+id/SelectAvatarIcon"
+			android:layout_width="40dp"
+			android:layout_height="wrap_content"
+			android:text="Ic"
+			android:textSize="20sp"
+			android:layout_marginEnd="5dp"
+			android:gravity="center" />
+		<TextView
+			android:id="@+id/SelectAvatarText"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_toEndOf="@+id/SelectAvatarIcon"
+			android:layout_marginEnd="15dp"
+			android:text="@string/Lbl_SelectAvatar"
+			android:gravity="start|center"
+			android:layout_centerVertical="true"
+			android:textSize="18sp"
+			android:layout_marginBottom="0dp" />
+	</RelativeLayout>
+	<RelativeLayout
+		android:id="@+id/ViewAvatarLayout"
+		android:layout_width="match_parent"
+		android:layout_marginEnd="5dp"
+		android:layout_marginStart="5dp"
+		android:layout_marginTop="8dp"
+		android:padding="7dp"
+		android:clickable="true"
+		android:background="?attr/selectableItemBackground"
+		android:gravity="center_vertical"
+		android:layout_height="wrap_content">
+		<TextView
+			android:id="@+id/ViewAvatarIcon"
+			android:layout_width="40dp"
+			android:layout_height="wrap_content"
+			android:text="Ic"
+			android:textSize="20sp"
+			android:layout_marginEnd="5dp"
+			android:gravity="center" />
+		<TextView
+			android:id="@+id/ViewAvatarText"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_toEndOf="@+id/ViewAvatarIcon"
+			android:layout_marginEnd="15dp"
+			android:text="@string/Lbl_ViewAvatar"
+			android:gravity="start|center"
+			android:layout_centerVertical="true"
+			android:textSize="18sp"
+			android:layout_marginBottom="0dp" />
+	</RelativeLayout>
+
+	<View
+		android:layout_width="match_parent"
+		android:layout_height="?android:attr/actionBarSize"/>
+</LinearLayout>

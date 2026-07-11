@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_margin="5dp"
+              android:gravity="center" >
+     
+	<TextView
+		android:id="@+id/txt_Font"
+		android:layout_width="wrap_content"
+		android:layout_height="45dp"
+		android:text="Henny Penny"
+		android:gravity="center"
+		android:textSize="16sp"
+		android:background="@drawable/round_button_outline"
+		android:padding="10dp"
+		android:textColor="#4a4a4a" />
+
+</LinearLayout>

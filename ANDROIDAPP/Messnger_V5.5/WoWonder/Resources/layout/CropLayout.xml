@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/cropLayout"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/rounded_dialog"
+	android:elevation="100dp"
+	android:orientation="vertical">
+
+	<LinearLayout
+		android:id="@+id/CropMenu"
+		android:layout_width="match_parent"
+		android:layout_height="50dp"
+		android:orientation="horizontal"
+		android:background="@drawable/rounded_dialog"
+		android:backgroundTint="@color/accentLight"
+		android:gravity="center_vertical"
+		android:elevation="50dp">
+
+		<ImageView
+			android:id="@+id/imgCloseCrop"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:padding="8dp"
+			android:layout_marginHorizontal="15dp"
+			android:src="@drawable/ic_close"
+			android:tint="@color/gnt_black" />
+
+		<View
+			android:layout_width="wrap_content"
+			android:layout_height="1dp"
+			android:layout_weight="1"/>
+
+		<TextView
+			android:id="@+id/crop_draw"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:gravity="center"
+			android:paddingHorizontal="8dp"
+			android:paddingVertical="5dp"
+			android:layout_marginHorizontal="5dp"
+			android:text="@string/Lbl_Crop"
+			android:textStyle="bold"
+			android:textColor="@color/accent"  />
+		 
+		<View
+			android:layout_width="wrap_content"
+			android:layout_height="1dp"
+			android:layout_weight="1"/>
+
+		<ImageView
+			android:id="@+id/imgSaveCrop"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:layout_marginHorizontal="15dp"
+			android:src="@drawable/ic_yes"
+			android:tint="@color/gnt_black" />
+	</LinearLayout>
+
+	<LinearLayout
+		android:id="@+id/CropOption"
+		android:layout_width="match_parent"
+		android:layout_height="50dp"
+		android:orientation="horizontal"  
+		android:gravity="center"
+		android:elevation="50dp">
+
+		<ImageView
+			android:id="@+id/img_h_flip"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:padding="5dp"
+			android:visibility="gone"
+			android:layout_marginHorizontal="20dp"
+			android:src="@drawable/ic_h_flip"
+			android:tint="@color/gnt_black" />
+		 
+		<ImageView
+			android:id="@+id/img_rotate"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:clickable="true"
+			android:foreground="@drawable/custom_ripple"
+			android:padding="5dp" 
+			android:layout_marginHorizontal="20dp"
+			android:src="@drawable/ic_rotate"  />
+		  
+		<ImageView
+			android:id="@+id/img_v_flip"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:clickable="true"
+			android:padding="5dp"
+			android:visibility="gone"
+			android:foreground="@drawable/custom_ripple"
+			android:layout_marginHorizontal="20dp"
+			android:src="@drawable/ic_v_flip"
+			android:tint="@color/gnt_black" />
+	</LinearLayout>
+
+	<RelativeLayout
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:orientation="vertical">
+		<com.isseiaoki.simplecropview.CropImageView
+			android:id="@+id/crop_view" 
+			android:layout_width="match_parent"
+			android:layout_height="match_parent" 
+			android:padding="16dp"
+			android:layout_marginBottom="100dp"
+			app:scv_background_color="@color/lite_transparent"
+			app:scv_crop_mode="fit_image"
+			app:scv_frame_color="@color/accent"
+			app:scv_frame_stroke_weight="1dp"
+			app:scv_guide_color="@color/accent"
+			app:scv_guide_show_mode="show_always"
+			app:scv_guide_stroke_weight="1dp"
+			app:scv_handle_color="@color/accent"
+			app:scv_handle_show_mode="show_always"
+			app:scv_handle_size="10dp"
+			app:scv_min_frame_size="100dp"
+			app:scv_overlay_color="#aa1c1c1c"
+			app:scv_touch_padding="8dp" />
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/rvCropView"
+			android:layout_width="match_parent"
+			android:layout_height="100dp"
+			android:background="@color/gnt_white"
+			android:layout_gravity="bottom"
+			android:orientation="horizontal"
+			android:scrollbars="none"
+			android:layout_alignParentBottom="true"
+			android:layout_centerHorizontal="true"/>
+			 
+	</RelativeLayout> 
+</LinearLayout> 

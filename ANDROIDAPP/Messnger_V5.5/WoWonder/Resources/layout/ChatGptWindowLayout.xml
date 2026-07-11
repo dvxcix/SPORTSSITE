@@ -1,0 +1,205 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:id="@+id/rootChatWindowView"
+	android:orientation="vertical"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="?attr/colorFill">
+	<androidx.appcompat.widget.Toolbar
+		android:id="@+id/toolbar"
+		android:layout_width="match_parent"
+		android:layout_height="62dp"
+		android:paddingBottom="4dp"
+		android:paddingTop="0dp"
+		app:titleMarginStart="0dp"
+		android:background="@android:color/transparent"
+		app:titleTextColor="@color/gnt_white"
+		app:contentInsetLeft="0dp"
+		app:contentInsetStart="0dp"
+		app:contentInsetStartWithNavigation="0dp"
+		android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar">
+		<RelativeLayout
+			android:padding="1dp"
+			android:layout_marginTop="3dp"
+			android:layout_marginBottom="3dp"
+			android:layout_marginStart="0dp"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+			<ImageView
+				android:id="@+id/BackButton"
+				android:layout_width="24dp"
+				android:layout_height="24dp"
+				android:layout_marginStart="10dp"
+				android:rotation="180"
+				android:padding="3dp"
+				android:tint="?attr/colorAccent"
+				android:layout_centerVertical="true"
+				android:layout_gravity="center_vertical"
+				android:src="@drawable/icon_next_vector" />
+			<de.hdodenhof.circleimageview.CircleImageView
+				android:id="@+id/userProfileImage"
+				android:layout_marginStart="42dp"
+				android:layout_width="44dp"
+				android:layout_height="44dp"
+				app:civ_border_width="1dp"
+				android:layout_centerVertical="true"
+				app:civ_border_color="#10A37F"
+				android:padding="0dp"
+				android:src="@drawable/icon_chatgpt_vector" />
+			<TextView
+				android:id="@+id/Txt_Username"
+				android:textStyle="bold"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginStart="10dp"
+				android:layout_marginTop="3.5dp"
+				android:layout_toEndOf="@id/userProfileImage"
+				android:layout_gravity="start|center"
+				android:gravity="start|center"
+				android:layout_centerVertical="true"
+				android:textSize="17sp" />			
+		</RelativeLayout>
+	</androidx.appcompat.widget.Toolbar>
+	<LinearLayout
+		android:id="@+id/bodyListChatLayout"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:orientation="vertical"
+		android:background="#F1F1F2">
+		<FrameLayout
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1"
+			android:layout_marginTop="0dp" >
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/recyler"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:scrollbars="none"
+				app:stackFromEnd="true"
+				android:layoutDirection="ltr"/>
+			
+			<com.google.android.material.floatingactionbutton.FloatingActionButton
+				style="@style/Widget.MaterialComponents.FloatingActionButton"
+				android:id="@+id/fab_scroll"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_gravity="end|bottom"
+				android:clickable="true"
+				app:elevation="3dp"
+				android:visibility="gone"
+				app:pressedTranslationZ="12dp"
+				app:rippleColor="@color/accent"
+				app:tint="@color/gnt_white"
+				android:src="@drawable/icon_expand_vector"
+				android:layout_alignParentEnd="true"
+				android:layout_alignParentBottom="true"
+				android:layout_marginEnd="20dp"
+				app:backgroundTint="@color/accent"
+				app:fabSize="mini"
+				android:layout_marginBottom="20dp" />
+			
+		</FrameLayout>
+		<LinearLayout
+			android:id="@+id/BoxButtonLayout"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:background="?attr/colorFill">
+			
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/RecyclerSuggestions"
+				android:layout_width="match_parent"
+				android:layout_height="60dp"
+				android:scrollbars="none"
+				android:layout_marginBottom="5dp"
+				android:layout_alignParentBottom="true"
+				android:visibility="gone"
+				android:scrollingCache="true" />
+			
+			<FrameLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:background="?attr/colorFill">
+				<LinearLayout
+					android:layout_width="match_parent"
+					android:layout_height="match_parent"
+					android:weightSum="11"
+					android:layout_marginTop="0dp"
+					android:paddingEnd="10dp"
+					android:paddingStart="10dp"
+					android:orientation="horizontal">
+					
+					<LinearLayout
+						android:id="@+id/LayoutEditText"
+						android:background="@drawable/EditTextStyleChat"
+						android:backgroundTint="?attr/colorBubble"
+						android:layout_weight="10"
+						android:orientation="horizontal"
+						android:layout_marginStart="7dp"
+						android:layout_marginTop="7dp"
+						android:layout_marginBottom="0dp"
+						android:layout_height="wrap_content"
+						android:layout_width="wrap_content">
+						<ImageView
+							android:id="@+id/emojiicon"
+							android:layout_width="24dp"
+							android:layout_height="24dp"
+							android:background="?attr/selectableItemBackgroundBorderless"
+							android:clickable="true"
+							android:padding="0dp"
+							android:layout_gravity="bottom|center"
+							android:scaleType="fitCenter"
+							android:layout_marginBottom="8dp"
+							android:tint="?attr/colorReact"
+							android:src="@drawable/icon_smile_vector" />
+						<com.aghajari.emojiview.view.AXEmojiEditText
+							android:id="@+id/EmojiconEditText5"
+							android:layout_width="0dp"
+							android:layout_height="wrap_content"
+							android:minHeight="40dp"
+							android:maxHeight="100dp"
+							android:layout_weight="1"
+							android:textColorHint="#888888"
+							android:layout_marginStart="3dp"
+							android:paddingEnd="5dp"
+							android:paddingStart="7dp"
+							android:textSize="14dp"
+							android:maxLines="4"
+							android:layout_gravity="bottom|center"
+							android:inputType="textAutoCorrect|textCapSentences|textMultiLine"
+							android:background="@android:color/transparent"
+							android:scrollbars="vertical"
+							android:hint="@string/Lbl_Write_your_message"
+							android:imeOptions="normal"
+							android:privateImeOptions="bold"/>
+						
+						<ImageView
+							android:id="@+id/sendButton"
+							android:layout_width="24dp"
+							android:layout_height="24dp"
+							android:background="?attr/selectableItemBackgroundBorderless"
+							android:clickable="true"
+							android:padding="1dp"
+							android:layout_marginStart="3dp"
+							android:layout_marginBottom="8dp"
+							android:layout_gravity="bottom|center"
+							android:scaleType="fitCenter"
+							android:visibility="gone"
+							android:tint="?attr/colorAccent"
+							android:src="@drawable/icon_send_vector" />					
+					</LinearLayout>
+				</LinearLayout>
+				
+			</FrameLayout>
+		
+			<View
+				android:layout_width="match_parent"
+				android:layout_height="10dp"/>
+		</LinearLayout>
+		
+
+	</LinearLayout>
+</LinearLayout>
