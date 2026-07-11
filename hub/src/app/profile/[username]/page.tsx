@@ -16,9 +16,11 @@ export default async function ProfilePage({ params }: Props) {
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
-  const [posts, { data: { user: authUser } }] = await Promise.all([
+  const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }] = await Promise.all([
     getUserPosts(profile.id),
     supabase.auth.getUser(),
+    supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id).eq('visibility', 'public'),
+    supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
   ])
 
   const isOwnProfile = authUser?.id === profile.id
@@ -120,6 +122,8 @@ export default async function ProfilePage({ params }: Props) {
 
           {/* Stats */}
           <ProfileStats stats={[
+            { value: String(postsCount ?? 0), label: 'Posts' },
+            { value: String(repostsCount ?? 0), label: 'Reposts' },
             { value: String(profile.following_count ?? 0), label: 'Following' },
             { value: String(profile.follower_count ?? 0), label: 'Followers' },
             ...(total > 0 ? [

@@ -9,7 +9,7 @@ const statVariants = {
 
 export function ProfileStats({ stats }: { stats: { value: string; label: string; accent?: boolean }[] }) {
   return (
-    <div className="flex gap-6 pt-2">
+    <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2">
       {stats.map((s, i) => (
         <motion.div key={s.label} custom={i} initial="hidden" animate="show" variants={statVariants}>
           <p className={`font-black text-lg leading-none ${s.accent ? 'text-[var(--accent)]' : 'text-white'}`}>{s.value}</p>
