@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair
 } from 'lucide-react'
+import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
@@ -17,7 +19,7 @@ const nav = [
   { href: '/explore',     icon: Compass,       label: 'Explore' },
   { href: '/search',      icon: Search,        label: 'Search' },
   { href: '/picks',       icon: TrendingUp,    label: 'Picks' },
-  { href: '/pro',         icon: Sparkles,      label: 'Go Pro' },
+  { href: '/pro',         icon: Sparkles,      label: 'Go Pro', flagKey: 'feature_pro_plan' },
   { href: '/messages',    icon: MessageCircle, label: 'Messages' },
   { href: '/notifications',icon: Bell,         label: 'Notifications' },
   null, // divider
@@ -31,11 +33,11 @@ const nav = [
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
   null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
-  { href: '/pages',       icon: LayoutGrid,    label: 'Pages' },
+  { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events' },
-  { href: '/blog',        icon: BookOpen,      label: 'Blog' },
-  { href: '/forum',       icon: MessageSquare, label: 'Forum' },
-  { href: '/marketplace', icon: ShoppingBag,   label: 'Marketplace' },
+  { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
+  { href: '/forum',       icon: MessageSquare, label: 'Forum', flagKey: 'feature_forum' },
+  { href: '/marketplace', icon: ShoppingBag,   label: 'Marketplace', flagKey: 'feature_marketplace' },
   { href: '/channels',    icon: Zap,           label: 'Channels' },
   null,
   { href: '/leaderboard', icon: Trophy,        label: 'Leaderboard' },
@@ -45,6 +47,21 @@ const nav = [
 
 export function Sidebar() {
   const path = usePathname()
+  // Beta launch default: assume the gated sections are off until the real
+  // flags load, so testers don't see items flash on then disappear — matches
+  // the site_settings rows we ship disabled by default.
+  const [flags, setFlags] = useState<Record<string, boolean>>({
+    feature_blog: false, feature_forum: false, feature_marketplace: false,
+    feature_pages: false, feature_pro_plan: false,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    fetchFeatureFlagsClient().then(f => { if (!cancelled) setFlags(f) })
+    return () => { cancelled = true }
+  }, [])
+
+  const visibleNav = nav.filter(item => !item || !('flagKey' in item) || !item.flagKey || flags[item.flagKey] !== false)
 
   function active(href: string) {
     if (href === '/feed') return path === '/feed'
@@ -84,7 +101,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {nav.map((item, i) => {
+        {visibleNav.map((item, i) => {
           if (item === null) {
             return <div key={`div-${i}`} style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
           }
