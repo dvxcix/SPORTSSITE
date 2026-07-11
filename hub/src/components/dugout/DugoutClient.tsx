@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BookLogo } from '@/components/BookLogo'
+import { InfoTooltip } from '@/components/InfoTooltip'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -689,7 +690,6 @@ function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }
   const active = !!sortKey && sortState?.col === sortKey
   return (
     <th
-      title={title ?? (typeof label === 'string' ? label : undefined)}
       onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}
       style={{
         ...STH,
@@ -698,7 +698,9 @@ function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }
         color: active ? 'var(--accent)' : 'var(--text-2)',
       }}
     >
-      {label}{active ? (sortState!.dir === 'desc' ? '▼' : '▲') : ''}
+      <InfoTooltip content={title ?? ''}>
+        <span>{label}{active ? (sortState!.dir === 'desc' ? '▼' : '▲') : ''}</span>
+      </InfoTooltip>
     </th>
   )
 }
@@ -1736,11 +1738,11 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
             {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
             {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
-            {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price (manual)', 44)}
+            {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44)}
             {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36)}
-            {H('Laser', 'Laser (manual)', 50)}
-            {H('Moon', 'Moon (manual)', 50)}
-            {H('1stPA', '1st Plate Appearance HR (manual)', 50)}
+            {H('Laser', 'Laser market price', 50)}
+            {H('Moon', 'Moonshot market price', 50)}
+            {H('1stPA', '1st Plate Appearance HR price', 50)}
             {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36)}
             {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi')}
             {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
@@ -1753,13 +1755,13 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
             {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
             {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
-            {H('HR÷C1', 'Anytime HR ÷ cheapest "combine for HR" price (manual)', 40)}
-            {H('HR÷C2', 'Anytime HR ÷ cheapest "combine for 2+ HR" price (manual)', 40)}
+            {H('HR÷C1', 'Anytime HR ÷ cheapest "combine for HR" price', 40)}
+            {H('HR÷C2', 'Anytime HR ÷ cheapest "combine for 2+ HR" price', 40)}
             <th style={SDIV_H} />
-            {H('paper', 'Statcast z-score composite', 46, 'paper')}
-            {H('bk·rk', 'Book rank (SA FD)', 30, 'bk_rk')}
-            {H('pp·rk', 'Paper rank', 30, 'pp_rk')}
-            {H('mm', 'bk·rk − pp·rk', 30, 'mm')}
+            {H('paper', 'Composite Statcast score', 46, 'paper')}
+            {H('bk·rk', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
+            {H('pp·rk', 'Statcast rank', 30, 'pp_rk')}
+            {H('mm', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
             <th style={SDIV_H} />
             {H('BSpd', 'Season bat speed', 38, 's_spd')}
             {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
@@ -2069,7 +2071,7 @@ export function DugoutClient({ date }: { date: string }) {
       )}
 
       <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
-        Manual-only columns (Laser, Moon, 1stPA, HRR, TB, Combos) always show — · Timing weighted by pitcher pitch arsenal · paper = z-scored Statcast within game · mm = bk·rk − pp·rk
+        Hover any column header for details.
       </div>
 
       {showHrBoard && (
