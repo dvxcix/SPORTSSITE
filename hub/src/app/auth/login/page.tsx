@@ -5,6 +5,12 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  whop_no_access: "That Whop account doesn't have an active subscription for SlipSurge access. Check your subscription on Whop and try again.",
+  whop_auth_failed: 'Whop sign-in failed. Please try again.',
+  auth_failed: 'Sign-in failed. Please try again.',
+}
+
 function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,6 +19,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/feed'
+  const oauthError = searchParams.get('error')
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -31,6 +38,10 @@ function LoginForm() {
       provider: 'google',
       options: { redirectTo: `${location.origin}/auth/callback?next=${next}` },
     })
+  }
+
+  function handleWhop() {
+    location.href = `/auth/whop/login?next=${encodeURIComponent(next)}`
   }
 
   return (
@@ -107,6 +118,26 @@ function LoginForm() {
           </svg>
           Continue with Google
         </button>
+
+        {/* Whop */}
+        <button onClick={handleWhop} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          padding: '11px 20px', borderRadius: 10,
+          background: 'var(--surface-2)', border: '1px solid var(--border-2)',
+          fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
+          cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-3)')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-2)')}>
+          <img src="https://whop.com/apple-touch-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
+          Continue with Whop
+        </button>
+
+        {oauthError && OAUTH_ERROR_MESSAGES[oauthError] && (
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)', marginBottom: 20 }}>
+            {OAUTH_ERROR_MESSAGES[oauthError]}
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />

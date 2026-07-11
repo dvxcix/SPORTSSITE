@@ -18,6 +18,11 @@ export interface User {
   twitter_handle?: string
   location?: string
   created_at: string
+  // Already present on the DB table (pre-existing, unused until the Whop
+  // OAuth bridge) — not new columns, just newly reflected here.
+  whop_user_id?: string
+  whop_membership_id?: string
+  membership_expires_at?: string
 }
 
 export interface Post {
