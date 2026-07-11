@@ -1,0 +1,302 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   SLIPSURGE DESIGN SYSTEM
+   Brand: electric lime on deep black
+   Optimised for web · desktop app · mobile webview
+───────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds */
+  --bg:          #06070A;
+  --surface:     #0C0E13;
+  --surface-2:   #121519;
+  --surface-3:   #191D25;
+  --surface-4:   #20242F;
+
+  /* Borders */
+  --border:      #1B1E28;
+  --border-2:    #252936;
+  --border-3:    #333849;
+
+  /* Brand accent — electric lime */
+  --accent:      #B4FF4D;
+  --accent-dim:  rgba(180,255,77,0.10);
+  --accent-glow: rgba(180,255,77,0.20);
+  --accent-fg:   #0B1600;    /* text on filled accent buttons */
+
+  /* Text */
+  --text-1:  #F0F2F8;
+  --text-2:  #8891A8;
+  --text-3:  #484F64;
+  --text-4:  #2E3347;
+
+  /* Status colours */
+  --red:     #FF4D6A;
+  --red-dim: rgba(255,77,106,0.12);
+  --green:   #2ED573;
+  --green-dim:rgba(46,213,115,0.12);
+  --blue:    #4D9EFF;
+  --blue-dim:rgba(77,158,255,0.12);
+  --gold:    #FFB84D;
+  --gold-dim:rgba(255,184,77,0.12);
+  --purple:  #A855F7;
+  --purple-dim:rgba(168,85,247,0.12);
+
+  /* Layout */
+  --sidebar-w: 220px;
+  --topbar-h:  52px;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow:    0 4px 16px rgba(0,0,0,0.6);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.7);
+}
+
+/* ── Reset & base ───────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  min-height: 100%;
+}
+
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: none; }
+button { cursor: pointer; }
+img { max-width: 100%; }
+
+/* ── Scrollbar ──────────────────────────────── */
+::-webkit-scrollbar         { width: 3px; height: 3px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: var(--border-3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+
+/* ── Selection ──────────────────────────────── */
+::selection { background: var(--accent-dim); color: var(--accent); }
+
+/* ── Focus ring ─────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ── Utility classes (not in Tailwind v4 by default) ── */
+.ss-surface   { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.ss-surface-2 { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.ss-card      { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 150ms; }
+.ss-card:hover { border-color: var(--border-2); }
+
+.ss-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 700; line-height: 1;
+  border: none; transition: all 150ms;
+}
+.ss-btn-accent {
+  background: var(--accent); color: var(--accent-fg);
+}
+.ss-btn-accent:hover { background: #C8FF6A; }
+.ss-btn-ghost {
+  background: transparent; color: var(--text-2);
+  border: 1px solid var(--border-2);
+}
+.ss-btn-ghost:hover { background: var(--surface-3); color: var(--text-1); border-color: var(--border-3); }
+
+.ss-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 13px;
+  font-size: 13.5px;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.ss-input::placeholder { color: var(--text-3); }
+.ss-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* Badge / pill */
+.ss-pill {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.02em;
+}
+.ss-pill-accent  { background: var(--accent-dim); color: var(--accent); }
+.ss-pill-red     { background: var(--red-dim);    color: var(--red); }
+.ss-pill-gold    { background: var(--gold-dim);   color: var(--gold); }
+.ss-pill-blue    { background: var(--blue-dim);   color: var(--blue); }
+.ss-pill-green   { background: var(--green-dim);  color: var(--green); }
+.ss-pill-purple  { background: var(--purple-dim); color: var(--purple); }
+
+/* ── Avatar sizes ───────────────────────────── */
+.avatar-xs { width: 24px; height: 24px; border-radius: 50%; overflow: hidden; }
+.avatar-sm { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; }
+.avatar-md { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; }
+.avatar-lg { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; }
+.avatar-xl { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; }
+.avatar-2xl { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; }
+
+/* ── Story gradient ring ────────────────────── */
+.story-ring {
+  background: linear-gradient(135deg, var(--accent) 0%, #00BFFF 60%, var(--purple) 100%);
+  padding: 2px; border-radius: 50%;
+}
+.story-ring-inner {
+  background: var(--bg); border-radius: 50%; overflow: hidden;
+}
+
+/* ── Accent glow effect ─────────────────────── */
+.glow-accent { box-shadow: 0 0 20px var(--accent-glow); }
+
+/* ── Verified checkmark ─────────────────────── */
+.verified-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-fg);
+  font-size: 8px; font-weight: 900; flex-shrink: 0;
+}
+
+/* ── Live pulse ─────────────────────────────── */
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red); flex-shrink: 0;
+  animation: pulse-live 1.4s ease-in-out infinite;
+}
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ── Skeleton loader ────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes skeleton-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Fade-in animation ──────────────────────── */
+.fade-in {
+  animation: fadeIn 200ms ease forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Mobile safe areas (iOS/Android) ───────── */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top    { padding-top:    env(safe-area-inset-top); }
+
+/* ── Sidebar nav item ───────────────────────── */
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  font-size: 13.5px; font-weight: 600; color: var(--text-2);
+  transition: all 130ms; user-select: none; cursor: pointer;
+  border: none; background: transparent; width: 100%;
+}
+.nav-item:hover {
+  background: var(--surface-3); color: var(--text-1);
+}
+.nav-item.active {
+  background: var(--accent-dim); color: var(--accent);
+}
+.nav-item .nav-badge {
+  margin-left: auto; font-size: 10px; font-weight: 800;
+  background: var(--red); color: #fff;
+  padding: 1px 5px; border-radius: 99px; min-width: 18px; text-align: center;
+}
+
+/* ── Post action button ─────────────────────── */
+.post-action {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: var(--radius-xs);
+  font-size: 12px; font-weight: 600; color: var(--text-3);
+  background: transparent; border: none;
+  transition: all 130ms;
+}
+.post-action:hover { background: var(--surface-3); color: var(--text-2); }
+.post-action.active-like  { color: var(--red); }
+.post-action.active-book  { color: var(--gold); }
+.post-action.active-share { color: var(--blue); }
+
+/* ── Dropdown ───────────────────────────────── */
+.ss-dropdown {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 50;
+}
+.ss-dropdown-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 14px; font-size: 13px; font-weight: 500;
+  color: var(--text-2); cursor: pointer; border: none;
+  background: transparent; width: 100%; text-align: left;
+  transition: all 100ms;
+}
+.ss-dropdown-item:hover { background: var(--surface-3); color: var(--text-1); }
+.ss-dropdown-item.danger { color: var(--red); }
+.ss-dropdown-item.danger:hover { background: var(--red-dim); }
+
+/* ── Tab bar ────────────────────────────────── */
+.tab-bar {
+  display: flex; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 3px; gap: 2px;
+}
+.tab-item {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 7px; border-radius: var(--radius-xs);
+  font-size: 12px; font-weight: 700; color: var(--text-3);
+  transition: all 130ms; cursor: pointer; border: none; background: transparent;
+}
+.tab-item.active { background: var(--surface-3); color: var(--text-1); }
+.tab-item:hover:not(.active) { color: var(--text-2); }
+
+/* ── Divider ────────────────────────────────── */
+.ss-divider { height: 1px; background: var(--border); margin: 0; }
+
+/* ── Sport tag ──────────────────────────────── */
+.sport-tag {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.03em;
+  background: var(--blue-dim); color: var(--blue);
+  cursor: pointer; transition: background 130ms;
+}
+.sport-tag:hover { background: var(--blue); color: #fff; }
+
+/* ── Pick card colours ──────────────────────── */
+.pick-win  { border-color: rgba(46,213,115,0.25); background: rgba(46,213,115,0.05); }
+.pick-loss { border-color: rgba(255,77,106,0.25); background: rgba(255,77,106,0.05); }
+.pick-push { border-color: rgba(255,184,77,0.15); background: rgba(255,184,77,0.05); }
+.pick-pending { border-color: var(--border-2); background: var(--surface-3); }
+
+/* ── Mobile nav height compensation ────────── */
+@media (max-width: 1023px) {
+  .main-content-pad { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
