@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
-import { MobileNav } from './MobileNav'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -23,13 +22,12 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex-1 min-w-0 flex flex-col pb-20 lg:pb-0">
+      <div className="flex-1 min-w-0 flex flex-col">
         <TopBar />
         <main className="flex-1 min-w-0">
           {children}
         </main>
       </div>
-      <MobileNav />
     </div>
   )
 }

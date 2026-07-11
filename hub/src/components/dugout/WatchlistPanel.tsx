@@ -123,12 +123,7 @@ export function WatchlistButton() {
   return (
     <>
       <style>{`
-        .wl-fab { position: fixed; right: 20px; bottom: 20px; z-index: 50; }
-        @media (max-width: 1023.98px) {
-          /* Clear the fixed mobile bottom nav (~58px + safe area) instead of
-             overlapping its rightmost tab. */
-          .wl-fab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
-        }
+        .wl-fab { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
       `}</style>
       <button
         className="wl-fab"

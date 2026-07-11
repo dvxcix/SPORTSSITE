@@ -39,9 +39,12 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [showLikers, setShowLikers] = useState(false)
   const [likers, setLikers] = useState<{ username: string; display_name?: string; avatar_url?: string }[] | null>(null)
   const [showComments, setShowComments] = useState(false)
-  const [comments, setComments] = useState<{ id: string; content: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string }[]>([])
+  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string; updated_at: string }[]>([])
   const [commentText, setCommentText] = useState('')
   const [loadedComments, setLoadedComments] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
   const [showMenu, setShowMenu] = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [pollVoted, setPollVoted] = useState<number | null>(null)
@@ -143,7 +146,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     if (loadedComments) { setShowComments(v => !v); return }
     const { data } = await supabase
       .from('comments')
-      .select('id, content, created_at, author:users(username, display_name, avatar_url)')
+      .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
       .eq('post_id', post.id)
       .is('parent_id', null)
       .order('created_at', { ascending: true })
@@ -157,7 +160,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     if (!user || !commentText.trim()) return
     const { data } = await supabase.from('comments')
       .insert({ post_id: post.id, author_id: user.id, content: commentText.trim() })
-      .select('id, content, created_at, author:users(username, display_name, avatar_url)')
+      .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
       .single()
     if (data) setComments(c => [...c, data as unknown as typeof comments[0]])
     setCommentText('')
@@ -165,6 +168,26 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       userId: post.author_id, actorId: user.id, type: 'comment',
       message: 'commented on your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
+  }
+
+  function startEditComment(c: typeof comments[0]) {
+    setEditingCommentId(c.id)
+    setEditText(c.content)
+  }
+
+  async function saveEditComment(id: string) {
+    const text = editText.trim()
+    if (!text) return
+    const nowIso = new Date().toISOString()
+    await supabase.from('comments').update({ content: text, updated_at: nowIso }).eq('id', id)
+    setComments(cs => cs.map(c => c.id === id ? { ...c, content: text, updated_at: nowIso } : c))
+    setEditingCommentId(null)
+  }
+
+  async function deleteComment(id: string) {
+    if (!confirm('Delete this comment?')) return
+    await supabase.from('comments').delete().eq('id', id)
+    setComments(cs => cs.filter(c => c.id !== id))
   }
 
   async function votePoll(idx: number) {
@@ -474,23 +497,54 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
         {/* Comments section */}
         {showComments && (
           <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {comments.map(c => (
-              <div key={c.id} style={{ display: 'flex', gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--text-3)' }}>
-                  {c.author?.avatar_url
-                    ? <img src={c.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : (c.author?.display_name || c.author?.username || '?')[0].toUpperCase()
-                  }
-                </div>
-                <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{c.author?.display_name || c.author?.username}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{timeAgo(c.created_at)}</span>
+            {comments.map(c => {
+              const isEdited = new Date(c.updated_at).getTime() !== new Date(c.created_at).getTime()
+              const isOwn = user?.id === c.author_id
+              return (
+                <div key={c.id} style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--text-3)' }}>
+                    {c.author?.avatar_url
+                      ? <img src={c.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (c.author?.display_name || c.author?.username || '?')[0].toUpperCase()
+                    }
                   </div>
-                  <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}>{c.content}</p>
+                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 10, padding: '8px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{c.author?.display_name || c.author?.username}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                        {timeAgo(c.created_at)}{isEdited && ` · edited ${timeAgo(c.updated_at)}`}
+                      </span>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                        {isOwn ? (
+                          <>
+                            <button onClick={() => startEditComment(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Edit</button>
+                            <button onClick={() => deleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
+                          </>
+                        ) : user && (
+                          <button onClick={() => setReportingCommentId(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
+                        )}
+                      </div>
+                    </div>
+                    {editingCommentId === c.id ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEditComment(c.id))}
+                          className="ss-input"
+                          style={{ flex: 1, fontSize: 13, padding: '5px 10px' }}
+                          autoFocus
+                        />
+                        <button onClick={() => saveEditComment(c.id)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Save</button>
+                        <button onClick={() => setEditingCommentId(null)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}>{c.content}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
             {user && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0 }} />
@@ -520,6 +574,10 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
       {showReport && user && (
         <ReportModal targetId={post.id} targetType="post" onClose={() => setShowReport(false)} />
+      )}
+
+      {reportingCommentId && user && (
+        <ReportModal targetId={reportingCommentId} targetType="comment" onClose={() => setReportingCommentId(null)} />
       )}
 
       {showLikers && (

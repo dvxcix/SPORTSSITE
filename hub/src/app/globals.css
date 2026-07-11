@@ -353,8 +353,3 @@ img { max-width: 100%; }
 .pick-loss { border-color: rgba(255,77,106,0.25); background: rgba(255,77,106,0.05); }
 .pick-push { border-color: rgba(255,184,77,0.15); background: rgba(255,184,77,0.05); }
 .pick-pending { border-color: var(--border-2); background: var(--surface-3); }
-
-/* ── Mobile nav height compensation ────────── */
-@media (max-width: 1023px) {
-  .main-content-pad { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-}
