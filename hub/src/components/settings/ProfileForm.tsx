@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Check } from 'lucide-react'
+import { Check, Loader2, Upload } from 'lucide-react'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
 
@@ -23,6 +23,25 @@ export function ProfileForm({ profile }: { profile: any }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState<'avatar' | 'banner' | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  async function uploadImage(file: File, kind: 'avatar' | 'banner') {
+    setError('')
+    setUploading(kind)
+    try {
+      const path = `${kind}s/${profile.id}/${Date.now()}-${file.name}`
+      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      if (uploadErr) { setError(uploadErr.message); return }
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+      setForm(f => ({ ...f, [`${kind}_url`]: publicUrl }))
+    } catch (e: any) {
+      setError(e?.message || 'Upload failed — please try again.')
+    } finally {
+      setUploading(null)
+    }
+  }
 
   function toggleSport(s: string) {
     setForm(f => ({
@@ -66,19 +85,43 @@ export function ProfileForm({ profile }: { profile: any }) {
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <div className="flex items-center gap-5">
-        <div className="w-20 h-20 rounded-2xl bg-zinc-700 overflow-hidden flex items-center justify-center text-3xl">
+        <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'avatar'); e.target.value = '' }} />
+        <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading === 'avatar'}
+          className="relative w-20 h-20 rounded-2xl bg-zinc-700 overflow-hidden flex items-center justify-center text-3xl shrink-0 group">
           {form.avatar_url ? <img src={form.avatar_url} alt="" className="w-full h-full object-cover" /> : (form.display_name || '?')[0]?.toUpperCase()}
-        </div>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+            {uploading === 'avatar' ? <Loader2 size={20} className="animate-spin text-white" /> : <Upload size={20} className="text-white" />}
+          </div>
+        </button>
         <div className="flex-1">
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Avatar URL</label>
-          <input value={form.avatar_url} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
-          <p className="text-xs text-zinc-600 mt-1">Direct image URL (jpg, png, webp)</p>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Profile Picture</label>
+          <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading === 'avatar'}
+            className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors disabled:opacity-60">
+            {uploading === 'avatar' ? 'Uploading…' : 'Upload image'}
+          </button>
+          <details className="mt-2">
+            <summary className="text-xs text-zinc-600 cursor-pointer hover:text-zinc-400">Or paste an image URL instead</summary>
+            <input value={form.avatar_url} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass + ' mt-2'} />
+          </details>
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-1.5">Banner URL</label>
-        <input value={form.banner_url} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
+        <label className="block text-xs font-bold text-zinc-400 mb-1.5">Banner</label>
+        <input ref={bannerInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'banner'); e.target.value = '' }} />
+        <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploading === 'banner'}
+          className="relative w-full h-24 rounded-xl bg-zinc-700 overflow-hidden flex items-center justify-center group">
+          {form.banner_url ? <img src={form.banner_url} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-zinc-500">No banner set</span>}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+            {uploading === 'banner' ? <Loader2 size={20} className="animate-spin text-white" /> : <Upload size={20} className="text-white" />}
+          </div>
+        </button>
+        <details className="mt-2">
+          <summary className="text-xs text-zinc-600 cursor-pointer hover:text-zinc-400">Or paste an image URL instead</summary>
+          <input value={form.banner_url} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass + ' mt-2'} />
+        </details>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -120,7 +163,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         </div>
       </div>
 
-      <button onClick={save} disabled={saving}
+      <button onClick={save} disabled={saving || !!uploading}
         className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all ${saved ? 'bg-green-600 text-white' : 'bg-green-500 hover:bg-green-400 text-black'} disabled:opacity-60`}>
         {saved ? <><Check size={16} /> Saved!</> : saving ? 'Saving…' : 'Save Profile'}
       </button>
