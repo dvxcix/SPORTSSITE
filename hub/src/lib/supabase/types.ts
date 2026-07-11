@@ -81,6 +81,7 @@ export interface Post {
   reaction_count: number
   comment_count: number
   repost_count: number
+  bookmark_count: number
   created_at: string
   user_reacted?: boolean
   user_bookmarked?: boolean

@@ -30,10 +30,11 @@ function timeAgo(date: string) {
 }
 
 export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientProps) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [liked, setLiked] = useState(initialPost.user_reacted ?? false)
   const [likeCount, setLikeCount] = useState(initialPost.reaction_count)
   const [bookmarked, setBookmarked] = useState(initialPost.user_bookmarked ?? false)
+  const [bookmarkCount, setBookmarkCount] = useState(initialPost.bookmark_count)
   const [reposted, setReposted] = useState(initialPost.user_reposted ?? false)
   const [repostCount, setRepostCount] = useState(initialPost.repost_count)
   const [showLikers, setShowLikers] = useState(false)
@@ -136,8 +137,10 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     if (!user) return
     if (bookmarked) {
       await supabase.from('bookmarks').delete().match({ user_id: user.id, post_id: post.id })
+      setBookmarkCount(c => c - 1)
     } else {
       await supabase.from('bookmarks').insert({ user_id: user.id, post_id: post.id })
+      setBookmarkCount(c => c + 1)
     }
     setBookmarked(v => !v)
   }
@@ -477,6 +480,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                   <ActionBtn
                     icon={<Bookmark size={15} fill={bookmarked ? 'currentColor' : 'none'} />}
+                    label={bookmarkCount > 0 ? String(bookmarkCount) : ''}
                     active={bookmarked}
                     activeColor="var(--gold)"
                     hoverBg="rgba(255,184,77,0.08)"
@@ -508,7 +512,11 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                       : (c.author?.display_name || c.author?.username || '?')[0].toUpperCase()
                     }
                   </div>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 10, padding: '8px 12px' }}>
+                  <div style={{
+                    flex: 1, borderRadius: 10, padding: '8px 12px',
+                    background: isOwn ? 'rgba(77,158,255,0.10)' : 'var(--surface-2)',
+                    border: isOwn ? '1px solid rgba(77,158,255,0.25)' : '1px solid transparent',
+                  }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{c.author?.display_name || c.author?.username}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
@@ -547,7 +555,12 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
             })}
             {user && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0 }} />
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--accent)' }}>
+                  {profile?.avatar_url
+                    ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : (profile?.display_name || profile?.username || '?')[0].toUpperCase()
+                  }
+                </div>
                 <div style={{ flex: 1, display: 'flex', gap: 8 }}>
                   <input
                     value={commentText}
