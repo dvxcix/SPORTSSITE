@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Search, TrendingUp, Users, Zap, Hash, Activity } from 'lucide-react'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
+import { UserBadges } from '@/components/social/UserBadges'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb'
 
@@ -183,6 +184,7 @@ export default function SearchPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-white text-sm truncate">{u.display_name || u.username}</span>
+                        <UserBadges userId={u.id} size={13} />
                         {u.is_verified && <span className="text-green-400 text-xs">✓</span>}
                         {u.account_type === 'creator' && <span className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-full">PRO</span>}
                       </div>

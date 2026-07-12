@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { FollowButton } from '@/components/social/FollowButton'
 import { ProfileStats } from '@/components/profile/ProfileStats'
+import { UserBadges } from '@/components/social/UserBadges'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp } from 'lucide-react'
 
@@ -92,6 +93,7 @@ export default async function ProfilePage({ params }: Props) {
           {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-black text-white">{profile.display_name || profile.username}</h1>
+            <UserBadges userId={profile.id} size={18} />
             {profile.is_verified && <span className="text-green-400 text-sm">✓</span>}
             {profile.account_type === 'creator' && (
               <span className="text-xs font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>

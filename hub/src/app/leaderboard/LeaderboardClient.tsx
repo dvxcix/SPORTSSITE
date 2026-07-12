@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Trophy, TrendingUp, Target, Flame } from 'lucide-react'
+import { UserBadges } from '@/components/social/UserBadges'
 
 type UserRow = {
   id: string
@@ -142,6 +143,7 @@ function RankRow({ user, rank }: { user: UserRow; rank: number }) {
             <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.display_name || user.username}
             </p>
+            <UserBadges userId={user.id} size={13} />
             {user.is_verified && <span style={{ color: '#4ade80', fontSize: 12, flexShrink: 0 }}>✓</span>}
             {user.account_type === 'creator' && (
               <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99, background: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.15)', flexShrink: 0 }}>

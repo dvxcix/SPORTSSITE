@@ -18,9 +18,10 @@ import { LinkifiedText } from './LinkifiedText'
 import { EmojiPicker } from './EmojiPicker'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { useCustomEmojis } from '@/lib/emoji'
+import { UserBadges } from './UserBadges'
 
 interface PostCardClientProps {
-  post: Post & { author: { username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
+  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
   index?: number
 }
 
@@ -313,6 +314,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                   <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 800, color: 'var(--text-1)', fontSize: 14, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
+                  <UserBadges userId={post.author.id} />
                   {post.author.is_verified && (
                     <span style={{ fontSize: 11, color: 'var(--green)' }}>✓</span>
                   )}
@@ -594,6 +596,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{c.author?.display_name || c.author?.username}</span>
+                      <UserBadges userId={c.author_id} size={12} />
                       <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                         {timeAgo(c.created_at)}{isEdited && ` · edited ${timeAgo(c.updated_at)}`}
                       </span>
