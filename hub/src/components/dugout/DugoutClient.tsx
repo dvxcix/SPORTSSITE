@@ -1446,13 +1446,9 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       detail: `${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`,
     })
   }
-  if (hasLiveMatchup) {
-    badgeSignals.push({
-      icon: '⚡', label: 'EDGE', clickable: false,
-      color: '#4ade80', bg: 'rgba(74,222,128,0.15)', border: 'rgba(74,222,128,0.3)',
-      detail: "Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too",
-    })
-  }
+  // ⚡EDGE and 💰HR÷RBI live as their own bare-icon badges next to the name
+  // (not folded into the collapsed chip below) — icon-only so both fit
+  // side by side without eating into the name's guaranteed width.
   if (!hasHr && row.near_hr) {
     badgeSignals.push({
       icon: '🎯', label: String(row.near_hr.parks_hr_count), clickable: true,
@@ -1508,6 +1504,24 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
                   >{badgeSignals[0].icon} {badgeSignals[0].label}{badgeSignals.length > 1 ? ` +${badgeSignals.length - 1}` : ''}</span>
                 </Tooltip>
               )}
+              {hasLiveMatchup && (
+                <Tooltip content="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too">
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', fontSize: 10, flexShrink: 0,
+                    color: '#4ade80', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
+                    padding: '1px 4px', borderRadius: 4, cursor: 'help',
+                  }}>⚡</span>
+                </Tooltip>
+              )}
+              {row.is_money_sa_rbi && (
+                <Tooltip content="HR÷RBI value flag: opening HR price ≥3.5x RBI price with a low community pick count (ported from mlb-party Signals, uses opening odds exactly like the source)">
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', fontSize: 10, flexShrink: 0,
+                    color: '#f59e0b', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
+                    padding: '1px 4px', borderRadius: 4, cursor: 'help',
+                  }}>💰</span>
+                </Tooltip>
+              )}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{row.position} · {row.bats}HB</div>
           </div>
@@ -1552,7 +1566,6 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="rbi" book="fanduel" odds={row.rbi_fd} openOdds={row.rbiFd_open} display={f2(row.sa_div_rbi)}
         style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi, g('sa_div_rbi')) }}
-        badge={row.is_money_sa_rbi ? { label: '💰', color: '#f59e0b', title: 'HR÷RBI value flag: opening HR price ≥3.5x RBI price with a low community pick count (ported from mlb-party Signals, uses opening odds exactly like the source)' } : undefined}
       />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi2" book="fanduel" odds={row.rbi2_fd} openOdds={row.rbi2Fd_open} display={f2(row.sa_div_rbi2)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi2, g('sa_div_rbi2')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi3" book="fanduel" odds={row.rbi3_fd} openOdds={row.rbi3Fd_open} display={f2(row.sa_div_rbi3)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi3, g('sa_div_rbi3')) }} />
