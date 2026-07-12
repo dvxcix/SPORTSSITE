@@ -518,6 +518,22 @@ function buildBatterRow(
       if (sa_fd != null && av.cz) return (sa_fd - av.cz) / av.cz
       return null
     })(),
+    // Raw odds-POINT delta (current − own average), not the percentage —
+    // used to weight the shade heat-map's intensity instead of fhr_pct/
+    // sa_pct's own magnitude. A 30% swing off an +800 average is a ~240-point
+    // real market move; the same 30% off a +300 average is only ~90 points —
+    // the percentage alone treats those as equally significant, the raw
+    // point swing correctly doesn't.
+    fhr_delta: (() => {
+      const avgFd = fhrAvgMap[nn]?.fd
+      return fhr_fd != null && avgFd ? fhr_fd - avgFd : null
+    })(),
+    sa_delta: (() => {
+      const av = saAvgMap[nn] ?? {}
+      if (sa_fd != null && av.fd) return sa_fd - av.fd
+      if (sa_fd != null && av.cz) return sa_fd - av.cz
+      return null
+    })(),
     sa_fd, sa_cz, sa_mgm, sa_br, m_div_f,
     sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
     sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd,
@@ -648,10 +664,7 @@ function oddsHeat(v: number | null, all: (number | null)[], rgb: string = '20,14
 
 // Sign-based text coloring for the FHR%/HR% "shade" columns — deliberately
 // NOT rank-based like heat()/oddsHeat() above: green/red is fixed by sign,
-// near-zero always yellow, regardless of where it falls in the pool. Only
-// the INTENSITY (alpha) scales with the pool, so a big swing on a longshot
-// doesn't read identically to a small swing on a heavy favorite just
-// because both point the same direction.
+// near-zero always yellow, regardless of where it falls in the pool.
 //
 // NEGATIVE is GREEN, not red: fhr_pct/sa_pct is (today's price − own
 // season-average price) ÷ average (see buildBatterRow) — negative means
@@ -660,14 +673,21 @@ function oddsHeat(v: number | null, all: (number | null)[], rgb: string = '20,14
 // against a real result: Henry Davis posted -5.7% FHR / -12.8% HR and went
 // on to hit the actual first HR of that game — negative was the right call,
 // positive (price drifted longer than usual) is the bearish one.
-function shadeColor(v: number | null, all: (number | null)[]): React.CSSProperties {
-  if (v == null) return { color: 'var(--text-3)' }
-  const mags = all.filter((x): x is number => x != null).map(x => Math.abs(x))
+//
+// INTENSITY is driven by the raw odds-POINT delta (fhr_delta/sa_delta), NOT
+// by pct's own magnitude — a 30% swing off an +800 average is a ~240-point
+// real market move, the same 30% off a +300 average only ~90 points. Ranking
+// by percentage would treat those as equally significant; ranking by the
+// actual point swing (against the pool's own point swings — teammates for
+// HR%, whole game for FHR%) doesn't.
+function shadeColor(pct: number | null, delta: number | null, deltaPool: (number | null)[]): React.CSSProperties {
+  if (pct == null) return { color: 'var(--text-3)' }
+  const mags = deltaPool.filter((x): x is number => x != null).map(x => Math.abs(x))
   const maxMag = mags.length ? Math.max(...mags) : 0
-  const intensity = maxMag > 0 ? Math.min(Math.abs(v) / maxMag, 1) : 0
-  if (Math.abs(v) < 0.03) return { color: '#eab308', fontWeight: 700 }
+  const intensity = maxMag > 0 && delta != null ? Math.min(Math.abs(delta) / maxMag, 1) : 0
+  if (Math.abs(pct) < 0.03) return { color: '#eab308', fontWeight: 700 }
   const alpha = 0.55 + intensity * 0.45
-  return { color: v < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
+  return { color: pct < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
 }
 
 // ─── MLB assets ───────────────────────────────────────────────────────────────
@@ -1595,8 +1615,8 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         {row.div != null ? (row.div >= 0 ? '+' : '') + (row.div * 100).toFixed(1) : '—'}
       </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.fhr_div_sa, g('fhr_div_sa')) }}>{f2(row.fhr_div_sa)}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.fhr_pct, g('fhr_pct')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.sa_pct, gTeam('sa_pct')) }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.fhr_pct, row.fhr_delta, g('fhr_delta')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.sa_pct, row.sa_delta, gTeam('sa_delta')) }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
 
       <td style={SDIV_D} />
 
