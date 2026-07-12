@@ -38,6 +38,10 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
     if (err) { setError(err.message); setSaving(false); return }
     setNewPassword(''); setConfirmPassword('')
     setSaved('password'); setTimeout(() => setSaved(''), 2000); setSaving(false)
+    // Supabase has no built-in email for this (only for the forgot-password
+    // flow, not an in-app change) — fire our own security alert. Best-effort:
+    // never blocks or fails the password change itself if this errors.
+    fetch('/api/settings/notify-password-changed', { method: 'POST' }).catch(() => {})
   }
 
   const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
