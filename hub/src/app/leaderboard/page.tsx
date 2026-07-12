@@ -14,7 +14,7 @@ export default async function LeaderboardPage() {
   const { data: pickStats } = await supabase
     .from('posts')
     .select('author_id, sport, pick_data, created_at')
-    .eq('post_type', 'pick')
+    .in('post_type', ['pick', 'parlay'])
     .not('pick_data', 'is', null)
 
   const oneWeekAgo = new Date()
@@ -56,9 +56,18 @@ export default async function LeaderboardPage() {
     const fromPosts = statsByUser[u.id]
     const fromRecord = u.pick_record as { wins?: number; losses?: number; pushes?: number } | null
 
-    const wins = fromPosts?.wins ?? fromRecord?.wins ?? 0
-    const losses = fromPosts?.losses ?? fromRecord?.losses ?? 0
-    const pushes = fromPosts?.pushes ?? fromRecord?.pushes ?? 0
+    // users.pick_record is the authoritative, trigger-maintained total
+    // (computed straight from `picks`, correctly excludes picks whose post
+    // got deleted) — preferred over re-deriving totals from `pickStats`
+    // here. `fromPosts?.wins ?? fromRecord?.wins` used to be the order,
+    // but that's backwards AND broken: `0 ?? x` evaluates to 0, not x, so
+    // it never actually fell back once a user had any entry in
+    // statsByUser at all. fromPosts is still what drives the per-sport/
+    // this-week/streak breakdown below, since pick_record doesn't carry
+    // that granularity.
+    const wins = fromRecord?.wins ?? fromPosts?.wins ?? 0
+    const losses = fromRecord?.losses ?? fromPosts?.losses ?? 0
+    const pushes = fromRecord?.pushes ?? fromPosts?.pushes ?? 0
     const graded = wins + losses
     const winPct = graded > 0 ? Math.round((wins / graded) * 1000) / 10 : 0
 
