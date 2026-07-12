@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { Heart, MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -16,6 +16,8 @@ import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { fmtUsd } from '@/lib/parlayCalc'
 import { LinkifiedText } from './LinkifiedText'
 import { EmojiPicker } from './EmojiPicker'
+import { Tooltip } from '@/components/ui/tooltip-card'
+import { useCustomEmojis } from '@/lib/emoji'
 
 interface PostCardClientProps {
   post: Post & { author: { username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
@@ -34,15 +36,14 @@ function timeAgo(date: string) {
 
 export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientProps) {
   const { user, profile } = useAuth()
-  const [liked, setLiked] = useState(initialPost.user_reacted ?? false)
-  const [likeCount, setLikeCount] = useState(initialPost.reaction_count)
+  const [reactionSummary, setReactionSummary] = useState<Record<string, number>>(initialPost.reaction_summary ?? {})
+  const [myReactions, setMyReactions] = useState<Set<string>>(new Set(initialPost.user_reacted_emojis ?? []))
+  const customEmojis = useCustomEmojis()
   const [bookmarked, setBookmarked] = useState(initialPost.user_bookmarked ?? false)
   const [bookmarkCount, setBookmarkCount] = useState(initialPost.bookmark_count)
   const [reposted, setReposted] = useState(initialPost.user_reposted ?? false)
   const [repostCount, setRepostCount] = useState(initialPost.repost_count)
   const [commentCount, setCommentCount] = useState(initialPost.comment_count)
-  const [showLikers, setShowLikers] = useState(false)
-  const [likers, setLikers] = useState<{ username: string; display_name?: string; avatar_url?: string }[] | null>(null)
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<{ id: string; content: string; author_id: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string; updated_at: string }[]>([])
   const [commentText, setCommentText] = useState('')
@@ -86,7 +87,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${initialPost.id}` },
         (payload: any) => {
           if (payload.new?.pick_data) setPickData(payload.new.pick_data)
-          if (typeof payload.new?.reaction_count === 'number') setLikeCount(payload.new.reaction_count)
+          if (payload.new?.reaction_summary) setReactionSummary(payload.new.reaction_summary)
           if (typeof payload.new?.repost_count === 'number') setRepostCount(payload.new.repost_count)
           if (typeof payload.new?.comment_count === 'number') setCommentCount(payload.new.comment_count)
           if (typeof payload.new?.bookmark_count === 'number') setBookmarkCount(payload.new.bookmark_count)
@@ -113,21 +114,36 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const totalPollVotes = pollCounts.reduce((a, b) => a + b, 0)
   const pollEnded = post.poll_data?.ends_at && new Date(post.poll_data.ends_at) < new Date()
 
-  async function toggleLike() {
+  // Was a single hardcoded ❤️ toggle — now any standard or custom emoji,
+  // Discord-style: a user can stack multiple different reactions on the
+  // same post (👍 AND 🔥 both at once), each toggled independently.
+  // reaction_summary itself is kept in sync by a DB trigger (see the
+  // realtime subscription above) — this only needs to update the local
+  // optimistic view instantly.
+  async function toggleReaction(emoji: string) {
     if (!user) return
-    if (liked) {
+    const alreadyReacted = myReactions.has(emoji)
+    setMyReactions(prev => {
+      const next = new Set(prev)
+      if (alreadyReacted) next.delete(emoji); else next.add(emoji)
+      return next
+    })
+    setReactionSummary(prev => {
+      const count = (prev[emoji] ?? 0) + (alreadyReacted ? -1 : 1)
+      const next = { ...prev }
+      if (count <= 0) delete next[emoji]; else next[emoji] = count
+      return next
+    })
+    if (alreadyReacted) {
       await supabase.from('reactions').delete()
-        .match({ user_id: user.id, target_id: post.id, target_type: 'post', emoji: '❤️' })
-      setLikeCount(c => c - 1)
+        .match({ user_id: user.id, target_id: post.id, target_type: 'post', emoji })
     } else {
-      await supabase.from('reactions').insert({ user_id: user.id, target_id: post.id, target_type: 'post', emoji: '❤️' })
-      setLikeCount(c => c + 1)
+      await supabase.from('reactions').insert({ user_id: user.id, target_id: post.id, target_type: 'post', emoji })
       await notify(supabase, {
         userId: post.author_id, actorId: user.id, type: 'reaction',
-        message: 'liked your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+        message: 'reacted to your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
       })
     }
-    setLiked(v => !v)
   }
 
   async function toggleRepost() {
@@ -144,17 +160,6 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       })
     }
     setReposted(v => !v)
-  }
-
-  async function openLikers() {
-    setShowLikers(true)
-    if (likers) return
-    const { data } = await supabase
-      .from('reactions')
-      .select('user:users(username, display_name, avatar_url)')
-      .eq('target_id', post.id).eq('target_type', 'post').eq('emoji', '❤️')
-      .limit(100)
-    setLikers(((data ?? []).map((r: any) => r.user).filter(Boolean)) as any)
   }
 
   async function toggleBookmark() {
@@ -495,25 +500,42 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                 </div>
               )}
 
+              {/* Reactions — any standard or custom emoji, Discord-style
+                  pills with counts, not just a single ❤️ like button.
+                  Hovering a pill lazily fetches who reacted with it
+                  (ReactionNames below); clicking toggles your own. */}
+              {(Object.keys(reactionSummary).length > 0 || user) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginTop: 12 }}>
+                  {Object.entries(reactionSummary).sort((a, b) => b[1] - a[1]).map(([emoji, count]) => {
+                    const mine = myReactions.has(emoji)
+                    const custom = emoji.match(/^:([a-z0-9_]+):$/)
+                    const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
+                    return (
+                      <Tooltip key={emoji} content={<ReactionNames postId={post.id} emoji={emoji} />}>
+                        <button
+                          onClick={() => toggleReaction(emoji)}
+                          disabled={!user}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999,
+                            border: `1px solid ${mine ? 'var(--accent)' : 'var(--border)'}`,
+                            background: mine ? 'var(--accent-dim)' : 'var(--surface-2)',
+                            cursor: user ? 'pointer' : 'default', fontSize: 12,
+                          }}>
+                          {customEmoji
+                            ? <img src={customEmoji.image_url} alt={emoji} style={{ width: 14, height: 14, objectFit: 'contain' }} />
+                            : <span style={{ fontSize: 13, lineHeight: 1 }}>{emoji}</span>
+                          }
+                          <span style={{ fontWeight: 700, color: mine ? 'var(--accent)' : 'var(--text-2)' }}>{count}</span>
+                        </button>
+                      </Tooltip>
+                    )
+                  })}
+                  {user && <EmojiPicker onSelect={toggleReaction} />}
+                </div>
+              )}
+
               {/* Action bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 12, marginLeft: -6 }}>
-                <ActionBtn
-                  icon={<Heart size={15} fill={liked ? 'currentColor' : 'none'} />}
-                  active={liked}
-                  activeColor="var(--red)"
-                  hoverBg="rgba(255,77,106,0.08)"
-                  onClick={toggleLike}
-                />
-                {likeCount > 0 && (
-                  <button onClick={openLikers} style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600, color: 'var(--text-3)', padding: '0 4px', marginLeft: -6,
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                  onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
-                    {likeCount}
-                  </button>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 8, marginLeft: -6 }}>
                 <ActionBtn
                   icon={<MessageCircle size={15} />}
                   label={commentCount > 0 ? String(commentCount) : ''}
@@ -648,37 +670,35 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
         <ReportModal targetId={reportingCommentId} targetType="comment" onClose={() => setReportingCommentId(null)} />
       )}
 
-      {showLikers && (
-        <div onClick={() => setShowLikers(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: 'min(360px, 100%)', maxHeight: '70vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Liked by</span>
-              <button onClick={() => setShowLikers(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
-            </div>
-            {likers === null ? (
-              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>Loading…</p>
-            ) : likers.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>No likes yet</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {likers.map(l => (
-                  <Link key={l.username} href={`/profile/${l.username}`} onClick={() => setShowLikers(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, textDecoration: 'none' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden', flexShrink: 0 }}>
-                      {l.avatar_url && <img src={l.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{l.display_name || l.username}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </>
   )
+}
+
+// Tooltip's `content` only actually mounts once the popup becomes visible
+// (see tooltip-card.tsx — it's conditionally rendered, not just CSS-hidden),
+// so this only fires its fetch on first hover of THIS specific pill, not
+// upfront for every emoji on every post in a feed.
+function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
+  const [names, setNames] = useState<string[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    supabase.from('reactions')
+      .select('user:users(username, display_name)')
+      .eq('target_id', postId).eq('target_type', 'post').eq('emoji', emoji)
+      .limit(50)
+      .then(({ data }) => {
+        if (cancelled) return
+        setNames((data ?? []).map((r: any) => r.user?.display_name || r.user?.username).filter(Boolean))
+      })
+    return () => { cancelled = true }
+  }, [postId, emoji])
+
+  if (names === null) return <span>Loading…</span>
+  if (names.length === 0) return <span>No reactions yet</span>
+  const shown = names.slice(0, 8)
+  const extra = names.length - shown.length
+  return <span>{shown.join(', ')}{extra > 0 ? ` and ${extra} more` : ''} reacted with {emoji}</span>
 }
 
 function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onClick }: {

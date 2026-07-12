@@ -6,19 +6,31 @@ import type { Post, Channel, Message, Notification, User } from './supabase/type
 // implicitly undefined, so a like/repost always rendered as un-done again
 // after any refresh (the visible symptom), even though the underlying row
 // was there in `reactions`/`reposts` the whole time.
+//
+// user_reacted_emojis carries the full set of emojis THIS viewer reacted
+// with (not just a single ❤️ boolean) — reactions are multi-emoji now, any
+// standard or custom emoji, not just a heart-shaped like button.
 export async function attachUserReactions<T extends { id: string }>(
   posts: T[], userId: string | null | undefined
-): Promise<(T & { user_reacted: boolean; user_reposted: boolean })[]> {
-  if (!userId || posts.length === 0) return posts.map(p => ({ ...p, user_reacted: false, user_reposted: false }))
+): Promise<(T & { user_reacted: boolean; user_reacted_emojis: string[]; user_reposted: boolean })[]> {
+  if (!userId || posts.length === 0) return posts.map(p => ({ ...p, user_reacted: false, user_reacted_emojis: [], user_reposted: false }))
   const supabase = await createClient()
   const postIds = posts.map(p => p.id)
   const [{ data: likes }, { data: reposts }] = await Promise.all([
-    supabase.from('reactions').select('target_id').eq('user_id', userId).eq('target_type', 'post').in('target_id', postIds),
+    supabase.from('reactions').select('target_id, emoji').eq('user_id', userId).eq('target_type', 'post').in('target_id', postIds),
     supabase.from('reposts').select('post_id').eq('user_id', userId).in('post_id', postIds),
   ])
-  const liked = new Set((likes ?? []).map((r: any) => r.target_id))
+  const emojisByPost = new Map<string, string[]>()
+  for (const r of likes ?? []) {
+    const arr = emojisByPost.get((r as any).target_id) ?? []
+    arr.push((r as any).emoji)
+    emojisByPost.set((r as any).target_id, arr)
+  }
   const reposted = new Set((reposts ?? []).map((r: any) => r.post_id))
-  return posts.map(p => ({ ...p, user_reacted: liked.has(p.id), user_reposted: reposted.has(p.id) }))
+  return posts.map(p => {
+    const emojis = emojisByPost.get(p.id) ?? []
+    return { ...p, user_reacted: emojis.length > 0, user_reacted_emojis: emojis, user_reposted: reposted.has(p.id) }
+  })
 }
 
 export async function getCurrentUser(): Promise<User | null> {

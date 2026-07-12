@@ -79,11 +79,17 @@ export interface Post {
   visibility: 'public' | 'followers' | 'subscribers'
   is_premium: boolean
   reaction_count: number
+  // Per-emoji breakdown, e.g. { "🔥": 5, "❤️": 2, ":ath:": 1 } — a custom
+  // emoji's key is its :code: text, same convention as inline shortcodes.
+  // reaction_count is the sum across every key here, kept in sync by the
+  // same trigger.
+  reaction_summary: Record<string, number>
   comment_count: number
   repost_count: number
   bookmark_count: number
   created_at: string
   user_reacted?: boolean
+  user_reacted_emojis?: string[]
   user_bookmarked?: boolean
   user_reposted?: boolean
   // Present only when this Post object represents someone's REPOST of the
