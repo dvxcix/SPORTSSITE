@@ -103,16 +103,36 @@ export interface BDLPropMap {
 
 // ─── API calls ───────────────────────────────────────────────────────────────
 
+// BDL's documented error codes were being silently swallowed (`!res.ok` just
+// returned an empty array, indistinguishable from "genuinely no games/props
+// right now") — a bad key (401) or an outage (500/503) looked identical to a
+// quiet night in the logs. Logs the status distinctly per BDL's own error
+// table so a systemic failure is actually visible instead of just showing up
+// as thin data.
+function logBDLError(endpoint: string, status: number) {
+  const meaning: Record<number, string> = {
+    400: 'Bad Request — request params likely malformed',
+    401: 'Unauthorized — API key missing/invalid or tier lacks access to this endpoint',
+    404: 'Not Found',
+    406: 'Not Acceptable — requested a non-JSON format',
+    429: 'Rate limited — exceeded requests/min for this tier',
+    500: 'BDL internal server error',
+    503: 'BDL temporarily offline for maintenance',
+  }
+  console.error(`[BDL] ${endpoint} → ${status}: ${meaning[status] ?? 'Unexpected status'}`)
+}
+
 export async function getBDLGames(date: string): Promise<BDLGame[]> {
   try {
     const res = await fetch(`${BDL_BASE}/games?dates[]=${date}&per_page=30`, {
       headers: bdlHeaders,
       next: { revalidate: 60 },
     })
-    if (!res.ok) return []
+    if (!res.ok) { logBDLError('games', res.status); return [] }
     const data = await res.json()
     return data.data ?? []
-  } catch {
+  } catch (e) {
+    console.error('[BDL] games fetch threw', e)
     return []
   }
 }
@@ -127,10 +147,11 @@ export async function getBDLPlayerProps(gameId: number): Promise<BDLPlayerProp[]
       headers: bdlHeaders,
       next: { revalidate: 120 },
     })
-    if (!res.ok) return []
+    if (!res.ok) { logBDLError(`odds/player_props?game_id=${gameId}`, res.status); return [] }
     const data = await res.json()
     return data.data ?? []
-  } catch {
+  } catch (e) {
+    console.error(`[BDL] player_props fetch threw for game ${gameId}`, e)
     return []
   }
 }
@@ -150,7 +171,7 @@ export async function getBDLPlayerNames(playerIds: number[]): Promise<Record<num
         headers: bdlHeaders,
         next: { revalidate: 3600 },
       })
-      if (!res.ok) continue
+      if (!res.ok) { logBDLError('players', res.status); continue }
       const data = await res.json()
       for (const p of (data.data ?? []) as BDLPlayer[]) out[p.id] = p
     }
@@ -327,3 +348,44 @@ export function impliedProb(odds: number | null): number | null {
   if (odds > 0) return 100 / (odds + 100)
   return Math.abs(odds) / (Math.abs(odds) + 100)
 }
+
+// ─── game matching ─────────────────────────────────────────────────────────
+// Shared between the BDL-odds cron (the only thing that still calls BDL
+// live) and anything reading its output — moved here from dugout/data's
+// route file so both have one copy instead of two drifting independently.
+
+// `mlbGameDateIso` disambiguates when BDL returns more than one game for the
+// same team pair on the queried date — this happens because BDL's dates[]
+// filter appears to match on UTC calendar day, so a late-ET game from the
+// PREVIOUS day (already STATUS_FINAL, stale/settled odds) can share the same
+// UTC date as today's real game. Picking .find()'s first match is wrong; we
+// want whichever BDL game's start time is actually closest to MLB's game.
+export function matchBDLGame(bdlGames: BDLGame[], homeTeam: string, awayTeam: string, mlbGameDateIso?: string): BDLGame | null {
+  const last = (s: string) => s.split(' ').pop()!.toLowerCase()
+  const ha = last(homeTeam), aa = last(awayTeam)
+  const candidates = bdlGames.filter(g => {
+    const bha = g.home_team.abbreviation.toLowerCase()
+    const baa = g.away_team.abbreviation.toLowerCase()
+    const bhn = g.home_team.name.toLowerCase()
+    const ban = g.away_team.name.toLowerCase()
+    return (bha === ha || bhn.includes(ha) || homeTeam.toLowerCase().includes(last(g.home_team.name))) &&
+           (baa === aa || ban.includes(aa) || awayTeam.toLowerCase().includes(last(g.away_team.name)))
+  })
+  if (!candidates.length) return null
+  if (candidates.length === 1 || !mlbGameDateIso) return candidates[0]
+
+  const target = new Date(mlbGameDateIso).getTime()
+  return candidates.reduce((best, g) => {
+    const diff = Math.abs(new Date(g.date).getTime() - target)
+    const bestDiff = Math.abs(new Date(best.date).getTime() - target)
+    return diff < bestDiff ? g : best
+  })
+}
+
+export function addDaysToDateStr(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00Z')
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
+export const toETDate = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })

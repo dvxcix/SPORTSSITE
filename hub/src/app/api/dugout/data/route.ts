@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getBDLGames, getBDLPlayerProps, getBDLPlayerNames, buildPropMap, type BDLGame, type BDLPropMap, type BDLPlayerProp } from '@/lib/balldontlie'
+import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const revalidate = 0
@@ -278,57 +278,14 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
   } catch { return [] }
 }
 
-// `mlbGameDateIso` disambiguates when BDL returns more than one game for the
-// same team pair on the queried date — this happens because BDL's dates[]
-// filter appears to match on UTC calendar day, so a late-ET game from the
-// PREVIOUS day (already STATUS_FINAL, stale/settled odds) can share the same
-// UTC date as today's real game. Picking .find()'s first match is wrong; we
-// want whichever BDL game's start time is actually closest to MLB's game.
-function matchBDLGame(bdlGames: BDLGame[], homeTeam: string, awayTeam: string, mlbGameDateIso?: string): BDLGame | null {
-  const last = (s: string) => s.split(' ').pop()!.toLowerCase()
-  const ha = last(homeTeam), aa = last(awayTeam)
-  const candidates = bdlGames.filter(g => {
-    const bha = g.home_team.abbreviation.toLowerCase()
-    const baa = g.away_team.abbreviation.toLowerCase()
-    const bhn = g.home_team.name.toLowerCase()
-    const ban = g.away_team.name.toLowerCase()
-    return (bha === ha || bhn.includes(ha) || homeTeam.toLowerCase().includes(last(g.home_team.name))) &&
-           (baa === aa || ban.includes(aa) || awayTeam.toLowerCase().includes(last(g.away_team.name)))
-  })
-  if (!candidates.length) return null
-  if (candidates.length === 1 || !mlbGameDateIso) return candidates[0]
-
-  const target = new Date(mlbGameDateIso).getTime()
-  return candidates.reduce((best, g) => {
-    const diff = Math.abs(new Date(g.date).getTime() - target)
-    const bestDiff = Math.abs(new Date(best.date).getTime() - target)
-    return diff < bestDiff ? g : best
-  })
-}
-
-// Track which BDL games have been claimed to avoid double-header collisions
-const claimedBdlIds = new Set<number>()
-
-function addDaysToDateStr(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T12:00:00Z')
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().split('T')[0]
-}
-
-const toETDate = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const isPastDate = date < todayET
   // If the service-role key isn't configured, degrade gracefully: skip
-  // snapshot persistence/lookup entirely rather than 500ing the whole page.
-  // Live (pregame) odds still work fine without it.
+  // snapshot lookup entirely rather than 500ing the whole page (odds just
+  // won't populate — everything else on the page still works).
   let admin: ReturnType<typeof createAdminClient> | null = null
   try { admin = createAdminClient() } catch { admin = null }
-
-  claimedBdlIds.clear()
 
   // 1. MLB schedule
   let mlbGames: any[] = []
@@ -375,16 +332,10 @@ export async function GET(req: Request) {
   }
 
   // 2. Parallel: BDL games + all mlb-party tables
-  // BDL's dates[] filter matches the UTC calendar day, not ET. A late-ET
-  // game from the PREVIOUS day (e.g. 9:45pm ET start = 01:45 UTC next day)
-  // lands on today's UTC date and leaks into results as an already-finished,
-  // stale-odds duplicate of today's real matchup. Conversely a late West
-  // coast start tonight can roll into tomorrow's UTC date and get missed
-  // entirely. Fetch both the target date and the next UTC day, then filter
-  // to games whose ACTUAL ET calendar date matches what was requested.
-  const [bdlGamesDay1, bdlGamesDay2, statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents] = await Promise.all([
-    getBDLGames(date),
-    getBDLGames(addDaysToDateStr(date, 1)),
+  // 2. Parallel: mlb-party tables (BDL odds no longer fetched live here —
+  // see /api/cron/bdl-odds, which polls BDL on a fixed schedule and writes
+  // to pregame_odds_snapshots; this route just reads that table below).
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -468,10 +419,6 @@ export async function GET(req: Request) {
     for (const r of mgmOpenRows ?? []) (mgmGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
-  const bdlGamesById = new Map<number, BDLGame>()
-  for (const g of [...bdlGamesDay1, ...bdlGamesDay2]) bdlGamesById.set(g.id, g)
-  const bdlGames = Array.from(bdlGamesById.values()).filter(g => toETDate(g.date) === date)
-
   // 3. Pitcher splits (needs pitcher IDs from schedule)
   const pitcherIds = new Set<number>()
   for (const g of mlbGames) {
@@ -512,59 +459,25 @@ export async function GET(req: Request) {
 
   const pitcherSplits = await fetchPitcherSplits(pitcherIdList)
 
-  // 4. Match each MLB game to a BDL game and fetch its props — sequential,
-  // in mlbGames order. This must NOT run inside the parallel games.map below:
-  // doing so races multiple async branches against the shared claimedBdlIds
-  // set, so a doubleheader's game 2 could nondeterministically claim game 1's
-  // (already-finished, odds-stale) BDL id depending on which promise resolves
-  // its earlier awaits first. Sequential also keeps us under BDL's tight
-  // per-minute rate limit instead of firing N parallel prop requests at once.
-  //
-  // Once a game has started (or we're viewing a past date), live odds are no
-  // longer meaningful for pregame research — skip BDL entirely for those and
-  // serve the frozen pregame snapshot captured right up until first pitch.
-  const bdlPropsByGameIndex: BDLPlayerProp[][] = []
-  const bdlGameIdByGameIndex: (number | null)[] = []
-  const useSnapshotByIndex: boolean[] = []
-  for (const g of mlbGames) {
-    const hasStarted = g.status?.abstractGameState !== 'Preview'
-    const useSnapshot = isPastDate || hasStarted
-    useSnapshotByIndex.push(useSnapshot)
-    if (useSnapshot) {
-      bdlGameIdByGameIndex.push(null)
-      bdlPropsByGameIndex.push([])
-      continue
-    }
-    const homeTeam = g.teams?.home?.team?.name || ''
-    const awayTeam = g.teams?.away?.team?.name || ''
-    const bdlGame = matchBDLGame(bdlGames.filter(bg => !claimedBdlIds.has(bg.id)), homeTeam, awayTeam, g.gameDate)
-    if (bdlGame) {
-      claimedBdlIds.add(bdlGame.id)
-      bdlGameIdByGameIndex.push(bdlGame.id)
-      bdlPropsByGameIndex.push(await getBDLPlayerProps(bdlGame.id))
-    } else {
-      bdlGameIdByGameIndex.push(null)
-      bdlPropsByGameIndex.push([])
-    }
-  }
-  const allPlayerIds = bdlPropsByGameIndex.flat().map(p => p.player_id)
-  const bdlPlayerNames = await getBDLPlayerNames(allPlayerIds)
-
-  // Load any existing pregame snapshots for games that have started/passed,
-  // and freeze (lock in permanently) whichever snapshot was last captured
-  // before we first noticed the game had started.
-  const gamePksNeedingSnapshot = mlbGames
-    .filter((_: any, i: number) => useSnapshotByIndex[i])
-    .map((g: any) => String(g.gamePk))
-  const snapshotByGamePk = new Map<string, { prop_map: BDLPropMap; is_frozen: boolean }>()
-  if (admin && gamePksNeedingSnapshot.length) {
+  // 4. Odds snapshot lookup — BDL is never called live from this route
+  // anymore (see /api/cron/bdl-odds, which polls it on a fixed schedule and
+  // writes here). Every game just reads whatever's currently in this table,
+  // started or not; a started-but-not-yet-frozen game gets permanently
+  // frozen right here so its odds stop drifting once in-game/settled markets
+  // would otherwise take over — same freeze-on-first-observation as before.
+  const gamePksToday = mlbGames.map((g: any) => String(g.gamePk))
+  const snapshotByGamePk = new Map<string, { bdl_game_id: number | null; prop_map: BDLPropMap; is_frozen: boolean }>()
+  if (admin && gamePksToday.length) {
     const { data: snapRows } = await admin
       .from('pregame_odds_snapshots')
-      .select('game_pk, prop_map, is_frozen')
-      .in('game_pk', gamePksNeedingSnapshot)
+      .select('game_pk, bdl_game_id, prop_map, is_frozen')
+      .in('game_pk', gamePksToday)
     for (const row of snapRows ?? []) snapshotByGamePk.set(row.game_pk, row)
 
-    const toFreeze = (snapRows ?? []).filter(r => !r.is_frozen).map(r => r.game_pk)
+    const toFreeze = mlbGames
+      .filter((g: any) => g.status?.abstractGameState !== 'Preview')
+      .map((g: any) => String(g.gamePk))
+      .filter((pk: string) => snapshotByGamePk.get(pk)?.is_frozen === false)
     if (toFreeze.length) {
       await admin
         .from('pregame_odds_snapshots')
@@ -574,8 +487,7 @@ export async function GET(req: Request) {
   }
 
   // 5. Build games
-  const snapshotUpserts: any[] = []
-  const games = await Promise.all(mlbGames.map(async (g: any, gi: number) => {
+  const games = await Promise.all(mlbGames.map(async (g: any) => {
     const homeTeam = g.teams?.home?.team?.name || ''
     const awayTeam = g.teams?.away?.team?.name || ''
     const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
@@ -622,30 +534,11 @@ export async function GET(req: Request) {
       awayLineup = await fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam)
     }
 
-    // BDL props — matched sequentially above (see step 4) to avoid the
-    // doubleheader race and respect the BDL rate limit. Once a game has
-    // started (or we're viewing history), serve the frozen pregame snapshot
-    // instead of live odds — in-game/post-game markets don't belong on a
-    // pregame research board.
-    const bdlGameId = bdlGameIdByGameIndex[gi]
-    let propMap: BDLPropMap
-    if (useSnapshotByIndex[gi]) {
-      propMap = snapshotByGamePk.get(String(g.gamePk))?.prop_map ?? {}
-    } else {
-      propMap = bdlGameId != null ? buildPropMap(bdlPropsByGameIndex[gi], bdlPlayerNames) : {}
-      if (bdlGameId != null) {
-        snapshotUpserts.push({
-          game_pk: String(g.gamePk),
-          game_date: date,
-          bdl_game_id: bdlGameId,
-          home_abbr: homeAbbr,
-          away_abbr: awayAbbr,
-          prop_map: propMap,
-          is_frozen: false,
-          captured_at: new Date().toISOString(),
-        })
-      }
-    }
+    // BDL props — read straight from the snapshot the cron last wrote (see
+    // step 4 above). No live BDL call on this path at all anymore.
+    const snap = snapshotByGamePk.get(String(g.gamePk))
+    const bdlGameId = snap?.bdl_game_id ?? null
+    const propMap: BDLPropMap = snap?.prop_map ?? {}
     const bdlByName: Record<string, any> = {}
     for (const entry of Object.values(propMap)) {
       bdlByName[normName(entry.name)] = entry
@@ -743,23 +636,17 @@ export async function GET(req: Request) {
       awayScore: g.teams?.away?.score,
       bdlGameId: bdlGameId ?? null,
       _bdlDebug: {
-        bdlGamesTotal: bdlGames.length,
-        matchedBdlId: bdlGameId ?? null,
-        usedSnapshot: useSnapshotByIndex[gi],
-        snapshotFrozen: snapshotByGamePk.get(String(g.gamePk))?.is_frozen ?? null,
-        rawPropsCount: bdlPropsByGameIndex[gi]?.length ?? 0,
+        matchedBdlId: bdlGameId,
+        hasSnapshot: !!snap,
+        snapshotFrozen: snap?.is_frozen ?? null,
         propsCount: Object.keys(propMap).length,
-        bdlNamesSample: Object.values(propMap).slice(0, 5).map(e => e.name),
+        bdlNamesSample: Object.values(propMap).slice(0, 5).map((e: any) => e.name),
         homeLineupNamesSample: homeLineup.slice(0, 5).map(p => p.name_norm),
       },
       homeLineup: homeLineup.map(p => ({ ...p, props: bdlByName[p.name_norm] || null })),
       awayLineup: awayLineup.map(p => ({ ...p, props: bdlByName[p.name_norm] || null })),
     }
   }))
-
-  if (admin && snapshotUpserts.length) {
-    await admin.from('pregame_odds_snapshots').upsert(snapshotUpserts, { onConflict: 'game_pk' })
-  }
 
   // The FanDuel gap-merge (fhr/laser/moon/etc.) re-queries fresh every
   // request and has no server-side cache of its own (revalidate=0 above),
