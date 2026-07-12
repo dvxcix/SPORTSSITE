@@ -12,6 +12,10 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: '#fff' },
   pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
+  // No local favicon file yet — falls back to this colored initials pill
+  // (same graceful degrade every other book gets on a missing/broken icon)
+  // until a real /public/sportsbooks/fanatics.ico is added.
+  fanatics:   { favicon: '/sportsbooks/fanatics.ico',   initials: 'FAN', bg: '#DA1927', color: '#fff' },
 }
 
 // Normalize vendor key from any alias

@@ -400,9 +400,14 @@ function buildBatterRow(
   const props      = player.props
   const fhr_fd     = props?.fhr?.fanduel      ?? null
   const fhr_cz     = props?.fhr?.caesars      ?? null
+  // Fanatics FHR and BetRivers anytime-HR — BDL carries both about as
+  // reliably as the existing three books (confirmed live: ~96% coverage
+  // vs FanDuel's own), just never surfaced as their own columns before.
+  const fhr_fan    = props?.fhr?.fanatics     ?? null
   const sa_fd      = props?.sa?.fanduel       ?? null
   const sa_cz      = props?.sa?.caesars       ?? null
   const sa_mgm     = props?.sa?.betmgm        ?? null
+  const sa_br      = props?.sa?.betrivers     ?? null
   const sng_fd     = props?.singles?.fanduel  ?? null
   const dbl_fd     = props?.doubles?.fanduel  ?? null
   const rbi_fd     = props?.rbi?.fanduel      ?? null
@@ -498,7 +503,7 @@ function buildBatterRow(
     position:      player.position as string,
     bats:          player.bats    as string,
     team:          player.team    as string,
-    fhr_fd, fhr_cz, div, fhr_div_sa,
+    fhr_fd, fhr_cz, fhr_fan, div, fhr_div_sa,
     // Shade %: today's price vs own season-average price (negative = cheaper
     // than usual = book conviction). Ported exactly from mlb-party: FHR% only
     // compares FanDuel-to-FanDuel; HR% (SA) falls back to Caesars if FD's own
@@ -513,7 +518,7 @@ function buildBatterRow(
       if (sa_fd != null && av.cz) return (sa_fd - av.cz) / av.cz
       return null
     })(),
-    sa_fd, sa_cz, sa_mgm, m_div_f,
+    sa_fd, sa_cz, sa_mgm, sa_br, m_div_f,
     sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
     sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd,
     laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hrMl_fd, pa1_div_sa, sa_div_ml,
@@ -626,7 +631,10 @@ function heat(v: number | null, all: (number | null)[], dir: 'hi' | 'lo' = 'hi')
   return {}
 }
 
-function oddsHeat(v: number | null, all: (number | null)[]): React.CSSProperties {
+// rgb defaults to FanDuel blue — pass a book's own brand triplet (see
+// BookLogo.tsx) to color-code a column by which book it actually is,
+// instead of every odds column reading as "FanDuel blue" regardless of book.
+function oddsHeat(v: number | null, all: (number | null)[], rgb: string = '20,147,255'): React.CSSProperties {
   if (v == null) return {}
   const impls = all.map(toImpl).filter((x): x is number => x != null)
   const mine  = toImpl(v)
@@ -635,7 +643,23 @@ function oddsHeat(v: number | null, all: (number | null)[]): React.CSSProperties
   if (mx === mn) return {}
   const t = (mine - mn) / (mx - mn)
   if (t < 0.5) return {}
-  return { background: `rgba(20,147,255,${0.05 + t * 0.18})` }
+  return { background: `rgba(${rgb},${0.05 + t * 0.18})` }
+}
+
+// Sign-based text coloring for the FHR%/HR% "shade" columns — deliberately
+// NOT rank-based like heat()/oddsHeat() above: negative is always red,
+// positive always green, near-zero always yellow, regardless of where it
+// falls in the pool. Only the INTENSITY (alpha) scales with the pool, so a
+// big swing on a longshot doesn't read identically to a small swing on a
+// heavy favorite just because both are "positive."
+function shadeColor(v: number | null, all: (number | null)[]): React.CSSProperties {
+  if (v == null) return { color: 'var(--text-3)' }
+  const mags = all.filter((x): x is number => x != null).map(x => Math.abs(x))
+  const maxMag = mags.length ? Math.max(...mags) : 0
+  const intensity = maxMag > 0 ? Math.min(Math.abs(v) / maxMag, 1) : 0
+  if (Math.abs(v) < 0.03) return { color: '#eab308', fontWeight: 700 }
+  const alpha = 0.55 + intensity * 0.45
+  return { color: v > 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
 }
 
 // ─── MLB assets ───────────────────────────────────────────────────────────────
@@ -1412,6 +1436,12 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   id?: string
 }) {
   const g = (f: keyof BatterRow) => pool.map(r => r[f] as number | null)
+  // FHR%'s shade is meaningful across the WHOLE game (all ~18 batters, both
+  // teams — BDL's FanDuel FHR average is one shared per-game market), but
+  // HR%'s shade should only be weighed against this player's own TEAMMATES,
+  // not the opposing lineup too.
+  const teammates = pool.filter(r => r.team === row.team)
+  const gTeam = (f: keyof BatterRow) => teammates.map(r => r[f] as number | null)
   const hits = row.hr_hits ?? []
   const hasFirst = hits.some(h => h.is_first_hr_of_game)
   const hasHr = hits.length > 0
@@ -1547,22 +1577,26 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
 
       <td style={SDIV_D} />
 
-      {/* FHR */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanduel" odds={row.fhr_fd} openOdds={row.fhr_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fd, g('fhr_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="caesars" odds={row.fhr_cz} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_cz, g('fhr_fd')) }} />
+      {/* FHR — each book's heat background uses its own brand color (see
+          BookLogo.tsx) instead of one blue for every column regardless of
+          book. */}
+      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanduel" odds={row.fhr_fd} openOdds={row.fhr_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fd, g('fhr_fd'), '20,147,255') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="caesars" odds={row.fhr_cz} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_cz, g('fhr_fd'), '11,64,50') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanatics" odds={row.fhr_fan} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fan, g('fhr_fd'), '218,25,55') }} />
       <td style={{ ...STD, width: 36, minWidth: 36, color: row.div != null ? (row.div > 0.008 ? '#4ade80' : row.div < -0.008 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
         {row.div != null ? (row.div >= 0 ? '+' : '') + (row.div * 100).toFixed(1) : '—'}
       </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.fhr_div_sa, g('fhr_div_sa')) }}>{f2(row.fhr_div_sa)}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, color: 'var(--text-2)' }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, color: 'var(--text-2)' }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.fhr_pct, g('fhr_pct')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.sa_pct, gTeam('sa_pct')) }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
 
       <td style={SDIV_D} />
 
-      {/* SA */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="fanduel" odds={row.sa_fd} openOdds={row.saFd_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_fd, g('sa_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="caesars" odds={row.sa_cz} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_cz, g('sa_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betmgm" odds={row.sa_mgm} openOdds={row.saMgm_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_mgm, g('sa_fd')) }} />
+      {/* SA (anytime HR) */}
+      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="fanduel" odds={row.sa_fd} openOdds={row.saFd_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_fd, g('sa_fd'), '20,147,255') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="caesars" odds={row.sa_cz} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_cz, g('sa_fd'), '11,64,50') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betmgm" odds={row.sa_mgm} openOdds={row.saMgm_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_mgm, g('sa_fd'), '184,150,12') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betrivers" odds={row.sa_br} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_br, g('sa_fd'), '0,48,135') }} />
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.m_div_f, g('m_div_f')) }}>{f2(row.m_div_f)}</td>
       <OddsCell row={row} gameInfo={gameInfo} propKey="hrMl" book="fanduel" odds={row.hrMl_fd} openOdds={row.hrMl_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hrMl_fd, g('hrMl_fd')) }} />
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.sa_div_ml, g('sa_div_ml')) }}>{f2(row.sa_div_ml)}</td>
@@ -2070,6 +2104,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             <th style={SDIV_H} />
             {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
             {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
+            {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
             {H('div', 'FD−CZ implied diff ×100', 36, 'div')}
             {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
             {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
@@ -2078,6 +2113,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             {BL('fanduel', 'HR', 'FanDuel Anytime HR', 50, 'sa_fd')}
             {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
             {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
+            {BL('betrivers', 'HR', 'BetRivers Anytime HR', 50, 'sa_br')}
             {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
             {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
             {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
