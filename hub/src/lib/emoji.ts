@@ -72,7 +72,7 @@ export const STANDARD_EMOJI_MAP: Record<string, string> = Object.fromEntries(
   EMOJI_CATEGORIES.flatMap(c => c.emoji).map(e => [e.code, e.char])
 )
 
-export type CustomEmoji = { code: string; image_url: string }
+export type CustomEmoji = { code: string; image_url: string; category_id: string | null; category_name: string | null }
 
 let customEmojiCache: CustomEmoji[] | null = null
 let inflight: Promise<CustomEmoji[]> | null = null
@@ -82,13 +82,34 @@ async function fetchCustomEmojis(): Promise<CustomEmoji[]> {
   if (!inflight) {
     inflight = (async () => {
       const supabase = createClient()
-      const { data } = await supabase.from('custom_emojis').select('code, image_url')
-      customEmojiCache = data ?? []
+      const { data } = await supabase
+        .from('custom_emojis')
+        .select('code, image_url, category_id, category:custom_emoji_categories(name)')
+      customEmojiCache = (data ?? []).map((e: any) => ({
+        code: e.code, image_url: e.image_url, category_id: e.category_id, category_name: e.category?.name ?? null,
+      }))
       inflight = null
       return customEmojiCache
     })()
   }
   return inflight
+}
+
+// Groups custom emoji by category for the picker — MLB/NBA/etc. sections
+// alongside the standard ones, not one flat "Custom" bucket. Uncategorized
+// emoji (category_id null, e.g. one whose category got deleted) land in a
+// trailing "Other" group rather than silently vanishing from the picker.
+export function groupCustomEmojisByCategory(emojis: CustomEmoji[]): { label: string; emoji: CustomEmoji[] }[] {
+  const byCategory = new Map<string, CustomEmoji[]>()
+  for (const e of emojis) {
+    const label = e.category_name ?? 'Other'
+    if (!byCategory.has(label)) byCategory.set(label, [])
+    byCategory.get(label)!.push(e)
+  }
+  const groups = Array.from(byCategory.entries()).map(([label, emoji]) => ({ label, emoji }))
+  // "Other" always last regardless of alphabetical/insertion order.
+  groups.sort((a, b) => (a.label === 'Other' ? 1 : b.label === 'Other' ? -1 : a.label.localeCompare(b.label)))
+  return groups
 }
 
 // Module-level cache (not a Context) — every PostCardClient instance on a

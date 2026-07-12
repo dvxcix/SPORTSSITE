@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Smile } from 'lucide-react'
-import { EMOJI_CATEGORIES, useCustomEmojis } from '@/lib/emoji'
+import { EMOJI_CATEGORIES, useCustomEmojis, groupCustomEmojisByCategory } from '@/lib/emoji'
 
 // Click inserts the raw unicode character for a standard emoji, or the
 // :code: text for a custom one (LinkifiedText renders that back into the
@@ -14,6 +14,7 @@ import { EMOJI_CATEGORIES, useCustomEmojis } from '@/lib/emoji'
 export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => void }) {
   const [open, setOpen] = useState(false)
   const customEmojis = useCustomEmojis()
+  const customGroups = groupCustomEmojisByCategory(customEmojis)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -47,13 +48,13 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
           background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
           boxShadow: '0 8px 24px rgba(0,0,0,0.35)', padding: 10,
         }}>
-          {customEmojis.length > 0 && (
-            <div style={{ marginBottom: 10 }}>
+          {customGroups.map(group => (
+            <div key={group.label} style={{ marginBottom: 10 }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
-                Custom
+                {group.label}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                {customEmojis.map(e => (
+                {group.emoji.map(e => (
                   <button
                     key={e.code}
                     type="button"
@@ -68,7 +69,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
                 ))}
               </div>
             </div>
-          )}
+          ))}
           {EMOJI_CATEGORIES.map(cat => (
             <div key={cat.label} style={{ marginBottom: 10 }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
