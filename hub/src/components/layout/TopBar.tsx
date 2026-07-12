@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
+import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
+import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 
 const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart, comment: MessageCircle, follow: UserPlus,
@@ -20,6 +22,13 @@ type NotifRow = {
   data?: { avatar_url?: string } | null
 }
 
+type QuickResults = {
+  users: any[]; posts: any[]
+  players: { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null }[]
+  teams: { id: number; abbr: string; name: string; gamePk: number | null }[]
+}
+const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [] }
+
 export function TopBar() {
   const { user, profile } = useAuth()
   const [search, setSearch] = useState('')
@@ -32,6 +41,54 @@ export function TopBar() {
   const supabase = createClient()
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  // Live type-ahead preview — same data sources /search itself uses
+  // (users/posts by ilike, MLB players/teams via the shared route), just
+  // capped smaller since this is a glance-and-click dropdown, not the full
+  // results page. Typing used to just sit there doing nothing until you
+  // hit Enter and got dumped on /search with an EMPTY box, forcing a
+  // retype of what you'd already typed.
+  const [quickResults, setQuickResults] = useState<QuickResults>(EMPTY_RESULTS)
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickLoading, setQuickLoading] = useState(false)
+  const searchRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    const query = search.trim()
+    if (query.length < 2) { setQuickResults(EMPTY_RESULTS); setQuickLoading(false); return }
+    let cancelled = false
+    setQuickLoading(true)
+    const t = setTimeout(async () => {
+      const [{ data: u }, { data: p }, sportsData] = await Promise.all([
+        supabase.from('users')
+          .select('id, username, display_name, avatar_url')
+          .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+          .limit(3),
+        supabase.from('posts')
+          .select('id, content, author:users(username, display_name)')
+          .ilike('content', `%${query}%`)
+          .eq('visibility', 'public')
+          .order('created_at', { ascending: false })
+          .limit(3),
+        fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+      ])
+      if (cancelled) return
+      setQuickResults({
+        users: u ?? [], posts: p ?? [],
+        players: (sportsData.players ?? []).slice(0, 3),
+        teams: (sportsData.teams ?? []).slice(0, 2),
+      })
+      setQuickLoading(false)
+    }, 250)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0
+
+  function goTo(href: string) {
+    setQuickOpen(false)
+    router.push(href)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -73,6 +130,7 @@ export function TopBar() {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setQuickOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -85,7 +143,7 @@ export function TopBar() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (search.trim()) router.push(`/search?q=${encodeURIComponent(search.trim())}`)
+    if (search.trim()) goTo(`/search?q=${encodeURIComponent(search.trim())}`)
   }
 
   return (
@@ -98,14 +156,16 @@ export function TopBar() {
       position: 'sticky', top: 0, zIndex: 20,
     }}>
       {/* Search */}
-      <form onSubmit={handleSearch} style={{ flex: 1, maxWidth: 400, position: 'relative' }}>
+      <form ref={searchRef} onSubmit={handleSearch} style={{ flex: 1, maxWidth: 400, position: 'relative' }}>
         <Search size={14} style={{
           position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
           color: 'var(--text-3)', pointerEvents: 'none',
         }} />
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setQuickOpen(true) }}
+          onFocus={e => { e.target.style.borderColor = 'var(--accent)'; setQuickOpen(true) }}
+          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
           placeholder="Search picks, users, teams…"
           style={{
             width: '100%', paddingLeft: 32, paddingRight: 12,
@@ -114,9 +174,68 @@ export function TopBar() {
             borderRadius: 999, fontSize: 13, color: 'var(--text-1)',
             outline: 'none', transition: 'border-color 150ms',
           }}
-          onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
         />
+
+        {quickOpen && search.trim().length >= 2 && (
+          <div className="ss-dropdown" style={{
+            position: 'absolute', left: 0, right: 0, top: 'calc(100% + 6px)',
+            maxHeight: 420, overflowY: 'auto', zIndex: 50,
+          }}>
+            {quickLoading && !hasQuickResults ? (
+              <div style={{ padding: '16px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>Searching…</div>
+            ) : !hasQuickResults ? (
+              <div style={{ padding: '16px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>No results for "{search.trim()}"</div>
+            ) : (
+              <>
+                {quickResults.teams.map(t => (
+                  <button key={`t-${t.abbr}`} onClick={() => goTo(t.gamePk ? `/sports/mlb/${t.gamePk}` : '/sports')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    className="notif-dropdown-item">
+                    <TeamLogo logo={mlbTeamLogo(t.id)} name={t.abbr} size={26} />
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{t.name}</span>
+                    {t.gamePk && <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, color: 'var(--red)' }}>LIVE</span>}
+                  </button>
+                ))}
+                {quickResults.players.map(p => (
+                  <button key={`p-${p.mlbId}`} onClick={() => goTo(`/dugout?highlight=${p.mlbId}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    className="notif-dropdown-item">
+                    <PlayerAvatar headshot={mlbHeadshot(p.mlbId)} teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null} name={p.name} size={26} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{[p.position, p.teamName].filter(Boolean).join(' · ')}</div>
+                    </div>
+                  </button>
+                ))}
+                {quickResults.users.map(u => (
+                  <button key={`u-${u.id}`} onClick={() => goTo(`/profile/${u.username}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    className="notif-dropdown-item">
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'var(--text-3)' }}>
+                      {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.display_name || u.username)[0].toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{u.display_name || u.username}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>@{u.username}</span>
+                  </button>
+                ))}
+                {quickResults.posts.map(p => (
+                  <button key={`post-${p.id}`} onClick={() => goTo(`/posts/${p.id}`)}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    className="notif-dropdown-item">
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>@{p.author?.username}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.content}</span>
+                  </button>
+                ))}
+                <button onClick={() => goTo(`/search?q=${encodeURIComponent(search.trim())}`)} style={{
+                  display: 'block', width: '100%', textAlign: 'center', padding: '10px', fontSize: 12, fontWeight: 700,
+                  color: 'var(--accent)', background: 'transparent', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer',
+                }}>
+                  See all results for "{search.trim()}"
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </form>
 
       {/* Right controls */}
