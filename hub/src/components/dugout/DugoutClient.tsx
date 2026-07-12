@@ -647,11 +647,19 @@ function oddsHeat(v: number | null, all: (number | null)[], rgb: string = '20,14
 }
 
 // Sign-based text coloring for the FHR%/HR% "shade" columns — deliberately
-// NOT rank-based like heat()/oddsHeat() above: negative is always red,
-// positive always green, near-zero always yellow, regardless of where it
-// falls in the pool. Only the INTENSITY (alpha) scales with the pool, so a
-// big swing on a longshot doesn't read identically to a small swing on a
-// heavy favorite just because both are "positive."
+// NOT rank-based like heat()/oddsHeat() above: green/red is fixed by sign,
+// near-zero always yellow, regardless of where it falls in the pool. Only
+// the INTENSITY (alpha) scales with the pool, so a big swing on a longshot
+// doesn't read identically to a small swing on a heavy favorite just
+// because both point the same direction.
+//
+// NEGATIVE is GREEN, not red: fhr_pct/sa_pct is (today's price − own
+// season-average price) ÷ average (see buildBatterRow) — negative means
+// today's price is CHEAPER/shorter than this player's own usual price, i.e.
+// real book conviction they're more likely today than average. Confirmed
+// against a real result: Henry Davis posted -5.7% FHR / -12.8% HR and went
+// on to hit the actual first HR of that game — negative was the right call,
+// positive (price drifted longer than usual) is the bearish one.
 function shadeColor(v: number | null, all: (number | null)[]): React.CSSProperties {
   if (v == null) return { color: 'var(--text-3)' }
   const mags = all.filter((x): x is number => x != null).map(x => Math.abs(x))
@@ -659,7 +667,7 @@ function shadeColor(v: number | null, all: (number | null)[]): React.CSSProperti
   const intensity = maxMag > 0 ? Math.min(Math.abs(v) / maxMag, 1) : 0
   if (Math.abs(v) < 0.03) return { color: '#eab308', fontWeight: 700 }
   const alpha = 0.55 + intensity * 0.45
-  return { color: v > 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
+  return { color: v < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
 }
 
 // ─── MLB assets ───────────────────────────────────────────────────────────────
