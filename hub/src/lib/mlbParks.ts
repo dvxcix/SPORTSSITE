@@ -52,6 +52,37 @@ export const MLB_PARKS: Record<string, ParkInfo> = {
   WSH: { name: 'Nationals Park', city: 'Washington', lat: 38.873, lon: -77.0074, roof: 'open', orientationDeg: 30 },
 }
 
+// How aligned the wind is with THIS park's actual center-field orientation,
+// -1 (dead blowing in) .. +1 (dead blowing out), scaled by speed (an 18mph+
+// wind is "full" magnitude, calmer wind fades toward 0 regardless of
+// direction). Shared by hrWindColor (direction-only heat) and
+// hrWeatherScore (direction + temp + humidity combined) so the two can't
+// silently drift apart on the same underlying alignment math.
+function windAlignmentScore(windDirDeg: number | null, windMph: number | null, orientationDeg: number): number {
+  if (windDirDeg == null) return 0
+  const blowsTo = windDirDeg + 180
+  const rad = ((blowsTo - orientationDeg) * Math.PI) / 180
+  const alignment = Math.cos(rad) // +1 = dead out, -1 = dead in, 0 = crosswind
+  const magnitude = Math.min(1, (windMph ?? 0) / 18)
+  return alignment * magnitude // -1..1
+}
+
+// Red -> yellow -> green interpolation for a score already normalized to
+// -1 (fully suppressing) .. +1 (fully boosting). Shared by hrWindColor
+// (wind-only) and hrScoreColor (full weather score, pre-normalized before
+// calling this).
+function heatColor(t01: number): string {
+  const red = { r: 239, g: 68, b: 68 }
+  const yellow = { r: 234, g: 179, b: 8 }
+  const green = { r: 34, g: 197, b: 94 }
+  const [a, b] = t01 < 0.5 ? [red, yellow] : [yellow, green]
+  const localT = t01 < 0.5 ? t01 / 0.5 : (t01 - 0.5) / 0.5
+  const r = Math.round(a.r + (b.r - a.r) * localT)
+  const g = Math.round(a.g + (b.g - a.g) * localT)
+  const bl = Math.round(a.b + (b.b - a.b) * localT)
+  return `rgb(${r}, ${g}, ${bl})`
+}
+
 // Red (suppresses HR carry — wind blowing in) -> yellow (neutral/crosswind)
 // -> green (blowing out — helps carry), scaled by both direction alignment
 // AND wind speed. A 3mph "out" wind barely matters; a 15mph one matters a
@@ -59,23 +90,89 @@ export const MLB_PARKS: Record<string, ParkInfo> = {
 // saturated/extreme as speed increases.
 export function hrWindColor(windDirDeg: number | null, windMph: number | null, orientationDeg: number): string {
   if (windDirDeg == null) return '#6b7280' // gray — no data
-  const blowsTo = windDirDeg + 180
-  const rad = ((blowsTo - orientationDeg) * Math.PI) / 180
-  const alignment = Math.cos(rad) // +1 = dead out, -1 = dead in, 0 = crosswind
-  const magnitude = Math.min(1, (windMph ?? 0) / 18)
-  const score = alignment * magnitude // -1..1
+  const score = windAlignmentScore(windDirDeg, windMph, orientationDeg) // -1..1
+  return heatColor((score + 1) / 2)
+}
 
-  // Interpolate red -> yellow -> green through score
-  const red = { r: 239, g: 68, b: 68 }
-  const yellow = { r: 234, g: 179, b: 8 }
-  const green = { r: 34, g: 197, b: 94 }
-  const t = (score + 1) / 2 // 0..1
-  const [a, b] = t < 0.5 ? [red, yellow] : [yellow, green]
-  const localT = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5
-  const r = Math.round(a.r + (b.r - a.r) * localT)
-  const g = Math.round(a.g + (b.g - a.g) * localT)
-  const bl = Math.round(a.b + (b.b - a.b) * localT)
-  return `rgb(${r}, ${g}, ${bl})`
+export interface HrWeatherInput {
+  tempF: number | null
+  humidity: number | null
+  windDirDeg: number | null
+  windMph: number | null
+  orientationDeg: number
+  sheltered: boolean // dome, or a retractable roof (we don't have live open/closed status)
+}
+
+export interface HrWeatherResult {
+  score: number // -3 (suppresses HR carry) .. +3 (boosts it)
+  label: string
+  factors: string[]
+  color: string
+}
+
+// A live, from-scratch HR-carry read for the currently selected hour —
+// computed entirely from what Weather Lab already fetches (Open-Meteo temp/
+// humidity/wind + this park's real center-field orientation), not a scraped
+// third-party page. That matters: mlb-party's own equivalent (game_weather.
+// hr_weather_score, a Supabase edge function that scrapes baseballwx.com)
+// turned out to have its wind columns silently null for all but its first
+// day of data (the scraper's HTML-table regex broke against the live site
+// and nothing ever surfaced that), plus a wind-direction rule that assumed
+// the same "SW/W/NW blows out" bucket for every park regardless of actual
+// orientation. Building this here instead means it rides the same live,
+// per-hour, per-date fetch the rest of the page already depends on — no
+// separate ingest job that can go stale or silently break.
+//
+// This is still a physics-*informed* approximation, not a rigorous carry
+// simulation (no altitude/air-pressure input, no ball-flight integration) —
+// coefficients are hand-tuned to roughly match published research (warmer/
+// less-dense air adds a few feet of carry per 10°F; wind is the dominant
+// factor, humid air is very slightly LESS dense than dry air despite the
+// common intuition, since H2O's molar mass is lower than N2/O2's). Good
+// enough for an at-a-glance "does today's weather help or hurt the over,"
+// not a substitute for a real park-factor model.
+export function hrWeatherScore(input: HrWeatherInput): HrWeatherResult {
+  if (input.sheltered) {
+    return { score: 0, label: 'Neutral — indoors', factors: [], color: heatColor(0.5) }
+  }
+
+  let score = 0
+  const factors: string[] = []
+
+  if (input.tempF != null) {
+    const t = (input.tempF - 70) * 0.04
+    score += t
+    if (input.tempF >= 85) factors.push('Hot air (+carry)')
+    else if (input.tempF >= 75) factors.push('Warm (+slight carry)')
+    else if (input.tempF <= 55) factors.push('Cold air (−carry)')
+  }
+
+  if (input.humidity != null) {
+    // Counterintuitive but real: humid air is LESS dense than dry air
+    // (water vapor's molar mass is lower than N2/O2's), so more humidity
+    // means very slightly more carry, not less. Kept small on purpose —
+    // this is a minor effect next to wind and temperature.
+    score += (input.humidity - 50) * 0.006
+    if (input.humidity >= 80) factors.push('Humid (+slight carry)')
+    else if (input.humidity <= 25) factors.push('Dry air (−slight carry)')
+  }
+
+  if (input.windDirDeg != null) {
+    const align = windAlignmentScore(input.windDirDeg, input.windMph, input.orientationDeg) // -1..1
+    const windScore = align * 2.2
+    score += windScore
+    const mph = input.windMph ?? 0
+    if (align > 0.35) factors.push(mph >= 12 ? 'Wind blowing OUT (+carry)' : 'Light wind out')
+    else if (align < -0.35) factors.push(mph >= 12 ? 'Wind blowing IN (−carry)' : 'Light wind in')
+    else if (mph >= 10) factors.push('Crosswind')
+  }
+
+  score = Math.max(-3, Math.min(3, Math.round(score * 10) / 10))
+  const label = factors.length
+    ? factors.join(' · ')
+    : score >= 0.5 ? 'Favorable conditions' : score <= -0.5 ? 'Unfavorable conditions' : 'Neutral conditions'
+
+  return { score, label, factors, color: heatColor((score / 3 + 1) / 2) }
 }
 
 // Open-Meteo WMO weather codes -> short label.

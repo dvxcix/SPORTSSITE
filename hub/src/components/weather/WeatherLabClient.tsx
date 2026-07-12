@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor, isDarkTeamLogo, LOGO_WHITE_FILTER } from '@/lib/mlbTeamColors'
-import { WMO_LABELS, compassFromTo, hrWindColor, type ParkRoof } from '@/lib/mlbParks'
+import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore, type ParkRoof } from '@/lib/mlbParks'
 import { MLB_PARK_SHAPES } from '@/lib/mlbParkShapes'
 import { mlbHeadshot } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { Tooltip } from '@/components/ui/tooltip-card'
 
 // For the logo halo — a plain white glow read as flat/ugly against several
 // teams' colors, so the halo uses that team's own secondary color instead.
@@ -384,6 +385,14 @@ function GameCard({ game }: { game: WeatherGame }) {
   const logoUrl = getTeamLogoUrl(game.homeAbbr)
   const isSheltered = game.park.roof !== 'open'
   const [showParkHr, setShowParkHr] = useState(false)
+  const hrWeather = hrWeatherScore({
+    tempF: h?.tempF ?? null,
+    humidity: h?.humidity ?? null,
+    windDirDeg: h?.windDirDeg ?? null,
+    windMph: h?.windMph ?? null,
+    orientationDeg: game.park.orientationDeg,
+    sheltered: isSheltered,
+  })
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', transition: 'border-color 150ms' }}
@@ -466,6 +475,27 @@ function GameCard({ game }: { game: WeatherGame }) {
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{h?.humidity != null ? `${Math.round(h.humidity)}%` : '—'}</span>
         </div>
       </div>
+
+      {/* HR weather read — live per-hour score from temp/humidity/wind vs
+          this park's real orientation, not a static or scraped number.
+          Green = favorable for the ball carrying out, red = suppressing,
+          yellow/gray = roughly neutral. Recomputes with the hour tab above. */}
+      <Tooltip content={hrWeather.label}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          margin: '2px 14px 0', padding: '6px 10px', borderRadius: 8, cursor: 'help',
+          background: `${hrWeather.color.startsWith('rgb') ? hrWeather.color.replace('rgb(', 'rgba(').replace(')', ',0.14)') : hrWeather.color}`,
+          border: `1px solid ${hrWeather.color}`,
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>HR WEATHER</span>
+          <span style={{ fontSize: 12, fontWeight: 900, color: hrWeather.color }}>
+            {hrWeather.score > 0 ? '+' : ''}{hrWeather.score.toFixed(1)}
+          </span>
+          <span style={{ fontSize: 10, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '20ch' }}>
+            {hrWeather.label}
+          </span>
+        </div>
+      </Tooltip>
 
       {/* park visual */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 12px 12px', gap: 4 }}>
