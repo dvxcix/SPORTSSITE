@@ -72,6 +72,15 @@ export async function GET(request: Request) {
         avatar_url: whopUser.picture,
         whop_user_id: whopUser.sub,
       },
+      // Without this, createUser() defaults app_metadata.provider to
+      // 'email' whenever an email is supplied — indistinguishable from a
+      // real public self-signup. The "Allow New Registrations" admin toggle
+      // (enforced by a DB trigger on auth.users, see the
+      // enforce_registration_toggle migration) only blocks provider IN
+      // ('email','google') specifically so Whop-gated access (already its
+      // own separate access-pass check above) keeps working even while
+      // public registration is switched off.
+      app_metadata: { provider: 'whop', providers: ['whop'] },
     })
 
     if (createError || !created.user) {

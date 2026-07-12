@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Switch } from '@/components/ui/Switch'
 
 const SETTINGS_FIELDS = [
   { key: 'site_name', label: 'Site Name', type: 'text', default: 'SlipSurge' },
@@ -20,20 +21,49 @@ export function AdminGeneralSettings() {
     SETTINGS_FIELDS.forEach(f => { v[f.key] = f.default })
     return v
   })
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Previously this never loaded the actually-saved row at all — every page
+  // load silently showed the hardcoded defaults (e.g. "Allow New
+  // Registrations" = on) regardless of what was really saved, and hitting
+  // Save while looking at a stale/default screen would overwrite the real
+  // value right back to that default.
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    Promise.resolve(supabase.from('site_settings').select('key, value').in('key', SETTINGS_FIELDS.map(f => f.key)))
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setValues(prev => {
+          const next = { ...prev }
+          for (const row of data) {
+            const field = SETTINGS_FIELDS.find(f => f.key === row.key)
+            if (!field) continue
+            next[row.key] = field.type === 'toggle' ? row.value === 'true' : field.type === 'number' ? Number(row.value) : row.value
+          }
+          return next
+        })
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   async function save() {
     setSaving(true)
     // Store in site_settings table (upsert)
     const supabase = createClient()
     await supabase.from('site_settings').upsert(
-      Object.entries(values).map(([key, value]) => ({ key, value: String(value) }))
+      Object.entries(values).map(([key, value]) => ({ key, value: String(value) })),
+      { onConflict: 'key' }
     )
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     setSaving(false)
   }
+
+  if (loading) return <div className="text-sm text-zinc-500 py-8 text-center">Loading…</div>
 
   return (
     <div className="space-y-4">
@@ -42,10 +72,7 @@ export function AdminGeneralSettings() {
           <div key={f.key} className="flex items-center justify-between px-4 py-3.5">
             <label className="text-sm font-medium text-white">{f.label}</label>
             {f.type === 'toggle' ? (
-              <button type="button" onClick={() => setValues(v => ({ ...v, [f.key]: !v[f.key] }))}
-                style={{ width: '40px', height: '22px', background: values[f.key] ? '#22c55e' : '#3f3f46', borderRadius: '11px', position: 'relative', transition: 'background 0.15s' }}>
-                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', background: 'white', borderRadius: '50%', transition: 'transform 0.15s', transform: values[f.key] ? 'translateX(18px)' : 'translateX(2px)' }} />
-              </button>
+              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} />
             ) : (
               <input
                 type={f.type}

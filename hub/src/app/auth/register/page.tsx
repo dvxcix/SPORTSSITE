@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -30,7 +30,19 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmationSent, setConfirmationSent] = useState(false)
+  // null = still checking. This is the friendly UX layer for the common
+  // case (someone using the real form) — the actual enforcement (blocking
+  // signups even via a direct API call) lives in a database trigger, since
+  // a client-side check alone can't stop that.
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    let cancelled = false
+    createClient().from('site_settings').select('value').eq('key', 'allow_registration').maybeSingle()
+      .then(({ data }) => { if (!cancelled) setRegistrationOpen(data?.value !== 'false') })
+    return () => { cancelled = true }
+  }, [])
 
   function toggleSport(s: string) {
     setSports(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
@@ -116,7 +128,22 @@ export default function RegisterPage() {
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
         </div>
 
-        {confirmationSent ? (
+        {registrationOpen === false ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🚧</div>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Registration is closed</h1>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 340, margin: '0 auto' }}>
+              New accounts aren't open right now. Check back soon, or sign in if you already have one.
+            </p>
+            <Link href="/auth/login" style={{
+              display: 'inline-block', marginTop: 24,
+              background: 'var(--accent)', color: 'var(--accent-fg)',
+              fontWeight: 800, padding: '10px 24px', borderRadius: 99, fontSize: 13, textDecoration: 'none',
+            }}>
+              Back to sign in
+            </Link>
+          </div>
+        ) : confirmationSent ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>📬</div>
             <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Check your email</h1>

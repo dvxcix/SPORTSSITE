@@ -7,21 +7,7 @@ import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { BANNER_PRESETS, type SiteBanner } from '@/lib/banner'
 import { X } from 'lucide-react'
-
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex items-center gap-2 text-sm font-bold text-zinc-300"
-    >
-      <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${checked ? 'bg-green-500' : 'bg-zinc-700'}`}>
-        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-4.5' : 'translate-x-1'}`} />
-      </span>
-      {label}
-    </button>
-  )
-}
+import { Switch as Toggle } from '@/components/ui/Switch'
 
 export function SiteBannerManager({ initialBanner }: { initialBanner: SiteBanner | null }) {
   const [message, setMessage] = useState(initialBanner?.message ?? '')

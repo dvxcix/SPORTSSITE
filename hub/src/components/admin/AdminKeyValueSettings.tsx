@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Switch } from '@/components/ui/Switch'
 
 export type SettingField = { key: string; label: string; type: 'text' | 'email' | 'number' | 'toggle'; default: any; hint?: string }
 
@@ -65,10 +66,7 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
               {f.hint && <p className="text-xs text-zinc-500 mt-0.5">{f.hint}</p>}
             </div>
             {f.type === 'toggle' ? (
-              <button type="button" onClick={() => setValues(v => ({ ...v, [f.key]: !v[f.key] }))}
-                style={{ width: '40px', height: '22px', background: values[f.key] ? '#22c55e' : '#3f3f46', borderRadius: '11px', position: 'relative', transition: 'background 0.15s', flexShrink: 0 }}>
-                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', background: 'white', borderRadius: '50%', transition: 'transform 0.15s', transform: values[f.key] ? 'translateX(18px)' : 'translateX(2px)' }} />
-              </button>
+              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} />
             ) : (
               <input
                 type={f.type}
