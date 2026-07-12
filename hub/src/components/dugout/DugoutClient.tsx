@@ -334,7 +334,17 @@ function buildBatterRow(
   nearMap: Record<string, any>,
   batterPitchMap: BatterPitchMap,
   pitcherPitchMap: PitcherPitchMap,
-  platoonMap: PlatoonMap
+  platoonMap: PlatoonMap,
+  // Only meaningful once the real lineup posts — the away team bats first
+  // every inning, so the away 9-hole hitter still gets his first PA before
+  // ANY home batter does; a home 9-hole hitter is realistically the very
+  // last of all 18 to get a first look. Used to weight FHR conviction by
+  // how little "first at-bat" opportunity a guy actually has. Projected
+  // (unconfirmed) rosters carry the FULL bench, not a real batting order —
+  // batting_order there is just a position-priority index, not a real
+  // sequence — so this is only trustworthy when lineupConfirmed is true.
+  isHome: boolean = false,
+  lineupConfirmed: boolean = false,
 ) {
   const idKey = String(player.mlb_id || '')
   const nn    = player.name_norm || normName(player.name || '')
@@ -495,6 +505,13 @@ function buildBatterRow(
   const is_money_sa_rbi = sa_rbi_raw_ratio != null && sa_rbi_raw_ratio >= 3.5
                         && picks_count != null && picks_count <= 50
 
+  // 1-18 global "who gets a first-PA look first" rank, once the real lineup
+  // is out — away bats first every inning, so away's own order 1-9 maps to
+  // ranks 1-9 and home's to ranks 10-18. null pre-confirmation, since a
+  // projected lineup's batting_order is a position-priority index over the
+  // full bench, not a real sequence.
+  const bat_rank = lineupConfirmed ? (isHome ? 9 + (player.batting_order as number) : (player.batting_order as number)) : null
+
   return {
     mlb_id:        player.mlb_id as number | null,
     name:          player.name   as string,
@@ -533,6 +550,21 @@ function buildBatterRow(
       if (sa_fd != null && av.fd) return sa_fd - av.fd
       if (sa_fd != null && av.cz) return sa_fd - av.cz
       return null
+    })(),
+    bat_rank,
+    // FHR-only (batting order doesn't meaningfully bias ANYTIME-HR chances
+    // the way it does "who's literally first") — scales fhr_delta by how
+    // little first-PA opportunity this spot in the order actually gets: 0.75x
+    // for the very first hitter of the game up to 1.5x for the very last, so
+    // real conviction on a 9-hole home bat reads brighter than the same-size
+    // move on a leadoff man who was already likely to be first up regardless.
+    // Falls back to the plain (unweighted) delta until the lineup posts.
+    fhr_delta_weighted: (() => {
+      const avgFd = fhrAvgMap[nn]?.fd
+      const delta = fhr_fd != null && avgFd ? fhr_fd - avgFd : null
+      if (delta == null || bat_rank == null) return delta
+      const orderWeight = 0.75 + (bat_rank - 1) / 17 * 0.75
+      return delta * orderWeight
     })(),
     sa_fd, sa_cz, sa_mgm, sa_br, m_div_f,
     sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
@@ -1615,7 +1647,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         {row.div != null ? (row.div >= 0 ? '+' : '') + (row.div * 100).toFixed(1) : '—'}
       </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.fhr_div_sa, g('fhr_div_sa')) }}>{f2(row.fhr_div_sa)}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.fhr_pct, row.fhr_delta, g('fhr_delta')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.fhr_pct, row.fhr_delta_weighted, g('fhr_delta_weighted')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.sa_pct, row.sa_delta, gTeam('sa_delta')) }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
 
       <td style={SDIV_D} />
@@ -2097,10 +2129,10 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
     const ap = game.awayPitcher
     const hp = game.homePitcher
     const homeRows = game.homeLineup.map((p: any) =>
-      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap)
+      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, true, !!game.homeLineupConfirmed)
     )
     const awayRows = game.awayLineup.map((p: any) =>
-      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap)
+      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, false, !!game.awayLineupConfirmed)
     )
     const pool = [...homeRows, ...awayRows]
     computePaper(pool)
