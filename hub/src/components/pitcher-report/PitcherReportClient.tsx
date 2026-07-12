@@ -639,7 +639,7 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                             {picks != null && (
                               <Tooltip content={`${picks.toLocaleString()} community Anytime HR picks`}>
                                 <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>
-                                  🎟{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
+                                  📊{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
                                 </span>
                               </Tooltip>
                             )}

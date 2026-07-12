@@ -1675,11 +1675,19 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
   )
 }
 
+// 'pk' isn't a plain number on the row — it's the whole pikkit object
+// ({picks, prop_type, ...}), so the generic a[col] extraction below would
+// diff two objects (always NaN) and silently never reorder anything.
+function sortValue(r: BatterRow, col: string): number | null {
+  if (col === 'pk') return (r.pk as any)?.picks ?? null
+  return r[col as keyof BatterRow] as unknown as number | null
+}
+
 function sortRows(rows: BatterRow[], sort: SortState): BatterRow[] {
   if (!sort) return rows
   return [...rows].sort((a, b) => {
-    const av = a[sort.col as keyof BatterRow] as number | null
-    const bv = b[sort.col as keyof BatterRow] as number | null
+    const av = sortValue(a, sort.col)
+    const bv = sortValue(b, sort.col)
     if (av == null && bv == null) return 0
     if (av == null) return 1
     if (bv == null) return -1
@@ -1790,8 +1798,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
         <thead>
           <tr>
-            <TH label="Player" w={190} sticky />
-            {H('pk', 'Community HR pick count', 34)}
+            <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" sortState={sort} onSort={toggleSort} />
+            {H('pk', 'Community HR pick count', 34, 'pk')}
             <th style={SDIV_H} />
             {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
             {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
@@ -1804,12 +1812,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
             {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
             {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
-            {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44)}
-            {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36)}
-            {H('Laser', 'Laser market price', 50)}
-            {H('Moon', 'Moonshot market price', 50)}
-            {H('1stPA', '1st Plate Appearance HR price', 50)}
-            {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36)}
+            {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
+            {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
+            {H('Laser', 'Laser market price', 50, 'laser105_fd')}
+            {H('Moon', 'Moonshot market price', 50, 'moonshot_fd')}
+            {H('1stPA', '1st Plate Appearance HR price', 50, 'pa1_fd')}
+            {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
             {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi')}
             {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
             {H('HR÷RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
@@ -1821,8 +1829,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
             {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
             {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
-            {H('HR÷C1', 'Anytime HR ÷ cheapest "combine for HR" price', 40)}
-            {H('HR÷C2', 'Anytime HR ÷ cheapest "combine for 2+ HR" price', 40)}
+            {H('HR÷C1', 'Anytime HR ÷ cheapest "combine for HR" price', 40, 'sa_div_c1')}
+            {H('HR÷C2', 'Anytime HR ÷ cheapest "combine for 2+ HR" price', 40, 'sa_div_c2')}
             <th style={SDIV_H} />
             {H('paper', 'Composite Statcast score', 46, 'paper')}
             {H('bk·rk', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
