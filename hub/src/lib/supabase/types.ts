@@ -14,6 +14,9 @@ export interface User {
   following_count: number
   pick_record: { wins: number; losses: number; pushes: number }
   favorite_teams: string[]
+  favorite_players: { mlb_id: number; name: string; team: string }[]
+  social_links: Record<string, string>
+  sportsbooks: string[]
   website?: string
   twitter_handle?: string
   location?: string

@@ -1,11 +1,35 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, Upload } from 'lucide-react'
+import { Check, Loader2, Upload, X, Search } from 'lucide-react'
+import { BookLogo } from '@/components/BookLogo'
+import { MLB_TEAMS } from '@/lib/mlbTeams'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { mlbHeadshot } from '@/lib/mlb-api'
+import { mlbTeamAbbrById } from '@/lib/mlbTeams'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
+
+// Matches BookLogo's own hardcoded BOOKS keys (not exported from there) —
+// these are the only books this app can reliably show a real logo for
+// (locally-hosted assets, not hotlinked favicons), so the picker is capped
+// to this same set rather than letting someone type in an arbitrary book
+// name that would just render as a gray initials fallback everywhere.
+const SPORTSBOOKS = [
+  { key: 'fanduel', label: 'FanDuel' },
+  { key: 'draftkings', label: 'DraftKings' },
+  { key: 'betmgm', label: 'BetMGM' },
+  { key: 'caesars', label: 'Caesars' },
+  { key: 'betrivers', label: 'BetRivers' },
+  { key: 'pinnacle', label: 'Pinnacle' },
+]
+
+type SocialPlatform = { id: string; key: string; name: string; icon_url: string; url_template: string | null }
+type FavoritePlayer = { mlb_id: number; name: string; team: string }
+type PlayerSearchResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null }
 
 export function ProfileForm({ profile }: { profile: any }) {
   const router = useRouter()
@@ -19,6 +43,10 @@ export function ProfileForm({ profile }: { profile: any }) {
     avatar_url: profile?.avatar_url ?? '',
     banner_url: profile?.banner_url ?? '',
     favorite_sports: (profile?.favorite_sports ?? []) as string[],
+    favorite_teams: (profile?.favorite_teams ?? []) as string[],
+    favorite_players: (profile?.favorite_players ?? []) as FavoritePlayer[],
+    social_links: (profile?.social_links ?? {}) as Record<string, string>,
+    sportsbooks: (profile?.sportsbooks ?? []) as string[],
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -26,6 +54,28 @@ export function ProfileForm({ profile }: { profile: any }) {
   const [uploading, setUploading] = useState<'avatar' | 'banner' | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([])
+  useEffect(() => {
+    supabase.from('social_platforms').select('*').order('sort_order').order('name')
+      .then(({ data }) => setPlatforms((data ?? []) as SocialPlatform[]))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [playerQuery, setPlayerQuery] = useState('')
+  const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([])
+  const [playerSearching, setPlayerSearching] = useState(false)
+  useEffect(() => {
+    if (playerQuery.trim().length < 2) { setPlayerResults([]); return }
+    let cancelled = false
+    setPlayerSearching(true)
+    const t = setTimeout(() => {
+      fetch(`/api/search/sports?q=${encodeURIComponent(playerQuery.trim())}`)
+        .then(r => r.ok ? r.json() : { players: [] })
+        .then(d => { if (!cancelled) setPlayerResults(d.players ?? []) })
+        .finally(() => { if (!cancelled) setPlayerSearching(false) })
+    }, 300)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [playerQuery])
 
   async function uploadImage(file: File, kind: 'avatar' | 'banner') {
     setError('')
@@ -52,6 +102,45 @@ export function ProfileForm({ profile }: { profile: any }) {
     }))
   }
 
+  function toggleTeam(abbr: string) {
+    setForm(f => ({
+      ...f,
+      favorite_teams: f.favorite_teams.includes(abbr)
+        ? f.favorite_teams.filter(x => x !== abbr)
+        : [...f.favorite_teams, abbr],
+    }))
+  }
+
+  function toggleSportsbook(key: string) {
+    setForm(f => ({
+      ...f,
+      sportsbooks: f.sportsbooks.includes(key)
+        ? f.sportsbooks.filter(x => x !== key)
+        : [...f.sportsbooks, key],
+    }))
+  }
+
+  function setSocialLink(platformKey: string, handle: string) {
+    setForm(f => {
+      const next = { ...f.social_links }
+      if (handle.trim()) next[platformKey] = handle.trim()
+      else delete next[platformKey]
+      return { ...f, social_links: next }
+    })
+  }
+
+  function addFavoritePlayer(p: PlayerSearchResult) {
+    if (form.favorite_players.some(x => x.mlb_id === p.mlbId)) return
+    if (form.favorite_players.length >= 8) { setError('Up to 8 favorite players.'); return }
+    const team = mlbTeamAbbrById(p.teamId) ?? p.teamName ?? ''
+    setForm(f => ({ ...f, favorite_players: [...f.favorite_players, { mlb_id: p.mlbId, name: p.name, team }] }))
+    setPlayerQuery(''); setPlayerResults([])
+  }
+
+  function removeFavoritePlayer(mlbId: number) {
+    setForm(f => ({ ...f, favorite_players: f.favorite_players.filter(x => x.mlb_id !== mlbId) }))
+  }
+
   async function save() {
     setSaving(true); setError('')
     try {
@@ -67,6 +156,10 @@ export function ProfileForm({ profile }: { profile: any }) {
         avatar_url: form.avatar_url.trim() || null,
         banner_url: form.banner_url.trim() || null,
         favorite_sports: form.favorite_sports,
+        favorite_teams: form.favorite_teams,
+        favorite_players: form.favorite_players,
+        social_links: form.social_links,
+        sportsbooks: form.sportsbooks,
       }).eq('id', profile.id)
       if (err) { setError(err.message); return }
       setSaved(true); setTimeout(() => setSaved(false), 2000)
@@ -162,6 +255,87 @@ export function ProfileForm({ profile }: { profile: any }) {
           ))}
         </div>
       </div>
+
+      <div>
+        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Teams</label>
+        <div className="flex flex-wrap gap-2">
+          {MLB_TEAMS.map(t => (
+            <button key={t.abbr} type="button" onClick={() => toggleTeam(t.abbr)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_teams.includes(t.abbr) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+              <img src={getTeamLogoUrl(t.abbr)} alt="" className="w-4 h-4 object-contain" />
+              {t.shortName}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Players <span className="text-zinc-600 font-normal">(up to 8 — shows as a card linking to their Dugout page)</span></label>
+        {form.favorite_players.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {form.favorite_players.map(p => (
+              <div key={p.mlb_id} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full pl-1.5 pr-2 py-1">
+                <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={24} />
+                <span className="text-xs font-bold text-white">{p.name}</span>
+                <button type="button" onClick={() => removeFavoritePlayer(p.mlb_id)} className="text-zinc-500 hover:text-red-400"><X size={12} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <input value={playerQuery} onChange={e => setPlayerQuery(e.target.value)} placeholder="Search MLB players…"
+            className={inputClass} style={{ paddingLeft: 32 }} />
+          {(playerSearching || playerResults.length > 0) && playerQuery.trim().length >= 2 && (
+            <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden shadow-xl">
+              {playerSearching && playerResults.length === 0 ? (
+                <p className="text-xs text-zinc-500 px-3 py-2">Searching…</p>
+              ) : (
+                playerResults.map(p => (
+                  <button key={p.mlbId} type="button" onClick={() => addFavoritePlayer(p)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-zinc-700/60 text-left">
+                    <PlayerAvatar headshot={mlbHeadshot(p.mlbId)} teamLogo={getTeamLogoUrl(mlbTeamAbbrById(p.teamId))} teamAbbr={mlbTeamAbbrById(p.teamId)} name={p.name} size={26} />
+                    <span className="text-sm text-white flex-1 truncate">{p.name}</span>
+                    <span className="text-xs text-zinc-500">{p.position} · {p.teamName}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-zinc-400 mb-2">Sportsbooks You Use</label>
+        <div className="flex flex-wrap gap-2">
+          {SPORTSBOOKS.map(b => (
+            <button key={b.key} type="button" onClick={() => toggleSportsbook(b.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.sportsbooks.includes(b.key) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+              <BookLogo vendor={b.key} size={14} />
+              {b.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {platforms.length > 0 && (
+        <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-2">Connected Accounts</label>
+          <div className="space-y-2">
+            {platforms.map(p => (
+              <div key={p.id} className="flex items-center gap-2.5">
+                <img src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
+                <input
+                  value={form.social_links[p.key] ?? ''}
+                  onChange={e => setSocialLink(p.key, e.target.value)}
+                  placeholder={`Your ${p.name} handle/username…`}
+                  className={inputClass}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button onClick={save} disabled={saving || !!uploading}
         className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all ${saved ? 'bg-green-600 text-white' : 'bg-green-500 hover:bg-green-400 text-black'} disabled:opacity-60`}>

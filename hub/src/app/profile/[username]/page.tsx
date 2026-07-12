@@ -1,24 +1,35 @@
 import { getUserProfile, getUserPosts, attachUserReactions } from '@/lib/queries'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { FollowButton } from '@/components/social/FollowButton'
 import { ProfileStats } from '@/components/profile/ProfileStats'
 import { UserBadges } from '@/components/social/UserBadges'
 import { AchievementsSection } from '@/components/profile/AchievementsSection'
+import { FavoritesSection } from '@/components/profile/FavoritesSection'
+import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp } from 'lucide-react'
 
-interface Props { params: Promise<{ username: string }> }
+interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
 export const dynamic = 'force-dynamic'
 
-export default async function ProfilePage({ params }: Props) {
+const TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'picks', label: 'Picks' },
+  { key: 'reposts', label: 'Reposts' },
+] as const
+
+export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params
+  const { tab: tabParam } = await searchParams
+  const tab = TABS.some(t => t.key === tabParam) ? tabParam! : 'all'
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
-  const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }] = await Promise.all([
+  const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
     getUserPosts(profile.id),
     supabase.auth.getUser(),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id).eq('visibility', 'public'),
@@ -26,10 +37,16 @@ export default async function ProfilePage({ params }: Props) {
     supabase.from('user_badges')
       .select('badge:badges(id, name, description, card_image_url)')
       .eq('user_id', profile.id),
+    supabase.from('social_platforms').select('*'),
   ])
   const achievements = (achievementRows ?? [])
     .map((r: any) => r.badge)
     .filter((b: any) => b?.card_image_url)
+
+  // Only the platforms this profile actually filled in a handle for.
+  const connectedAccounts = (socialPlatforms ?? [])
+    .filter((p: any) => profile.social_links?.[p.key])
+    .map((p: any) => ({ ...p, handle: profile.social_links[p.key] as string }))
 
   const isOwnProfile = authUser?.id === profile.id
 
@@ -51,10 +68,15 @@ export default async function ProfilePage({ params }: Props) {
   // this profile's own info — that forcing was wrong for reposts, where the
   // post's real author is whoever originally posted it, not this profile.
   const postsWithReactions = await attachUserReactions(posts, authUser?.id)
-  const mappedPosts = postsWithReactions.map((p: any) => ({
+  const allMappedPosts = postsWithReactions.map((p: any) => ({
     ...p,
     user_bookmarked: false,
   }))
+  const mappedPosts = tab === 'picks'
+    ? allMappedPosts.filter((p: any) => p.post_type === 'pick' || p.post_type === 'parlay')
+    : tab === 'reposts'
+    ? allMappedPosts.filter((p: any) => p.reposted_by)
+    : allMappedPosts
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -129,6 +151,32 @@ export default async function ProfilePage({ params }: Props) {
             </span>
           </div>
 
+          {/* Connected accounts + sportsbooks — badges only, no OAuth
+              behind these, just what the person typed into Settings. */}
+          {(connectedAccounts.length > 0 || (profile.sportsbooks?.length ?? 0) > 0) && (
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {connectedAccounts.map((a: any) => {
+                const href = a.url_template ? a.url_template.replace('{handle}', encodeURIComponent(a.handle.replace(/^@/, ''))) : null
+                const content = (
+                  <span className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-full pl-1.5 pr-2.5 py-1 text-xs font-bold text-zinc-300">
+                    <img src={a.icon_url} alt={a.name} className="w-4 h-4 object-contain" />
+                    {a.handle}
+                  </span>
+                )
+                return href ? (
+                  <a key={a.id} href={href} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">{content}</a>
+                ) : (
+                  <span key={a.id}>{content}</span>
+                )
+              })}
+              {(profile.sportsbooks ?? []).map((book: string) => (
+                <span key={book} className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-1.5" title={book}>
+                  <BookLogo vendor={book} size={14} />
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Stats */}
           <ProfileStats stats={[
             { value: String(postsCount ?? 0), label: 'Posts' },
@@ -151,16 +199,34 @@ export default async function ProfilePage({ params }: Props) {
       </div>
 
       <AchievementsSection achievements={achievements} />
+      <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} />
 
       <div className="border-t border-zinc-800" />
+
+      {/* Tabs */}
+      <div className="flex px-2">
+        {TABS.map(t => (
+          <Link
+            key={t.key}
+            href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
+            className={`flex-1 text-center text-sm font-bold py-3 border-b-2 transition-colors ${
+              tab === t.key ? 'text-white border-green-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
 
       {/* Posts */}
       <div className="px-4 py-4 space-y-3">
         {mappedPosts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-4xl mb-3">📭</p>
-            <p className="text-zinc-400 font-medium">No posts yet</p>
-            {isOwnProfile && (
+            <p className="text-zinc-400 font-medium">
+              {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : 'No posts yet'}
+            </p>
+            {isOwnProfile && tab === 'all' && (
               <p className="text-zinc-600 text-sm mt-1">Share your first pick on the <a href="/feed" className="text-green-400 hover:underline">feed</a></p>
             )}
           </div>

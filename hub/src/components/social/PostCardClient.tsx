@@ -371,9 +371,23 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
               )}
 
               {/* Content */}
-              <p style={{ marginTop: 8, fontSize: 14, color: 'var(--text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                <LinkifiedText text={post.content} />
-              </p>
+              {post.content && (
+                <p style={{ marginTop: 8, fontSize: 14, color: 'var(--text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <LinkifiedText text={post.content} />
+                </p>
+              )}
+
+              {/* Attached image — media_urls has existed on posts for a
+                  while but nothing ever rendered it (the composer's Photo
+                  button was a no-op until now, so this was effectively
+                  unreachable dead data). */}
+              {post.media_urls?.[0] && (
+                <img
+                  src={post.media_urls[0]}
+                  alt=""
+                  style={{ marginTop: 10, maxWidth: '100%', maxHeight: 420, borderRadius: 12, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }}
+                />
+              )}
 
               {/* Pick card — structured picks (mlb_id + prop_key) render a
                   full player card; older freeform picks (team/line/odds/book

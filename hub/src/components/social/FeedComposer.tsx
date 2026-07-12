@@ -30,8 +30,28 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const [pollDuration, setPollDuration] = useState('24')
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const supabase = createClient()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  async function uploadImage(file: File) {
+    if (!user) return
+    setError('')
+    setUploadingImage(true)
+    try {
+      const path = `posts/${user.id}/${Date.now()}-${file.name}`
+      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      if (uploadErr) { setError(uploadErr.message); return }
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+      setImageUrl(publicUrl)
+    } catch (e: any) {
+      setError(e?.message || 'Image upload failed — please try again.')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   function insertAtCursor(insertion: string) {
     const el = textareaRef.current
@@ -59,7 +79,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   }
 
   async function handlePost() {
-    if (!content.trim() || !user) return
+    if ((!content.trim() && !imageUrl) || !user) return
     setPosting(true)
     setError('')
 
@@ -117,6 +137,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
       potential_payout: payout,
       pick_data: pickData,
       poll_data: pollData,
+      media_urls: imageUrl ? [imageUrl] : [],
       visibility: 'public',
       group_id: groupId ?? null,
     }).select('id').single()
@@ -154,6 +175,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     setLegs([])
     setWager('')
     setPollOptions(['', ''])
+    setImageUrl('')
     setShowPickForm(false)
     setShowPollForm(false)
     setPosting(false)
@@ -293,6 +315,32 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             </div>
           )}
 
+          {/* Image preview */}
+          {(imageUrl || uploadingImage) && (
+            <div style={{ position: 'relative', marginTop: 10, width: 'fit-content' }}>
+              {uploadingImage ? (
+                <div style={{ width: 160, height: 120, borderRadius: 10, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--text-3)' }}>
+                  Uploading…
+                </div>
+              ) : (
+                <>
+                  <img src={imageUrl} alt="" style={{ maxWidth: 260, maxHeight: 220, borderRadius: 10, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }} />
+                  <button
+                    onClick={() => setImageUrl('')}
+                    style={{
+                      position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                    }}
+                    aria-label="Remove image"
+                  >
+                    <X size={12} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {error && (
             <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{error}</p>
           )}
@@ -316,7 +364,19 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 activeFg="var(--purple)"
                 onClick={() => { setShowPollForm(v => !v); setShowPickForm(false) }}
               />
-              <ComposerBtn icon={<ImageIcon size={14} />} label="Photo" onClick={() => {}} />
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = '' }}
+              />
+              <ComposerBtn
+                icon={<ImageIcon size={14} />}
+                label="Photo"
+                active={!!imageUrl || uploadingImage}
+                onClick={() => imageInputRef.current?.click()}
+              />
               <EmojiPicker onSelect={insertAtCursor} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -328,7 +388,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               )}
               {(() => {
                 const pickIncomplete = showPickForm && legs.length === 0
-                const disabled = !content.trim() || posting || pickIncomplete
+                const disabled = (!content.trim() && !imageUrl) || posting || uploadingImage || pickIncomplete
                 const button = (
                   <button onClick={handlePost} disabled={disabled} style={{
                     padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 800,
