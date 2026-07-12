@@ -46,7 +46,7 @@ export default async function ExplorePage() {
         <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
           <Hash size={14} /> Browse by Sport
         </h2>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {SPORTS.map(s => {
             const logo = sportLogoUrl(s.label)
             return (

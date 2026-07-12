@@ -91,7 +91,10 @@ export default async function SportsPage({
       isSelected: d === date,
       isToday: d === today,
       dayName: dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
-      dayNum: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+      // Day number only (no month) — "Jul 12" doesn't fit in a 7-across strip
+      // on a 375px phone without overflowing; the day name above it plus the
+      // "today" dot/highlight is enough context outside month boundaries.
+      dayNum: dt.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' }),
     }
   })
 
@@ -167,8 +170,8 @@ export default async function SportsPage({
               {/* Column headers */}
               <div style={{ display: 'flex', alignItems: 'center', padding: '7px 16px 7px 30px', borderBottom: '1px solid var(--border)', gap: 0 }}>
                 <span style={{ flex: 1, fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Away</span>
-                <span style={{ width: 100, textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
-                <span style={{ flex: 1, textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingRight: 90 }}>Home</span>
+                <span className="w-[64px] sm:w-[100px]" style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
+                <span className="pr-3 sm:pr-[90px]" style={{ flex: 1, textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Home</span>
               </div>
               {/* Live games first */}
               {live.map(g => <MLBScoreRow key={g.gamePk} game={g} />)}

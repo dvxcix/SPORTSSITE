@@ -689,12 +689,18 @@ function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }
   sortKey?: string; sortState?: SortState; onSort?: (key: string) => void
 }) {
   const active = !!sortKey && sortState?.col === sortKey
+  // The sticky Player column (only sticky=true caller) gets a narrower fixed
+  // width on mobile to match its <td>, so more of the ~60 scrollable stat
+  // columns fit on screen — inline width has to move to a className for that
+  // one column since inline styles always win over responsive Tailwind classes.
+  const responsiveSticky = sticky && w === 190
   return (
     <th
       onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}
+      className={responsiveSticky ? 'w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]' : undefined}
       style={{
         ...STH,
-        width: w, minWidth: w, maxWidth: w,
+        ...(responsiveSticky ? {} : { width: w, minWidth: w, maxWidth: w }),
         ...(sticky ? { position: 'sticky', left: 0, zIndex: 4 } : {}),
         color: active ? 'var(--accent)' : 'var(--text-2)',
       }}
@@ -1259,10 +1265,15 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
 
   return (
     <tr id={id} style={hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}>
-      {/* sticky player cell */}
+      {/* sticky player cell — narrower on mobile (140px vs 190px) so more of
+          the ~60 scrollable stat columns are visible without scrolling past
+          a name column that's eating half a 375px viewport. Width/min/max
+          moved out of inline style into the className since inline styles
+          always beat responsive Tailwind classes for the same property. */}
       <td
         onClick={onToggle}
-        style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', width: 190, minWidth: 190, maxWidth: 190, cursor: 'pointer' }}
+        className="w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
+        style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', cursor: 'pointer' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
           <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right', flexShrink: 0, marginTop: 2 }}>{row.batting_order}</span>

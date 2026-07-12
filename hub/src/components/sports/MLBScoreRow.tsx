@@ -7,8 +7,12 @@ import type { MLBGame } from '@/lib/mlb-api'
 
 function Logo({ id, name, size = 32 }: { id: number; name: string; size?: number }) {
   const [err, setErr] = useState(false)
+  // clamp() instead of a fixed px size so the logo shrinks on narrow phone
+  // viewports (where this row's fixed-width status/venue columns leave much
+  // less room for the flexible away/home sections) without any JS/media query.
+  const dim = `clamp(${size - 8}px, 7vw, ${size}px)`
   if (err || !id) return (
-    <div style={{ width: size, height: size, borderRadius: 4, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.38, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>
+    <div style={{ width: dim, height: dim, borderRadius: 4, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.38, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>
       {name?.[0] ?? '?'}
     </div>
   )
@@ -17,7 +21,7 @@ function Logo({ id, name, size = 32 }: { id: number; name: string; size?: number
       src={mlbTeamLogo(id)}
       alt={name}
       onError={() => setErr(true)}
-      style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }}
+      style={{ width: dim, height: dim, objectFit: 'contain', flexShrink: 0 }}
     />
   )
 }
@@ -73,7 +77,7 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
         </div>
 
         {/* Status center */}
-        <div style={{ width: 100, flexShrink: 0, textAlign: 'center', padding: '0 8px' }}>
+        <div className="w-[64px] sm:w-[100px]" style={{ flexShrink: 0, textAlign: 'center', padding: '0 8px' }}>
           <p style={{ fontSize: 11, fontWeight: 800, color: isLive ? 'var(--red)' : isFinal ? 'var(--text-3)' : 'var(--text-2)', letterSpacing: '0.02em' }}>
             {isFinal ? 'Final' : isLive ? label : label}
           </p>
@@ -100,8 +104,10 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
           <Logo id={home.team.id} name={home.team.name} size={28} />
         </div>
 
-        {/* Venue / time */}
-        <div style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingLeft: 12 }}>
+        {/* Venue / time — hidden on narrow phones, no room next to the
+            already-tight away/status/home columns and it's non-essential
+            (the game detail page has full venue info). */}
+        <div className="hidden sm:block" style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingLeft: 12 }}>
           {isPre && game.venue?.name && (
             <p style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{game.venue.name}</p>
           )}

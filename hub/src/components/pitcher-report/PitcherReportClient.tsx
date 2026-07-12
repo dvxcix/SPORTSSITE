@@ -297,7 +297,7 @@ function DateStrip({ date, onChange }: { date: string; onChange: (d: string) => 
     return {
       date: d, isSelected: d === date, isToday: d === today,
       dayName: dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
-      dayNum: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+      dayNum: dt.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' }),
     }
   })
   return (
@@ -337,7 +337,7 @@ function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
 
   if (!rows.length) {
     return (
-      <div style={{ flex: 1, minWidth: 280 }}>
+      <div style={{ flex: 1, minWidth: 'min(280px, 100%)' }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
         <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-3)', fontSize: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>No pitches tracked against this side in the window.</div>
       </div>
@@ -352,7 +352,7 @@ function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
     return cmpNullsLast(a[activeSort.col], b[activeSort.col], activeSort.dir)
   })
   return (
-    <div style={{ flex: 1, minWidth: 320 }}>
+    <div style={{ flex: 1, minWidth: 'min(320px, 100%)' }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.04em' }}>{title}</div>
       <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 4 }}>Click a pitch to pin its opposing-batter breakdown below</div>
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
@@ -859,7 +859,7 @@ export function PitcherReportClient() {
   }, [hotPitches, pinned, activeRows, showAll])
 
   return (
-    <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="max-w-[1400px] mx-auto px-4 py-5 sm:px-6">
       <div className="fade-in" style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
           Pitcher <span style={{ color: 'var(--accent)' }}>Report</span>

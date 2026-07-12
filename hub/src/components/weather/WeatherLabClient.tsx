@@ -582,7 +582,8 @@ function DateStrip({ date, onChange }: { date: string; onChange: (d: string) => 
       isSelected: d === date,
       isToday: d === today,
       dayName: dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
-      dayNum: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+      // Day number only — "Jul 12" overflows a 7-across strip at 375px.
+      dayNum: dt.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' }),
     }
   })
   const prevDate = offsetDate(date, -1)
@@ -644,7 +645,7 @@ export function WeatherLabClient() {
   }, [date])
 
   return (
-    <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="max-w-[1400px] mx-auto px-4 py-5 sm:px-6">
       <div className="fade-in" style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           Weather <span style={{ color: 'var(--accent)' }}>Lab</span>
@@ -662,7 +663,7 @@ export function WeatherLabClient() {
       ) : games.length === 0 ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No games with weather data for {date}.</div>
       ) : (
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {games.map(g => <GameCard key={g.gamePk} game={g} />)}
         </div>
       )}
