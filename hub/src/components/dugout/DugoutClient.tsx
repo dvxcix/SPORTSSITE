@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -1308,7 +1309,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       {/* pk */}
       <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
         {row.pk?.picks != null ? (
-          <Tooltip content={`${row.pk.picks.toLocaleString()} community HR picks (Pikkit)`} containerClassName="w-full h-full flex items-center justify-center">
+          <Tooltip content={`${row.pk.picks.toLocaleString()} community HR picks`} containerClassName="w-full h-full flex items-center justify-center">
             <span style={{ cursor: 'help' }}>{row.pk.picks >= 1000 ? `${(row.pk.picks / 1000).toFixed(1)}k` : row.pk.picks}</span>
           </Tooltip>
         ) : '—'}
@@ -1686,8 +1687,34 @@ function sortRows(rows: BatterRow[], sort: SortState): BatterRow[] {
   })
 }
 
+// The opposing-pitcher label at the top of each lineup used to be plain
+// gray text ("vs RHP Robert Gasser") — no headshot, no way to tell hand at
+// a glance, and no way to actually get to that pitcher's own page. Links
+// straight into Pitcher Report with this exact pitcher pre-selected, same
+// full-site-fluidity pattern as the batter links elsewhere in this file
+// that jump the other direction (Pitcher Report -> Dugout via ?highlight=).
+function PitcherLinkChip({ pitcher, teamAbbr, date }: { pitcher: { id: number; name: string; hand: string }; teamAbbr: string; date: string }) {
+  return (
+    <Tooltip content={`Open ${pitcher.name} in Pitcher Report`}>
+      <Link
+        href={`/pitcher-report?date=${date}&pitcherId=${pitcher.id}`}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', textDecoration: 'none' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
+      >
+        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>vs</span>
+        <SharedPlayerAvatar headshot={mlbHeadshot(pitcher.id)} teamLogo={getTeamLogoUrl(teamAbbr)} teamAbbr={teamAbbr} name={pitcher.name} size={22} />
+        {/* Same L=blue/R=orange hand convention used everywhere else in
+            this app (batter-hand badges, Pitcher Report's starter cards). */}
+        <span style={{ fontSize: 10, fontWeight: 800, color: pitcher.hand === 'L' ? '#60a5fa' : '#fb923c' }}>{pitcher.hand}HP</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-2)' }}>{pitcher.name}</span>
+      </Link>
+    </Tooltip>
+  )
+}
+
 // ─── game table ───────────────────────────────────────────────────────────────
-function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap, highlightMlbId }: {
+function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap, highlightMlbId, date }: {
   game: any
   splitMap: SplitMap; timingMap: TimingMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -1702,6 +1729,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   platoonMap: PlatoonMap
   pitchEventsMap: PitchEventsMap
   highlightMlbId?: number | null
+  date: string
 }) {
   const [sort, setSort] = useState<SortState>(null)
   const highlightKey = highlightMlbId != null
@@ -1763,7 +1791,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
         <thead>
           <tr>
             <TH label="Player" w={190} sticky />
-            {H('pk', 'Pikkit community HR pick count', 34)}
+            {H('pk', 'Community HR pick count', 34)}
             <th style={SDIV_H} />
             {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
             {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
@@ -1842,7 +1870,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
                     {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
                   </span>
                 )}
-                {game.awayPitcher && <span style={{ fontSize: 10, color: 'var(--text-3)', marginLeft: 'auto' }}>vs <strong style={{ color: 'var(--text-2)' }}>{game.awayPitcher.hand}HP</strong> {game.awayPitcher.name}</span>}
+                {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
               </div>
             </td>
           </tr>
@@ -1870,7 +1898,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
                     {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
                   </span>
                 )}
-                {game.homePitcher && <span style={{ fontSize: 10, color: 'var(--text-3)', marginLeft: 'auto' }}>vs <strong style={{ color: 'var(--text-2)' }}>{game.homePitcher.hand}HP</strong> {game.homePitcher.name}</span>}
+                {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
               </div>
             </td>
           </tr>
@@ -2090,6 +2118,7 @@ export function DugoutClient({ date }: { date: string }) {
         <GameTable
           key={active.gameKey}
           game={active}
+          date={date}
           splitMap={splitMap}
           timingMap={timingMap}
           pitcherMap={pitcherMap}

@@ -1,6 +1,7 @@
 'use client'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -636,7 +637,7 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                               </Tooltip>
                             ))}
                             {picks != null && (
-                              <Tooltip content={`${picks.toLocaleString()} community Anytime HR picks (Pikkit)`}>
+                              <Tooltip content={`${picks.toLocaleString()} community Anytime HR picks`}>
                                 <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>
                                   🎟{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
                                 </span>
@@ -673,7 +674,13 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
 
 // ─── page ────────────────────────────────────────────────────────────────
 export function PitcherReportClient() {
-  const [date, setDate] = useState<string>(() => localToday())
+  // Deep-link support (Dugout's opposing-pitcher chip links here with both
+  // params) — date picks the right slate, pitcherId auto-selects that exact
+  // starter once his game's data loads instead of defaulting to whoever's
+  // first in the list.
+  const searchParams = useSearchParams()
+  const linkedPitcherId = searchParams.get('pitcherId')
+  const [date, setDate] = useState<string>(() => searchParams.get('date') || localToday())
   const [data, setData] = useState<DugoutData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -714,8 +721,10 @@ export function PitcherReportClient() {
   }, [data])
 
   useEffect(() => {
-    if (!selectedKey && starters.length) setSelectedKey(starters[0].key)
-  }, [starters, selectedKey])
+    if (selectedKey || !starters.length) return
+    const linked = linkedPitcherId ? starters.find(s => String(s.pitcher.id) === linkedPitcherId) : null
+    setSelectedKey((linked ?? starters[0]).key)
+  }, [starters, selectedKey, linkedPitcherId])
 
   const selected = starters.find(s => s.key === selectedKey) ?? null
 

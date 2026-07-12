@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import { PitcherReportClient } from '@/components/pitcher-report/PitcherReportClient'
 
 export default function PitcherReportPage() {
-  return <PitcherReportClient />
+  return (
+    <Suspense fallback={null}>
+      <PitcherReportClient />
+    </Suspense>
+  )
 }
