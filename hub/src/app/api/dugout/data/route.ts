@@ -135,9 +135,16 @@ async function fetchPitcherPitchTypeRecent() {
 // played" window, not a calendar-day one) + season platoon splits — scoped
 // to just today's lineups since that's the only relevant set, not the whole
 // league. See ingest-batter-game-logs.
+//
+// No date bound here — a full slate's lineups can easily carry a combined
+// season's worth of per-game rows (confirmed live: ~67 rows/batter average),
+// so this hit the exact same silent per-request truncation as
+// fanduel_gap_odds and pikkit_public_picks did (mpGet caps at 1000 rows
+// regardless of how many actually match). mpGetAll pages until a short
+// page proves the end, same fix already applied to those two.
 async function fetchBatterGameLogs(mlbIds: number[]) {
   if (!mlbIds.length) return []
-  return mpGet(`/rest/v1/batter_game_logs?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,name_norm,game_date,pa,ab,h,hr,rbi,bb,so,avg,obp,slg,ops&order=game_date.desc`, 900)
+  return mpGetAll(`/rest/v1/batter_game_logs?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,name_norm,game_date,pa,ab,h,hr,rbi,bb,so,avg,obp,slg,ops&order=game_date.desc`, 900)
 }
 
 async function fetchBatterPlatoonSplits(mlbIds: number[]) {
