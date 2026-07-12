@@ -15,7 +15,7 @@ type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb'
 
 const TRENDING_TAGS = ['MLB', 'Yankees', 'Dodgers', 'OverUnder', 'NFL2026', 'Props', 'Parlays', 'NBA']
 
-type MlbPlayerResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null; gamePk: number | null }
+type MlbPlayerResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null; gamePk: number | null; isProbableStarter: boolean }
 type MlbTeamResult = { id: number; abbr: string; name: string; shortName: string; gamePk: number | null }
 
 export function SearchClient() {
@@ -30,6 +30,7 @@ export function SearchClient() {
   const [posts, setPosts] = useState<any[]>([])
   const [players, setPlayers] = useState<MlbPlayerResult[]>([])
   const [teams, setTeams] = useState<MlbTeamResult[]>([])
+  const [mlbDate, setMlbDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
@@ -58,6 +59,7 @@ export function SearchClient() {
     setPosts(p ?? [])
     setPlayers(sportsData.players ?? [])
     setTeams(sportsData.teams ?? [])
+    setMlbDate(sportsData.date ?? null)
     setLoading(false)
   }, [])
 
@@ -163,6 +165,18 @@ export function SearchClient() {
                         className="text-[11px] font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors">
                         Dugout
                       </Link>
+                      {/* Only shown when this exact player is a probable
+                          starter today — Pitcher Report is built around one
+                          specific starting pitcher's own matchup, so it has
+                          nothing real to show for a reliever or position
+                          player, and linking there for every "P" result
+                          regardless would just land on an empty state. */}
+                      {p.isProbableStarter && (
+                        <Link href={`/pitcher-report?date=${mlbDate ?? ''}&pitcherId=${p.mlbId}`}
+                          className="text-[11px] font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors">
+                          Pitcher Report
+                        </Link>
+                      )}
                       {p.gamePk && (
                         <Link href={`/sports/mlb/${p.gamePk}`}
                           className="text-[11px] font-bold bg-green-500 hover:bg-green-400 text-black px-2.5 py-1.5 rounded-lg transition-colors">
