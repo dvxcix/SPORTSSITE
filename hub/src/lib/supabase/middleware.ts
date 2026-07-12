@@ -12,6 +12,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Share-image PNGs are meant to be fetched by whoever a pick got shared
+  // to — the recipient's browser, an external site's link-preview crawler —
+  // none of whom carry a SlipSurge session cookie. Same problem as cron:
+  // the proxy matcher covers /api too, so this got redirected to
+  // /auth/login (HTML) before the route handler ever ran.
+  if (request.nextUrl.pathname.startsWith('/api/share-image/')) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
