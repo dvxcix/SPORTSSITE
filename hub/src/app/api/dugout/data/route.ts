@@ -480,7 +480,37 @@ export async function GET(req: Request) {
     if (hp) pitcherIds.add(hp)
     if (ap) pitcherIds.add(ap)
   }
-  const pitcherSplits = await fetchPitcherSplits(Array.from(pitcherIds))
+  const pitcherIdList = Array.from(pitcherIds)
+
+  // Same silent-gap pattern as the confirmed-lineup batSide fix above, just
+  // for the pitcher's own hand this time — confirmed live: schedule's
+  // hydrate=probablePitcher NEVER returns pitchHand (every probablePitcher
+  // object came back with it undefined, for every single game checked), so
+  // `pitchHand?.code || 'R'` was silently forcing every pitcher on the
+  // slate to "RHP" regardless of their real hand — real lefties like
+  // Robert Gasser, Matthew Boyd, and Andrew Abbott all showed as RHP. This
+  // fed both the page's own "RHP"/"LHP" label AND effectiveBatSide's
+  // switch-hitter grouping (which pitcher hand a switch hitter should
+  // count as facing), so it wasn't just cosmetic. people?personIds= does
+  // carry it — batch-fetch it the same way batSide already is.
+  const pitcherHandById = new Map<number, string>()
+  if (pitcherIdList.length) {
+    try {
+      const res = await fetch(
+        `https://statsapi.mlb.com/api/v1/people?personIds=${pitcherIdList.join(',')}`,
+        { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+      )
+      if (res.ok) {
+        const people = (await res.json()).people ?? []
+        for (const p of people) {
+          const code = p.pitchHand?.code
+          if (p.id && code) pitcherHandById.set(p.id, code)
+        }
+      }
+    } catch {}
+  }
+
+  const pitcherSplits = await fetchPitcherSplits(pitcherIdList)
 
   // 4. Match each MLB game to a BDL game and fetch its props — sequential,
   // in mlbGames order. This must NOT run inside the parallel games.map below:
@@ -560,10 +590,10 @@ export async function GET(req: Request) {
     const mgmGapOpeningByName = mgmGapOpeningByGameKey[gameKey] ?? {}
 
     const homePitcher = g.teams?.home?.probablePitcher
-      ? { id: g.teams.home.probablePitcher.id, name: g.teams.home.probablePitcher.fullName, hand: g.teams.home.probablePitcher.pitchHand?.code || 'R' }
+      ? { id: g.teams.home.probablePitcher.id, name: g.teams.home.probablePitcher.fullName, hand: pitcherHandById.get(g.teams.home.probablePitcher.id) ?? g.teams.home.probablePitcher.pitchHand?.code ?? 'R' }
       : null
     const awayPitcher = g.teams?.away?.probablePitcher
-      ? { id: g.teams.away.probablePitcher.id, name: g.teams.away.probablePitcher.fullName, hand: g.teams.away.probablePitcher.pitchHand?.code || 'R' }
+      ? { id: g.teams.away.probablePitcher.id, name: g.teams.away.probablePitcher.fullName, hand: pitcherHandById.get(g.teams.away.probablePitcher.id) ?? g.teams.away.probablePitcher.pitchHand?.code ?? 'R' }
       : null
 
     const mkLineup = (players: any[], teamAbbr: string, teamName: string) =>
