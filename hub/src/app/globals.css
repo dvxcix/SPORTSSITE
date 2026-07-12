@@ -252,6 +252,24 @@ img { max-width: 100%; }
   to { --ring-angle: 360deg; }
 }
 
+/* ── Pinned-card moving border ──────────────── */
+/* Same conic-gradient-chasing-the-edge technique as avatar-glow-ring
+   (reuses its --ring-angle/ring-spin), just with a rectangular radius
+   instead of a circle — for calling out a pinned/selected card (Aceternity's
+   Moving Border effect) rather than a profile avatar. */
+.pinned-moving-border {
+  position: relative;
+}
+.pinned-moving-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  background: conic-gradient(from var(--ring-angle, 0deg), var(--accent), transparent 30%, transparent 70%, var(--accent));
+  animation: ring-spin 3s linear infinite;
+  z-index: -1;
+}
+
 /* ── Aceternity UI (Meteors / Spotlight) ────── */
 @keyframes meteor {
   0%   { transform: rotate(215deg) translateX(0); opacity: 1; }

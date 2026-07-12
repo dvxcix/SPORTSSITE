@@ -827,19 +827,26 @@ export function PitcherReportClient() {
   // time, give me the option to just see everything.
   const [showAll, setShowAll] = useState(false)
   useEffect(() => { setShowAll(false) }, [selected?.key, windowMode, liveN])
+  // Pinning is exclusive, not additive: as soon as anything is pinned, that
+  // becomes the whole view — auto top-2 and "show all" both stand down until
+  // every pin is cleared. Pinning is a deliberate "just show me THIS" action,
+  // and mixing it back in with the auto-picked pitches buried the thing you
+  // just went out of your way to select among stuff you didn't ask for.
   const shownPitches = useMemo(() => {
+    if (pinned.length > 0) {
+      const out: { hand: 'R' | 'L'; pitchType: string; row: any }[] = []
+      for (const p of pinned) {
+        const row = activeRows[p.hand].find(r => r.pitch_type === p.pitchType)
+        if (row) out.push({ hand: p.hand, pitchType: p.pitchType, row })
+      }
+      return out
+    }
     if (showAll) {
       const out: { hand: 'R' | 'L'; pitchType: string; row: any }[] = []
       for (const hand of ['R', 'L'] as const) for (const row of activeRows[hand]) out.push({ hand, pitchType: row.pitch_type, row })
       return out
     }
-    const out = [...hotPitches]
-    for (const p of pinned) {
-      if (out.some(h => h.hand === p.hand && h.pitchType === p.pitchType)) continue
-      const row = activeRows[p.hand].find(r => r.pitch_type === p.pitchType)
-      if (row) out.push({ hand: p.hand, pitchType: p.pitchType, row })
-    }
-    return out
+    return hotPitches
   }, [hotPitches, pinned, activeRows, showAll])
 
   return (
@@ -877,10 +884,20 @@ export function PitcherReportClient() {
                     cursor: 'pointer', textAlign: 'left',
                   }}
                 >
-                  <TeamLogoImg abbr={s.teamAbbr} size={18} />
+                  <PlayerAvatar headshot={mlbHeadshot(s.pitcher.id)} teamLogo={getTeamLogoUrl(s.teamAbbr)} teamAbbr={s.teamAbbr} name={s.pitcher.name} size={32} />
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: isSel ? 'var(--accent)' : 'var(--text-1)' }}>{s.pitcher.name}</div>
-                    <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{s.pitcher.hand}HP · {s.teamAbbr} vs {s.oppAbbr}</div>
+                    <div style={{ fontSize: 9, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {/* Same L/R color convention as the batter-hand badges
+                          in these tables (L=blue, R=orange) — so pitcher
+                          handedness reads at a glance instead of blending
+                          into gray meta text. */}
+                      <span style={{ fontWeight: 800, color: s.pitcher.hand === 'L' ? '#60a5fa' : '#fb923c' }}>{s.pitcher.hand}HP</span>
+                      <span style={{ color: 'var(--text-3)' }}>·</span>
+                      <TeamLogoImg abbr={s.teamAbbr} size={12} />
+                      <span style={{ color: 'var(--text-3)' }}>vs</span>
+                      <TeamLogoImg abbr={s.oppAbbr} size={12} />
+                    </div>
                   </div>
                 </button>
               )
@@ -943,7 +960,7 @@ export function PitcherReportClient() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
                     <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>
-                      {showAll ? 'Every pitch vs every batter' : 'Getting hit on these pitches lately'}
+                      {pinned.length > 0 ? '📌 Pinned pitches' : showAll ? 'Every pitch vs every batter' : 'Getting hit on these pitches lately'}
                     </div>
                     <button
                       onClick={() => setShowAll(v => !v)}
@@ -953,9 +970,11 @@ export function PitcherReportClient() {
                     </button>
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
-                    {showAll
+                    {pinned.length > 0
+                      ? `Showing only what you've pinned (${pinned.length}) — unpin everything below to go back to ${showAll ? 'showing every pitch' : 'the auto-picked top 2 per hand'}.`
+                      : showAll
                       ? 'Every pitch this pitcher has thrown vs each hand, matched against the opposing lineup\'s own recent numbers for that exact combo — no curation.'
-                      : 'Auto-picked: ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches), top 2 per hand — plus anything you\'ve pinned yourself from the tables above (📌). Opposing lineup\'s own recent numbers shown against that exact pitch/hand combo, hardest-hit first.'}
+                      : 'Auto-picked: ranked by barrel% + hard-hit% in the window above (min. 10 tracked pitches), top 2 per hand. Click any row in the tables above to pin it instead — pinning takes over this whole section until you unpin.'}
                   </div>
                   {shownPitches.length === 0 && (
                     <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 12 }}>
@@ -967,7 +986,11 @@ export function PitcherReportClient() {
                       const batters = selected.oppLineup.filter(p => effectiveBatSide(p.bats, selected.pitcher.hand) === hand)
                       const isManual = pinnedByHand[hand].has(pitchType)
                       return (
-                        <div key={`${hand}-${pitchType}`}>
+                        <div
+                          key={`${hand}-${pitchType}`}
+                          className={isManual ? 'pinned-moving-border' : undefined}
+                          style={isManual ? { padding: 12, borderRadius: 14, background: 'var(--surface)' } : undefined}
+                        >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                             <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: pitchColor(pitchType) }} />
                             <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{pitchLabel(pitchType)} vs {hand}HB</span>
