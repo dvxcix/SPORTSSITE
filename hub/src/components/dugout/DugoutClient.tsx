@@ -9,6 +9,7 @@ import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot } from '@/lib/mlb-api'
+import { PitchMixTable, BatterVsPitchTable, pct as matchupPct } from '@/components/pitcher-report/MatchupTables'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const normName = (s: string) =>
@@ -783,6 +784,7 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 function PlayerDrillDown({
   row, pitcherRow, timingMap, oppPitcher, gameInfo, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap,
   windowMode, liveN, onSetWindowMode, onSetLiveN, liveEntry,
+  lineupPlayer, pitcherTeamAbbr, pitcherTeamName, lineupConfirmed, splitMap, pitcherMap, pikkitMap,
 }: {
   row: BatterRow
   pitcherRow: any
@@ -799,6 +801,16 @@ function PlayerDrillDown({
   onSetWindowMode: (m: '14day' | 'live') => void
   onSetLiveN: (n: number) => void
   liveEntry?: { status: 'loading' | 'ready' | 'error'; data?: any; error?: string }
+  // Matchup card — reuses Pitcher Report's actual PitchMixTable/
+  // BatterVsPitchTable components, scoped to this one batter vs this one
+  // pitcher, instead of the condensed columns above.
+  lineupPlayer: any
+  pitcherTeamAbbr: string
+  pitcherTeamName: string
+  lineupConfirmed: boolean
+  splitMap: SplitMap
+  pitcherMap: PitcherMap
+  pikkitMap: Record<string, any>
 }) {
   const [expandedPitch, setExpandedPitch] = useState<string | null>(null)
   const pitcherHand = pitcherRow?.pitch_hand || 'R'
@@ -900,6 +912,36 @@ function PlayerDrillDown({
   }).sort((a, b) => b.pct - a.pct)
 
   const noBatSplits = !row.s_spd && !row.s_brl
+
+  // Full pitch-mix rows for just the hand this batter is actually facing —
+  // same two sources (live-computed vs 14-day mlb-party) as the condensed
+  // table above, just unfiltered by the >4%-usage cutoff since PitchMixTable
+  // does its own display/sort, not a top-N summary.
+  const matchupMixRows: any[] = useLive
+    ? liveMixRows
+    : Object.values(pitcherPitchMap[pitcherIdKey] ?? {}).map((byHand: any) => byHand?.[effectiveBats]).filter(Boolean)
+
+  // Same auto-pick as Pitcher Report: ranked by barrel%+hard-hit% among
+  // pitches with a real sample, top 2 — "what's actually live against him
+  // right now," not just what he throws most.
+  const matchupHotPitches = useMemo(() => {
+    const eligible = matchupMixRows.filter((r: any) => (r.pitches ?? 0) >= 10)
+    return [...eligible].sort((a: any, b: any) =>
+      ((b.barrel_pct ?? 0) * 1.5 + (b.hard_hit_pct ?? 0)) - ((a.barrel_pct ?? 0) * 1.5 + (a.hard_hit_pct ?? 0))
+    ).slice(0, 2).map((r: any) => r.pitch_type as string)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchupMixRows.map((r: any) => `${r.pitch_type}:${r.pitches}:${r.barrel_pct}:${r.hard_hit_pct}`).join('|')])
+
+  const [matchupPinned, setMatchupPinned] = useState<Set<string>>(new Set())
+  const onToggleMatchupPin = (_hand: 'R' | 'L', pt: string) => setMatchupPinned(prev => {
+    const next = new Set(prev)
+    if (next.has(pt)) next.delete(pt); else next.add(pt)
+    return next
+  })
+  const matchupShownTypes = matchupPinned.size > 0 ? Array.from(matchupPinned) : matchupHotPitches
+  const matchupGetRow = (pitchType: string) => (_b: any) => useLive
+    ? ((liveBatterRows[pitchType] as any)?.[pitcherHand] ?? null)
+    : (batterPitchMap[row.name_norm]?.[pitchType]?.[pitcherHand] ?? null)
 
   return (
     <td colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
@@ -1160,6 +1202,77 @@ function PlayerDrillDown({
           </div>
         )}
       </div>
+
+      {/* Full pitcher matchup card — literally Pitcher Report's own
+          PitchMixTable/BatterVsPitchTable, scoped to just this one batter
+          vs the pitcher he's actually facing tonight, not a condensed
+          rebuild. Reuses the same windowMode/liveN toggle above. */}
+      {pitcherRow && lineupPlayer && oppPitcher && (
+        <div style={{ width: '100%', marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <PlayerAvatar mlbId={oppPitcher.id ?? null} size={40} teamAbbr={pitcherTeamAbbr} name={oppPitcher.name} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>
+                {oppPitcher.name} <span style={{ color: 'var(--accent)' }}>{pitcherHand}HP</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                {pitcherTeamName} · facing {lineupPlayer.team_name || row.team} · {lineupConfirmed ? 'Confirmed lineup' : 'Projected lineup (roster, not confirmed batting order)'}
+              </div>
+            </div>
+          </div>
+
+          <PitchMixTable
+            title={`${oppPitcher.name}'s mix vs ${effectiveBats === 'L' ? 'LHB' : 'RHB'} (${row.name})`}
+            rows={matchupMixRows}
+            hand={effectiveBats as 'R' | 'L'}
+            pinned={matchupPinned}
+            onTogglePin={onToggleMatchupPin}
+          />
+
+          {matchupMixRows.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)', marginBottom: 4 }}>
+                {matchupPinned.size > 0 ? '📌 Pinned pitches' : `${row.name}'s recent form vs these pitches`}
+              </div>
+              {matchupShownTypes.length === 0 ? (
+                <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                  No pitch cleared the 10-pitch auto-pick threshold yet — click any row in the table above to pin it.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {matchupShownTypes.map(pitchType => {
+                    const mixRow = matchupMixRows.find((r: any) => r.pitch_type === pitchType)
+                    return (
+                      <div key={pitchType}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-1)' }}>{PITCH_LABELS[pitchType] || pitchType}</span>
+                          {mixRow && (
+                            <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
+                              ({matchupPct(mixRow.hard_hit_pct)} hard-hit · {matchupPct(mixRow.barrel_pct)} barrel · {mixRow.pitches} pitches)
+                            </span>
+                          )}
+                        </div>
+                        <BatterVsPitchTable
+                          pitchType={pitchType}
+                          batters={[lineupPlayer]}
+                          date={gameInfo.game_date ?? ''}
+                          pitcherId={oppPitcher.id}
+                          pitcherHand={pitcherHand}
+                          splitMap={splitMap}
+                          timingMap={timingMap}
+                          pitcherMap={pitcherMap}
+                          pikkitMap={pikkitMap}
+                          getRow={matchupGetRow(pitchType)}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </td>
   )
 }
@@ -1990,11 +2103,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           {displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
             const pitRow = pickPitcherRow(pitcherMap, game.awayPitcher?.id, row.bats === 'S' ? (game.awayPitcher?.hand === 'L' ? 'R' : 'L') : row.bats)
+            const lineupPlayer = game.homeLineup?.find((p: any) => p.mlb_id === row.mlb_id) ?? null
             return (
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.awayPitcher?.id ? liveCache[`${game.awayPitcher.id}-${liveN}`] : undefined} /></tr>
+                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.awayPitcher?.id ? liveCache[`${game.awayPitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.awayAbbr} pitcherTeamName={game.awayTeam} lineupConfirmed={!!game.homeLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} /></tr>
                 )}
               </React.Fragment>
             )
@@ -2018,11 +2132,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
             const pitRow = pickPitcherRow(pitcherMap, game.homePitcher?.id, row.bats === 'S' ? (game.homePitcher?.hand === 'L' ? 'R' : 'L') : row.bats)
+            const lineupPlayer = game.awayLineup?.find((p: any) => p.mlb_id === row.mlb_id) ?? null
             return (
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.homePitcher?.id ? liveCache[`${game.homePitcher.id}-${liveN}`] : undefined} /></tr>
+                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.homePitcher?.id ? liveCache[`${game.homePitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.homeAbbr} pitcherTeamName={game.homeTeam} lineupConfirmed={!!game.awayLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} /></tr>
                 )}
               </React.Fragment>
             )
