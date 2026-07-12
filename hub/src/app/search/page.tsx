@@ -3,38 +3,52 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Search, TrendingUp, Users, Zap, Hash } from 'lucide-react'
+import { Search, TrendingUp, Users, Zap, Hash, Activity } from 'lucide-react'
+import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
+import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 
-type SearchTab = 'all' | 'users' | 'posts' | 'picks'
+type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb'
 
 const TRENDING_TAGS = ['MLB', 'Yankees', 'Dodgers', 'OverUnder', 'NFL2026', 'Props', 'Parlays', 'NBA']
+
+type MlbPlayerResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null; gamePk: number | null }
+type MlbTeamResult = { id: number; abbr: string; name: string; shortName: string; gamePk: number | null }
 
 export default function SearchPage() {
   const [q, setQ] = useState('')
   const [tab, setTab] = useState<SearchTab>('all')
   const [users, setUsers] = useState<any[]>([])
   const [posts, setPosts] = useState<any[]>([])
+  const [players, setPlayers] = useState<MlbPlayerResult[]>([])
+  const [teams, setTeams] = useState<MlbTeamResult[]>([])
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
   const doSearch = useCallback(async (query: string) => {
-    if (!query.trim()) { setUsers([]); setPosts([]); return }
+    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); return }
     setLoading(true)
 
-    const [{ data: u }, { data: p }] = await Promise.all([
+    const [{ data: u }, { data: p }, sportsData] = await Promise.all([
       supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
         .limit(8),
+      // Plain ilike, not full-text search — a partial/mid-word type-ahead
+      // like "mach" finding "Machado" matches how people actually use a
+      // search box better than websearch_to_tsquery's whole-word stemming.
       supabase.from('posts')
         .select('id, content, post_type, pick_data, sport, created_at, author:users(username, display_name, avatar_url)')
-        .textSearch('content', query, { type: 'websearch' })
+        .ilike('content', `%${query}%`)
         .eq('visibility', 'public')
-        .limit(10),
+        .order('created_at', { ascending: false })
+        .limit(15),
+      fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
     ])
 
     setUsers(u ?? [])
     setPosts(p ?? [])
+    setPlayers(sportsData.players ?? [])
+    setTeams(sportsData.teams ?? [])
     setLoading(false)
   }, [])
 
@@ -43,10 +57,14 @@ export default function SearchPage() {
     return () => clearTimeout(t)
   }, [q, doSearch])
 
-  const hasResults = users.length > 0 || posts.length > 0
+  // Picks used to only match post_type === 'pick', silently excluding
+  // parlays — same bug already found/fixed on /feed and /picks.
+  const picks = posts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
+  const hasResults = users.length > 0 || posts.length > 0 || players.length > 0 || teams.length > 0
   const showUsers = tab === 'all' || tab === 'users'
   const showPosts = tab === 'all' || tab === 'posts'
   const showPicks = tab === 'picks'
+  const showMlb = tab === 'all' || tab === 'mlb'
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
@@ -57,7 +75,7 @@ export default function SearchPage() {
           autoFocus
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="Search players, picks, users, teams…"
+          placeholder="Search players, teams, picks, users…"
           className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 focus:ring-1 ring-green-500/20 transition-all"
         />
         {loading && (
@@ -85,13 +103,69 @@ export default function SearchPage() {
         <>
           {/* Tabs */}
           <div className="flex gap-1 mb-4 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
-            {([['all', 'All'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as const).map(([k, l]) => (
+            {([['all', 'All'], ['mlb', 'MLB'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as const).map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 {l}
               </button>
             ))}
           </div>
+
+          {/* MLB players & teams */}
+          {showMlb && (players.length > 0 || teams.length > 0) && (
+            <div className="mb-6">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+                <Activity size={12} /> MLB
+              </h3>
+              <div className="space-y-2">
+                {teams.map(t => (
+                  <Link key={t.abbr} href={t.gamePk ? `/sports/mlb/${t.gamePk}` : '/sports'}
+                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                    <TeamLogo logo={mlbTeamLogo(t.id)} name={t.abbr} size={40} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{t.name}</p>
+                      <p className="text-xs text-zinc-500">{t.gamePk ? 'Playing today · tap for live game' : 'Team'}</p>
+                    </div>
+                    {t.gamePk && (
+                      <span className="text-[10px] font-black text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /> LIVE
+                      </span>
+                    )}
+                  </Link>
+                ))}
+                {players.map(p => (
+                  <div key={p.mlbId} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                    <PlayerAvatar
+                      headshot={mlbHeadshot(p.mlbId)}
+                      teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null}
+                      name={p.name}
+                      size={44}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{p.name}</p>
+                      <p className="text-xs text-zinc-500 truncate">
+                        {p.position && <span>{p.position}</span>}
+                        {p.position && p.teamName && <span> · </span>}
+                        {p.teamName}
+                      </p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <Link href={`/dugout?highlight=${p.mlbId}`}
+                        className="text-[11px] font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors">
+                        Dugout
+                      </Link>
+                      {p.gamePk && (
+                        <Link href={`/sports/mlb/${p.gamePk}`}
+                          className="text-[11px] font-bold bg-green-500 hover:bg-green-400 text-black px-2.5 py-1.5 rounded-lg transition-colors">
+                          Live
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Users */}
           {showUsers && users.length > 0 && (
@@ -126,14 +200,14 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* Posts */}
-          {(showPosts || showPicks) && posts.length > 0 && (
+          {/* Posts / Picks */}
+          {((showPosts && posts.length > 0) || (showPicks && picks.length > 0)) && (
             <div>
               <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
                 <Zap size={12} /> {showPicks ? 'Picks' : 'Posts'}
               </h3>
               <div className="space-y-2">
-                {posts.filter(p => !showPicks || p.post_type === 'pick').map((p: any) => (
+                {(showPicks ? picks : posts).map((p: any) => (
                   <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 overflow-hidden">
@@ -143,9 +217,12 @@ export default function SearchPage() {
                         @{p.author?.username}
                       </Link>
                       {p.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>}
+                      {p.post_type === 'parlay' && <span className="text-[10px] font-bold bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full">PARLAY</span>}
                     </div>
-                    <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2">{p.content}</p>
-                    {p.pick_data && (
+                    <Link href={`/posts/${p.id}`}>
+                      <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2">{p.content}</p>
+                    </Link>
+                    {p.pick_data?.team && (
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <TrendingUp size={11} className="text-yellow-400" />
                         <span className="font-bold text-white">{p.pick_data.team}</span>
