@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe } from 'lucide-react'
@@ -9,6 +9,7 @@ import { PROP_META } from '@/lib/watchlist'
 import { combineOdds, calcPayout, fmtUsd } from '@/lib/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { notifyMentions } from '@/lib/mentions'
+import { EmojiPicker } from './EmojiPicker'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -30,6 +31,21 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function insertAtCursor(insertion: string) {
+    const el = textareaRef.current
+    const start = el?.selectionStart ?? content.length
+    const end = el?.selectionEnd ?? content.length
+    const next = content.slice(0, start) + insertion + content.slice(end)
+    setContent(next)
+    // Restore focus + caret position after the inserted text — without
+    // this the cursor jumps to the end of the textarea on every insert.
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(start + insertion.length, start + insertion.length)
+    })
+  }
 
   if (!user || !profile) {
     return (
@@ -166,6 +182,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={e => setContent(e.target.value)}
             placeholder="Drop a pick, take, or hot comment…"
@@ -300,6 +317,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 onClick={() => { setShowPollForm(v => !v); setShowPickForm(false) }}
               />
               <ComposerBtn icon={<ImageIcon size={14} />} label="Photo" onClick={() => {}} />
+              <EmojiPicker onSelect={insertAtCursor} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
@@ -15,6 +15,7 @@ import { BookLogo } from '@/components/BookLogo'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { fmtUsd } from '@/lib/parlayCalc'
 import { LinkifiedText } from './LinkifiedText'
+import { EmojiPicker } from './EmojiPicker'
 
 interface PostCardClientProps {
   post: Post & { author: { username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
@@ -45,6 +46,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<{ id: string; content: string; author_id: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string; updated_at: string }[]>([])
   const [commentText, setCommentText] = useState('')
+  const commentInputRef = useRef<HTMLInputElement>(null)
   const [loadedComments, setLoadedComments] = useState(false)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -179,6 +181,18 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     setComments((data as unknown as typeof comments) ?? [])
     setLoadedComments(true)
     setShowComments(true)
+  }
+
+  function insertCommentEmoji(insertion: string) {
+    const el = commentInputRef.current
+    const start = el?.selectionStart ?? commentText.length
+    const end = el?.selectionEnd ?? commentText.length
+    const next = commentText.slice(0, start) + insertion + commentText.slice(end)
+    setCommentText(next)
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(start + insertion.length, start + insertion.length)
+    })
   }
 
   async function submitComment() {
@@ -600,8 +614,9 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                     : (profile?.display_name || profile?.username || '?')[0].toUpperCase()
                   }
                 </div>
-                <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
                   <input
+                    ref={commentInputRef}
                     value={commentText}
                     onChange={e => setCommentText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), submitComment())}
@@ -609,6 +624,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                     className="ss-input"
                     style={{ flex: 1, fontSize: 13, padding: '6px 12px' }}
                   />
+                  <EmojiPicker onSelect={insertCommentEmoji} />
                   <button onClick={submitComment} disabled={!commentText.trim()} style={{
                     padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                     background: commentText.trim() ? 'var(--accent)' : 'var(--surface-3)',
