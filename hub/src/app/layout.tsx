@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </RootLayoutShell>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
