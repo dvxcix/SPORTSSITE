@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -10,6 +10,10 @@ const geist = Geist({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'SlipSurge — The Social Hub for Sports & Betting',
   description: 'Live scores, picks, community channels, and creator content — all in one place.',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#B4FF4D',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
