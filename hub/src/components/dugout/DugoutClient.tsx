@@ -428,6 +428,11 @@ function buildBatterRow(
   const hr2_fd     = props?.hr2?.fanduel      ?? null
   const tri_fd     = props?.triples?.fanduel  ?? null
   const hrr_fd     = props?.hrr?.fanduel      ?? null
+  // Real BDL markets that were already flowing through buildPropMap
+  // (balldontlie.ts) but never surfaced as their own columns.
+  const sb_fd      = props?.stolen_bases?.fanduel ?? null
+  const hits_fd    = props?.hits?.fanduel     ?? null
+  const runs_fd    = props?.runs?.fanduel     ?? null
   // FanDuel-only markets BDL doesn't carry — backfilled via the admin
   // fanduel-import tool (console scraper paste), see /admin/fanduel-import.
   const laser105_fd = props?.laser105?.fanduel ?? null
@@ -568,7 +573,7 @@ function buildBatterRow(
     })(),
     sa_fd, sa_cz, sa_mgm, sa_br, m_div_f,
     sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
-    sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd,
+    sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd, sb_fd, hits_fd, runs_fd,
     laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hrMl_fd, pa1_div_sa, sa_div_ml,
     fhr_open, saFd_open, hr2Fd_open, sngFd_open, dblFd_open, triFd_open, rbiFd_open, rbi2Fd_open, rbi3Fd_open, tb4Fd_open, tb5Fd_open, hrrFd_open,
     laser105_open, laser110_open, moonshot_open, pa1_open, hrMl_open, saMgm_open, hr2Mgm_open,
@@ -1707,20 +1712,12 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderRight: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
       />
-      <td style={{ ...STD, width: 40, minWidth: 40, ...heat(row.sa_div_c1, g('sa_div_c1')) }}>
-        {row.combo1_partners ? (
-          <Tooltip content={`Cheapest of ${row.combo1_count} pairing(s): ${(row.combo1_partners as any[]).slice().sort((a, b) => a.price - b.price).slice(0, 3).map(p => `${p.partner} (${p.price >= 0 ? '+' : ''}${p.price})`).join(', ')}`} containerClassName="w-full h-full flex items-center justify-center">
-            <span style={{ cursor: 'help' }}>{f2(row.sa_div_c1)}</span>
-          </Tooltip>
-        ) : f2(row.sa_div_c1)}
-      </td>
-      <td style={{ ...STD, width: 40, minWidth: 40, ...heat(row.sa_div_c2, g('sa_div_c2')) }}>
-        {row.combo2_partners ? (
-          <Tooltip content={`Cheapest of ${row.combo2_count} pairing(s): ${(row.combo2_partners as any[]).slice().sort((a, b) => a.price - b.price).slice(0, 3).map(p => `${p.partner} (${p.price >= 0 ? '+' : ''}${p.price})`).join(', ')}`} containerClassName="w-full h-full flex items-center justify-center">
-            <span style={{ cursor: 'help' }}>{f2(row.sa_div_c2)}</span>
-          </Tooltip>
-        ) : f2(row.sa_div_c2)}
-      </td>
+      {/* Replaced HR÷C1/HR÷C2 (thin, manual-paste-only combine-for-HR
+          ratios) with real BDL-sourced markets that were already flowing
+          through buildPropMap but never shown. */}
+      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} />
 
       <td style={SDIV_D} />
 
@@ -2192,8 +2189,9 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
             {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
             {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
-            {H('HR÷C1', 'Anytime HR ÷ cheapest "combine for HR" price', 40, 'sa_div_c1')}
-            {H('HR÷C2', 'Anytime HR ÷ cheapest "combine for 2+ HR" price', 40, 'sa_div_c2')}
+            {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd')}
+            {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd')}
+            {BL('fanduel', 'RUN', '1+ Run Scored (FD)', 44, 'runs_fd')}
             <th style={SDIV_H} />
             {H('paper', 'Composite Statcast score', 46, 'paper')}
             {H('bk·rk', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
