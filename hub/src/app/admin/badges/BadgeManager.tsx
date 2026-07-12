@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { invalidateBadgeCache } from '@/lib/badges'
-import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight, Users } from 'lucide-react'
+import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight, Users, Pencil, Sparkles } from 'lucide-react'
 
-type BadgeRow = { id: string; name: string; icon_url: string; description: string }
+type BadgeRow = { id: string; name: string; icon_url: string; description: string; card_image_url: string | null }
 type BadgeMember = { id: string; username: string; display_name: string | null; avatar_url: string | null }
 type Assignment = { badge_id: string; user: BadgeMember | null }
 type FoundUser = { id: string; username: string; display_name: string | null; avatar_url: string | null }
@@ -22,6 +22,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -51,6 +52,35 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     } finally {
       setUploading(false)
     }
+  }
+
+  async function updateBadge(id: string, patch: { name: string; description: string; iconFile: File | null; cardFile: File | null; removeCard: boolean }) {
+    setError('')
+    const update: Record<string, any> = { name: patch.name.trim(), description: patch.description.trim() }
+    if (patch.iconFile) {
+      const path = `badges/${userId}/${Date.now()}-${patch.iconFile.name}`
+      const { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.iconFile, { upsert: true })
+      if (uploadErr) { setError(uploadErr.message); return false }
+      update.icon_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+    }
+    if (patch.cardFile) {
+      const path = `badge-cards/${userId}/${Date.now()}-${patch.cardFile.name}`
+      const { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.cardFile, { upsert: true })
+      if (uploadErr) { setError(uploadErr.message); return false }
+      update.card_image_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+    } else if (patch.removeCard) {
+      update.card_image_url = null
+    }
+
+    const { data, error: err } = await supabase.from('badges').update(update).eq('id', id).select('*').single()
+    if (err) {
+      setError(err.code === '23505' ? `A badge named "${patch.name.trim()}" already exists.` : err.message)
+      return false
+    }
+    setBadges(b => b.map(x => x.id === id ? (data as BadgeRow) : x))
+    invalidateBadgeCache()
+    router.refresh()
+    return true
   }
 
   async function deleteBadge(id: string) {
@@ -133,16 +163,24 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
           badges.map(b => {
             const members = membersByBadge(b.id)
             const isOpen = expanded === b.id
+            const isEditing = editing === b.id
             return (
               <div key={b.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 p-3">
                   <img src={b.icon_url} alt={b.name} className="w-9 h-9 object-contain rounded shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{b.name}</p>
+                    <p className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                      {b.name}
+                      {b.card_image_url && <Sparkles size={12} className="text-green-400 shrink-0" />}
+                    </p>
                     <p className="text-xs text-zinc-500 truncate">{b.description}</p>
                   </div>
                   <span className="text-xs text-zinc-500 shrink-0">{members.length} member{members.length === 1 ? '' : 's'}</span>
-                  <button onClick={() => setExpanded(isOpen ? null : b.id)}
+                  <button onClick={() => { setEditing(isEditing ? null : b.id); setExpanded(null) }}
+                    className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
+                    <Pencil size={12} /> Edit
+                  </button>
+                  <button onClick={() => { setExpanded(isOpen ? null : b.id); setEditing(null) }}
                     className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
                     {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Members
                   </button>
@@ -150,11 +188,94 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
                     <Trash2 size={15} />
                   </button>
                 </div>
+                {isEditing && <BadgeEditPanel badge={b} onSave={patch => updateBadge(b.id, patch).then(ok => { if (ok) setEditing(null) })} onCancel={() => setEditing(null)} />}
                 {isOpen && <BadgeMembersPanel badge={b} members={members} onAward={award} onRevoke={revoke} onAwardAll={awardAll} />}
               </div>
             )
           })
         )}
+      </div>
+    </div>
+  )
+}
+
+// Name/description/icon are always editable. The card is a separate,
+// optional add-on: a badge can be JUST the small name-badge (no card), or
+// also get a bigger "collectors card" image shown in a profile's
+// Achievements section — this panel is where that gets turned on and its
+// art gets uploaded, independent of the icon.
+function BadgeEditPanel({ badge, onSave, onCancel }: {
+  badge: BadgeRow
+  onSave: (patch: { name: string; description: string; iconFile: File | null; cardFile: File | null; removeCard: boolean }) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(badge.name)
+  const [description, setDescription] = useState(badge.description)
+  const [iconFile, setIconFile] = useState<File | null>(null)
+  const [hasCard, setHasCard] = useState(!!badge.card_image_url)
+  const [cardFile, setCardFile] = useState<File | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const removeCard = !hasCard && !!badge.card_image_url
+  const cardPreview = cardFile ? URL.createObjectURL(cardFile) : (hasCard ? badge.card_image_url : null)
+
+  async function save() {
+    setSaving(true)
+    try {
+      await onSave({ name, description, iconFile, cardFile, removeCard })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="border-t border-zinc-800 p-3 space-y-3">
+      <div className="flex gap-3 flex-wrap">
+        <div className="flex-1 min-w-[160px]">
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Name</label>
+          <input value={name} onChange={e => setName(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+        </div>
+        <div className="flex-1 min-w-[220px]">
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description (shown on hover)</label>
+          <input value={description} onChange={e => setDescription(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon (leave blank to keep current)</label>
+          <input type="file" accept="image/*" onChange={e => setIconFile(e.target.files?.[0] ?? null)}
+            className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+        </div>
+      </div>
+
+      <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-2">
+        <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer">
+          <input type="checkbox" checked={hasCard} onChange={e => setHasCard(e.target.checked)} className="accent-green-500" />
+          <Sparkles size={13} className="text-green-400" />
+          Also show as a card in profile Achievements
+        </label>
+        {hasCard && (
+          <div className="flex items-center gap-3 pl-6">
+            {cardPreview && <img src={cardPreview} alt="" className="w-16 h-auto rounded border border-zinc-800" />}
+            <div>
+              <label className="block text-xs font-bold text-zinc-400 mb-1.5">
+                {badge.card_image_url ? 'Replace card image' : 'Upload card image'}
+              </label>
+              <input type="file" accept="image/*" onChange={e => setCardFile(e.target.files?.[0] ?? null)}
+                className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <button onClick={save} disabled={saving || !name.trim() || !description.trim() || (hasCard && !badge.card_image_url && !cardFile)}
+          className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+          {saving ? 'Saving…' : 'Save Changes'}
+        </button>
+        <button onClick={onCancel} className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-4 py-2 rounded-xl transition-colors">
+          Cancel
+        </button>
       </div>
     </div>
   )

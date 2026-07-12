@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { invalidateCustomEmojiCache } from '@/lib/emoji'
-import { Trash2, Plus } from 'lucide-react'
+import { Trash2, Plus, Pencil } from 'lucide-react'
 
 type Category = { id: string; name: string; sort_order: number }
 type CustomEmojiRow = { id: string; code: string; image_url: string; category_id: string | null; category: { name: string } | null; created_at: string }
@@ -23,6 +23,7 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
   const [error, setError] = useState('')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [addingCategory, setAddingCategory] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -80,6 +81,29 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
     } finally {
       setUploading(false)
     }
+  }
+
+  async function updateEmoji(id: string, patch: { code: string; categoryId: string; file: File | null }) {
+    const normalized = patch.code.trim().toLowerCase()
+    if (!CODE_RE.test(normalized)) { setError('Code must be 2-30 letters, numbers, or underscores — no colons or spaces.'); return false }
+    setError('')
+    const update: Record<string, any> = { code: normalized, category_id: patch.categoryId || null }
+    if (patch.file) {
+      const path = `emojis/${userId}/${Date.now()}-${patch.file.name}`
+      const { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.file, { upsert: true })
+      if (uploadErr) { setError(uploadErr.message); return false }
+      update.image_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+    }
+    const { data, error: err } = await supabase.from('custom_emojis').update(update).eq('id', id)
+      .select('*, category:custom_emoji_categories(name)').single()
+    if (err) {
+      setError(err.code === '23505' ? `:${normalized}: already exists.` : err.message)
+      return false
+    }
+    setEmojis(e => e.map(x => x.id === id ? (data as CustomEmojiRow) : x))
+    invalidateCustomEmojiCache()
+    router.refresh()
+    return true
   }
 
   async function remove(id: string) {
@@ -166,18 +190,97 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">{group.label} · {group.items.length}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {group.items.map(e => (
-                  <div key={e.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
-                    <img src={e.image_url} alt={e.code} className="w-8 h-8 object-contain rounded shrink-0" />
-                    <span className="text-sm text-zinc-300 font-mono truncate flex-1">:{e.code}:</span>
-                    <button onClick={() => remove(e.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  editingId === e.id ? (
+                    <EmojiEditRow
+                      key={e.id}
+                      emoji={e}
+                      categories={categories}
+                      onSave={patch => updateEmoji(e.id, patch).then(ok => { if (ok) setEditingId(null) })}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <div key={e.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
+                      <img src={e.image_url} alt={e.code} className="w-8 h-8 object-contain rounded shrink-0" />
+                      <span className="text-sm text-zinc-300 font-mono truncate flex-1">:{e.code}:</span>
+                      <button onClick={() => setEditingId(e.id)} className="text-zinc-500 hover:text-white shrink-0" aria-label="Edit">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => remove(e.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label="Delete">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )
                 ))}
               </div>
             </div>
           ))
         )}
+      </div>
+    </div>
+  )
+}
+
+// Inline edit — replaces the emoji's grid tile in place rather than opening
+// a modal, matching the rest of this page's flat/no-modal style. Renaming
+// the code doesn't touch already-posted text using the old :code: (it'll
+// just stop rendering as an image), same tradeoff already called out for
+// deleting an emoji.
+function EmojiEditRow({ emoji, categories, onSave, onCancel }: {
+  emoji: CustomEmojiRow
+  categories: Category[]
+  onSave: (patch: { code: string; categoryId: string; file: File | null }) => void
+  onCancel: () => void
+}) {
+  const [code, setCode] = useState(emoji.code)
+  const [categoryId, setCategoryId] = useState(emoji.category_id ?? '')
+  const [file, setFile] = useState<File | null>(null)
+  const [saving, setSaving] = useState(false)
+  const preview = file ? URL.createObjectURL(file) : emoji.image_url
+
+  async function save() {
+    setSaving(true)
+    try {
+      await onSave({ code, categoryId, file })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="col-span-2 sm:col-span-3 bg-zinc-900 border border-green-500/40 rounded-xl p-3 space-y-2">
+      <div className="flex gap-3 items-end flex-wrap">
+        <img src={preview} alt="" className="w-9 h-9 object-contain rounded shrink-0" />
+        <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Code</label>
+          <div className="flex items-center gap-1">
+            <span className="text-zinc-500 text-sm">:</span>
+            <input value={code} onChange={e => setCode(e.target.value.toLowerCase())}
+              className="w-28 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50" />
+            <span className="text-zinc-500 text-sm">:</span>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-500/50">
+            <option value="">Uncategorized</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Replace image (optional)</label>
+          <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)}
+            className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={save} disabled={saving || !code.trim()}
+          className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={onCancel} className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-4 py-2 rounded-xl transition-colors">
+          Cancel
+        </button>
       </div>
     </div>
   )

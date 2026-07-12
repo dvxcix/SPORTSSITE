@@ -5,6 +5,7 @@ import { PostCardClient } from '@/components/social/PostCardClient'
 import { FollowButton } from '@/components/social/FollowButton'
 import { ProfileStats } from '@/components/profile/ProfileStats'
 import { UserBadges } from '@/components/social/UserBadges'
+import { AchievementsSection } from '@/components/profile/AchievementsSection'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp } from 'lucide-react'
 
@@ -17,12 +18,18 @@ export default async function ProfilePage({ params }: Props) {
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
-  const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }] = await Promise.all([
+  const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }] = await Promise.all([
     getUserPosts(profile.id),
     supabase.auth.getUser(),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id).eq('visibility', 'public'),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
+    supabase.from('user_badges')
+      .select('badge:badges(id, name, description, card_image_url)')
+      .eq('user_id', profile.id),
   ])
+  const achievements = (achievementRows ?? [])
+    .map((r: any) => r.badge)
+    .filter((b: any) => b?.card_image_url)
 
   const isOwnProfile = authUser?.id === profile.id
 
@@ -142,6 +149,8 @@ export default async function ProfilePage({ params }: Props) {
           )}
         </div>
       </div>
+
+      <AchievementsSection achievements={achievements} />
 
       <div className="border-t border-zinc-800" />
 
