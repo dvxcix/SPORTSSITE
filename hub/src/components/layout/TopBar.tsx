@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users } from 'lucide-react'
+import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
@@ -29,7 +29,7 @@ type QuickResults = {
 }
 const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [] }
 
-export function TopBar() {
+export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, profile } = useAuth()
   const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -155,6 +155,23 @@ export function TopBar() {
       padding: '0 16px',
       position: 'sticky', top: 0, zIndex: 20,
     }}>
+      {/* Hamburger — mobile only, opens the off-canvas sidebar drawer.
+          display must live in the className (flex / md:hidden), not inline
+          style — an inline style="display:flex" would always beat the
+          md:hidden class (inline styles win over any stylesheet rule
+          regardless of specificity), so the button would never actually
+          hide on desktop. */}
+      {onMenuClick && (
+        <button onClick={onMenuClick} className="flex md:hidden items-center justify-center" style={{
+          width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+          background: 'transparent', border: '1px solid var(--border)',
+          color: 'var(--text-2)', cursor: 'pointer',
+        }}
+        aria-label="Open menu">
+          <Menu size={16} />
+        </button>
+      )}
+
       {/* Search */}
       <form ref={searchRef} onSubmit={handleSearch} style={{ flex: 1, maxWidth: 400, position: 'relative' }}>
         <Search size={14} style={{
@@ -344,7 +361,7 @@ export function TopBar() {
                     : (profile?.display_name || profile?.username || '?')[0].toUpperCase()
                   }
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span className="hidden sm:inline" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile?.display_name || profile?.username || 'Me'}
                 </span>
                 <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />

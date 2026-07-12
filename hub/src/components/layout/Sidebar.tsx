@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
-  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair
+  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, X
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 
@@ -45,7 +45,7 @@ const nav = [
   { href: '/bookmarks',   icon: Bookmark,      label: 'Bookmarks' },
 ]
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePathname()
   // Beta launch default: assume the gated sections are off until the real
   // flags load, so testers don't see items flash on then disappear — matches
@@ -61,6 +61,11 @@ export function Sidebar() {
     return () => { cancelled = true }
   }, [])
 
+  // Tapping a nav link should close the drawer on mobile — otherwise the
+  // new page loads underneath a sidebar that's still covering half the
+  // screen until you notice and dismiss it yourself.
+  useEffect(() => { onClose() }, [path]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const visibleNav = nav.filter(item => !item || !('flagKey' in item) || !item.flagKey || flags[item.flagKey] !== false)
 
   function active(href: string) {
@@ -69,18 +74,23 @@ export function Sidebar() {
   }
 
   return (
-    <aside style={{
-      width: 'var(--sidebar-w)',
-      background: 'var(--surface)',
-      borderRight: '1px solid var(--border)',
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-      zIndex: 30,
-    }}>
+    <>
+      {/* Backdrop — mobile only, dismisses the drawer on tap outside it */}
+      {open && (
+        <div onClick={onClose} className="md:hidden fixed inset-0 z-40 bg-black/60" aria-hidden="true" />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 md:sticky md:top-0 md:z-30 md:translate-x-0 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{
+          width: 'var(--sidebar-w)',
+          background: 'var(--surface)',
+          borderRight: '1px solid var(--border)',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+        }}
+      >
       {/* Logo */}
       <Link href="/feed" style={{
         display: 'flex', alignItems: 'center', gap: 10,
@@ -89,7 +99,7 @@ export function Sidebar() {
         textDecoration: 'none',
       }}>
         <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
             Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
           </div>
@@ -97,6 +107,14 @@ export function Sidebar() {
             SPORTS · PICKS · SOCIAL
           </div>
         </div>
+        <button
+          onClick={e => { e.preventDefault(); onClose() }}
+          className="md:hidden"
+          style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
       </Link>
 
       {/* Nav */}
@@ -158,6 +176,7 @@ export function Sidebar() {
           <span>Settings & Help</span>
         </Link>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
