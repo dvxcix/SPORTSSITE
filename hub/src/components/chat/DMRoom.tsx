@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, Send } from 'lucide-react'
+import { EmojiPicker } from '@/components/social/EmojiPicker'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
@@ -16,7 +17,20 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const textInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+
+  function insertAtCursor(insertion: string) {
+    const el = textInputRef.current
+    const start = el?.selectionStart ?? text.length
+    const end = el?.selectionEnd ?? text.length
+    const next = text.slice(0, start) + insertion + text.slice(end)
+    setText(next)
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(start + insertion.length, start + insertion.length)
+    })
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -91,14 +105,16 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <input
+            ref={textInputRef}
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
             placeholder={`Message @${partner.username}…`}
             className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
           />
+          <EmojiPicker onSelect={insertAtCursor} />
           <button onClick={send} disabled={!text.trim() || sending}
             className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black p-2.5 rounded-xl transition-colors">
             <Send size={16} />

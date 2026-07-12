@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { EmojiPicker } from '@/components/social/EmojiPicker'
 
 export function NewThreadForm({ userId, categories, defaultCategory }: {
   userId: string; categories: { id: string; name: string; slug: string }[]; defaultCategory?: string
@@ -14,6 +15,19 @@ export function NewThreadForm({ userId, categories, defaultCategory }: {
   const [categoryId, setCategoryId] = useState(defaultCategory ?? categories[0]?.id ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function insertAtCursor(insertion: string) {
+    const el = textareaRef.current
+    const start = el?.selectionStart ?? content.length
+    const end = el?.selectionEnd ?? content.length
+    const next = content.slice(0, start) + insertion + content.slice(end)
+    setContent(next)
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(start + insertion.length, start + insertion.length)
+    })
+  }
 
   async function submit() {
     if (!title.trim() || !categoryId) { setError('Title and category are required'); return }
@@ -41,8 +55,9 @@ export function NewThreadForm({ userId, categories, defaultCategory }: {
       </select>
       <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Thread title…"
         className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
-      <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write your post… (optional)" rows={8}
+      <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="Write your post… (optional)" rows={8}
         className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 outline-none focus:border-green-500/50 resize-y" />
+      <EmojiPicker onSelect={insertAtCursor} />
       <button onClick={submit} disabled={submitting || !title.trim()}
         className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
         {submitting ? 'Posting…' : 'Post Thread'}

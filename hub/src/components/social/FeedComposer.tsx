@@ -345,8 +345,12 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{error}</p>
           )}
 
-          {/* Action bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+          {/* Action bar — button labels ("Pick"/"Poll"/"Photo") hide below
+              sm and flexWrap is a safety net, since Pick+Poll+Photo+emoji
+              on the left plus Public+Post on the right doesn't fit on one
+              line under ~360px with labels shown, and used to just push
+              Post off the right edge of the screen with no wrap. */}
+          <div className="flex-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: 2 }}>
               <ComposerBtn
                 icon={<TrendingUp size={14} />}
@@ -381,7 +385,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
-                <Globe size={11} /> Public
+                <Globe size={11} /> <span className="hidden sm:inline">Public</span>
               </span>
               {content.length > 400 && (
                 <span style={{ fontSize: 11, color: remaining < 50 ? 'var(--red)' : 'var(--text-3)' }}>{remaining}</span>
@@ -425,7 +429,9 @@ function ComposerBtn({ icon, label, active, activeColor, activeFg, onClick }: {
     onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
     onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = active ? (activeFg ?? 'var(--text-1)') : 'var(--text-3)'; }}>
       {icon}
-      {label}
+      {/* Label text hides below sm — Pick/Poll/Photo with full text plus
+          Public+Post didn't fit one row under ~360px. */}
+      {label && <span className="hidden sm:inline">{label}</span>}
     </button>
   )
 }

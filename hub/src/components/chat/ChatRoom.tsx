@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/lib/supabase/types'
 import { Send, TrendingUp } from 'lucide-react'
+import { EmojiPicker } from '@/components/social/EmojiPicker'
 
 interface ChatRoomProps {
   channelId: string
@@ -17,7 +18,20 @@ export function ChatRoom({ channelId, initialMessages, currentUserId }: ChatRoom
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+
+  function insertAtCursor(insertion: string) {
+    const el = inputRef.current
+    const start = el?.selectionStart ?? input.length
+    const end = el?.selectionEnd ?? input.length
+    const next = input.slice(0, start) + insertion + input.slice(end)
+    setInput(next)
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(start + insertion.length, start + insertion.length)
+    })
+  }
 
   // Supabase Realtime subscription
   useEffect(() => {
@@ -116,12 +130,14 @@ export function ChatRoom({ channelId, initialMessages, currentUserId }: ChatRoom
         ) : (
           <form onSubmit={sendMessage} className="flex gap-2 items-center">
             <input
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Message..."
               maxLength={1000}
               className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500 transition-colors"
             />
+            <EmojiPicker onSelect={insertAtCursor} />
             <button
               type="submit"
               disabled={!input.trim() || sending}

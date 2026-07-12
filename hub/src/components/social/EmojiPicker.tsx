@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Smile } from 'lucide-react'
 import { EMOJI_CATEGORIES, useCustomEmojis, groupCustomEmojisByCategory } from '@/lib/emoji'
+
+const PANEL_WIDTH = 280
+const VIEWPORT_MARGIN = 8
 
 // Click inserts the raw unicode character for a standard emoji, or the
 // :code: text for a custom one (LinkifiedText renders that back into the
@@ -16,6 +19,36 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
   const customEmojis = useCustomEmojis()
   const customGroups = groupCustomEmojisByCategory(customEmojis)
   const ref = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  // Panel used to always open upward-left of the trigger button
+  // (bottom:110%, left:0) with no regard for the button's actual screen
+  // position — fine for a desktop composer with room to spare, but a
+  // trigger near the top or right edge of a narrow phone viewport (e.g.
+  // this same button sitting just under the topbar, or a reaction button
+  // near the right side of a post) pushed the panel up past y=0 and off
+  // the right edge, landing it wherever, overlapping unrelated chrome.
+  // Measured after render (real panel height varies with emoji group
+  // count) and clamped to stay fully on-screen.
+  const [pos, setPos] = useState<{ left: number; vertical: 'up' | 'down' } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open || !ref.current) { setPos(null); return }
+    const btnRect = ref.current.getBoundingClientRect()
+    const panelHeight = panelRef.current?.offsetHeight ?? 320
+
+    let left = 0
+    const absLeft = btnRect.left + left
+    if (absLeft + PANEL_WIDTH > window.innerWidth - VIEWPORT_MARGIN) {
+      left -= absLeft + PANEL_WIDTH - (window.innerWidth - VIEWPORT_MARGIN)
+    }
+    if (btnRect.left + left < VIEWPORT_MARGIN) {
+      left = VIEWPORT_MARGIN - btnRect.left
+    }
+
+    const vertical: 'up' | 'down' = btnRect.top - panelHeight - VIEWPORT_MARGIN < 0 ? 'down' : 'up'
+
+    setPos({ left, vertical })
+  }, [open, customGroups.length])
 
   useEffect(() => {
     if (!open) return
@@ -42,12 +75,19 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
       </button>
 
       {open && (
-        <div style={{
-          position: 'absolute', bottom: '110%', left: 0, zIndex: 50,
-          width: 280, maxHeight: 320, overflowY: 'auto',
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)', padding: 10,
-        }}>
+        <div
+          ref={panelRef}
+          style={{
+            position: 'absolute', zIndex: 50,
+            ...(pos?.vertical === 'down' ? { top: '110%' } : { bottom: '110%' }),
+            left: pos?.left ?? 0,
+            // Invisible until measured/clamped so it never flashes at the
+            // unclamped default position for a frame.
+            visibility: pos ? 'visible' : 'hidden',
+            width: PANEL_WIDTH, maxHeight: 320, overflowY: 'auto',
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.35)', padding: 10,
+          }}>
           {customGroups.map(group => (
             <div key={group.label} style={{ marginBottom: 10 }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
