@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { invalidateBadgeCache } from '@/lib/badges'
-import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight, Users } from 'lucide-react'
 
 type BadgeRow = { id: string; name: string; icon_url: string; description: string }
 type BadgeMember = { id: string; username: string; display_name: string | null; avatar_url: string | null }
@@ -77,6 +77,24 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     router.refresh()
   }
 
+  // One-time snapshot of "everyone right now" — deliberately not a toggle
+  // that keeps auto-awarding to every future signup, since a badge like
+  // "Beta Tester" should mean "was here for the beta," not "is a user."
+  async function awardAll(badgeId: string) {
+    const alreadyHas = new Set(assignments.filter(a => a.badge_id === badgeId).map(a => a.user?.id))
+    const { data: allUsers } = await supabase.from('users').select('id, username, display_name, avatar_url').limit(1000)
+    const toAward = (allUsers ?? []).filter(u => !alreadyHas.has(u.id))
+    if (toAward.length === 0) return
+    if (!confirm(`Award "${badges.find(b => b.id === badgeId)?.name}" to all ${toAward.length} member(s) who don't already have it?`)) return
+
+    const { error: err } = await supabase.from('user_badges')
+      .insert(toAward.map(u => ({ user_id: u.id, badge_id: badgeId, awarded_by: userId })))
+    if (err) { setError(err.message); return }
+    setAssignments(a => [...a, ...toAward.map(u => ({ badge_id: badgeId, user: u as BadgeMember }))])
+    invalidateBadgeCache()
+    router.refresh()
+  }
+
   return (
     <div className="space-y-6">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
@@ -132,7 +150,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
                     <Trash2 size={15} />
                   </button>
                 </div>
-                {isOpen && <BadgeMembersPanel badge={b} members={members} onAward={award} onRevoke={revoke} />}
+                {isOpen && <BadgeMembersPanel badge={b} members={members} onAward={award} onRevoke={revoke} onAwardAll={awardAll} />}
               </div>
             )
           })
@@ -142,42 +160,51 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
   )
 }
 
-function BadgeMembersPanel({ badge, members, onAward, onRevoke }: {
+function BadgeMembersPanel({ badge, members, onAward, onRevoke, onAwardAll }: {
   badge: BadgeRow
   members: { user: BadgeMember | null }[]
   onAward: (badgeId: string, u: FoundUser) => void
   onRevoke: (badgeId: string, userId: string) => void
+  onAwardAll: (badgeId: string) => void
 }) {
   const [q, setQ] = useState('')
+  // Browsable by default — loaded on open, not just after typing a search
+  // query, so "who's around to award this to" is visible without having
+  // to know a name first. Search (below) narrows this same list further.
   const [results, setResults] = useState<FoundUser[]>([])
-  const [searching, setSearching] = useState(false)
+  const [searching, setSearching] = useState(true)
   const supabase = createClient()
   const memberIds = new Set(members.map(m => m.user?.id).filter(Boolean))
 
-  async function search() {
-    if (!q.trim()) { setResults([]); return }
+  async function search(query: string) {
     setSearching(true)
-    const { data } = await supabase.from('users')
-      .select('id, username, display_name, avatar_url')
-      .or(`username.ilike.%${q.trim()}%,display_name.ilike.%${q.trim()}%`)
-      .limit(8)
+    let req = supabase.from('users').select('id, username, display_name, avatar_url').order('username').limit(50)
+    if (query.trim()) req = req.or(`username.ilike.%${query.trim()}%,display_name.ilike.%${query.trim()}%`)
+    const { data } = await req
     setResults(data ?? [])
     setSearching(false)
   }
 
+  useEffect(() => { search('') }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="border-t border-zinc-800 p-3 space-y-3">
+      <button onClick={() => onAwardAll(badge.id)}
+        className="w-full flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
+        <Users size={13} /> Award to All Members
+      </button>
       <div className="flex gap-2">
-        <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && search()}
-          placeholder="Search users to award this badge…"
+        <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && search(q)}
+          placeholder="Search to narrow the list…"
           className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
-        <button onClick={search} disabled={searching}
+        <button onClick={() => search(q)} disabled={searching}
           className="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-3 rounded-lg transition-colors disabled:opacity-40">
           Search
         </button>
       </div>
+      {searching && results.length === 0 && <p className="text-xs text-zinc-600 text-center py-2">Loading members…</p>}
       {results.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-1 max-h-64 overflow-y-auto">
           {results.map(u => (
             <div key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-800/60">
               <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white">
