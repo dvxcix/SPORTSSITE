@@ -440,7 +440,12 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                           <PlayerAvatar headshot={leg.headshot_url} teamLogo={getTeamLogoUrl(leg.team)} teamAbbr={leg.team} name={leg.player_name} size={30} />
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{leg.player_name}</p>
-                            <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{leg.team} · {leg.prop_label ?? leg.line}</p>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
+                              {getTeamLogoUrl(leg.team)
+                                ? <img src={getTeamLogoUrl(leg.team)} alt={leg.team} style={{ width: 12, height: 12, objectFit: 'contain' }} />
+                                : <span>{leg.team}</span>}
+                              · {leg.prop_label ?? leg.line}
+                            </p>
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>
                             {leg.odds != null ? (Number(leg.odds) > 0 ? `+${leg.odds}` : leg.odds) : '—'}
@@ -470,7 +475,12 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                       />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{post.pick_data.player_name}</p>
-                        <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>{post.pick_data.team} · {post.pick_data.prop_label ?? post.pick_data.line}</p>
+                        <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>
+                          {getTeamLogoUrl(post.pick_data.team)
+                            ? <img src={getTeamLogoUrl(post.pick_data.team)} alt={post.pick_data.team ?? ''} style={{ width: 13, height: 13, objectFit: 'contain' }} />
+                            : <span>{post.pick_data.team}</span>}
+                          · {post.pick_data.prop_label ?? post.pick_data.line}
+                        </p>
                         <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
                           {post.pick_data.odds != null && (
                             <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>

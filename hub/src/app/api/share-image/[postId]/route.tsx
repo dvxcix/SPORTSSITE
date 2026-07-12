@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
 // BookLogo.tsx's normalizeVendor isn't importable here — it's a 'use client'
 // module, and every export of a client module becomes an opaque client
@@ -57,6 +58,21 @@ function BookMark({ book, origin }: { book?: string | null; origin: string }) {
     </div>
   )
   return <img src={origin + info.favicon} width={18} height={18} style={{ borderRadius: 3, objectFit: 'contain' }} />
+}
+
+// Team logo (falling back to the bare abbreviation only for teams with no
+// mlbstatic.com mapping) instead of always showing plain text like "PIT" —
+// matches how team abbreviations render everywhere else on the site.
+function TeamLine({ team, detail, fontSize, color }: { team?: string | null; detail: any; fontSize: number; color: string }) {
+  const logo = getTeamLogoUrl(team)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      {logo
+        ? <img src={logo} width={fontSize} height={fontSize} style={{ objectFit: 'contain' }} />
+        : team && <span style={{ fontSize, color }}>{team}</span>}
+      <span style={{ fontSize, color }}>· {detail}</span>
+    </div>
+  )
 }
 
 function Avatar({ src, name, size }: { src?: string | null; name?: string | null; size: number }) {
@@ -138,7 +154,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
                   <Avatar src={leg.headshot_url} name={leg.player_name} size={44} />
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <span style={{ fontSize: 18, fontWeight: 700, color: C.text1 }}>{leg.player_name}</span>
-                    <span style={{ fontSize: 14, color: C.text3 }}>{leg.team} · {leg.prop_label ?? leg.line}</span>
+                    <TeamLine team={leg.team} detail={leg.prop_label ?? leg.line} fontSize={14} color={C.text3} />
                   </div>
                   <span style={{ fontSize: 17, fontWeight: 800, color: C.text1, fontFamily: 'monospace' }}>{fmtOdds(leg.odds)}</span>
                 </div>
@@ -153,7 +169,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
               <Avatar src={pd.headshot_url} name={pd.player_name} size={64} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span style={{ fontSize: 22, fontWeight: 800, color: C.text1 }}>{pd.player_name}</span>
-                <span style={{ fontSize: 15, color: C.text2 }}>{pd.team} · {pd.prop_label ?? pd.line}</span>
+                <TeamLine team={pd.team} detail={pd.prop_label ?? pd.line} fontSize={15} color={C.text2} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                   <span style={{ fontSize: 18, fontWeight: 800, color: C.text1, fontFamily: 'monospace' }}>{fmtOdds(pd.odds)}</span>
                   <BookMark book={pd.book} origin={origin} />

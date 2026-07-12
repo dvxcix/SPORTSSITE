@@ -46,9 +46,15 @@ export function SearchClient() {
       // Plain ilike, not full-text search — a partial/mid-word type-ahead
       // like "mach" finding "Machado" matches how people actually use a
       // search box better than websearch_to_tsquery's whole-word stemming.
+      // Matches against the freeform caption OR the whole pick_data JSON
+      // blob cast to text — a player's name usually only lives inside
+      // pick_data (top-level player_name for a single pick, nested inside
+      // legs[] for a parlay), not the caption, so content-only search was
+      // silently missing every pick post where nobody happened to type the
+      // player's name into their caption too.
       supabase.from('posts')
         .select('id, content, post_type, pick_data, sport, created_at, author:users(username, display_name, avatar_url)')
-        .ilike('content', `%${query}%`)
+        .or(`content.ilike.%${query}%,pick_data::text.ilike.%${query}%`)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
         .limit(15),
