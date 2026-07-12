@@ -782,6 +782,7 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 
 function PlayerDrillDown({
   row, pitcherRow, timingMap, oppPitcher, gameInfo, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap,
+  windowMode, liveN, onSetWindowMode, onSetLiveN, liveEntry,
 }: {
   row: BatterRow
   pitcherRow: any
@@ -793,6 +794,11 @@ function PlayerDrillDown({
   gameLogMap: GameLogMap
   platoonMap: PlatoonMap
   pitchEventsMap: PitchEventsMap
+  windowMode: '14day' | 'live'
+  liveN: number
+  onSetWindowMode: (m: '14day' | 'live') => void
+  onSetLiveN: (n: number) => void
+  liveEntry?: { status: 'loading' | 'ready' | 'error'; data?: any; error?: string }
 }) {
   const [expandedPitch, setExpandedPitch] = useState<string | null>(null)
   const pitcherHand = pitcherRow?.pitch_hand || 'R'
@@ -802,7 +808,7 @@ function PlayerDrillDown({
   // Note: there's no pct_sweeper column in pitcher_statcast_splits at all —
   // an earlier version of this fell back to pct_slider for it, which just
   // silently duplicated the Slider row under a fake "Sweeper" label.
-  const mix = ([
+  const mix14day = ([
     ['FF', pitcherRow?.pct_fastball  || 0],
     ['SI', pitcherRow?.pct_sinker    || 0],
     ['FC', pitcherRow?.pct_cutter    || 0],
@@ -819,6 +825,22 @@ function PlayerDrillDown({
   // standing on against this specific pitcher for every lookup below.
   const effectiveBats = row.bats === 'S' ? (pitcherHand === 'L' ? 'R' : 'L') : (row.bats || 'R')
 
+  // Live mode: same "this batter's own last N games, this pitcher's own
+  // last N starts, computed live from MLB play-by-play" the Pitcher Report
+  // page offers, surfaced here per-matchup instead of needing to go look the
+  // pitcher up separately. pitchLog.ts's aggregate rows use the same field
+  // names (pitches/hard_hit_pct/whiff_pct/...) as the mlb-party 14-day
+  // tables below, so batEdge/pitEdge/risk all work unmodified regardless of
+  // which source fed them.
+  const useLive = windowMode === 'live' && liveEntry?.status === 'ready' && !!liveEntry.data
+  const liveMixRows: any[] = useLive ? (liveEntry!.data.pitcherRows?.[effectiveBats] ?? []) : []
+  const liveMixByType: Record<string, any> = Object.fromEntries(liveMixRows.map((r: any) => [r.pitch_type, r]))
+  const liveBatterRows: Record<string, { R?: any; L?: any }> = useLive ? (liveEntry!.data.batters?.[idKey] ?? {}) : {}
+
+  const mix = useLive
+    ? liveMixRows.map((r: any): [string, number] => [r.pitch_type, r.usage_pct ?? 0]).filter(([, p]: [string, number]) => p > 4)
+    : mix14day
+
   const gameLogs = gameLogMap[idKey] ?? []
   const l5 = rollupGames(gameLogs, 5)
   const l10 = rollupGames(gameLogs, 10)
@@ -834,13 +856,19 @@ function PlayerDrillDown({
     const se = (tRows as any)?.season
     const re = (tRows as any)?.recent
 
-    // The real matchup edge: this batter's own last-14-day results against
-    // THIS exact pitch type from THIS exact pitcher-hand, next to this
-    // pitcher's own last-14-day results throwing THIS exact pitch type to
-    // THIS exact batter-hand. Both computed from raw Statcast events, not
-    // Savant's season-only arsenal leaderboard — see ingest-pitch-type-recency.
-    const batEdge = batterPitchMap[row.name_norm]?.[pt]?.[pitcherHand] ?? null
-    const pitEdge = pitcherPitchMap[pitcherIdKey]?.[pt]?.[effectiveBats] ?? null
+    // The real matchup edge: this batter's own recent results against THIS
+    // exact pitch type from THIS exact pitcher-hand, next to this pitcher's
+    // own recent results throwing THIS exact pitch type to THIS exact
+    // batter-hand. In live mode both sides are the pitcher's actual last N
+    // starts / this batter's actual last N games, computed from raw MLB
+    // play-by-play; in 14-day mode (default) both come from mlb-party's
+    // pre-aggregated tables — see ingest-pitch-type-recency.
+    const batEdge = useLive
+      ? ((liveBatterRows[pt] as any)?.[pitcherHand] ?? null)
+      : (batterPitchMap[row.name_norm]?.[pt]?.[pitcherHand] ?? null)
+    const pitEdge = useLive
+      ? (liveMixByType[pt] ?? null)
+      : (pitcherPitchMap[pitcherIdKey]?.[pt]?.[effectiveBats] ?? null)
 
     // Danger zone: batter is squaring this pitch up recently (hard-hit% high,
     // whiff% low) AND this pitcher has been getting hit hard on it recently
@@ -880,17 +908,45 @@ function PlayerDrillDown({
         {/* Pitch mix + timing */}
         {pitcherRow ? (
           <div style={{ minWidth: 420 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 2 }}>
-              PITCH MIX &amp; TIMING · vs {pitcherHand}HP
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>
+                PITCH MIX &amp; TIMING · vs {pitcherHand}HP
+              </div>
+              {/* Same Last-N-Starts/Games live window as Pitcher Report, just
+                  surfaced per-matchup here instead of needing a separate trip
+                  to that page — shared per game (not per row) via GameTable's
+                  liveCache, so switching between two batters facing the same
+                  pitcher doesn't refetch. */}
+              <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', marginLeft: 'auto' }}>
+                <button onClick={() => onSetWindowMode('14day')} style={{ padding: '2px 7px', fontSize: 8, fontWeight: 700, border: 'none', cursor: 'pointer', background: windowMode === '14day' ? 'var(--accent-dim)' : 'var(--surface)', color: windowMode === '14day' ? 'var(--accent)' : 'var(--text-3)' }}>14-Day</button>
+                <button onClick={() => onSetWindowMode('live')} style={{ padding: '2px 7px', fontSize: 8, fontWeight: 700, border: 'none', borderLeft: '1px solid var(--border)', cursor: 'pointer', background: windowMode === 'live' ? 'var(--accent-dim)' : 'var(--surface)', color: windowMode === 'live' ? 'var(--accent)' : 'var(--text-3)' }}>Live N</button>
+              </div>
+              {windowMode === 'live' && (
+                <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
+                  {[3, 5, 10].map(n => (
+                    <button key={n} onClick={() => onSetLiveN(n)} style={{ padding: '2px 6px', fontSize: 8, fontWeight: 700, border: 'none', borderLeft: n !== 3 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: liveN === n ? 'var(--accent-dim)' : 'var(--surface)', color: liveN === n ? 'var(--accent)' : 'var(--text-3)' }}>N={n}</button>
+                  ))}
+                </div>
+              )}
             </div>
-            {/* Mix% is this pitcher's overall usage — Baseball Savant's arsenal-stats
-                leaderboard doesn't offer a split by opposing batter side, so this
-                number is the same regardless of who's up. OnTime%/Miss ARE real:
-                this batter's own recognition numbers against {pitcherHand}HP pitchers
-                specifically, via batter_timing_splits. */}
-            <div style={{ fontSize: 8, color: 'var(--text-4)', marginBottom: 4 }}>
-              Mix% = season-wide usage (not split by batter side) · OnTime%/Miss = {row.bats}HB's own recognition vs {pitcherHand}HP
-            </div>
+            {windowMode === 'live' ? (
+              <div style={{ fontSize: 8, color: liveEntry?.status === 'error' ? '#f87171' : 'var(--text-4)', marginBottom: 4 }}>
+                {liveEntry?.status === 'loading' || !liveEntry
+                  ? 'Computing from MLB play-by-play…'
+                  : liveEntry.status === 'error'
+                  ? liveEntry.error
+                  : `Sample: pitcher's last ${liveEntry.data.window.games} starts (${liveEntry.data.window.dateFrom} – ${liveEntry.data.window.dateTo}) · Mix%/Bat·HH%/Pit·HH% below are live-computed · batter side uses ${row.bats === 'S' ? row.bats : row.bats + 'HB'}'s own last ${liveN} games vs ${pitcherHand}HP (any opponent)`}
+              </div>
+            ) : (
+              /* Mix% is this pitcher's overall usage — Baseball Savant's arsenal-stats
+                 leaderboard doesn't offer a split by opposing batter side, so this
+                 number is the same regardless of who's up. OnTime%/Miss ARE real:
+                 this batter's own recognition numbers against {pitcherHand}HP pitchers
+                 specifically, via batter_timing_splits. */
+              <div style={{ fontSize: 8, color: 'var(--text-4)', marginBottom: 4 }}>
+                Mix% = season-wide usage (not split by batter side) · OnTime%/Miss = {row.bats}HB's own recognition vs {pitcherHand}HP
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 5, fontSize: 8, color: 'var(--text-3)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
@@ -1758,6 +1814,44 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   const [hrPopupRow, setHrPopupRow] = useState<BatterRow | null>(null)
   const toggleExpand = (key: string) => setExpanded(prev => prev === key ? null : key)
 
+  // Pitcher Report's "Last N Starts/Games" live-computed window, surfaced
+  // here too — same /api/pitcher-report/live-window endpoint, same response
+  // shape (pitchLog.ts's aggregate rows use the same field names as the
+  // mlb-party pitch_type_recent tables PlayerDrillDown already reads, so no
+  // data-shape conversion is needed, just swapping which source the pitch-mix
+  // table below pulls from). Lives at the GameTable level, not per-row, so
+  // switching between two batters facing the same pitcher reuses one fetch
+  // instead of refetching per row — and only one row can be expanded at a
+  // time in this table anyway (single `expanded` key for both teams).
+  const [windowMode, setWindowMode] = useState<'14day' | 'live'>('14day')
+  const [liveN, setLiveN] = useState(3)
+  const [liveCache, setLiveCache] = useState<Record<string, { status: 'loading' | 'ready' | 'error'; data?: any; error?: string }>>({})
+
+  useEffect(() => {
+    if (windowMode !== 'live' || !expanded) return
+    const isHome = expanded.startsWith('h-')
+    const pitcher = isHome ? game.awayPitcher : game.homePitcher
+    const lineup = isHome ? game.homeLineup : game.awayLineup
+    const pitcherId = pitcher?.id
+    if (!pitcherId) return
+    const key = `${pitcherId}-${liveN}`
+    if (liveCache[key]) return
+    const batterIds = (lineup ?? []).map((p: any) => p.mlb_id).filter(Boolean)
+    setLiveCache(prev => ({ ...prev, [key]: { status: 'loading' } }))
+    fetch(`/api/pitcher-report/live-window?pitcherId=${pitcherId}&batterIds=${batterIds.join(',')}&games=${liveN}`)
+      .then(async r => {
+        const json = await r.json()
+        if (!r.ok) throw new Error(json.error || 'Failed to compute live window')
+        setLiveCache(prev => ({ ...prev, [key]: { status: 'ready', data: json } }))
+      })
+      .catch((e: any) => {
+        setLiveCache(prev => ({ ...prev, [key]: { status: 'error', error: e.message || 'Failed to load live window' } }))
+      })
+    // liveCache deliberately omitted — it's read for a cache-hit check, not a
+    // dependency; including it would refetch every time any entry is set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowMode, liveN, expanded, game])
+
   useEffect(() => {
     if (!highlightKey) return
     // A short delay so the expanded drilldown row has actually rendered
@@ -1900,7 +1994,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} /></tr>
+                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.awayPitcher?.id ? liveCache[`${game.awayPitcher.id}-${liveN}`] : undefined} /></tr>
                 )}
               </React.Fragment>
             )
@@ -1928,7 +2022,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} /></tr>
+                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.homePitcher?.id ? liveCache[`${game.homePitcher.id}-${liveN}`] : undefined} /></tr>
                 )}
               </React.Fragment>
             )
