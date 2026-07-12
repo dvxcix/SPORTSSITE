@@ -3,6 +3,7 @@ import { Geist } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
+import { Analytics } from '@vercel/analytics/next'
 
 const geist = Geist({ subsets: ['latin'] })
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </RootLayoutShell>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
