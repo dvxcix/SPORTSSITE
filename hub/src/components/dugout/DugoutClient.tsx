@@ -1481,7 +1481,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
             >{row.bats || '?'}</span>
           </Tooltip>
           <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
-          <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
+          <div style={{ overflow: 'hidden', minWidth: 0, flex: 1, textAlign: 'left' }}>
             {/* Badges used to each render as their own flexShrink:0 chip on
                 this same line, so 2+ active signals could squeeze the name
                 down to almost nothing (e.g. "E."). They're now collapsed
@@ -1523,7 +1523,14 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
                 </Tooltip>
               )}
             </div>
-            <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{row.position} · {row.bats}HB</div>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 4, textAlign: 'left',
+              fontSize: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif",
+            }}>
+              <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>{row.position}</span>
+              <span style={{ color: 'var(--text-4)' }}>·</span>
+              <span style={{ color: handColor, fontWeight: 700 }}>{row.bats === 'S' ? 'SHB' : `${row.bats}HB`}</span>
+            </div>
           </div>
           <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
