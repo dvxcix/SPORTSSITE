@@ -949,7 +949,19 @@ export function PitcherReportClient() {
                 ) : allRows.length === 0 ? (
                   liveLoading ? 'Computing…' : 'No recent pitch-type data for this pitcher yet.'
                 ) : windowMode === 'live' ? (
-                  `Sample: ${winLabel} — real starts, computed live from MLB play-by-play (not a rolling calendar window)`
+                  <>
+                    {`Sample: ${winLabel} — real starts, computed live from MLB play-by-play (not a rolling calendar window)`}
+                    {/* That date range is this pitcher's own — each opposing batter's
+                        numbers further down aren't from at-bats against him specifically
+                        (rare to have enough of those to be meaningful); they're each
+                        hitter's own last N games vs same-handed pitching in general, i.e.
+                        how he's hitting this pitch mix right now. Was flagged as a
+                        possible mismatch and confirmed as the intended read — this just
+                        makes it explicit instead of implying one shared date range. */}
+                    <div style={{ marginTop: 2 }}>
+                      Batter rows below use each hitter's own last {liveN} games vs same-handed pitching (any opponent) — his current form against this pitch, not at-bats vs this specific pitcher.
+                    </div>
+                  </>
                 ) : (
                   `Sample: ${winLabel} · rolling window, not a start count`
                 )}
