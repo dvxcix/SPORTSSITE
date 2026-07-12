@@ -226,8 +226,36 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
     if (!res.ok) return []
     const data = await res.json()
     const roster: any[] = data.roster ?? []
-    return roster
-      .filter(p => p.position?.type !== 'Pitcher')
+    const positionPlayers = roster.filter(p => p.position?.type !== 'Pitcher')
+
+    // teams/{id}/roster's `person` objects never carry batSide at all —
+    // confirmed live, every entry comes back undefined, not just missing
+    // for switch hitters or some edge case. Every projected/unconfirmed
+    // batter was silently defaulting to bats: '?', which a downstream
+    // `bats === 'S' ? ... : bats === 'L' ? 'L' : 'R'`-style fallback then
+    // treats as right-handed — so an entire projected lineup could show
+    // zero LHB/switch hitters even when several were actually on it.
+    // Batch-fetch it the same way the confirmed-lineup path already does
+    // (see batSideById above) rather than trusting this endpoint for it.
+    const ids = positionPlayers.map(p => p.person?.id).filter(Boolean)
+    const projBatSideById = new Map<number, string>()
+    if (ids.length) {
+      try {
+        const peopleRes = await fetch(
+          `https://statsapi.mlb.com/api/v1/people?personIds=${ids.join(',')}`,
+          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+        )
+        if (peopleRes.ok) {
+          const people = (await peopleRes.json()).people ?? []
+          for (const person of people) {
+            const code = person.batSide?.code
+            if (person.id && code) projBatSideById.set(person.id, code)
+          }
+        }
+      } catch {}
+    }
+
+    return positionPlayers
       .sort((a, b) => (POS_ORDER[a.position?.abbreviation] ?? 9) - (POS_ORDER[b.position?.abbreviation] ?? 9))
       .map((p, i) => ({
         mlb_id: p.person.id,
@@ -235,7 +263,7 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
         name_norm: normName(p.person.fullName || ''),
         batting_order: i + 1,
         position: p.position?.abbreviation || '?',
-        bats: p.person.batSide?.code || '?',
+        bats: projBatSideById.get(p.person.id) || p.person.batSide?.code || '?',
         team: teamAbbr,
         team_name: teamName,
         projected: true,

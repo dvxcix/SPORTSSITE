@@ -593,6 +593,7 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                         </button>
                       </Tooltip>
                       <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Tooltip content={`Open ${batter.name} in The Dugout`}>
                         <Link
                           href={`/dugout?date=${date}&highlight=${batter.mlb_id}`}
@@ -604,6 +605,22 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                           <span style={{ fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{batter.name}</span>
                         </Link>
                         </Tooltip>
+                        {/* Hand badge — same L/S/R color convention as Dugout's
+                            player cell, just missing here before. Previously
+                            impossible to tell LHB/RHB/switch apart at a glance
+                            in this table at all. */}
+                        <Tooltip content={batter.bats === 'S' ? 'Switch hitter' : batter.bats === 'L' ? 'Bats left' : 'Bats right'}>
+                          <span
+                            style={{
+                              flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
+                              color: batter.bats === 'L' ? '#60a5fa' : batter.bats === 'S' ? '#c084fc' : '#fb923c',
+                              border: `1px solid ${batter.bats === 'L' ? '#60a5fa' : batter.bats === 'S' ? '#c084fc' : '#fb923c'}`,
+                              background: `${batter.bats === 'L' ? '#60a5fa' : batter.bats === 'S' ? '#c084fc' : '#fb923c'}18`,
+                            }}
+                          >{batter.bats || '?'}</span>
+                        </Tooltip>
+                        </div>
                         {(sa?.fanduel != null || sa?.caesars != null || sa?.betmgm != null || picks != null) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2, marginLeft: 26 }}>
                             {(['fanduel', 'caesars', 'betmgm'] as const).map(book => sa?.[book] != null && (
