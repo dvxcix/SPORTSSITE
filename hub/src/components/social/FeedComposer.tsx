@@ -8,6 +8,7 @@ import { PickComposer, type ComposedPick } from './PickComposer'
 import { PROP_META } from '@/lib/watchlist'
 import { combineOdds, calcPayout, fmtUsd } from '@/lib/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
+import { notifyMentions } from '@/lib/mentions'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -128,6 +129,8 @@ export function FeedComposer({ onPost }: FeedComposerProps) {
         result: 'pending',
       })))
     }
+
+    await notifyMentions(supabase, user.id, content, `/posts/${post.id}`, post.id, 'a post')
 
     setContent('')
     setLegs([])

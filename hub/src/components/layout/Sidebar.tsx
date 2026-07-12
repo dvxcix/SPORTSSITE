@@ -34,7 +34,7 @@ const nav = [
   null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
-  { href: '/events',      icon: Calendar,      label: 'Events' },
+  { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
   { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
   { href: '/forum',       icon: MessageSquare, label: 'Forum', flagKey: 'feature_forum' },
   { href: '/marketplace', icon: ShoppingBag,   label: 'Marketplace', flagKey: 'feature_marketplace' },
@@ -52,7 +52,7 @@ export function Sidebar() {
   // the site_settings rows we ship disabled by default.
   const [flags, setFlags] = useState<Record<string, boolean>>({
     feature_blog: false, feature_forum: false, feature_marketplace: false,
-    feature_pages: false, feature_pro_plan: false,
+    feature_pages: false, feature_pro_plan: false, feature_events: false,
   })
 
   useEffect(() => {

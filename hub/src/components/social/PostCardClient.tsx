@@ -4,6 +4,7 @@ import { useState, useEffect, useId } from 'react'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
 import { Heart, MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
 import Link from 'next/link'
@@ -13,6 +14,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { fmtUsd } from '@/lib/parlayCalc'
+import { LinkifiedText } from './LinkifiedText'
 
 interface PostCardClientProps {
   post: Post & { author: { username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
@@ -181,8 +183,9 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
   async function submitComment() {
     if (!user || !commentText.trim()) return
+    const text = commentText.trim()
     const { data } = await supabase.from('comments')
-      .insert({ post_id: post.id, author_id: user.id, content: commentText.trim() })
+      .insert({ post_id: post.id, author_id: user.id, content: text })
       .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
       .single()
     if (data) {
@@ -194,6 +197,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       userId: post.author_id, actorId: user.id, type: 'comment',
       message: 'commented on your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
+    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a comment')
   }
 
   function startEditComment(c: typeof comments[0]) {
@@ -338,7 +342,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
               {/* Content */}
               <p style={{ marginTop: 8, fontSize: 14, color: 'var(--text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {post.content}
+                <LinkifiedText text={post.content} />
               </p>
 
               {/* Pick card — structured picks (mlb_id + prop_key) render a
@@ -582,7 +586,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                         <button onClick={() => setEditingCommentId(null)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
                       </div>
                     ) : (
-                      <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}>{c.content}</p>
+                      <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}><LinkifiedText text={c.content} /></p>
                     )}
                   </div>
                 </div>

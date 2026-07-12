@@ -10,6 +10,7 @@ export const FEATURE_FLAGS = {
   pages: 'feature_pages',
   pro_plan: 'feature_pro_plan',
   stories: 'feature_stories',
+  events: 'feature_events',
 } as const
 
 export type FeatureFlagKey = typeof FEATURE_FLAGS[keyof typeof FEATURE_FLAGS]
