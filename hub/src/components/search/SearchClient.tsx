@@ -38,7 +38,8 @@ export function SearchClient() {
     if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); return }
     setLoading(true)
 
-    const [{ data: u }, { data: p }, sportsData] = await Promise.all([
+    const postCols = 'id, content, post_type, pick_data, sport, created_at, author:users(username, display_name, avatar_url)'
+    const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData] = await Promise.all([
       supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
@@ -46,23 +47,40 @@ export function SearchClient() {
       // Plain ilike, not full-text search — a partial/mid-word type-ahead
       // like "mach" finding "Machado" matches how people actually use a
       // search box better than websearch_to_tsquery's whole-word stemming.
-      // Matches against the freeform caption OR the whole pick_data JSON
-      // blob cast to text — a player's name usually only lives inside
-      // pick_data (top-level player_name for a single pick, nested inside
-      // legs[] for a parlay), not the caption, so content-only search was
-      // silently missing every pick post where nobody happened to type the
-      // player's name into their caption too.
-      supabase.from('posts')
-        .select('id, content, post_type, pick_data, sport, created_at, author:users(username, display_name, avatar_url)')
-        .or(`content.ilike.%${query}%,pick_data::text.ilike.%${query}%`)
+      supabase.from('posts').select(postCols)
+        .ilike('content', `%${query}%`)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
         .limit(15),
+      // A player's name usually only lives inside pick_data — the
+      // top-level player_name for a single pick, nested inside legs[] for
+      // a parlay — not the caption, so content-only search was silently
+      // missing every pick post where nobody happened to also type the
+      // player's name into their own caption. PostgREST's or=() logic tree
+      // doesn't accept a `column::type` cast (confirmed live — it 400s
+      // with PGRST100, which the old code silently swallowed since only
+      // `data` was destructured, never `error`), so this can't be one
+      // query; fetch a bounded recent window of picks/parlays and match
+      // the whole pick_data blob client-side instead, then merge+dedupe
+      // with the content matches above.
+      supabase.from('posts').select(postCols)
+        .in('post_type', ['pick', 'parlay'])
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false })
+        .limit(150),
       fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
     ])
 
+    const q = query.toLowerCase()
+    const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
+    const seen = new Set<string>()
+    const p = [...(byContent ?? []), ...byPickData]
+      .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
+      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+      .slice(0, 15)
+
     setUsers(u ?? [])
-    setPosts(p ?? [])
+    setPosts(p)
     setPlayers(sportsData.players ?? [])
     setTeams(sportsData.teams ?? [])
     setMlbDate(sportsData.date ?? null)

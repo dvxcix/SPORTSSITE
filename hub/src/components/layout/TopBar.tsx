@@ -59,25 +59,40 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     let cancelled = false
     setQuickLoading(true)
     const t = setTimeout(async () => {
-      const [{ data: u }, { data: p }, sportsData] = await Promise.all([
+      const postCols = 'id, content, pick_data, author:users(username, display_name)'
+      const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData] = await Promise.all([
         supabase.from('users')
           .select('id, username, display_name, avatar_url')
           .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
           .limit(3),
-        // Same content-OR-pick_data match as the full /search results page
-        // (SearchClient.tsx) — a pick's player name usually only lives in
-        // pick_data, not the caption, so content-only search missed it here too.
-        supabase.from('posts')
-          .select('id, content, author:users(username, display_name)')
-          .or(`content.ilike.%${query}%,pick_data::text.ilike.%${query}%`)
+        supabase.from('posts').select(postCols)
+          .ilike('content', `%${query}%`)
           .eq('visibility', 'public')
           .order('created_at', { ascending: false })
           .limit(3),
+        // Same content-then-pick_data merge as the full /search results page
+        // (SearchClient.tsx) — a pick's player name usually only lives in
+        // pick_data, not the caption, so content-only search missed it here
+        // too. Can't do this as a single .or() query — PostgREST's logic
+        // tree grammar rejects a `column::type` cast (confirmed live via a
+        // PGRST100 parse error), so it's a separate bounded fetch merged
+        // client-side instead.
+        supabase.from('posts').select(postCols)
+          .in('post_type', ['pick', 'parlay'])
+          .eq('visibility', 'public')
+          .order('created_at', { ascending: false })
+          .limit(150),
         fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
       ])
       if (cancelled) return
+      const q = query.toLowerCase()
+      const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
+      const seen = new Set<string>()
+      const p = [...(byContent ?? []), ...byPickData]
+        .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
+        .slice(0, 3)
       setQuickResults({
-        users: u ?? [], posts: p ?? [],
+        users: u ?? [], posts: p,
         players: (sportsData.players ?? []).slice(0, 3),
         teams: (sportsData.teams ?? []).slice(0, 2),
       })
