@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Clock, Eye, Heart, ArrowLeft, BookOpen } from 'lucide-react'
 import { BlogLikeButton } from '@/components/blog/BlogLikeButton'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <span className="text-xs font-bold text-purple-400 bg-purple-400/10 px-2.5 py-1 rounded-full">{blog.category}</span>
         )}
         {blog.sport && (
-          <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded-full">{blog.sport}</span>
+          sportLogoUrl(blog.sport) ? (
+            <span className="bg-blue-400/10 rounded-full p-1.5 flex items-center"><img src={sportLogoUrl(blog.sport)} alt={blog.sport} className="w-4 h-4 object-contain" /></span>
+          ) : (
+            <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded-full">{blog.sport}</span>
+          )
         )}
       </div>
 

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Calendar, Plus, MapPin, Clock } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const revalidate = 60
 
@@ -91,7 +92,11 @@ function EventCard({ event, past }: { event: any; past?: boolean }) {
               <MapPin size={10} /> {event.location}
             </span>
           )}
-          {event.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{event.sport}</span>}
+          {event.sport && (
+            sportLogoUrl(event.sport)
+              ? <img src={sportLogoUrl(event.sport)} alt={event.sport} className="w-3.5 h-3.5 object-contain" />
+              : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{event.sport}</span>
+          )}
           {past && <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded-full">Past</span>}
         </div>
         <p className="text-xs text-zinc-600 mt-1">by @{event.host?.display_name || event.host?.username}</p>

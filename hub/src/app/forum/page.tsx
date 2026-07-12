@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { MessageSquare, Plus, Pin } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const revalidate = 60
 
@@ -41,7 +42,11 @@ export default async function ForumPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="font-bold text-white">{cat.name}</p>
-                {cat.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{cat.sport}</span>}
+                {cat.sport && (
+                  sportLogoUrl(cat.sport)
+                    ? <img src={sportLogoUrl(cat.sport)} alt={cat.sport} className="w-3.5 h-3.5 object-contain" />
+                    : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{cat.sport}</span>
+                )}
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">{cat.description}</p>
             </div>

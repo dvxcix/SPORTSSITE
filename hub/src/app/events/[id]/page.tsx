@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { EventRSVPButtons } from '@/components/events/EventRSVPButtons'
 import { Calendar, MapPin, Clock, Link as LinkIcon, Users } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {event.sport && <span className="inline-block text-xs font-bold text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded-full mb-3">{event.sport}</span>}
+      {event.sport && (
+        sportLogoUrl(event.sport)
+          ? <span className="inline-flex bg-blue-400/10 rounded-full p-1.5 mb-3"><img src={sportLogoUrl(event.sport)} alt={event.sport} className="w-5 h-5 object-contain" /></span>
+          : <span className="inline-block text-xs font-bold text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded-full mb-3">{event.sport}</span>
+      )}
       <h1 className="text-2xl font-black text-white mb-4">{event.title}</h1>
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3 mb-4">

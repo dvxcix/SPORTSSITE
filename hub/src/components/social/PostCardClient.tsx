@@ -13,6 +13,7 @@ import { ReportModal } from './ReportModal'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { sportLogoUrl } from '@/lib/sportLogos'
 import { fmtUsd } from '@/lib/parlayCalc'
 import { LinkifiedText } from './LinkifiedText'
 import { EmojiPicker } from './EmojiPicker'
@@ -354,10 +355,18 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                 </div>
               </div>
 
-              {/* Sport tag */}
+              {/* Sport tag — real league logo when we have one (MLB/NFL/NBA/
+                  NHL/MMA), text fallback otherwise (e.g. Soccer, which has
+                  no single governing-league badge to show). */}
               {post.sport && (
                 <Link href={`/hashtag/${post.sport.toLowerCase()}`} style={{ textDecoration: 'none' }}>
-                  <span className="sport-tag" style={{ display: 'inline-block', marginTop: 4 }}>{post.sport}</span>
+                  {sportLogoUrl(post.sport) ? (
+                    <span className="sport-tag" style={{ display: 'inline-flex', marginTop: 4, padding: '3px 8px' }}>
+                      <img src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 14, height: 14, objectFit: 'contain' }} />
+                    </span>
+                  ) : (
+                    <span className="sport-tag" style={{ display: 'inline-block', marginTop: 4 }}>{post.sport}</span>
+                  )}
                 </Link>
               )}
 
@@ -378,7 +387,11 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <TrendingUp size={13} style={{ color: 'var(--gold)', flexShrink: 0 }} />
                     <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.06em' }}>PICK</span>
-                    {post.sport && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{post.sport}</span>}
+                    {post.sport && (
+                      sportLogoUrl(post.sport)
+                        ? <img src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 12, height: 12, objectFit: 'contain' }} />
+                        : <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{post.sport}</span>
+                    )}
                     {pickResult && pickResult !== 'pending' && (
                       <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 900, color: pickResult === 'win' ? 'var(--green)' : pickResult === 'loss' ? 'var(--red)' : 'var(--text-3)' }}>
                         {pickResult === 'win' ? '✓ WIN' : pickResult === 'loss' ? '✗ LOSS' : 'PUSH'}

@@ -2,6 +2,7 @@ import { getChannels } from '@/lib/queries'
 import Link from 'next/link'
 import { MessageSquare, Users, Pin } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const revalidate = 60
 
@@ -55,7 +56,11 @@ function ChannelRow({ channel }: { channel: Awaited<ReturnType<typeof getChannel
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-bold text-white">{channel.name}</span>
-            {channel.sport && <Badge>{channel.sport}</Badge>}
+            {channel.sport && (
+              sportLogoUrl(channel.sport)
+                ? <img src={sportLogoUrl(channel.sport)} alt={channel.sport} className="w-4 h-4 object-contain" />
+                : <Badge>{channel.sport}</Badge>
+            )}
             {channel.channel_type !== 'public' && (
               <Badge variant="pick">{channel.channel_type === 'vip' ? 'VIP' : 'Members'}</Badge>
             )}

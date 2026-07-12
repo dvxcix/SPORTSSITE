@@ -7,6 +7,8 @@ import { Search, TrendingUp, Users, Zap, Hash, Activity } from 'lucide-react'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { UserBadges } from '@/components/social/UserBadges'
+import { sportLogoUrl } from '@/lib/sportLogos'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb'
 
@@ -218,7 +220,11 @@ export default function SearchPage() {
                       <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-zinc-400 hover:text-white">
                         @{p.author?.username}
                       </Link>
-                      {p.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>}
+                      {p.sport && (
+                        sportLogoUrl(p.sport)
+                          ? <img src={sportLogoUrl(p.sport)} alt={p.sport} className="w-3.5 h-3.5 object-contain shrink-0" />
+                          : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>
+                      )}
                       {p.post_type === 'parlay' && <span className="text-[10px] font-bold bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full">PARLAY</span>}
                     </div>
                     <Link href={`/posts/${p.id}`}>
@@ -227,7 +233,9 @@ export default function SearchPage() {
                     {p.pick_data?.team && (
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <TrendingUp size={11} className="text-yellow-400" />
-                        <span className="font-bold text-white">{p.pick_data.team}</span>
+                        {getTeamLogoUrl(p.pick_data.team)
+                          ? <img src={getTeamLogoUrl(p.pick_data.team)} alt={p.pick_data.team} className="w-4 h-4 object-contain shrink-0" />
+                          : <span className="font-bold text-white">{p.pick_data.team}</span>}
                         <span className="text-zinc-500">{p.pick_data.line}</span>
                         <span className="font-mono font-bold text-zinc-300">{p.pick_data.odds}</span>
                       </div>

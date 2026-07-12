@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Tag, MessageCircle, Flag, CheckCircle } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,7 +48,9 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
               <span className="text-xs font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full">{listing.condition}</span>
             )}
             {listing.sport && (
-              <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full">{listing.sport}</span>
+              sportLogoUrl(listing.sport)
+                ? <span className="bg-blue-400/10 rounded-full p-1 flex items-center"><img src={sportLogoUrl(listing.sport)} alt={listing.sport} className="w-4 h-4 object-contain" /></span>
+                : <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full">{listing.sport}</span>
             )}
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TrendingUp, Flame, Users, Hash } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
 export const revalidate = 300
 
@@ -45,13 +47,16 @@ export default async function ExplorePage() {
           <Hash size={14} /> Browse by Sport
         </h2>
         <div className="grid grid-cols-3 gap-2">
-          {SPORTS.map(s => (
-            <Link key={s.label} href={s.href}
-              className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all">
-              <span className="text-xl">{s.emoji}</span>
-              <span className="font-bold text-white text-sm">{s.label}</span>
-            </Link>
-          ))}
+          {SPORTS.map(s => {
+            const logo = sportLogoUrl(s.label)
+            return (
+              <Link key={s.label} href={s.href}
+                className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all">
+                {logo ? <img src={logo} alt={s.label} className="w-6 h-6 object-contain shrink-0" /> : <span className="text-xl">{s.emoji}</span>}
+                <span className="font-bold text-white text-sm">{s.label}</span>
+              </Link>
+            )
+          })}
         </div>
       </section>
 
@@ -62,23 +67,33 @@ export default async function ExplorePage() {
             <TrendingUp size={14} /> Hot Picks Today
           </h2>
           <div className="space-y-2">
-            {(trendingPicks ?? []).map((p: any) => (
-              <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-zinc-500">@{p.author?.display_name || p.author?.username}</span>
-                  {p.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>}
-                  <span className="ml-auto text-xs text-zinc-600">❤️ {p.reaction_count}</span>
-                </div>
-                {p.pick_data && (
-                  <div className="flex items-center gap-2">
-                    <TrendingUp size={11} className="text-yellow-400 shrink-0" />
-                    <span className="text-sm font-bold text-white">{p.pick_data.team}</span>
-                    <span className="text-xs text-zinc-500">{p.pick_data.line}</span>
-                    <span className="text-xs font-mono font-bold text-zinc-300">{p.pick_data.odds}</span>
+            {(trendingPicks ?? []).map((p: any) => {
+              const sportLogo = sportLogoUrl(p.sport)
+              const teamLogo = getTeamLogoUrl(p.pick_data?.team)
+              return (
+                <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-zinc-500">@{p.author?.display_name || p.author?.username}</span>
+                    {p.sport && (
+                      sportLogo
+                        ? <img src={sportLogo} alt={p.sport} className="w-4 h-4 object-contain shrink-0" />
+                        : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>
+                    )}
+                    <span className="ml-auto text-xs text-zinc-600">❤️ {p.reaction_count}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                  {p.pick_data && (
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={11} className="text-yellow-400 shrink-0" />
+                      {teamLogo
+                        ? <img src={teamLogo} alt={p.pick_data.team} className="w-5 h-5 object-contain shrink-0" />
+                        : <span className="text-sm font-bold text-white">{p.pick_data.team}</span>}
+                      <span className="text-xs text-zinc-500">{p.pick_data.line}</span>
+                      <span className="text-xs font-mono font-bold text-zinc-300">{p.pick_data.odds}</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
@@ -90,19 +105,26 @@ export default async function ExplorePage() {
             <Flame size={14} /> Top Posts (24h)
           </h2>
           <div className="space-y-2">
-            {(topPosts ?? []).map((p: any) => (
-              <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-5 h-5 rounded-full bg-zinc-700 overflow-hidden shrink-0">
-                    {p.author?.avatar_url && <img src={p.author.avatar_url} alt="" className="w-full h-full object-cover" />}
+            {(topPosts ?? []).map((p: any) => {
+              const sportLogo = sportLogoUrl(p.sport)
+              return (
+                <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-5 h-5 rounded-full bg-zinc-700 overflow-hidden shrink-0">
+                      {p.author?.avatar_url && <img src={p.author.avatar_url} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                    <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-zinc-400 hover:text-white">@{p.author?.username}</Link>
+                    {p.sport && (
+                      sportLogo
+                        ? <img src={sportLogo} alt={p.sport} className="w-4 h-4 object-contain shrink-0" />
+                        : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>
+                    )}
+                    <span className="ml-auto text-xs text-zinc-600">❤️ {p.reaction_count} · 💬 {p.comment_count}</span>
                   </div>
-                  <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-zinc-400 hover:text-white">@{p.author?.username}</Link>
-                  {p.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>}
-                  <span className="ml-auto text-xs text-zinc-600">❤️ {p.reaction_count} · 💬 {p.comment_count}</span>
+                  <p className="text-sm text-zinc-200 line-clamp-2">{p.content}</p>
                 </div>
-                <p className="text-sm text-zinc-200 line-clamp-2">{p.content}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}

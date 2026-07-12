@@ -9,6 +9,7 @@ import { GroupInviteModal } from '@/components/groups/GroupInviteModal'
 import { GroupInviteResponse } from '@/components/groups/GroupInviteResponse'
 import { ChatRoom } from '@/components/chat/ChatRoom'
 import { Users, Lock, Globe, Settings } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,7 +83,13 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
         {group.banner_url && <img src={group.banner_url} alt="" className="w-full h-full object-cover" />}
         {group.sport && (
           <div className="absolute top-3 right-3">
-            <span className="text-xs font-bold text-blue-400 bg-blue-400/20 backdrop-blur px-2 py-1 rounded-full border border-blue-400/30">{group.sport}</span>
+            {sportLogoUrl(group.sport) ? (
+              <span className="bg-blue-400/20 backdrop-blur p-1.5 rounded-full border border-blue-400/30 flex items-center">
+                <img src={sportLogoUrl(group.sport)} alt={group.sport} className="w-5 h-5 object-contain" />
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-blue-400 bg-blue-400/20 backdrop-blur px-2 py-1 rounded-full border border-blue-400/30">{group.sport}</span>
+            )}
           </div>
         )}
       </div>

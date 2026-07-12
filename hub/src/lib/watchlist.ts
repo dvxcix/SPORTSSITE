@@ -125,9 +125,15 @@ export async function postBetToFeed(
 
   const supabase = createClient()
 
+  // Sportsbook name is deliberately left out of this auto-generated caption
+  // — it's already shown as a real BookLogo on the structured pick card
+  // rendered right below the content text (PostCardClient), so spelling it
+  // out again in plain text here was both redundant and the one place that
+  // ended up naming the book everywhere the caption gets echoed (Explore,
+  // notifications, link previews) instead of showing it as a logo.
   const content = opts.content?.trim() || (isParlay
-    ? `${legs.length}-Leg Parlay${book ? ` (${book})` : ''} · ${combined > 0 ? `+${combined}` : combined}`
-    : `${legs[0].player_name} — ${legs[0].prop_label}${book ? ` (${book})` : ''}${legs[0].odds != null ? ` ${legs[0].odds! > 0 ? '+' : ''}${legs[0].odds}` : ''}`)
+    ? `${legs.length}-Leg Parlay · ${combined > 0 ? `+${combined}` : combined}`
+    : `${legs[0].player_name} — ${legs[0].prop_label}${legs[0].odds != null ? ` ${legs[0].odds! > 0 ? '+' : ''}${legs[0].odds}` : ''}`)
 
   const legsSummary = legs.map(l => ({
     player_name: l.player_name,

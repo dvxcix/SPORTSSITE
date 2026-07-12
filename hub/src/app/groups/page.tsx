@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Users, Plus, Lock } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const revalidate = 60
 
@@ -56,7 +57,11 @@ export default async function GroupsPage() {
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-white">{g.name}</p>
                   {!g.is_public && <Lock size={12} className="text-zinc-500" />}
-                  {g.sport && <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{g.sport}</span>}
+                  {g.sport && (
+                    sportLogoUrl(g.sport)
+                      ? <img src={sportLogoUrl(g.sport)} alt={g.sport} className="w-3.5 h-3.5 object-contain" />
+                      : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{g.sport}</span>
+                  )}
                 </div>
                 <p className="text-xs text-zinc-500 mt-0.5 truncate">{g.description}</p>
                 <p className="text-xs text-zinc-600 mt-1">{g.member_count ?? 0} members</p>
