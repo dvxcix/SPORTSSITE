@@ -258,19 +258,24 @@ function SortableTH({ label, colKey, sort, onSort, align = 'right' }: {
   )
 }
 
+// dir is the batter/HR-favorable direction — heat() colors toward green as
+// the value moves that way, red the other way. Omitted dir (PITCHES/BBE,
+// pure sample-size counts; LA/LD%, no monotonic good/bad — LA has a sweet
+// spot, LD% is a contact-quality signal but not an HR one) skips coloring
+// entirely rather than asserting a direction that isn't real.
 const COLS: { key: string; label: string; dir?: 'hi' | 'lo' }[] = [
   { key: 'pitches', label: 'PITCHES' },
   { key: 'in_play', label: 'BBE' },
-  { key: 'whiff_pct', label: 'WHIFF%' },
-  { key: 'hard_hit_pct', label: 'HARD-HIT%' },
-  { key: 'barrel_pct', label: 'BARREL%' },
-  { key: 'home_runs', label: 'HR' },
-  { key: 'avg_exit_velo', label: 'EV' },
+  { key: 'whiff_pct', label: 'WHIFF%', dir: 'lo' },
+  { key: 'hard_hit_pct', label: 'HARD-HIT%', dir: 'hi' },
+  { key: 'barrel_pct', label: 'BARREL%', dir: 'hi' },
+  { key: 'home_runs', label: 'HR', dir: 'hi' },
+  { key: 'avg_exit_velo', label: 'EV', dir: 'hi' },
   { key: 'avg_launch_angle', label: 'LA' },
-  { key: 'gb_pct', label: 'GB%' },
-  { key: 'fb_pct', label: 'FB%' },
+  { key: 'gb_pct', label: 'GB%', dir: 'lo' },
+  { key: 'fb_pct', label: 'FB%', dir: 'hi' },
   { key: 'ld_pct', label: 'LD%' },
-  { key: 'pu_pct', label: 'PU%' },
+  { key: 'pu_pct', label: 'PU%', dir: 'lo' },
 ]
 
 // ─── date strip — same offset-anchored-at-UTC-noon pattern as Weather Lab's,
@@ -377,7 +382,7 @@ function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
                   </td>
                   <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', fontWeight: 700 }}>{pct(r.usage_pct)}</td>
                   {COLS.map(c => (
-                    <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r[c.key], sorted.map(x => x[c.key]), c.dir ?? 'hi') }}>
+                    <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.dir ? heat(r[c.key], sorted.map(x => x[c.key]), c.dir) : {}) }}>
                       {c.key === 'home_runs' ? int(r[c.key]) : c.key === 'avg_exit_velo' || c.key === 'avg_launch_angle' ? num(r[c.key]) : pct(r[c.key])}
                     </td>
                   ))}
@@ -643,7 +648,7 @@ function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, spl
                     </div>
                   </td>
                   {COLS.filter(c => c.key !== 'in_play').map(c => (
-                    <td key={c.key} style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)', ...(row ? heat(row[c.key], withData.map(x => x[c.key]), c.dir ?? 'hi') : {}) }}>
+                    <td key={c.key} style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-1)', ...(row && c.dir ? heat(row[c.key], withData.map(x => x[c.key]), c.dir) : {}) }}>
                       {!row ? '—' : c.key === 'home_runs' ? int(row[c.key]) : c.key === 'avg_exit_velo' || c.key === 'avg_launch_angle' ? num(row[c.key]) : pct(row[c.key])}
                     </td>
                   ))}
