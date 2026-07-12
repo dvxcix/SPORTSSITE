@@ -1514,7 +1514,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
                 </Tooltip>
               )}
               {row.is_money_sa_rbi && (
-                <Tooltip content="HR÷RBI value flag: opening HR price ≥3.5x RBI price with a low community pick count (ported from mlb-party Signals, uses opening odds exactly like the source)">
+                <Tooltip content="Value flag — this player's HR price looks cheap relative to his RBI price, with low community attention so far">
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', fontSize: 10, flexShrink: 0,
                     color: '#f59e0b', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
@@ -1590,7 +1590,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sng_fd, g('sng_fd')),
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderLeft: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
-        badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power Vehicle: HR÷Double 1.35–1.60x and HR÷TB4 ≤3.8x — book pricing HR+double close together with real damage conviction (ported from mlb-party Signals)' } : undefined}
+        badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power Vehicle — this player\'s HR, double, and total-bases pricing all line up with real book conviction on power tonight' } : undefined}
       />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="doubles" book="fanduel" odds={row.dbl_fd} openOdds={row.dblFd_open}
