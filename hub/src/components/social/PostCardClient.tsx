@@ -6,10 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Loader2 } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
+import { ShareImageModal } from './ShareImageModal'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
@@ -176,47 +177,20 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     setBookmarked(v => !v)
   }
 
-  const [sharingImage, setSharingImage] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
-  // Picks/parlays get a real shareable PNG (the card + a SlipSurge watermark
-  // strip with this poster's avatar/handle) instead of just a bare permalink
-  // — the whole point is that anyone reposting a slip to Twitter/Instagram/
-  // wherever carries visible attribution with it. Everything else (plain
-  // text, polls, image-only posts) has no "card" shape to render, so those
-  // keep the original link-share behavior unchanged.
-  async function share() {
+  // Picks/parlays get a real in-app share sheet (preview of the generated
+  // PNG + Download/Copy Link/X/Reddit/Text/native-share options) instead of
+  // handing off straight to the OS share dialog — see ShareImageModal.
+  // Everything else (plain text, polls, image-only posts) has no "card"
+  // shape to render into an image, so those keep the original bare-link
+  // native-share behavior.
+  function share() {
     if (!post.pick_data) {
       navigator.share?.({ url: window.location.origin + '/posts/' + post.id })
       return
     }
-    if (sharingImage) return
-    setSharingImage(true)
-    try {
-      const res = await fetch(`/api/share-image/${post.id}`)
-      if (!res.ok) throw new Error('image generation failed')
-      const blob = await res.blob()
-      const file = new File([blob], 'slipsurge-pick.png', { type: 'image/png' })
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'My pick on SlipSurge' })
-      } else {
-        // Desktop / no Web Share Level 2 support — just download it so the
-        // user can attach it themselves wherever they're posting.
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'slipsurge-pick.png'
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        URL.revokeObjectURL(url)
-      }
-    } catch {
-      // Either the fetch failed or the user dismissed the native share
-      // sheet (which also rejects) — nothing actionable to surface either
-      // way, same as the old navigator.share?.() silently no-op-ing.
-    } finally {
-      setSharingImage(false)
-    }
+    setShareModalOpen(true)
   }
 
   async function loadComments() {
@@ -635,7 +609,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                     onClick={toggleBookmark}
                   />
                   <ActionBtn
-                    icon={sharingImage ? <Loader2 size={15} className="animate-spin" /> : <Share2 size={15} />}
+                    icon={<Share2 size={15} />}
                     hoverBg="var(--surface-3)"
                     onClick={share}
                   />
@@ -741,6 +715,10 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
       {reportingCommentId && user && (
         <ReportModal targetId={reportingCommentId} targetType="comment" onClose={() => setReportingCommentId(null)} />
+      )}
+
+      {shareModalOpen && (
+        <ShareImageModal postId={post.id} onClose={() => setShareModalOpen(false)} />
       )}
 
     </>
