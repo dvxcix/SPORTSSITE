@@ -8,8 +8,13 @@ import { useWatchlist } from '@/context/WatchlistContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import { mlbHeadshot } from '@/lib/mlb-api'
-import { PitchMixTable, BatterVsPitchTable, pct as matchupPct } from '@/components/pitcher-report/MatchupTables'
+import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
+import {
+  PitchMixTable, BatterVsPitchTable, StatTile, SortableTH,
+  toggleSortState as toggleMatchupSort, cmpNullsLast as cmpMatchupNullsLast,
+  pct as matchupPct,
+} from '@/components/pitcher-report/MatchupTables'
+import type { SortState as MatchupSortState } from '@/components/pitcher-report/MatchupTables'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const normName = (s: string) =>
@@ -714,11 +719,6 @@ function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }
 }
 
 // ─── pitch drill-down panel ───────────────────────────────────────────────────
-const PITCH_LABELS: Record<string, string> = {
-  FF: 'Fastball', SI: 'Sinker', FC: 'Cutter', SL: 'Slider',
-  ST: 'Sweeper', CU: 'Curve', CH: 'Changeup', FS: 'Splitter',
-}
-
 function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
   oppPitcher: any
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
@@ -784,7 +784,7 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 function PlayerDrillDown({
   row, pitcherRow, timingMap, oppPitcher, gameInfo, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap,
   windowMode, liveN, onSetWindowMode, onSetLiveN, liveEntry,
-  lineupPlayer, pitcherTeamAbbr, pitcherTeamName, lineupConfirmed, splitMap, pitcherMap, pikkitMap,
+  lineupPlayer, pitcherTeamAbbr, pitcherTeamName, lineupConfirmed, splitMap, pitcherMap, pikkitMap, pool,
 }: {
   row: BatterRow
   pitcherRow: any
@@ -811,8 +811,14 @@ function PlayerDrillDown({
   splitMap: SplitMap
   pitcherMap: PitcherMap
   pikkitMap: Record<string, any>
+  // Heat-maps the Bat Tracking tiles against the rest of tonight's lineups —
+  // same "heat-mapped vs the rest of this lineup" convention as Pitcher
+  // Report's PlayerStatcastDetail.
+  pool: BatterRow[]
 }) {
   const [expandedPitch, setExpandedPitch] = useState<string | null>(null)
+  const [mixSort, setMixSort] = useState<MatchupSortState>(null)
+  const onSortMix = (col: string) => setMixSort(prev => toggleMatchupSort(prev, col))
   const pitcherHand = pitcherRow?.pitch_hand || 'R'
   // pct_* columns come out of mlb-party already scaled as percentages
   // (44.2 meaning 44.2%), not fractions — same quirk as barrel_batted_rate/
@@ -909,7 +915,30 @@ function PlayerDrillDown({
         : null
     }
     return { pt, pct, se, re, risk, batEdge, pitEdge }
-  }).sort((a, b) => b.pct - a.pct)
+  })
+
+  const mixActiveSort = mixSort ?? { col: 'pct', dir: 'desc' as const }
+  const sortedRows = [...rows].sort((a, b) => {
+    switch (mixActiveSort.col) {
+      case 'pct': return cmpMatchupNullsLast(a.pct, b.pct, mixActiveSort.dir)
+      case 'bat_hh': return cmpMatchupNullsLast(a.batEdge?.hard_hit_pct ?? null, b.batEdge?.hard_hit_pct ?? null, mixActiveSort.dir)
+      case 'pit_hh': return cmpMatchupNullsLast(a.pitEdge?.hard_hit_pct ?? null, b.pitEdge?.hard_hit_pct ?? null, mixActiveSort.dir)
+      case 'on_time': return cmpMatchupNullsLast(a.se?.on_time_percent ?? null, b.se?.on_time_percent ?? null, mixActiveSort.dir)
+      case 'r_on_time': return cmpMatchupNullsLast(a.re?.on_time_percent ?? null, b.re?.on_time_percent ?? null, mixActiveSort.dir)
+      case 'miss': return cmpMatchupNullsLast(a.se?.miss_distance ?? null, b.se?.miss_distance ?? null, mixActiveSort.dir)
+      case 'r_miss': return cmpMatchupNullsLast(a.re?.miss_distance ?? null, b.re?.miss_distance ?? null, mixActiveSort.dir)
+      default: return cmpMatchupNullsLast(a.pct, b.pct, mixActiveSort.dir)
+    }
+  })
+  // Heat-map pools for the pitch-mix table — green = favors the batter/bettor
+  // (harder contact, better recognition, closer misses), red = favors the
+  // pitcher, same convention PitchMixTable itself uses.
+  const batHhPool = rows.map(r => r.batEdge?.hard_hit_pct ?? null)
+  const pitHhPool = rows.map(r => r.pitEdge?.hard_hit_pct ?? null)
+  const onTimePool = rows.map(r => r.se?.on_time_percent ?? null)
+  const rOnTimePool = rows.map(r => r.re?.on_time_percent ?? null)
+  const missPool = rows.map(r => r.se?.miss_distance ?? null)
+  const rMissPool = rows.map(r => r.re?.miss_distance ?? null)
 
   const noBatSplits = !row.s_spd && !row.s_brl
 
@@ -999,27 +1028,28 @@ function PlayerDrillDown({
                 pitcher's weapon vs this batter
               </span>
             </div>
-            <table style={{ borderCollapse: 'collapse', fontSize: 9, width: '100%' }}>
+            <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
               <thead>
-                <tr>
-                  <th style={{ ...STH, textAlign: 'left', width: 90 }}>Pitch</th>
-                  <th style={{ ...STH, width: 40 }}>Mix%</th>
-                  <th style={{ ...STH, width: 44 }}>
-                    <Tooltip content="Batter's own hard-hit% on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>Bat·HH%</span></Tooltip>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>PITCH</th>
+                  <SortableTH label="MIX%" colKey="pct" sort={mixActiveSort} onSort={onSortMix} />
+                  <th onClick={() => onSortMix('bat_hh')} style={{ textAlign: 'right', padding: '6px 8px', color: mixActiveSort.col === 'bat_hh' ? 'var(--accent)' : 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}>
+                    <Tooltip content="Batter's own hard-hit% on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>BAT·HH%{mixActiveSort.col === 'bat_hh' ? (mixActiveSort.dir === 'desc' ? ' ▼' : ' ▲') : ''}</span></Tooltip>
                   </th>
-                  <th style={{ ...STH, width: 44 }}>
-                    <Tooltip content="This pitcher's hard-hit% allowed on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>Pit·HH%</span></Tooltip>
+                  <th onClick={() => onSortMix('pit_hh')} style={{ textAlign: 'right', padding: '6px 8px', color: mixActiveSort.col === 'pit_hh' ? 'var(--accent)' : 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}>
+                    <Tooltip content="This pitcher's hard-hit% allowed on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>PIT·HH%{mixActiveSort.col === 'pit_hh' ? (mixActiveSort.dir === 'desc' ? ' ▼' : ' ▲') : ''}</span></Tooltip>
                   </th>
-                  <th style={{ ...STH, width: 40 }}>OnTime%</th>
-                  <th style={{ ...STH, width: 40 }}>R·OT%</th>
-                  <th style={{ ...STH, width: 40 }}>Miss</th>
-                  <th style={{ ...STH, width: 40 }}>R·Miss</th>
+                  <SortableTH label="ONTIME%" colKey="on_time" sort={mixActiveSort} onSort={onSortMix} />
+                  <SortableTH label="R·OT%" colKey="r_on_time" sort={mixActiveSort} onSort={onSortMix} />
+                  <SortableTH label="MISS" colKey="miss" sort={mixActiveSort} onSort={onSortMix} />
+                  <SortableTH label="R·MISS" colKey="r_miss" sort={mixActiveSort} onSort={onSortMix} />
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 ? (
-                  <tr><td colSpan={8} style={{ ...STD, textAlign: 'left', color: 'var(--text-3)', fontSize: 9 }}>No pitch mix data</td></tr>
-                ) : rows.map(({ pt, pct, se, re, risk, batEdge, pitEdge }) => {
+                {sortedRows.length === 0 ? (
+                  <tr><td colSpan={8} style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--text-3)', fontSize: 11 }}>No pitch mix data</td></tr>
+                ) : sortedRows.map(({ pt, pct, se, re, risk, batEdge, pitEdge }) => {
                   const events = pitchEventsMap[idKey]?.[pt]?.[pitcherHand] ?? []
                   const isOpen = expandedPitch === pt
                   return (
@@ -1027,39 +1057,40 @@ function PlayerDrillDown({
                   <tr
                     onClick={() => events.length && setExpandedPitch(isOpen ? null : pt)}
                     style={{
+                      borderBottom: '1px solid var(--border)',
                       background: risk === 'batter' ? 'rgba(74,222,128,0.08)' : risk === 'pitcher' ? 'rgba(248,113,113,0.08)' : undefined,
                       cursor: events.length ? 'pointer' : 'default',
                     }}
                   >
-                    <td style={{ ...STD, textAlign: 'left', paddingLeft: 2 }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
                       {risk && (
-                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: risk === 'batter' ? '#4ade80' : '#f87171', marginRight: 4, verticalAlign: 'middle' }} />
+                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: risk === 'batter' ? '#4ade80' : '#f87171', marginRight: 5, verticalAlign: 'middle' }} />
                       )}
-                      <span style={{ display: 'inline-block', width: `${Math.max(2, Math.round(pct * 0.6))}px`, height: 4, background: 'var(--accent)', opacity: 0.6, borderRadius: 2, marginRight: 4, verticalAlign: 'middle' }} />
-                      {PITCH_LABELS[pt] || pt}
-                      {events.length > 0 && <span style={{ marginLeft: 3, fontSize: 8, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>}
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(pt), marginRight: 6, verticalAlign: 'middle' }} />
+                      {pitchLabel(pt)}
+                      {events.length > 0 && <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>}
                     </td>
-                    <td style={{ ...STD }}>{pct.toFixed(0)}%</td>
-                    <td style={{ ...STD, color: batEdge?.hard_hit_pct != null ? '#4ade80' : 'var(--text-3)', fontWeight: batEdge?.hard_hit_pct != null ? 700 : 400 }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', fontWeight: 700 }}>{pct.toFixed(0)}%</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(batEdge?.hard_hit_pct ?? null, batHhPool, 'hi') }}>
                       <Tooltip content={batEdge ? `${batEdge.pitches} pitches seen · ${f1(batEdge.whiff_pct)}% whiff · ${batEdge.home_runs ?? 0} HR — click row for the pitch-by-pitch log` : 'No pitches seen off this pitch type recently'} containerClassName="w-full h-full flex items-center justify-center">
                         <span style={{ cursor: 'help' }}>{batEdge?.hard_hit_pct != null ? `${f1(batEdge.hard_hit_pct)}` : '—'}</span>
                       </Tooltip>
                     </td>
-                    <td style={{ ...STD, color: pitEdge?.hard_hit_pct != null ? '#f87171' : 'var(--text-3)', fontWeight: pitEdge?.hard_hit_pct != null ? 700 : 400 }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(pitEdge?.hard_hit_pct ?? null, pitHhPool, 'hi') }}>
                       <Tooltip content={pitEdge ? `${pitEdge.pitches} pitches thrown · ${f1(pitEdge.whiff_pct)}% whiff induced · ${pitEdge.home_runs_allowed ?? 0} HR allowed` : 'No pitches thrown of this type recently'} containerClassName="w-full h-full flex items-center justify-center">
                         <span style={{ cursor: 'help' }}>{pitEdge?.hard_hit_pct != null ? `${f1(pitEdge.hard_hit_pct)}` : '—'}</span>
                       </Tooltip>
                     </td>
-                    <td style={{ ...STD, color: se?.on_time_percent != null ? 'var(--text-1)' : 'var(--text-3)' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(se?.on_time_percent ?? null, onTimePool, 'hi') }}>
                       {se?.on_time_percent != null ? `${(se.on_time_percent * 100).toFixed(1)}` : '—'}
                     </td>
-                    <td style={{ ...STD, color: re?.on_time_percent != null ? 'var(--accent)' : 'var(--text-3)' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(re?.on_time_percent ?? null, rOnTimePool, 'hi') }}>
                       {re?.on_time_percent != null ? `${(re.on_time_percent * 100).toFixed(1)}` : '—'}
                     </td>
-                    <td style={{ ...STD, color: se?.miss_distance != null ? 'var(--text-1)' : 'var(--text-3)' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(se?.miss_distance ?? null, missPool, 'lo') }}>
                       {f1(se?.miss_distance ?? null)}
                     </td>
-                    <td style={{ ...STD, color: re?.miss_distance != null ? '#f87171' : 'var(--text-3)' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(re?.miss_distance ?? null, rMissPool, 'lo') }}>
                       {f1(re?.miss_distance ?? null)}
                     </td>
                   </tr>
@@ -1096,6 +1127,7 @@ function PlayerDrillDown({
                 })}
               </tbody>
             </table>
+            </div>
             <p style={{ fontSize: 8, color: 'var(--text-4)', marginTop: 3 }}>
               Bat·HH%/Pit·HH% = hard-hit rate on/allowing this exact pitch type, last ~20 pitches seen (raw Statcast) · row highlight = both sides agree this pitch is live right now · click a pitch row for the batted-ball log
             </p>
@@ -1108,99 +1140,95 @@ function PlayerDrillDown({
         {/* Last N games played (real game-count window, not calendar days)
             + season platoon split vs whichever hand this pitcher throws —
             see ingest-batter-game-logs. */}
-        {(l5 || l10 || platoonRow) && (
-          <div style={{ minWidth: 220 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 4 }}>
-              RECENT FORM &amp; SPLITS
-            </div>
-            <table style={{ borderCollapse: 'collapse', fontSize: 9, width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ ...STH, textAlign: 'left', width: 60 }}>Window</th>
-                  <th style={{ ...STH, width: 44 }}>AVG</th>
-                  <th style={{ ...STH, width: 44 }}>OPS</th>
-                  <th style={{ ...STH, width: 30 }}>HR</th>
-                  <th style={{ ...STH, width: 30 }}>BB</th>
-                  <th style={{ ...STH, width: 30 }}>SO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {l5 && (
-                  <tr>
-                    <td style={{ ...STD, textAlign: 'left', paddingLeft: 2 }}>L5 ({l5.games}g)</td>
-                    <td style={{ ...STD, color: 'var(--text-1)' }}>{l5.avg != null ? l5.avg.toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ ...STD, color: 'var(--accent)' }}>{l5.ops != null ? l5.ops.toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ ...STD }}>{l5.hr}</td>
-                    <td style={{ ...STD }}>{l5.bb}</td>
-                    <td style={{ ...STD }}>{l5.so}</td>
-                  </tr>
-                )}
-                {l10 && (
-                  <tr>
-                    <td style={{ ...STD, textAlign: 'left', paddingLeft: 2 }}>L10 ({l10.games}g)</td>
-                    <td style={{ ...STD, color: 'var(--text-1)' }}>{l10.avg != null ? l10.avg.toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ ...STD, color: 'var(--accent)' }}>{l10.ops != null ? l10.ops.toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ ...STD }}>{l10.hr}</td>
-                    <td style={{ ...STD }}>{l10.bb}</td>
-                    <td style={{ ...STD }}>{l10.so}</td>
-                  </tr>
-                )}
-                {platoonRow && (
-                  <tr>
-                    <td style={{ ...STD, textAlign: 'left', paddingLeft: 2 }}>vs {pitcherHand}HP (szn)</td>
-                    <td style={{ ...STD, color: 'var(--text-1)' }}>{platoonRow.avg != null ? Number(platoonRow.avg).toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ ...STD, color: 'var(--accent)' }}>{platoonRow.ops != null ? Number(platoonRow.ops).toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ ...STD }}>{platoonRow.hr ?? '—'}</td>
-                    <td style={{ ...STD }}>{platoonRow.bb ?? '—'}</td>
-                    <td style={{ ...STD }}>{platoonRow.so ?? '—'}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            <p style={{ fontSize: 8, color: 'var(--text-4)', marginTop: 3 }}>
-              L5/L10 = last N games actually played this season (MLB gameLog) · vs {pitcherHand}HP = season-to-date vs this pitcher's throwing hand
-            </p>
-          </div>
-        )}
-
-        {/* Bat tracking summary */}
-        {!noBatSplits && (
+        {(l5 || l10 || platoonRow) && (() => {
+          const formRows = [
+            l5 && { label: `L5 (${l5.games}g)`, avg: l5.avg, ops: l5.ops, hr: l5.hr, bb: l5.bb, so: l5.so },
+            l10 && { label: `L10 (${l10.games}g)`, avg: l10.avg, ops: l10.ops, hr: l10.hr, bb: l10.bb, so: l10.so },
+            platoonRow && { label: `vs ${pitcherHand}HP (szn)`, avg: platoonRow.avg != null ? Number(platoonRow.avg) : null, ops: platoonRow.ops != null ? Number(platoonRow.ops) : null, hr: platoonRow.hr ?? null, bb: platoonRow.bb ?? null, so: platoonRow.so ?? null },
+          ].filter(Boolean) as { label: string; avg: number | null; ops: number | null; hr: number | null; bb: number | null; so: number | null }[]
+          const avgPool = formRows.map(r => r.avg)
+          const opsPool = formRows.map(r => r.ops)
+          const hrPool = formRows.map(r => r.hr)
+          const bbPool = formRows.map(r => r.bb)
+          const soPool = formRows.map(r => r.so)
+          return (
           <div style={{ minWidth: 260 }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
-              BAT TRACKING
+              RECENT FORM &amp; SPLITS
             </div>
-            <table style={{ borderCollapse: 'collapse', fontSize: 9 }}>
+            <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
               <thead>
-                <tr>
-                  <th style={{ ...STH, textAlign: 'left', width: 80 }}>Stat</th>
-                  <th style={{ ...STH, width: 50 }}>Season</th>
-                  <th style={{ ...STH, width: 50 }}>Recent</th>
-                  <th style={{ ...STH, width: 40 }}>Δ</th>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>WINDOW</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>AVG</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>OPS</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>HR</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>BB</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>SO</th>
                 </tr>
               </thead>
               <tbody>
-                {([
-                  ['Bat Speed', row.s_spd, row.r_spd, row.d_spd, false],
-                  ['Sq·Up%', row.s_sq != null ? row.s_sq * 100 : null, row.r_sq != null ? row.r_sq * 100 : null, row.d_sq != null ? row.d_sq * 100 : null, false],
-                  ['Blast%', row.s_bla != null ? row.s_bla * 100 : null, row.r_bla != null ? row.r_bla * 100 : null, null, false],
-                  ['Atk°', row.s_atk, row.r_atk, null, false],
-                  ['Barrel%', row.s_brl, null, null, false],
-                  ['HH%', row.s_hh, null, null, false],
-                  ['PullAir%', row.s_pa != null ? row.s_pa * 100 : null, null, null, false],
-                ] as [string, number | null, number | null, number | null, boolean][]).map(([label, s, r, d]) => (
-                  <tr key={label}>
-                    <td style={{ ...STD, textAlign: 'left', paddingLeft: 2, color: 'var(--text-2)' }}>{label}</td>
-                    <td style={{ ...STD }}>{s != null ? s.toFixed(1) : '—'}</td>
-                    <td style={{ ...STD, color: r != null ? 'var(--accent)' : 'var(--text-3)' }}>{r != null ? r.toFixed(1) : '—'}</td>
-                    <td style={{ ...STD, color: d != null ? (d > 0 ? '#4ade80' : '#f87171') : 'var(--text-3)', fontSize: 8 }}>
-                      {d != null ? (d >= 0 ? '+' : '') + d.toFixed(1) : '—'}
-                    </td>
+                {formRows.map(r => (
+                  <tr key={r.label} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{r.label}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.avg, avgPool, 'hi') }}>{r.avg != null ? r.avg.toFixed(3).replace(/^0/, '') : '—'}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.ops, opsPool, 'hi') }}>{r.ops != null ? r.ops.toFixed(3).replace(/^0/, '') : '—'}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.hr, hrPool, 'hi') }}>{r.hr ?? '—'}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.bb, bbPool, 'hi') }}>{r.bb ?? '—'}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.so, soPool, 'lo') }}>{r.so ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
+            <p style={{ fontSize: 8, color: 'var(--text-4)', marginTop: 3 }}>
+              L5/L10 = last N games actually played this season (MLB gameLog) · vs {pitcherHand}HP = season-to-date vs this pitcher's throwing hand
+            </p>
           </div>
-        )}
+          )
+        })()}
+
+        {/* Bat tracking — same StatTile grid as Pitcher Report's own
+            PlayerStatcastDetail, heat-mapped against tonight's full pool
+            (both lineups) instead of a plain table. */}
+        {!noBatSplits && (() => {
+          const g = (k: keyof BatterRow) => pool.map(p => p[k] as number | null)
+          return (
+          <div style={{ minWidth: 320 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
+              BAT TRACKING <span style={{ fontWeight: 400, textTransform: 'none' }}>· heat-mapped vs tonight's lineups</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+              <StatTile label="BSPD" value={f1(row.s_spd)} title="Season bat speed" heatStyle={heat(row.s_spd, g('s_spd'), 'hi')} />
+              <StatTile label="R·SPD" value={f1(row.r_spd)} title="Recent bat speed" heatStyle={heat(row.r_spd, g('r_spd'), 'hi')} />
+              <StatTile label="ΔSPD" value={dlt(row.d_spd)} title="Recent − season bat speed" heatStyle={heat(row.d_spd, g('d_spd'), 'hi')} />
+              <StatTile label="HARDSW" value={row.s_hrd != null ? `${(row.s_hrd * 100).toFixed(1)}%` : '—'} title="Hard swing rate" heatStyle={heat(row.s_hrd, g('s_hrd'), 'hi')} />
+              <StatTile label="SQ" value={row.s_sq != null ? `${(row.s_sq * 100).toFixed(1)}%` : '—'} title="Squared-up per swing" heatStyle={heat(row.s_sq, g('s_sq'), 'hi')} />
+              <StatTile label="R·SQ" value={row.r_sq != null ? `${(row.r_sq * 100).toFixed(1)}%` : '—'} title="Recent squared-up" heatStyle={heat(row.r_sq, g('r_sq'), 'hi')} />
+              <StatTile label="ΔSQ" value={dlt(row.d_sq, 100)} title="Squared-up delta ×100" heatStyle={heat(row.d_sq, g('d_sq'), 'hi')} />
+              <StatTile label="BLAST" value={row.s_bla != null ? `${(row.s_bla * 100).toFixed(1)}%` : '—'} title="Blast per swing" heatStyle={heat(row.s_bla, g('s_bla'), 'hi')} />
+              <StatTile label="R·BLA" value={row.r_bla != null ? `${(row.r_bla * 100).toFixed(1)}%` : '—'} title="Recent blast per swing" heatStyle={heat(row.r_bla, g('r_bla'), 'hi')} />
+              <StatTile label="SWLEN" value={f1(row.s_len)} title="Swing length" heatStyle={heat(row.s_len, g('s_len'), 'lo')} />
+              <StatTile label="ATK°" value={f1(row.s_atk)} title="Attack angle" heatStyle={heat(row.s_atk, g('s_atk'), 'hi')} />
+              <StatTile label="R·ATK" value={f1(row.r_atk)} title="Recent attack angle" heatStyle={heat(row.r_atk, g('r_atk'), 'hi')} />
+              <StatTile label="IDLAA" value={row.s_iaa != null ? `${(row.s_iaa * 100).toFixed(1)}%` : '—'} title="Ideal attack angle rate" heatStyle={heat(row.s_iaa, g('s_iaa'), 'hi')} />
+              <StatTile label="TILT" value={f1(row.s_tlt)} title="Swing tilt" />
+            </div>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              <StatTile label="BRL%" value={ppRaw(row.s_brl)} title="Barrel batted rate" heatStyle={heat(row.s_brl, g('s_brl'), 'hi')} />
+              <StatTile label="HH%" value={ppRaw(row.s_hh)} title="Hard hit rate" heatStyle={heat(row.s_hh, g('s_hh'), 'hi')} />
+              <StatTile label="PULLAIR" value={row.s_pa != null ? `${(row.s_pa * 100).toFixed(1)}%` : '—'} title="Pull air rate" heatStyle={heat(row.s_pa, g('s_pa'), 'hi')} />
+              <StatTile label="FB%" value={row.s_fb != null ? `${(row.s_fb * 100).toFixed(1)}%` : '—'} title="Flyball rate" heatStyle={heat(row.s_fb, g('s_fb'), 'hi')} />
+              <StatTile label="EV" value={f1(row.s_ev)} title="Exit velocity" heatStyle={heat(row.s_ev, g('s_ev'), 'hi')} />
+              <StatTile label="LA" value={f1(row.s_la)} title="Launch angle" />
+              <StatTile label="XHR" value={f1(row.s_xhr)} title="Expected HR (season)" heatStyle={heat(row.s_xhr, g('s_xhr'), 'hi')} />
+              <StatTile label="HR" value={row.s_hr != null ? String(Math.round(row.s_hr)) : '—'} title="Season HR total" heatStyle={heat(row.s_hr, g('s_hr'), 'hi')} />
+            </div>
+          </div>
+          )
+        })()}
       </div>
 
       {/* Full pitcher matchup card — literally Pitcher Report's own
@@ -1245,7 +1273,8 @@ function PlayerDrillDown({
                     return (
                       <div key={pitchType}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-1)' }}>{PITCH_LABELS[pitchType] || pitchType}</span>
+                          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: pitchColor(pitchType) }} />
+                          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-1)' }}>{pitchLabel(pitchType)}</span>
                           {mixRow && (
                             <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
                               ({matchupPct(mixRow.hard_hit_pct)} hard-hit · {matchupPct(mixRow.barrel_pct)} barrel · {mixRow.pitches} pitches)
@@ -2013,7 +2042,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
 
   return (
     <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8 }}>
-      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
+      <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
         <thead>
           <tr>
             <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" sortState={sort} onSort={toggleSort} />
@@ -2108,7 +2137,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.awayPitcher?.id ? liveCache[`${game.awayPitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.awayAbbr} pitcherTeamName={game.awayTeam} lineupConfirmed={!!game.homeLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} /></tr>
+                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.awayPitcher?.id ? liveCache[`${game.awayPitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.awayAbbr} pitcherTeamName={game.awayTeam} lineupConfirmed={!!game.homeLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
@@ -2137,7 +2166,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.homePitcher?.id ? liveCache[`${game.homePitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.homeAbbr} pitcherTeamName={game.homeTeam} lineupConfirmed={!!game.awayLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} /></tr>
+                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.homePitcher?.id ? liveCache[`${game.homePitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.homeAbbr} pitcherTeamName={game.homeTeam} lineupConfirmed={!!game.awayLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
@@ -2380,7 +2409,12 @@ export function DugoutClient({ date }: { date: string }) {
 
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
-        tbody tr:hover td{background:rgba(255,255,255,0.025)!important}
+        /* Direct-child combinators only — the expanded drilldown row's own
+           <td colSpan={99}> is a direct child of this table's tbody, but the
+           nested pitch-mix/matchup tables inside it are many levels further
+           down, not direct children, so their own heat-mapped cell colors
+           survive hovering instead of getting flattened to this grey. */
+        .dugout-dense-table > tbody > tr:hover > td{background:rgba(255,255,255,0.025)!important}
       `}</style>
     </div>
   )
