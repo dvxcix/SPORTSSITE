@@ -352,7 +352,15 @@ export async function GET(req: Request) {
     getBDLGames(addDaysToDateStr(date, 1)),
     fetchStatSplits(),
     fetchTimingSplits(),
-    mpGet(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type`, 300),
+    // A single mpGet() (no pagination) silently caps at the same per-request
+    // row limit already worked around elsewhere in this file (see mpGetAll's
+    // own comment, and the FanDuel gap-odds .range() fix) — confirmed today:
+    // 1237 pikkit rows exist for one date, past that cap, and whichever rows
+    // fell past it just vanished with no error. Symptom looked identical to
+    // the AZ@LAD game-key bug (a real upload "not showing"), but this one
+    // was a straight truncation, unrelated to which game the picks belonged
+    // to — any game whose rows happened to land past the cutoff lost them.
+    mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type`, 300),
     mpRpc('get_fhr_history_avg', { p_date: date }),
     mpRpc('get_sa_history_avg', { p_date: date }),
     mpRpc('get_opening_sa_rbi', { p_date: date }),
