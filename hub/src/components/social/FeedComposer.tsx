@@ -14,9 +14,10 @@ const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
 interface FeedComposerProps {
   onPost?: () => void
+  groupId?: string
 }
 
-export function FeedComposer({ onPost }: FeedComposerProps) {
+export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const { user, profile } = useAuth()
   const [content, setContent] = useState('')
   const [showPickForm, setShowPickForm] = useState(false)
@@ -101,6 +102,7 @@ export function FeedComposer({ onPost }: FeedComposerProps) {
       pick_data: pickData,
       poll_data: pollData,
       visibility: 'public',
+      group_id: groupId ?? null,
     }).select('id').single()
 
     if (err) {

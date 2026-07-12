@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
+const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '⚾', '🏀', '🏒', '⚽', '🥊', '🎉', '💎', '🚀', '👑', '🦁', '🎰']
 
 export function CreateGroupForm({ userId }: { userId: string }) {
   const router = useRouter()
@@ -21,20 +22,41 @@ export function CreateGroupForm({ userId }: { userId: string }) {
     if (!form.name.trim()) { setError('Group name is required'); return }
     setSubmitting(true)
     setError('')
+    const groupSlug = slug(form.name.trim())
     const { data, error: err } = await supabase.from('groups').insert({
       name: form.name.trim(),
-      slug: slug(form.name.trim()),
+      slug: groupSlug,
       description: form.description.trim() || null,
       sport: form.sport || null,
       emoji: form.emoji,
       is_public: form.is_public,
       owner_id: userId,
-      member_count: 1,
+      // Not member_count: 1 here — the group_members insert right below
+      // fires the count-sync trigger, which would double it to 2.
     }).select('id, slug').single()
     if (err) { setError(err.message); setSubmitting(false); return }
-    // Join the group
     if (data?.id) {
       await supabase.from('group_members').insert({ group_id: data.id, user_id: userId, role: 'owner' })
+
+      // Every group gets a chat channel — reuses the existing channels/
+      // messages/realtime infra rather than building a parallel chat
+      // system. channel_type gates who can even SELECT it (see the RLS
+      // policy): 'public' for a public group's chat (readable by anyone,
+      // matching the group's own openness), 'members_only' for a private
+      // group so non-members can't read the channel at all.
+      const { data: channel } = await supabase.from('channels').insert({
+        name: form.name.trim(),
+        slug: `group-${groupSlug}`,
+        description: form.description.trim() || null,
+        icon: form.emoji,
+        channel_type: form.is_public ? 'public' : 'members_only',
+        owner_id: userId,
+        member_count: 1,
+      }).select('id').single()
+      if (channel?.id) {
+        await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: userId })
+        await supabase.from('groups').update({ channel_id: channel.id }).eq('id', data.id)
+      }
     }
     router.push(`/groups/${data?.slug}`)
   }
@@ -56,6 +78,19 @@ export function CreateGroupForm({ userId }: { userId: string }) {
             placeholder="What is this group about?"
             rows={3}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all resize-none" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon</label>
+          <div className="flex flex-wrap gap-1.5">
+            {EMOJIS.map(e => (
+              <button key={e} type="button" onClick={() => setForm(f => ({ ...f, emoji: e }))}
+                className={`w-9 h-9 flex items-center justify-center rounded-lg text-lg border transition-all ${
+                  form.emoji === e ? 'border-green-500 bg-green-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                }`}>
+                {e}
+              </button>
+            ))}
+          </div>
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport Category</label>

@@ -36,6 +36,13 @@ export function GroupSettingsForm({ group }: { group: any }) {
       is_public: form.is_public,
     }).eq('id', group.id)
     if (err) { setError(err.message); setSaving(false); return }
+    // The chat channel's own channel_type gates who can read it at all
+    // (see the RLS policy) — it has to track the group's own visibility,
+    // or a group flipped to private would still have a publicly-readable
+    // channel left over from when it was created public.
+    if (group.channel_id && form.is_public !== group.is_public) {
+      await supabase.from('channels').update({ channel_type: form.is_public ? 'public' : 'members_only' }).eq('id', group.channel_id)
+    }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
     setSaving(false)
     router.refresh()

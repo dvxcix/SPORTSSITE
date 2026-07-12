@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2 } from 'lucide-react'
+import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +14,7 @@ const iconMap: Record<string, any> = {
   dm: MessageCircle,
   subscription: Zap,
   repost: Repeat2,
+  group_invite: Users,
 }
 
 export default async function NotificationsPage() {

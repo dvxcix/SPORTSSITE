@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export function GroupJoinButton({ userId, groupId, initialMember }: {
-  userId: string; groupId: string; initialMember: boolean
+export function GroupJoinButton({ userId, groupId, channelId, initialMember }: {
+  userId: string; groupId: string; channelId: string | null; initialMember: boolean
 }) {
   const [member, setMember] = useState(initialMember)
   const [loading, setLoading] = useState(false)
@@ -14,8 +14,10 @@ export function GroupJoinButton({ userId, groupId, initialMember }: {
     setLoading(true)
     if (member) {
       await supabase.from('group_members').delete().match({ user_id: userId, group_id: groupId })
+      if (channelId) await supabase.from('channel_members').delete().match({ user_id: userId, channel_id: channelId })
     } else {
       await supabase.from('group_members').insert({ user_id: userId, group_id: groupId, role: 'member' })
+      if (channelId) await supabase.from('channel_members').insert({ user_id: userId, channel_id: channelId })
     }
     setMember(v => !v)
     setLoading(false)
