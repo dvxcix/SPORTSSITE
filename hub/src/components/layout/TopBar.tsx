@@ -153,7 +153,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       borderBottom: '1px solid var(--border)',
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '0 16px',
-      position: 'sticky', top: 0, zIndex: 20,
+      // --banner-h is set by SiteBanner (0px when it's not showing) so this
+      // sticks right below the banner instead of both pinning to literal
+      // y:0 and overlapping once you scroll past the banner.
+      position: 'sticky', top: 'var(--banner-h, 0px)', zIndex: 20,
     }}>
       {/* Hamburger — mobile only, opens the off-canvas sidebar drawer.
           display must live in the className (flex / md:hidden), not inline

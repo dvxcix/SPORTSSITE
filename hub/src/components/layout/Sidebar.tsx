@@ -80,11 +80,21 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <div onClick={onClose} className="md:hidden fixed inset-0 z-40 bg-black/60" aria-hidden="true" />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 md:sticky md:top-0 md:z-30 md:translate-x-0 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
+        // that custom property (0px when it's not showing) so this sticks
+        // right below the banner instead of overlapping it once scrolled.
+        className={`fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
           width: 'var(--sidebar-w)',
           background: 'var(--surface)',
           borderRight: '1px solid var(--border)',
+          // Deliberately still 100vh, not calc(100vh - banner-h) — that
+          // calc would be correct for the desktop sticky case but wrong for
+          // the mobile drawer (fixed, top:0 unchanged, banner sits above
+          // it) which would then fall short of the viewport bottom by the
+          // banner's height. 100vh just means the sticky desktop sidebar's
+          // own box extends a few tens of px past the viewport bottom when
+          // a banner is showing — invisible/harmless, unlike the mobile gap.
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
