@@ -7,6 +7,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { Spotlight } from '@/components/ui/spotlight'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 // Client-only — Meteors' random delays/durations differ between server and
 // client render, which React flags as a hydration mismatch otherwise.
@@ -212,17 +213,22 @@ export default function RegisterPage() {
               <div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 10, letterSpacing: '0.02em' }}>SPORTS YOU FOLLOW</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {SPORTS.map(s => (
-                    <button key={s} type="button" onClick={() => toggleSport(s)} style={{
-                      padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-                      border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
-                      background: sports.includes(s) ? 'var(--accent-dim)' : 'transparent',
-                      color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
-                      cursor: 'pointer', transition: 'all 130ms',
-                    }}>
-                      {s}
-                    </button>
-                  ))}
+                  {SPORTS.map(s => {
+                    const logo = sportLogoUrl(s)
+                    return (
+                      <button key={s} type="button" onClick={() => toggleSport(s)} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+                        border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
+                        background: sports.includes(s) ? 'var(--accent-dim)' : 'transparent',
+                        color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
+                        cursor: 'pointer', transition: 'all 130ms',
+                      }}>
+                        {logo && <img src={logo} alt={s} style={{ width: 14, height: 14, objectFit: 'contain' }} />}
+                        {s}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
