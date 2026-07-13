@@ -59,6 +59,12 @@ export async function GET(request: Request) {
 
   let authUserId: string
   let authUserEmail: string
+  // Only true for a genuinely brand-new Supabase account created below
+  // (not an existing bridged user, and not an existing email/password or
+  // Google account we're just now linking Whop onto) — those two other
+  // cases already have a real account and shouldn't be sent through
+  // onboarding again.
+  let isNewAccount = false
 
   if (existing) {
     authUserId = existing.id
@@ -107,6 +113,7 @@ export async function GET(request: Request) {
     } else {
       authUserId = created.user.id
       authUserEmail = whopUser.email
+      isNewAccount = true
 
       await admin.from('users').upsert({
         id: authUserId,
@@ -126,8 +133,12 @@ export async function GET(request: Request) {
   })
   if (linkError || !linkData?.properties?.hashed_token) return loginFailed('whop_auth_failed')
 
+  // First time we've ever seen this person → still goes through onboarding
+  // (pre-filled from what Whop already gave us — display name, avatar) just
+  // like an email/password or Google signup does. Returning Whop users skip
+  // straight to wherever they were headed, same as today.
   const completeUrl = new URL(`${origin}/auth/whop/complete`)
   completeUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
-  completeUrl.searchParams.set('next', stored.next || '/feed')
+  completeUrl.searchParams.set('next', isNewAccount ? '/onboarding' : (stored.next || '/feed'))
   return NextResponse.redirect(completeUrl.toString())
 }

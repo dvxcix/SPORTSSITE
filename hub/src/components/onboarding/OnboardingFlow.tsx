@@ -1,24 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
+import { MLB_TEAMS } from '@/lib/mlbTeams'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
 
-const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
-const STEPS = ['Welcome', 'Your Profile', 'Favorite Sports', 'You\'re in!']
+const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Follow', 'Done']
 
-export function OnboardingFlow({ userId, initialProfile }: { userId: string; initialProfile: any }) {
+const slide = {
+  enter: { opacity: 0, x: 16 },
+  center: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -16 },
+}
+
+export function OnboardingFlow({ userId, initialProfile, accountType, suggestedUsers }: {
+  userId: string
+  initialProfile: any
+  accountType: 'user' | 'creator'
+  suggestedUsers: SuggestedUser[]
+}) {
   const router = useRouter()
   const supabase = createClient()
   const [step, setStep] = useState(0)
   const [displayName, setDisplayName] = useState(initialProfile?.display_name ?? '')
   const [bio, setBio] = useState(initialProfile?.bio ?? '')
-  const [sports, setSports] = useState<string[]>(initialProfile?.favorite_sports ?? [])
+  const [avatarUrl, setAvatarUrl] = useState(initialProfile?.avatar_url ?? '')
+  const [teams, setTeams] = useState<string[]>(initialProfile?.favorite_teams ?? [])
+  const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
-  function toggleSport(s: string) {
-    setSports(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+  function toggleTeam(abbr: string) {
+    setTeams(prev => prev.includes(abbr) ? prev.filter(x => x !== abbr) : [...prev, abbr])
+  }
+
+  async function uploadAvatar(file: File) {
+    setError(''); setUploading(true)
+    try {
+      const path = `avatars/${userId}/${Date.now()}-${file.name}`
+      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      if (uploadErr) { setError(uploadErr.message); return }
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+      setAvatarUrl(publicUrl)
+    } catch (e: any) {
+      setError(e?.message || 'Upload failed — please try again.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function finish() {
@@ -26,120 +59,201 @@ export function OnboardingFlow({ userId, initialProfile }: { userId: string; ini
     await supabase.from('users').update({
       display_name: displayName.trim() || undefined,
       bio: bio.trim() || undefined,
-      favorite_sports: sports,
+      avatar_url: avatarUrl.trim() || undefined,
+      favorite_teams: teams,
     }).eq('id', userId)
+    // Best-effort — never blocks getting into the app if the email fails.
+    fetch('/api/onboarding/notify-welcome', { method: 'POST' }).catch(() => {})
     router.push('/feed')
   }
+
+  const initials = (displayName || initialProfile?.username || '?')[0]?.toUpperCase()
 
   return (
     <div className="w-full max-w-md">
       {/* Progress */}
       <div className="flex items-center justify-between mb-8">
         {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-              i < step ? 'bg-green-500 text-black' : i === step ? 'bg-zinc-700 text-white ring-2 ring-green-500' : 'bg-zinc-900 text-zinc-600'
-            }`}>
-              {i < step ? <Check size={14} /> : i + 1}
+          <div key={s} className="flex items-center" style={{ flex: i < STEPS.length - 1 ? 1 : undefined }}>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all"
+              style={{
+                background: i < step ? 'var(--accent)' : i === step ? 'var(--surface-3)' : 'var(--surface-2)',
+                color: i < step ? 'var(--accent-fg)' : i === step ? 'var(--text-1)' : 'var(--text-3)',
+                boxShadow: i === step ? '0 0 0 2px var(--accent)' : 'none',
+              }}
+            >
+              {i < step ? <Check size={12} /> : i + 1}
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`w-8 h-0.5 mx-1 ${i < step ? 'bg-green-500' : 'bg-zinc-800'}`} />
+              <div className="flex-1 h-0.5 mx-1" style={{ background: i < step ? 'var(--accent)' : 'var(--border)' }} />
             )}
           </div>
         ))}
       </div>
 
-      {step === 0 && (
-        <div className="text-center space-y-6">
-          <div>
-            <p className="text-5xl mb-4">⚡</p>
-            <h1 className="text-3xl font-black text-white">Welcome to <span className="text-green-400">SlipSurge</span></h1>
-            <p className="text-zinc-400 mt-3">The sports betting social hub. Follow cappers, share picks, win big.</p>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            {[
-              { emoji: '🏆', label: 'Follow top cappers' },
-              { emoji: '🎯', label: 'Share your picks' },
-              { emoji: '💰', label: 'Track your wins' },
-            ].map(f => (
-              <div key={f.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-                <p className="text-2xl mb-1">{f.emoji}</p>
-                <p className="text-xs text-zinc-400 font-medium">{f.label}</p>
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
+          {error}
+        </div>
+      )}
+
+      <AnimatePresence mode="wait">
+        <motion.div key={step} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+
+          {step === 0 && (
+            <div className="text-center space-y-6">
+              <div>
+                <p className="text-5xl mb-4">⚡</p>
+                <h1 style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
+                  Welcome to <span style={{ color: 'var(--accent)' }}>SlipSurge</span>
+                </h1>
+                <p style={{ color: 'var(--text-2)', marginTop: 12, fontSize: 14, lineHeight: 1.6 }}>
+                  {accountType === 'creator'
+                    ? "You're set up as a Capper. Build your record in the open, share picks, and grow a following."
+                    : 'The social hub for sports & picks. Follow real graded records, share your own, and never miss a line move.'}
+                </p>
               </div>
-            ))}
-          </div>
-          <button onClick={() => setStep(1)}
-            className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black py-3 rounded-xl transition-colors">
-            Get Started <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
-
-      {step === 1 && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-black text-white">Your Profile</h2>
-            <p className="text-zinc-400 text-sm mt-1">How should others know you?</p>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Display Name</label>
-              <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name or handle"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500/50 transition-all" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Bio</label>
-              <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell people who you are — your record, strategy, teams you follow…" rows={3}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setStep(0)} className="flex-1 border border-zinc-700 text-zinc-400 font-bold py-3 rounded-xl hover:bg-zinc-800 transition-colors">Back</button>
-            <button onClick={() => setStep(2)} className="flex-1 bg-green-500 hover:bg-green-400 text-black font-black py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-              Next <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-black text-white">Favorite Sports</h2>
-            <p className="text-zinc-400 text-sm mt-1">Pick all that apply — we'll personalize your feed.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {SPORTS.map(s => (
-              <button key={s} onClick={() => toggleSport(s)}
-                className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all ${
-                  sports.includes(s) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
-                }`}>
-                {sports.includes(s) && <Check size={11} className="inline mr-1" />}{s}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { emoji: '🏆', label: 'Follow top cappers' },
+                  { emoji: '🎯', label: 'Share your picks' },
+                  { emoji: '💰', label: 'Track your wins' },
+                ].map(f => (
+                  <div key={f.label} className="ss-card" style={{ padding: 12, textAlign: 'center' }}>
+                    <p style={{ fontSize: 22, marginBottom: 4 }}>{f.emoji}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>{f.label}</p>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setStep(1)} className="ss-btn ss-btn-accent w-full justify-center" style={{ padding: '13px 20px', fontSize: 14 }}>
+                Get Started <ChevronRight size={16} />
               </button>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setStep(1)} className="flex-1 border border-zinc-700 text-zinc-400 font-bold py-3 rounded-xl hover:bg-zinc-800 transition-colors">Back</button>
-            <button onClick={() => setStep(3)} className="flex-1 bg-green-500 hover:bg-green-400 text-black font-black py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-              Next <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {step === 3 && (
-        <div className="text-center space-y-6">
-          <div>
-            <p className="text-5xl mb-4">🎉</p>
-            <h2 className="text-2xl font-black text-white">You're all set!</h2>
-            <p className="text-zinc-400 mt-2">Your SlipSurge profile is ready. Start exploring picks, join groups, and connect with cappers.</p>
-          </div>
-          <button onClick={finish} disabled={saving}
-            className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black font-black py-3 rounded-xl transition-colors">
-            {saving ? 'Saving…' : 'Go to My Feed →'}
-          </button>
-        </div>
-      )}
+          {step === 1 && (
+            <div className="space-y-6">
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Your Profile</h2>
+                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>How should others know you?</p>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Display Name</label>
+                  <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name or handle" className="ss-input" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Bio</label>
+                  <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell people who you are — your record, strategy, teams you follow…" rows={3} className="ss-input" style={{ resize: 'none' }} />
+                </div>
+              </div>
+              <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} />
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6">
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Add a Photo</h2>
+                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Profiles with a real picture get way more follows.</p>
+              </div>
+              <div className="flex flex-col items-center gap-4 py-4">
+                <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.target.value = '' }} />
+                <button
+                  type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading}
+                  className="relative rounded-full overflow-hidden flex items-center justify-center group"
+                  style={{ width: 112, height: 112, background: 'var(--surface-2)', border: '2px solid var(--border-2)', fontSize: 36, fontWeight: 900, color: 'var(--text-3)' }}
+                >
+                  {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                    {uploading ? <Loader2 size={22} className="animate-spin" color="#fff" /> : <Upload size={22} color="#fff" />}
+                  </div>
+                </button>
+                <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading} style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                  {uploading ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload a photo'}
+                </button>
+              </div>
+              <StepNav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={avatarUrl ? 'Next' : 'Skip for now'} />
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-6">
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Favorite Teams</h2>
+                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>We'll personalize your feed and Dugout around these.</p>
+              </div>
+              <div className="flex flex-wrap gap-2" style={{ maxHeight: 260, overflowY: 'auto' }}>
+                {MLB_TEAMS.map(t => (
+                  <button key={t.abbr} type="button" onClick={() => toggleTeam(t.abbr)}
+                    className="flex items-center gap-1.5"
+                    style={{
+                      padding: '7px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+                      border: `1px solid ${teams.includes(t.abbr) ? 'var(--accent)' : 'var(--border-2)'}`,
+                      background: teams.includes(t.abbr) ? 'var(--accent-dim)' : 'transparent',
+                      color: teams.includes(t.abbr) ? 'var(--accent)' : 'var(--text-3)',
+                      transition: 'all 130ms',
+                    }}>
+                    <img src={getTeamLogoUrl(t.abbr)} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                    {t.shortName}
+                  </button>
+                ))}
+              </div>
+              <StepNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={teams.length ? 'Next' : 'Skip for now'} />
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-6">
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Who to Follow</h2>
+                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Follow a few to get your feed going — you can always find more later.</p>
+              </div>
+              {suggestedUsers.length > 0 ? (
+                <div className="ss-card" style={{ padding: 16 }}>
+                  <SuggestedUsers users={suggestedUsers} currentUserId={userId} />
+                </div>
+              ) : (
+                <div className="ss-card" style={{ padding: 16, textAlign: 'center', fontSize: 13, color: 'var(--text-3)' }}>
+                  No suggestions yet — you'll find people to follow all over the app.
+                </div>
+              )}
+              <StepNav onBack={() => setStep(3)} onNext={() => setStep(5)} />
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="text-center space-y-6">
+              <div>
+                <p className="text-5xl mb-4">🎉</p>
+                <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-1)' }}>You're all set!</h2>
+                <p style={{ color: 'var(--text-2)', marginTop: 8, fontSize: 14 }}>
+                  {accountType === 'creator'
+                    ? 'Your profile is ready — drop your first pick and start building your record.'
+                    : "Your feed is ready. Let's see what's happening."}
+                </p>
+              </div>
+              <button onClick={finish} disabled={saving} className="ss-btn ss-btn-accent w-full justify-center" style={{ padding: '13px 20px', fontSize: 14, opacity: saving ? 0.6 : 1 }}>
+                {saving ? 'Saving…' : 'Go to My Feed →'}
+              </button>
+            </div>
+          )}
+
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function StepNav({ onBack, onNext, nextLabel = 'Next' }: { onBack: () => void; onNext: () => void; nextLabel?: string }) {
+  return (
+    <div className="flex gap-3">
+      <button onClick={onBack} className="ss-btn ss-btn-ghost flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>Back</button>
+      <button onClick={onNext} className="ss-btn ss-btn-accent flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>
+        {nextLabel} <ChevronRight size={16} />
+      </button>
     </div>
   )
 }

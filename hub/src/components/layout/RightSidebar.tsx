@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TrendingUp, Users } from 'lucide-react'
+import { SuggestedUsers } from '@/components/social/SuggestedUsers'
 
 const TRENDING = [
   { tag: 'MLB', posts: '2.4K', hot: true },
@@ -74,33 +75,7 @@ export async function RightSidebar() {
             <Users size={14} className="text-blue-400" />
             <span className="text-sm font-black text-white">Who to follow</span>
           </div>
-          <div className="space-y-3">
-            {suggested.map((u: any) => (
-              <div key={u.id} className="flex items-center gap-3">
-                <Link href={`/profile/${u.username}`} className="shrink-0">
-                  <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-sm font-black text-white">
-                    {u.avatar_url
-                      ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                      : (u.display_name || u.username)[0].toUpperCase()
-                    }
-                  </div>
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <Link href={`/profile/${u.username}`} className="text-sm font-bold text-white hover:underline truncate">
-                      {u.display_name || u.username}
-                    </Link>
-                    {u.is_verified && <span className="text-green-400 text-xs shrink-0">✓</span>}
-                  </div>
-                  <p className="text-xs text-zinc-500 truncate">@{u.username}</p>
-                </div>
-                <Link href={`/profile/${u.username}`}
-                  className="text-xs font-bold text-white bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded-full transition-colors shrink-0">
-                  Follow
-                </Link>
-              </div>
-            ))}
-          </div>
+          <SuggestedUsers users={suggested} currentUserId={user?.id ?? null} />
           <Link href="/creators" className="block text-xs text-green-400 hover:underline mt-3 text-center">
             Show more
           </Link>

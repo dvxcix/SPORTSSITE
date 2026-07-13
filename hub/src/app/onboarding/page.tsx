@@ -1,17 +1,50 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
+import { Spotlight } from '@/components/ui/spotlight'
+
+// Client-only for the same reason register/login use it this way — Meteors'
+// randomized delays differ between server and client render, which React
+// flags as a hydration mismatch otherwise.
+const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('users').select('username, display_name, bio, favorite_sports').eq('id', user.id).single()
+  const { data: profile } = await supabase
+    .from('users')
+    .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports')
+    .eq('id', user.id)
+    .single()
+
+  // Suggested accounts to follow — same shape/ranking as RightSidebar's own
+  // query (top follower_count, excluding self), reused as a server-side
+  // fetch here so the onboarding "Who to follow" step has no loading state.
+  const { data: suggested } = await supabase
+    .from('users')
+    .select('id, username, display_name, avatar_url, is_verified, account_type')
+    .neq('id', user.id)
+    .order('follower_count', { ascending: false })
+    .limit(6)
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-zinc-950">
-      <OnboardingFlow userId={user.id} initialProfile={profile} />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,255,77,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <Spotlight className="left-0 top-0" fill="#B4FF4D" />
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <Meteors number={12} className="opacity-60" />
+      </div>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <OnboardingFlow
+          userId={user.id}
+          initialProfile={profile}
+          accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
+          suggestedUsers={suggested ?? []}
+        />
+      </div>
     </div>
   )
 }
