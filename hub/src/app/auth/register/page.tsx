@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
   // Same providers/handling as the login page — OAuth signup and sign-in are
   // the same Supabase call, so these buttons work for brand-new accounts too.
-  function oauthHandler(provider: 'google' | 'discord' | 'twitter' | 'apple') {
+  function oauthHandler(provider: 'google' | 'discord' | 'x' | 'apple') {
     return async () => {
       const supabase = createClient()
       await supabase.auth.signInWithOAuth({
@@ -51,7 +51,9 @@ export default function RegisterPage() {
   }
   const handleGoogle = oauthHandler('google')
   const handleDiscord = oauthHandler('discord')
-  const handleX = oauthHandler('twitter')
+  // Supabase's modern provider slot for X is 'x' (OAuth 2.0) — see login
+  // page's comment on this same fix.
+  const handleX = oauthHandler('x')
   const handleApple = oauthHandler('apple')
   function handleWhop() {
     location.href = `/auth/whop/login?next=${encodeURIComponent('/onboarding')}`

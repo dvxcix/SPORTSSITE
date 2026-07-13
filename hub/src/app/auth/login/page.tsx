@@ -58,7 +58,7 @@ function LoginForm() {
   // no custom callback route needed (unlike Whop, which has no native
   // Supabase provider). Each just needs enabling in the Supabase dashboard
   // (Authentication > Providers) with that platform's own app credentials.
-  function oauthHandler(provider: 'google' | 'discord' | 'twitter' | 'apple') {
+  function oauthHandler(provider: 'google' | 'discord' | 'x' | 'apple') {
     return async () => {
       const supabase = createClient()
       await supabase.auth.signInWithOAuth({
@@ -69,7 +69,11 @@ function LoginForm() {
   }
   const handleGoogle = oauthHandler('google')
   const handleDiscord = oauthHandler('discord')
-  const handleX = oauthHandler('twitter')
+  // Supabase's modern X provider slot is 'x' (OAuth 2.0), distinct from the
+  // legacy deprecated 'twitter' (OAuth 1.0a) — the X developer portal
+  // pushes new apps toward OAuth 2.0 Client ID/Secret by default, which maps
+  // to Supabase's "X / Twitter (OAuth 2.0)" toggle, not "Twitter (OAuth 1.0a)".
+  const handleX = oauthHandler('x')
   const handleApple = oauthHandler('apple')
 
   function handleWhop() {
