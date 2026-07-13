@@ -194,7 +194,7 @@ function LoginForm() {
         {(hashErrorDescription || (oauthError && OAUTH_ERROR_MESSAGES[oauthError])) && (
           <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)', marginBottom: 20 }}>
             {hashErrorDescription?.toLowerCase().includes('email')
-              ? "That account's provider didn't share an email address with us, so we can't sign you in with it. (If you're the site owner: this usually means the app needs \"Request email from users\" turned on in that provider's developer settings.)"
+              ? "Your X account isn't associated with an email address. Please log in to X and add an email to your account before using it to sign in or sign up on SlipSurge."
               : hashErrorDescription || OAUTH_ERROR_MESSAGES[oauthError!]}
           </div>
         )}
