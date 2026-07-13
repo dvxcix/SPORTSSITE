@@ -16,6 +16,10 @@ export interface User {
   favorite_teams: string[]
   favorite_players: { mlb_id: number; name: string; team: string }[]
   social_links: Record<string, string>
+  // Real OAuth-linked handles (Discord/X), synced from auth.identities when
+  // a user connects via Settings > Connected Accounts > Verify — distinct
+  // from social_links, which is unverified free text.
+  verified_identities?: Record<string, { handle: string; profileUrl: string }>
   sportsbooks: string[]
   website?: string
   twitter_handle?: string

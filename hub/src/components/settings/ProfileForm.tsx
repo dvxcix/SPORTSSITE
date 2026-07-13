@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, Upload, X, Search } from 'lucide-react'
+import { Check, Loader2, Upload, X, Search, BadgeCheck, Link2, Unlink } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { MLB_TEAMS } from '@/lib/mlbTeams'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
@@ -11,6 +11,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot } from '@/lib/mlb-api'
 import { mlbTeamAbbrById } from '@/lib/mlbTeams'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import { PROVIDER_BY_PLATFORM_KEY, extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
 
@@ -61,6 +62,52 @@ export function ProfileForm({ profile }: { profile: any }) {
     supabase.from('social_platforms').select('*').order('sort_order').order('name')
       .then(({ data }) => setPlatforms((data ?? []) as SocialPlatform[]))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real, verified handles from Supabase's own linked OAuth identities —
+  // separate from the free-text social_links a user can type in unverified.
+  // Synced on mount (and right after linkIdentity() redirects back here)
+  // since getUserIdentities() only reflects what's true *right now*, not
+  // what was last saved to the users row.
+  const [verified, setVerified] = useState<Record<string, VerifiedIdentity>>(profile?.verified_identities ?? {})
+  const [linkingProvider, setLinkingProvider] = useState<'discord' | 'x' | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    supabase.auth.getUserIdentities().then(async ({ data }) => {
+      if (cancelled || !data) return
+      const next: Record<string, VerifiedIdentity> = {}
+      for (const identity of data.identities) {
+        if (identity.provider !== 'discord' && identity.provider !== 'x') continue
+        const extracted = extractIdentityHandle(identity.provider, identity.identity_data ?? {})
+        if (extracted) next[identity.provider] = extracted
+      }
+      const changed = JSON.stringify(next) !== JSON.stringify(profile?.verified_identities ?? {})
+      setVerified(next)
+      if (changed) {
+        await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
+      }
+    })
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function linkIdentity(provider: 'discord' | 'x') {
+    setLinkingProvider(provider)
+    supabase.auth.linkIdentity({
+      provider,
+      options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent('/settings/profile')}` },
+    }).finally(() => setLinkingProvider(null))
+  }
+
+  async function unlinkIdentity(provider: 'discord' | 'x') {
+    const { data } = await supabase.auth.getUserIdentities()
+    const identity = data?.identities.find(i => i.provider === provider)
+    if (!identity) return
+    const { error: err } = await supabase.auth.unlinkIdentity(identity)
+    if (err) { setError(err.message); return }
+    const next = { ...verified }
+    delete next[provider]
+    setVerified(next)
+    await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
+  }
 
   const [playerQuery, setPlayerQuery] = useState('')
   const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([])
@@ -328,18 +375,48 @@ export function ProfileForm({ profile }: { profile: any }) {
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-2">Connected Accounts</label>
           <div className="space-y-2">
-            {platforms.map(p => (
-              <div key={p.id} className="flex items-center gap-2.5">
-                <img src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
-                <input
-                  value={form.social_links[p.key] ?? ''}
-                  onChange={e => setSocialLink(p.key, e.target.value)}
-                  placeholder={`Your ${p.name} handle/username…`}
-                  className={inputClass}
-                />
-              </div>
-            ))}
+            {platforms.map(p => {
+              const provider = PROVIDER_BY_PLATFORM_KEY[p.key]
+              const identity = provider ? verified[provider] : undefined
+              if (provider && identity) {
+                // Real, OAuth-verified link — shown as-is (not editable text),
+                // since it's pulled from the actual connected account, not typed.
+                return (
+                  <div key={p.id} className="flex items-center gap-2.5">
+                    <img src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
+                    <a href={identity.profileUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex-1 flex items-center gap-1.5 text-sm font-bold text-white hover:underline">
+                      {identity.handle}
+                      <BadgeCheck size={14} className="text-green-500 shrink-0" />
+                    </a>
+                    <button type="button" onClick={() => unlinkIdentity(provider)}
+                      className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-red-400 px-2 py-1.5">
+                      <Unlink size={12} /> Unlink
+                    </button>
+                  </div>
+                )
+              }
+              return (
+                <div key={p.id} className="flex items-center gap-2.5">
+                  <img src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
+                  <input
+                    value={form.social_links[p.key] ?? ''}
+                    onChange={e => setSocialLink(p.key, e.target.value)}
+                    placeholder={`Your ${p.name} handle/username…`}
+                    className={inputClass}
+                  />
+                  {provider && (
+                    <button type="button" onClick={() => linkIdentity(provider)} disabled={linkingProvider === provider}
+                      className="flex items-center gap-1 text-xs font-bold text-green-400 hover:text-green-300 px-2 py-1.5 whitespace-nowrap disabled:opacity-50">
+                      <Link2 size={12} /> {linkingProvider === provider ? 'Linking…' : 'Verify'}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
+          <p className="text-[11px] text-zinc-600 mt-1.5">Click Verify to connect your real {' '}
+            {platforms.filter(p => PROVIDER_BY_PLATFORM_KEY[p.key]).map(p => p.name).join('/')} account — shows a checkmark and links to your actual profile instead of a manually typed handle.</p>
         </div>
       )}
 

@@ -10,7 +10,8 @@ import { AchievementsSection } from '@/components/profile/AchievementsSection'
 import { FavoritesSection } from '@/components/profile/FavoritesSection'
 import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp } from 'lucide-react'
+import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp, BadgeCheck } from 'lucide-react'
+import { PROVIDER_BY_PLATFORM_KEY } from '@/lib/verifiedIdentity'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -43,10 +44,23 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     .map((r: any) => r.badge)
     .filter((b: any) => b?.card_image_url)
 
-  // Only the platforms this profile actually filled in a handle for.
+  // Only the platforms this profile actually connected — a real OAuth-linked
+  // identity (verified_identities) takes priority over a manually-typed
+  // social_links handle when both exist, since the linked one is provably
+  // real and the typed one is just whatever text they entered.
   const connectedAccounts = (socialPlatforms ?? [])
-    .filter((p: any) => profile.social_links?.[p.key])
-    .map((p: any) => ({ ...p, handle: profile.social_links[p.key] as string }))
+    .map((p: any) => {
+      const provider = PROVIDER_BY_PLATFORM_KEY[p.key]
+      const verifiedIdentity = provider ? profile.verified_identities?.[provider] : null
+      if (verifiedIdentity) {
+        return { ...p, handle: verifiedIdentity.handle, href: verifiedIdentity.profileUrl, isVerified: true }
+      }
+      const manualHandle = profile.social_links?.[p.key]
+      if (!manualHandle) return null
+      const href = p.url_template ? p.url_template.replace('{handle}', encodeURIComponent(manualHandle.replace(/^@/, ''))) : null
+      return { ...p, handle: manualHandle, href, isVerified: false }
+    })
+    .filter(Boolean)
 
   const isOwnProfile = authUser?.id === profile.id
 
@@ -151,20 +165,21 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             </span>
           </div>
 
-          {/* Connected accounts + sportsbooks — badges only, no OAuth
-              behind these, just what the person typed into Settings. */}
+          {/* Connected accounts + sportsbooks — a verified badge means the
+              handle came from a real, OAuth-linked account (Settings >
+              Connected Accounts > Verify), not just typed-in text. */}
           {(connectedAccounts.length > 0 || (profile.sportsbooks?.length ?? 0) > 0) && (
             <div className="flex flex-wrap items-center gap-2 pt-0.5">
               {connectedAccounts.map((a: any) => {
-                const href = a.url_template ? a.url_template.replace('{handle}', encodeURIComponent(a.handle.replace(/^@/, ''))) : null
                 const content = (
                   <span className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-full pl-1.5 pr-2.5 py-1 text-xs font-bold text-zinc-300">
                     <img src={a.icon_url} alt={a.name} className="w-4 h-4 object-contain" />
                     {a.handle}
+                    {a.isVerified && <BadgeCheck size={13} className="text-green-500" />}
                   </span>
                 )
-                return href ? (
-                  <a key={a.id} href={href} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">{content}</a>
+                return a.href ? (
+                  <a key={a.id} href={a.href} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">{content}</a>
                 ) : (
                   <span key={a.id}>{content}</span>
                 )
