@@ -2,8 +2,20 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { ThreadReplyForm } from '@/components/forum/ThreadReplyForm'
 import { Pin, Lock } from 'lucide-react'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: thread } = await supabase.from('forum_threads').select('title, content').eq('id', id).single()
+  if (!thread) return {}
+  return {
+    title: `${thread.title} · SlipSurge Forum`,
+    description: thread.content?.slice(0, 160) || thread.title,
+  }
+}
 
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

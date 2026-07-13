@@ -3,8 +3,22 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Tag, MessageCircle, Flag, CheckCircle } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: listing } = await supabase.from('marketplace_listings').select('title, description, price, images').eq('id', id).single()
+  if (!listing) return {}
+  const description = `$${Number(listing.price).toFixed(2)} — ${listing.description || listing.title}`
+  return {
+    title: `${listing.title} · SlipSurge Marketplace`,
+    description,
+    openGraph: { title: listing.title, description, images: listing.images?.[0] ? [listing.images[0]] : undefined },
+  }
+}
 
 export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

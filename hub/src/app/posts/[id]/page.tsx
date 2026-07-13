@@ -16,11 +16,21 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
-  const { data: post } = await supabase.from('posts').select('pick_data, content').eq('id', id).single()
-  if (!post?.pick_data) return {}
+  const { data: post } = await supabase
+    .from('posts')
+    .select('pick_data, content, author:users(display_name, username)')
+    .eq('id', id)
+    .single()
+  if (!post) return {}
+  const author = (Array.isArray(post.author) ? post.author[0] : post.author) as { display_name?: string; username?: string } | null
+  const name = author?.display_name || author?.username || 'Someone'
+  const title = `${name} on SlipSurge`
+  const description = post.content?.slice(0, 160) || `${name}'s post on SlipSurge`
+  if (!post.pick_data) return { title, description }
   return {
-    openGraph: { images: [`/api/share-image/${id}`] },
-    twitter: { card: 'summary_large_image', images: [`/api/share-image/${id}`] },
+    title, description,
+    openGraph: { title, description, images: [`/api/share-image/${id}`] },
+    twitter: { card: 'summary_large_image', title, description, images: [`/api/share-image/${id}`] },
   }
 }
 

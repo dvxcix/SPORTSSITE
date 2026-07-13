@@ -5,8 +5,22 @@ import { PostCardClient } from '@/components/social/PostCardClient'
 import { PageFollowButton } from '@/components/pages/PageFollowButton'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { Users, Calendar } from 'lucide-react'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createClient()
+  const { data: page } = await supabase.from('pages').select('name, description, banner_url').eq('slug', slug).single()
+  if (!page) return {}
+  const description = page.description || `${page.name} on SlipSurge`
+  return {
+    title: `${page.name} · SlipSurge`,
+    description,
+    openGraph: { title: page.name, description, images: page.banner_url ? [page.banner_url] : undefined },
+  }
+}
 
 export default async function PageDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params

@@ -3,8 +3,23 @@ import { notFound } from 'next/navigation'
 import { EventRSVPButtons } from '@/components/events/EventRSVPButtons'
 import { Calendar, MapPin, Clock, Link as LinkIcon, Users } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: event } = await supabase.from('events').select('title, description, cover_image, start_date').eq('id', id).single()
+  if (!event) return {}
+  const when = event.start_date ? new Date(event.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''
+  const description = `${when ? `${when} — ` : ''}${event.description || event.title}`
+  return {
+    title: `${event.title} · SlipSurge`,
+    description,
+    openGraph: { title: event.title, description, images: event.cover_image ? [event.cover_image] : undefined },
+  }
+}
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

@@ -4,8 +4,23 @@ import Link from 'next/link'
 import { Clock, Eye, Heart, ArrowLeft, BookOpen } from 'lucide-react'
 import { BlogLikeButton } from '@/components/blog/BlogLikeButton'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createClient()
+  const { data: blog } = await supabase.from('blogs').select('title, excerpt, cover_image').eq('slug', slug).eq('status', 'published').single()
+  if (!blog) return {}
+  const description = blog.excerpt || blog.title
+  return {
+    title: `${blog.title} · SlipSurge`,
+    description,
+    openGraph: { title: blog.title, description, images: blog.cover_image ? [blog.cover_image] : undefined },
+    twitter: { card: 'summary_large_image', title: blog.title, description, images: blog.cover_image ? [blog.cover_image] : undefined },
+  }
+}
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params

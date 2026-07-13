@@ -10,8 +10,22 @@ import { GroupInviteResponse } from '@/components/groups/GroupInviteResponse'
 import { ChatRoom } from '@/components/chat/ChatRoom'
 import { Users, Lock, Globe, Settings } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createClient()
+  const { data: group } = await supabase.from('groups').select('name, description, banner_url').eq('slug', slug).single()
+  if (!group) return {}
+  const description = group.description || `${group.name} on SlipSurge`
+  return {
+    title: `${group.name} · SlipSurge`,
+    description,
+    openGraph: { title: group.name, description, images: group.banner_url ? [group.banner_url] : undefined },
+  }
+}
 
 export default async function GroupPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params

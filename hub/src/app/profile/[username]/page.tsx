@@ -12,10 +12,42 @@ import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp, BadgeCheck } from 'lucide-react'
 import { PROVIDER_BY_PLATFORM_KEY } from '@/lib/verifiedIdentity'
+import type { Metadata } from 'next'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
 export const dynamic = 'force-dynamic'
+
+// Every page previously inherited the root layout's generic site-wide title
+// ("SlipSurge — The Social Hub...") — sharing a profile link (a core loop
+// for a social app built around showing off your record) unfurled with zero
+// context about who it even was. Real name/record/avatar now included.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { username } = await params
+  const profile = await getUserProfile(username)
+  if (!profile) return {}
+  const name = profile.display_name || profile.username
+  const record = profile.pick_record as { wins?: number; losses?: number; pushes?: number } | null
+  const recordStr = record && ((record.wins ?? 0) + (record.losses ?? 0) + (record.pushes ?? 0)) > 0
+    ? `${record.wins ?? 0}-${record.losses ?? 0}${record.pushes ? `-${record.pushes}` : ''} record. `
+    : ''
+  const description = `${recordStr}${profile.bio || `${name}'s picks and posts on SlipSurge.`}`.trim()
+  return {
+    title: `${name} (@${profile.username}) · SlipSurge`,
+    description,
+    openGraph: {
+      title: `${name} (@${profile.username})`,
+      description,
+      images: profile.avatar_url ? [profile.avatar_url] : undefined,
+    },
+    twitter: {
+      card: 'summary',
+      title: `${name} (@${profile.username})`,
+      description,
+      images: profile.avatar_url ? [profile.avatar_url] : undefined,
+    },
+  }
+}
 
 const TABS = [
   { key: 'all', label: 'All' },
