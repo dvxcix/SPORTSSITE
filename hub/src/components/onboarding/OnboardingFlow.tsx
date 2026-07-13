@@ -3,11 +3,17 @@
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
 import { MLB_TEAMS } from '@/lib/mlbTeams'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
+
+// dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
+// onboarding page itself (Next 16), so the Meteors background lives here
+// instead — this component is already 'use client'.
+const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Follow', 'Done']
 
@@ -70,7 +76,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   const initials = (displayName || initialProfile?.username || '?')[0]?.toUpperCase()
 
   return (
-    <div className="w-full max-w-md">
+    <>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <Meteors number={12} className="opacity-60" />
+      </div>
+      <div className="w-full max-w-md" style={{ position: 'relative', zIndex: 1 }}>
       {/* Progress */}
       <div className="flex items-center justify-between mb-8">
         {STEPS.map((s, i) => (
@@ -243,7 +253,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 
         </motion.div>
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   )
 }
 
