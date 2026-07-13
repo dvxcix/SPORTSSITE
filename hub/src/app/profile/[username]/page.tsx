@@ -67,8 +67,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   // Check follow status
   let isFollowing = false
   if (authUser && !isOwnProfile) {
+    // follows has no `id` column (its PK is the composite
+    // follower_id/following_id pair) — selecting 'id' errored on every call,
+    // and since the error was never checked, `data` was always null and
+    // this always evaluated to false regardless of the real relationship.
+    // The button correctly wrote the follow row; only this read was broken,
+    // which is why it reverted to "Follow" on every refresh despite the
+    // follow having actually persisted.
     const { data } = await supabase.from('follows')
-      .select('id').eq('follower_id', authUser.id).eq('following_id', profile.id).maybeSingle()
+      .select('follower_id').eq('follower_id', authUser.id).eq('following_id', profile.id).maybeSingle()
     isFollowing = !!data
   }
 

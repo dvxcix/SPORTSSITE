@@ -123,6 +123,15 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   // reaction_summary itself is kept in sync by a DB trigger (see the
   // realtime subscription above) — this only needs to update the local
   // optimistic view instantly.
+  // All three toggles below follow the same shape: apply optimistically,
+  // then check the write's actual result — a prior version updated local
+  // state unconditionally regardless of whether the insert/delete
+  // succeeded, so a failed write (RLS denial, network blip, a duplicate
+  // click racing the unique constraint) left the UI showing a state that
+  // didn't match the database until the next full reload silently
+  // "corrected" it. A duplicate-key error (23505) means the row already
+  // existed — the end state already matches what was optimistically
+  // assumed — so that's treated as success, not rolled back.
   async function toggleReaction(emoji: string) {
     if (!user) return
     const alreadyReacted = myReactions.has(emoji)
@@ -137,44 +146,69 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
       if (count <= 0) delete next[emoji]; else next[emoji] = count
       return next
     })
+    let error
     if (alreadyReacted) {
-      await supabase.from('reactions').delete()
-        .match({ user_id: user.id, target_id: post.id, target_type: 'post', emoji })
+      ({ error } = await supabase.from('reactions').delete()
+        .match({ user_id: user.id, target_id: post.id, target_type: 'post', emoji }))
     } else {
-      await supabase.from('reactions').insert({ user_id: user.id, target_id: post.id, target_type: 'post', emoji })
-      await notify(supabase, {
-        userId: post.author_id, actorId: user.id, type: 'reaction',
-        message: 'reacted to your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+      ({ error } = await supabase.from('reactions').insert({ user_id: user.id, target_id: post.id, target_type: 'post', emoji }))
+      if (!error) {
+        await notify(supabase, {
+          userId: post.author_id, actorId: user.id, type: 'reaction',
+          message: 'reacted to your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+        })
+      }
+    }
+    if (error && error.code !== '23505') {
+      setMyReactions(prev => {
+        const next = new Set(prev)
+        if (alreadyReacted) next.add(emoji); else next.delete(emoji)
+        return next
+      })
+      setReactionSummary(prev => {
+        const count = (prev[emoji] ?? 0) + (alreadyReacted ? 1 : -1)
+        const next = { ...prev }
+        if (count <= 0) delete next[emoji]; else next[emoji] = count
+        return next
       })
     }
   }
 
   async function toggleRepost() {
     if (!user) return
-    if (reposted) {
-      await supabase.from('reposts').delete().match({ user_id: user.id, post_id: post.id })
-      setRepostCount(c => c - 1)
+    const wasReposted = reposted
+    setReposted(!wasReposted)
+    setRepostCount(c => wasReposted ? c - 1 : c + 1)
+    let error
+    if (wasReposted) {
+      ({ error } = await supabase.from('reposts').delete().match({ user_id: user.id, post_id: post.id }))
     } else {
-      await supabase.from('reposts').insert({ user_id: user.id, post_id: post.id })
-      setRepostCount(c => c + 1)
-      await notify(supabase, {
-        userId: post.author_id, actorId: user.id, type: 'repost',
-        message: 'reposted your pick', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
-      })
+      ({ error } = await supabase.from('reposts').insert({ user_id: user.id, post_id: post.id }))
+      if (!error) {
+        await notify(supabase, {
+          userId: post.author_id, actorId: user.id, type: 'repost',
+          message: 'reposted your pick', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+        })
+      }
     }
-    setReposted(v => !v)
+    if (error && error.code !== '23505') {
+      setReposted(wasReposted)
+      setRepostCount(c => wasReposted ? c + 1 : c - 1)
+    }
   }
 
   async function toggleBookmark() {
     if (!user) return
-    if (bookmarked) {
-      await supabase.from('bookmarks').delete().match({ user_id: user.id, post_id: post.id })
-      setBookmarkCount(c => c - 1)
-    } else {
-      await supabase.from('bookmarks').insert({ user_id: user.id, post_id: post.id })
-      setBookmarkCount(c => c + 1)
+    const wasBookmarked = bookmarked
+    setBookmarked(!wasBookmarked)
+    setBookmarkCount(c => wasBookmarked ? c - 1 : c + 1)
+    const { error } = wasBookmarked
+      ? await supabase.from('bookmarks').delete().match({ user_id: user.id, post_id: post.id })
+      : await supabase.from('bookmarks').insert({ user_id: user.id, post_id: post.id })
+    if (error && error.code !== '23505') {
+      setBookmarked(wasBookmarked)
+      setBookmarkCount(c => wasBookmarked ? c + 1 : c - 1)
     }
-    setBookmarked(v => !v)
   }
 
   const [shareModalOpen, setShareModalOpen] = useState(false)
@@ -222,14 +256,16 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   async function submitComment() {
     if (!user || !commentText.trim()) return
     const text = commentText.trim()
-    const { data } = await supabase.from('comments')
+    const { data, error } = await supabase.from('comments')
       .insert({ post_id: post.id, author_id: user.id, content: text })
       .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
       .single()
-    if (data) {
-      setComments(c => [...c, data as unknown as typeof comments[0]])
-      setCommentCount(c => c + 1)
-    }
+    // Only clear the input / fire notifications once the comment actually
+    // saved — clearing it unconditionally meant a failed submit silently
+    // ate whatever the user had typed.
+    if (error || !data) return
+    setComments(c => [...c, data as unknown as typeof comments[0]])
+    setCommentCount(c => c + 1)
     setCommentText('')
     await notify(supabase, {
       userId: post.author_id, actorId: user.id, type: 'comment',
@@ -247,25 +283,29 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     const text = editText.trim()
     if (!text) return
     const nowIso = new Date().toISOString()
-    await supabase.from('comments').update({ content: text, updated_at: nowIso }).eq('id', id)
+    const { error } = await supabase.from('comments').update({ content: text, updated_at: nowIso }).eq('id', id)
+    if (error) return
     setComments(cs => cs.map(c => c.id === id ? { ...c, content: text, updated_at: nowIso } : c))
     setEditingCommentId(null)
   }
 
   async function deleteComment(id: string) {
     if (!confirm('Delete this comment?')) return
-    await supabase.from('comments').delete().eq('id', id)
+    const { error } = await supabase.from('comments').delete().eq('id', id)
+    if (error) return
     setComments(cs => cs.filter(c => c.id !== id))
     setCommentCount(c => Math.max(0, c - 1))
   }
 
   async function votePoll(idx: number) {
     if (!user || pollVoted !== null) return
+    const prevCounts = pollCounts
     const newCounts = pollCounts.map((c, i) => i === idx ? c + 1 : c)
     setPollCounts(newCounts)
     setPollVoted(idx)
     const updatedOptions = (post.poll_data?.options ?? []).map((o: any, i: number) => ({ ...o, votes: newCounts[i] }))
-    await supabase.from('posts').update({ poll_data: { ...post.poll_data, options: updatedOptions } }).eq('id', post.id)
+    const { error } = await supabase.from('posts').update({ poll_data: { ...post.poll_data, options: updatedOptions } }).eq('id', post.id)
+    if (error) { setPollCounts(prevCounts); setPollVoted(null) }
   }
 
   const pickBorderColor = pickResult === 'win' ? 'rgba(46,213,115,0.3)' : pickResult === 'loss' ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,77,0.2)'

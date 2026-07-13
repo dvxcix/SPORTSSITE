@@ -19,20 +19,32 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing }: 
   async function toggle() {
     setLoading(true)
     if (following) {
-      await supabase.from('follows').delete()
+      const { error } = await supabase.from('follows').delete()
         .match({ follower_id: currentUserId, following_id: targetUserId })
+      // Only reflect success in the UI if the write actually succeeded —
+      // this previously flipped state unconditionally, so a failed
+      // delete/insert (RLS, network blip, etc.) would show the wrong
+      // state until the next full page load silently "fixed" it.
+      if (!error) setFollowing(false)
     } else {
-      await supabase.from('follows').insert({ follower_id: currentUserId, following_id: targetUserId })
-      const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
-      await notify(supabase, {
-        userId: targetUserId,
-        actorId: currentUserId,
-        type: 'follow',
-        message: 'started following you',
-        link: me?.username ? `/profile/${me.username}` : null,
-      })
+      const { error } = await supabase.from('follows').insert({ follower_id: currentUserId, following_id: targetUserId })
+      // A duplicate-key error (23505) just means the follow row already
+      // existed — e.g. the button's initialFollowing prop was stale —
+      // not a real failure, so still show "Following" rather than an error.
+      if (!error || error.code === '23505') {
+        setFollowing(true)
+        if (!error) {
+          const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
+          await notify(supabase, {
+            userId: targetUserId,
+            actorId: currentUserId,
+            type: 'follow',
+            message: 'started following you',
+            link: me?.username ? `/profile/${me.username}` : null,
+          })
+        }
+      }
     }
-    setFollowing(v => !v)
     setLoading(false)
   }
 
