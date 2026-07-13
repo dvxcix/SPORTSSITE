@@ -1,6 +1,7 @@
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { fetchParkHrCounts } from '@/lib/parkHrHistory'
 import { HrDerbyTable, type DerbyPlayer } from '@/components/dugout/HrDerbyTable'
+import { HrDerbyOddsPanel } from '@/components/dugout/HrDerbyOddsPanel'
 import { Spotlight } from '@/components/ui/spotlight'
 
 export const revalidate = 300
@@ -124,6 +125,8 @@ export default async function HrDerbyPage() {
         </div>
 
         <HrDerbyTable players={players} />
+
+        <HrDerbyOddsPanel players={players} />
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 24 }}>
           Source: mlb-party Statcast tables (bat-tracking, timing, 14-day recent form) · MLB Stats API · Citizens Bank Park history via Statcast (2015–present) · Updated on page load
