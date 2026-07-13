@@ -1,34 +1,82 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import Link from 'next/link'
 import { TrendingUp, Flame, Users, Hash } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { PostCardClient } from '@/components/social/PostCardClient'
+import { UserBadges } from '@/components/social/UserBadges'
+import { FollowButton } from '@/components/social/FollowButton'
 
 export const revalidate = 300
 
+// Same shape every other real post listing (Feed/Hashtag/Bookmarks/Picks)
+// queries with — Explore previously hand-rolled its own thin post cards
+// (plain hearts, no real reactions/comments/badges, no click-through),
+// which is why it looked and behaved nothing like the rest of the site.
+const POST_WITH_AUTHOR = `*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
+
+type ExploreUser = {
+  id: string
+  username: string
+  display_name: string | null
+  avatar_url: string | null
+  is_verified: boolean
+  account_type: string
+  follower_count: number
+  pick_record: { wins: number; losses: number } | null
+}
+
 export default async function ExplorePage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: topUsers }, { data: topPosts }, { data: trendingPicks }] = await Promise.all([
+  const [{ data: topCappers }, { data: topBettors }, { data: rawTopPosts }, { data: rawTrendingPicks }] = await Promise.all([
+    // "Capper" is this site's term for a creator account specifically (see
+    // register/onboarding) — filtered by account_type so this section can
+    // only ever show real cappers, never a mislabeled regular member.
     supabase.from('users')
       .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
       .eq('is_active_member', true)
+      .eq('account_type', 'creator')
+      .order('follower_count', { ascending: false })
+      .limit(6),
+    // Everyone else — the site's actual "bettor" role — shown as its own,
+    // correctly-labeled section instead of being lumped in under "Cappers".
+    supabase.from('users')
+      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
+      .eq('is_active_member', true)
+      .neq('account_type', 'creator')
       .order('follower_count', { ascending: false })
       .limit(6),
     supabase.from('posts')
-      .select('id, content, sport, post_type, pick_data, reaction_count, comment_count, created_at, author:users(username, display_name, avatar_url)')
+      .select(POST_WITH_AUTHOR)
       .eq('visibility', 'public')
       .gte('created_at', new Date(Date.now() - 86400000).toISOString())
       .order('reaction_count', { ascending: false })
       .limit(5),
     supabase.from('posts')
-      .select('id, content, pick_data, sport, reaction_count, created_at, author:users(username, display_name)')
+      .select(POST_WITH_AUTHOR)
       .eq('post_type', 'pick')
       .eq('visibility', 'public')
       .gte('created_at', new Date(Date.now() - 86400000).toISOString())
       .order('reaction_count', { ascending: false })
-      .limit(8),
+      .limit(5),
   ])
+
+  const [topPosts, trendingPicks] = await Promise.all([
+    attachUserReactions(rawTopPosts ?? [], user?.id),
+    attachUserReactions(rawTrendingPicks ?? [], user?.id),
+  ])
+
+  const spotlightUsers = [...(topCappers ?? []), ...(topBettors ?? [])] as ExploreUser[]
+  let followingIds = new Set<string>()
+  if (user && spotlightUsers.length) {
+    const { data: followingRows } = await supabase.from('follows')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .in('following_id', spotlightUsers.map(u => u.id))
+    followingIds = new Set((followingRows ?? []).map((r: any) => r.following_id))
+  }
 
   const SPORTS = [
     { label: 'MLB', emoji: '⚾', href: '/hashtag/mlb' },
@@ -60,103 +108,89 @@ export default async function ExplorePage() {
         </div>
       </section>
 
-      {/* Trending picks */}
-      {(trendingPicks?.length ?? 0) > 0 && (
+      {/* Trending picks — real post cards, same component Feed uses */}
+      {trendingPicks.length > 0 && (
         <section>
           <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
             <TrendingUp size={14} /> Hot Picks Today
           </h2>
-          <div className="space-y-2">
-            {(trendingPicks ?? []).map((p: any) => {
-              const sportLogo = sportLogoUrl(p.sport)
-              const teamLogo = getTeamLogoUrl(p.pick_data?.team)
-              return (
-                <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-zinc-500">@{p.author?.display_name || p.author?.username}</span>
-                    {p.sport && (
-                      sportLogo
-                        ? <img src={sportLogo} alt={p.sport} className="w-4 h-4 object-contain shrink-0" />
-                        : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>
-                    )}
-                    <span className="ml-auto text-xs text-zinc-600">❤️ {p.reaction_count}</span>
-                  </div>
-                  {p.pick_data && (
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={11} className="text-yellow-400 shrink-0" />
-                      {teamLogo
-                        ? <img src={teamLogo} alt={p.pick_data.team} className="w-5 h-5 object-contain shrink-0" />
-                        : <span className="text-sm font-bold text-white">{p.pick_data.team}</span>}
-                      <span className="text-xs text-zinc-500">{p.pick_data.line}</span>
-                      <span className="text-xs font-mono font-bold text-zinc-300">{p.pick_data.odds}</span>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+          <div className="space-y-3">
+            {trendingPicks.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)}
           </div>
         </section>
       )}
 
-      {/* Top posts */}
-      {(topPosts?.length ?? 0) > 0 && (
+      {/* Top posts — real post cards, same component Feed uses */}
+      {topPosts.length > 0 && (
         <section>
           <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
             <Flame size={14} /> Top Posts (24h)
           </h2>
-          <div className="space-y-2">
-            {(topPosts ?? []).map((p: any) => {
-              const sportLogo = sportLogoUrl(p.sport)
-              return (
-                <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-5 h-5 rounded-full bg-zinc-700 overflow-hidden shrink-0">
-                      {p.author?.avatar_url && <img src={p.author.avatar_url} alt="" className="w-full h-full object-cover" />}
-                    </div>
-                    <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-zinc-400 hover:text-white">@{p.author?.username}</Link>
-                    {p.sport && (
-                      sportLogo
-                        ? <img src={sportLogo} alt={p.sport} className="w-4 h-4 object-contain shrink-0" />
-                        : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{p.sport}</span>
-                    )}
-                    <span className="ml-auto text-xs text-zinc-600">❤️ {p.reaction_count} · 💬 {p.comment_count}</span>
-                  </div>
-                  <p className="text-sm text-zinc-200 line-clamp-2">{p.content}</p>
-                </div>
-              )
-            })}
+          <div className="space-y-3">
+            {topPosts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)}
           </div>
         </section>
       )}
 
-      {/* Top creators */}
-      {(topUsers?.length ?? 0) > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-zinc-400 flex items-center gap-2">
-              <Users size={14} /> Top Cappers
-            </h2>
-            <Link href="/leaderboard" className="text-xs text-green-400 hover:text-green-300">See all →</Link>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(topUsers ?? []).map((u: any) => (
-              <Link key={u.id} href={`/profile/${u.username}`}
-                className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-                <div className="w-10 h-10 rounded-full bg-zinc-700 shrink-0 flex items-center justify-center text-sm font-black text-white overflow-hidden">
-                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white text-xs truncate">{u.display_name || u.username}</p>
-                  <p className="text-[10px] text-zinc-500">{u.follower_count ?? 0} followers</p>
-                  {u.pick_record && (
-                    <p className="text-[10px] font-bold text-green-400">{u.pick_record.wins}W-{u.pick_record.losses}L</p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+      {/* Top cappers — real creator accounts only; hidden entirely once
+          none exist yet rather than padding it out with regular members */}
+      {(topCappers?.length ?? 0) > 0 && (
+        <PeopleSection title="Top Cappers" icon={<Users size={14} />} users={topCappers as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />
+      )}
+
+      {/* Top bettors — everyone else, i.e. the vast majority of members */}
+      {(topBettors?.length ?? 0) > 0 && (
+        <PeopleSection title="Top Bettors" icon={<Users size={14} />} users={topBettors as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />
       )}
     </div>
+  )
+}
+
+function PeopleSection({ title, icon, users, currentUserId, followingIds }: {
+  title: string
+  icon: React.ReactNode
+  users: ExploreUser[]
+  currentUserId: string | null
+  followingIds: Set<string>
+}) {
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-bold text-zinc-400 flex items-center gap-2">{icon} {title}</h2>
+        <Link href="/leaderboard" className="text-xs text-green-400 hover:text-green-300">See all →</Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {users.map(u => (
+          <div key={u.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+            <Link href={`/profile/${u.username}`} className="shrink-0">
+              <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-black text-white overflow-hidden">
+                {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
+              </div>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1 flex-wrap">
+                <Link href={`/profile/${u.username}`} className="font-bold text-white text-xs truncate hover:underline">
+                  {u.display_name || u.username}
+                </Link>
+                <UserBadges userId={u.id} size={12} />
+                {u.is_verified && <span className="text-green-400 text-[10px] shrink-0">✓</span>}
+              </div>
+              <Link href={`/profile/${u.username}`} className="text-[10px] text-zinc-500 hover:text-zinc-300 block truncate">@{u.username}</Link>
+              <p className="text-[10px] text-zinc-500">{u.follower_count ?? 0} followers</p>
+              {u.pick_record && (
+                <p className="text-[10px] font-bold text-green-400">{u.pick_record.wins}W-{u.pick_record.losses}L</p>
+              )}
+            </div>
+            {currentUserId && currentUserId !== u.id ? (
+              <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={followingIds.has(u.id)} />
+            ) : !currentUserId ? (
+              <Link href="/auth/login" className="text-xs font-bold text-white bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-xl transition-colors shrink-0">
+                Follow
+              </Link>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
