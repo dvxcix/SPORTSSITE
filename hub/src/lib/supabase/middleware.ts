@@ -30,6 +30,19 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // /api/push/send and /api/email/send-notification are called by Postgres
+  // triggers (notifications_push_trigger / notifications_email_trigger) via
+  // pg_net — server-to-server, no browser session cookie at all. Same bug
+  // class as cron/share-image: without this, the trigger's webhook call got
+  // redirected to /auth/login before the route ever ran, meaning push/email
+  // delivery would silently never fire. Each route still authenticates
+  // itself via a bearer secret. (/api/push/subscribe and /unsubscribe are
+  // deliberately NOT covered here — those genuinely need a real signed-in
+  // user and check for one internally.)
+  if (request.nextUrl.pathname === '/api/push/send' || request.nextUrl.pathname === '/api/email/send-notification') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

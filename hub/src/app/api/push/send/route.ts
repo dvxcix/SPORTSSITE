@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 
 export const revalidate = 0
 
@@ -43,6 +44,19 @@ export async function POST(request: Request) {
     .eq('id', notificationId)
     .maybeSingle()
   if (!notification) return NextResponse.json({ ok: true, skipped: 'notification not found' })
+
+  const { data: recipient } = await admin
+    .from('users')
+    .select('notification_settings')
+    .eq('id', notification.user_id)
+    .maybeSingle()
+  const settings = (recipient?.notification_settings as Record<string, boolean> | null) ?? {}
+  const settingsKey = SETTINGS_KEY_BY_TYPE[notification.type as NotificationType]
+  // Push defaults to ON (matches NotificationSettingsForm) — only an
+  // explicit `false` turns it off for this type.
+  if (settingsKey && settings[settingsKey] === false) {
+    return NextResponse.json({ ok: true, skipped: 'push disabled for this notification type' })
+  }
 
   const { data: subscriptions } = await admin
     .from('push_subscriptions')

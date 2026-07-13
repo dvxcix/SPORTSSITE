@@ -3,11 +3,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type NotificationType = 'follow' | 'reaction' | 'comment' | 'mention' | 'pick_result' | 'subscription' | 'message' | 'repost' | 'group_invite' | 'new_pick'
 
 // Maps each notification type to its toggle key in users.notification_settings
-// (see NotificationSettingsForm) — settings/notifications previously wrote
-// this jsonb column but nothing ever read it back, so every toggle was a
-// no-op. Checked here, in the one place every notification insert goes
-// through, so it's enforced regardless of call site.
-const SETTINGS_KEY_BY_TYPE: Record<NotificationType, string> = {
+// (see NotificationSettingsForm). Push uses this key directly (e.g.
+// "new_follower"); email uses the same key with an "_email" suffix (e.g.
+// "new_follower_email"). Exported so the push/email delivery routes — not
+// notify() itself — can each independently decide whether to actually
+// deliver on their channel.
+export const SETTINGS_KEY_BY_TYPE: Record<NotificationType, string> = {
   follow: 'new_follower',
   reaction: 'post_reaction',
   comment: 'post_comment',
@@ -25,6 +26,15 @@ const SETTINGS_KEY_BY_TYPE: Record<NotificationType, string> = {
 // The notifications page/TopBar dropdown render `{actor.display_name}
 // {message}`, so `message` should read as the tail of that sentence (e.g.
 // "started following you"), not a full sentence on its own.
+//
+// Always inserts — the in-app notification (bell/list) is the user's
+// activity history and isn't itself a per-type preference. Push and email
+// are separate delivery *channels* layered on top of that same row (see
+// notifications_push_trigger / notifications_email_trigger and the
+// /api/push/send, /api/email/send-notification routes they call), each
+// independently gated by its own toggle. Gating insertion itself here
+// would make "email only, no push" impossible, since email delivery reads
+// off this same row.
 export async function notify(supabase: SupabaseClient, {
   userId, actorId, type, message, link, targetId, targetType,
 }: {
@@ -37,12 +47,6 @@ export async function notify(supabase: SupabaseClient, {
   targetType?: string | null
 }) {
   if (!userId || userId === actorId) return // never notify yourself
-
-  const settingsKey = SETTINGS_KEY_BY_TYPE[type]
-  const { data: recipient } = await supabase.from('users').select('notification_settings').eq('id', userId).maybeSingle()
-  // Undefined/missing key defaults to enabled (matches NotificationSettingsForm's
-  // own default) — only an explicit `false` suppresses the notification.
-  if ((recipient?.notification_settings as Record<string, boolean> | null)?.[settingsKey] === false) return
 
   await supabase.from('notifications').insert({
     user_id: userId,
