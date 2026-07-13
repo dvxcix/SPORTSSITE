@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, X, Trash2 } from 'lucide-react'
+import { useCustomEmojis } from '@/lib/emoji'
 
 export const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart,
@@ -22,7 +23,7 @@ export type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
   link: string | null; read: boolean; created_at: string
   actor?: { username: string; display_name?: string; avatar_url?: string } | null
-  data?: { avatar_url?: string } | null
+  data?: { avatar_url?: string; emoji?: string; team_logo?: string; actors?: { id: string; avatar_url?: string }[]; count?: number } | null
 }
 
 function timeAgo(dateStr: string) {
@@ -105,8 +106,25 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
 
 function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void }) {
   const [hovered, setHovered] = useState(false)
+  const customEmojis = useCustomEmojis()
   const Icon = NOTIF_ICONS[n.type] ?? Bell
   const actorName = n.actor?.display_name || n.actor?.username
+
+  // Reaction notifications carry which emoji was used (data.emoji) and
+  // pick-result ones carry the leg's team logo (data.team_logo) — shown in
+  // the same corner-badge slot the generic type icon used to always
+  // occupy, falling back to that icon when there's nothing richer to show
+  // (e.g. notifications created before this was added).
+  let badge: React.ReactNode = <Icon size={10} style={{ color: 'var(--accent)' }} />
+  if (n.type === 'reaction' && n.data?.emoji) {
+    const custom = n.data.emoji.match(/^:([a-z0-9_]+):$/)
+    const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
+    badge = customEmoji
+      ? <img src={customEmoji.image_url} alt={n.data.emoji} style={{ width: 11, height: 11, objectFit: 'contain' }} />
+      : <span style={{ fontSize: 10, lineHeight: 1 }}>{n.data.emoji}</span>
+  } else if (n.type === 'pick_result' && n.data?.team_logo) {
+    badge = <img src={n.data.team_logo} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
+  }
 
   const inner = (
     <>
@@ -121,7 +139,7 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
           background: 'var(--surface)', border: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Icon size={10} style={{ color: 'var(--accent)' }} />
+          {badge}
         </div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>

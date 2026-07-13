@@ -153,9 +153,14 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     } else {
       ({ error } = await supabase.from('reactions').insert({ user_id: user.id, target_id: post.id, target_type: 'post', emoji }))
       if (!error) {
-        await notify(supabase, {
-          userId: post.author_id, actorId: user.id, type: 'reaction',
-          message: 'reacted to your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+        // Groups consecutive same-emoji reactions on this post into one
+        // notification ("X and 12 others reacted 🔥") instead of a flood
+        // of individual rows — see notify_reaction() migration for why
+        // this has to be a security-definer RPC rather than a plain
+        // insert (grouping needs to read the recipient's own notification
+        // rows, which RLS correctly blocks a different user from doing).
+        await supabase.rpc('notify_reaction', {
+          p_user_id: post.author_id, p_actor_id: user.id, p_post_id: post.id, p_emoji: emoji,
         })
       }
     }

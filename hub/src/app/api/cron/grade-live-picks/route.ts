@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, checkEarlyWin, settleFinalPick, applyLegResultToPost } from '@/lib/pickGrading'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
 
   const { data: pending, error } = await admin
     .from('picks')
-    .select('id, post_id, game_pk, mlb_id, pick_type, post:posts(id, author_id, pick_data)')
+    .select('id, post_id, game_pk, mlb_id, pick_type, team, post:posts(id, author_id, pick_data)')
     .eq('sport', 'MLB')
     .eq('result', 'pending')
     .not('game_pk', 'is', null)
@@ -77,11 +78,12 @@ export async function GET(req: Request) {
         if (outcome.result === 'win') won++
 
         if (post?.author_id && outcome.legPlayerName && outcome.result === 'win') {
+          const teamLogo = getTeamLogoUrl((pick as any).team)
           await admin.from('notifications').insert({
             user_id: post.author_id, type: 'pick_result',
             message: `🎉 ${outcome.legPlayerName} came through — that leg hit!`,
             link: `/posts/${outcome.postId}`, target_id: outcome.postId, target_type: 'post',
-            data: outcome.legHeadshotUrl ? { avatar_url: outcome.legHeadshotUrl } : null,
+            data: (outcome.legHeadshotUrl || teamLogo) ? { avatar_url: outcome.legHeadshotUrl, team_logo: teamLogo } : null,
           })
           notified.push(outcome.postId!)
         }
@@ -120,6 +122,7 @@ export async function GET(req: Request) {
 
       won++
       if (post.author_id) {
+        const teamLogo = getTeamLogoUrl(pick.team)
         await admin.from('notifications').insert({
           user_id: post.author_id,
           type: 'pick_result',
@@ -127,7 +130,7 @@ export async function GET(req: Request) {
           link: `/posts/${post.id}`,
           target_id: post.id,
           target_type: 'post',
-          data: legHeadshotUrl ? { avatar_url: legHeadshotUrl } : null,
+          data: (legHeadshotUrl || teamLogo) ? { avatar_url: legHeadshotUrl, team_logo: teamLogo } : null,
         })
         notified.push(post.id)
       }

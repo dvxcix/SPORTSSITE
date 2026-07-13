@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
+import { useCustomEmojis } from '@/lib/emoji'
 
 const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart, comment: MessageCircle, follow: UserPlus,
@@ -19,7 +20,7 @@ type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
   link: string | null; read: boolean; created_at: string
   actor?: { username: string; display_name?: string; avatar_url?: string } | null
-  data?: { avatar_url?: string } | null
+  data?: { avatar_url?: string; emoji?: string; team_logo?: string } | null
 }
 
 type QuickResults = {
@@ -36,7 +37,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [notifOpen, setNotifOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [notifications, setNotifications] = useState<NotifRow[]>([])
-  const [notifLoaded, setNotifLoaded] = useState(false)
+  const customEmojis = useCustomEmojis()
   const router = useRouter()
   const supabase = createClient()
   const menuRef = useRef<HTMLDivElement>(null)
@@ -125,9 +126,16 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }, [user])
 
   async function openNotifications() {
-    setNotifOpen(v => !v)
+    const opening = !notifOpen
+    setNotifOpen(opening)
     setMenuOpen(false)
-    if (!notifLoaded && user) {
+    // Previously only fetched once ever (gated behind a one-time-set flag)
+    // — the realtime subscription above bumps the unread badge on a new
+    // notification, but the dropdown's actual list never refreshed after
+    // that first load, so a genuinely new notification could be sitting
+    // in the DB while the open dropdown kept showing stale contents.
+    // Cheap enough (10 rows) to just refetch on every open.
+    if (opening && user) {
       const { data } = await supabase
         .from('notifications')
         .select('id, type, message, body, link, read, created_at, data, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
@@ -135,9 +143,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         .order('created_at', { ascending: false })
         .limit(10)
       setNotifications((data as any) ?? [])
-      setNotifLoaded(true)
     }
-    if (unread > 0 && user) {
+    if (opening && unread > 0 && user) {
       setUnread(0)
       await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
@@ -326,6 +333,20 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       const Icon = NOTIF_ICONS[n.type] ?? Bell
                       const actorName = n.actor?.display_name || n.actor?.username
                       const text = (actorName ? `${actorName} ` : '') + (n.message || n.body || 'interacted with you')
+                      // Same badge logic as the full /notifications page —
+                      // actual emoji (or custom emoji image) for reactions,
+                      // team logo for pick results, generic type icon
+                      // otherwise.
+                      let badge: React.ReactNode = <Icon size={8} style={{ color: 'var(--accent)' }} />
+                      if (n.type === 'reaction' && n.data?.emoji) {
+                        const custom = n.data.emoji.match(/^:([a-z0-9_]+):$/)
+                        const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
+                        badge = customEmoji
+                          ? <img src={customEmoji.image_url} alt={n.data.emoji} style={{ width: 9, height: 9, objectFit: 'contain' }} />
+                          : <span style={{ fontSize: 8, lineHeight: 1 }}>{n.data.emoji}</span>
+                      } else if (n.type === 'pick_result' && n.data?.team_logo) {
+                        badge = <img src={n.data.team_logo} alt="" style={{ width: 11, height: 11, objectFit: 'contain' }} />
+                      }
                       const inner = (
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 32px 10px 14px' }}>
                           <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -335,7 +356,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                               )}
                             </div>
                             <div style={{ position: 'absolute', bottom: -3, right: -3, width: 16, height: 16, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Icon size={8} style={{ color: 'var(--accent)' }} />
+                              {badge}
                             </div>
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
