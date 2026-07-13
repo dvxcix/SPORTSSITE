@@ -3,6 +3,20 @@ import { LeaderboardClient } from './LeaderboardClient'
 
 export const revalidate = 120
 
+// Standard Wilson score interval lower bound (95% confidence) — ranks by
+// win rate while accounting for sample size, without letting a bad big
+// sample beat a good small one the way a hard "5+ picks always ranks
+// above fewer" cutoff did (that let a 0-5 record outrank a 1-1 record).
+// A higher win% always scores higher than a lower one; sample size only
+// breaks ties between comparably-performing records.
+function wilsonLowerBound(wins: number, total: number): number {
+  if (total === 0) return 0
+  const z = 1.96
+  const phat = wins / total
+  const z2 = z * z
+  return (phat + z2 / (2 * total) - z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total)) / (1 + z2 / total)
+}
+
 export default async function LeaderboardPage() {
   const supabase = await createClient()
 
@@ -95,13 +109,8 @@ export default async function LeaderboardPage() {
       thisWeek: fromPosts?.thisWeek ?? { wins: 0, losses: 0 },
       bySport: fromPosts?.bySport ?? {},
     }
-  }).sort((a, b) => {
-    const aG = a.wins + a.losses, bG = b.wins + b.losses
-    if (aG >= 5 && bG < 5) return -1
-    if (bG >= 5 && aG < 5) return 1
-    if (a.winPct !== b.winPct) return b.winPct - a.winPct
-    return b.follower_count - a.follower_count
-  })
+  }).sort((a, b) => wilsonLowerBound(b.wins, b.wins + b.losses) - wilsonLowerBound(a.wins, a.wins + a.losses)
+    || b.follower_count - a.follower_count)
 
   const allSports = Array.from(new Set((pickStats ?? []).map(p => p.sport).filter(Boolean))) as string[]
 
