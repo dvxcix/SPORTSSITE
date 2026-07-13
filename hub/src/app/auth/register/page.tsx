@@ -136,13 +136,13 @@ export default function RegisterPage() {
             <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></div>
           </div>
           <h2 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: 16 }}>
-            Join 10,000+<br />sports bettors.
+            Get in early.<br />Build your record.
           </h2>
           <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 360 }}>
             Get in before the crowd. Share picks, build a following, and win together.
           </p>
           <div style={{ display: 'flex', gap: 24, marginTop: 48 }}>
-            {[['10K+', 'Members'], ['85%', 'Win rate tracking'], ['$0', 'Free to join']].map(([val, lbl], i) => (
+            {[['Real', 'Graded track records'], ['Live', 'Odds & line moves'], ['$0', 'Free to join']].map(([val, lbl], i) => (
               <motion.div key={lbl} custom={i} initial="hidden" animate="show" variants={statVariants}>
                 <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.03em' }}>{val}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{lbl}</div>
