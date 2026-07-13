@@ -9,11 +9,18 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
   const [isPrivate, setIsPrivate] = useState(settings.is_private ?? false)
   const [allowDms, setAllowDms] = useState(settings.allow_dms ?? true)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   async function save() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('users').update({ is_private: isPrivate, allow_dms: allowDms }).eq('id', user.id)
+    setError('')
+    // "Saved!" previously showed regardless of whether the write actually
+    // succeeded — for Private Account specifically, that meant someone
+    // could believe their account was locked down (and post accordingly)
+    // while it silently stayed fully public.
+    const { error: err } = await supabase.from('users').update({ is_private: isPrivate, allow_dms: allowDms }).eq('id', user.id)
+    if (err) { setError('Could not save — please try again.'); return }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
@@ -38,6 +45,7 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
           </div>
         ))}
       </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
       <button onClick={save} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
         {saved ? <><Check size={13} /> Saved!</> : 'Save Privacy Settings'}
       </button>

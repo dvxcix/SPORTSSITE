@@ -23,12 +23,14 @@ export function ReportModal({ targetType, targetId, onClose }: {
   const [details, setDetails] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
 
   async function submit() {
     if (!reason) return
     setSubmitting(true)
+    setError('')
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('reports').insert({
+    const { error: err } = await supabase.from('reports').insert({
       reporter_id: user?.id ?? null,
       target_type: targetType,
       target_id: targetId,
@@ -36,8 +38,12 @@ export function ReportModal({ targetType, targetId, onClose }: {
       details: details.trim() || null,
       status: 'pending',
     })
-    setDone(true)
     setSubmitting(false)
+    // Previously showed "Report submitted" and closed regardless of
+    // whether the insert actually succeeded — someone reporting
+    // harassment or abuse would have no way of knowing it silently failed.
+    if (err) { setError('Could not submit report — please try again.'); return }
+    setDone(true)
     setTimeout(onClose, 1500)
   }
 
@@ -66,6 +72,7 @@ export function ReportModal({ targetType, targetId, onClose }: {
             </div>
             <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Additional details (optional)" rows={2}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none mb-4 resize-none" />
+            {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
             <button onClick={submit} disabled={submitting || !reason}
               className="w-full bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white font-black py-2.5 rounded-xl transition-colors">
               {submitting ? 'Submitting…' : 'Submit Report'}

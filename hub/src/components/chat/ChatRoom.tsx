@@ -65,13 +65,16 @@ export function ChatRoom({ channelId, initialMessages, currentUserId }: ChatRoom
     e.preventDefault()
     if (!input.trim() || !currentUserId || sending) return
     setSending(true)
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       channel_id: channelId,
       sender_id: currentUserId,
       content: input.trim(),
       message_type: 'text',
     })
-    setInput('')
+    // Only clear the input once the message actually saved — clearing it
+    // unconditionally (the previous behavior) silently discarded whatever
+    // was typed if the insert failed, with no way to tell it didn't send.
+    if (!error) setInput('')
     setSending(false)
   }
 

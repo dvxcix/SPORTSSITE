@@ -12,12 +12,13 @@ export function PageFollowButton({ userId, pageId, initialFollowing }: {
 
   async function toggle() {
     setLoading(true)
-    if (following) {
-      await supabase.from('page_follows').delete().match({ user_id: userId, page_id: pageId })
-    } else {
-      await supabase.from('page_follows').insert({ user_id: userId, page_id: pageId })
-    }
-    setFollowing(v => !v)
+    const { error } = following
+      ? await supabase.from('page_follows').delete().match({ user_id: userId, page_id: pageId })
+      : await supabase.from('page_follows').insert({ user_id: userId, page_id: pageId })
+    // Only flip state if the write actually succeeded — previously flipped
+    // unconditionally, so a failed follow/unfollow left the button showing
+    // a status that didn't match the database.
+    if (!error || error.code === '23505') setFollowing(v => !v)
     setLoading(false)
   }
 

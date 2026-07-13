@@ -15,13 +15,19 @@ export function EventRSVPButtons({ userId, eventId, initialRsvp }: {
 
   async function select(status: RSVPStatus) {
     setLoading(true)
+    const prevRsvp = rsvp
+    let error
     if (rsvp === status) {
-      await supabase.from('event_rsvps').delete().match({ user_id: userId, event_id: eventId })
       setRsvp(null)
+      ;({ error } = await supabase.from('event_rsvps').delete().match({ user_id: userId, event_id: eventId }))
     } else {
-      await supabase.from('event_rsvps').upsert({ user_id: userId, event_id: eventId, status }, { onConflict: 'user_id,event_id' })
       setRsvp(status)
+      ;({ error } = await supabase.from('event_rsvps').upsert({ user_id: userId, event_id: eventId, status }, { onConflict: 'user_id,event_id' }))
     }
+    // Only reflect success in the UI if the write actually succeeded — this
+    // previously flipped state unconditionally, so a failed write left the
+    // buttons showing an RSVP status that didn't match the database.
+    if (error) setRsvp(prevRsvp)
     setLoading(false)
   }
 

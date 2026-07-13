@@ -12,14 +12,19 @@ export function GroupJoinButton({ userId, groupId, channelId, initialMember }: {
 
   async function toggle() {
     setLoading(true)
+    let error
     if (member) {
-      await supabase.from('group_members').delete().match({ user_id: userId, group_id: groupId })
-      if (channelId) await supabase.from('channel_members').delete().match({ user_id: userId, channel_id: channelId })
+      ({ error } = await supabase.from('group_members').delete().match({ user_id: userId, group_id: groupId }))
+      if (!error && channelId) await supabase.from('channel_members').delete().match({ user_id: userId, channel_id: channelId })
     } else {
-      await supabase.from('group_members').insert({ user_id: userId, group_id: groupId, role: 'member' })
-      if (channelId) await supabase.from('channel_members').insert({ user_id: userId, channel_id: channelId })
+      ({ error } = await supabase.from('group_members').insert({ user_id: userId, group_id: groupId, role: 'member' }))
+      if (!error && channelId) await supabase.from('channel_members').insert({ user_id: userId, channel_id: channelId })
     }
-    setMember(v => !v)
+    // Only flip the button's state if the core group_members write actually
+    // succeeded — previously flipped unconditionally, so a failed
+    // join/leave (RLS, network) left the button showing membership status
+    // that didn't match the database.
+    if (!error || error.code === '23505') setMember(v => !v)
     setLoading(false)
   }
 

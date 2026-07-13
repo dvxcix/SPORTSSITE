@@ -48,11 +48,14 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
     return init
   })
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   async function save() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('users').update({ notification_settings: values }).eq('id', user.id)
+    setError('')
+    const { error: err } = await supabase.from('users').update({ notification_settings: values }).eq('id', user.id)
+    if (err) { setError('Could not save — please try again.'); return }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
@@ -106,6 +109,7 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
           </div>
         ))}
       </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
       <button onClick={save} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
         {saved ? <><Check size={13} /> Saved!</> : 'Save Preferences'}
       </button>

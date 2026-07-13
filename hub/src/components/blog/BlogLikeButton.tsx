@@ -11,9 +11,11 @@ export function BlogLikeButton({ userId, blogId, likes }: { userId: string; blog
 
   async function toggle() {
     const next = !liked
+    const prevCount = count
     setLiked(next)
     setCount(c => next ? c + 1 : c - 1)
-    await supabase.from('blogs').update({ like_count: next ? count + 1 : count - 1 }).eq('id', blogId)
+    const { error } = await supabase.from('blogs').update({ like_count: next ? count + 1 : count - 1 }).eq('id', blogId)
+    if (error) { setLiked(!next); setCount(prevCount) }
   }
 
   return (

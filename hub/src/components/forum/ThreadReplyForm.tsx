@@ -11,6 +11,7 @@ export function ThreadReplyForm({ userId, threadId }: { userId: string; threadId
   const supabase = createClient()
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   function insertAtCursor(insertion: string) {
@@ -28,9 +29,14 @@ export function ThreadReplyForm({ userId, threadId }: { userId: string; threadId
   async function reply() {
     if (!content.trim()) return
     setSubmitting(true)
-    await supabase.from('forum_replies').insert({ thread_id: threadId, author_id: userId, content: content.trim() })
-    setContent('')
+    setError('')
+    const { error: err } = await supabase.from('forum_replies').insert({ thread_id: threadId, author_id: userId, content: content.trim() })
     setSubmitting(false)
+    // Previously cleared the textarea and refreshed unconditionally — a
+    // failed insert silently ate whatever was typed with no sign anything
+    // went wrong.
+    if (err) { setError('Could not post reply — please try again.'); return }
+    setContent('')
     router.refresh()
   }
 
@@ -39,6 +45,7 @@ export function ThreadReplyForm({ userId, threadId }: { userId: string; threadId
       <p className="text-xs font-bold text-zinc-400 mb-2">Reply</p>
       <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="Write a reply…" rows={4}
         className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none mb-3" />
+      {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
       <div className="flex items-center justify-between">
         <EmojiPicker onSelect={insertAtCursor} />
         <button onClick={reply} disabled={submitting || !content.trim()}
