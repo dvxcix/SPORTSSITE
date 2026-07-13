@@ -21,6 +21,10 @@ export interface User {
   // from social_links, which is unverified free text.
   verified_identities?: Record<string, { handle: string; profileUrl: string }>
   sportsbooks: string[]
+  // Set once OnboardingFlow's finish() completes — null means the proxy
+  // (src/lib/supabase/middleware.ts) will redirect this account to
+  // /onboarding on every authenticated page request.
+  onboarding_completed_at?: string | null
   website?: string
   twitter_handle?: string
   location?: string

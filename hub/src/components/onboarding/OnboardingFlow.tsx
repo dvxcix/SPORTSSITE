@@ -67,6 +67,10 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       bio: bio.trim() || undefined,
       avatar_url: avatarUrl.trim() || undefined,
       favorite_teams: teams,
+      // The proxy (src/lib/supabase/middleware.ts) redirects any
+      // authenticated request back to /onboarding until this is set —
+      // this is the one place that ever sets it.
+      onboarding_completed_at: new Date().toISOString(),
     }).eq('id', userId)
     // Best-effort — never blocks getting into the app if the email fails.
     fetch('/api/onboarding/notify-welcome', { method: 'POST' }).catch(() => {})

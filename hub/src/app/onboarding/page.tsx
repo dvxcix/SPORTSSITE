@@ -10,9 +10,15 @@ export default async function OnboardingPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports')
+    .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, onboarding_completed_at')
     .eq('id', user.id)
     .single()
+
+  // The proxy gate sends anyone with onboarding_completed_at still null
+  // here — but someone who already finished can still type /onboarding
+  // into the address bar manually. Send them on instead of re-showing the
+  // wizard for a completed account.
+  if (profile?.onboarding_completed_at) redirect('/feed')
 
   // Suggested accounts to follow — same shape/ranking as RightSidebar's own
   // query (top follower_count, excluding self), reused as a server-side
