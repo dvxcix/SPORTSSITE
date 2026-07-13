@@ -14,6 +14,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -27,19 +28,21 @@ export function CreateStoryForm({ userId }: { userId: string }) {
     if (type === 'text' && !text.trim()) return
     if (type === 'image' && !file) return
     setSubmitting(true)
+    setError('')
 
     let mediaUrl = ''
     if (file) {
       const path = `stories/${userId}/${Date.now()}-${file.name}`
-      const { data } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      if (data) {
-        const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
-        mediaUrl = publicUrl
-      }
+      const { data, error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      // Previously ignored a failed upload and posted the story anyway
+      // with a blank media_url — an "image story" with no image.
+      if (uploadErr || !data) { setError('Could not upload photo — please try again.'); setSubmitting(false); return }
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+      mediaUrl = publicUrl
     }
 
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    await supabase.from('stories').insert({
+    const { error: insertErr } = await supabase.from('stories').insert({
       author_id: userId,
       story_type: type,
       content: text || null,
@@ -47,6 +50,10 @@ export function CreateStoryForm({ userId }: { userId: string }) {
       bg_color: bg,
       expires_at: expires,
     })
+    // Previously navigated to /feed unconditionally — a failed insert
+    // meant the story silently never posted, with no error and no
+    // indication anything went wrong.
+    if (insertErr) { setError('Could not post story — please try again.'); setSubmitting(false); return }
 
     router.push('/feed')
     router.refresh()
@@ -98,6 +105,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
         </label>
       )}
 
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button onClick={post} disabled={submitting || (type === 'text' ? !text.trim() : !file)}
         className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
         {submitting ? 'Posting…' : 'Share Story'}

@@ -11,9 +11,10 @@ export function AdminReportActions({ reportId, currentStatus }: { reportId: stri
 
   async function update(status: string) {
     setLoading(true)
-    await supabase.from('reports').update({ status }).eq('id', reportId)
-    router.refresh()
+    const { error } = await supabase.from('reports').update({ status }).eq('id', reportId)
     setLoading(false)
+    if (error) { alert(`Could not update: ${error.message}`); return }
+    router.refresh()
   }
 
   if (currentStatus !== 'pending') return null

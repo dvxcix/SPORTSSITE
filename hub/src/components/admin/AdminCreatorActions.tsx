@@ -13,24 +13,32 @@ export function AdminCreatorActions({ applicationId, userId }: { applicationId: 
 
   async function approve() {
     setLoading(true)
-    await supabase.from('creator_applications').update({
+    // Previously showed "Approved — user is now a creator" regardless of
+    // whether either write actually succeeded — including the case where
+    // the application flipped to "approved" but the account_type update
+    // failed, leaving the applicant approved on paper but never actually
+    // upgraded to a creator account.
+    const { error: appErr } = await supabase.from('creator_applications').update({
       status: 'approved',
       reviewed_at: new Date().toISOString(),
     }).eq('id', applicationId)
-    await supabase.from('users').update({ account_type: 'creator' }).eq('id', userId)
-    setDone('approved')
+    if (appErr) { setLoading(false); alert(`Could not approve: ${appErr.message}`); return }
+    const { error: userErr } = await supabase.from('users').update({ account_type: 'creator' }).eq('id', userId)
     setLoading(false)
+    if (userErr) { alert(`Application marked approved, but could not upgrade the account: ${userErr.message}`); return }
+    setDone('approved')
   }
 
   async function reject() {
     setLoading(true)
-    await supabase.from('creator_applications').update({
+    const { error } = await supabase.from('creator_applications').update({
       status: 'rejected',
       rejection_reason: rejectReason.trim() || null,
       reviewed_at: new Date().toISOString(),
     }).eq('id', applicationId)
-    setDone('rejected')
     setLoading(false)
+    if (error) { alert(`Could not reject: ${error.message}`); return }
+    setDone('rejected')
   }
 
   if (done) {

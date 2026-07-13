@@ -17,9 +17,13 @@ export function AdminDeleteRowAction({ table, id, confirmLabel = 'this item' }: 
   async function del() {
     if (!confirm(`Delete ${confirmLabel}?`)) return
     setLoading(true)
-    await supabase.from(table).delete().eq('id', id)
-    router.refresh()
+    const { error } = await supabase.from(table).delete().eq('id', id)
     setLoading(false)
+    // Previously refreshed unconditionally — a blocked delete (RLS, FK
+    // constraint) looked identical to a successful one until the admin
+    // noticed the row was still there, with nothing explaining why.
+    if (error) { alert(`Could not delete: ${error.message}`); return }
+    router.refresh()
   }
 
   return (

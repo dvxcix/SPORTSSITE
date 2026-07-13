@@ -12,15 +12,19 @@ export function AdminPageActions({ pageId, isVerified }: { pageId: string; isVer
 
   async function verify() {
     setLoading(true)
-    await supabase.from('pages').update({ is_verified: !isVerified }).eq('id', pageId)
-    router.refresh(); setLoading(false)
+    const { error } = await supabase.from('pages').update({ is_verified: !isVerified }).eq('id', pageId)
+    setLoading(false)
+    if (error) { alert(`Could not update: ${error.message}`); return }
+    router.refresh()
   }
 
   async function del() {
     if (!confirm('Delete this page?')) return
     setLoading(true)
-    await supabase.from('pages').delete().eq('id', pageId)
-    router.refresh(); setLoading(false)
+    const { error } = await supabase.from('pages').delete().eq('id', pageId)
+    setLoading(false)
+    if (error) { alert(`Could not delete: ${error.message}`); return }
+    router.refresh()
   }
 
   return (

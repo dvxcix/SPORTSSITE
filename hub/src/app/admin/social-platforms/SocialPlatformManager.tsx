@@ -66,7 +66,8 @@ export function SocialPlatformManager({ userId, initialPlatforms }: { userId: st
 
   async function remove(id: string) {
     if (!confirm('Delete this platform? Anyone who filled in a handle for it will just stop showing that badge.')) return
-    await supabase.from('social_platforms').delete().eq('id', id)
+    const { error: err } = await supabase.from('social_platforms').delete().eq('id', id)
+    if (err) { setError(err.message); return }
     setPlatforms(p => p.filter(x => x.id !== id))
     router.refresh()
   }

@@ -47,7 +47,8 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
     if (!confirm(inUse > 0
       ? `Delete this category? ${inUse} emoji(s) in it will become uncategorized (they'll still work, just show under "Other" in the picker).`
       : 'Delete this category?')) return
-    await supabase.from('custom_emoji_categories').delete().eq('id', id)
+    const { error } = await supabase.from('custom_emoji_categories').delete().eq('id', id)
+    if (error) { alert(`Could not delete category: ${error.message}`); return }
     setCategories(c => c.filter(x => x.id !== id))
     setEmojis(e => e.map(x => x.category_id === id ? { ...x, category_id: null, category: null } : x))
     if (categoryId === id) setCategoryId('')
@@ -108,7 +109,8 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
 
   async function remove(id: string) {
     if (!confirm('Delete this emoji? Any existing :code: text using it will stop rendering as an image.')) return
-    await supabase.from('custom_emojis').delete().eq('id', id)
+    const { error } = await supabase.from('custom_emojis').delete().eq('id', id)
+    if (error) { alert(`Could not delete: ${error.message}`); return }
     setEmojis(e => e.filter(x => x.id !== id))
     invalidateCustomEmojiCache()
     router.refresh()

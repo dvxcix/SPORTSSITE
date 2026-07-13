@@ -85,7 +85,8 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
 
   async function deleteBadge(id: string) {
     if (!confirm('Delete this badge? It will be removed from everyone who has it.')) return
-    await supabase.from('badges').delete().eq('id', id)
+    const { error } = await supabase.from('badges').delete().eq('id', id)
+    if (error) { alert(`Could not delete: ${error.message}`); return }
     setBadges(b => b.filter(x => x.id !== id))
     setAssignments(a => a.filter(x => x.badge_id !== id))
     invalidateBadgeCache()
@@ -101,7 +102,8 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
   }
 
   async function revoke(badgeId: string, uid: string) {
-    await supabase.from('user_badges').delete().match({ badge_id: badgeId, user_id: uid })
+    const { error } = await supabase.from('user_badges').delete().match({ badge_id: badgeId, user_id: uid })
+    if (error) { alert(`Could not revoke: ${error.message}`); return }
     setAssignments(a => a.filter(x => !(x.badge_id === badgeId && x.user?.id === uid)))
     invalidateBadgeCache()
     router.refresh()

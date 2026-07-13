@@ -37,7 +37,13 @@ export function CreateGroupForm({ userId }: { userId: string }) {
     }).select('id, slug').single()
     if (err) { setError(err.message); setSubmitting(false); return }
     if (data?.id) {
-      await supabase.from('group_members').insert({ group_id: data.id, user_id: userId, role: 'owner' })
+      const { error: memberErr } = await supabase.from('group_members').insert({ group_id: data.id, user_id: userId, role: 'owner' })
+      // The group row itself already exists at this point, so a failure
+      // here would leave a group with no owner membership row at all —
+      // likely unmanageable afterward if group-editing RLS checks
+      // membership rather than just groups.owner_id. Surfacing this
+      // rather than silently continuing to create a channel for it.
+      if (memberErr) { setError('Group created, but could not set you as owner — contact support.'); setSubmitting(false); return }
 
       // Every group gets a chat channel — reuses the existing channels/
       // messages/realtime infra rather than building a parallel chat

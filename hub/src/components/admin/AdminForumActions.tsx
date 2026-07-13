@@ -14,17 +14,19 @@ export function AdminForumActions({ threadId, isPinned, isLocked }: {
 
   async function act(update: Record<string, boolean>) {
     setLoading(true)
-    await supabase.from('forum_threads').update(update).eq('id', threadId)
-    router.refresh()
+    const { error } = await supabase.from('forum_threads').update(update).eq('id', threadId)
     setLoading(false)
+    if (error) { alert(`Could not update: ${error.message}`); return }
+    router.refresh()
   }
 
   async function del() {
     if (!confirm('Delete this thread?')) return
     setLoading(true)
-    await supabase.from('forum_threads').delete().eq('id', threadId)
-    router.refresh()
+    const { error } = await supabase.from('forum_threads').delete().eq('id', threadId)
     setLoading(false)
+    if (error) { alert(`Could not delete: ${error.message}`); return }
+    router.refresh()
   }
 
   return (

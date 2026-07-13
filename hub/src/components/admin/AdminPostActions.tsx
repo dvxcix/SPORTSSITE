@@ -12,9 +12,10 @@ export function AdminPostActions({ postId }: { postId: string }) {
   async function deletePost() {
     if (!confirm('Delete this post?')) return
     setLoading(true)
-    await supabase.from('posts').delete().eq('id', postId)
-    router.refresh()
+    const { error } = await supabase.from('posts').delete().eq('id', postId)
     setLoading(false)
+    if (error) { alert(`Could not delete: ${error.message}`); return }
+    router.refresh()
   }
 
   return (
