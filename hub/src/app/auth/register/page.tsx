@@ -62,10 +62,22 @@ export default function RegisterPage() {
     // misconfiguration on Supabase's side.
     const { data, error: signUpError } = await supabase.auth.signUp({
       email, password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/onboarding` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback?next=/onboarding`,
+        // Also stashed in user metadata (readable with no session, unlike the
+        // profile upsert below) so /auth/callback can pull the real chosen
+        // values once confirmation completes, instead of falling back to a
+        // generic email-derived username/display name.
+        data: { username, display_name: displayName || username, sport_preferences: sports, account_type: accountType },
+      },
     })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }
     if (data.user) {
+      // Only succeeds here when email confirmation is off and signUp()
+      // already returned a live session (auth.uid() satisfies the users
+      // table's RLS insert check). When confirmation is required, there's no
+      // session yet, this silently fails RLS, and /auth/callback's metadata
+      // fallback (above) is what actually creates the profile.
       await supabase.from('users').upsert({
         id: data.user.id, email, username,
         display_name: displayName || username,
