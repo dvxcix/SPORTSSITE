@@ -90,7 +90,11 @@ export async function settleFinalPick(admin: any, pick: PendingPick, feed: any, 
   }
 
   const nowIso = new Date().toISOString()
-  await admin.from('picks').update({ result, graded_at: nowIso }).eq('id', pick.id)
+  const { error: updateErr } = await admin.from('picks').update({ result, graded_at: nowIso }).eq('id', pick.id)
+  // If the grade itself didn't persist, don't apply the leg result or let the
+  // caller treat this as settled/won — a cron retry on the next run will
+  // pick it back up since `result` is still 'pending'.
+  if (updateErr) return null
 
   let legPlayerName: string | null = null
   let legHeadshotUrl: string | null = null

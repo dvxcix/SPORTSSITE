@@ -187,12 +187,20 @@ export async function postBetToFeed(
   const { data: picks, error: pickErr } = await supabase.from('picks').insert(pickRows).select('id')
   if (pickErr) throw pickErr
 
+  // The post + picks rows are already live at this point — a failure here
+  // only means a watchlist item's own status badge won't flip to "posted"
+  // (it stays actionable/visible in the watchlist instead), not that the
+  // actual post silently didn't happen. Logged rather than thrown so one
+  // bad update doesn't roll back an already-successful post.
   const nowIso = new Date().toISOString()
-  await Promise.all(legs.map((l, i) =>
+  const updateResults = await Promise.all(legs.map((l, i) =>
     supabase.from('watchlist_items')
       .update({ status: 'posted', posted_pick_id: picks![i].id, updated_at: nowIso })
       .eq('id', l.id)
   ))
+  for (const { error: updateErr } of updateResults) {
+    if (updateErr) console.error('[postBetToFeed] failed to mark watchlist item as posted', updateErr)
+  }
 
   return { postId: post.id, pickIds: (picks ?? []).map((p: any) => p.id) }
 }

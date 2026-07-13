@@ -20,15 +20,18 @@ export async function POST(req: Request) {
     .single()
 
   if (existing) {
-    await supabase.from('play_reactions').delete().eq('id', existing.id)
+    const { error } = await supabase.from('play_reactions').delete().eq('id', existing.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ action: 'removed' })
   }
 
   // Remove any other emoji by this user on this play first
-  await supabase.from('play_reactions').delete()
+  const { error: clearErr } = await supabase.from('play_reactions').delete()
     .eq('game_id', game_id).eq('play_id', play_id).eq('user_id', user.id)
+  if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 })
 
-  await supabase.from('play_reactions').insert({ game_id, play_id, user_id: user.id, emoji })
+  const { error: insertErr } = await supabase.from('play_reactions').insert({ game_id, play_id, user_id: user.id, emoji })
+  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
   return NextResponse.json({ action: 'added' })
 }
 

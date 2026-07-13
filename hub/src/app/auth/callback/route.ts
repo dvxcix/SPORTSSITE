@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       // the generic email-derived fallback (which stays as the fallback for
       // OAuth providers that never set these fields).
       const meta = data.user.user_metadata ?? {}
-      await supabase.from('users').upsert({
+      const { error: upsertErr } = await supabase.from('users').upsert({
         id: data.user.id,
         email: data.user.email,
         username: meta.username || data.user.email?.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase(),
@@ -50,6 +50,15 @@ export async function GET(request: Request) {
         sport_preferences: meta.sport_preferences,
         account_type: meta.account_type || 'user',
       }, { onConflict: 'id', ignoreDuplicates: true })
+      // For an existing account this upsert is a no-op by design
+      // (ignoreDuplicates) — only a brand-new account actually depends on it
+      // creating the row. If that fails, there's no profile row at all, and
+      // every gated page (including onboarding's own finish()) would just
+      // silently match zero rows against a user stuck in limbo. Don't send
+      // them into the app in that state.
+      if (upsertErr && isNewAccount) {
+        return NextResponse.redirect(`${origin}/auth/login?error=profile_setup_failed`)
+      }
       return NextResponse.redirect(`${origin}${isNewAccount ? '/onboarding' : next}`)
     }
 

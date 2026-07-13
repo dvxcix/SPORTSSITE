@@ -20,6 +20,7 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -44,14 +45,16 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
 
   async function save() {
     setSaving(true)
+    setError('')
     const supabase = createClient()
-    await supabase.from('site_settings').upsert(
+    const { error: err } = await supabase.from('site_settings').upsert(
       Object.entries(values).map(([key, value]) => ({ key, value: String(value) })),
       { onConflict: 'key' }
     )
+    setSaving(false)
+    if (err) { setError(err.message); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
-    setSaving(false)
   }
 
   if (loading) return <div className="text-sm text-zinc-500 py-8 text-center">Loading…</div>
@@ -78,6 +81,7 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
           </div>
         ))}
       </div>
+      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
       <button onClick={save} disabled={saving}
         className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-2.5 rounded-xl transition-colors">
         {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Settings'}

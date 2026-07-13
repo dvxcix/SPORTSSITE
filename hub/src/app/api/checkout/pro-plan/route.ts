@@ -34,7 +34,8 @@ export async function POST() {
       metadata: { slipsurge_user_id: profile.id },
     })
     customerId = customer.id
-    await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
+    const { error: backfillErr } = await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
+    if (backfillErr) console.error('[checkout/pro-plan] failed to backfill stripe_customer_id', backfillErr)
   }
 
   const session = await stripe.checkout.sessions.create({

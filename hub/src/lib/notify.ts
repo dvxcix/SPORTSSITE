@@ -48,7 +48,7 @@ export async function notify(supabase: SupabaseClient, {
 }) {
   if (!userId || userId === actorId) return // never notify yourself
 
-  await supabase.from('notifications').insert({
+  const { error } = await supabase.from('notifications').insert({
     user_id: userId,
     actor_id: actorId ?? null,
     type,
@@ -57,6 +57,11 @@ export async function notify(supabase: SupabaseClient, {
     target_id: targetId ?? null,
     target_type: targetType ?? null,
   })
+  // Every caller (follows, reactions, comments, etc.) treats its own action
+  // as already-succeeded by the time it calls notify() — this is purely a
+  // side effect, so a failure here shouldn't roll any of that back. Logged
+  // so a systemic problem (e.g. a bad migration) is at least visible.
+  if (error) console.error('[notify] failed to insert notification', { type, userId, error })
 }
 
 // Fans a notification out to everyone following `actorId` — e.g. "so-and-so

@@ -106,7 +106,11 @@ export function ProfileForm({ profile }: { profile: any }) {
       const changed = JSON.stringify(next) !== JSON.stringify(profile?.verified_identities ?? {})
       setVerified(next)
       if (changed) {
-        await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
+        // Best-effort cache of the real identity data for display elsewhere
+        // (public profile page) — the identities themselves are already
+        // correct via Supabase Auth regardless of whether this persists.
+        const { error: syncErr } = await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
+        if (syncErr) setConnectedError('Verified, but your public profile may not reflect it yet — refresh to retry.')
       }
     }).catch((e: any) => { if (!cancelled) setConnectedError(e?.message || 'Could not check connected accounts.') })
     return () => { cancelled = true }
@@ -152,7 +156,8 @@ export function ProfileForm({ profile }: { profile: any }) {
     const next = { ...verified }
     delete next[provider]
     setVerified(next)
-    await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
+    const { error: syncErr } = await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
+    if (syncErr) setConnectedError('Unlinked, but your public profile may still show it — refresh to retry.')
   }
 
   const [playerQuery, setPlayerQuery] = useState('')

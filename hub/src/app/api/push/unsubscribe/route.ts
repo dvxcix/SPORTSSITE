@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   const endpoint = body?.endpoint as string | undefined
   if (!endpoint) return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 })
 
-  await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', user.id)
+  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', user.id)
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

@@ -145,8 +145,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       setNotifications((data as any) ?? [])
     }
     if (opening && unread > 0 && user) {
+      const prevUnread = unread
       setUnread(0)
-      await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+      const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+      if (error) { setUnread(prevUnread); return } // badge would under-report actual unread count otherwise
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     }
   }
@@ -162,8 +164,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }, [])
 
   async function deleteNotif(id: string) {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    await supabase.from('notifications').delete().eq('id', id).eq('user_id', user!.id)
+    const prev = notifications
+    setNotifications(p => p.filter(n => n.id !== id))
+    const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', user!.id)
+    if (error) setNotifications(prev) // restore — it's still in the DB
   }
 
   async function signOut() {

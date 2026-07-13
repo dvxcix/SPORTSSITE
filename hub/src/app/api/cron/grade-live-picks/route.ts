@@ -110,7 +110,10 @@ export async function GET(req: Request) {
       if (!isEarlyWin) continue
 
       const nowIso = new Date().toISOString()
-      await admin.from('picks').update({ result: 'win', graded_at: nowIso }).eq('id', pick.id)
+      const { error: updateErr } = await admin.from('picks').update({ result: 'win', graded_at: nowIso }).eq('id', pick.id)
+      // Grade didn't persist — don't tell the author it hit, and don't touch
+      // pick_data. Stays 'pending' so a later run (early-win or Final) retries it.
+      if (updateErr) continue
 
       // Uses the same compare-and-swap helper settleFinalPick does — two
       // legs of the same parlay grading close together (this one early via

@@ -105,17 +105,21 @@ export async function GET(request: Request) {
       // Fill in profile gaps from Whop (avatar/display name) without
       // overwriting anything the person already customized on-site —
       // username isn't touched at all here, existing handles stay put.
-      await admin.from('users').update({
+      // Best-effort: authUserId/authUserEmail already resolve to a real,
+      // working account either way, so a failure here just means the Whop
+      // link/avatar backfill didn't take this time (retried next login).
+      const { error: linkUpdateErr } = await admin.from('users').update({
         whop_user_id: whopUser.sub,
         avatar_url: byEmail.avatar_url || whopUser.picture,
         display_name: byEmail.display_name || whopUser.name || whopUser.preferred_username,
       }).eq('id', authUserId)
+      if (linkUpdateErr) console.error('[whop/callback] failed to link whop_user_id to existing account', linkUpdateErr)
     } else {
       authUserId = created.user.id
       authUserEmail = whopUser.email
       isNewAccount = true
 
-      await admin.from('users').upsert({
+      const { error: profileErr } = await admin.from('users').upsert({
         id: authUserId,
         email: whopUser.email,
         username: whopUser.preferred_username || whopUser.email.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase(),
@@ -124,6 +128,10 @@ export async function GET(request: Request) {
         account_type: 'user',
         whop_user_id: whopUser.sub,
       }, { onConflict: 'id', ignoreDuplicates: true })
+      // Unlike the existing-account branch above, this account has no
+      // profile row at all if this fails — a real auth.users row now exists
+      // with nothing to back it, so don't bridge them into a broken session.
+      if (profileErr) return loginFailed('whop_auth_failed')
     }
   }
 

@@ -25,6 +25,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   whop_no_access: "That Whop account doesn't have an active subscription for SlipSurge access. Check your subscription on Whop and try again.",
   whop_auth_failed: 'Whop sign-in failed. Please try again.',
   auth_failed: 'Sign-in failed. Please try again.',
+  profile_setup_failed: 'Signed in, but we couldn\'t finish setting up your account. Please try again — contact support if it keeps happening.',
 }
 
 function LoginForm() {

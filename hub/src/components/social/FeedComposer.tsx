@@ -153,8 +153,9 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     // Mirror into the picks table too — this is what the settlement job
     // reads from (game_pk + mlb_id + prop_key), not posts.pick_data. One row
     // per leg, so a parlay grades leg-by-leg the same way a straight pick does.
+    let picksSaved = true
     if (hasPick) {
-      await supabase.from('picks').insert(legs.map(l => ({
+      const { error: picksErr } = await supabase.from('picks').insert(legs.map(l => ({
         user_id: user.id,
         post_id: post.id,
         sport: 'MLB',
@@ -169,6 +170,11 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
         book: l.book,
         result: 'pending',
       })))
+      // The post itself is already live at this point (can't be undone
+      // without deleting it out from under the user) — but if this failed,
+      // the pick will never grade. Surface it instead of pretending it's
+      // being tracked.
+      if (picksErr) { picksSaved = false; setError('Posted, but your pick couldn’t be tracked for grading — it won’t show a result.') }
     }
 
     await notifyMentions(supabase, user.id, content, `/posts/${post.id}`, post.id, 'a post')
@@ -177,7 +183,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     // dropped a pick/parlay — the only notification triggers were
     // reactions/comments/reposts/mentions on a post already made, none of
     // which fire on the post's own creation.
-    if (hasPick) {
+    if (hasPick && picksSaved) {
       await notifyFollowers(supabase, {
         actorId: user.id,
         type: 'new_pick',

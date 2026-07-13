@@ -52,7 +52,11 @@ export async function POST(req: Request) {
       metadata: { slipsurge_user_id: profile.id },
     })
     customerId = customer.id
-    await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
+    const { error: backfillErr } = await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
+    // Checkout still proceeds fine with the customer we just created either
+    // way — a failure here just means we'll create a second Stripe customer
+    // for this user next time instead of reusing this one.
+    if (backfillErr) console.error('[checkout/creator] failed to backfill stripe_customer_id', backfillErr)
   }
 
   const session = await stripe.checkout.sessions.create({

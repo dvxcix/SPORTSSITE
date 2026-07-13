@@ -22,6 +22,7 @@ export function AIBlogWriter({ userId }: { userId: string }) {
   const [generating, setGenerating] = useState(false)
   const [draft, setDraft] = useState<{ title: string; content: string; excerpt: string } | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   async function generate() {
     if (!prompt.trim()) return
@@ -56,8 +57,9 @@ export function AIBlogWriter({ userId }: { userId: string }) {
   async function saveDraft() {
     if (!draft) return
     setSaving(true)
+    setSaveError('')
     function slug(t: string) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now() }
-    const { data } = await supabase.from('blogs').insert({
+    const { data, error } = await supabase.from('blogs').insert({
       author_id: userId,
       title: draft.title,
       slug: slug(draft.title),
@@ -68,7 +70,12 @@ export function AIBlogWriter({ userId }: { userId: string }) {
       status: 'draft',
       view_count: 0,
     }).select('slug').single()
-    router.push(`/blog/create?from=${data?.slug}`)
+    if (error || !data?.slug) {
+      setSaveError('Could not save this draft — please try again.')
+      setSaving(false)
+      return
+    }
+    router.push(`/blog/create?from=${data.slug}`)
   }
 
   return (
@@ -135,6 +142,9 @@ export function AIBlogWriter({ userId }: { userId: string }) {
               rows={16}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-200 outline-none resize-y font-mono" />
           </div>
+          {saveError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{saveError}</div>
+          )}
           <div className="flex gap-3">
             <button onClick={() => setDraft(null)}
               className="flex-1 border border-zinc-700 text-zinc-400 hover:text-white font-bold py-2.5 rounded-xl transition-colors">

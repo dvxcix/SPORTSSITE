@@ -42,16 +42,20 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
   const [clearing, setClearing] = useState(false)
 
   async function deleteOne(id: string) {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    await supabase.from('notifications').delete().eq('id', id).eq('user_id', userId)
+    const prev = notifications
+    setNotifications(p => p.filter(n => n.id !== id))
+    const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', userId)
+    if (error) setNotifications(prev) // still in the DB — restore instead of pretending it's gone
   }
 
   async function clearAll() {
     if (!confirm('Clear all notifications? This can\'t be undone.')) return
+    const prev = notifications
     setClearing(true)
     setNotifications([])
-    await supabase.from('notifications').delete().eq('user_id', userId)
+    const { error } = await supabase.from('notifications').delete().eq('user_id', userId)
     setClearing(false)
+    if (error) setNotifications(prev) // delete didn't happen — don't leave the list looking cleared
   }
 
   const groups: Record<string, NotifRow[]> = {}
