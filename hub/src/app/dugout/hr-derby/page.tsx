@@ -6,12 +6,12 @@ import { Spotlight } from '@/components/ui/spotlight'
 export const revalidate = 300
 
 // Built same-day for tonight's 2026 All-Star Home Run Derby (Citizens Bank
-// Park, Philadelphia) — every number here is a real, live MLB Stats API call
-// made when this page renders (season/career hitting stats), plus the same
-// Statcast-CSV-backed park-HR lookup already proven out in the Dugout's own
-// park-history feature (fetchParkHrCounts). No made-up numbers, no
-// bat-tracking/Squared-Up/Blast metrics included — Savant only exposes those
-// through a separate leaderboard this page doesn't pull from tonight.
+// Park, Philadelphia). There's no real pitcher in a derby (it's BP), so this
+// leans entirely on bat-tracking/quality-of-contact data rather than
+// matchup/win-loss numbers — pulled straight from mlb-party (the same
+// Statcast-derived DB The Dugout itself reads for batter_statcast_splits /
+// batter_timing_splits / batter_pitch_type_recent), not re-derived or
+// guessed. Every number is live.
 const DERBY_PLAYERS: { name: string; mlbId: number; teamId: number; teamAbbr: string }[] = [
   { name: 'Munetaka Murakami', mlbId: 808959, teamId: 145, teamAbbr: 'CWS' },
   { name: 'Bryce Harper', mlbId: 547180, teamId: 143, teamAbbr: 'PHI' },
@@ -23,34 +23,61 @@ const DERBY_PLAYERS: { name: string; mlbId: number; teamId: number; teamAbbr: st
   { name: 'Jordan Walker', mlbId: 691023, teamId: 138, teamAbbr: 'STL' },
 ]
 
-async function fetchStats(mlbId: number, stats: 'season' | 'career') {
-  const seasonParam = stats === 'season' ? `&season=${new Date().getFullYear()}` : ''
+const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
+const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
+const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
+
+async function mpGet(path: string): Promise<any[]> {
   try {
-    const res = await fetch(
-      `https://statsapi.mlb.com/api/v1/people/${mlbId}/stats?stats=${stats}&group=hitting${seasonParam}`,
-      { headers: { 'User-Agent': 'SlipSurge/1.0' }, cache: 'no-store' }
-    )
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.stats?.[0]?.splits?.[0]?.stat ?? null
-  } catch { return null }
+    const res = await fetch(`${MP_URL}${path}`, { headers: mpH, cache: 'no-store' })
+    if (!res.ok) return []
+    const d = await res.json()
+    return Array.isArray(d) ? d : []
+  } catch { return [] }
 }
+
+const STAT_COLS = 'mlb_id,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,xhr,hr_total,avg_hr_distance'
+const TIME_COLS = 'mlb_id,miss_distance,on_time_percent,n_swings'
+const RECENT_COLS = 'mlb_id,pitches,whiff_pct,hard_hit_pct,barrel_pct,home_runs,avg_exit_velo,avg_launch_angle'
 
 export default async function HrDerbyPage() {
   const currentYear = new Date().getFullYear()
+  const ids = DERBY_PLAYERS.map(p => p.mlbId)
+  const idList = ids.join(',')
 
-  const [phiCounts, ...playerStats] = await Promise.all([
+  const [phiCounts, statSplits, timingSplits, recentRows] = await Promise.all([
     fetchParkHrCounts('PHI', currentYear).catch(() => new Map()),
-    ...DERBY_PLAYERS.map(async p => {
-      const [season, career] = await Promise.all([
-        fetchStats(p.mlbId, 'season'),
-        fetchStats(p.mlbId, 'career'),
-      ])
-      return { p, season, career }
-    }),
+    mpGet(`/rest/v1/batter_statcast_splits?mlb_id=in.(${idList})&select=${STAT_COLS}`),
+    mpGet(`/rest/v1/batter_timing_splits?mlb_id=in.(${idList})&select=${TIME_COLS}`),
+    mpGet(`/rest/v1/batter_pitch_type_recent?mlb_id=in.(${idList})&win=eq.recent&select=${RECENT_COLS}`),
   ])
 
-  const players: DerbyPlayer[] = playerStats.map(({ p, season, career }) => {
+  const statByPlayer = new Map<number, any>()
+  for (const r of statSplits) statByPlayer.set(r.mlb_id, r)
+
+  const timeByPlayer = new Map<number, any>()
+  for (const r of timingSplits) timeByPlayer.set(r.mlb_id, r)
+
+  // batter_pitch_type_recent has one row PER pitch type faced in the last
+  // 14 days — collapse to one pitch-count-weighted line per batter so the
+  // table shows a single real "recent form" number, not a fragment per pitch.
+  const recentByPlayer = new Map<number, { pitches: number; whiff: number; hardHit: number; barrel: number; hrs: number; ev: number }>()
+  for (const r of recentRows) {
+    const cur = recentByPlayer.get(r.mlb_id) ?? { pitches: 0, whiff: 0, hardHit: 0, barrel: 0, hrs: 0, ev: 0 }
+    const w = r.pitches ?? 0
+    cur.pitches += w
+    cur.whiff += (r.whiff_pct ?? 0) * w
+    cur.hardHit += (r.hard_hit_pct ?? 0) * w
+    cur.barrel += (r.barrel_pct ?? 0) * w
+    cur.hrs += r.home_runs ?? 0
+    cur.ev += (r.avg_exit_velo ?? 0) * w
+    recentByPlayer.set(r.mlb_id, cur)
+  }
+
+  const players: DerbyPlayer[] = DERBY_PLAYERS.map(p => {
+    const s = statByPlayer.get(p.mlbId) ?? {}
+    const t = timeByPlayer.get(p.mlbId) ?? {}
+    const rec = recentByPlayer.get(p.mlbId)
     const phi = (phiCounts as Map<number, { total: number; season: number }>).get(p.mlbId)
     return {
       name: p.name,
@@ -58,15 +85,23 @@ export default async function HrDerbyPage() {
       teamAbbr: p.teamAbbr,
       headshotUrl: mlbHeadshot(p.mlbId),
       teamLogoUrl: mlbTeamLogo(p.teamId),
-      seasonHr: season?.homeRuns ?? 0,
-      careerHr: career?.homeRuns ?? 0,
-      avg: season?.avg ?? '.000',
-      obp: season?.obp ?? '.000',
-      slg: season?.slg ?? '.000',
-      ops: season?.ops ?? '.000',
-      games: season?.gamesPlayed ?? 0,
+      avgBatSpeed: s.avg_bat_speed ?? 0,
+      squaredUpPct: s.squared_up_per_swing ?? 0,
+      blastPct: s.blast_per_swing ?? 0,
+      exitVeloAvg: s.exit_velocity_avg ?? 0,
+      barrelPct: s.barrel_batted_rate ?? 0,
+      hardHitPct: s.hard_hit_pct ?? 0,
+      xhr: s.xhr ?? 0,
+      hrTotal: s.hr_total ?? 0,
+      avgHrDistance: s.avg_hr_distance ?? 0,
+      onTimePct: t.on_time_percent ?? 0,
+      missDistance: t.miss_distance ?? 0,
+      recentEv: rec && rec.pitches ? rec.ev / rec.pitches : 0,
+      recentHardHit: rec && rec.pitches ? rec.hardHit / rec.pitches : 0,
+      recentBarrel: rec && rec.pitches ? rec.barrel / rec.pitches : 0,
+      recentWhiff: rec && rec.pitches ? rec.whiff / rec.pitches : 0,
+      recentHrs: rec?.hrs ?? 0,
       phiCareerHr: phi?.total ?? 0,
-      phiSeasonHr: phi?.season ?? 0,
     }
   })
 
@@ -75,7 +110,7 @@ export default async function HrDerbyPage() {
       <Spotlight className="left-0 top-0" fill="#B4FF4D" />
       <div style={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)', width: 700, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,255,77,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '32px 20px 64px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1240, margin: '0 auto', padding: '32px 20px 64px' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             All-Star Week · The Dugout
@@ -83,15 +118,15 @@ export default async function HrDerbyPage() {
           <h1 style={{ fontSize: 'clamp(28px, 5vw, 46px)', fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
             🏟️ Home Run Derby Watch
           </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 10, maxWidth: 560, margin: '10px auto 0' }}>
-            Every number below is real, live data — season &amp; career power numbers, plus how each guy has actually hit at Citizens Bank Park (the derby's home tonight). Click a column to sort.
+          <p style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 10, maxWidth: 620, margin: '10px auto 0' }}>
+            No real pitcher tonight — it's all bat. Real Statcast bat-tracking (bat speed, squared-up%, blast%), quality of contact, timing, and the last 14 days of recent form for all 8. Click a column to sort.
           </p>
         </div>
 
         <HrDerbyTable players={players} />
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 24 }}>
-          Source: MLB Stats API (live) · Park history via Statcast (2015–present) · Updated on page load
+          Source: mlb-party Statcast tables (bat-tracking, timing, 14-day recent form) · MLB Stats API · Citizens Bank Park history via Statcast (2015–present) · Updated on page load
         </p>
       </div>
     </div>
