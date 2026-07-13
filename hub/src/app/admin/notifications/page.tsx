@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-const TYPES = ['follow', 'reaction', 'comment', 'mention', 'pick_result', 'subscription', 'message', 'repost']
+const TYPES = ['follow', 'reaction', 'comment', 'mention', 'pick_result', 'subscription', 'message', 'repost', 'group_invite', 'new_pick']
 
 export default async function AdminNotificationsPage({
   searchParams,

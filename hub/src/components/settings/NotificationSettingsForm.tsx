@@ -8,8 +8,11 @@ const SETTINGS = [
   { key: 'new_follower', label: 'New follower', desc: 'When someone follows you' },
   { key: 'post_reaction', label: 'Post reactions', desc: 'When someone likes your post' },
   { key: 'post_comment', label: 'Comments', desc: 'When someone comments on your post' },
+  { key: 'repost', label: 'Reposts', desc: 'When someone reposts your pick' },
   { key: 'mention', label: 'Mentions', desc: 'When someone @mentions you' },
+  { key: 'new_pick', label: 'New picks from people you follow', desc: 'When someone you follow posts a pick or parlay' },
   { key: 'pick_result', label: 'Pick results', desc: 'When a pick you shared gets graded' },
+  { key: 'group_invite', label: 'Group invites', desc: 'When someone invites you to a group' },
   { key: 'dm', label: 'Direct messages', desc: 'When you receive a DM' },
   { key: 'subscription', label: 'Subscriptions', desc: 'New subscriber / subscription alerts' },
 ]

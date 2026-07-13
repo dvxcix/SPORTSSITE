@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu } from 'lucide-react'
+import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
@@ -12,7 +12,7 @@ import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart, comment: MessageCircle, follow: UserPlus,
   mention: AtSign, pick_result: Trophy, message: MessageCircle, subscription: Zap, repost: Repeat2,
-  group_invite: Users,
+  group_invite: Users, new_pick: TrendingUp,
 }
 
 type NotifRow = {
@@ -153,6 +153,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  async function deleteNotif(id: string) {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+    await supabase.from('notifications').delete().eq('id', id).eq('user_id', user!.id)
+  }
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -322,7 +327,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       const actorName = n.actor?.display_name || n.actor?.username
                       const text = (actorName ? `${actorName} ` : '') + (n.message || n.body || 'interacted with you')
                       const inner = (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 32px 10px 14px' }}>
                           <div style={{ position: 'relative', flexShrink: 0 }}>
                             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
                               {(n.actor?.avatar_url || n.data?.avatar_url) && (
@@ -341,13 +346,27 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                           </div>
                         </div>
                       )
-                      return n.link ? (
-                        <Link key={n.id} href={n.link} onClick={() => setNotifOpen(false)} style={{ textDecoration: 'none', display: 'block' }}
-                          className="notif-dropdown-item">
-                          {inner}
-                        </Link>
-                      ) : (
-                        <div key={n.id}>{inner}</div>
+                      return (
+                        <div key={n.id} style={{ position: 'relative' }}>
+                          {n.link ? (
+                            <Link href={n.link} onClick={() => setNotifOpen(false)} style={{ textDecoration: 'none', display: 'block' }}
+                              className="notif-dropdown-item">
+                              {inner}
+                            </Link>
+                          ) : inner}
+                          <button
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); deleteNotif(n.id) }}
+                            aria-label="Dismiss notification"
+                            style={{
+                              position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%',
+                              background: 'transparent', border: 'none', color: 'var(--text-3)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--red)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
+                            <X size={11} />
+                          </button>
+                        </div>
                       )
                     })
                   )}

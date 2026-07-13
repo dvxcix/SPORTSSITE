@@ -9,6 +9,7 @@ import { PROP_META } from '@/lib/watchlist'
 import { combineOdds, calcPayout, fmtUsd } from '@/lib/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { notifyMentions } from '@/lib/mentions'
+import { notifyFollowers } from '@/lib/notify'
 import { EmojiPicker } from './EmojiPicker'
 import { sportLogoUrl } from '@/lib/sportLogos'
 
@@ -171,6 +172,21 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     }
 
     await notifyMentions(supabase, user.id, content, `/posts/${post.id}`, post.id, 'a post')
+
+    // Followers previously got no signal at all when someone they follow
+    // dropped a pick/parlay — the only notification triggers were
+    // reactions/comments/reposts/mentions on a post already made, none of
+    // which fire on the post's own creation.
+    if (hasPick) {
+      await notifyFollowers(supabase, {
+        actorId: user.id,
+        type: 'new_pick',
+        message: `posted a new ${isParlay ? 'parlay' : 'pick'}`,
+        link: `/posts/${post.id}`,
+        targetId: post.id,
+        targetType: 'post',
+      })
+    }
 
     setContent('')
     setLegs([])
