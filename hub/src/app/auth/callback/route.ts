@@ -8,6 +8,16 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
+    // Captured before the exchange so a failed *link* attempt (someone
+    // already logged in, clicking Verify on Settings > Connected Accounts)
+    // can be told apart from a failed *sign-in* attempt — a link failure
+    // (most commonly: that identity's already linked to a different
+    // SlipSurge account, or Manual linking isn't enabled in Supabase) should
+    // send an already-authenticated user back to where they came from, not
+    // boot them to the login page.
+    const { data: preExisting } = await supabase.auth.getUser()
+    const wasAlreadyLoggedIn = !!preExisting.user
+
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data.user) {
       // Upsert user record on OAuth sign-in, or on email-confirmation
@@ -28,6 +38,12 @@ export async function GET(request: Request) {
         account_type: meta.account_type || 'user',
       }, { onConflict: 'id', ignoreDuplicates: true })
       return NextResponse.redirect(`${origin}${next}`)
+    }
+
+    if (error && wasAlreadyLoggedIn) {
+      const failUrl = new URL(`${origin}${next}`)
+      failUrl.searchParams.set('link_error', error.message)
+      return NextResponse.redirect(failUrl.toString())
     }
   }
 

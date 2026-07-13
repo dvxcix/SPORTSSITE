@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -36,6 +36,18 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/feed'
   const oauthError = searchParams.get('error')
+
+  // Supabase's own OAuth errors (e.g. a provider not returning an email)
+  // land in the URL *hash* fragment, not the query string — our own
+  // ?error=auth_failed is a query param, so this is a separate read. Shows
+  // the real reason (e.g. "Error getting user email from external
+  // provider") instead of just the generic fallback message.
+  const [hashErrorDescription, setHashErrorDescription] = useState('')
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const description = hash.get('error_description')
+    if (description) setHashErrorDescription(description.replace(/\+/g, ' '))
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -179,9 +191,11 @@ function LoginForm() {
           Continue with X
         </button>
 
-        {oauthError && OAUTH_ERROR_MESSAGES[oauthError] && (
+        {(hashErrorDescription || (oauthError && OAUTH_ERROR_MESSAGES[oauthError])) && (
           <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)', marginBottom: 20 }}>
-            {OAUTH_ERROR_MESSAGES[oauthError]}
+            {hashErrorDescription?.toLowerCase().includes('email')
+              ? "That account's provider didn't share an email address with us, so we can't sign you in with it. (If you're the site owner: this usually means the app needs \"Request email from users\" turned on in that provider's developer settings.)"
+              : hashErrorDescription || OAUTH_ERROR_MESSAGES[oauthError!]}
           </div>
         )}
 

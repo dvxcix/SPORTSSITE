@@ -15,9 +15,14 @@ export type VerifiedIdentity = { handle: string; profileUrl: string }
 // Supabase normalizes some OAuth fields (full_name, avatar_url, email) but
 // not everything — provider-specific raw fields (Discord's username, X's
 // user_name) pass through identity_data under whatever key that provider's
-// own userinfo response used. Tries the field names each provider is
-// documented to send, in order, since this hasn't been checked against a
-// live linked account yet.
+// own userinfo response used.
+//
+// Confirmed against a real linked Discord identity — its identity_data was:
+//   { full_name: 'parlaypartying', name: 'parlaypartying#0',
+//     custom_claims: { global_name: 'IS IT PARTY' }, provider_id: '...', ... }
+// full_name is Discord's actual unique @username; custom_claims.global_name
+// is just a changeable display nickname (can contain spaces/emoji, isn't
+// unique) — that's why it's tried last, not first.
 export function extractIdentityHandle(provider: 'discord' | 'x', data: Record<string, any>): VerifiedIdentity | null {
   if (!data) return null
   if (provider === 'x') {
@@ -27,7 +32,8 @@ export function extractIdentityHandle(provider: 'discord' | 'x', data: Record<st
     return { handle: `@${clean}`, profileUrl: `https://x.com/${clean}` }
   }
   // discord
-  const handle = data.custom_claims?.global_name || data.full_name || data.username || data.preferred_username || data.name
+  const handle = data.full_name || data.username || data.preferred_username
+    || data.name?.replace(/#0$/, '') || data.custom_claims?.global_name
   const id = data.provider_id || data.sub || data.id
   if (!handle) return null
   return { handle, profileUrl: id ? `https://discord.com/users/${id}` : `https://discord.com` }

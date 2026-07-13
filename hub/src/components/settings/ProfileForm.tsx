@@ -70,10 +70,33 @@ export function ProfileForm({ profile }: { profile: any }) {
   // what was last saved to the users row.
   const [verified, setVerified] = useState<Record<string, VerifiedIdentity>>(profile?.verified_identities ?? {})
   const [linkingProvider, setLinkingProvider] = useState<'discord' | 'x' | null>(null)
+  // Separate from the top-of-form `error` — that one renders far above this
+  // section, so a failed link/unlink click looked like it "did nothing"
+  // when really the error was just scrolled out of view (or, before this,
+  // silently swallowed entirely since getUserIdentities()/unlinkIdentity()
+  // had no error handling at all).
+  const [connectedError, setConnectedError] = useState('')
+  // /auth/callback redirects a failed linkIdentity() attempt back here with
+  // ?link_error=... (plain URLSearchParams, not next/navigation's
+  // useSearchParams — that needs a Suspense boundary this page doesn't have,
+  // and this only needs to run once on mount anyway).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const linkError = params.get('link_error')
+    if (linkError) {
+      setConnectedError(linkError)
+      params.delete('link_error')
+      const qs = params.toString()
+      window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
-    supabase.auth.getUserIdentities().then(async ({ data }) => {
-      if (cancelled || !data) return
+    supabase.auth.getUserIdentities().then(async ({ data, error: err }) => {
+      if (cancelled) return
+      if (err) { setConnectedError(err.message); return }
+      if (!data) return
       const next: Record<string, VerifiedIdentity> = {}
       for (const identity of data.identities) {
         if (identity.provider !== 'discord' && identity.provider !== 'x') continue
@@ -85,24 +108,47 @@ export function ProfileForm({ profile }: { profile: any }) {
       if (changed) {
         await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
       }
-    })
+    }).catch((e: any) => { if (!cancelled) setConnectedError(e?.message || 'Could not check connected accounts.') })
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function linkIdentity(provider: 'discord' | 'x') {
+  async function linkIdentity(provider: 'discord' | 'x') {
     setLinkingProvider(provider)
-    supabase.auth.linkIdentity({
-      provider,
-      options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent('/settings/profile')}` },
-    }).finally(() => setLinkingProvider(null))
+    setConnectedError('')
+    try {
+      const { error: err } = await supabase.auth.linkIdentity({
+        provider,
+        options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent('/settings/profile')}` },
+      })
+      // A successful call navigates away to the provider's OAuth screen —
+      // reaching this line at all means it didn't, i.e. it failed before
+      // ever redirecting (most commonly: Manual linking isn't enabled in
+      // Supabase's Auth settings, or this identity is already linked to a
+      // different SlipSurge account).
+      if (err) { setConnectedError(err.message); setLinkingProvider(null) }
+    } catch (e: any) {
+      setConnectedError(e?.message || 'Could not start linking — please try again.')
+      setLinkingProvider(null)
+    }
   }
 
   async function unlinkIdentity(provider: 'discord' | 'x') {
-    const { data } = await supabase.auth.getUserIdentities()
-    const identity = data?.identities.find(i => i.provider === provider)
-    if (!identity) return
-    const { error: err } = await supabase.auth.unlinkIdentity(identity)
-    if (err) { setError(err.message); return }
+    setConnectedError('')
+    let identity, err
+    try {
+      const res = await supabase.auth.getUserIdentities()
+      identity = res.data?.identities.find(i => i.provider === provider)
+    } catch (e: any) {
+      setConnectedError(e?.message || 'Could not load connected accounts.')
+      return
+    }
+    if (!identity) { setConnectedError(`No linked ${provider === 'x' ? 'X' : 'Discord'} account found to unlink.`); return }
+    try {
+      ;({ error: err } = await supabase.auth.unlinkIdentity(identity))
+    } catch (e: any) {
+      err = e
+    }
+    if (err) { setConnectedError(err.message || 'Unlink failed — please try again.'); return }
     const next = { ...verified }
     delete next[provider]
     setVerified(next)
@@ -374,6 +420,9 @@ export function ProfileForm({ profile }: { profile: any }) {
       {platforms.length > 0 && (
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-2">Connected Accounts</label>
+          {connectedError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-xs text-red-400 mb-2">{connectedError}</div>
+          )}
           <div className="space-y-2">
             {platforms.map(p => {
               const provider = PROVIDER_BY_PLATFORM_KEY[p.key]
