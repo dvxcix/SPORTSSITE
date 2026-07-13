@@ -43,7 +43,13 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  const isPublicRoute = ['/', '/feed', '/channels', '/leaderboard'].some(p =>
+  // Only the marketing homepage and static legal/info pages (no real member
+  // data on any of them) are visible signed-out — /feed, /channels, and
+  // /leaderboard used to be in this list too, which meant anyone with the
+  // URL could browse real members' posts, picks, and win/loss records
+  // without an account. Homepage handles its own signed-in redirect to
+  // /feed itself (see app/page.tsx), so it stays public here.
+  const isPublicRoute = ['/', '/about', '/faq', '/terms', '/privacy', '/responsible-gambling', '/support'].some(p =>
     request.nextUrl.pathname === p
   )
 
