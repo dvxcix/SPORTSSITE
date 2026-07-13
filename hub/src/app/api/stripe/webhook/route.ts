@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notify } from '@/lib/notify'
 
 export const runtime = 'nodejs'
 
@@ -65,6 +66,19 @@ export async function POST(req: Request) {
             current_period_start: periodStart,
             current_period_end: periodEnd,
           }, { onConflict: 'stripe_subscription_id' })
+          // "Subscriptions" has had a notification toggle in Settings since
+          // this session's notifications work, but nothing ever fired one —
+          // a creator got a new paying subscriber with zero signal beyond
+          // checking their payouts page. Scoped to .created specifically
+          // (not .updated, which also fires on every renewal/status change)
+          // so a creator isn't re-notified every billing cycle.
+          if (event.type === 'customer.subscription.created') {
+            await notify(supabase, {
+              userId: sub.metadata.creator_id, actorId: sub.metadata.subscriber_id, type: 'subscription',
+              message: 'subscribed to your channel', link: '/creators/payouts',
+              targetId: sub.metadata.subscriber_id, targetType: 'user',
+            })
+          }
         }
         break
       }

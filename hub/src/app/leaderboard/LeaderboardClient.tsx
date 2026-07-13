@@ -270,7 +270,7 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Leaderboard</h1>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Top cappers on SlipSurge</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Top bettors on SlipSurge</p>
           </div>
         </div>
         <Link href="/picks" style={{
@@ -287,7 +287,7 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
         {[
           { icon: <Target size={14} />, label: 'Picks Graded', value: totalPicks > 0 ? totalPicks.toLocaleString() : '0' },
           { icon: <TrendingUp size={14} />, label: 'Avg Win Rate', value: avgWin > 0 ? `${avgWin}%` : '--' },
-          { icon: <Flame size={14} />, label: 'Active Cappers', value: String(activeCnt) },
+          { icon: <Flame size={14} />, label: 'Active Bettors', value: String(activeCnt) },
         ].map(({ icon, label, value }) => (
           <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', marginBottom: 6 }}>

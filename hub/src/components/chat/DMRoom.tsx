@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, Send } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
+import { notify } from '@/lib/notify'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
@@ -54,12 +55,26 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
     if (!text.trim() || sending) return
     setSending(true)
     const content = text.trim()
-    setText('')
-    const { data } = await supabase.from('messages')
+    const { data, error } = await supabase.from('messages')
       .insert({ sender_id: currentUserId, dm_recipient_id: partner.id, content, message_type: 'text' })
       .select('id, content, created_at, sender_id')
       .single()
-    if (data) setMessages(m => [...m, { ...data, sender: null }])
+    // Only clear the input once the message actually saved — clearing it
+    // unconditionally (the previous behavior) silently ate whatever was
+    // typed if the insert failed.
+    if (error || !data) { setSending(false); return }
+    setText('')
+    setMessages(m => [...m, { ...data, sender: null }])
+    // "Direct messages" has had a notification toggle in Settings since
+    // this session's notifications work, but nothing ever actually fired
+    // one — a DM landed with zero signal to the recipient beyond the
+    // realtime subscription updating an already-open thread.
+    const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
+    await notify(supabase, {
+      userId: partner.id, actorId: currentUserId, type: 'message',
+      message: 'sent you a message', link: me?.username ? `/messages/${me.username}` : null,
+      targetId: currentUserId, targetType: 'user',
+    })
     setSending(false)
   }
 
