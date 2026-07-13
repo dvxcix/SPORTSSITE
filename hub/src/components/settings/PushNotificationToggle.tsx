@@ -49,6 +49,10 @@ export function PushNotificationToggle() {
 
       const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
       if (!publicKey) throw new Error('Push isn\'t configured on this server yet.')
+      // VAPID public key is not sensitive (it's shipped to every browser by
+      // design) — logged here only to make a bad/missing build-time env var
+      // visible in the console instead of surfacing as an opaque browser error.
+      console.log('[push] public key from build:', publicKey, `(length ${publicKey.length})`)
 
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
@@ -64,6 +68,7 @@ export function PushNotificationToggle() {
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Could not save subscription.')
       setStatus('on')
     } catch (e: any) {
+      console.error('[push] enable failed', e)
       setError(e?.message || 'Could not enable push notifications — please try again.')
       setStatus('off')
     }
@@ -85,6 +90,7 @@ export function PushNotificationToggle() {
       }
       setStatus('off')
     } catch (e: any) {
+      console.error('[push] disable failed', e)
       setError(e?.message || 'Could not disable push notifications.')
       setStatus('on')
     }
