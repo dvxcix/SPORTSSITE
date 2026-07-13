@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Zap, CheckCircle, ArrowLeft } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Tennis', 'Golf', 'Boxing', 'CFB', 'CBB']
 
@@ -131,17 +132,22 @@ export default function CreatorApplyPage() {
             SPORTS YOU COVER <span style={{ color: 'var(--red)' }}>*</span>
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {SPORTS.map(s => (
-              <button key={s} type="button" onClick={() => toggleSport(s)} style={{
-                padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-                border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
-                background: sports.includes(s) ? 'var(--accent-dim)' : 'transparent',
-                color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
-                cursor: 'pointer', transition: 'all 130ms',
-              }}>
-                {s}
-              </button>
-            ))}
+            {SPORTS.map(s => {
+              const logo = sportLogoUrl(s)
+              return (
+                <button key={s} type="button" onClick={() => toggleSport(s)} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+                  border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
+                  background: sports.includes(s) ? 'var(--accent-dim)' : 'transparent',
+                  color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
+                  cursor: 'pointer', transition: 'all 130ms',
+                }}>
+                  {logo && <img src={logo} alt={s} style={{ width: 14, height: 14, objectFit: 'contain' }} />}
+                  {s}
+                </button>
+              )
+            })}
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { attachUserReactions } from '@/lib/queries'
 import { TrendingUp, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { PostCardClient } from '@/components/social/PostCardClient'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 export const dynamic = 'force-dynamic'
 
@@ -137,14 +138,17 @@ export default async function PicksPage({
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 20 }}>
         {SPORTS.map(s => {
           const isActive = s === activeSport
+          const logo = sportLogoUrl(s)
           return (
             <Link key={s} href={s === 'All' ? '/picks' : `/picks?sport=${s}`} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
               padding: '5px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
               background: isActive ? 'var(--accent)' : 'var(--surface)',
               color: isActive ? 'var(--accent-fg)' : 'var(--text-3)',
               border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
               whiteSpace: 'nowrap', flexShrink: 0, textDecoration: 'none',
             }}>
+              {logo && <img src={logo} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />}
               {s}
             </Link>
           )

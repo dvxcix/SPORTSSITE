@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 
@@ -73,16 +74,20 @@ export function GroupSettingsForm({ group }: { group: any }) {
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
           <div className="flex flex-wrap gap-1.5">
-            {SPORTS.map(s => (
-              <button key={s} type="button" onClick={() => setForm(f => ({ ...f, sport: s === 'General' ? '' : s }))}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
-                  (form.sport === s || (s === 'General' && !form.sport))
-                    ? 'border-green-500 bg-green-500/10 text-green-400'
-                    : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'
-                }`}>
-                {s}
-              </button>
-            ))}
+            {SPORTS.map(s => {
+              const logo = sportLogoUrl(s)
+              return (
+                <button key={s} type="button" onClick={() => setForm(f => ({ ...f, sport: s === 'General' ? '' : s }))}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                    (form.sport === s || (s === 'General' && !form.sport))
+                      ? 'border-green-500 bg-green-500/10 text-green-400'
+                      : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'
+                  }`}>
+                  {logo && <img src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
+                  {s}
+                </button>
+              )
+            })}
           </div>
         </div>
         <div>

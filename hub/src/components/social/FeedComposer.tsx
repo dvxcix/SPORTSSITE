@@ -10,6 +10,7 @@ import { combineOdds, calcPayout, fmtUsd } from '@/lib/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from './EmojiPicker'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -222,17 +223,22 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               that flow only pulls real data for MLB right now. */}
           {!showPickForm && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              {SPORTS.map(s => (
-                <button key={s} type="button" onClick={() => setSport(s)} style={{
-                  padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                  border: `1px solid ${sport === s ? 'var(--accent)' : 'var(--border-2)'}`,
-                  background: sport === s ? 'var(--accent-dim)' : 'transparent',
-                  color: sport === s ? 'var(--accent)' : 'var(--text-3)',
-                  cursor: 'pointer', transition: 'all 130ms',
-                }}>
-                  {s}
-                </button>
-              ))}
+              {SPORTS.map(s => {
+                const logo = sportLogoUrl(s)
+                return (
+                  <button key={s} type="button" onClick={() => setSport(s)} style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                    border: `1px solid ${sport === s ? 'var(--accent)' : 'var(--border-2)'}`,
+                    background: sport === s ? 'var(--accent-dim)' : 'transparent',
+                    color: sport === s ? 'var(--accent)' : 'var(--text-3)',
+                    cursor: 'pointer', transition: 'all 130ms',
+                  }}>
+                    {logo && <img src={logo} alt={s} style={{ width: 12, height: 12, objectFit: 'contain' }} />}
+                    {s}
+                  </button>
+                )
+              })}
             </div>
           )}
 

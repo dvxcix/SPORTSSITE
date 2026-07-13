@@ -10,6 +10,7 @@ import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot } from '@/lib/mlb-api'
 import { mlbTeamAbbrById } from '@/lib/mlbTeams'
+import { sportLogoUrl } from '@/lib/sportLogos'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
 
@@ -247,12 +248,17 @@ export function ProfileForm({ profile }: { profile: any }) {
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Sports</label>
         <div className="flex flex-wrap gap-2">
-          {SPORTS.map(s => (
-            <button key={s} type="button" onClick={() => toggleSport(s)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_sports.includes(s) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
-              {form.favorite_sports.includes(s) && <Check size={10} />}{s}
-            </button>
-          ))}
+          {SPORTS.map(s => {
+            const logo = sportLogoUrl(s)
+            return (
+              <button key={s} type="button" onClick={() => toggleSport(s)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_sports.includes(s) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
+                {form.favorite_sports.includes(s) && <Check size={10} />}
+                {logo && <img src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
+                {s}
+              </button>
+            )
+          })}
         </div>
       </div>
 
