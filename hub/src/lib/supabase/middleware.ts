@@ -21,6 +21,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Once registered, a service worker's script gets auto-refetched by the
+  // browser on navigations within its scope (the whole origin here) to
+  // check for updates — including from a logged-out tab. A redirect
+  // response in place of the actual JS would just silently fail that
+  // update check, but there's no reason to route it through auth at all.
+  if (request.nextUrl.pathname === '/sw.js') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NotificationSettingsForm } from '@/components/settings/NotificationSettingsForm'
+import { PushNotificationToggle } from '@/components/settings/PushNotificationToggle'
 
 export default async function NotificationSettingsPage() {
   const supabase = await createClient()
@@ -10,6 +11,7 @@ export default async function NotificationSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <h1 className="text-xl font-black text-white mb-6">Notification Settings</h1>
+      <PushNotificationToggle />
       <NotificationSettingsForm settings={profile?.notification_settings ?? {}} />
     </div>
   )
