@@ -20,6 +20,19 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data.user) {
+      // Whop's callback explicitly detects brand-new accounts and forces
+      // them through onboarding (isNewAccount) — this generic OAuth path
+      // (Discord/X/Google, and email-confirmation completing) had no
+      // equivalent, so a first-time signup landed wherever the *calling
+      // page* happened to set `next`: /onboarding from the register page's
+      // buttons, but straight to /feed from the login page's, since a new
+      // user has no way of knowing to click "register" instead of "sign
+      // in" first. Checking for an existing profile row here — instead of
+      // trusting the caller — makes every entry point behave the same way
+      // regardless of which page or provider they used.
+      const { data: existingProfile } = await supabase.from('users').select('id').eq('id', data.user.id).maybeSingle()
+      const isNewAccount = !existingProfile && !wasAlreadyLoggedIn
+
       // Upsert user record on OAuth sign-in, or on email-confirmation
       // completing for a password signup that required it. For the password
       // signup case, the register page couldn't write this row itself (no
@@ -37,7 +50,7 @@ export async function GET(request: Request) {
         sport_preferences: meta.sport_preferences,
         account_type: meta.account_type || 'user',
       }, { onConflict: 'id', ignoreDuplicates: true })
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}${isNewAccount ? '/onboarding' : next}`)
     }
 
     if (error && wasAlreadyLoggedIn) {
