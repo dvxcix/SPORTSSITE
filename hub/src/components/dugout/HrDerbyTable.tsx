@@ -77,7 +77,6 @@ function SortableSection({ title, subtitle, players, columns }: {
     <div className="ss-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
       <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
         <p style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{title}</p>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</p>
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 780 }}>
@@ -198,9 +197,6 @@ export function HrDerbyTable({ players }: { players: DerbyPlayer[] }) {
           { key: 'missDistance', label: 'Miss Distance (in)', fmt: dec1 },
         ]}
       />
-      <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-        Heatmap coloring is relative to just these 8 players, not the full league.
-      </p>
     </div>
   )
 }

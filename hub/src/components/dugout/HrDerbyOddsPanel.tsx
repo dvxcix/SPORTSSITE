@@ -1,5 +1,6 @@
 import { BookLogo } from '@/components/BookLogo'
 import type { DerbyPlayer } from './HrDerbyTable'
+import { SortablePropTable } from './SortablePropTable'
 import {
   devig, impliedProb, PLAYER_MARKETS, LEAGUE_MARKET, TOTAL_MARKETS, FT500_MARKET,
   H2H_MARKETS, PROP_LINES, EXACT_RESULT, FINALISTS, DOUBLE_CHANCE, COMBINE_MARKETS,
@@ -69,8 +70,8 @@ function PlayerMarketCard({ title, time, options, statKey, players }: {
   )
 }
 
-function PairList({ title, subtitle, pairs, players, connector = 'vs.' }: {
-  title: string; subtitle?: string
+function PairList({ title, pairs, players, connector = 'vs.' }: {
+  title: string
   pairs: { a: string; b?: string; odds: number }[]
   players: Map<string, DerbyPlayer>
   connector?: string
@@ -78,8 +79,7 @@ function PairList({ title, subtitle, pairs, players, connector = 'vs.' }: {
   const sorted = [...pairs].map(p => ({ ...p, prob: impliedProb(p.odds) })).sort((a, b) => b.prob - a.prob)
   return (
     <div className="ss-card" style={{ padding: 14, marginBottom: 12 }}>
-      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{title}</p>
-      {subtitle && <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>{subtitle}</p>}
+      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{title}</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 4, marginTop: 8, maxHeight: 360, overflowY: 'auto' }}>
         {sorted.map((pr, i) => (
           <div key={`${pr.a}-${pr.b}-${i}`} style={{
@@ -104,13 +104,10 @@ export function HrDerbyOddsPanel({ players }: { players: DerbyPlayer[] }) {
 
   return (
     <div style={{ marginTop: 32 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <BookLogo vendor="fanduel" size={22} />
         <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-1)' }}>FanDuel Odds — Tonight's Props</h2>
       </div>
-      <p style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 16, maxWidth: 700 }}>
-        Every market posted for tonight, with the vig stripped out (devigged implied probability) so you can see the book's real lean — highlighted row is the favorite. Where we track the exact stat a market is asking about, your real season number is shown right under your name.
-      </p>
 
       {PLAYER_MARKETS.map(m => (
         <PlayerMarketCard key={m.title} title={m.title} time={m.time} options={m.options} statKey={m.statKey} players={byName} />
@@ -146,46 +143,21 @@ export function HrDerbyOddsPanel({ players }: { players: DerbyPlayer[] }) {
       </div>
 
       <div className="ss-card" style={{ padding: 14, marginBottom: 12 }}>
-        <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>📊 Player Prop Lines</p>
-        <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>Your real season number shown next to the line, so you can eyeball whether it's set high or low.</p>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase' }}>Player</th>
-                <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase' }}>Prop</th>
-                <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase' }}>Line</th>
-                <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase' }}>Over</th>
-                <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase' }}>Under</th>
-                <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase' }}>Your Number</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PROP_LINES.map((pl, i) => {
-                const p = byName.get(pl.player)
-                let real: string | number = '—'
-                if (p) {
-                  if (pl.label.includes('Longest')) real = `${p.avgHrDistance.toFixed(0)} ft avg`
-                  else if (pl.label.includes('Exit Velocity')) real = `${p.exitVeloAvg.toFixed(1)} mph avg`
-                  else if (pl.label.includes('Total Home Runs')) real = `${p.recentHrs} HR / 14d`
-                }
-                return (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '7px 10px' }}><MiniPlayer name={pl.player} players={byName} /></td>
-                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-2)' }}>{pl.label}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12, fontWeight: 700 }}>{pl.line}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12 }}>{fmtOdds(pl.overOdds)}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12 }}>{fmtOdds(pl.underOdds)}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }}>{real}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>📊 Player Prop Lines</p>
+        <SortablePropTable rows={PROP_LINES.map(pl => {
+          const p = byName.get(pl.player)
+          let real: number | null = null
+          let realLabel = '—'
+          if (p) {
+            if (pl.label.includes('Longest')) { real = p.avgHrDistance; realLabel = `${p.avgHrDistance.toFixed(0)} ft avg` }
+            else if (pl.label.includes('Exit Velocity')) { real = p.exitVeloAvg; realLabel = `${p.exitVeloAvg.toFixed(1)} mph avg` }
+            else if (pl.label.includes('Total Home Runs')) { real = p.recentHrs; realLabel = `${p.recentHrs} HR / 14d` }
+          }
+          return { ...pl, real, realLabel }
+        })} />
       </div>
 
-      <PairList title="🥇 Exact Result (Head-to-Head Final)" subtitle="Sorted by implied probability, favorite highlighted" pairs={EXACT_RESULT.map(e => ({ a: e.a, b: e.b, odds: e.odds }))} players={byName} connector="over" />
+      <PairList title="🥇 Exact Result (Head-to-Head Final)" pairs={EXACT_RESULT.map(e => ({ a: e.a, b: e.b, odds: e.odds }))} players={byName} connector="over" />
       <PairList title="🎯 Name the Finalists" pairs={FINALISTS.map(f => ({ a: f.a, b: f.b, odds: f.odds }))} players={byName} connector="vs." />
       <PairList title="🔀 Double Chance (Either Advances)" pairs={DOUBLE_CHANCE.map(d => ({ a: d.a, b: d.b, odds: d.odds }))} players={byName} connector="or" />
 
@@ -198,10 +170,6 @@ export function HrDerbyOddsPanel({ players }: { players: DerbyPlayer[] }) {
           connector="&"
         />
       ))}
-
-      <p style={{ textAlign: 'center', fontSize: 10.5, color: 'var(--text-3)', marginTop: 8 }}>
-        Odds via FanDuel, posted for tonight's derby. Probabilities are devigged (normalized) within each market — not a guarantee, just the vig-free read of the book's own line.
-      </p>
     </div>
   )
 }

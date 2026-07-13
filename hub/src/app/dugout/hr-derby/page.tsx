@@ -119,18 +119,11 @@ export default async function HrDerbyPage() {
           <h1 style={{ fontSize: 'clamp(28px, 5vw, 46px)', fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
             🏟️ Home Run Derby Watch
           </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 10, maxWidth: 620, margin: '10px auto 0' }}>
-            No real pitcher tonight — it's all bat. Real Statcast bat-tracking (bat speed, squared-up%, blast%), quality of contact, timing, and the last 14 days of recent form for all 8. Click a column to sort.
-          </p>
         </div>
 
         <HrDerbyTable players={players} />
 
         <HrDerbyOddsPanel players={players} />
-
-        <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 24 }}>
-          Source: mlb-party Statcast tables (bat-tracking, timing, 14-day recent form) · MLB Stats API · Citizens Bank Park history via Statcast (2015–present) · Updated on page load
-        </p>
       </div>
     </div>
   )
