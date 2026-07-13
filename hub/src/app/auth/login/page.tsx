@@ -32,6 +32,12 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPhone, setShowPhone] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [phoneCode, setPhoneCode] = useState('')
+  const [phoneStep, setPhoneStep] = useState<'number' | 'code'>('number')
+  const [phoneError, setPhoneError] = useState('')
+  const [phoneLoading, setPhoneLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/feed'
@@ -48,16 +54,52 @@ function LoginForm() {
     router.refresh()
   }
 
-  async function handleGoogle() {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback?next=${next}` },
-    })
+  // Discord/X/Apple all use Supabase's standard OAuth flow, same as Google —
+  // no custom callback route needed (unlike Whop, which has no native
+  // Supabase provider). Each just needs enabling in the Supabase dashboard
+  // (Authentication > Providers) with that platform's own app credentials.
+  function oauthHandler(provider: 'google' | 'discord' | 'twitter' | 'apple') {
+    return async () => {
+      const supabase = createClient()
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${location.origin}/auth/callback?next=${next}` },
+      })
+    }
   }
+  const handleGoogle = oauthHandler('google')
+  const handleDiscord = oauthHandler('discord')
+  const handleX = oauthHandler('twitter')
+  const handleApple = oauthHandler('apple')
 
   function handleWhop() {
     location.href = `/auth/whop/login?next=${encodeURIComponent(next)}`
+  }
+
+  // Phone sign-in has no redirect step — verifyOtp() turns the SMS code
+  // straight into a session in the browser, same mechanism email/password
+  // login uses. Requires an SMS provider (Twilio etc.) configured in
+  // Supabase's Auth settings; until then this 400s with a clear error.
+  async function handleSendCode(e: React.FormEvent) {
+    e.preventDefault()
+    setPhoneLoading(true)
+    setPhoneError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOtp({ phone })
+    setPhoneLoading(false)
+    if (error) { setPhoneError(error.message); return }
+    setPhoneStep('code')
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    setPhoneLoading(true)
+    setPhoneError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.verifyOtp({ phone, token: phoneCode, type: 'sms' })
+    if (error) { setPhoneError(error.message); setPhoneLoading(false); return }
+    router.push(next)
+    router.refresh()
   }
 
   return (
@@ -157,6 +199,89 @@ function LoginForm() {
           <img src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
           Continue with Whop
         </button>
+
+        {/* Discord — brand blurple */}
+        <button onClick={handleDiscord} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          padding: '11px 20px', borderRadius: 10,
+          background: '#5865F2', border: '1px solid rgba(255,255,255,0.12)',
+          fontSize: 14, fontWeight: 700, color: '#fff',
+          cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#6570F5')}
+        onMouseLeave={e => (e.currentTarget.style.background = '#5865F2')}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 0 0-5.48 0 12.6 12.6 0 0 0-.62-1.26.08.08 0 0 0-.08-.04c-1.7.29-3.36.8-4.89 1.52a.07.07 0 0 0-.03.03C.53 8.7-.32 12.9.1 17.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1 0-.13c.13-.09.25-.19.37-.28a.07.07 0 0 1 .08-.01c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08.01c.12.1.24.19.37.29a.08.08 0 0 1 0 .13c-.6.35-1.22.65-1.87.9a.08.08 0 0 0-.04.11c.36.7.78 1.37 1.23 2a.08.08 0 0 0 .08.03 19.8 19.8 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-4.83-.83-9-3.5-12.66a.06.06 0 0 0-.03-.03ZM8.02 14.5c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42Z"/></svg>
+          Continue with Discord
+        </button>
+
+        {/* X — matches its own black/white brand treatment regardless of app theme */}
+        <button onClick={handleX} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          padding: '11px 20px', borderRadius: 10,
+          background: '#000', border: '1px solid rgba(255,255,255,0.15)',
+          fontSize: 14, fontWeight: 700, color: '#fff',
+          cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#1a1a1a')}
+        onMouseLeave={e => (e.currentTarget.style.background = '#000')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.24 2H21.5l-7.3 8.34L22.8 22h-6.75l-5.28-6.9L4.7 22H1.44l7.8-8.92L1 2h6.92l4.78 6.32L18.24 2Zm-1.18 18h1.8L7.02 3.9H5.08l12 16.1Z"/></svg>
+          Continue with X
+        </button>
+
+        {/* Apple — always black-pill/white-text per Apple's Sign in with Apple guidelines */}
+        <button onClick={handleApple} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          padding: '11px 20px', borderRadius: 10,
+          background: '#000', border: '1px solid rgba(255,255,255,0.15)',
+          fontSize: 14, fontWeight: 700, color: '#fff',
+          cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#1a1a1a')}
+        onMouseLeave={e => (e.currentTarget.style.background = '#000')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M16.36 1c.12 1.02-.28 2.02-.9 2.76-.64.76-1.68 1.35-2.7 1.27-.14-1 .34-2.04.94-2.7C14.36 1.53 15.4 1.03 16.36 1Zm3.36 16.98c-.35.8-.77 1.55-1.28 2.24-.72.98-1.63 2.2-2.85 2.21-1.08.02-1.36-.7-2.83-.7-1.47 0-1.8.68-2.83.72-1.2.04-2.14-1.08-2.86-2.05-1.55-2.12-2.75-6-1.15-8.62.8-1.32 2.22-2.15 3.76-2.17 1.16-.02 2.25.79 2.96.79.7 0 2.03-.98 3.42-.83.58.02 2.22.24 3.28 1.78-.08.05-1.96 1.15-1.94 3.43.02 2.72 2.37 3.63 2.4 3.64-.02.06-.38 1.3-1.28 2.56Z"/></svg>
+          Continue with Apple
+        </button>
+
+        {/* Phone — inline toggle instead of a redirect, since it's a two-step
+            code exchange rather than an OAuth handoff */}
+        {!showPhone ? (
+          <button type="button" onClick={() => setShowPhone(true)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '11px 20px', borderRadius: 10,
+            background: 'var(--surface-2)', border: '1px solid var(--border-2)',
+            fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
+            cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
+          }}>
+            📱 Continue with phone
+          </button>
+        ) : (
+          <div style={{ padding: 14, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-2)', marginBottom: 20 }}>
+            {phoneStep === 'number' ? (
+              <form onSubmit={handleSendCode} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input type="tel" placeholder="+1 555 555 0100" value={phone} onChange={e => setPhone(e.target.value)} required className="ss-input" />
+                {phoneError && <div style={{ fontSize: 12, color: 'var(--red)' }}>{phoneError}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={() => setShowPhone(false)} style={{ padding: '9px 16px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={phoneLoading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', fontSize: 13, fontWeight: 800, cursor: phoneLoading ? 'not-allowed' : 'pointer', opacity: phoneLoading ? 0.6 : 1 }}>
+                    {phoneLoading ? 'Sending…' : 'Send code'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyCode} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Code sent to {phone}</p>
+                <input type="text" inputMode="numeric" placeholder="123456" value={phoneCode} onChange={e => setPhoneCode(e.target.value)} required className="ss-input" />
+                {phoneError && <div style={{ fontSize: 12, color: 'var(--red)' }}>{phoneError}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={() => setPhoneStep('number')} style={{ padding: '9px 16px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Back</button>
+                  <button type="submit" disabled={phoneLoading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', fontSize: 13, fontWeight: 800, cursor: phoneLoading ? 'not-allowed' : 'pointer', opacity: phoneLoading ? 0.6 : 1 }}>
+                    {phoneLoading ? 'Verifying…' : 'Verify & sign in'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
 
         {oauthError && OAUTH_ERROR_MESSAGES[oauthError] && (
           <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)', marginBottom: 20 }}>

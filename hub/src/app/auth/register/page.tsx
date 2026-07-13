@@ -38,6 +38,25 @@ export default function RegisterPage() {
   const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
   const router = useRouter()
 
+  // Same providers/handling as the login page — OAuth signup and sign-in are
+  // the same Supabase call, so these buttons work for brand-new accounts too.
+  function oauthHandler(provider: 'google' | 'discord' | 'twitter' | 'apple') {
+    return async () => {
+      const supabase = createClient()
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${location.origin}/auth/callback?next=/onboarding` },
+      })
+    }
+  }
+  const handleGoogle = oauthHandler('google')
+  const handleDiscord = oauthHandler('discord')
+  const handleX = oauthHandler('twitter')
+  const handleApple = oauthHandler('apple')
+  function handleWhop() {
+    location.href = `/auth/whop/login?next=${encodeURIComponent('/onboarding')}`
+  }
+
   useEffect(() => {
     let cancelled = false
     createClient().from('site_settings').select('value').eq('key', 'allow_registration').maybeSingle()
@@ -186,6 +205,72 @@ export default function RegisterPage() {
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28 }}>
           {step === 'account' ? 'Join the #1 sports social hub' : 'Tell us about yourself'}
         </p>
+
+        {step === 'account' && (
+          <>
+            <button type="button" onClick={handleGoogle} style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '11px 20px', borderRadius: 10,
+              background: 'var(--surface-2)', border: '1px solid var(--border-2)',
+              fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
+              cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </button>
+            <button type="button" onClick={handleWhop} style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '11px 20px', borderRadius: 10,
+              background: 'linear-gradient(135deg, #FF6243, #E5432A)', border: '1px solid rgba(255,255,255,0.12)',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+              boxShadow: '0 4px 14px rgba(229,67,42,0.35)',
+            }}>
+              <img src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
+              Continue with Whop
+            </button>
+            <button type="button" onClick={handleDiscord} style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '11px 20px', borderRadius: 10,
+              background: '#5865F2', border: '1px solid rgba(255,255,255,0.12)',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 0 0-5.48 0 12.6 12.6 0 0 0-.62-1.26.08.08 0 0 0-.08-.04c-1.7.29-3.36.8-4.89 1.52a.07.07 0 0 0-.03.03C.53 8.7-.32 12.9.1 17.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1 0-.13c.13-.09.25-.19.37-.28a.07.07 0 0 1 .08-.01c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08.01c.12.1.24.19.37.29a.08.08 0 0 1 0 .13c-.6.35-1.22.65-1.87.9a.08.08 0 0 0-.04.11c.36.7.78 1.37 1.23 2a.08.08 0 0 0 .08.03 19.8 19.8 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-4.83-.83-9-3.5-12.66a.06.06 0 0 0-.03-.03ZM8.02 14.5c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42Z"/></svg>
+              Continue with Discord
+            </button>
+            <button type="button" onClick={handleX} style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '11px 20px', borderRadius: 10,
+              background: '#000', border: '1px solid rgba(255,255,255,0.15)',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.24 2H21.5l-7.3 8.34L22.8 22h-6.75l-5.28-6.9L4.7 22H1.44l7.8-8.92L1 2h6.92l4.78 6.32L18.24 2Zm-1.18 18h1.8L7.02 3.9H5.08l12 16.1Z"/></svg>
+              Continue with X
+            </button>
+            <button type="button" onClick={handleApple} style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '11px 20px', borderRadius: 10,
+              background: '#000', border: '1px solid rgba(255,255,255,0.15)',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M16.36 1c.12 1.02-.28 2.02-.9 2.76-.64.76-1.68 1.35-2.7 1.27-.14-1 .34-2.04.94-2.7C14.36 1.53 15.4 1.03 16.36 1Zm3.36 16.98c-.35.8-.77 1.55-1.28 2.24-.72.98-1.63 2.2-2.85 2.21-1.08.02-1.36-.7-2.83-.7-1.47 0-1.8.68-2.83.72-1.2.04-2.14-1.08-2.86-2.05-1.55-2.12-2.75-6-1.15-8.62.8-1.32 2.22-2.15 3.76-2.17 1.16-.02 2.25.79 2.96.79.7 0 2.03-.98 3.42-.83.58.02 2.22.24 3.28 1.78-.08.05-1.96 1.15-1.94 3.43.02 2.72 2.37 3.63 2.4 3.64-.02.06-.38 1.3-1.28 2.56Z"/></svg>
+              Continue with Apple
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {step === 'account' ? (
