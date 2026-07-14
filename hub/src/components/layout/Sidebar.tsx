@@ -29,7 +29,6 @@ const nav = [
   { section: 'MLB', logo: MLB_LOGO_URL },
   { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
   { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
-  { href: '/dugout/hr-derby', icon: Trophy,    label: 'HR Derby Watch', badge: 'TONIGHT' },
   { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
   null,
