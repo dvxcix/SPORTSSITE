@@ -5,11 +5,12 @@
 // book's own true lean with the vig stripped out, not the raw juiced number.
 
 export type OddsOption = { player: string; odds: number }
+export type StatKey = 'exitVelo' | 'longestHr' | 'mostHr' | 'recentHr' | 'blast'
 export type Market = {
   title: string
   time?: string
   options: OddsOption[]
-  statKey?: 'exitVelo' | 'longestHr' | 'mostHr' | 'recentHr'
+  statKey?: StatKey
 }
 export type PairMarket = { title: string; time?: string; pairs: { a: string; b?: string; odds: number }[] }
 export type PropLine = { player: string; label: string; line: number; overOdds: number; underOdds: number }
@@ -50,60 +51,60 @@ export const PLAYER_MARKETS: Market[] = [
     { player: 'Jordan Walker', odds: 500 }, { player: 'Bryce Harper', odds: 700 },
     { player: 'Ben Rice', odds: 700 }, { player: 'Willson Contreras', odds: 800 },
   ]},
-  { title: 'Player to Hit 10+ Home Runs in the First Round', time: '8:00pm ET', options: [
+  { title: 'Player to Hit 10+ Home Runs in the First Round', time: '8:00pm ET', statKey: 'mostHr', options: [
     { player: 'Kyle Schwarber', odds: -180 }, { player: 'Junior Caminero', odds: -162 },
     { player: 'Munetaka Murakami', odds: -106 }, { player: 'Jac Caglianone', odds: 106 },
     { player: 'Jordan Walker', odds: 104 }, { player: 'Ben Rice', odds: 148 },
     { player: 'Bryce Harper', odds: 140 }, { player: 'Willson Contreras', odds: 162 },
   ]},
-  { title: 'Player to Hit 12+ Home Runs in the First Round', time: '8:00pm ET', options: [
+  { title: 'Player to Hit 12+ Home Runs in the First Round', time: '8:00pm ET', statKey: 'mostHr', options: [
     { player: 'Junior Caminero', odds: 194 }, { player: 'Jordan Walker', odds: 300 },
     { player: 'Bryce Harper', odds: 390 }, { player: 'Ben Rice', odds: 410 },
     { player: 'Willson Contreras', odds: 450 }, { player: 'Munetaka Murakami', odds: 280 },
     { player: 'Kyle Schwarber', odds: 174 }, { player: 'Jac Caglianone', odds: 300 },
   ]},
-  { title: 'Player to Hit 15+ Home Runs in the First Round', time: '8:00pm ET', options: [
+  { title: 'Player to Hit 15+ Home Runs in the First Round', time: '8:00pm ET', statKey: 'mostHr', options: [
     { player: 'Kyle Schwarber', odds: 750 }, { player: 'Junior Caminero', odds: 800 },
     { player: 'Munetaka Murakami', odds: 1100 }, { player: 'Jac Caglianone', odds: 1200 },
     { player: 'Jordan Walker', odds: 1200 }, { player: 'Bryce Harper', odds: 1400 },
     { player: 'Ben Rice', odds: 1500 }, { player: 'Willson Contreras', odds: 1700 },
   ]},
-  { title: 'Player to Hit 3+ Lasers (110+ MPH) in the First Round', time: '8:00pm ET', options: [
+  { title: 'Player to Hit 3+ Lasers (110+ MPH) in the First Round', time: '8:00pm ET', statKey: 'exitVelo', options: [
     { player: 'Junior Caminero', odds: -132 }, { player: 'Kyle Schwarber', odds: -108 },
     { player: 'Munetaka Murakami', odds: 110 }, { player: 'Jac Caglianone', odds: 134 },
     { player: 'Jordan Walker', odds: 144 }, { player: 'Willson Contreras', odds: 230 },
     { player: 'Bryce Harper', odds: 270 }, { player: 'Ben Rice', odds: 280 },
   ]},
-  { title: 'Player to Hit 5+ Lasers (110+ MPH) in the First Round', time: '8:00pm ET', options: [
+  { title: 'Player to Hit 5+ Lasers (110+ MPH) in the First Round', time: '8:00pm ET', statKey: 'exitVelo', options: [
     { player: 'Junior Caminero', odds: 400 }, { player: 'Kyle Schwarber', odds: 490 },
     { player: 'Munetaka Murakami', odds: 580 }, { player: 'Jac Caglianone', odds: 680 },
     { player: 'Jordan Walker', odds: 750 }, { player: 'Willson Contreras', odds: 1200 },
     { player: 'Bryce Harper', odds: 1400 }, { player: 'Ben Rice', odds: 1400 },
   ]},
-  { title: 'Round 1 First Swing to be a Home Run', time: '8:00pm ET', options: [
+  { title: 'Round 1 First Swing to be a Home Run', time: '8:00pm ET', statKey: 'blast', options: [
     { player: 'Junior Caminero', odds: 182 }, { player: 'Jordan Walker', odds: 220 },
     { player: 'Kyle Schwarber', odds: 162 }, { player: 'Jac Caglianone', odds: 198 },
     { player: 'Bryce Harper', odds: 220 }, { player: 'Willson Contreras', odds: 205 },
     { player: 'Ben Rice', odds: 220 }, { player: 'Munetaka Murakami', odds: 182 },
   ]},
-  { title: 'Round 1 First Swing to be a Laser (110MPH+)', time: '8:00pm ET', options: [
+  { title: 'Round 1 First Swing to be a Laser (110MPH+)', time: '8:00pm ET', statKey: 'exitVelo', options: [
     { player: 'Junior Caminero', odds: 500 }, { player: 'Munetaka Murakami', odds: 600 },
     { player: 'Kyle Schwarber', odds: 700 }, { player: 'Jac Caglianone', odds: 900 },
     { player: 'Jordan Walker', odds: 900 }, { player: 'Willson Contreras', odds: 1100 },
   ]},
-  { title: 'To Make Semifinal', time: '8:00pm ET', options: [
+  { title: 'To Make Semifinal', time: '8:00pm ET', statKey: 'mostHr', options: [
     { player: 'Kyle Schwarber', odds: -210 }, { player: 'Junior Caminero', odds: -186 },
     { player: 'Munetaka Murakami', odds: -125 }, { player: 'Jordan Walker', odds: -113 },
     { player: 'Jac Caglianone', odds: -108 }, { player: 'Ben Rice', odds: 128 },
     { player: 'Bryce Harper', odds: 120 }, { player: 'Willson Contreras', odds: 140 },
   ]},
-  { title: 'To Make the Finals', time: '8:00pm ET', options: [
+  { title: 'To Make the Finals', time: '8:00pm ET', statKey: 'mostHr', options: [
     { player: 'Kyle Schwarber', odds: 150 }, { player: 'Junior Caminero', odds: 168 },
     { player: 'Munetaka Murakami', odds: 250 }, { player: 'Jordan Walker', odds: 285 },
     { player: 'Jac Caglianone', odds: 285 }, { player: 'Bryce Harper', odds: 390 },
     { player: 'Ben Rice', odds: 400 }, { player: 'Willson Contreras', odds: 450 },
   ]},
-  { title: 'Player to Win the HR Derby and All-Star Game MVP', time: '8:00pm ET', options: [
+  { title: 'Player to Win the HR Derby and All-Star Game MVP', time: '8:00pm ET', statKey: 'mostHr', options: [
     { player: 'Kyle Schwarber', odds: 4500 }, { player: 'Junior Caminero', odds: 8000 },
     { player: 'Bryce Harper', odds: 12500 }, { player: 'Munetaka Murakami', odds: 12500 },
     { player: 'Jordan Walker', odds: 15000 }, { player: 'Ben Rice', odds: 20000 },

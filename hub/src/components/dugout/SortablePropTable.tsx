@@ -8,7 +8,7 @@ import type { PropLine } from '@/lib/hrDerbyOdds'
 function fmtOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 
 type SortKey = 'player' | 'label' | 'line' | 'overOdds' | 'underOdds' | 'real'
-type Row = PropLine & { real: number | null; realLabel: string }
+type Row = PropLine & { real: number | null; realLabel: string; flagged?: boolean }
 
 export function SortablePropTable({ rows }: { rows: Row[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('player')
@@ -74,7 +74,7 @@ export function SortablePropTable({ rows }: { rows: Row[] }) {
         <tbody>
           {sorted.map((pl, i) => (
             <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-              <td style={{ padding: '7px 10px', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{pl.player}</td>
+              <td style={{ padding: '7px 10px', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{pl.player} {pl.flagged && '❓'}</td>
               <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-2)' }}>{pl.label}</td>
               <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12, fontWeight: 700 }}>{pl.line}</td>
               <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12 }}>{fmtOdds(pl.overOdds)}</td>

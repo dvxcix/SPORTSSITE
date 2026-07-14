@@ -16,7 +16,20 @@ function statForMarket(p: DerbyPlayer | undefined, statKey?: string): string | n
     case 'longestHr': return `${p.avgHrDistance.toFixed(0)} ft avg HR dist`
     case 'mostHr': return `${p.hrTotal} HR (${p.xhr.toFixed(1)} xHR)`
     case 'recentHr': return `${p.recentHrs} HR last 14d`
+    case 'blast': return `${p.blastPct.toFixed(1)}% Blast`
     default: return null
+  }
+}
+
+function rawStatValue(p: DerbyPlayer | undefined, statKey?: string): number {
+  if (!p) return 0
+  switch (statKey) {
+    case 'exitVelo': return p.exitVeloAvg
+    case 'longestHr': return p.avgHrDistance
+    case 'mostHr': return p.hrTotal
+    case 'recentHr': return p.recentHrs
+    case 'blast': return p.blastPct
+    default: return 0
   }
 }
 
@@ -35,6 +48,21 @@ function PlayerMarketCard({ title, time, options, statKey, players }: {
   players: Map<string, DerbyPlayer>
 }) {
   const ranked = devig(options)
+
+  // Flag the single biggest disagreement between the book's own implied
+  // favorite and what our real tracked data says — not every row, just
+  // whichever player actually leads the relevant stat if that's not already
+  // who the market favors.
+  let dataLeaderName: string | null = null
+  if (statKey) {
+    let best = -Infinity
+    for (const o of options) {
+      const v = rawStatValue(players.get(o.player), statKey)
+      if (v > best) { best = v; dataLeaderName = o.player }
+    }
+    if (best <= 0 || dataLeaderName === ranked[0]?.player) dataLeaderName = null
+  }
+
   return (
     <div className="ss-card" style={{ padding: 14, marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
@@ -45,6 +73,7 @@ function PlayerMarketCard({ title, time, options, statKey, players }: {
         {ranked.map((o, i) => {
           const p = players.get(o.player)
           const stat = statForMarket(p, statKey)
+          const flagged = o.player === dataLeaderName
           return (
             <div key={o.player} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
@@ -54,7 +83,9 @@ function PlayerMarketCard({ title, time, options, statKey, players }: {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 {p && <img src={p.headshotUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-2)', flexShrink: 0 }} />}
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 12.5, fontWeight: 800, color: i === 0 ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>{o.player}</p>
+                  <p style={{ fontSize: 12.5, fontWeight: 800, color: i === 0 ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                    {o.player} {flagged && '❓'}
+                  </p>
                   {stat && <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{stat}</p>}
                 </div>
               </div>
@@ -153,7 +184,11 @@ export function HrDerbyOddsPanel({ players }: { players: DerbyPlayer[] }) {
             else if (pl.label.includes('Exit Velocity')) { real = p.exitVeloAvg; realLabel = `${p.exitVeloAvg.toFixed(1)} mph avg` }
             else if (pl.label.includes('Total Home Runs')) { real = p.recentHrs; realLabel = `${p.recentHrs} HR / 14d` }
           }
-          return { ...pl, real, realLabel }
+          // Flag when our real number lands on the opposite side of the line
+          // from whichever side the book actually favors (lower odds = favored).
+          const overFavored = impliedProb(pl.overOdds) > impliedProb(pl.underOdds)
+          const flagged = real !== null && real > 0 && (real > pl.line) !== overFavored
+          return { ...pl, real, realLabel, flagged }
         })} />
       </div>
 
