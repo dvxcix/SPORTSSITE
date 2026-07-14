@@ -9,7 +9,9 @@ import { MLB_TEAM_IDS } from '@/lib/mlbTeamColors'
 import { BookLogo } from '@/components/BookLogo'
 import {
   groupByBook, marketsForPlayer, groupBySection, searchMarkets, devig,
-  computeCrossBookFlags, crossBookFlagsForPlayer, type Market, type Sportsbook,
+  computeCrossBookFlags, crossBookFlagsForPlayer,
+  computeMarketVsDataFlags, dataMismatchFlagsForPlayer,
+  type Market, type MarketOption, type Sportsbook,
 } from '@/lib/allStarMarkets'
 
 const BOOK_LABEL: Record<Sportsbook, string> = { fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars' }
@@ -199,12 +201,13 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
 
 function LeagueBatterTable({
-  league, teamName, rows, pool, sort, onSort, expanded, onToggleExpand, markets, flags,
+  league, teamName, rows, pool, sort, onSort, expanded, onToggleExpand, markets, flags, dataFlags,
 }: {
   league: 'AL' | 'NL'; teamName: string; rows: BatterRow[]; pool: BatterRow[]
   sort: SortState; onSort: (col: string) => void
   expanded: Set<number>; onToggleExpand: (id: number) => void; markets: Market[]
   flags: ReturnType<typeof computeCrossBookFlags>
+  dataFlags: ReturnType<typeof computeMarketVsDataFlags>
 }) {
   const g = (f: string) => pool.map((r: any) => r[f])
   return (
@@ -232,6 +235,7 @@ function LeagueBatterTable({
               const handColor = HAND_COLOR[r.bats] ?? 'var(--text-3)'
               const playerMarkets = marketsForPlayer(markets, r.mlb_id)
               const playerFlags = crossBookFlagsForPlayer(flags, r.mlb_id)
+              const playerDataFlags = dataMismatchFlagsForPlayer(dataFlags, r.mlb_id)
               const isOpen = expanded.has(r.mlb_id)
               return (
                 <>
@@ -243,6 +247,7 @@ function LeagueBatterTable({
                         <span style={{ fontSize: 9, fontWeight: 800, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.bats}</span>
                         <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{r.position}</span>
                         {playerFlags.length > 0 && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fbbf24', flexShrink: 0 }} />}
+                        {playerDataFlags.length > 0 && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171', flexShrink: 0 }} />}
                         {playerMarkets.length > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>{playerMarkets.length} mkts {isOpen ? '▲' : '▼'}</span>}
                       </button>
                     </td>
@@ -330,7 +335,45 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
   )
 }
 
-function BookMarketsPanel({ book, markets }: { book: Sportsbook; markets: Market[] }) {
+// Every named selection gets a real headshot + team logo (via PlayerAvatar,
+// looked up by the option's mlbId against tonight's roster) instead of bare
+// text — team/total/over-under selections without an mlbId just show text.
+function MarketOptionsList({ options, rosterById }: { options: MarketOption[]; rosterById: Map<number, Roster> }) {
+  const [dir, setDir] = useState<'desc' | 'asc'>('desc')
+  const sorted = devig(options)
+  const rows = dir === 'desc' ? sorted : [...sorted].reverse()
+  return (
+    <div style={{ padding: '0 16px 12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+        <button
+          onClick={() => setDir(d => (d === 'desc' ? 'asc' : 'desc'))}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', padding: 0 }}
+        >
+          Sort: {dir === 'desc' ? 'Favorite first ▼' : 'Longshot first ▲'}
+        </button>
+      </div>
+      {rows.map((o, i) => {
+        const player = o.mlbId != null ? rosterById.get(o.mlbId) : undefined
+        const abbr = player?.teamId != null ? ID_TO_ABBR[player.teamId] : undefined
+        const logo = player?.teamId != null ? mlbTeamLogo(player.teamId) : undefined
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 0' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-2)', minWidth: 0 }}>
+              {player && <PlayerAvatar headshot={mlbHeadshot(player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={player.name} size={18} />}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+            </span>
+            <span style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <span style={{ color: 'var(--text-3)' }}>{(o.prob * 100).toFixed(1)}%</span>
+              <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{o.odds > 0 ? `+${o.odds}` : o.odds}</span>
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function BookMarketsPanel({ book, markets, rosterById }: { book: Sportsbook; markets: Market[]; rosterById: Map<number, Roster> }) {
   const [query, setQuery] = useState('')
   const [openSections, setOpenSections] = useState<Set<string>>(new Set())
   const [openMarkets, setOpenMarkets] = useState<Set<string>>(new Set())
@@ -376,19 +419,7 @@ function BookMarketsPanel({ book, markets }: { book: Sportsbook; markets: Market
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{m.title}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.options.length} · {openMarkets.has(m.id) ? '▲' : '▼'}</span>
                   </button>
-                  {openMarkets.has(m.id) && (
-                    <div style={{ padding: '0 16px 12px' }}>
-                      {devig(m.options).map((o, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 0' }}>
-                          <span style={{ color: 'var(--text-2)' }}>{o.label}</span>
-                          <span style={{ display: 'flex', gap: 8 }}>
-                            <span style={{ color: 'var(--text-3)' }}>{(o.prob * 100).toFixed(1)}%</span>
-                            <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{o.odds > 0 ? `+${o.odds}` : o.odds}</span>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {openMarkets.has(m.id) && <MarketOptionsList options={m.options} rosterById={rosterById} />}
                 </div>
               ))}
             </div>
@@ -435,9 +466,22 @@ export function AllStarClient() {
   const allMarkets: Market[] = data.markets ?? []
   const bookMarkets = groupByBook(allMarkets)
 
+  const rosterById = new Map<number, Roster>([...alRoster, ...nlRoster].map(p => [p.mlb_id, p]))
+
   // Real, mechanical cross-book disagreement — computed straight off the
   // three scraped boards (see allStarMarkets.ts), not a fabricated signal.
   const crossBookFlags = computeCrossBookFlags(allMarkets)
+
+  // The actual ask: does the market's consensus price for HR-family props
+  // (the only props with a real tracked season number on this page — xHR/HR
+  // total) line up with who our own bat-tracking data says is the biggest
+  // real threat. Ranked off season xHR (falls back to raw HR total).
+  const powerRanked = [...allBatterPool]
+    .filter(r => r.s_xhr != null || r.s_hr != null)
+    .sort((a, b) => (b.s_xhr ?? b.s_hr ?? 0) - (a.s_xhr ?? a.s_hr ?? 0))
+  const realRankByMlbId = new Map<number, number>()
+  powerRanked.forEach((r, i) => realRankByMlbId.set(r.mlb_id, i + 1))
+  const dataMismatchFlags = computeMarketVsDataFlags(allMarkets, realRankByMlbId)
 
   const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
@@ -479,32 +523,19 @@ export function AllStarClient() {
 
       {/* Section 1: Bat tracking board */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', marginBottom: 12 }}>Bat Tracking Board</h2>
-      <LeagueBatterTable league="AL" teamName="American League" rows={sortRows(alBatters, batterSort)} pool={allBatterPool} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} />
-      <LeagueBatterTable league="NL" teamName="National League" rows={sortRows(nlBatters, batterSort)} pool={allBatterPool} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} />
+      <LeagueBatterTable league="AL" teamName="American League" rows={sortRows(alBatters, batterSort)} pool={allBatterPool} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} />
+      <LeagueBatterTable league="NL" teamName="National League" rows={sortRows(nlBatters, batterSort)} pool={allBatterPool} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} />
 
       {/* Pitching staffs */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Pitching Staffs</h2>
       <LeaguePitcherTable league="AL" rows={sortRows(alPitchers, pitcherSort)} pool={allPitcherPool} sort={pitcherSort} onSort={col => toggleSort(setPitcherSort, col)} />
       <LeaguePitcherTable league="NL" rows={sortRows(nlPitchers, pitcherSort)} pool={allPitcherPool} sort={pitcherSort} onSort={col => toggleSort(setPitcherSort, col)} />
 
-      {/* Historical ASG game-script pattern — real, sourced from 5 past
-          All-Star box scores/play-by-plays, not modeled/guessed. */}
-      <div style={{ marginTop: 32, marginBottom: 8, border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 10 }}>How This Game Actually Plays Out</h2>
-        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>From the last 5 All-Star Games (2021-2025 box scores/play-by-play):</p>
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.9 }}>
-          <li>Teams use 9-13 pitchers across 9 innings — 1 inning per arm is the norm, several games saw every single pitcher hold to exactly 1.0 IP.</li>
-          <li>The designated closer works the 9th in every game with a save spot; the hardest-throwing setup arms cluster in the 7th-8th. This held with zero exceptions across all 5 games.</li>
-          <li>Starters get 1-2 plate appearances before coming out — 2 AB is the more common outcome. 3 AB is rare and only happened to leadoff/2-hole hitters. A starter getting 0 AB happens but is uncommon.</li>
-          <li>Mid-to-late innings (6th-8th) often see 2-3 pitchers combine within the same inning — treat "faced 2-3 batters" as more reliable than "pitched an inning" for those arms.</li>
-        </ul>
-      </div>
-
       {/* Section 2: Sportsbook markets — one panel per book, logos not text */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Sportsbook Markets</h2>
-      <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} />
-      <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} />
-      <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} />
+      <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} rosterById={rosterById} />
+      <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} rosterById={rosterById} />
+      <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} rosterById={rosterById} />
     </div>
   )
 }

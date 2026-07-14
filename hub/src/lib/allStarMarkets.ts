@@ -150,3 +150,65 @@ export function computeCrossBookFlags(allMarkets: Market[], minSpread = 0.08): C
 export function crossBookFlagsForPlayer(flags: CrossBookFlag[], mlbId: number): CrossBookFlag[] {
   return flags.filter(f => f.mlbId === mlbId)
 }
+
+// ─── Market price vs our own real data ─────────────────────────────────────
+// The actual ask: not just "do the books agree with each other" but "does
+// the consensus market price agree with what our own tracked bat-tracking
+// data says." Scoped to the HR-family markets specifically — those are the
+// only props with a real underlying tracked number (season xHR/HR total)
+// on this page; RBI/hits/runs props don't have a real season counting stat
+// in the Statcast tables this page reads, so they're deliberately left out
+// rather than faking a comparison.
+const HR_FAMILY_KEYS = ['anytime_hr', 'hr_2plus', 'first_pa_hr']
+
+export type DataMismatchFlag = {
+  key: string
+  mlbId: number
+  bookRank: number   // 1 = the market's biggest consensus favorite for this prop
+  realRank: number    // 1 = our own data's biggest real HR threat
+  consensusProb: number
+}
+
+export function computeMarketVsDataFlags(
+  allMarkets: Market[],
+  realRankByMlbId: Map<number, number>,
+  gapThreshold = 6,
+): DataMismatchFlag[] {
+  const sums = new Map<string, { total: number; count: number; mlbId: number }>()
+  for (const m of allMarkets) {
+    const key = canonicalizeTitle(m.title)
+    if (!key || !HR_FAMILY_KEYS.includes(key)) continue
+    for (const o of devig(m.options)) {
+      if (o.mlbId == null) continue
+      const gk = `${key}::${o.mlbId}`
+      const cur = sums.get(gk) ?? { total: 0, count: 0, mlbId: o.mlbId }
+      cur.total += o.prob
+      cur.count += 1
+      sums.set(gk, cur)
+    }
+  }
+  const byKey = new Map<string, { mlbId: number; prob: number }[]>()
+  for (const [gk, v] of sums) {
+    const key = gk.split('::')[0]
+    const arr = byKey.get(key) ?? []
+    arr.push({ mlbId: v.mlbId, prob: v.total / v.count })
+    byKey.set(key, arr)
+  }
+  const flags: DataMismatchFlag[] = []
+  for (const [key, arr] of byKey) {
+    const sorted = [...arr].sort((a, b) => b.prob - a.prob)
+    sorted.forEach((entry, idx) => {
+      const bookRank = idx + 1
+      const realRank = realRankByMlbId.get(entry.mlbId)
+      if (realRank == null) return
+      if (Math.abs(bookRank - realRank) >= gapThreshold) {
+        flags.push({ key, mlbId: entry.mlbId, bookRank, realRank, consensusProb: entry.prob })
+      }
+    })
+  }
+  return flags
+}
+
+export function dataMismatchFlagsForPlayer(flags: DataMismatchFlag[], mlbId: number): DataMismatchFlag[] {
+  return flags.filter(f => f.mlbId === mlbId)
+}
