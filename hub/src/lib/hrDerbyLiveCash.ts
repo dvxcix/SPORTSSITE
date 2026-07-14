@@ -69,40 +69,64 @@ export function fmtCashOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 // Winner+loser of every fully-decided round+matchup pairing, keyed off the
 // real bracket data (not a guess at seeding) — a matchup only resolves here
 // once both of its players have at least one recorded HR event in that
-// round; a 0-HR round for a competitor (essentially never happens in a real
-// derby round) would leave that matchup unresolved rather than risk a
-// wrong call. A tied matchup (real derbies settle those with a swing-off)
-// is also left unresolved here rather than arbitrarily picking a side.
+// round. Per MLB's own 2026 rules (confirmed at mlb.com/news/home-run-
+// derby-format-change-for-2026): a Round 1 tie is broken by whichever tied
+// player hit the longest home run of that round; Round 2/3 ties go to a
+// three-swing swing-off, which this feed can't observe, so those stay
+// unresolved rather than risk a wrong call.
 function matchupResults(hrs: LiveHr[], round: number): { winner: string; loser: string }[] {
-  const byMatchup = new Map<number, Map<number, { name: string; max: number }>>()
+  const byMatchup = new Map<number, Map<number, { name: string; max: number; maxDist: number }>>()
   for (const h of hrs) {
     if (h.round !== round || h.matchup == null || h.batterMatchupHrs == null) continue
     let m = byMatchup.get(h.matchup)
     if (!m) { m = new Map(); byMatchup.set(h.matchup, m) }
-    const cur = m.get(h.playerId) ?? { name: h.playerName, max: 0 }
+    const cur = m.get(h.playerId) ?? { name: h.playerName, max: 0, maxDist: 0 }
     cur.max = Math.max(cur.max, h.batterMatchupHrs)
+    if (h.distance != null) cur.maxDist = Math.max(cur.maxDist, h.distance)
     m.set(h.playerId, cur)
   }
   const results: { winner: string; loser: string }[] = []
   for (const playersInMatchup of byMatchup.values()) {
     const entries = Array.from(playersInMatchup.values())
-    if (entries.length !== 2 || entries[0].max === entries[1].max) continue
-    const [winner, loser] = entries[0].max > entries[1].max ? [entries[0], entries[1]] : [entries[1], entries[0]]
+    if (entries.length !== 2) continue
+    const [a, b] = entries
+    let aWins: boolean
+    if (a.max !== b.max) aWins = a.max > b.max
+    else if (round === 1 && a.maxDist !== b.maxDist) aWins = a.maxDist > b.maxDist
+    else continue
+    const [winner, loser] = aWins ? [a, b] : [b, a]
     results.push({ winner: winner.name, loser: loser.name })
   }
   return results
 }
 
-// Every player tied for the field lead on some value (round-1 HR count,
-// whole-derby longest distance, whole-derby highest EV, etc.) — 1 name
-// means an outright leader, 2+ means a genuine tie (pushes/voids for all
-// of them, no loser among the tied group since none of them actually lost
-// to another).
+// Every player tied for the field lead on some value (whole-derby longest
+// distance, whole-derby highest EV, etc.) — 1 name means an outright
+// leader, 2+ means a genuine tie (pushes/voids for all of them, no loser
+// among the tied group since none of them actually lost to another).
 function leadersByValue(valueByMlbId: Map<number, number>, players: DerbyPlayer[]): string[] {
   let max = -1
   for (const p of players) max = Math.max(max, valueByMlbId.get(p.mlbId) ?? 0)
   if (max <= 0) return []
   return players.filter(p => (valueByMlbId.get(p.mlbId) ?? 0) === max).map(p => p.name)
+}
+
+// The Round 1 HR-count leader, with MLB's own real Round 1 tiebreaker
+// (longest HR of the round among tied players) applied — never voids,
+// since the rule always produces a single winner unless two players
+// somehow also tie exactly on distance.
+function round1OutrightWinner(round1CountByPlayer: Map<number, number>, round1MaxDistByPlayer: Map<number, number>, players: DerbyPlayer[]): string | null {
+  const leaders = leadersByValue(round1CountByPlayer, players)
+  if (leaders.length === 0) return null
+  if (leaders.length === 1) return leaders[0]
+  let best: string | null = null
+  let bestDist = -1
+  for (const name of leaders) {
+    const p = players.find(pl => pl.name === name)
+    const dist = p ? (round1MaxDistByPlayer.get(p.mlbId) ?? 0) : 0
+    if (dist > bestDist) { bestDist = dist; best = name }
+  }
+  return best
 }
 
 export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): CashedProp[] {
@@ -112,6 +136,7 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
   const round1 = hrs.filter(h => h.round === 1)
   const round1CountByPlayer = new Map<number, number>()
   const round1LaserCountByPlayer = new Map<number, number>()
+  const round1MaxDistByPlayer = new Map<number, number>()
   const maxDistByPlayer = new Map<number, number>()
   const maxEvByPlayer = new Map<number, number>()
 
@@ -119,6 +144,7 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
     if (h.round === 1) {
       round1CountByPlayer.set(h.playerId, (round1CountByPlayer.get(h.playerId) ?? 0) + 1)
       if ((h.exitVelocity ?? 0) >= 110) round1LaserCountByPlayer.set(h.playerId, (round1LaserCountByPlayer.get(h.playerId) ?? 0) + 1)
+      if (h.distance != null) round1MaxDistByPlayer.set(h.playerId, Math.max(round1MaxDistByPlayer.get(h.playerId) ?? 0, h.distance))
     }
     if (h.distance != null) maxDistByPlayer.set(h.playerId, Math.max(maxDistByPlayer.get(h.playerId) ?? 0, h.distance))
     if (h.exitVelocity != null) maxEvByPlayer.set(h.playerId, Math.max(maxEvByPlayer.get(h.playerId) ?? 0, h.exitVelocity))
@@ -208,10 +234,10 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
   if (currentRound > 1) {
     const mostHrMarket = PLAYER_MARKETS.find(m => m.title === 'Player to Hit the Most Home Runs in the First Round')
     if (mostHrMarket) {
-      const leaders = leadersByValue(round1CountByPlayer, players)
-      if (leaders.length === 1) {
-        const opt = mostHrMarket.options.find(o => o.player === leaders[0])
-        if (opt) cashed.push({ key: `mosthr-r1-${leaders[0]}`, players: [leaders[0]], category: 'Round 1', prop: 'Most HRs in Round 1 (outright)', odds: opt.odds })
+      const winner = round1OutrightWinner(round1CountByPlayer, round1MaxDistByPlayer, players)
+      if (winner) {
+        const opt = mostHrMarket.options.find(o => o.player === winner)
+        if (opt) cashed.push({ key: `mosthr-r1-${winner}`, players: [winner], category: 'Round 1', prop: 'Most HRs in Round 1 (outright)', odds: opt.odds })
       }
     }
     for (const [title, resultKey] of [
@@ -339,12 +365,14 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
   const round1 = hrs.filter(h => h.round === 1)
   const round1CountByPlayer = new Map<number, number>()
   const round1LaserCountByPlayer = new Map<number, number>()
+  const round1MaxDistByPlayer = new Map<number, number>()
   const maxDistByPlayer = new Map<number, number>()
   const maxEvByPlayer = new Map<number, number>()
   for (const h of hrs) {
     if (h.round === 1) {
       round1CountByPlayer.set(h.playerId, (round1CountByPlayer.get(h.playerId) ?? 0) + 1)
       if ((h.exitVelocity ?? 0) >= 110) round1LaserCountByPlayer.set(h.playerId, (round1LaserCountByPlayer.get(h.playerId) ?? 0) + 1)
+      if (h.distance != null) round1MaxDistByPlayer.set(h.playerId, Math.max(round1MaxDistByPlayer.get(h.playerId) ?? 0, h.distance))
     }
     if (h.distance != null) maxDistByPlayer.set(h.playerId, Math.max(maxDistByPlayer.get(h.playerId) ?? 0, h.distance))
     if (h.exitVelocity != null) maxEvByPlayer.set(h.playerId, Math.max(maxEvByPlayer.get(h.playerId) ?? 0, h.exitVelocity))
@@ -383,11 +411,8 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
       }
     }
     if (m.title === 'Player to Hit the Most Home Runs in the First Round' && round1Final) {
-      const leaders = leadersByValue(round1CountByPlayer, players)
-      for (const opt of m.options) {
-        if (leaders.length > 1 && leaders.includes(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'void')
-        else settled.set(`pm::${m.title}::${opt.player}`, leaders[0] === opt.player ? 'won' : 'lost')
-      }
+      const winner = round1OutrightWinner(round1CountByPlayer, round1MaxDistByPlayer, players)
+      for (const opt of m.options) settled.set(`pm::${m.title}::${opt.player}`, winner === opt.player ? 'won' : 'lost')
     }
     if (m.title === 'Player to Hit the Longest Home Run' && derbyFinal) {
       const leaders = leadersByValue(maxDistByPlayer, players)
@@ -509,9 +534,13 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
       if (aId == null || bId == null) return
       const aCnt = round1CountByPlayer.get(aId) ?? 0
       const bCnt = round1CountByPlayer.get(bId) ?? 0
-      if (aCnt === bCnt) { settled.set(`h2h::${i}::a`, 'void'); settled.set(`h2h::${i}::b`, 'void'); return }
-      settled.set(`h2h::${i}::a`, aCnt > bCnt ? 'won' : 'lost')
-      settled.set(`h2h::${i}::b`, bCnt > aCnt ? 'won' : 'lost')
+      // Real Round 1 tiebreaker: longest HR of the round wins, per MLB's
+      // 2026 rules — not a swing-off (that's Round 2/3 only) or a push.
+      const aWins = aCnt !== bCnt ? aCnt > bCnt : (round1MaxDistByPlayer.get(aId) ?? 0) > (round1MaxDistByPlayer.get(bId) ?? 0)
+      const bWins = aCnt !== bCnt ? bCnt > aCnt : (round1MaxDistByPlayer.get(bId) ?? 0) > (round1MaxDistByPlayer.get(aId) ?? 0)
+      if (!aWins && !bWins) return
+      settled.set(`h2h::${i}::a`, aWins ? 'won' : 'lost')
+      settled.set(`h2h::${i}::b`, bWins ? 'won' : 'lost')
     })
 
     for (const cm of COMBINE_MARKETS) {
