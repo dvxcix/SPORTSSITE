@@ -19,7 +19,7 @@ export default async function AdminDashboard() {
     supabase.from('groups').select('*', { count: 'exact', head: true }),
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('users').select('id, username, display_name, avatar_url, account_type, created_at').order('created_at', { ascending: false }).limit(5),
-    supabase.from('posts').select('id, content, created_at, author:users(username)').order('created_at', { ascending: false }).limit(5),
+    supabase.from('posts').select('id, content, created_at, author:users!posts_author_id_fkey(username)').order('created_at', { ascending: false }).limit(5),
   ])
 
   const stats = [

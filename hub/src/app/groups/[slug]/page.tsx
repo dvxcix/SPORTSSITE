@@ -79,7 +79,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   if (canViewContent) {
     const { data: rawPosts } = await supabase
       .from('posts')
-      .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+      .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
       .eq('group_id', group.id)
       .order('created_at', { ascending: false })
       .limit(20)

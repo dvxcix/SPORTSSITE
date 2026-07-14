@@ -35,7 +35,7 @@ export default async function PicksPage({
   // play-by-play, which don't filter by post_type at all).
   let picksQuery = supabase
     .from('posts')
-    .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .in('post_type', ['pick', 'parlay'])
     .order('created_at', { ascending: false })
     .limit(30)
@@ -45,7 +45,7 @@ export default async function PicksPage({
 
   const { data: hotPicks } = await supabase
     .from('posts')
-    .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .in('post_type', ['pick', 'parlay'])
     .gte('created_at', new Date(Date.now() - 86400000).toISOString())
     .order('reaction_count', { ascending: false })

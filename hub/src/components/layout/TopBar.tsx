@@ -60,7 +60,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     let cancelled = false
     setQuickLoading(true)
     const t = setTimeout(async () => {
-      const postCols = 'id, content, pick_data, author:users(username, display_name)'
+      const postCols = 'id, content, pick_data, author:users!posts_author_id_fkey(username, display_name)'
       const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData] = await Promise.all([
         supabase.from('users')
           .select('id, username, display_name, avatar_url')

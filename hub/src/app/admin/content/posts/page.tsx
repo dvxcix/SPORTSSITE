@@ -32,7 +32,7 @@ export default async function AdminPostsPage({
 
   let query = supabase
     .from('posts')
-    .select('id, content, post_type, sport, visibility, reaction_count, comment_count, repost_count, created_at, author:users(username, display_name)')
+    .select('id, content, post_type, sport, visibility, reaction_count, comment_count, repost_count, created_at, author:users!posts_author_id_fkey(username, display_name)')
     .limit(100)
 
   if (q && authorIds) {

@@ -94,7 +94,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
 
   const supabase = await createClient()
   const { data: post } = await supabase.from('posts')
-    .select('id, sport, pick_data, author:users(username, display_name, avatar_url, is_verified)')
+    .select('id, sport, pick_data, author:users!posts_author_id_fkey(username, display_name, avatar_url, is_verified)')
     .eq('id', postId).eq('visibility', 'public').single()
 
   const author = Array.isArray(post?.author) ? post?.author[0] : post?.author

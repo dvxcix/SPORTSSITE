@@ -22,7 +22,7 @@ async function resolveTargets(supabase: any, reports: any[]) {
   const previews: Record<string, Record<string, { label: string; href: string }>> = {}
 
   if (idsByType.post?.size) {
-    const { data } = await supabase.from('posts').select('id, content, author:users(username)').in('id', Array.from(idsByType.post))
+    const { data } = await supabase.from('posts').select('id, content, author:users!posts_author_id_fkey(username)').in('id', Array.from(idsByType.post))
     previews.post = {}
     for (const p of data ?? []) previews.post[p.id] = { label: p.content?.slice(0, 80) || '(no text)', href: `/posts/${p.id}` }
   }

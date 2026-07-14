@@ -13,7 +13,7 @@ export const revalidate = 300
 // queries with — Explore previously hand-rolled its own thin post cards
 // (plain hearts, no real reactions/comments/badges, no click-through),
 // which is why it looked and behaved nothing like the rest of the site.
-const POST_WITH_AUTHOR = `*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
 
 type ExploreUser = {
   id: string

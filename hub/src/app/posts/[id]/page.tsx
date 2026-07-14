@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient()
   const { data: post } = await supabase
     .from('posts')
-    .select('pick_data, content, author:users(display_name, username)')
+    .select('pick_data, content, author:users!posts_author_id_fkey(display_name, username)')
     .eq('id', id)
     .single()
   if (!post) return {}
@@ -45,7 +45,7 @@ export default async function PostDetailPage({ params }: Props) {
 
   const { data: post } = await supabase
     .from('posts')
-    .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .eq('id', id)
     .single()
 

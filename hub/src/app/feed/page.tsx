@@ -11,7 +11,7 @@ import { Zap, TrendingUp, Clock, Users } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const POST_WITH_AUTHOR = `*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
 
 // Reposts previously had zero effect on the feed — nothing here ever
 // queried the `reposts` table, so a repost only ever bumped a counter on

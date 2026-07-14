@@ -38,7 +38,7 @@ export function SearchClient() {
     if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); return }
     setLoading(true)
 
-    const postCols = 'id, content, post_type, pick_data, sport, created_at, author:users(username, display_name, avatar_url)'
+    const postCols = 'id, content, post_type, pick_data, sport, created_at, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
     const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData] = await Promise.all([
       supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')

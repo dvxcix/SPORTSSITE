@@ -16,7 +16,7 @@ export default async function BookmarksPage() {
     .select(`
       post:posts(
         *,
-        author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)
+        author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)
       )
     `)
     .eq('user_id', user.id)

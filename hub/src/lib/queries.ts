@@ -51,7 +51,7 @@ export async function getFeedPosts(limit = 20, offset = 0): Promise<Post[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('posts')
-    .select(`*, author:users(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`)
+    .select(`*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`)
     .eq('visibility', 'public')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
@@ -98,7 +98,7 @@ export async function getUserProfile(username: string): Promise<User | null> {
   return data
 }
 
-const POST_WITH_AUTHOR = `*, author:users(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`
 
 // A profile's post list is authored posts UNION what that user reposted —
 // reposting previously had zero visible effect anywhere (it only bumped a

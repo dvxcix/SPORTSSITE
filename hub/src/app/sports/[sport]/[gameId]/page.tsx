@@ -24,7 +24,7 @@ async function fetchCommunityPicksForGame(supabase: any, gameId: string, teamAbb
   const abbrs = new Set(teamAbbrs.filter((a): a is string => !!a))
   const { data } = await supabase
     .from('posts')
-    .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .in('post_type', ['pick', 'parlay'])
     .order('created_at', { ascending: false })
     .limit(300)

@@ -42,7 +42,7 @@ export default async function AdminMonetizationPage() {
   // payout numbers above so the two aren't confused with each other.
   const { data: recentBets } = await supabase
     .from('posts')
-    .select('id, post_type, book, wager_amount, potential_payout, combined_odds, pick_data, created_at, author:users(username, display_name)')
+    .select('id, post_type, book, wager_amount, potential_payout, combined_odds, pick_data, created_at, author:users!posts_author_id_fkey(username, display_name)')
     .in('post_type', ['pick', 'parlay'])
     .order('created_at', { ascending: false })
     .limit(50)

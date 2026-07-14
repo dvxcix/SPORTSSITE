@@ -40,7 +40,7 @@ export default async function PageDetailPage({ params }: { params: Promise<{ slu
 
   const { data: rawPosts } = await supabase
     .from('posts')
-    .select('*, author:users(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
     .eq('page_id', page.id)
     .order('created_at', { ascending: false })
     .limit(20)
