@@ -1,20 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import type { DerbyPlayer } from './HrDerbyTable'
+import type { LiveHr } from '@/lib/hrDerbyLiveCash'
 
-type LiveHr = {
-  playerId: number
-  playerName: string
-  round: number
-  hrNumInRound: number | null
-  exitVelocity: number | null
-  distance: number | null
-  launchAngle: number | null
-  time: string | null
-}
-
-type LiveStatus = {
+export type LiveStatus = {
   state: string
   currentRound: number
   currentBatter: { id: number; fullName: string } | null
@@ -27,29 +17,9 @@ type LiveStatus = {
 
 const ROUND_NAMES: Record<number, string> = { 1: 'Round 1', 2: 'Semifinals', 3: 'Finals' }
 
-export function LiveDerbyTracker({ players }: { players: DerbyPlayer[] }) {
-  const [status, setStatus] = useState<LiveStatus>(null)
-  const [hrs, setHrs] = useState<LiveHr[]>([])
-  const [live, setLive] = useState(false)
+export function LiveDerbyTracker({ players, status, hrs }: { players: DerbyPlayer[]; status: LiveStatus; hrs: LiveHr[] }) {
   const byId = useRef(new Map(players.map(p => [p.mlbId, p])))
-
-  useEffect(() => {
-    let cancelled = false
-    async function poll() {
-      try {
-        const res = await fetch('/api/dugout/hr-derby-live')
-        if (!res.ok) return
-        const data = await res.json()
-        if (cancelled) return
-        setStatus(data.status)
-        setHrs(data.hrs ?? [])
-        setLive(data.status?.state === 'Live')
-      } catch {}
-    }
-    poll()
-    const id = setInterval(poll, 5000)
-    return () => { cancelled = true; clearInterval(id) }
-  }, [])
+  const live = status?.state === 'Live'
 
   if (!status && hrs.length === 0) return null
 

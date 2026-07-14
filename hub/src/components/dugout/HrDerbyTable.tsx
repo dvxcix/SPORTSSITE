@@ -33,7 +33,7 @@ type ColDef = { key: keyof DerbyPlayer; label: string; fmt?: (v: number) => stri
 // Green (best) -> yellow -> red (worst), relative to just these 8 derby
 // participants, not a league-wide scale.
 function heatColor(value: number, min: number, max: number): string {
-  if (max === min) return 'rgba(180,255,77,0.10)'
+  if (max === min) return 'rgba(255,255,255,0.03)'
   const t = (value - min) / (max - min)
   if (t > 0.66) return `rgba(180,255,77,${0.08 + t * 0.22})`
   if (t > 0.33) return `rgba(250,204,21,${0.06 + t * 0.14})`

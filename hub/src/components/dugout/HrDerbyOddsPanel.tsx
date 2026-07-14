@@ -78,12 +78,11 @@ function PlayerMarketCard({ title, time, options, statKey, players }: {
             <div key={o.player} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
               padding: '5px 8px', borderRadius: 8,
-              background: i === 0 ? 'var(--accent-dim)' : 'transparent',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 {p && <img src={p.headshotUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-2)', flexShrink: 0 }} />}
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 12.5, fontWeight: 800, color: i === 0 ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
                     {o.player} {flagged && '❓'}
                   </p>
                   {stat && <p style={{ fontSize: 10, color: 'var(--text-3)' }}>{stat}</p>}
@@ -115,14 +114,14 @@ function PairList({ title, pairs, players, connector = 'vs.' }: {
         {sorted.map((pr, i) => (
           <div key={`${pr.a}-${pr.b}-${i}`} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
-            padding: '5px 8px', borderRadius: 6, background: i === 0 ? 'var(--accent-dim)' : 'var(--surface-2)',
+            padding: '5px 8px', borderRadius: 6, background: 'var(--surface-2)',
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, overflow: 'hidden' }}>
               <MiniPlayer name={pr.a} players={players} />
               {pr.b && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{connector}</span>}
               {pr.b && <MiniPlayer name={pr.b} players={players} />}
             </span>
-            <span style={{ fontSize: 11.5, fontWeight: 800, color: i === 0 ? 'var(--accent)' : 'var(--text-2)', flexShrink: 0 }}>{fmtOdds(pr.odds)}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--text-2)', flexShrink: 0 }}>{fmtOdds(pr.odds)}</span>
           </div>
         ))}
       </div>
@@ -162,11 +161,11 @@ export function HrDerbyOddsPanel({ players }: { players: DerbyPlayer[] }) {
             <div key={i} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--surface-2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <MiniPlayer name={h.a} players={byName} />
-                <span style={{ fontSize: 12, fontWeight: 800, color: impliedProb(h.oddsA) > impliedProb(h.oddsB) ? 'var(--accent)' : 'var(--text-2)' }}>{fmtOdds(h.oddsA)}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-2)' }}>{fmtOdds(h.oddsA)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
                 <MiniPlayer name={h.b} players={byName} />
-                <span style={{ fontSize: 12, fontWeight: 800, color: impliedProb(h.oddsB) > impliedProb(h.oddsA) ? 'var(--accent)' : 'var(--text-2)' }}>{fmtOdds(h.oddsB)}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-2)' }}>{fmtOdds(h.oddsB)}</span>
               </div>
             </div>
           ))}
