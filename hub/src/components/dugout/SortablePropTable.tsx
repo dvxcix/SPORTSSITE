@@ -4,18 +4,21 @@ import { useMemo, useState } from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { DerbyPlayer } from './HrDerbyTable'
 import type { PropLine } from '@/lib/hrDerbyOdds'
+import type { MarketOutcome } from '@/lib/hrDerbyLiveCash'
 
 function fmtOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 
-type Outcome = 'won' | 'lost' | undefined
+type Outcome = MarketOutcome | undefined
 function outcomeBg(o: Outcome) {
   if (o === 'won') return 'rgba(34,197,94,0.16)'
   if (o === 'lost') return 'rgba(248,113,113,0.10)'
+  if (o === 'void') return 'rgba(234,179,8,0.14)'
   return undefined
 }
 function outcomeMark(o: Outcome) {
   if (o === 'won') return ' ✅'
   if (o === 'lost') return ' ❌'
+  if (o === 'void') return ' ⚠️ VOID'
   return ''
 }
 

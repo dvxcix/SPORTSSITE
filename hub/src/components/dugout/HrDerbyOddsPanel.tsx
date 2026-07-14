@@ -8,9 +8,9 @@ import {
   devig, impliedProb, PLAYER_MARKETS, LEAGUE_MARKET, TOTAL_MARKETS, FT500_MARKET,
   H2H_MARKETS, PROP_LINES, EXACT_RESULT, FINALISTS, DOUBLE_CHANCE, COMBINE_MARKETS,
 } from '@/lib/hrDerbyOdds'
-import { computeMarketSettlement, type LiveHr, type LiveStatusLike } from '@/lib/hrDerbyLiveCash'
+import { computeMarketSettlement, type LiveHr, type LiveStatusLike, type MarketOutcome } from '@/lib/hrDerbyLiveCash'
 
-type Outcome = 'won' | 'lost' | undefined
+type Outcome = MarketOutcome | undefined
 
 function pct(p: number) { return `${(p * 100).toFixed(1)}%` }
 function fmtOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
@@ -18,11 +18,13 @@ function fmtOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 function outcomeBg(o: Outcome) {
   if (o === 'won') return 'rgba(34,197,94,0.16)'
   if (o === 'lost') return 'rgba(248,113,113,0.10)'
+  if (o === 'void') return 'rgba(234,179,8,0.14)'
   return undefined
 }
 function outcomeMark(o: Outcome) {
   if (o === 'won') return '✅'
   if (o === 'lost') return '❌'
+  if (o === 'void') return '⚠️ VOID'
   return null
 }
 
@@ -63,7 +65,7 @@ function MiniPlayer({ name, players }: { name: string; players: Map<string, Derb
 function PlayerMarketCard({ title, time, options, statKey, players, settlement, lookupKey }: {
   title: string; time?: string; options: { player: string; odds: number }[]; statKey?: string
   players: Map<string, DerbyPlayer>
-  settlement?: Map<string, 'won' | 'lost'>
+  settlement?: Map<string, MarketOutcome>
   lookupKey?: (player: string) => string
 }) {
   const ranked = devig(options)
@@ -125,7 +127,7 @@ function PairList({ title, pairs, players, connector = 'vs.', settlement, lookup
   pairs: { a: string; b?: string; odds: number }[]
   players: Map<string, DerbyPlayer>
   connector?: string
-  settlement?: Map<string, 'won' | 'lost'>
+  settlement?: Map<string, MarketOutcome>
   lookupKey?: (pr: { a: string; b?: string; odds: number }) => string
 }) {
   const sorted = [...pairs].map(p => ({ ...p, prob: impliedProb(p.odds) })).sort((a, b) => b.prob - a.prob)

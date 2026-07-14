@@ -41,6 +41,8 @@ export function fmtCashOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 // both of its players have at least one recorded HR event in that round; a
 // 0-HR round for a competitor (essentially never happens in a real derby
 // round) would leave that matchup unresolved rather than risk a wrong call.
+// A tied matchup (real derbies settle those with a swing-off) is also left
+// unresolved here rather than arbitrarily picking a side.
 function matchupWinners(hrs: LiveHr[], round: number): string[] {
   const byMatchup = new Map<number, Map<number, { name: string; max: number }>>()
   for (const h of hrs) {
@@ -54,10 +56,20 @@ function matchupWinners(hrs: LiveHr[], round: number): string[] {
   const winners: string[] = []
   for (const playersInMatchup of byMatchup.values()) {
     const entries = Array.from(playersInMatchup.values())
-    if (entries.length !== 2) continue
-    winners.push(entries[0].max >= entries[1].max ? entries[0].name : entries[1].name)
+    if (entries.length !== 2 || entries[0].max === entries[1].max) continue
+    winners.push(entries[0].max > entries[1].max ? entries[0].name : entries[1].name)
   }
   return winners
+}
+
+// Every player tied for the field lead in a round — 1 name means an
+// outright leader, 2+ means a tie (pushes/voids for all of them, no loser
+// among the tied group since none of them actually lost to another).
+function round1Leaders(round1CountByPlayer: Map<number, number>, players: DerbyPlayer[]): string[] {
+  let max = -1
+  for (const p of players) max = Math.max(max, round1CountByPlayer.get(p.mlbId) ?? 0)
+  if (max <= 0) return []
+  return players.filter(p => (round1CountByPlayer.get(p.mlbId) ?? 0) === max).map(p => p.name)
 }
 
 export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): CashedProp[] {
@@ -154,6 +166,14 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
   // round, so every matchup in it is truly final.
   const currentRound = status?.currentRound ?? 0
   if (currentRound > 1) {
+    const mostHrMarket = PLAYER_MARKETS.find(m => m.title === 'Player to Hit the Most Home Runs in the First Round')
+    if (mostHrMarket) {
+      const leaders = round1Leaders(round1CountByPlayer, players)
+      if (leaders.length === 1) {
+        const opt = mostHrMarket.options.find(o => o.player === leaders[0])
+        if (opt) cashed.push({ key: `mosthr-r1-${leaders[0]}`, players: [leaders[0]], category: 'Round 1', prop: 'Most HRs in Round 1 (outright)', odds: opt.odds })
+      }
+    }
     const semiMarket = PLAYER_MARKETS.find(m => m.title === 'To Make Semifinal')
     for (const name of matchupWinners(hrs, 1)) {
       const opt = semiMarket?.options.find(o => o.player === name)
@@ -183,9 +203,12 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
   return cashed
 }
 
-// Per-row won/lost lookup for every option/pair shown in the odds panel
-// itself, not just the top cashed list — so every market on the page can
-// highlight green+check or red+x once we actually know the outcome. Keys:
+export type MarketOutcome = 'won' | 'lost' | 'void'
+
+// Per-row won/lost/void lookup for every option/pair shown in the odds
+// panel itself, not just the top cashed list — so every market on the page
+// can highlight green+check, red+x, or (on a genuine tie) yellow+void once
+// we actually know the outcome. Keys:
 //   pm::<market title>::<player>       PLAYER_MARKETS options
 //   tot::<market title>::<Over/Under>  TOTAL_MARKETS options
 //   ft500::<threshold>                 FT500_MARKET (won-only, no full-derby-over signal to call a loss)
@@ -198,9 +221,9 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
 // whole-derby "Under" side of Total HRs/Highest EV/500ft markets — none of
 // those are determinable without a "derby is fully over" signal this feed
 // doesn't give us mid-event.
-export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): Map<string, 'won' | 'lost'> {
+export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): Map<string, MarketOutcome> {
   const byName = new Map(players.map(p => [p.name, p.mlbId]))
-  const settled = new Map<string, 'won' | 'lost'>()
+  const settled = new Map<string, MarketOutcome>()
 
   const round1 = hrs.filter(h => h.round === 1)
   const round1CountByPlayer = new Map<number, number>()
@@ -242,6 +265,13 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
         if (mlbId == null) continue
         const cnt = round1LaserCountByPlayer.get(mlbId) ?? 0
         settled.set(`pm::${m.title}::${opt.player}`, cnt >= threshold ? 'won' : 'lost')
+      }
+    }
+    if (m.title === 'Player to Hit the Most Home Runs in the First Round' && round1Final) {
+      const leaders = round1Leaders(round1CountByPlayer, players)
+      for (const opt of m.options) {
+        if (leaders.length > 1 && leaders.includes(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'void')
+        else settled.set(`pm::${m.title}::${opt.player}`, leaders[0] === opt.player ? 'won' : 'lost')
       }
     }
     if (m.title === 'To Make Semifinal' && round1Final) {
@@ -305,7 +335,7 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
       if (aId == null || bId == null) return
       const aCnt = round1CountByPlayer.get(aId) ?? 0
       const bCnt = round1CountByPlayer.get(bId) ?? 0
-      if (aCnt === bCnt) return
+      if (aCnt === bCnt) { settled.set(`h2h::${i}::a`, 'void'); settled.set(`h2h::${i}::b`, 'void'); return }
       settled.set(`h2h::${i}::a`, aCnt > bCnt ? 'won' : 'lost')
       settled.set(`h2h::${i}::b`, bCnt > aCnt ? 'won' : 'lost')
     })
