@@ -110,18 +110,22 @@ function PairList({ title, pairs, players, connector = 'vs.' }: {
   return (
     <div className="ss-card" style={{ padding: 14, marginBottom: 12 }}>
       <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{title}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 4, marginTop: 8, maxHeight: 360, overflowY: 'auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 6, marginTop: 8, maxHeight: 400, overflowY: 'auto' }}>
         {sorted.map((pr, i) => (
           <div key={`${pr.a}-${pr.b}-${i}`} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
-            padding: '5px 8px', borderRadius: 6, background: 'var(--surface-2)',
+            display: 'flex', flexDirection: 'column', gap: 4,
+            padding: '7px 10px', borderRadius: 8, background: 'var(--surface-2)',
           }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <MiniPlayer name={pr.a} players={players} />
-              {pr.b && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{connector}</span>}
-              {pr.b && <MiniPlayer name={pr.b} players={players} />}
-            </span>
-            <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--text-2)', flexShrink: 0 }}>{fmtOdds(pr.odds)}</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--text-2)', flexShrink: 0 }}>{fmtOdds(pr.odds)}</span>
+            </div>
+            {pr.b && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-3)', width: 22, flexShrink: 0 }}>{connector}</span>
+                <MiniPlayer name={pr.b} players={players} />
+              </div>
+            )}
           </div>
         ))}
       </div>
