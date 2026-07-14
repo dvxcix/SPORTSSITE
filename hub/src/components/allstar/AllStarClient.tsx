@@ -11,6 +11,7 @@ import {
   groupByBook, marketsForPlayer, groupBySection, searchMarkets, devig,
   computeCrossBookFlags, crossBookFlagsForPlayer,
   computeMarketVsDataFlags, dataMismatchFlagsForPlayer,
+  computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook,
 } from '@/lib/allStarMarkets'
@@ -418,10 +419,11 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
 // looked up by the option's mlbId against tonight's roster) instead of bare
 // text — team/total/over-under selections without an mlbId just show text.
 function MarketOptionsList({
-  options, title, rosterById, flags, dataFlags,
+  options, title, rosterById, flags, dataFlags, containmentFlags,
 }: {
   options: MarketOption[]; title: string; rosterById: Map<number, Roster>
   flags: ReturnType<typeof computeCrossBookFlags>; dataFlags: ReturnType<typeof computeMarketVsDataFlags>
+  containmentFlags: ReturnType<typeof computeContainmentFlags>
 }) {
   const [dir, setDir] = useState<'desc' | 'asc'>('desc')
   const sorted = devig(options)
@@ -443,7 +445,8 @@ function MarketOptionsList({
         const logo = player?.teamId != null ? mlbTeamLogo(player.teamId) : undefined
         const flagged = o.mlbId != null && canonKey != null && (
           flags.some(f => f.key === canonKey && f.mlbId === o.mlbId) ||
-          dataFlags.some(f => f.key === canonKey && f.mlbId === o.mlbId)
+          dataFlags.some(f => f.key === canonKey && f.mlbId === o.mlbId) ||
+          containmentFlags.some(f => f.mlbId === o.mlbId && (f.narrowKey === canonKey || f.broadKey === canonKey))
         )
         return (
           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 0' }}>
@@ -464,10 +467,11 @@ function MarketOptionsList({
 }
 
 function BookMarketsPanel({
-  book, markets, rosterById, flags, dataFlags,
+  book, markets, rosterById, flags, dataFlags, containmentFlags,
 }: {
   book: Sportsbook; markets: Market[]; rosterById: Map<number, Roster>
   flags: ReturnType<typeof computeCrossBookFlags>; dataFlags: ReturnType<typeof computeMarketVsDataFlags>
+  containmentFlags: ReturnType<typeof computeContainmentFlags>
 }) {
   const [query, setQuery] = useState('')
   const [openSections, setOpenSections] = useState<Set<string>>(new Set())
@@ -515,7 +519,11 @@ function BookMarketsPanel({
                       {(() => {
                         const key = canonicalizeTitle(m.title)
                         const has = key != null && m.options.some(o =>
-                          o.mlbId != null && (flags.some(f => f.key === key && f.mlbId === o.mlbId) || dataFlags.some(f => f.key === key && f.mlbId === o.mlbId))
+                          o.mlbId != null && (
+                            flags.some(f => f.key === key && f.mlbId === o.mlbId) ||
+                            dataFlags.some(f => f.key === key && f.mlbId === o.mlbId) ||
+                            containmentFlags.some(f => f.mlbId === o.mlbId && (f.narrowKey === key || f.broadKey === key))
+                          )
                         )
                         return has ? <span>🚩</span> : null
                       })()}
@@ -523,7 +531,7 @@ function BookMarketsPanel({
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.options.length} · {openMarkets.has(m.id) ? '▲' : '▼'}</span>
                   </button>
-                  {openMarkets.has(m.id) && <MarketOptionsList options={m.options} title={m.title} rosterById={rosterById} flags={flags} dataFlags={dataFlags} />}
+                  {openMarkets.has(m.id) && <MarketOptionsList options={m.options} title={m.title} rosterById={rosterById} flags={flags} dataFlags={dataFlags} containmentFlags={containmentFlags} />}
                 </div>
               ))}
             </div>
@@ -592,6 +600,14 @@ export function AllStarClient() {
   powerRanked.forEach((r, i) => realRankByMlbId.set(r.mlb_id, i + 1))
   const dataMismatchFlags = computeMarketVsDataFlags(allMarkets, realRankByMlbId)
 
+  // Real logical containment across markets for the same player (a HR
+  // guarantees a hit/run/RBI/4 total bases; "first HR of the game" requires
+  // "hits a HR" at all) — pure arithmetic on the scraped prices, flags any
+  // book pricing the stricter/narrower event as MORE likely than the
+  // broader event it's contained in.
+  const reserveMlbIds = computeReserveMlbIds(allMarkets)
+  const containmentFlags = computeContainmentFlags(allMarkets, reserveMlbIds)
+
   const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   const gameDateLabel = data.gameDate
@@ -642,9 +658,9 @@ export function AllStarClient() {
 
       {/* Section 2: Sportsbook markets — one panel per book, logos not text */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Sportsbook Markets</h2>
-      <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} />
-      <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} />
-      <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} />
+      <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} />
+      <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} />
+      <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} />
     </div>
   )
 }

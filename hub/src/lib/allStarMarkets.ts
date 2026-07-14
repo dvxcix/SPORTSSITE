@@ -82,11 +82,21 @@ export function searchMarkets(markets: Market[], query: string): Market[] {
 // (team spreads/totals, exact-result grids, futures) — those still display,
 // they're just outside the cross-book comparison.
 export function canonicalizeTitle(title: string): string | null {
-  const t = title.toLowerCase()
+  const t = title.toLowerCase().trim()
+  // Structurally different shapes that would otherwise false-match a family
+  // below (a head-to-head compare, a distance threshold, a combo parlay) —
+  // excluded up front rather than silently mis-bucketed.
+  if (/^h2h\b/.test(t)) return null
+  if (/\bfeet\b/.test(t)) return null
+  if (/parlay/.test(t)) return null
   const n = t.match(/(\d+)\+/)?.[1] ?? '1'
+  // "First HR"/"First HR of the Game" (the whole-game outright — one real
+  // winner among every player, distinct from each player's own independent
+  // anytime-HR prop) must be checked before the generic home-run match below.
+  if (/first\s+(hr|home run)\b/.test(t) && !/plate appearance/.test(t)) return 'first_hr_of_game'
   if (/first plate appearance/.test(t)) return 'first_pa_hr'
   if (/2\+\s*home runs?/.test(t)) return 'hr_2plus'
-  if (/home run/.test(t)) return 'anytime_hr'
+  if (/home run/.test(t) || /\bhr\b/.test(t)) return 'anytime_hr'
   if (/hits\s*\+\s*runs\s*\+\s*rbis/.test(t)) return `hrr_${n}plus`
   if (/extra base hit/.test(t)) return 'xbh_1plus'
   if (/total bases/.test(t)) return `tb_${n}plus`
@@ -94,7 +104,7 @@ export function canonicalizeTitle(title: string): string | null {
   if (/\bdouble\b/.test(t)) return 'double'
   if (/\bsingle\b/.test(t)) return 'single'
   if (/\btriple\b/.test(t)) return 'triple'
-  if (/run scored|runs? scored/.test(t)) return `run_${n}plus`
+  if (/record\s+(a\s+|an\s+)?run\b|score\s+a\s+run|run scored/.test(t)) return `run_${n}plus`
   if (/strikeouts?/.test(t)) return `k_${n}plus`
   if (/\bhits?\b/.test(t)) return `hits_${n}plus`
   if (/\bmvp\b/.test(t)) return 'mvp'
@@ -210,5 +220,110 @@ export function computeMarketVsDataFlags(
 }
 
 export function dataMismatchFlagsForPlayer(flags: DataMismatchFlag[], mlbId: number): DataMismatchFlag[] {
+  return flags.filter(f => f.mlbId === mlbId)
+}
+
+// ─── Cross-market logical containment ──────────────────────────────────────
+// Real MLB scoring rules create hard subset relationships between markets
+// for the same player: hitting a HR necessarily means he recorded a hit,
+// scored a run, drove himself in, and picked up 4 total bases from that
+// at-bat alone — so P(narrower event) can never be mispriced ABOVE
+// P(broader event it's contained in). Any book (or the cross-book
+// consensus) pricing the narrow side higher is a provable contradiction —
+// this is arithmetic on the real scraped prices, not a fabricated signal.
+function consensusProbByKey(allMarkets: Market[]): Map<string, Map<number, number>> {
+  const sums = new Map<string, Map<number, { total: number; count: number }>>()
+  for (const m of allMarkets) {
+    const key = canonicalizeTitle(m.title)
+    if (!key) continue
+    let byId = sums.get(key)
+    if (!byId) { byId = new Map(); sums.set(key, byId) }
+    for (const o of devig(m.options)) {
+      if (o.mlbId == null) continue
+      const cur = byId.get(o.mlbId) ?? { total: 0, count: 0 }
+      cur.total += o.prob
+      cur.count += 1
+      byId.set(o.mlbId, cur)
+    }
+  }
+  const out = new Map<string, Map<number, number>>()
+  for (const [key, byId] of sums) {
+    const avg = new Map<number, number>()
+    for (const [id, v] of byId) avg.set(id, v.total / v.count)
+    out.set(key, avg)
+  }
+  return out
+}
+
+// BetMGM's own "(Reserves)" split (a separate market for bench bats) is a
+// real, book-provided signal of who's not a starter tonight — used to scope
+// the First-HR-of-Game vs First-PA-HR check the way it was actually asked:
+// a reserve's realistic path to "first HR of the game" IS his first PA
+// (that's the only at-bat he gets before it's already been claimed by
+// someone earlier in the lineup), so pricing him shorter to get the whole
+// game's first HR than to simply homer in his own first trip is backwards.
+export function computeReserveMlbIds(allMarkets: Market[]): Set<number> {
+  const ids = new Set<number>()
+  for (const m of allMarkets) {
+    if (!/\(reserves?\)/i.test(m.title)) continue
+    if (!/\b(hit|home run|hr)\b/i.test(m.title)) continue
+    for (const o of m.options) if (o.mlbId != null) ids.add(o.mlbId)
+  }
+  return ids
+}
+
+export type ContainmentFlag = {
+  narrowKey: string
+  broadKey: string
+  mlbId: number
+  narrowProb: number
+  broadProb: number
+}
+
+export function computeContainmentFlags(
+  allMarkets: Market[],
+  reserveMlbIds: Set<number>,
+  minGap = 0.01,
+): ContainmentFlag[] {
+  const probs = consensusProbByKey(allMarkets)
+
+  const rules: { narrow: string; broad: string; scope?: 'reserves' }[] = [
+    { narrow: 'first_pa_hr', broad: 'anytime_hr' },
+    { narrow: 'hr_2plus', broad: 'anytime_hr' },
+    { narrow: 'anytime_hr', broad: 'xbh_1plus' },
+    { narrow: 'anytime_hr', broad: 'rbi_1plus' },
+    { narrow: 'anytime_hr', broad: 'run_1plus' },
+    { narrow: 'anytime_hr', broad: 'hits_1plus' },
+    { narrow: 'first_hr_of_game', broad: 'anytime_hr' },
+    { narrow: 'first_hr_of_game', broad: 'first_pa_hr', scope: 'reserves' },
+  ]
+  // A bare solo HR guarantees exactly 4 total bases and at least 3 combined
+  // Hits+Runs+RBIs (1 hit + 1 run + minimum 1 RBI, himself) from that at-bat
+  // — only wire in the thresholds a HR alone actually clears.
+  for (const key of probs.keys()) {
+    const tb = key.match(/^tb_(\d+)plus$/)
+    if (tb && Number(tb[1]) <= 4) rules.push({ narrow: 'anytime_hr', broad: key })
+    const hrr = key.match(/^hrr_(\d+)plus$/)
+    if (hrr && Number(hrr[1]) <= 3) rules.push({ narrow: 'anytime_hr', broad: key })
+  }
+
+  const flags: ContainmentFlag[] = []
+  for (const rule of rules) {
+    const narrowMap = probs.get(rule.narrow)
+    const broadMap = probs.get(rule.broad)
+    if (!narrowMap || !broadMap) continue
+    for (const [mlbId, narrowProb] of narrowMap) {
+      if (rule.scope === 'reserves' && !reserveMlbIds.has(mlbId)) continue
+      const broadProb = broadMap.get(mlbId)
+      if (broadProb == null) continue
+      if (narrowProb > broadProb + minGap) {
+        flags.push({ narrowKey: rule.narrow, broadKey: rule.broad, mlbId, narrowProb, broadProb })
+      }
+    }
+  }
+  return flags
+}
+
+export function containmentFlagsForPlayer(flags: ContainmentFlag[], mlbId: number): ContainmentFlag[] {
   return flags.filter(f => f.mlbId === mlbId)
 }
