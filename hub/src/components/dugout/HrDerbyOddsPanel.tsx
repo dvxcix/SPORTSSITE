@@ -134,7 +134,7 @@ function PairList({ title, pairs, players, connector = 'vs.', settlement, lookup
   return (
     <div className="ss-card" style={{ padding: 14, marginBottom: 12 }}>
       <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>{title}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 6, marginTop: 8, maxHeight: 400, overflowY: 'auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 6, marginTop: 8 }}>
         {sorted.map((pr, i) => {
           const outcome: Outcome = lookupKey ? settlement?.get(lookupKey(pr)) : undefined
           return (

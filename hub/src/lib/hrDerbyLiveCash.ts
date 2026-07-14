@@ -10,11 +10,11 @@
 // Round 3) is actually decided — also confirmed directly, not guessed.
 // Player to Win the HR Derby and All-Star Game MVP still isn't covered:
 // that depends on the separate All-Star Game itself, which this feed has
-// zero visibility into. The swing-off tiebreaker market also stays
-// uncovered — no record of whether one occurred earlier in the broadcast.
-// Round 1 First Swing to be a HR/Laser IS covered, but not from this feed
-// (it only records completed HR events, not every swing) — FIRST_SWING_RESULTS
-// below is confirmed ground truth from watching tonight's broadcast.
+// zero visibility into. Round 1 First Swing to be a HR/Laser and the
+// swing-off tiebreaker market ARE covered, but not from this feed (it only
+// records completed HR events, not every swing, and doesn't retain
+// tiebreaker history) — FIRST_SWING_RESULTS/HAD_SWING_OFF_TIEBREAKER below
+// are confirmed ground truth from watching tonight's broadcast.
 import type { DerbyPlayer } from '@/components/dugout/HrDerbyTable'
 import { PLAYER_MARKETS, LEAGUE_MARKET, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS, H2H_MARKETS, EXACT_RESULT, FINALISTS, DOUBLE_CHANCE } from './hrDerbyOdds'
 
@@ -55,6 +55,10 @@ const FIRST_SWING_RESULTS: Record<string, { hr: boolean; laser: boolean }> = {
   'Kyle Schwarber': { hr: false, laser: false },
   'Bryce Harper': { hr: false, laser: false },
 }
+
+// Whether any round tonight went to a swing-off tiebreaker — confirmed
+// ground truth (no tiebreaker occurred in any round).
+const HAD_SWING_OFF_TIEBREAKER = false
 
 // players is empty for field-wide markets (totals, 500ft-HR count) that
 // aren't tied to any one participant.
@@ -183,6 +187,13 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
     if (actual !== null && actual > threshold) {
       cashed.push({ key: `t-${m.title}`, players: [], category: 'Total', prop: `${m.title.split('—')[0].trim()} — Over ${threshold}`, odds: overOpt.odds })
     }
+  }
+
+  // Swing-off tiebreaker — confirmed ground truth, gradeable once the derby wraps.
+  if (status?.state === 'Final' && !HAD_SWING_OFF_TIEBREAKER) {
+    const tieMarket = TOTAL_MARKETS.find(m => m.title.startsWith('Will There Be a Swing-Off Tiebreaker'))
+    const noOpt = tieMarket?.options.find(o => o.player === 'No')
+    if (noOpt) cashed.push({ key: 'tiebreaker-no', players: [], category: 'Total', prop: 'Will There Be a Swing-Off Tiebreaker in Any Round? — No', odds: noOpt.odds })
   }
 
   // 500+ foot HR count thresholds (field-wide, not tied to one player).
@@ -319,9 +330,8 @@ export type MarketOutcome = 'won' | 'lost' | 'void'
 //   doublechance::<a>::<b>
 //   league::<American League|National League>
 //   exactresult::<a>::<b>
-// Deliberately no keys for MVP (depends on the separate All-Star Game) or
-// the Round 1 First Swing / swing-off tiebreaker markets (this feed only
-// records actual HR events, not every swing or prior tiebreaker history).
+// Deliberately no keys for MVP — that depends on the separate All-Star
+// Game, which this feed has zero visibility into.
 export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): Map<string, MarketOutcome> {
   const byName = new Map(players.map(p => [p.name, p.mlbId]))
   const settled = new Map<string, MarketOutcome>()
@@ -427,6 +437,16 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
     }
     for (const e of EXACT_RESULT) {
       settled.set(`exactresult::${e.a}::${e.b}`, e.a === finalResult.winner && e.b === finalResult.loser ? 'won' : 'lost')
+    }
+  }
+
+  if (derbyFinal) {
+    const tieMarket = TOTAL_MARKETS.find(m => m.title.startsWith('Will There Be a Swing-Off Tiebreaker'))
+    if (tieMarket) {
+      for (const opt of tieMarket.options) {
+        const isYes = opt.player === 'Yes'
+        settled.set(`tot::${tieMarket.title}::${opt.player}`, isYes === HAD_SWING_OFF_TIEBREAKER ? 'won' : 'lost')
+      }
     }
   }
 
