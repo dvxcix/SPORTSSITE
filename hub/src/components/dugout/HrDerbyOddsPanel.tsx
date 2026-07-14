@@ -179,7 +179,10 @@ export function HrDerbyOddsPanel({ players, hrs, status }: { players: DerbyPlaye
       ))}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, marginBottom: 12 }}>
-        <PlayerMarketCard title={LEAGUE_MARKET.title} time={LEAGUE_MARKET.time} options={LEAGUE_MARKET.options} players={byName} />
+        <PlayerMarketCard
+          title={LEAGUE_MARKET.title} time={LEAGUE_MARKET.time} options={LEAGUE_MARKET.options} players={byName}
+          settlement={settlement} lookupKey={p => `league::${p}`}
+        />
         <PlayerMarketCard
           title={FT500_MARKET.title} time={FT500_MARKET.time} options={FT500_MARKET.options} players={byName}
           settlement={settlement} lookupKey={p => `ft500::${p}`}
@@ -238,7 +241,10 @@ export function HrDerbyOddsPanel({ players, hrs, status }: { players: DerbyPlaye
         })} />
       </div>
 
-      <PairList title="🥇 Exact Result (Head-to-Head Final)" pairs={EXACT_RESULT.map(e => ({ a: e.a, b: e.b, odds: e.odds }))} players={byName} connector="over" />
+      <PairList
+        title="🥇 Exact Result (Head-to-Head Final)" pairs={EXACT_RESULT.map(e => ({ a: e.a, b: e.b, odds: e.odds }))} players={byName} connector="over"
+        settlement={settlement} lookupKey={pr => `exactresult::${pr.a}::${pr.b}`}
+      />
       <PairList
         title="🎯 Name the Finalists" pairs={FINALISTS.map(f => ({ a: f.a, b: f.b, odds: f.odds }))} players={byName} connector="vs."
         settlement={settlement} lookupKey={pr => `finalists::${pr.a}::${pr.b}`}

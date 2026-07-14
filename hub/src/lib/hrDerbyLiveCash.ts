@@ -2,18 +2,20 @@
 // real live derby feed and reports which ones have already been decided.
 // Most markets are monotonically determinable from swing-by-swing data (a
 // count or a max can only go up). Bracket markets (To Make Semifinal, To
-// Make the Finals) are also real and verifiable — Savant's feed tags every
-// HR with summary.matchup (the bracket pairing index) and
-// summary.batterMatchupHrs (that player's HR count within their own
-// matchup), confirmed directly against the live feed. Once the derby moves
-// past a round (status.currentRound > that round), every matchup in it is
-// final, so the higher-batterMatchupHrs player in each pairing is the real,
-// confirmed winner — not a guess. Champion/League/MVP/Exact Result/
-// Finalists/Double Chance still aren't covered: those resolve off the
-// Round 3 (Finals) matchup, and there's no "round after 3" to compare
-// against to know Round 3 itself is over.
+// Make the Finals, Champion, League of Winner, Exact Result) are also real
+// and verifiable — Savant's feed tags every HR with summary.matchup (the
+// bracket pairing index) and summary.batterMatchupHrs (that player's HR
+// count within their own matchup), confirmed directly against the live
+// feed, and status.state flips to "Final" once the whole event (including
+// Round 3) is actually decided — also confirmed directly, not guessed.
+// Player to Win the HR Derby and All-Star Game MVP still isn't covered:
+// that depends on the separate All-Star Game itself, which this feed has
+// zero visibility into. Round 1 First Swing to be a HR/Laser and the
+// swing-off tiebreaker market also stay uncovered — this feed only records
+// actual HR events, not every swing, so a non-HR first swing (or whether a
+// tiebreaker occurred earlier in the broadcast) can't be confirmed.
 import type { DerbyPlayer } from '@/components/dugout/HrDerbyTable'
-import { PLAYER_MARKETS, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS, H2H_MARKETS, FINALISTS, DOUBLE_CHANCE } from './hrDerbyOdds'
+import { PLAYER_MARKETS, LEAGUE_MARKET, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS, H2H_MARKETS, EXACT_RESULT, FINALISTS, DOUBLE_CHANCE } from './hrDerbyOdds'
 
 export type LiveHr = {
   playerId: number
@@ -28,7 +30,15 @@ export type LiveHr = {
   time: string | null
 }
 
-export type LiveStatusLike = { currentRound: number } | null
+export type LiveStatusLike = { currentRound: number; state?: string } | null
+
+// Only the 8 teams that matter here (the derby field) — not a general
+// league lookup, just enough to settle "League of Winner" off the
+// champion's real team.
+const TEAM_LEAGUE: Record<string, 'American League' | 'National League'> = {
+  CWS: 'American League', KC: 'American League', BOS: 'American League', TB: 'American League', NYY: 'American League',
+  PHI: 'National League', STL: 'National League',
+}
 
 // players is empty for field-wide markets (totals, 500ft-HR count) that
 // aren't tied to any one participant.
@@ -36,14 +46,14 @@ export type CashedProp = { key: string; players: string[]; category: string; pro
 
 export function fmtCashOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 
-// Winner of every fully-decided round+matchup pairing, keyed off the real
-// bracket data (not a guess at seeding) — a matchup only resolves here once
-// both of its players have at least one recorded HR event in that round; a
-// 0-HR round for a competitor (essentially never happens in a real derby
-// round) would leave that matchup unresolved rather than risk a wrong call.
-// A tied matchup (real derbies settle those with a swing-off) is also left
-// unresolved here rather than arbitrarily picking a side.
-function matchupWinners(hrs: LiveHr[], round: number): string[] {
+// Winner+loser of every fully-decided round+matchup pairing, keyed off the
+// real bracket data (not a guess at seeding) — a matchup only resolves here
+// once both of its players have at least one recorded HR event in that
+// round; a 0-HR round for a competitor (essentially never happens in a real
+// derby round) would leave that matchup unresolved rather than risk a
+// wrong call. A tied matchup (real derbies settle those with a swing-off)
+// is also left unresolved here rather than arbitrarily picking a side.
+function matchupResults(hrs: LiveHr[], round: number): { winner: string; loser: string }[] {
   const byMatchup = new Map<number, Map<number, { name: string; max: number }>>()
   for (const h of hrs) {
     if (h.round !== round || h.matchup == null || h.batterMatchupHrs == null) continue
@@ -53,13 +63,14 @@ function matchupWinners(hrs: LiveHr[], round: number): string[] {
     cur.max = Math.max(cur.max, h.batterMatchupHrs)
     m.set(h.playerId, cur)
   }
-  const winners: string[] = []
+  const results: { winner: string; loser: string }[] = []
   for (const playersInMatchup of byMatchup.values()) {
     const entries = Array.from(playersInMatchup.values())
     if (entries.length !== 2 || entries[0].max === entries[1].max) continue
-    winners.push(entries[0].max > entries[1].max ? entries[0].name : entries[1].name)
+    const [winner, loser] = entries[0].max > entries[1].max ? [entries[0], entries[1]] : [entries[1], entries[0]]
+    results.push({ winner: winner.name, loser: loser.name })
   }
-  return winners
+  return results
 }
 
 // Every player tied for the field lead in a round — 1 name means an
@@ -175,16 +186,60 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
       }
     }
     const semiMarket = PLAYER_MARKETS.find(m => m.title === 'To Make Semifinal')
-    for (const name of matchupWinners(hrs, 1)) {
+    for (const { winner: name } of matchupResults(hrs, 1)) {
       const opt = semiMarket?.options.find(o => o.player === name)
       if (opt) cashed.push({ key: `bracket-semi-${name}`, players: [name], category: 'Bracket', prop: 'Advanced to Semifinal (won Round 1 matchup)', odds: opt.odds })
     }
   }
   if (currentRound > 2) {
     const finalsMarket = PLAYER_MARKETS.find(m => m.title === 'To Make the Finals')
-    for (const name of matchupWinners(hrs, 2)) {
+    for (const { winner: name } of matchupResults(hrs, 2)) {
       const opt = finalsMarket?.options.find(o => o.player === name)
       if (opt) cashed.push({ key: `bracket-finals-${name}`, players: [name], category: 'Bracket', prop: 'Advanced to the Finals (won Semifinal matchup)', odds: opt.odds })
+    }
+  }
+
+  // Champion / League of Winner / Exact Result — only once the whole event
+  // is actually over (status.state === 'Final', confirmed against the real
+  // feed once tonight's derby finished), so Round 3 is truly decided too.
+  if (status?.state === 'Final') {
+    const finalResult = matchupResults(hrs, 3)[0]
+    if (finalResult) {
+      const champMarket = PLAYER_MARKETS.find(m => m.title === 'HR Derby Champion')
+      const champOpt = champMarket?.options.find(o => o.player === finalResult.winner)
+      if (champOpt) cashed.push({ key: `champion-${finalResult.winner}`, players: [finalResult.winner], category: 'Champion', prop: 'HR Derby Champion', odds: champOpt.odds })
+
+      const champPlayer = players.find(p => p.name === finalResult.winner)
+      const league = champPlayer ? TEAM_LEAGUE[champPlayer.teamAbbr] : undefined
+      const leagueOpt = league ? LEAGUE_MARKET.options.find(o => o.player === league) : undefined
+      if (leagueOpt) cashed.push({ key: `league-${league}`, players: [], category: 'League', prop: 'League of Winner', odds: leagueOpt.odds })
+
+      const exactOpt = EXACT_RESULT.find(e => e.a === finalResult.winner && e.b === finalResult.loser)
+      if (exactOpt) cashed.push({ key: `exact-${finalResult.winner}-${finalResult.loser}`, players: [finalResult.winner, finalResult.loser], category: 'Champion', prop: `${finalResult.winner} over ${finalResult.loser} — Exact Result`, odds: exactOpt.odds })
+    }
+
+    // Whole-derby Under sides — only confirmable once the derby is fully
+    // over and these numbers can't move anymore.
+    for (const pl of PROP_LINES) {
+      const mlbId = byName.get(pl.player)
+      if (mlbId == null) continue
+      if (pl.label.includes('Longest') && (maxDistByPlayer.get(mlbId) ?? 0) < pl.line) {
+        cashed.push({ key: `pl-${pl.player}-longest-under`, players: [pl.player], category: 'Prop Line', prop: `Under ${pl.line} ft Longest HR`, odds: pl.underOdds })
+      } else if (pl.label.includes('Exit Velocity') && (maxEvByPlayer.get(mlbId) ?? 0) < pl.line) {
+        cashed.push({ key: `pl-${pl.player}-ev-under`, players: [pl.player], category: 'Prop Line', prop: `Under ${pl.line} MPH Exit Velo`, odds: pl.underOdds })
+      }
+    }
+    for (const m of TOTAL_MARKETS) {
+      const thMatch = m.title.match(/—\s*([\d.]+)\s*$/)
+      if (!thMatch) continue
+      const threshold = parseFloat(thMatch[1])
+      const underOpt = m.options.find(o => /^Under/i.test(o.player))
+      if (!underOpt) continue
+      if (m.title.startsWith('Total Home Runs Hit By All Players') && seasonTotal < threshold) {
+        cashed.push({ key: `t-${m.title}-under`, players: [], category: 'Total', prop: `${m.title.split('—')[0].trim()} — Under ${threshold}`, odds: underOpt.odds })
+      } else if (m.title.startsWith('Highest Exit Velocity') && maxEvAll < threshold) {
+        cashed.push({ key: `t-${m.title}-under`, players: [], category: 'Total', prop: `${m.title.split('—')[0].trim()} — Under ${threshold}`, odds: underOpt.odds })
+      }
     }
   }
 
@@ -217,10 +272,11 @@ export type MarketOutcome = 'won' | 'lost' | 'void'
 //   combine::<threshold>::<a>::<b>
 //   finalists::<a>::<b>
 //   doublechance::<a>::<b>
-// Deliberately no keys for League/MVP/Exact Result/Champion, or the
-// whole-derby "Under" side of Total HRs/Highest EV/500ft markets — none of
-// those are determinable without a "derby is fully over" signal this feed
-// doesn't give us mid-event.
+//   league::<American League|National League>
+//   exactresult::<a>::<b>
+// Deliberately no keys for MVP (depends on the separate All-Star Game) or
+// the Round 1 First Swing / swing-off tiebreaker markets (this feed only
+// records actual HR events, not every swing or prior tiebreaker history).
 export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): Map<string, MarketOutcome> {
   const byName = new Map(players.map(p => [p.name, p.mlbId]))
   const settled = new Map<string, MarketOutcome>()
@@ -239,12 +295,16 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
     if (h.exitVelocity != null) maxEvByPlayer.set(h.playerId, Math.max(maxEvByPlayer.get(h.playerId) ?? 0, h.exitVelocity))
   }
   const round1Total = round1.length
+  const seasonTotal = hrs.length
+  const maxEvAll = hrs.reduce((mx, h) => Math.max(mx, h.exitVelocity ?? 0), 0)
   const ft500Count = hrs.filter(h => (h.distance ?? 0) >= 500).length
   const currentRound = status?.currentRound ?? 0
   const round1Final = currentRound > 1
   const round2Final = currentRound > 2
-  const round1Winners = round1Final ? new Set(matchupWinners(hrs, 1)) : new Set<string>()
-  const round2Winners = round2Final ? new Set(matchupWinners(hrs, 2)) : new Set<string>()
+  const derbyFinal = status?.state === 'Final'
+  const round1Winners = round1Final ? new Set(matchupResults(hrs, 1).map(r => r.winner)) : new Set<string>()
+  const round2Winners = round2Final ? new Set(matchupResults(hrs, 2).map(r => r.winner)) : new Set<string>()
+  const finalResult = derbyFinal ? matchupResults(hrs, 3)[0] : undefined
 
   for (const m of PLAYER_MARKETS) {
     const hrMatch = m.title.match(/^Player to Hit (\d+)\+ Home Runs in the First Round$/)
@@ -283,6 +343,20 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
         else if (round1Final && !round1Winners.has(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'lost')
       }
     }
+    if (m.title === 'HR Derby Champion' && finalResult) {
+      for (const opt of m.options) settled.set(`pm::${m.title}::${opt.player}`, opt.player === finalResult.winner ? 'won' : 'lost')
+    }
+  }
+
+  if (finalResult) {
+    const champPlayer = players.find(p => p.name === finalResult.winner)
+    const winningLeague = champPlayer ? TEAM_LEAGUE[champPlayer.teamAbbr] : undefined
+    if (winningLeague) {
+      for (const opt of LEAGUE_MARKET.options) settled.set(`league::${opt.player}`, opt.player === winningLeague ? 'won' : 'lost')
+    }
+    for (const e of EXACT_RESULT) {
+      settled.set(`exactresult::${e.a}::${e.b}`, e.a === finalResult.winner && e.b === finalResult.loser ? 'won' : 'lost')
+    }
   }
 
   for (const m of TOTAL_MARKETS) {
@@ -296,12 +370,18 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
         settled.set(`tot::${m.title}::${opt.player}`, cashed ? 'won' : 'lost')
       }
     } else if (m.title.startsWith('Total Home Runs Hit By All Players') || m.title.startsWith('Highest Exit Velocity')) {
-      const actual = m.title.startsWith('Total Home Runs Hit By All Players') ? hrs.length : hrs.reduce((mx, h) => Math.max(mx, h.exitVelocity ?? 0), 0)
+      const actual = m.title.startsWith('Total Home Runs Hit By All Players') ? seasonTotal : maxEvAll
       const overOpt = m.options.find(o => /^Over/i.test(o.player))
       const underOpt = m.options.find(o => /^Under/i.test(o.player))
       if (actual > threshold) {
         if (overOpt) settled.set(`tot::${m.title}::${overOpt.player}`, 'won')
         if (underOpt) settled.set(`tot::${m.title}::${underOpt.player}`, 'lost')
+      } else if (derbyFinal) {
+        // Only confirmable once the derby is fully over — the number can't
+        // move anymore, so a value still under the line at that point means
+        // Under actually won, not just "hasn't cashed yet."
+        if (underOpt) settled.set(`tot::${m.title}::${underOpt.player}`, 'won')
+        if (overOpt) settled.set(`tot::${m.title}::${overOpt.player}`, 'lost')
       }
     }
   }
@@ -309,6 +389,7 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
   for (const opt of FT500_MARKET.options) {
     const threshold = parseInt(opt.player)
     if (ft500Count >= threshold) settled.set(`ft500::${opt.player}`, 'won')
+    else if (derbyFinal) settled.set(`ft500::${opt.player}`, 'lost')
   }
 
   for (const pl of PROP_LINES) {
@@ -317,9 +398,11 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
     if (pl.label.includes('Longest')) {
       const max = maxDistByPlayer.get(mlbId) ?? 0
       if (max > pl.line) { settled.set(`propline::${pl.player}::${pl.label}::over`, 'won'); settled.set(`propline::${pl.player}::${pl.label}::under`, 'lost') }
+      else if (derbyFinal) { settled.set(`propline::${pl.player}::${pl.label}::over`, 'lost'); settled.set(`propline::${pl.player}::${pl.label}::under`, 'won') }
     } else if (pl.label.includes('Exit Velocity')) {
       const max = maxEvByPlayer.get(mlbId) ?? 0
       if (max > pl.line) { settled.set(`propline::${pl.player}::${pl.label}::over`, 'won'); settled.set(`propline::${pl.player}::${pl.label}::under`, 'lost') }
+      else if (derbyFinal) { settled.set(`propline::${pl.player}::${pl.label}::over`, 'lost'); settled.set(`propline::${pl.player}::${pl.label}::under`, 'won') }
     } else if (pl.label.includes('Total Home Runs') && round1Final) {
       const cnt = round1CountByPlayer.get(mlbId) ?? 0
       const over = cnt > pl.line
