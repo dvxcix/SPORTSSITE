@@ -23,6 +23,8 @@ export async function GET() {
       playerName: h.playerName,
       round: h.round,
       hrNumInRound: h.summary?.hrs ?? null,
+      matchup: h.summary?.matchup ?? null,
+      batterMatchupHrs: h.summary?.batterMatchupHrs ?? null,
       exitVelocity: h.result?.computedMetrics?.exitVelocity?.value ?? null,
       distance: h.result?.computedMetrics?.projectedDistance?.value ?? null,
       launchAngle: h.result?.computedMetrics?.launchAngle?.value ?? null,

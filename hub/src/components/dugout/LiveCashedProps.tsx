@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { DerbyPlayer } from './HrDerbyTable'
-import { computeCashedProps, fmtCashOdds, type CashedProp, type LiveHr } from '@/lib/hrDerbyLiveCash'
+import { computeCashedProps, fmtCashOdds, type CashedProp, type LiveHr, type LiveStatusLike } from '@/lib/hrDerbyLiveCash'
 
 type Row = CashedProp & { seq: number }
 type SortKey = 'seq' | 'players' | 'category' | 'prop' | 'odds'
@@ -30,7 +30,7 @@ function PlayerCell({ names, players }: { names: string[]; players: Map<string, 
   )
 }
 
-export function LiveCashedProps({ hrs, players }: { hrs: LiveHr[]; players: DerbyPlayer[] }) {
+export function LiveCashedProps({ hrs, players, status }: { hrs: LiveHr[]; players: DerbyPlayer[]; status: LiveStatusLike }) {
   const byName = useMemo(() => new Map(players.map(p => [p.name, p])), [players])
   const seenRef = useRef(new Map<string, number>())
   const seqRef = useRef(0)
@@ -39,7 +39,7 @@ export function LiveCashedProps({ hrs, players }: { hrs: LiveHr[]; players: Derb
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
-    const current = computeCashedProps(hrs, players)
+    const current = computeCashedProps(hrs, players, status)
     let changed = false
     for (const c of current) {
       if (!seenRef.current.has(c.key)) {
@@ -51,7 +51,7 @@ export function LiveCashedProps({ hrs, players }: { hrs: LiveHr[]; players: Derb
       setRows(current.map(c => ({ ...c, seq: seenRef.current.get(c.key)! })))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hrs])
+  }, [hrs, status])
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))

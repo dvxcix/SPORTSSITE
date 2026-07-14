@@ -32,7 +32,7 @@ export function LiveDerbyPanel({ players }: { players: DerbyPlayer[] }) {
 
   return (
     <>
-      <LiveCashedProps hrs={hrs} players={players} />
+      <LiveCashedProps hrs={hrs} players={players} status={status} />
       <LiveDerbyTracker players={players} status={status} hrs={hrs} />
     </>
   )

@@ -1,11 +1,17 @@
 // Checks every FanDuel market on the HR Derby page against Baseball Savant's
 // real live derby feed and reports which ones have already been decided.
-// Only markets that are monotonically determinable from swing-by-swing data
-// (a count or a max can only go up) are covered — bracket/advancement
-// markets (Champion, Semis, Finals, League, MVP, Exact Result, Finalists,
-// Double Chance) depend on real elimination rules this feed doesn't expose
-// cleanly, so guessing at those would risk flagging a market "cashed" when
-// it isn't. Left out on purpose rather than shipped wrong.
+// Most markets are monotonically determinable from swing-by-swing data (a
+// count or a max can only go up). Bracket markets (To Make Semifinal, To
+// Make the Finals) are also real and verifiable — Savant's feed tags every
+// HR with summary.matchup (the bracket pairing index) and
+// summary.batterMatchupHrs (that player's HR count within their own
+// matchup), confirmed directly against the live feed. Once the derby moves
+// past a round (status.currentRound > that round), every matchup in it is
+// final, so the higher-batterMatchupHrs player in each pairing is the real,
+// confirmed winner — not a guess. Champion/League/MVP/Exact Result/
+// Finalists/Double Chance still aren't covered: those resolve off the
+// Round 3 (Finals) matchup, and there's no "round after 3" to compare
+// against to know Round 3 itself is over.
 import type { DerbyPlayer } from '@/components/dugout/HrDerbyTable'
 import { PLAYER_MARKETS, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS } from './hrDerbyOdds'
 
@@ -14,11 +20,15 @@ export type LiveHr = {
   playerName: string
   round: number
   hrNumInRound: number | null
+  matchup: number | null
+  batterMatchupHrs: number | null
   exitVelocity: number | null
   distance: number | null
   launchAngle: number | null
   time: string | null
 }
+
+export type LiveStatusLike = { currentRound: number } | null
 
 // players is empty for field-wide markets (totals, 500ft-HR count) that
 // aren't tied to any one participant.
@@ -26,7 +36,31 @@ export type CashedProp = { key: string; players: string[]; category: string; pro
 
 export function fmtCashOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 
-export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): CashedProp[] {
+// Winner of every fully-decided round+matchup pairing, keyed off the real
+// bracket data (not a guess at seeding) — a matchup only resolves here once
+// both of its players have at least one recorded HR event in that round; a
+// 0-HR round for a competitor (essentially never happens in a real derby
+// round) would leave that matchup unresolved rather than risk a wrong call.
+function matchupWinners(hrs: LiveHr[], round: number): string[] {
+  const byMatchup = new Map<number, Map<number, { name: string; max: number }>>()
+  for (const h of hrs) {
+    if (h.round !== round || h.matchup == null || h.batterMatchupHrs == null) continue
+    let m = byMatchup.get(h.matchup)
+    if (!m) { m = new Map(); byMatchup.set(h.matchup, m) }
+    const cur = m.get(h.playerId) ?? { name: h.playerName, max: 0 }
+    cur.max = Math.max(cur.max, h.batterMatchupHrs)
+    m.set(h.playerId, cur)
+  }
+  const winners: string[] = []
+  for (const playersInMatchup of byMatchup.values()) {
+    const entries = Array.from(playersInMatchup.values())
+    if (entries.length !== 2) continue
+    winners.push(entries[0].max >= entries[1].max ? entries[0].name : entries[1].name)
+  }
+  return winners
+}
+
+export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): CashedProp[] {
   const byName = new Map(players.map(p => [p.name, p.mlbId]))
   const cashed: CashedProp[] = []
 
@@ -114,6 +148,24 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): Cashe
   for (const opt of FT500_MARKET.options) {
     const threshold = parseInt(opt.player)
     if (ft500Count >= threshold) cashed.push({ key: `ft500-${opt.player}`, players: [], category: '500ft HRs', prop: `${opt.player} 500-Foot Home Runs`, odds: opt.odds })
+  }
+
+  // Bracket advancement — only once the derby has actually moved past that
+  // round, so every matchup in it is truly final.
+  const currentRound = status?.currentRound ?? 0
+  if (currentRound > 1) {
+    const semiMarket = PLAYER_MARKETS.find(m => m.title === 'To Make Semifinal')
+    for (const name of matchupWinners(hrs, 1)) {
+      const opt = semiMarket?.options.find(o => o.player === name)
+      if (opt) cashed.push({ key: `bracket-semi-${name}`, players: [name], category: 'Bracket', prop: 'Advanced to Semifinal (won Round 1 matchup)', odds: opt.odds })
+    }
+  }
+  if (currentRound > 2) {
+    const finalsMarket = PLAYER_MARKETS.find(m => m.title === 'To Make the Finals')
+    for (const name of matchupWinners(hrs, 2)) {
+      const opt = finalsMarket?.options.find(o => o.player === name)
+      if (opt) cashed.push({ key: `bracket-finals-${name}`, players: [name], category: 'Bracket', prop: 'Advanced to the Finals (won Semifinal matchup)', odds: opt.odds })
+    }
   }
 
   // Combine-for-X Round 1 HRs pairs.
