@@ -2,6 +2,7 @@ import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { fetchParkHrCounts } from '@/lib/parkHrHistory'
 import { HrDerbyTable, type DerbyPlayer } from '@/components/dugout/HrDerbyTable'
 import { HrDerbyOddsPanel } from '@/components/dugout/HrDerbyOddsPanel'
+import { LiveDerbyTracker } from '@/components/dugout/LiveDerbyTracker'
 import { Spotlight } from '@/components/ui/spotlight'
 
 export const revalidate = 300
@@ -120,6 +121,8 @@ export default async function HrDerbyPage() {
             🏟️ Home Run Derby Watch
           </h1>
         </div>
+
+        <LiveDerbyTracker players={players} />
 
         <HrDerbyTable players={players} />
 
