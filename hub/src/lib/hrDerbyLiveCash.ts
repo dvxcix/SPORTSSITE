@@ -10,10 +10,11 @@
 // Round 3) is actually decided — also confirmed directly, not guessed.
 // Player to Win the HR Derby and All-Star Game MVP still isn't covered:
 // that depends on the separate All-Star Game itself, which this feed has
-// zero visibility into. Round 1 First Swing to be a HR/Laser and the
-// swing-off tiebreaker market also stay uncovered — this feed only records
-// actual HR events, not every swing, so a non-HR first swing (or whether a
-// tiebreaker occurred earlier in the broadcast) can't be confirmed.
+// zero visibility into. The swing-off tiebreaker market also stays
+// uncovered — no record of whether one occurred earlier in the broadcast.
+// Round 1 First Swing to be a HR/Laser IS covered, but not from this feed
+// (it only records completed HR events, not every swing) — FIRST_SWING_RESULTS
+// below is confirmed ground truth from watching tonight's broadcast.
 import type { DerbyPlayer } from '@/components/dugout/HrDerbyTable'
 import { PLAYER_MARKETS, LEAGUE_MARKET, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS, H2H_MARKETS, EXACT_RESULT, FINALISTS, DOUBLE_CHANCE } from './hrDerbyOdds'
 
@@ -38,6 +39,21 @@ export type LiveStatusLike = { currentRound: number; state?: string } | null
 const TEAM_LEAGUE: Record<string, 'American League' | 'National League'> = {
   CWS: 'American League', KC: 'American League', BOS: 'American League', TB: 'American League', NYY: 'American League',
   PHI: 'National League', STL: 'National League',
+}
+
+// Whether each player's very first Round 1 swing was a home run / a laser
+// (110+ MPH) — this feed only records completed HR events, not swing-by-
+// swing outcomes, so a non-HR first swing can't be derived from the API.
+// Confirmed ground truth from watching tonight's broadcast.
+const FIRST_SWING_RESULTS: Record<string, { hr: boolean; laser: boolean }> = {
+  'Willson Contreras': { hr: false, laser: false },
+  'Jordan Walker': { hr: true, laser: true },
+  'Jac Caglianone': { hr: false, laser: false },
+  'Munetaka Murakami': { hr: true, laser: false },
+  'Ben Rice': { hr: false, laser: false },
+  'Junior Caminero': { hr: true, laser: true },
+  'Kyle Schwarber': { hr: false, laser: false },
+  'Bryce Harper': { hr: false, laser: false },
 }
 
 // players is empty for field-wide markets (totals, 500ft-HR count) that
@@ -73,14 +89,16 @@ function matchupResults(hrs: LiveHr[], round: number): { winner: string; loser: 
   return results
 }
 
-// Every player tied for the field lead in a round — 1 name means an
-// outright leader, 2+ means a tie (pushes/voids for all of them, no loser
-// among the tied group since none of them actually lost to another).
-function round1Leaders(round1CountByPlayer: Map<number, number>, players: DerbyPlayer[]): string[] {
+// Every player tied for the field lead on some value (round-1 HR count,
+// whole-derby longest distance, whole-derby highest EV, etc.) — 1 name
+// means an outright leader, 2+ means a genuine tie (pushes/voids for all
+// of them, no loser among the tied group since none of them actually lost
+// to another).
+function leadersByValue(valueByMlbId: Map<number, number>, players: DerbyPlayer[]): string[] {
   let max = -1
-  for (const p of players) max = Math.max(max, round1CountByPlayer.get(p.mlbId) ?? 0)
+  for (const p of players) max = Math.max(max, valueByMlbId.get(p.mlbId) ?? 0)
   if (max <= 0) return []
-  return players.filter(p => (round1CountByPlayer.get(p.mlbId) ?? 0) === max).map(p => p.name)
+  return players.filter(p => (valueByMlbId.get(p.mlbId) ?? 0) === max).map(p => p.name)
 }
 
 export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): CashedProp[] {
@@ -179,10 +197,21 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
   if (currentRound > 1) {
     const mostHrMarket = PLAYER_MARKETS.find(m => m.title === 'Player to Hit the Most Home Runs in the First Round')
     if (mostHrMarket) {
-      const leaders = round1Leaders(round1CountByPlayer, players)
+      const leaders = leadersByValue(round1CountByPlayer, players)
       if (leaders.length === 1) {
         const opt = mostHrMarket.options.find(o => o.player === leaders[0])
         if (opt) cashed.push({ key: `mosthr-r1-${leaders[0]}`, players: [leaders[0]], category: 'Round 1', prop: 'Most HRs in Round 1 (outright)', odds: opt.odds })
+      }
+    }
+    for (const [title, resultKey] of [
+      ['Round 1 First Swing to be a Home Run', 'hr'],
+      ['Round 1 First Swing to be a Laser (110MPH+)', 'laser'],
+    ] as const) {
+      const market = PLAYER_MARKETS.find(m => m.title === title)
+      if (!market) continue
+      for (const opt of market.options) {
+        const r = FIRST_SWING_RESULTS[opt.player]
+        if (r && r[resultKey]) cashed.push({ key: `firstswing-${resultKey}-${opt.player}`, players: [opt.player], category: 'Round 1', prop: title, odds: opt.odds })
       }
     }
     const semiMarket = PLAYER_MARKETS.find(m => m.title === 'To Make Semifinal')
@@ -216,6 +245,22 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
 
       const exactOpt = EXACT_RESULT.find(e => e.a === finalResult.winner && e.b === finalResult.loser)
       if (exactOpt) cashed.push({ key: `exact-${finalResult.winner}-${finalResult.loser}`, players: [finalResult.winner, finalResult.loser], category: 'Champion', prop: `${finalResult.winner} over ${finalResult.loser} — Exact Result`, odds: exactOpt.odds })
+    }
+
+    // Whole-derby outright markets (Longest HR, Highest Exit Velo) — only
+    // settle a winner once no tie exists; a genuine tie pushes for everyone
+    // tied and never appears here as a "win."
+    const longestMarket = PLAYER_MARKETS.find(m => m.title === 'Player to Hit the Longest Home Run')
+    const longestLeaders = leadersByValue(maxDistByPlayer, players)
+    if (longestMarket && longestLeaders.length === 1) {
+      const opt = longestMarket.options.find(o => o.player === longestLeaders[0])
+      if (opt) cashed.push({ key: `longest-hr-${longestLeaders[0]}`, players: [longestLeaders[0]], category: 'Champion', prop: 'Player to Hit the Longest Home Run', odds: opt.odds })
+    }
+    const evMarket = PLAYER_MARKETS.find(m => m.title === 'Player to Hit the Home Run with the Highest Exit Velocity')
+    const evLeaders = leadersByValue(maxEvByPlayer, players)
+    if (evMarket && evLeaders.length === 1) {
+      const opt = evMarket.options.find(o => o.player === evLeaders[0])
+      if (opt) cashed.push({ key: `highest-ev-${evLeaders[0]}`, players: [evLeaders[0]], category: 'Champion', prop: 'Player to Hit the Home Run with the Highest Exit Velocity', odds: opt.odds })
     }
 
     // Whole-derby Under sides — only confirmable once the derby is fully
@@ -328,10 +373,36 @@ export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], s
       }
     }
     if (m.title === 'Player to Hit the Most Home Runs in the First Round' && round1Final) {
-      const leaders = round1Leaders(round1CountByPlayer, players)
+      const leaders = leadersByValue(round1CountByPlayer, players)
       for (const opt of m.options) {
         if (leaders.length > 1 && leaders.includes(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'void')
         else settled.set(`pm::${m.title}::${opt.player}`, leaders[0] === opt.player ? 'won' : 'lost')
+      }
+    }
+    if (m.title === 'Player to Hit the Longest Home Run' && derbyFinal) {
+      const leaders = leadersByValue(maxDistByPlayer, players)
+      for (const opt of m.options) {
+        if (leaders.length > 1 && leaders.includes(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'void')
+        else settled.set(`pm::${m.title}::${opt.player}`, leaders[0] === opt.player ? 'won' : 'lost')
+      }
+    }
+    if (m.title === 'Player to Hit the Home Run with the Highest Exit Velocity' && derbyFinal) {
+      const leaders = leadersByValue(maxEvByPlayer, players)
+      for (const opt of m.options) {
+        if (leaders.length > 1 && leaders.includes(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'void')
+        else settled.set(`pm::${m.title}::${opt.player}`, leaders[0] === opt.player ? 'won' : 'lost')
+      }
+    }
+    if (m.title === 'Round 1 First Swing to be a Home Run') {
+      for (const opt of m.options) {
+        const r = FIRST_SWING_RESULTS[opt.player]
+        if (r) settled.set(`pm::${m.title}::${opt.player}`, r.hr ? 'won' : 'lost')
+      }
+    }
+    if (m.title === 'Round 1 First Swing to be a Laser (110MPH+)') {
+      for (const opt of m.options) {
+        const r = FIRST_SWING_RESULTS[opt.player]
+        if (r) settled.set(`pm::${m.title}::${opt.player}`, r.laser ? 'won' : 'lost')
       }
     }
     if (m.title === 'To Make Semifinal' && round1Final) {
