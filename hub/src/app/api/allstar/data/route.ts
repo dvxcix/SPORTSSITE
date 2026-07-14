@@ -41,6 +41,12 @@ async function mpGetAll(path: string): Promise<any[]> {
 
 const STAT_COLS = 'mlb_id,name_norm,pitch_hand,win,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,ideal_attack_angle_rate,swing_tilt,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,pull_air_rate,fb_rate,xhr,hr_total,avg_hr_distance'
 const TIME_COLS = 'mlb_id,name_norm,pitch_hand,pitch_type,win,miss_distance,on_time_percent,n_swings'
+// Real recency-windowed, pitch-type-specific, hand-conditioned outcomes —
+// the same tables The Dugout/Pitcher Report read for "is this batter doing
+// damage lately against the exact pitch this pitcher throws" — see
+// api/dugout/data/route.ts's own comment on these tables.
+const PITCH_RECENT_BATTER_COLS = 'mlb_id,name_norm,pitch_type,pitcher_hand,pitches,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs,avg_exit_velo,avg_launch_angle,window_start,window_end'
+const PITCH_RECENT_PITCHER_COLS = 'mlb_id,name_norm,pitch_type,bat_hand,pitches,usage_pct,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs_allowed,avg_exit_velo_against,avg_launch_angle_against,window_start,window_end'
 
 export async function GET() {
   // 1. Real live game feed — boxscore.teams.{away,home}.players already
@@ -123,10 +129,12 @@ export async function GET() {
   // 3. Real Statcast bat-tracking + timing splits — same tables/columns The
   // Dugout itself reads for a normal game, just scoped to tonight's 65
   // rostered All-Stars instead of a slate's confirmed lineups.
-  const [statSplits, timingSplits, pitcherSplits] = await Promise.all([
+  const [statSplits, timingSplits, pitcherSplits, batterPitchRecent, pitcherPitchRecent] = await Promise.all([
     mpGetAll(`/rest/v1/batter_statcast_splits?select=${STAT_COLS}${idFilter}`),
     mpGetAll(`/rest/v1/batter_timing_splits?select=${TIME_COLS}${idFilter}`),
     allMlbIds.length ? mpGet(`/rest/v1/pitcher_statcast_splits?mlb_id=in.(${allMlbIds.join(',')})&select=*`) : Promise.resolve([]),
+    mpGetAll(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}${idFilter}&win=eq.recent`),
+    mpGetAll(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}${idFilter}&win=eq.recent`),
   ])
 
   // 4. Real scraped FanDuel/BetMGM/Caesars markets — a DB table, not
@@ -152,6 +160,8 @@ export async function GET() {
       statSplits,
       timingSplits,
       pitcherSplits,
+      batterPitchRecent,
+      pitcherPitchRecent,
       markets,
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
