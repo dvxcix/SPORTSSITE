@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -128,6 +129,19 @@ export async function GET() {
     allMlbIds.length ? mpGet(`/rest/v1/pitcher_statcast_splits?mlb_id=in.(${allMlbIds.join(',')})&select=*`) : Promise.resolve([]),
   ])
 
+  // 4. Real scraped FanDuel/BetMGM/Caesars markets — a DB table, not
+  // committed source (this repo is public, so vendor odds data can't live
+  // in a checked-in file the way the hand-transcribed HR Derby board did).
+  let markets: any[] = []
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('allstar_event_markets')
+      .select('id, book, section, title, options')
+      .eq('snapshot', 'current')
+    markets = data ?? []
+  } catch {}
+
   return NextResponse.json(
     {
       gamePk: ASG_GAME_PK,
@@ -138,6 +152,7 @@ export async function GET() {
       statSplits,
       timingSplits,
       pitcherSplits,
+      markets,
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
   )
