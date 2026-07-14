@@ -13,7 +13,7 @@
 // Round 3 (Finals) matchup, and there's no "round after 3" to compare
 // against to know Round 3 itself is over.
 import type { DerbyPlayer } from '@/components/dugout/HrDerbyTable'
-import { PLAYER_MARKETS, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS } from './hrDerbyOdds'
+import { PLAYER_MARKETS, TOTAL_MARKETS, FT500_MARKET, PROP_LINES, COMBINE_MARKETS, H2H_MARKETS, FINALISTS, DOUBLE_CHANCE } from './hrDerbyOdds'
 
 export type LiveHr = {
   playerId: number
@@ -181,4 +181,158 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[], status
   }
 
   return cashed
+}
+
+// Per-row won/lost lookup for every option/pair shown in the odds panel
+// itself, not just the top cashed list — so every market on the page can
+// highlight green+check or red+x once we actually know the outcome. Keys:
+//   pm::<market title>::<player>       PLAYER_MARKETS options
+//   tot::<market title>::<Over/Under>  TOTAL_MARKETS options
+//   ft500::<threshold>                 FT500_MARKET (won-only, no full-derby-over signal to call a loss)
+//   propline::<player>::<label>::over|under
+//   h2h::<index>::a|b                  H2H_MARKETS, by its render-order index
+//   combine::<threshold>::<a>::<b>
+//   finalists::<a>::<b>
+//   doublechance::<a>::<b>
+// Deliberately no keys for League/MVP/Exact Result/Champion, or the
+// whole-derby "Under" side of Total HRs/Highest EV/500ft markets — none of
+// those are determinable without a "derby is fully over" signal this feed
+// doesn't give us mid-event.
+export function computeMarketSettlement(hrs: LiveHr[], players: DerbyPlayer[], status: LiveStatusLike): Map<string, 'won' | 'lost'> {
+  const byName = new Map(players.map(p => [p.name, p.mlbId]))
+  const settled = new Map<string, 'won' | 'lost'>()
+
+  const round1 = hrs.filter(h => h.round === 1)
+  const round1CountByPlayer = new Map<number, number>()
+  const round1LaserCountByPlayer = new Map<number, number>()
+  const maxDistByPlayer = new Map<number, number>()
+  const maxEvByPlayer = new Map<number, number>()
+  for (const h of hrs) {
+    if (h.round === 1) {
+      round1CountByPlayer.set(h.playerId, (round1CountByPlayer.get(h.playerId) ?? 0) + 1)
+      if ((h.exitVelocity ?? 0) >= 110) round1LaserCountByPlayer.set(h.playerId, (round1LaserCountByPlayer.get(h.playerId) ?? 0) + 1)
+    }
+    if (h.distance != null) maxDistByPlayer.set(h.playerId, Math.max(maxDistByPlayer.get(h.playerId) ?? 0, h.distance))
+    if (h.exitVelocity != null) maxEvByPlayer.set(h.playerId, Math.max(maxEvByPlayer.get(h.playerId) ?? 0, h.exitVelocity))
+  }
+  const round1Total = round1.length
+  const ft500Count = hrs.filter(h => (h.distance ?? 0) >= 500).length
+  const currentRound = status?.currentRound ?? 0
+  const round1Final = currentRound > 1
+  const round2Final = currentRound > 2
+  const round1Winners = round1Final ? new Set(matchupWinners(hrs, 1)) : new Set<string>()
+  const round2Winners = round2Final ? new Set(matchupWinners(hrs, 2)) : new Set<string>()
+
+  for (const m of PLAYER_MARKETS) {
+    const hrMatch = m.title.match(/^Player to Hit (\d+)\+ Home Runs in the First Round$/)
+    if (hrMatch && round1Final) {
+      const threshold = parseInt(hrMatch[1])
+      for (const opt of m.options) {
+        const mlbId = byName.get(opt.player)
+        if (mlbId == null) continue
+        const cnt = round1CountByPlayer.get(mlbId) ?? 0
+        settled.set(`pm::${m.title}::${opt.player}`, cnt >= threshold ? 'won' : 'lost')
+      }
+    }
+    const laserMatch = m.title.match(/^Player to Hit (\d+)\+ Lasers/)
+    if (laserMatch && round1Final) {
+      const threshold = parseInt(laserMatch[1])
+      for (const opt of m.options) {
+        const mlbId = byName.get(opt.player)
+        if (mlbId == null) continue
+        const cnt = round1LaserCountByPlayer.get(mlbId) ?? 0
+        settled.set(`pm::${m.title}::${opt.player}`, cnt >= threshold ? 'won' : 'lost')
+      }
+    }
+    if (m.title === 'To Make Semifinal' && round1Final) {
+      for (const opt of m.options) settled.set(`pm::${m.title}::${opt.player}`, round1Winners.has(opt.player) ? 'won' : 'lost')
+    }
+    if (m.title === 'To Make the Finals') {
+      for (const opt of m.options) {
+        if (round2Final) settled.set(`pm::${m.title}::${opt.player}`, round2Winners.has(opt.player) ? 'won' : 'lost')
+        else if (round1Final && !round1Winners.has(opt.player)) settled.set(`pm::${m.title}::${opt.player}`, 'lost')
+      }
+    }
+  }
+
+  for (const m of TOTAL_MARKETS) {
+    const thMatch = m.title.match(/—\s*([\d.]+)\s*$/)
+    if (!thMatch) continue
+    const threshold = parseFloat(thMatch[1])
+    if (m.title.startsWith('Round 1 Total Home Runs') && round1Final) {
+      for (const opt of m.options) {
+        const isOver = /^Over/i.test(opt.player)
+        const cashed = isOver ? round1Total > threshold : round1Total < threshold
+        settled.set(`tot::${m.title}::${opt.player}`, cashed ? 'won' : 'lost')
+      }
+    } else if (m.title.startsWith('Total Home Runs Hit By All Players') || m.title.startsWith('Highest Exit Velocity')) {
+      const actual = m.title.startsWith('Total Home Runs Hit By All Players') ? hrs.length : hrs.reduce((mx, h) => Math.max(mx, h.exitVelocity ?? 0), 0)
+      const overOpt = m.options.find(o => /^Over/i.test(o.player))
+      const underOpt = m.options.find(o => /^Under/i.test(o.player))
+      if (actual > threshold) {
+        if (overOpt) settled.set(`tot::${m.title}::${overOpt.player}`, 'won')
+        if (underOpt) settled.set(`tot::${m.title}::${underOpt.player}`, 'lost')
+      }
+    }
+  }
+
+  for (const opt of FT500_MARKET.options) {
+    const threshold = parseInt(opt.player)
+    if (ft500Count >= threshold) settled.set(`ft500::${opt.player}`, 'won')
+  }
+
+  for (const pl of PROP_LINES) {
+    const mlbId = byName.get(pl.player)
+    if (mlbId == null) continue
+    if (pl.label.includes('Longest')) {
+      const max = maxDistByPlayer.get(mlbId) ?? 0
+      if (max > pl.line) { settled.set(`propline::${pl.player}::${pl.label}::over`, 'won'); settled.set(`propline::${pl.player}::${pl.label}::under`, 'lost') }
+    } else if (pl.label.includes('Exit Velocity')) {
+      const max = maxEvByPlayer.get(mlbId) ?? 0
+      if (max > pl.line) { settled.set(`propline::${pl.player}::${pl.label}::over`, 'won'); settled.set(`propline::${pl.player}::${pl.label}::under`, 'lost') }
+    } else if (pl.label.includes('Total Home Runs') && round1Final) {
+      const cnt = round1CountByPlayer.get(mlbId) ?? 0
+      const over = cnt > pl.line
+      settled.set(`propline::${pl.player}::${pl.label}::over`, over ? 'won' : 'lost')
+      settled.set(`propline::${pl.player}::${pl.label}::under`, over ? 'lost' : 'won')
+    }
+  }
+
+  if (round1Final) {
+    H2H_MARKETS.forEach((h, i) => {
+      const aId = byName.get(h.a)
+      const bId = byName.get(h.b)
+      if (aId == null || bId == null) return
+      const aCnt = round1CountByPlayer.get(aId) ?? 0
+      const bCnt = round1CountByPlayer.get(bId) ?? 0
+      if (aCnt === bCnt) return
+      settled.set(`h2h::${i}::a`, aCnt > bCnt ? 'won' : 'lost')
+      settled.set(`h2h::${i}::b`, bCnt > aCnt ? 'won' : 'lost')
+    })
+
+    for (const cm of COMBINE_MARKETS) {
+      const threshold = parseInt(cm.threshold)
+      for (const pair of cm.pairs) {
+        const aId = byName.get(pair.a)
+        const bId = byName.get(pair.b)
+        if (aId == null || bId == null) continue
+        const combined = (round1CountByPlayer.get(aId) ?? 0) + (round1CountByPlayer.get(bId) ?? 0)
+        settled.set(`combine::${cm.threshold}::${pair.a}::${pair.b}`, combined >= threshold ? 'won' : 'lost')
+      }
+    }
+
+    for (const pair of DOUBLE_CHANCE) {
+      const hit = round1Winners.has(pair.a) || round1Winners.has(pair.b)
+      settled.set(`doublechance::${pair.a}::${pair.b}`, hit ? 'won' : 'lost')
+    }
+  }
+
+  if (round2Final && round2Winners.size === 2) {
+    for (const pair of FINALISTS) {
+      const isMatch = round2Winners.has(pair.a) && round2Winners.has(pair.b)
+      settled.set(`finalists::${pair.a}::${pair.b}`, isMatch ? 'won' : 'lost')
+    }
+  }
+
+  return settled
 }

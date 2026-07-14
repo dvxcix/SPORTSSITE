@@ -1,7 +1,6 @@
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { fetchParkHrCounts } from '@/lib/parkHrHistory'
-import { HrDerbyTable, type DerbyPlayer } from '@/components/dugout/HrDerbyTable'
-import { HrDerbyOddsPanel } from '@/components/dugout/HrDerbyOddsPanel'
+import { type DerbyPlayer } from '@/components/dugout/HrDerbyTable'
 import { LiveDerbyPanel } from '@/components/dugout/LiveDerbyPanel'
 import { Spotlight } from '@/components/ui/spotlight'
 
@@ -123,10 +122,6 @@ export default async function HrDerbyPage() {
         </div>
 
         <LiveDerbyPanel players={players} />
-
-        <HrDerbyTable players={players} />
-
-        <HrDerbyOddsPanel players={players} />
       </div>
     </div>
   )

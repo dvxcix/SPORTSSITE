@@ -7,8 +7,20 @@ import type { PropLine } from '@/lib/hrDerbyOdds'
 
 function fmtOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 
+type Outcome = 'won' | 'lost' | undefined
+function outcomeBg(o: Outcome) {
+  if (o === 'won') return 'rgba(34,197,94,0.16)'
+  if (o === 'lost') return 'rgba(248,113,113,0.10)'
+  return undefined
+}
+function outcomeMark(o: Outcome) {
+  if (o === 'won') return ' ✅'
+  if (o === 'lost') return ' ❌'
+  return ''
+}
+
 type SortKey = 'player' | 'label' | 'line' | 'overOdds' | 'underOdds' | 'real'
-type Row = PropLine & { real: number | null; realLabel: string; flagged?: boolean }
+type Row = PropLine & { real: number | null; realLabel: string; flagged?: boolean; overOutcome?: Outcome; underOutcome?: Outcome }
 
 export function SortablePropTable({ rows }: { rows: Row[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('player')
@@ -77,8 +89,8 @@ export function SortablePropTable({ rows }: { rows: Row[] }) {
               <td style={{ padding: '7px 10px', fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{pl.player} {pl.flagged && '❓'}</td>
               <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-2)' }}>{pl.label}</td>
               <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12, fontWeight: 700 }}>{pl.line}</td>
-              <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12 }}>{fmtOdds(pl.overOdds)}</td>
-              <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12 }}>{fmtOdds(pl.underOdds)}</td>
+              <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12, background: outcomeBg(pl.overOutcome) }}>{fmtOdds(pl.overOdds)}{outcomeMark(pl.overOutcome)}</td>
+              <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 12, background: outcomeBg(pl.underOutcome) }}>{fmtOdds(pl.underOdds)}{outcomeMark(pl.underOutcome)}</td>
               <td style={{ padding: '7px 10px', textAlign: 'center', fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>{pl.realLabel}</td>
             </tr>
           ))}
