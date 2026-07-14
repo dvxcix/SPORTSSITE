@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Spotlight } from '@/components/ui/spotlight'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -200,81 +200,59 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
 
-// Real batter-vs-any-opposing-pitcher matchup — no fixed starter exists for
-// an All-Star Game, so instead of one computed matchup this lets you pick
-// ANY pitcher on the other side and see the batter's real split vs that
-// exact pitcher's real throwing hand, and that pitcher's real split vs the
-// batter's real (or switch-hitter-resolved) side. Covers all four hand
-// combinations (RHP/RHB, RHP/LHB, LHP/RHB, LHP/LHB) since both axes are
-// driven by the actual two players selected, not one shared toggle.
-function PitcherMatchupPanel({
-  batter, opposingPitchers, statSplits, timingSplits, pitcherSplits,
-}: {
-  batter: { mlb_id: number; name: string; bats: string }
-  opposingPitchers: Roster[]
-  statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]
-}) {
-  const [pitcherId, setPitcherId] = useState<number | ''>('')
-  const pitcher = opposingPitchers.find(p => p.mlb_id === pitcherId)
-  const pHand = (pitcher?.throws === 'L' ? 'L' : 'R') as 'R' | 'L'
-  const bRow = pitcher ? buildBatterRow(batter as Roster, pHand, statSplits, timingSplits) : null
-  const effectiveBats = (batter.bats === 'S' ? (pHand === 'L' ? 'R' : 'L') : (batter.bats === 'L' ? 'L' : 'R')) as 'R' | 'L'
-  const pRow = pitcher ? buildPitcherRow(pitcher, effectiveBats, pitcherSplits) : null
-
-  return (
-    <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-      <select
-        value={pitcherId}
-        onChange={e => setPitcherId(e.target.value ? Number(e.target.value) : '')}
-        className="ss-input"
-        style={{ fontSize: 11, padding: '5px 8px', marginBottom: 8, maxWidth: 320 }}
-      >
-        <option value="">Compare vs a pitcher…</option>
-        {opposingPitchers.map(p => <option key={p.mlb_id} value={p.mlb_id}>{p.name} ({p.throws}HP)</option>)}
-      </select>
-      {bRow && pRow && pitcher && (
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 11 }}>
-          <div>
-            <div style={{ fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>{batter.name} vs {pHand}HP</div>
-            <div style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
-              BSpd {fmt(bRow.s_spd)} · HardSw {fmt(bRow.s_hrd)} · Sq {fmt(bRow.s_sq)} · Blast {fmt(bRow.s_bla)} · Timing {fmt(bRow.s_timing)} · Miss {fmt(bRow.s_miss)}<br />
-              EV {fmt(bRow.s_ev)} · Brl% {fmt(bRow.s_brl)} · HH% {fmt(bRow.s_hh)} · xHR {fmt(bRow.s_xhr)} · HR {fmt(bRow.s_hr, 0)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>{pitcher.name} vs {effectiveBats}HB</div>
-            <div style={{ color: 'var(--text-2)', lineHeight: 1.7 }}>
-              FF Velo {fmt(pRow.velo_ff)} · Arm° {fmt(pRow.arm_angle)} · Whiff% {fmt(pRow.whiff_per_swing_against)}<br />
-              HH% {fmt(pRow.hard_hit_pct)} · EV {fmt(pRow.exit_velocity_avg)} · Brl% {fmt(pRow.barrel_batted_rate)} · xHR {fmt(pRow.xhr)} · HR {fmt(pRow.hr_total, 0)}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function LeagueBatterTable({
-  league, teamName, rows, pool, sort, onSort, expanded, onToggleExpand, markets, flags, dataFlags,
-  opposingPitchers, statSplits, timingSplits, pitcherSplits,
+  league, batterRoster, hand, sort, onSort, expanded, onToggleExpand, markets, flags, dataFlags,
+  opposingPitchers, statSplits, timingSplits,
 }: {
-  league: 'AL' | 'NL'; teamName: string; rows: BatterRow[]; pool: BatterRow[]
+  league: 'AL' | 'NL'; batterRoster: Roster[]; hand: 'R' | 'L'
   sort: SortState; onSort: (col: string) => void
   expanded: Set<number>; onToggleExpand: (id: number) => void; markets: Market[]
   flags: ReturnType<typeof computeCrossBookFlags>
   dataFlags: ReturnType<typeof computeMarketVsDataFlags>
-  opposingPitchers: Roster[]; statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]
+  opposingPitchers: Roster[]; statSplits: any[]; timingSplits: any[]
 }) {
+  // Selecting a pitcher up top recomputes EVERY batter's row (and the
+  // heatmap, since it's scaled off whatever's currently on screen) vs that
+  // exact pitcher's real throwing hand — this is the actual "who's the best
+  // batter vs this specific pitcher" tool, not a per-row aside.
+  const [pitcherId, setPitcherId] = useState<number | ''>('')
+  const selectedPitcher = opposingPitchers.find(p => p.mlb_id === pitcherId)
+  const effectiveHand = (selectedPitcher ? (selectedPitcher.throws === 'L' ? 'L' : 'R') : hand) as 'R' | 'L'
+  const rows = useMemo(
+    () => sortRows(batterRoster.map(p => buildBatterRow(p, effectiveHand, statSplits, timingSplits)), sort),
+    [batterRoster, effectiveHand, statSplits, timingSplits, sort]
+  )
+  const pool = useMemo(
+    () => batterRoster.map(p => buildBatterRow(p, effectiveHand, statSplits, timingSplits)),
+    [batterRoster, effectiveHand, statSplits, timingSplits]
+  )
   const g = (f: string) => pool.map((r: any) => r[f])
+  const pAbbr = selectedPitcher?.teamId != null ? ID_TO_ABBR[selectedPitcher.teamId] : undefined
+  const pLogo = selectedPitcher?.teamId != null ? mlbTeamLogo(selectedPitcher.teamId) : undefined
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <span style={{
           fontSize: 10, fontWeight: 900, padding: '3px 8px', borderRadius: 6,
           background: league === 'AL' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
           color: league === 'AL' ? '#f87171' : '#60a5fa',
         }}>{league === 'AL' ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{rows.length} batters</span>
+        <select
+          value={pitcherId}
+          onChange={e => setPitcherId(e.target.value ? Number(e.target.value) : '')}
+          className="ss-input"
+          style={{ fontSize: 11, padding: '5px 8px', maxWidth: 260 }}
+        >
+          <option value="">vs {hand === 'R' ? 'RHP' : 'LHP'} (season avg)…</option>
+          {opposingPitchers.map(p => <option key={p.mlb_id} value={p.mlb_id}>{p.name} ({p.throws}HP)</option>)}
+        </select>
+        {selectedPitcher && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <PlayerAvatar headshot={mlbHeadshot(selectedPitcher.mlb_id)} teamLogo={pLogo} teamAbbr={pAbbr} name={selectedPitcher.name} size={22} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>{selectedPitcher.name}</span>
+          </span>
+        )}
       </div>
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid var(--border)', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -316,11 +294,6 @@ function LeagueBatterTable({
                   {isOpen && (
                     <tr key={`${r.mlb_id}-exp`}>
                       <td colSpan={BATTER_COLS.length + 1} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
-                        <PitcherMatchupPanel
-                          batter={{ mlb_id: r.mlb_id, name: r.name, bats: r.bats }}
-                          opposingPitchers={opposingPitchers}
-                          statSplits={statSplits} timingSplits={timingSplits} pitcherSplits={pitcherSplits}
-                        />
                         {playerMarkets.length === 0 ? (
                           <span style={{ fontSize: 11, color: 'var(--text-3)' }}>No markets loaded for {r.name} yet.</span>
                         ) : (
@@ -516,9 +489,12 @@ export function AllStarClient() {
   const alRoster: Roster[] = data.rosters?.AL ?? []
   const nlRoster: Roster[] = data.rosters?.NL ?? []
 
-  const alBatters = alRoster.filter(p => p.position !== 'P').map(p => buildBatterRow(p, hand, data.statSplits, data.timingSplits))
-  const nlBatters = nlRoster.filter(p => p.position !== 'P').map(p => buildBatterRow(p, hand, data.statSplits, data.timingSplits))
-  const allBatterPool = [...alBatters, ...nlBatters]
+  const alBatterRoster = alRoster.filter(p => p.position !== 'P')
+  const nlBatterRoster = nlRoster.filter(p => p.position !== 'P')
+  // Baseline (global-hand) build — used only for the HR power ranking below;
+  // each LeagueBatterTable rebuilds its own rows internally once a specific
+  // opposing pitcher is selected.
+  const allBatterPool = [...alBatterRoster, ...nlBatterRoster].map(p => buildBatterRow(p, hand, data.statSplits, data.timingSplits))
 
   const alPitcherRoster = alRoster.filter(p => p.position === 'P')
   const nlPitcherRoster = nlRoster.filter(p => p.position === 'P')
@@ -586,8 +562,8 @@ export function AllStarClient() {
 
       {/* Section 1: Bat tracking board */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', marginBottom: 12 }}>Bat Tracking Board</h2>
-      <LeagueBatterTable league="AL" teamName="American League" rows={sortRows(alBatters, batterSort)} pool={allBatterPool} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} pitcherSplits={data.pitcherSplits} />
-      <LeagueBatterTable league="NL" teamName="National League" rows={sortRows(nlBatters, batterSort)} pool={allBatterPool} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} pitcherSplits={data.pitcherSplits} />
+      <LeagueBatterTable league="AL" batterRoster={alBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} />
+      <LeagueBatterTable league="NL" batterRoster={nlBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} />
 
       {/* Pitching staffs */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Pitching Staffs</h2>
