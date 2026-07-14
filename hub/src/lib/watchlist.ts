@@ -2,27 +2,47 @@ import { createClient } from '@/lib/supabase/client'
 import { combineOdds, calcPayout } from '@/lib/parlayCalc'
 
 // ─── Prop metadata ─────────────────────────────────────────────────────────
-// Maps a raw BDL propMap key (or synthetic key) to a human label + pick_type
-// used when posting to the picks/feed table.
+// Maps a raw BDL propMap key (or synthetic key) to what shows on the
+// consumer side (post captions, pick cards, watchlist) + a pick_type used
+// when posting to the picks/feed table. `label` is deliberately the market's
+// literal FanDuel section title, not our own shorthand for it — someone
+// reading a pick needs to be able to go find that exact market on FanDuel
+// itself, and an internal nickname/code (e.g. "pa1") doesn't exist there.
+// Titles below are the real scraped section names FanDuel uses (see
+// SECTION_MAP in api/admin/fanduel-import/route.ts, matched there via
+// exact-anchored regex against FanDuel's own page text) or, where noted,
+// confirmed directly.
 export const PROP_META: Record<string, { label: string; pickType: string }> = {
-  fhr:                { label: 'First Home Run',      pickType: 'first_hr' },
-  sa:                  { label: 'Anytime HR',           pickType: 'anytime_hr' },
-  hr2:                 { label: '2+ Home Runs',         pickType: 'hr_2plus' },
+  fhr:                 { label: 'To Hit First Home Run',                        pickType: 'first_hr' },
+  sa:                  { label: 'To Hit a Home Run',                           pickType: 'anytime_hr' },
+  hr2:                 { label: 'To Hit 2+ Home Runs',                          pickType: 'hr_2plus' },
+  // Confirmed directly (not in SECTION_MAP's regex-matched set, which only
+  // needs "first plate appearance"/"home run"+"moneyline parlay" to match —
+  // these are the real full titles).
+  pa1:                 { label: 'To Hit a Home Run in First Plate Appearance', pickType: 'first_pa_hr' },
+  hrMl:                { label: 'Home Run / Moneyline Parlay',                 pickType: 'hr_moneyline_parlay' },
+  singles:             { label: 'To Hit a Single',                             pickType: 'single' },
+  doubles:             { label: 'To Hit a Double',                             pickType: 'double' },
+  triples:             { label: 'To Hit a Triple',                             pickType: 'triple' },
+  rbi:                 { label: 'To Record an RBI',                            pickType: 'rbi' },
+  rbi2:                { label: 'To Record 2+ RBIs',                           pickType: 'rbi_2plus' },
+  rbi3:                { label: 'To Record 3+ RBIs',                           pickType: 'rbi_3plus' },
+  tb4:                 { label: 'To Record 4+ Total Bases',                    pickType: 'total_bases_4plus' },
+  tb5:                 { label: 'To Record 5+ Total Bases',                    pickType: 'total_bases_5plus' },
+  hrr:                 { label: 'Player to Record 1+ Hits + Runs + RBIs',      pickType: 'hits_runs_rbis' },
+  // Everything below isn't in SECTION_MAP (BDL carries these directly, not
+  // scraped from a FanDuel page section), so the exact FanDuel title hasn't
+  // been confirmed the same way as the ones above — flagged for a follow-up
+  // pass once that wording's been checked against FanDuel directly.
   hits:                { label: '1+ Hits',               pickType: 'hits' },
-  singles:             { label: '1+ Single',             pickType: 'single' },
-  doubles:             { label: '1+ Double',             pickType: 'double' },
-  triples:             { label: '1+ Triple',             pickType: 'triple' },
-  rbi:                 { label: '1+ RBI',                pickType: 'rbi' },
-  rbi2:                { label: '2+ RBI',                pickType: 'rbi_2plus' },
-  rbi3:                { label: '3+ RBI',                pickType: 'rbi_3plus' },
   tb:                  { label: '1.5+ Total Bases',      pickType: 'total_bases' },
-  tb4:                 { label: '4+ Total Bases',        pickType: 'total_bases_4plus' },
-  tb5:                 { label: '5+ Total Bases',        pickType: 'total_bases_5plus' },
   runs:                { label: '1+ Run Scored',         pickType: 'run_scored' },
   stolen_bases:        { label: '1+ Stolen Base',        pickType: 'stolen_base' },
   strikeouts:          { label: '1+ Strikeout (batter)', pickType: 'batter_strikeout' },
-  hrr:                 { label: 'Hits+Runs+RBIs',        pickType: 'hits_runs_rbis' },
   pitcher_strikeouts:  { label: 'Pitcher Strikeouts',    pickType: 'pitcher_strikeouts' },
+  laser105:            { label: 'Laser (105+ MPH Home Run)', pickType: 'laser_105' },
+  laser110:            { label: 'Laser (110+ MPH Home Run)', pickType: 'laser_110' },
+  moonshot:            { label: 'Moonshot Home Run',     pickType: 'moonshot' },
 }
 
 export type WatchlistItem = {
