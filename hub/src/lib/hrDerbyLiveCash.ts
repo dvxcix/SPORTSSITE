@@ -20,9 +20,11 @@ export type LiveHr = {
   time: string | null
 }
 
-export type CashedProp = { key: string; label: string; odds: number; category: string }
+// players is empty for field-wide markets (totals, 500ft-HR count) that
+// aren't tied to any one participant.
+export type CashedProp = { key: string; players: string[]; category: string; prop: string; odds: number }
 
-function fmtOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
+export function fmtCashOdds(o: number) { return o > 0 ? `+${o}` : `${o}` }
 
 export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): CashedProp[] {
   const byName = new Map(players.map(p => [p.name, p.mlbId]))
@@ -56,13 +58,13 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): Cashe
     if (mlbId == null) continue
     if (pl.label.includes('Longest')) {
       const max = maxDistByPlayer.get(mlbId) ?? 0
-      if (max > pl.line) cashed.push({ key: `pl-${pl.player}-longest`, label: `${pl.player} Over ${pl.line} ft Longest HR`, odds: pl.overOdds, category: 'Prop Line' })
+      if (max > pl.line) cashed.push({ key: `pl-${pl.player}-longest`, players: [pl.player], category: 'Prop Line', prop: `Over ${pl.line} ft Longest HR`, odds: pl.overOdds })
     } else if (pl.label.includes('Exit Velocity')) {
       const max = maxEvByPlayer.get(mlbId) ?? 0
-      if (max > pl.line) cashed.push({ key: `pl-${pl.player}-ev`, label: `${pl.player} Over ${pl.line} MPH Exit Velo`, odds: pl.overOdds, category: 'Prop Line' })
+      if (max > pl.line) cashed.push({ key: `pl-${pl.player}-ev`, players: [pl.player], category: 'Prop Line', prop: `Over ${pl.line} MPH Exit Velo`, odds: pl.overOdds })
     } else if (pl.label.includes('Total Home Runs')) {
       const cnt = round1CountByPlayer.get(mlbId) ?? 0
-      if (cnt > pl.line) cashed.push({ key: `pl-${pl.player}-r1hr`, label: `${pl.player} Over ${pl.line} Round 1 HRs`, odds: pl.overOdds, category: 'Prop Line' })
+      if (cnt > pl.line) cashed.push({ key: `pl-${pl.player}-r1hr`, players: [pl.player], category: 'Prop Line', prop: `Over ${pl.line} Round 1 HRs`, odds: pl.overOdds })
     }
   }
 
@@ -76,7 +78,7 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): Cashe
         const mlbId = byName.get(opt.player)
         if (mlbId == null) continue
         const cnt = round1CountByPlayer.get(mlbId) ?? 0
-        if (cnt >= threshold) cashed.push({ key: `m-r1hr${threshold}-${opt.player}`, label: `${opt.player} — ${threshold}+ HRs in Round 1`, odds: opt.odds, category: 'Round 1' })
+        if (cnt >= threshold) cashed.push({ key: `m-r1hr${threshold}-${opt.player}`, players: [opt.player], category: 'Round 1', prop: `${threshold}+ HRs in Round 1`, odds: opt.odds })
       }
     }
     const laserMatch = m.title.match(/^Player to Hit (\d+)\+ Lasers/)
@@ -86,7 +88,7 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): Cashe
         const mlbId = byName.get(opt.player)
         if (mlbId == null) continue
         const cnt = round1LaserCountByPlayer.get(mlbId) ?? 0
-        if (cnt >= threshold) cashed.push({ key: `m-laser${threshold}-${opt.player}`, label: `${opt.player} — ${threshold}+ Lasers (110+ MPH) in Round 1`, odds: opt.odds, category: 'Round 1' })
+        if (cnt >= threshold) cashed.push({ key: `m-laser${threshold}-${opt.player}`, players: [opt.player], category: 'Round 1', prop: `${threshold}+ Lasers (110+ MPH) in Round 1`, odds: opt.odds })
       }
     }
   }
@@ -104,14 +106,14 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): Cashe
     else if (m.title.startsWith('Total Home Runs Hit By All Players')) actual = seasonTotal
     else if (m.title.startsWith('Highest Exit Velocity')) actual = maxEvAll
     if (actual !== null && actual > threshold) {
-      cashed.push({ key: `t-${m.title}`, label: `${m.title.split('—')[0].trim()} — Over ${threshold}`, odds: overOpt.odds, category: 'Total' })
+      cashed.push({ key: `t-${m.title}`, players: [], category: 'Total', prop: `${m.title.split('—')[0].trim()} — Over ${threshold}`, odds: overOpt.odds })
     }
   }
 
-  // 500+ foot HR count thresholds.
+  // 500+ foot HR count thresholds (field-wide, not tied to one player).
   for (const opt of FT500_MARKET.options) {
     const threshold = parseInt(opt.player)
-    if (ft500Count >= threshold) cashed.push({ key: `ft500-${opt.player}`, label: `${opt.player} 500-Foot Home Runs`, odds: opt.odds, category: '500ft HRs' })
+    if (ft500Count >= threshold) cashed.push({ key: `ft500-${opt.player}`, players: [], category: '500ft HRs', prop: `${opt.player} 500-Foot Home Runs`, odds: opt.odds })
   }
 
   // Combine-for-X Round 1 HRs pairs.
@@ -122,11 +124,9 @@ export function computeCashedProps(hrs: LiveHr[], players: DerbyPlayer[]): Cashe
       const bId = byName.get(pair.b)
       if (aId == null || bId == null) continue
       const combined = (round1CountByPlayer.get(aId) ?? 0) + (round1CountByPlayer.get(bId) ?? 0)
-      if (combined >= threshold) cashed.push({ key: `combine-${cm.threshold}-${pair.a}-${pair.b}`, label: `${pair.a} & ${pair.b} — Combine ${cm.threshold} Round 1 HRs`, odds: pair.odds, category: 'Combine' })
+      if (combined >= threshold) cashed.push({ key: `combine-${cm.threshold}-${pair.a}-${pair.b}`, players: [pair.a, pair.b], category: 'Combine', prop: `Combine ${cm.threshold} Round 1 HRs`, odds: pair.odds })
     }
   }
 
   return cashed
 }
-
-export { fmtOdds as fmtCashOdds }
