@@ -57,7 +57,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
   const [showMenu, setShowMenu] = useState(false)
   const [showReport, setShowReport] = useState(false)
-  const [pollVoted, setPollVoted] = useState<number | null>(null)
+  const [pollVoted, setPollVoted] = useState<number | null>(initialPost.user_poll_vote ?? null)
   const [pollCounts, setPollCounts] = useState<number[]>(
     (initialPost.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
   )
@@ -305,12 +305,17 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   async function votePoll(idx: number) {
     if (!user || pollVoted !== null) return
     const prevCounts = pollCounts
-    const newCounts = pollCounts.map((c, i) => i === idx ? c + 1 : c)
-    setPollCounts(newCounts)
+    // Optimistic bump — cast_poll_vote recomputes every option's real count
+    // from the actual vote rows server-side, so this is just what shows
+    // instantly; a concurrent voter elsewhere can't clobber it since the
+    // RPC never trusts this client-held snapshot for the real write.
+    setPollCounts(pollCounts.map((c, i) => i === idx ? c + 1 : c))
     setPollVoted(idx)
-    const updatedOptions = (post.poll_data?.options ?? []).map((o: any, i: number) => ({ ...o, votes: newCounts[i] }))
-    const { error } = await supabase.from('posts').update({ poll_data: { ...post.poll_data, options: updatedOptions } }).eq('id', post.id)
-    if (error) { setPollCounts(prevCounts); setPollVoted(null) }
+    const { data: finalVote, error } = await supabase.rpc('cast_poll_vote', { p_post_id: post.id, p_option_index: idx })
+    if (error) { setPollCounts(prevCounts); setPollVoted(null); return }
+    // finalVote reflects whatever's actually recorded for this user (handles
+    // the rare case of a vote already existing from another tab/device).
+    if (typeof finalVote === 'number' && finalVote !== idx) setPollVoted(finalVote)
   }
 
   const pickBorderColor = pickResult === 'win' ? 'rgba(46,213,115,0.3)' : pickResult === 'loss' ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,77,0.2)'

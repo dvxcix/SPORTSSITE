@@ -103,6 +103,7 @@ export interface Post {
   user_reacted_emojis?: string[]
   user_bookmarked?: boolean
   user_reposted?: boolean
+  user_poll_vote?: number | null
   // Present only when this Post object represents someone's REPOST of the
   // underlying post (as opposed to the original post itself) — set by
   // getUserPosts/getFeedPosts when merging in rows from `reposts`. The

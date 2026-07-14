@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachUserReactions } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import type { Metadata } from 'next'
@@ -40,6 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PostDetailPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: post } = await supabase
     .from('posts')
@@ -49,9 +51,15 @@ export default async function PostDetailPage({ params }: Props) {
 
   if (!post) notFound()
 
+  // This page never went through attachUserReactions — a poll (or a
+  // reaction/repost/bookmark) always looked un-interacted-with here even
+  // when the viewer really had already voted/liked/etc, since every one of
+  // those relies on this same enrichment everywhere else on the site.
+  const [enriched] = await attachUserReactions([post], user?.id)
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <PostCardClient post={post} />
+      <PostCardClient post={enriched} />
     </div>
   )
 }

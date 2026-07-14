@@ -12,13 +12,14 @@ import type { Post, Channel, Message, Notification, User } from './supabase/type
 // standard or custom emoji, not just a heart-shaped like button.
 export async function attachUserReactions<T extends { id: string }>(
   posts: T[], userId: string | null | undefined
-): Promise<(T & { user_reacted: boolean; user_reacted_emojis: string[]; user_reposted: boolean })[]> {
-  if (!userId || posts.length === 0) return posts.map(p => ({ ...p, user_reacted: false, user_reacted_emojis: [], user_reposted: false }))
+): Promise<(T & { user_reacted: boolean; user_reacted_emojis: string[]; user_reposted: boolean; user_poll_vote: number | null })[]> {
+  if (!userId || posts.length === 0) return posts.map(p => ({ ...p, user_reacted: false, user_reacted_emojis: [], user_reposted: false, user_poll_vote: null }))
   const supabase = await createClient()
   const postIds = posts.map(p => p.id)
-  const [{ data: likes }, { data: reposts }] = await Promise.all([
+  const [{ data: likes }, { data: reposts }, { data: pollVotes }] = await Promise.all([
     supabase.from('reactions').select('target_id, emoji').eq('user_id', userId).eq('target_type', 'post').in('target_id', postIds),
     supabase.from('reposts').select('post_id').eq('user_id', userId).in('post_id', postIds),
+    supabase.from('post_poll_votes').select('post_id, option_index').eq('user_id', userId).in('post_id', postIds),
   ])
   const emojisByPost = new Map<string, string[]>()
   for (const r of likes ?? []) {
@@ -27,9 +28,14 @@ export async function attachUserReactions<T extends { id: string }>(
     emojisByPost.set((r as any).target_id, arr)
   }
   const reposted = new Set((reposts ?? []).map((r: any) => r.post_id))
+  const voteByPost = new Map<string, number>()
+  for (const v of pollVotes ?? []) voteByPost.set((v as any).post_id, (v as any).option_index)
   return posts.map(p => {
     const emojis = emojisByPost.get(p.id) ?? []
-    return { ...p, user_reacted: emojis.length > 0, user_reacted_emojis: emojis, user_reposted: reposted.has(p.id) }
+    return {
+      ...p, user_reacted: emojis.length > 0, user_reacted_emojis: emojis, user_reposted: reposted.has(p.id),
+      user_poll_vote: voteByPost.has(p.id) ? voteByPost.get(p.id)! : null,
+    }
   })
 }
 
