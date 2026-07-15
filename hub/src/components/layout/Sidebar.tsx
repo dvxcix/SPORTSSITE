@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
-  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, X
+  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, X, Medal
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 
@@ -31,6 +31,7 @@ const nav = [
   { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
   { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
+  { href: '/allstar2026', icon: Medal,         label: 'All-Star Game' },
   null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },

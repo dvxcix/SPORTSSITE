@@ -14,8 +14,9 @@ import {
   computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer,
   topFlagForPlayer, describeTopFlag,
   computeHrRaceBoard, oddsStr,
+  computeLiveSettlement, outcomeBg, outcomeMark,
   canonicalizeTitle,
-  type Market, type MarketOption, type Sportsbook, type HrRaceRow,
+  type Market, type MarketOption, type Sportsbook, type HrRaceRow, type LiveGameState, type MarketOutcome,
 } from '@/lib/allStarMarkets'
 
 const BOOK_LABEL: Record<Sportsbook, string> = { fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars' }
@@ -252,8 +253,7 @@ function ContradictionBoard({
   if (shown.length === 0) return null
   return (
     <div style={{ marginBottom: 24, border: '1px solid #f87171', borderRadius: 14, padding: 16, background: 'rgba(248,113,113,0.04)', overflowX: 'auto' }}>
-      <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 2 }}>🚩 HR Race Odds — Caesars vs FanDuel vs BetMGM</h2>
-      <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Every player priced by at least 2 books — real market, real odds per book — biggest spread first.</p>
+      <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 10 }}>🚩 HR Race Odds — Caesars vs FanDuel vs BetMGM</h2>
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -514,11 +514,12 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
 // looked up by the option's mlbId against tonight's roster) instead of bare
 // text — team/total/over-under selections without an mlbId just show text.
 function MarketOptionsList({
-  options, title, rosterById, flags, dataFlags, containmentFlags,
+  options, title, marketId, rosterById, flags, dataFlags, containmentFlags, settlement,
 }: {
-  options: MarketOption[]; title: string; rosterById: Map<number, Roster>
+  options: MarketOption[]; title: string; marketId: string; rosterById: Map<number, Roster>
   flags: ReturnType<typeof computeCrossBookFlags>; dataFlags: ReturnType<typeof computeMarketVsDataFlags>
   containmentFlags: ReturnType<typeof computeContainmentFlags>
+  settlement: Map<string, MarketOutcome>
 }) {
   const [dir, setDir] = useState<'desc' | 'asc'>('desc')
   const sorted = devig(options)
@@ -543,12 +544,14 @@ function MarketOptionsList({
           dataFlags.some(f => f.key === canonKey && f.mlbId === o.mlbId) ||
           containmentFlags.some(f => f.mlbId === o.mlbId && (f.narrowKey === canonKey || f.broadKey === canonKey))
         )
+        const outcome = settlement.get(`${marketId}::${o.label}`)
         return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 0' }}>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 6px', borderRadius: 8, background: outcomeBg(outcome) }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-2)', minWidth: 0 }}>
               {flagged && <span style={{ flexShrink: 0 }}>🚩</span>}
               {player && <PlayerAvatar headshot={mlbHeadshot(player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={player.name} size={18} />}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+              {outcome && <span style={{ flexShrink: 0, fontWeight: 800, fontSize: 10 }}>{outcomeMark(outcome)}</span>}
             </span>
             <span style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               <span style={{ color: 'var(--text-3)' }}>{(o.prob * 100).toFixed(1)}%</span>
@@ -562,11 +565,12 @@ function MarketOptionsList({
 }
 
 function BookMarketsPanel({
-  book, markets, rosterById, flags, dataFlags, containmentFlags,
+  book, markets, rosterById, flags, dataFlags, containmentFlags, settlement,
 }: {
   book: Sportsbook; markets: Market[]; rosterById: Map<number, Roster>
   flags: ReturnType<typeof computeCrossBookFlags>; dataFlags: ReturnType<typeof computeMarketVsDataFlags>
   containmentFlags: ReturnType<typeof computeContainmentFlags>
+  settlement: Map<string, MarketOutcome>
 }) {
   const [query, setQuery] = useState('')
   const [openSections, setOpenSections] = useState<Set<string>>(new Set())
@@ -623,10 +627,14 @@ function BookMarketsPanel({
                         return has ? <span>🚩</span> : null
                       })()}
                       {m.title}
+                      {(() => {
+                        const wonCount = m.options.filter(o => settlement.get(`${m.id}::${o.label}`) === 'won').length
+                        return wonCount > 0 ? <span style={{ color: '#4ade80', fontSize: 10, fontWeight: 800 }}>✅ {wonCount}</span> : null
+                      })()}
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.options.length} · {openMarkets.has(m.id) ? '▲' : '▼'}</span>
                   </button>
-                  {openMarkets.has(m.id) && <MarketOptionsList options={m.options} title={m.title} rosterById={rosterById} flags={flags} dataFlags={dataFlags} containmentFlags={containmentFlags} />}
+                  {openMarkets.has(m.id) && <MarketOptionsList options={m.options} title={m.title} marketId={m.id} rosterById={rosterById} flags={flags} dataFlags={dataFlags} containmentFlags={containmentFlags} settlement={settlement} />}
                 </div>
               ))}
             </div>
@@ -644,12 +652,28 @@ export function AllStarClient() {
   const [batterSort, setBatterSort] = useState<SortState>({ col: 's_hr', dir: 'desc' })
   const [pitcherSort, setPitcherSort] = useState<SortState>({ col: 'hr_total', dir: 'desc' })
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [live, setLive] = useState<LiveGameState | null>(null)
 
   useEffect(() => {
     fetch('/api/allstar/data')
       .then(r => r.json())
       .then(d => { if (d.error) setError(d.error); else setData(d) })
       .catch(() => setError('Failed to load All-Star Game data'))
+  }, [])
+
+  // Real live grading — same real boxscore/play-by-play the site reads
+  // everywhere else, polled while the game is actually happening.
+  useEffect(() => {
+    let cancelled = false
+    const poll = () => {
+      fetch('/api/allstar/live')
+        .then(r => r.json())
+        .then(d => { if (!cancelled) setLive(d) })
+        .catch(() => {})
+    }
+    poll()
+    const id = setInterval(poll, 20000)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
   if (error) {
@@ -677,6 +701,12 @@ export function AllStarClient() {
 
   const allMarkets: Market[] = data.markets ?? []
   const bookMarkets = groupByBook(allMarkets)
+
+  // Real live grading straight off MLB's own boxscore/play-by-play — every
+  // option row that's actually settleable goes green (won), red (lost), or
+  // yellow (void) as the real game happens. Team totals/innings/H2H/exact-
+  // score/MVP have no live data source on this page and stay unhighlighted.
+  const liveSettlement = computeLiveSettlement(allMarkets, live)
 
   const rosterById = new Map<number, Roster>([...alRoster, ...nlRoster].map(p => [p.mlb_id, p]))
 
@@ -720,7 +750,17 @@ export function AllStarClient() {
         <Spotlight className="left-0 top-0" fill="#B4FF4D" />
         <Meteors number={10} className="opacity-40" />
         <div style={{ position: 'relative', zIndex: 2 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>One Night Only</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>One Night Only</span>
+            {live?.gameState === 'Live' && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#f87171', border: '1px solid #f87171', borderRadius: 6, padding: '1px 6px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171' }} /> LIVE
+              </span>
+            )}
+            {live?.gameState === 'Final' && (
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '1px 6px' }}>FINAL</span>
+            )}
+          </div>
           <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', margin: '4px 0' }}>2026 MLB All-Star Game</h1>
           <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 2 }}>American League vs National League</p>
           <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{data.venue} · Philadelphia, PA{gameDateLabel ? ` · ${gameDateLabel}` : ''}</p>
@@ -742,7 +782,6 @@ export function AllStarClient() {
             >{h === 'R' ? 'RHP / RHB' : 'LHP / LHB'}</button>
           ))}
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>No fixed opposing pitcher tonight — this shows each player's own real season split vs that hand.</span>
       </div>
 
       {/* Contradiction Board — every flagged player, worst first */}
@@ -760,9 +799,9 @@ export function AllStarClient() {
 
       {/* Section 2: Sportsbook markets — one panel per book, logos not text */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Sportsbook Markets</h2>
-      <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} />
-      <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} />
-      <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} />
+      <BookMarketsPanel book="fanduel" markets={bookMarkets.fanduel} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} settlement={liveSettlement} />
+      <BookMarketsPanel book="betmgm" markets={bookMarkets.betmgm} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} settlement={liveSettlement} />
+      <BookMarketsPanel book="caesars" markets={bookMarkets.caesars} rosterById={rosterById} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} settlement={liveSettlement} />
     </div>
   )
 }

@@ -503,3 +503,93 @@ export function topFlagForPlayer(
   candidates.sort((a, b) => b.severity - a.severity)
   return { top: candidates[0], extraCount: candidates.length - 1 }
 }
+
+// ─── Live in-game settlement ────────────────────────────────────────────────
+// Real counting stats straight from MLB's own live boxscore (see
+// /api/allstar/live) compared against the real scraped odds — the same
+// "grade it as the real game happens" pattern the HR Derby page used, scoped
+// to the player-stat markets this page can actually verify from a live feed
+// (team totals, innings, H2H, exact-score, and MVP stay unhighlighted —
+// no real data source for those here, not guessed).
+export type LivePlayerStats = {
+  hits: number; hr: number; doubles: number; triples: number
+  rbi: number; runs: number; totalBases: number; pa: number
+}
+export type LiveGameState = {
+  gameState: string | null
+  players: Record<number, LivePlayerStats>
+  firstPaResult: Record<number, 'hr' | 'other'>
+  firstHrMlbId: number | null
+}
+export type MarketOutcome = 'won' | 'lost' | 'void'
+
+export function computeLiveSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+
+  for (const m of allMarkets) {
+    const key = canonicalizeTitle(m.title)
+    if (!key) continue
+
+    for (const o of m.options) {
+      const rowKey = `${m.id}::${o.label}`
+
+      if (key === 'first_hr_of_game') {
+        if (o.mlbId == null) {
+          // The "No HR Hit" field option — only real once the whole game is over.
+          if (isFinal) out.set(rowKey, live.firstHrMlbId == null ? 'won' : 'lost')
+          continue
+        }
+        if (live.firstHrMlbId != null) out.set(rowKey, live.firstHrMlbId === o.mlbId ? 'won' : 'lost')
+        else if (isFinal) out.set(rowKey, 'lost')
+        continue
+      }
+
+      if (o.mlbId == null) continue
+      const p = live.players[o.mlbId]
+
+      if (key === 'first_pa_hr') {
+        const r = live.firstPaResult[o.mlbId]
+        if (r === 'hr') out.set(rowKey, 'won')
+        else if (r === 'other') out.set(rowKey, 'lost')
+        else if (isFinal) out.set(rowKey, 'void') // never got a plate appearance tonight
+        continue
+      }
+
+      if (!p) { if (isFinal) out.set(rowKey, 'lost'); continue }
+
+      let value: number | null = null
+      let threshold = Number(key.match(/_(\d+)plus$/)?.[1] ?? '1')
+      if (key === 'anytime_hr') { value = p.hr; threshold = 1 }
+      else if (key === 'hr_2plus') { value = p.hr; threshold = 2 }
+      else if (key.startsWith('hits_')) value = p.hits
+      else if (key.startsWith('rbi_')) value = p.rbi
+      else if (key.startsWith('run_')) value = p.runs
+      else if (key.startsWith('tb_')) value = p.totalBases
+      else if (key === 'xbh_1plus') { value = p.doubles + p.triples + p.hr; threshold = 1 }
+      else if (key === 'double') { value = p.doubles; threshold = 1 }
+      else if (key === 'single') { value = p.hits - p.doubles - p.triples - p.hr; threshold = 1 }
+      else if (key === 'triple') { value = p.triples; threshold = 1 }
+      else if (key.startsWith('hrr_')) value = p.hits + p.runs + p.rbi
+      if (value == null) continue
+
+      if (value >= threshold) out.set(rowKey, 'won')
+      else if (isFinal) out.set(rowKey, 'lost')
+    }
+  }
+  return out
+}
+
+export function outcomeBg(o: MarketOutcome | undefined): string | undefined {
+  if (o === 'won') return 'rgba(34,197,94,0.16)'
+  if (o === 'lost') return 'rgba(248,113,113,0.10)'
+  if (o === 'void') return 'rgba(234,179,8,0.14)'
+  return undefined
+}
+export function outcomeMark(o: MarketOutcome | undefined): string | null {
+  if (o === 'won') return '✅'
+  if (o === 'lost') return '❌'
+  if (o === 'void') return '⚠️ VOID'
+  return null
+}
