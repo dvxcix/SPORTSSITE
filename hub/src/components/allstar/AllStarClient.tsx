@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Spotlight } from '@/components/ui/spotlight'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -14,7 +14,7 @@ import {
   computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer,
   topFlagForPlayer, describeTopFlag,
   computeHrRaceBoard, oddsStr,
-  computeLiveSettlement, outcomeBg, outcomeMark,
+  computeLiveSettlement, computeTeamAndInningsSettlement, outcomeBg, outcomeMark,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook, type HrRaceRow, type LiveGameState, type MarketOutcome,
 } from '@/lib/allStarMarkets'
@@ -232,6 +232,45 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 }
 
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
+
+// Scrollable "cashed live" feed — every prop that's actually won so far,
+// newest first, never removed once it appears (same pattern the deleted HR
+// Derby tracker used). Real book, real odds, real market — no fabricated
+// "confidence" score, just what's already happened.
+function LiveCashedFeed({
+  feed, rosterById,
+}: {
+  feed: { key: string; market: Market; option: MarketOption }[]
+  rosterById: Map<number, Roster>
+}) {
+  if (feed.length === 0) return null
+  return (
+    <div style={{ marginBottom: 24, border: '1px solid var(--accent)', borderRadius: 14, padding: 16, background: 'rgba(180,255,77,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 10, fontWeight: 900, borderRadius: 6, padding: '2px 8px', letterSpacing: '0.03em' }}>✅ CASHED LIVE</span>
+        <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{feed.length} prop{feed.length !== 1 ? 's' : ''} hit so far</h2>
+      </div>
+      <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {feed.map(f => {
+          const player = f.option.mlbId != null ? rosterById.get(f.option.mlbId) : undefined
+          const abbr = player?.teamId != null ? ID_TO_ABBR[player.teamId] : undefined
+          const logo = player?.teamId != null ? mlbTeamLogo(player.teamId) : undefined
+          return (
+            <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)' }}>
+              <BookLogo vendor={f.market.book} size={14} />
+              {player && <PlayerAvatar headshot={mlbHeadshot(player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={player.name} size={20} />}
+              <span style={{ fontSize: 12, color: 'var(--text-2)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <b style={{ color: 'var(--text-1)' }}>{player ? player.name : f.option.label}</b> — {f.market.title}{player ? ` (${f.option.label})` : ''}
+              </span>
+              <span style={{ fontWeight: 800, color: 'var(--accent)', fontSize: 12, flexShrink: 0 }}>{oddsStr(f.option.odds)}</span>
+              <span style={{ flexShrink: 0 }}>✅</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 const RACE_BOOK_ORDER: Sportsbook[] = ['caesars', 'fanduel', 'betmgm']
 const RACE_KEY_SHORT: Record<string, string> = { first_hr_of_game: 'First HR', first_pa_hr: 'First PA HR', anytime_hr: 'Anytime HR' }
@@ -653,6 +692,9 @@ export function AllStarClient() {
   const [pitcherSort, setPitcherSort] = useState<SortState>({ col: 'hr_total', dir: 'desc' })
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [live, setLive] = useState<LiveGameState | null>(null)
+  const [liveSettlement, setLiveSettlement] = useState<Map<string, MarketOutcome>>(new Map())
+  const [wonFeed, setWonFeed] = useState<{ key: string; market: Market; option: MarketOption }[]>([])
+  const wonSeenRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     fetch('/api/allstar/data')
@@ -675,6 +717,30 @@ export function AllStarClient() {
     const id = setInterval(poll, 20000)
     return () => { cancelled = true; clearInterval(id) }
   }, [])
+
+  // Recompute every settled row whenever the live feed updates, and append
+  // any prop that JUST turned won to the live "cashed" feed — same
+  // never-remove, insertion-order pattern the deleted HR Derby tracker used.
+  useEffect(() => {
+    if (!data || !live) return
+    const marketsNow: Market[] = data.markets ?? []
+    const merged = new Map<string, MarketOutcome>([
+      ...computeLiveSettlement(marketsNow, live),
+      ...computeTeamAndInningsSettlement(marketsNow, live),
+    ])
+    setLiveSettlement(merged)
+    const newlyWon: { key: string; market: Market; option: MarketOption }[] = []
+    for (const m of marketsNow) {
+      for (const o of m.options) {
+        const k = `${m.id}::${o.label}`
+        if (merged.get(k) === 'won' && !wonSeenRef.current.has(k)) {
+          wonSeenRef.current.add(k)
+          newlyWon.push({ key: k, market: m, option: o })
+        }
+      }
+    }
+    if (newlyWon.length > 0) setWonFeed(prev => [...newlyWon.reverse(), ...prev])
+  }, [data, live])
 
   if (error) {
     return <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-3)' }}>{error}</div>
@@ -701,12 +767,6 @@ export function AllStarClient() {
 
   const allMarkets: Market[] = data.markets ?? []
   const bookMarkets = groupByBook(allMarkets)
-
-  // Real live grading straight off MLB's own boxscore/play-by-play — every
-  // option row that's actually settleable goes green (won), red (lost), or
-  // yellow (void) as the real game happens. Team totals/innings/H2H/exact-
-  // score/MVP have no live data source on this page and stay unhighlighted.
-  const liveSettlement = computeLiveSettlement(allMarkets, live)
 
   const rosterById = new Map<number, Roster>([...alRoster, ...nlRoster].map(p => [p.mlb_id, p]))
 
@@ -766,6 +826,9 @@ export function AllStarClient() {
           <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{data.venue} · Philadelphia, PA{gameDateLabel ? ` · ${gameDateLabel}` : ''}</p>
         </div>
       </div>
+
+      {/* Live cashed feed — everything that's actually hit so far, real-time */}
+      <LiveCashedFeed feed={wonFeed} rosterById={rosterById} />
 
       {/* Hand toggle */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 16 }}>

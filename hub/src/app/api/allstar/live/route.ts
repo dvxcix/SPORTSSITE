@@ -8,13 +8,18 @@ export const revalidate = 0
 // roster/Statcast join.
 const ASG_GAME_PK = 823443
 
+const EMPTY = {
+  gameState: null, players: {}, firstPaResult: {}, firstHrMlbId: null,
+  innings: [], teamTotals: { awayRuns: 0, homeRuns: 0, awayHits: 0, homeHits: 0 }, scoreProgression: [],
+}
+
 export async function GET() {
   try {
     const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${ASG_GAME_PK}/feed/live`, {
       cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
     })
     if (!res.ok) {
-      return NextResponse.json({ gameState: null, players: {}, firstPaResult: {}, firstHrMlbId: null }, { headers: { 'Cache-Control': 'no-store' } })
+      return NextResponse.json(EMPTY, { headers: { 'Cache-Control': 'no-store' } })
     }
     const feed = await res.json()
 
@@ -41,12 +46,15 @@ export async function GET() {
       }
     }
 
-    // First-PA result per batter + the game's real chronological first HR —
-    // only derivable from play order, not the boxscore totals above.
+    // First-PA result per batter, the game's real chronological first HR,
+    // and the running away/home score after every completed play — none of
+    // this is in the boxscore aggregates above, only derivable from play
+    // order (used for Race-To-N-Runs markets).
     const allPlays = feed.liveData?.plays?.allPlays ?? []
     const seenFirstPa = new Set<number>()
     const firstPaResult: Record<number, 'hr' | 'other'> = {}
     let firstHrMlbId: number | null = null
+    const scoreProgression: { away: number; home: number }[] = []
     for (const play of allPlays) {
       if (!play.about?.isComplete) continue
       const batterId = play.matchup?.batter?.id
@@ -58,13 +66,27 @@ export async function GET() {
       if (eventType === 'home_run' && batterId != null && firstHrMlbId == null) {
         firstHrMlbId = batterId
       }
+      scoreProgression.push({ away: play.result?.awayScore ?? 0, home: play.result?.homeScore ?? 0 })
+    }
+
+    // Real per-inning + running team totals straight from MLB's own
+    // linescore — backs every innings/team-total market on the page.
+    const linescore = feed.liveData?.linescore
+    const innings = (linescore?.innings ?? []).map((i: any) => ({
+      num: i.num,
+      awayRuns: i.away?.runs ?? null, homeRuns: i.home?.runs ?? null,
+      awayHits: i.away?.hits ?? null, homeHits: i.home?.hits ?? null,
+    }))
+    const teamTotals = {
+      awayRuns: linescore?.teams?.away?.runs ?? 0, homeRuns: linescore?.teams?.home?.runs ?? 0,
+      awayHits: linescore?.teams?.away?.hits ?? 0, homeHits: linescore?.teams?.home?.hits ?? 0,
     }
 
     return NextResponse.json(
-      { gameState, players, firstPaResult, firstHrMlbId },
+      { gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
     )
   } catch {
-    return NextResponse.json({ gameState: null, players: {}, firstPaResult: {}, firstHrMlbId: null }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json(EMPTY, { headers: { 'Cache-Control': 'no-store' } })
   }
 }

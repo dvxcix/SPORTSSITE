@@ -505,21 +505,29 @@ export function topFlagForPlayer(
 }
 
 // ─── Live in-game settlement ────────────────────────────────────────────────
-// Real counting stats straight from MLB's own live boxscore (see
+// Real counting stats straight from MLB's own live boxscore + linescore (see
 // /api/allstar/live) compared against the real scraped odds — the same
-// "grade it as the real game happens" pattern the HR Derby page used, scoped
-// to the player-stat markets this page can actually verify from a live feed
-// (team totals, innings, H2H, exact-score, and MVP stay unhighlighted —
-// no real data source for those here, not guessed).
+// "grade it as the real game happens" pattern the HR Derby page used. Player
+// props, innings props, and team-total props all settle here; H2H
+// comparisons, MVP, whole-game Exact Result grids, Caesars' ambiguous
+// "1st 3/5 Innings" and "Inning Money Line" formats, and pitch-level markets
+// (First Pitch Result) have no clean, verifiable real data source on this
+// page and stay unhighlighted rather than being guessed.
 export type LivePlayerStats = {
   hits: number; hr: number; doubles: number; triples: number
   rbi: number; runs: number; totalBases: number; pa: number
 }
+export type LiveInning = { num: number; awayRuns: number | null; homeRuns: number | null; awayHits: number | null; homeHits: number | null }
+export type LiveTeamTotals = { awayRuns: number; homeRuns: number; awayHits: number; homeHits: number }
+export type LiveScorePoint = { away: number; home: number }
 export type LiveGameState = {
   gameState: string | null
   players: Record<number, LivePlayerStats>
   firstPaResult: Record<number, 'hr' | 'other'>
   firstHrMlbId: number | null
+  innings: LiveInning[]
+  teamTotals: LiveTeamTotals
+  scoreProgression: LiveScorePoint[]
 }
 export type MarketOutcome = 'won' | 'lost' | 'void'
 
@@ -576,6 +584,229 @@ export function computeLiveSettlement(allMarkets: Market[], live: LiveGameState 
 
       if (value >= threshold) out.set(rowKey, 'won')
       else if (isFinal) out.set(rowKey, 'lost')
+    }
+  }
+  return out
+}
+
+// This game is AL (away) vs NL (home) — real, confirmed team assignment
+// (see /api/allstar/data's own comment). Hardcoded since this is a one-off
+// event page, not a general team-agnostic import path.
+const AWAY_LABEL = 'American League'
+const HOME_LABEL = 'National League'
+
+function sumInningsWindow(innings: LiveInning[], n: number): { awayRuns: number; homeRuns: number; complete: boolean } {
+  let awayRuns = 0, homeRuns = 0, complete = true
+  for (let i = 0; i < n; i++) {
+    const inn = innings[i]
+    if (!inn || inn.awayRuns == null || inn.homeRuns == null) complete = false
+    awayRuns += inn?.awayRuns ?? 0
+    homeRuns += inn?.homeRuns ?? 0
+  }
+  return { awayRuns, homeRuns, complete }
+}
+
+// Team+signed-number run-line label, e.g. "American League -1.5" or (First-N
+// -Innings format) "National League | -0.5" — sign is sometimes omitted for
+// the positive side in the real scraped data, so it defaults to +.
+function parseRunLine(label: string): { team: string; line: number } | null {
+  const m = label.match(/^(American League|National League)\s*\|?\s*([+-]?[\d.]+)$/)
+  if (!m) return null
+  return { team: m[1], line: Number(m[2]) }
+}
+
+// Real per-inning, first-N-innings, and whole-game team-total markets —
+// covers every "Nth Inning ___" / "First N Innings ___" / team season-total
+// title this page's real scraped odds actually use. Grades live as soon as
+// a window (a single inning, an innings range, or the whole game) is
+// mathematically decided — a completed inning's totals can never change, so
+// its markets settle immediately rather than waiting for the whole game.
+export function computeTeamAndInningsSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+  const { innings, teamTotals } = live
+
+  const grade = (rowKey: string, won: boolean, decidable: boolean) => {
+    if (won) out.set(rowKey, 'won')
+    else if (decidable) out.set(rowKey, 'lost')
+  }
+
+  for (const m of allMarkets) {
+    const title = m.title.trim()
+    if (/parlay/i.test(title)) continue
+    if (title === 'Inning Money Line' || title === '1st 3 Innings' || title === '1st 5 Innings') continue
+
+    // ── Single inning N ──────────────────────────────────────────────────
+    const inningMatch = title.match(/^(\d+)(?:st|nd|rd|th) Inning\s+(.+)$/)
+    if (inningMatch) {
+      const n = Number(inningMatch[1])
+      const rest = inningMatch[2].trim()
+      const inn = innings[n - 1]
+      if (!inn) continue
+      const complete = inn.awayRuns != null && inn.homeRuns != null
+      const awayR = inn.awayRuns ?? 0, homeR = inn.homeRuns ?? 0
+      const totalR = awayR + homeR
+      const totalH = (inn.awayHits ?? 0) + (inn.homeHits ?? 0)
+      const runsMatch = rest.match(/^(?:Over\/Under\s*)?([\d.]+)\s*Runs$/)
+
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        const label = o.label
+        if (rest === 'Result') {
+          grade(rowKey, label === 'Tie' ? awayR === homeR : label === AWAY_LABEL ? awayR > homeR : label === HOME_LABEL ? homeR > awayR : false, complete)
+        } else if (rest === 'Run Line') {
+          const rl = parseRunLine(label)
+          if (rl) { const diff = rl.team === AWAY_LABEL ? awayR - homeR : homeR - awayR; grade(rowKey, diff + rl.line > 0, complete) }
+        } else if (rest === 'Total Runs') {
+          const orMore = label.match(/^(\d+)\s*Runs?\s*Or More$/i)
+          const exact = label.match(/^(\d+)\s*Runs?$/i)
+          grade(rowKey, orMore ? totalR >= Number(orMore[1]) : exact ? totalR === Number(exact[1]) : false, complete)
+        } else if (runsMatch && (label === 'Over' || label === 'Under')) {
+          const threshold = Number(runsMatch[1])
+          grade(rowKey, label === 'Over' ? totalR > threshold : totalR < threshold, complete)
+        } else if (rest === 'Hits') {
+          const plus = label.match(/^(\d+)\+\s*Hits Recorded$/)
+          grade(rowKey, label === '0-1 Hits Recorded' ? totalH <= 1 : plus ? totalH >= Number(plus[1]) : false, complete)
+        } else if (rest === 'Runs Odd/Even') {
+          grade(rowKey, label === 'Odd' ? totalR % 2 === 1 : label === 'Even' ? totalR % 2 === 0 : false, complete)
+        } else if (rest === 'Correct Score') {
+          const tie = label.match(/^Tie (\d+)-(\d+)$/)
+          const side = label.match(/^(American League|National League) (\d+)-(\d+)$/)
+          if (tie) grade(rowKey, awayR === homeR && awayR === Number(tie[1]), complete)
+          else if (side) {
+            const teamR = Number(side[2]), oppR = Number(side[3])
+            grade(rowKey, side[1] === AWAY_LABEL ? (awayR === teamR && homeR === oppR) : (homeR === teamR && awayR === oppR), complete)
+          } else if (label === 'Any Other Score' && complete) {
+            const matchesAny = m.options.some(o2 => {
+              if (o2.label === label) return false
+              const t2 = o2.label.match(/^Tie (\d+)-(\d+)$/)
+              if (t2) return awayR === homeR && awayR === Number(t2[1])
+              const s2 = o2.label.match(/^(American League|National League) (\d+)-(\d+)$/)
+              if (!s2) return false
+              const teamR2 = Number(s2[2]), oppR2 = Number(s2[3])
+              return s2[1] === AWAY_LABEL ? (awayR === teamR2 && homeR === oppR2) : (homeR === teamR2 && awayR === oppR2)
+            })
+            out.set(rowKey, matchesAny ? 'lost' : 'won')
+          }
+        }
+      }
+      continue
+    }
+
+    // ── First N Innings aggregate ────────────────────────────────────────
+    const firstNMatch = title.match(/^First (\d+) Innings?(?:\s+(.+))?$/)
+    if (firstNMatch) {
+      const n = Number(firstNMatch[1])
+      const rest = (firstNMatch[2] ?? '').trim()
+      const { awayRuns, homeRuns, complete } = sumInningsWindow(innings, n)
+
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        const label = o.label
+        if (rest === 'Result') {
+          grade(rowKey, label === 'Tie' ? awayRuns === homeRuns : label === AWAY_LABEL ? awayRuns > homeRuns : label === HOME_LABEL ? homeRuns > awayRuns : false, complete)
+        } else if (rest === 'Run Line' || rest === 'Alternate Run Lines') {
+          const rl = parseRunLine(label)
+          if (rl) { const diff = rl.team === AWAY_LABEL ? awayRuns - homeRuns : homeRuns - awayRuns; grade(rowKey, diff + rl.line > 0, complete) }
+        } else if (rest === 'Total Runs' || rest === 'Alternate Total Runs') {
+          const total = awayRuns + homeRuns
+          const num = label.match(/(Over|Under)\s*([\d.]+)/)
+          if (num) grade(rowKey, num[1] === 'Over' ? total > Number(num[2]) : total < Number(num[2]), complete)
+        } else if (rest === 'Money Line') {
+          const isAway = /American League/.test(label), isHome = /National League/.test(label)
+          if (complete) {
+            if (awayRuns === homeRuns) out.set(rowKey, 'void')
+            else grade(rowKey, isAway ? awayRuns > homeRuns : isHome ? homeRuns > awayRuns : false, true)
+          } else if ((isAway && awayRuns > homeRuns) || (isHome && homeRuns > awayRuns)) out.set(rowKey, 'won')
+        } else if (rest.startsWith('Winning Margin')) {
+          if (label === 'Tie') { grade(rowKey, awayRuns === homeRuns, complete); continue }
+          const teamM = label.match(/^(American League|National League) Win By/)
+          if (!teamM) continue
+          const margin = teamM[1] === AWAY_LABEL ? awayRuns - homeRuns : homeRuns - awayRuns
+          const plus = label.match(/Win By (\d+)\+ Runs?/)
+          const range = label.match(/Win By (\d+)\s*-\s*(\d+) Runs?/)
+          const exact = label.match(/Win By (\d+) Runs?$/)
+          const won = plus ? margin >= Number(plus[1]) : range ? margin >= Number(range[1]) && margin <= Number(range[2]) : exact ? margin === Number(exact[1]) : false
+          grade(rowKey, won, complete)
+        }
+      }
+      continue
+    }
+
+    // ── Whole-game team season totals ────────────────────────────────────
+    const teamTotalMatch = title.match(/^(American League|National League) (?:Alt\.?\s*)?Total Runs$/)
+    if (teamTotalMatch) {
+      const value = teamTotalMatch[1] === AWAY_LABEL ? teamTotals.awayRuns : teamTotals.homeRuns
+      for (const o of m.options) {
+        const num = o.label.match(/(Over|Under)\s*([\d.]+)/)
+        if (!num) continue
+        grade(`${m.id}::${o.label}`, num[1] === 'Over' ? value > Number(num[2]) : value < Number(num[2]), isFinal)
+      }
+      continue
+    }
+    if (title === 'American League Total Runs Odd/Even' || title === 'National League Total Runs Odd/Even') {
+      const value = title.startsWith(AWAY_LABEL) ? teamTotals.awayRuns : teamTotals.homeRuns
+      for (const o of m.options) grade(`${m.id}::${o.label}`, o.label === 'Odd' ? value % 2 === 1 : o.label === 'Even' ? value % 2 === 0 : false, isFinal)
+      continue
+    }
+    if (title === 'Total Runs Odd/Even') {
+      const total = teamTotals.awayRuns + teamTotals.homeRuns
+      for (const o of m.options) grade(`${m.id}::${o.label}`, o.label === 'Odd' ? total % 2 === 1 : o.label === 'Even' ? total % 2 === 0 : false, isFinal)
+      continue
+    }
+    if (title === 'Total Runs (Bands)') {
+      const total = teamTotals.awayRuns + teamTotals.homeRuns
+      for (const o of m.options) {
+        const range = o.label.match(/^(\d+)-(\d+)$/)
+        const plus = o.label.match(/^(\d+)\+$/)
+        const won = range ? total >= Number(range[1]) && total <= Number(range[2]) : plus ? total >= Number(plus[1]) : false
+        grade(`${m.id}::${o.label}`, won, isFinal)
+      }
+      continue
+    }
+    if (title === 'Away Total Runs' || title === 'Home Total Runs') {
+      for (const o of m.options) {
+        const team = o.label.match(/,\s*(American League|National League)$/)
+        const num = o.label.match(/(Over|Under)\s*([\d.]+)/)
+        if (!team || !num) continue
+        const value = team[1] === AWAY_LABEL ? teamTotals.awayRuns : teamTotals.homeRuns
+        grade(`${m.id}::${o.label}`, num[1] === 'Over' ? value > Number(num[2]) : value < Number(num[2]), isFinal)
+      }
+      continue
+    }
+    if (title === 'Winning Margin') {
+      const margin = Math.abs(teamTotals.awayRuns - teamTotals.homeRuns)
+      for (const o of m.options) {
+        const exact = o.label.match(/^By Exactly (\d+) Runs?$/)
+        const plus = o.label.match(/^By (\d+) Or More Runs?$/)
+        const won = exact ? margin === Number(exact[1]) : plus ? margin >= Number(plus[1]) : false
+        grade(`${m.id}::${o.label}`, won, isFinal)
+      }
+      continue
+    }
+    const raceMatch = title.match(/^Race To (\d+) Runs$/)
+    if (raceMatch) {
+      const n = Number(raceMatch[1])
+      let winner: 'away' | 'home' | null = null
+      for (const pt of live.scoreProgression) {
+        if (pt.away >= n) { winner = 'away'; break }
+        if (pt.home >= n) { winner = 'home'; break }
+      }
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        if (o.label === 'Neither') {
+          if (isFinal && winner == null) out.set(rowKey, 'won')
+          else if (winner != null) out.set(rowKey, 'lost')
+        } else if (o.label === AWAY_LABEL) {
+          if (winner === 'away') out.set(rowKey, 'won')
+          else if (winner === 'home' || (isFinal && winner == null)) out.set(rowKey, 'lost')
+        } else if (o.label === HOME_LABEL) {
+          if (winner === 'home') out.set(rowKey, 'won')
+          else if (winner === 'away' || (isFinal && winner == null)) out.set(rowKey, 'lost')
+        }
+      }
+      continue
     }
   }
   return out
