@@ -14,7 +14,7 @@ import {
   computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer,
   topFlagForPlayer, describeTopFlag,
   computeHrRaceBoard, oddsStr,
-  computeLiveSettlement, computeTeamAndInningsSettlement, outcomeBg, outcomeMark,
+  computeLiveSettlement, computeTeamAndInningsSettlement, computeFirstPitchSettlement, outcomeBg, outcomeMark,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook, type HrRaceRow, type LiveGameState, type MarketOutcome,
 } from '@/lib/allStarMarkets'
@@ -727,7 +727,7 @@ export function AllStarClient() {
         .catch(() => {})
     }
     poll()
-    const id = setInterval(poll, 20000)
+    const id = setInterval(poll, 5000)
     return () => { cancelled = true; clearInterval(id) }
   }, [])
 
@@ -740,6 +740,7 @@ export function AllStarClient() {
     const merged = new Map<string, MarketOutcome>([
       ...computeLiveSettlement(marketsNow, live),
       ...computeTeamAndInningsSettlement(marketsNow, live),
+      ...computeFirstPitchSettlement(marketsNow, live),
     ])
     setLiveSettlement(merged)
     const newlyWon: { key: string; market: Market; option: MarketOption }[] = []

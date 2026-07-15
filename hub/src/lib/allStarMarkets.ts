@@ -520,6 +520,10 @@ export type LivePlayerStats = {
 export type LiveInning = { num: number; awayRuns: number | null; homeRuns: number | null; awayHits: number | null; homeHits: number | null }
 export type LiveTeamTotals = { awayRuns: number; homeRuns: number; awayHits: number; homeHits: number }
 export type LiveScorePoint = { away: number; home: number }
+export type LiveFirstPitch = {
+  isBall: boolean; isStrike: boolean; isInPlay: boolean; isHbp: boolean
+  startSpeed: number | null; resultEvent: string | null; pitcherName: string | null
+} | null
 export type LiveGameState = {
   gameState: string | null
   players: Record<number, LivePlayerStats>
@@ -528,6 +532,7 @@ export type LiveGameState = {
   innings: LiveInning[]
   teamTotals: LiveTeamTotals
   scoreProgression: LiveScorePoint[]
+  firstPitch: { top: LiveFirstPitch; bottom: LiveFirstPitch }
 }
 export type MarketOutcome = 'won' | 'lost' | 'void'
 
@@ -805,6 +810,75 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
           if (winner === 'home') out.set(rowKey, 'won')
           else if (winner === 'away' || (isFinal && winner == null)) out.set(rowKey, 'lost')
         }
+      }
+      continue
+    }
+  }
+  return out
+}
+
+// ─── First-pitch markets ────────────────────────────────────────────────
+// Real pitch-level detail (same playEvents-filtered-by-type-'pitch' data
+// the site's own /sports live game page already reads) for the very first
+// pitch of each half of the 1st inning. Once that one pitch has actually
+// been thrown, the whole market is known — no need to wait for the at-bat
+// (or the game) to finish.
+function classifyFirstPitchResult(fp: LiveFirstPitch): 'strike' | 'ball_hbp' | 'single' | 'xbh' | 'other' | null {
+  if (!fp) return null
+  if (fp.isInPlay) {
+    const ev = (fp.resultEvent ?? '').toLowerCase()
+    if (ev === 'single') return 'single'
+    if (ev === 'double' || ev === 'triple' || ev === 'home run') return 'xbh'
+    return 'other'
+  }
+  if (fp.isBall || fp.isHbp) return 'ball_hbp'
+  if (fp.isStrike) return 'strike'
+  return null
+}
+
+const FIRST_PITCH_RESULT_LABEL: Record<string, string> = {
+  strike: 'Taken Strike/Swinging Strike/Foul',
+  ball_hbp: 'Ball/HBP',
+  single: 'Single',
+  xbh: 'Extra Base Hit (Double/Triple/Home Run)',
+  other: 'Any Other Out/Outcome',
+}
+
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+export function computeFirstPitchSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+
+  for (const m of allMarkets) {
+    const resultMatch = m.title.match(/^First Pitch Result - (Top|Bottom) 1st$/)
+    if (resultMatch) {
+      const fp = resultMatch[1] === 'Top' ? live.firstPitch.top : live.firstPitch.bottom
+      const cls = classifyFirstPitchResult(fp)
+      if (!cls) continue
+      const winningLabel = FIRST_PITCH_RESULT_LABEL[cls]
+      for (const o of m.options) out.set(`${m.id}::${o.label}`, o.label === winningLabel ? 'won' : 'lost')
+      continue
+    }
+
+    const veloMatch = m.title.match(/^(.+) Velocity of First Pitch$/)
+    if (veloMatch) {
+      const nameInTitle = stripAccents(veloMatch[1].trim())
+      const candidates = [live.firstPitch.top, live.firstPitch.bottom].filter((c): c is NonNullable<LiveFirstPitch> => c != null)
+      const fp = candidates.find(c => c.pitcherName && nameInTitle.includes(stripAccents(c.pitcherName.split(' ').pop() ?? '')))
+      if (!fp || fp.startSpeed == null) continue
+      const speed = fp.startSpeed
+      for (const o of m.options) {
+        const faster = o.label.match(/([\d.]+)\s*MPH or Faster/)
+        const slower = o.label.match(/([\d.]+)\s*MPH or Slower/)
+        const range = o.label.match(/([\d.]+)\s*-\s*([\d.]+)\s*MPH/)
+        let won = false
+        if (faster) won = speed >= Number(faster[1])
+        else if (slower) won = speed <= Number(slower[1])
+        else if (range) won = speed >= Number(range[1]) && speed <= Number(range[2])
+        out.set(`${m.id}::${o.label}`, won ? 'won' : 'lost')
       }
       continue
     }

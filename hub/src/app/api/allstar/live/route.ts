@@ -11,6 +11,26 @@ const ASG_GAME_PK = 823443
 const EMPTY = {
   gameState: null, players: {}, firstPaResult: {}, firstHrMlbId: null,
   innings: [], teamTotals: { awayRuns: 0, homeRuns: 0, awayHits: 0, homeHits: 0 }, scoreProgression: [],
+  firstPitch: { top: null, bottom: null },
+}
+
+// Real pitch-level detail for the very first pitch of a half-inning — same
+// playEvents-filtered-by-type-'pitch' pattern /sports' own live MLB game
+// page already uses (hub/src/lib/mlb-api.ts's pitch parsing), just read
+// server-side here instead of client-side.
+function firstPitchOf(play: any) {
+  const pitches = (play?.playEvents ?? []).filter((e: any) => e.type === 'pitch')
+  if (pitches.length === 0) return null
+  const p = pitches[0]
+  return {
+    isBall: !!p.details?.isBall,
+    isStrike: !!p.details?.isStrike,
+    isInPlay: !!p.details?.isInPlay,
+    isHbp: /hit by pitch/i.test(p.details?.description ?? ''),
+    startSpeed: p.pitchData?.startSpeed ?? null,
+    resultEvent: play?.result?.event ?? null,
+    pitcherName: play?.matchup?.pitcher?.fullName ?? null,
+  }
 }
 
 export async function GET() {
@@ -82,8 +102,12 @@ export async function GET() {
       awayHits: linescore?.teams?.away?.hits ?? 0, homeHits: linescore?.teams?.home?.hits ?? 0,
     }
 
+    const topFirstPlay = allPlays.find((p: any) => p.about?.inning === 1 && p.about?.halfInning === 'top')
+    const bottomFirstPlay = allPlays.find((p: any) => p.about?.inning === 1 && p.about?.halfInning === 'bottom')
+    const firstPitch = { top: firstPitchOf(topFirstPlay), bottom: firstPitchOf(bottomFirstPlay) }
+
     return NextResponse.json(
-      { gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression },
+      { gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression, firstPitch },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
     )
   } catch {
