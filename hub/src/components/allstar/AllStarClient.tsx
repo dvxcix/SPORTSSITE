@@ -392,9 +392,31 @@ function LeagueBatterTable({
   // heatmap, since it's scaled off whatever's currently on screen) vs that
   // exact pitcher's real throwing hand — this is the actual "who's the best
   // batter vs this specific pitcher" tool, not a per-row aside.
-  const [pitcherId, setPitcherId] = useState<number | ''>('')
-  const selectedPitcher = opposingPitchers.find(p => p.mlb_id === pitcherId)
+  //
+  // Live-first: whichever pitcher is REALLY on the mound right now against
+  // this league's batters (linescore.defense.pitcher, surfaced as
+  // live.currentPitcherId) auto-populates the matchup — no dropdown click
+  // required. Only relevant when it's actually this league's half to bat
+  // (i.e. the live pitcher belongs to opposingPitchers); otherwise there's
+  // no live matchup for this table right now and it falls back to manual/
+  // season-avg. A manual pick from the dropdown always overrides live.
+  const [manualPitcherId, setManualPitcherId] = useState<number | ''>('')
+  const livePitcher = live?.currentPitcherId != null
+    ? opposingPitchers.find(p => p.mlb_id === live.currentPitcherId)
+    : undefined
+  const selectedPitcher = manualPitcherId ? opposingPitchers.find(p => p.mlb_id === manualPitcherId) : livePitcher
+  const isLiveMatchup = !manualPitcherId && !!livePitcher
   const effectiveHand = (selectedPitcher ? (selectedPitcher.throws === 'L' ? 'L' : 'R') : hand) as 'R' | 'L'
+  // The instant a live matchup first appears, snap the sort to Edge desc so
+  // "who's in right now vs whoever's pitching to them, best matchup first"
+  // is the default view — not something you have to know to click for.
+  const hadLiveRef = useRef(false)
+  useEffect(() => {
+    if (livePitcher && !hadLiveRef.current && sort?.col !== 'edge') {
+      onSort('edge')
+    }
+    hadLiveRef.current = !!livePitcher
+  }, [!!livePitcher]) // eslint-disable-line react-hooks/exhaustive-deps
   const buildRow = (p: Roster) => {
     const row = buildBatterRow(p, effectiveHand, statSplits, timingSplits)
     const edge = selectedPitcher
@@ -430,18 +452,23 @@ function LeagueBatterTable({
         }}>{league === 'AL' ? 'AMERICAN LEAGUE' : 'NATIONAL LEAGUE'}</span>
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{rows.length} batters</span>
         <select
-          value={pitcherId}
-          onChange={e => setPitcherId(e.target.value ? Number(e.target.value) : '')}
+          value={manualPitcherId}
+          onChange={e => setManualPitcherId(e.target.value ? Number(e.target.value) : '')}
           className="ss-input"
           style={{ fontSize: 11, padding: '5px 8px', maxWidth: 260 }}
         >
-          <option value="">vs {hand === 'R' ? 'RHP' : 'LHP'} (season avg)…</option>
-          {opposingPitchers.map(p => <option key={p.mlb_id} value={p.mlb_id}>{p.name} ({p.throws}HP)</option>)}
+          <option value="">{livePitcher ? `🔴 Live: ${livePitcher.name}` : `vs ${hand === 'R' ? 'RHP' : 'LHP'} (season avg)…`}</option>
+          {opposingPitchers.map(p => <option key={p.mlb_id} value={p.mlb_id}>{p.name} ({p.throws}HP){live?.currentPitcherId === p.mlb_id ? ' 🔴 LIVE' : ''}</option>)}
         </select>
         {selectedPitcher && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <PlayerAvatar headshot={mlbHeadshot(selectedPitcher.mlb_id)} teamLogo={pLogo} teamAbbr={pAbbr} name={selectedPitcher.name} size={22} />
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>{selectedPitcher.name}</span>
+            {isLiveMatchup && (
+              <span style={{ fontSize: 9, fontWeight: 900, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
+                🔴 LIVE PITCHING NOW
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -453,7 +480,7 @@ function LeagueBatterTable({
               <TH label="Status" title="Real live status straight from MLB's boxscore — who's actually in the lineup right now, at bat, on deck, hasn't played yet, or has already been substituted out. Refreshes every 5s." sortKey="statusRank" sort={sort} onSort={onSort} />
               <TH label="🚩" title="Total contradiction flags on this player — cross-book disagreement, market price vs. our own data, or a logical containment violation (e.g. First HR of the Game priced above First PA HR). Click the player to see exactly which." sortKey="flagCount" sort={sort} onSort={onSort} />
               {selectedPitcher && (
-                <TH label="Edge" title="Recent pitch-mix matchup edge vs this pitcher's real recent arsenal (usage-weighted hard-hit% minus whiff%, both sides, min. 8-pitch recent sample per pitch type)" sortKey="edge" sort={sort} onSort={onSort} />
+                <TH label="Edge" title="Recent pitch-mix matchup edge vs this pitcher's real recent arsenal (usage-weighted hard-hit% minus whiff%, both sides, min. 8-pitch recent sample per pitch type). Auto-follows whoever's actually pitching live; pick a different pitcher from the dropdown to override." sortKey="edge" sort={sort} onSort={onSort} />
               )}
               {BATTER_COLS.map(c => <TH key={c.key as string} label={c.label} title={c.title} sortKey={c.key as string} sort={sort} onSort={onSort} />)}
             </tr>
