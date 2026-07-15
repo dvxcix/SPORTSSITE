@@ -533,6 +533,10 @@ export type LiveGameState = {
   teamTotals: LiveTeamTotals
   scoreProgression: LiveScorePoint[]
   firstPitch: { top: LiveFirstPitch; bottom: LiveFirstPitch }
+  playerStatus: Record<number, 'in' | 'not_played' | 'done'>
+  currentBatterId: number | null
+  onDeckBatterId: number | null
+  currentPitcherId: number | null
 }
 export type MarketOutcome = 'won' | 'lost' | 'void'
 

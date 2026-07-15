@@ -12,6 +12,7 @@ const EMPTY = {
   gameState: null, players: {}, firstPaResult: {}, firstHrMlbId: null,
   innings: [], teamTotals: { awayRuns: 0, homeRuns: 0, awayHits: 0, homeHits: 0 }, scoreProgression: [],
   firstPitch: { top: null, bottom: null },
+  playerStatus: {}, currentBatterId: null, onDeckBatterId: null, currentPitcherId: null,
 }
 
 // Real pitch-level detail for the very first pitch of a half-inning — same
@@ -106,8 +107,47 @@ export async function GET() {
     const bottomFirstPlay = allPlays.find((p: any) => p.about?.inning === 1 && p.about?.halfInning === 'bottom')
     const firstPitch = { top: firstPitchOf(topFirstPlay), bottom: firstPitchOf(bottomFirstPlay) }
 
+    // Real real-time roster status — MLB's own boxscore already flags the
+    // exact current batter/pitcher per player (gameStatus), plus the live
+    // batting order (who's actually active in the lineup right now, updated
+    // the instant a substitution happens) and each player's own recorded
+    // plate appearances / innings pitched to tell "hasn't played yet" from
+    // "already played and has since been replaced." No guessing which
+    // player is in — this is the same data MLB.com itself uses.
+    const playerStatus: Record<number, 'in' | 'not_played' | 'done'> = {}
+    for (const side of ['away', 'home'] as const) {
+      const team = boxTeams[side]
+      if (!team) continue
+      const battingOrderSet = new Set<number>(team.battingOrder ?? [])
+      const raw = team.players ?? {}
+      for (const key of Object.keys(raw)) {
+        const p = raw[key]
+        const id = p.person?.id
+        if (!id) continue
+        const isPitcher = p.position?.code === '1' || p.position?.abbreviation === 'P'
+        if (isPitcher) {
+          const battersFaced = p.stats?.pitching?.battersFaced ?? 0
+          const pitched = battersFaced > 0
+          if (p.gameStatus?.isCurrentPitcher) playerStatus[id] = 'in'
+          else if (pitched) playerStatus[id] = 'done'
+          else playerStatus[id] = 'not_played'
+        } else {
+          const pa = p.stats?.batting?.plateAppearances ?? 0
+          if (battingOrderSet.has(id)) playerStatus[id] = 'in'
+          else if (pa > 0) playerStatus[id] = 'done'
+          else playerStatus[id] = 'not_played'
+        }
+      }
+    }
+    const currentBatterId = linescore?.offense?.batter?.id ?? null
+    const onDeckBatterId = linescore?.offense?.onDeck?.id ?? null
+    const currentPitcherId = linescore?.defense?.pitcher?.id ?? null
+
     return NextResponse.json(
-      { gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression, firstPitch },
+      {
+        gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression, firstPitch,
+        playerStatus, currentBatterId, onDeckBatterId, currentPitcherId,
+      },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
     )
   } catch {

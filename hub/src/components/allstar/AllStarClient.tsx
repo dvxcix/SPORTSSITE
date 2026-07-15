@@ -233,6 +233,19 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
 
+// Real live roster status, straight from MLB's own boxscore (gameStatus +
+// battingOrder/battersFaced) — who's actually in the game right now, who
+// hasn't played yet, who's already been pulled/pinch-hit for. Refreshes
+// every 5s off the same poll that grades the props.
+function StatusBadge({ status, isCurrent, isOnDeck, currentLabel }: { status: 'in' | 'not_played' | 'done' | null; isCurrent: boolean; isOnDeck: boolean; currentLabel: string }) {
+  if (isCurrent) return <span style={{ fontSize: 9.5, fontWeight: 900, color: '#06070A', background: 'var(--accent)', borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>⚾ {currentLabel}</span>
+  if (isOnDeck) return <span style={{ fontSize: 9.5, fontWeight: 800, color: '#fbbf24', border: '1px solid #fbbf24', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>ON DECK</span>
+  if (status === 'in') return <span style={{ fontSize: 9.5, fontWeight: 800, color: '#4ade80', border: '1px solid rgba(74,222,128,0.5)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>🟢 IN</span>
+  if (status === 'not_played') return <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>BENCH</span>
+  if (status === 'done') return <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-3)', background: 'rgba(255,255,255,0.04)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>⚫ OUT</span>
+  return null
+}
+
 // Scrollable "cashed live" feed — every prop that's actually won so far,
 // newest first, never removed once it appears (same pattern the deleted HR
 // Derby tracker used). Real book, real odds, real market — no fabricated
@@ -363,7 +376,7 @@ function ContradictionBoard({
 
 function LeagueBatterTable({
   league, batterRoster, hand, sort, onSort, expanded, onToggleExpand, markets, flags, dataFlags, containmentFlags,
-  opposingPitchers, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent,
+  opposingPitchers, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, live,
 }: {
   league: 'AL' | 'NL'; batterRoster: Roster[]; hand: 'R' | 'L'
   sort: SortState; onSort: (col: string) => void
@@ -373,6 +386,7 @@ function LeagueBatterTable({
   containmentFlags: ReturnType<typeof computeContainmentFlags>
   opposingPitchers: Roster[]; statSplits: any[]; timingSplits: any[]
   batterPitchRecent: any[]; pitcherPitchRecent: any[]
+  live: LiveGameState | null
 }) {
   // Selecting a pitcher up top recomputes EVERY batter's row (and the
   // heatmap, since it's scaled off whatever's currently on screen) vs that
@@ -389,15 +403,19 @@ function LeagueBatterTable({
     const flagCount = crossBookFlagsForPlayer(flags, p.mlb_id).length
       + dataMismatchFlagsForPlayer(dataFlags, p.mlb_id).length
       + containmentFlagsForPlayer(containmentFlags, p.mlb_id).length
-    return { ...row, edge, flagCount }
+    const isCurrentBatter = live?.currentBatterId === p.mlb_id
+    const isOnDeck = live?.onDeckBatterId === p.mlb_id
+    const status = live?.playerStatus[p.mlb_id] ?? null
+    const statusRank = isCurrentBatter ? 4 : isOnDeck ? 3 : status === 'in' ? 2 : status === 'not_played' ? 1 : status === 'done' ? 0 : -1
+    return { ...row, edge, flagCount, status, isCurrentBatter, isOnDeck, statusRank }
   }
   const rows = useMemo(
     () => sortRows(batterRoster.map(buildRow), sort),
-    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, sort, flags, dataFlags, containmentFlags]
+    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, sort, flags, dataFlags, containmentFlags, live]
   )
   const pool = useMemo(
     () => batterRoster.map(buildRow),
-    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, flags, dataFlags, containmentFlags]
+    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, flags, dataFlags, containmentFlags, live]
   )
   const g = (f: string) => pool.map((r: any) => r[f])
   const pAbbr = selectedPitcher?.teamId != null ? ID_TO_ABBR[selectedPitcher.teamId] : undefined
@@ -432,6 +450,7 @@ function LeagueBatterTable({
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
               <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Player</th>
+              <TH label="Status" title="Real live status straight from MLB's boxscore — who's actually in the lineup right now, at bat, on deck, hasn't played yet, or has already been substituted out. Refreshes every 5s." sortKey="statusRank" sort={sort} onSort={onSort} />
               <TH label="🚩" title="Total contradiction flags on this player — cross-book disagreement, market price vs. our own data, or a logical containment violation (e.g. First HR of the Game priced above First PA HR). Click the player to see exactly which." sortKey="flagCount" sort={sort} onSort={onSort} />
               {selectedPitcher && (
                 <TH label="Edge" title="Recent pitch-mix matchup edge vs this pitcher's real recent arsenal (usage-weighted hard-hit% minus whiff%, both sides, min. 8-pitch recent sample per pitch type)" sortKey="edge" sort={sort} onSort={onSort} />
@@ -459,6 +478,9 @@ function LeagueBatterTable({
                         {playerMarkets.length > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>{playerMarkets.length} mkts {isOpen ? '▲' : '▼'}</span>}
                       </button>
                     </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>
+                      <StatusBadge status={r.status} isCurrent={r.isCurrentBatter} isOnDeck={r.isOnDeck} currentLabel="AT BAT" />
+                    </td>
                     <td style={{ padding: '6px 8px', textAlign: 'right', ...heat(r.flagCount, g('flagCount')) }}>
                       {r.flagCount > 0 && (
                         <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
@@ -479,7 +501,7 @@ function LeagueBatterTable({
                   </tr>
                   {isOpen && (
                     <tr key={`${r.mlb_id}-exp`}>
-                      <td colSpan={BATTER_COLS.length + 2 + (selectedPitcher ? 1 : 0)} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
+                      <td colSpan={BATTER_COLS.length + 3 + (selectedPitcher ? 1 : 0)} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
                         {playerTop && (
                           <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>🚩</span>
@@ -513,7 +535,9 @@ function LeagueBatterTable({
   )
 }
 
-function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL' | 'NL'; rows: PitcherRow[]; pool: PitcherRow[]; sort: SortState; onSort: (col: string) => void }) {
+type LivePitcherRow = PitcherRow & { status: 'in' | 'not_played' | 'done' | null; isCurrentPitcher: boolean; statusRank: number }
+
+function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL' | 'NL'; rows: LivePitcherRow[]; pool: LivePitcherRow[]; sort: SortState; onSort: (col: string) => void }) {
   const g = (f: string) => pool.map((r: any) => r[f])
   return (
     <div style={{ marginBottom: 20 }}>
@@ -530,6 +554,7 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
               <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Pitcher</th>
+              <TH label="Status" title="Real live status straight from MLB's boxscore — who's actually pitching right now, hasn't been used yet, or has already been pulled. Refreshes every 5s." sortKey="statusRank" sort={sort} onSort={onSort} />
               {PITCHER_COLS.map(c => <TH key={c.key as string} label={c.label} title={c.title} sortKey={c.key as string} sort={sort} onSort={onSort} />)}
             </tr>
           </thead>
@@ -546,6 +571,9 @@ function LeaguePitcherTable({ league, rows, pool, sort, onSort }: { league: 'AL'
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{r.name}</span>
                       <span style={{ fontSize: 9, fontWeight: 800, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.throws}HP</span>
                     </div>
+                  </td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>
+                    <StatusBadge status={r.status} isCurrent={r.isCurrentPitcher} isOnDeck={false} currentLabel="PITCHING" />
                   </td>
                   {PITCHER_COLS.map(c => (
                     <td key={c.key as string} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', fontFamily: "'SF Mono',monospace", ...heat(r[c.key] as number | null, g(c.key as string), c.dir) }}>
@@ -775,8 +803,17 @@ export function AllStarClient() {
 
   const alPitcherRoster = alRoster.filter(p => p.position === 'P')
   const nlPitcherRoster = nlRoster.filter(p => p.position === 'P')
-  const alPitchers = alPitcherRoster.map(p => buildPitcherRow(p, hand, data.pitcherSplits))
-  const nlPitchers = nlPitcherRoster.map(p => buildPitcherRow(p, hand, data.pitcherSplits))
+  // Real live roster status attached to every pitcher row too — same
+  // gameStatus/battersFaced signal as batters, refreshed every 5s.
+  const withPitcherStatus = (p: Roster) => {
+    const row = buildPitcherRow(p, hand, data.pitcherSplits)
+    const isCurrentPitcher = live?.currentPitcherId === p.mlb_id
+    const status = live?.playerStatus[p.mlb_id] ?? null
+    const statusRank = isCurrentPitcher ? 4 : status === 'in' ? 2 : status === 'not_played' ? 1 : status === 'done' ? 0 : -1
+    return { ...row, status, isCurrentPitcher, statusRank }
+  }
+  const alPitchers = alPitcherRoster.map(withPitcherStatus)
+  const nlPitchers = nlPitcherRoster.map(withPitcherStatus)
   const allPitcherPool = [...alPitchers, ...nlPitchers]
 
   const allMarkets: Market[] = data.markets ?? []
@@ -866,8 +903,8 @@ export function AllStarClient() {
 
       {/* Section 1: Bat tracking board */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', marginBottom: 12 }}>Bat Tracking Board</h2>
-      <LeagueBatterTable league="AL" batterRoster={alBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} />
-      <LeagueBatterTable league="NL" batterRoster={nlBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} />
+      <LeagueBatterTable league="AL" batterRoster={alBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} live={live} />
+      <LeagueBatterTable league="NL" batterRoster={nlBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} live={live} />
 
       {/* Pitching staffs */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Pitching Staffs</h2>
