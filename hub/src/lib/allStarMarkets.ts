@@ -111,6 +111,25 @@ export function canonicalizeTitle(title: string): string | null {
   return null
 }
 
+// Plain-English name for a canonical family — used only to say WHICH two
+// real, publicly-listed markets a flag is comparing (e.g. "First HR of the
+// Game" vs "First PA HR"), never the underlying threshold math itself.
+const FAMILY_LABELS: Record<string, string> = {
+  anytime_hr: 'Anytime HR', first_pa_hr: 'First PA HR', hr_2plus: '2+ HR',
+  first_hr_of_game: 'First HR of the Game', xbh_1plus: 'Extra-Base Hit',
+  double: 'Double', single: 'Single', triple: 'Triple', mvp: 'MVP',
+}
+export function labelKey(key: string): string {
+  if (FAMILY_LABELS[key]) return FAMILY_LABELS[key]
+  const tb = key.match(/^tb_(\d+)plus$/); if (tb) return `${tb[1]}+ Total Bases`
+  const hrr = key.match(/^hrr_(\d+)plus$/); if (hrr) return `${hrr[1]}+ Hits+Runs+RBIs`
+  const rbi = key.match(/^rbi_(\d+)plus$/); if (rbi) return `${rbi[1]}+ RBI`
+  const run = key.match(/^run_(\d+)plus$/); if (run) return `${run[1]}+ Run${run[1] === '1' ? '' : 's'} Scored`
+  const hits = key.match(/^hits_(\d+)plus$/); if (hits) return `${hits[1]}+ Hits`
+  const k = key.match(/^k_(\d+)plus$/); if (k) return `${k[1]}+ Strikeouts`
+  return key
+}
+
 export type CrossBookEntry = { book: Sportsbook; odds: number; prob: number; option: MarketOption }
 export type CrossBookFlag = {
   key: string
@@ -159,6 +178,10 @@ export function computeCrossBookFlags(allMarkets: Market[], minSpread = 0.08): C
 
 export function crossBookFlagsForPlayer(flags: CrossBookFlag[], mlbId: number): CrossBookFlag[] {
   return flags.filter(f => f.mlbId === mlbId)
+}
+
+export function describeCrossBookFlag(f: CrossBookFlag): string {
+  return `Books disagree on ${labelKey(f.key)} — ${Math.round(f.spread * 100)}pt spread across ${f.entries.map(e => e.book).join(', ')}`
 }
 
 // ─── Market price vs our own real data ─────────────────────────────────────
@@ -221,6 +244,10 @@ export function computeMarketVsDataFlags(
 
 export function dataMismatchFlagsForPlayer(flags: DataMismatchFlag[], mlbId: number): DataMismatchFlag[] {
   return flags.filter(f => f.mlbId === mlbId)
+}
+
+export function describeDataMismatchFlag(f: DataMismatchFlag): string {
+  return `${labelKey(f.key)} market favorite ranks him #${f.bookRank} — our own bat-tracking data has him #${f.realRank}`
 }
 
 // ─── Cross-market logical containment ──────────────────────────────────────
@@ -326,4 +353,8 @@ export function computeContainmentFlags(
 
 export function containmentFlagsForPlayer(flags: ContainmentFlag[], mlbId: number): ContainmentFlag[] {
   return flags.filter(f => f.mlbId === mlbId)
+}
+
+export function describeContainmentFlag(f: ContainmentFlag): string {
+  return `${labelKey(f.narrowKey)} (${(f.narrowProb * 100).toFixed(1)}%) priced above ${labelKey(f.broadKey)} (${(f.broadProb * 100).toFixed(1)}%) — the narrower event can't be more likely than the broader one it's contained in`
 }

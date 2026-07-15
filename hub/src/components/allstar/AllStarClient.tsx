@@ -9,11 +9,12 @@ import { MLB_TEAM_IDS } from '@/lib/mlbTeamColors'
 import { BookLogo } from '@/components/BookLogo'
 import {
   groupByBook, marketsForPlayer, groupBySection, searchMarkets, devig,
-  computeCrossBookFlags, crossBookFlagsForPlayer,
-  computeMarketVsDataFlags, dataMismatchFlagsForPlayer,
-  computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer,
+  computeCrossBookFlags, crossBookFlagsForPlayer, describeCrossBookFlag,
+  computeMarketVsDataFlags, dataMismatchFlagsForPlayer, describeDataMismatchFlag,
+  computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer, describeContainmentFlag,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook,
+  type CrossBookFlag, type DataMismatchFlag, type ContainmentFlag,
 } from '@/lib/allStarMarkets'
 
 const BOOK_LABEL: Record<Sportsbook, string> = { fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars' }
@@ -230,8 +231,48 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
 
+// Ranked "worst first" list of every flagged batter — the actual ask isn't
+// just a bare emoji buried in a row, it's knowing at a glance who's most
+// mispriced and why, in plain English (which two real markets contradict),
+// without exposing the underlying thresholds/formula.
+function ContradictionBoard({
+  entries,
+}: {
+  entries: { player: Roster; cb: CrossBookFlag[]; dm: DataMismatchFlag[]; ct: ContainmentFlag[]; count: number }[]
+}) {
+  if (entries.length === 0) return null
+  return (
+    <div style={{ marginBottom: 24, border: '1px solid #f87171', borderRadius: 14, padding: 16, background: 'rgba(248,113,113,0.04)' }}>
+      <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 2 }}>🚩 Contradiction Board</h2>
+      <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>
+        Every player with a real, mechanical pricing contradiction (cross-book disagreement, market price vs. our own bat-tracking data, or a logical containment violation) — worst first.
+      </p>
+      {entries.map((e, i) => {
+        const abbr = e.player.teamId != null ? ID_TO_ABBR[e.player.teamId] : undefined
+        const logo = e.player.teamId != null ? mlbTeamLogo(e.player.teamId) : undefined
+        return (
+          <div key={e.player.mlb_id} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: i < entries.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-3)', width: 20, flexShrink: 0, textAlign: 'right' }}>#{i + 1}</span>
+            <PlayerAvatar headshot={mlbHeadshot(e.player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={e.player.name} size={26} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-1)' }}>{e.player.name}</span>
+                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{e.player.league} · {e.player.position}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>🚩 {e.count}</span>
+              </div>
+              {e.cb.map((f, j) => <div key={`cb-${j}`} style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3 }}>• {describeCrossBookFlag(f)}</div>)}
+              {e.dm.map((f, j) => <div key={`dm-${j}`} style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3 }}>• {describeDataMismatchFlag(f)}</div>)}
+              {e.ct.map((f, j) => <div key={`ct-${j}`} style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3 }}>• {describeContainmentFlag(f)}</div>)}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function LeagueBatterTable({
-  league, batterRoster, hand, sort, onSort, expanded, onToggleExpand, markets, flags, dataFlags,
+  league, batterRoster, hand, sort, onSort, expanded, onToggleExpand, markets, flags, dataFlags, containmentFlags,
   opposingPitchers, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent,
 }: {
   league: 'AL' | 'NL'; batterRoster: Roster[]; hand: 'R' | 'L'
@@ -239,6 +280,7 @@ function LeagueBatterTable({
   expanded: Set<number>; onToggleExpand: (id: number) => void; markets: Market[]
   flags: ReturnType<typeof computeCrossBookFlags>
   dataFlags: ReturnType<typeof computeMarketVsDataFlags>
+  containmentFlags: ReturnType<typeof computeContainmentFlags>
   opposingPitchers: Roster[]; statSplits: any[]; timingSplits: any[]
   batterPitchRecent: any[]; pitcherPitchRecent: any[]
 }) {
@@ -254,15 +296,18 @@ function LeagueBatterTable({
     const edge = selectedPitcher
       ? computeMatchupEdge(p.mlb_id, selectedPitcher.mlb_id, effectiveHand, batterPitchRecent, pitcherPitchRecent)
       : null
-    return { ...row, edge }
+    const flagCount = crossBookFlagsForPlayer(flags, p.mlb_id).length
+      + dataMismatchFlagsForPlayer(dataFlags, p.mlb_id).length
+      + containmentFlagsForPlayer(containmentFlags, p.mlb_id).length
+    return { ...row, edge, flagCount }
   }
   const rows = useMemo(
     () => sortRows(batterRoster.map(buildRow), sort),
-    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, sort]
+    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, sort, flags, dataFlags, containmentFlags]
   )
   const pool = useMemo(
     () => batterRoster.map(buildRow),
-    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher]
+    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, flags, dataFlags, containmentFlags]
   )
   const g = (f: string) => pool.map((r: any) => r[f])
   const pAbbr = selectedPitcher?.teamId != null ? ID_TO_ABBR[selectedPitcher.teamId] : undefined
@@ -297,6 +342,7 @@ function LeagueBatterTable({
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
               <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', position: 'sticky', left: 0, background: 'var(--surface-2)' }}>Player</th>
+              <TH label="🚩" title="Total contradiction flags on this player — cross-book disagreement, market price vs. our own data, or a logical containment violation (e.g. First HR of the Game priced above First PA HR). Click the player to see exactly which." sortKey="flagCount" sort={sort} onSort={onSort} />
               {selectedPitcher && (
                 <TH label="Edge" title="Recent pitch-mix matchup edge vs this pitcher's real recent arsenal (usage-weighted hard-hit% minus whiff%, both sides, min. 8-pitch recent sample per pitch type)" sortKey="edge" sort={sort} onSort={onSort} />
               )}
@@ -311,6 +357,7 @@ function LeagueBatterTable({
               const playerMarkets = marketsForPlayer(markets, r.mlb_id)
               const playerFlags = crossBookFlagsForPlayer(flags, r.mlb_id)
               const playerDataFlags = dataMismatchFlagsForPlayer(dataFlags, r.mlb_id)
+              const playerContainmentFlags = containmentFlagsForPlayer(containmentFlags, r.mlb_id)
               const isOpen = expanded.has(r.mlb_id)
               return (
                 <>
@@ -321,10 +368,15 @@ function LeagueBatterTable({
                         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{r.name}</span>
                         <span style={{ fontSize: 9, fontWeight: 800, color: handColor, border: `1px solid ${handColor}`, borderRadius: 4, padding: '1px 4px' }}>{r.bats}</span>
                         <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{r.position}</span>
-                        {playerFlags.length > 0 && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fbbf24', flexShrink: 0 }} />}
-                        {playerDataFlags.length > 0 && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171', flexShrink: 0 }} />}
                         {playerMarkets.length > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)' }}>{playerMarkets.length} mkts {isOpen ? '▲' : '▼'}</span>}
                       </button>
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', ...heat(r.flagCount, g('flagCount')) }}>
+                      {r.flagCount > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>
+                          🚩 {r.flagCount}
+                        </span>
+                      )}
                     </td>
                     {selectedPitcher && (
                       <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: 'var(--accent)', fontFamily: "'SF Mono',monospace", ...heat((r as any).edge, g('edge')) }}>
@@ -339,7 +391,17 @@ function LeagueBatterTable({
                   </tr>
                   {isOpen && (
                     <tr key={`${r.mlb_id}-exp`}>
-                      <td colSpan={BATTER_COLS.length + 1 + (selectedPitcher ? 1 : 0)} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
+                      <td colSpan={BATTER_COLS.length + 2 + (selectedPitcher ? 1 : 0)} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
+                        {r.flagCount > 0 && (
+                          <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                              🚩 {r.flagCount} contradiction{r.flagCount !== 1 ? 's' : ''} flagged
+                            </div>
+                            {playerFlags.map((f, i) => <div key={`cb-${i}`} style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '2px 0' }}>• {describeCrossBookFlag(f)}</div>)}
+                            {playerDataFlags.map((f, i) => <div key={`dm-${i}`} style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '2px 0' }}>• {describeDataMismatchFlag(f)}</div>)}
+                            {playerContainmentFlags.map((f, i) => <div key={`ct-${i}`} style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '2px 0' }}>• {describeContainmentFlag(f)}</div>)}
+                          </div>
+                        )}
                         {playerMarkets.length === 0 ? (
                           <span style={{ fontSize: 11, color: 'var(--text-3)' }}>No markets loaded for {r.name} yet.</span>
                         ) : (
@@ -608,6 +670,20 @@ export function AllStarClient() {
   const reserveMlbIds = computeReserveMlbIds(allMarkets)
   const containmentFlags = computeContainmentFlags(allMarkets, reserveMlbIds)
 
+  // Ranked "who's most mispriced" list — every batter with at least one
+  // flag, worst (most flags) first, so it doesn't take digging into every
+  // row to see what's actually contradicting.
+  const contradictionEntries = [...alBatterRoster, ...nlBatterRoster]
+    .map(p => ({
+      player: p,
+      cb: crossBookFlagsForPlayer(crossBookFlags, p.mlb_id),
+      dm: dataMismatchFlagsForPlayer(dataMismatchFlags, p.mlb_id),
+      ct: containmentFlagsForPlayer(containmentFlags, p.mlb_id),
+    }))
+    .map(e => ({ ...e, count: e.cb.length + e.dm.length + e.ct.length }))
+    .filter(e => e.count > 0)
+    .sort((a, b) => b.count - a.count)
+
   const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   const gameDateLabel = data.gameDate
@@ -646,10 +722,13 @@ export function AllStarClient() {
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>No fixed opposing pitcher tonight — this shows each player's own real season split vs that hand.</span>
       </div>
 
+      {/* Contradiction Board — every flagged player, worst first */}
+      <ContradictionBoard entries={contradictionEntries} />
+
       {/* Section 1: Bat tracking board */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', marginBottom: 12 }}>Bat Tracking Board</h2>
-      <LeagueBatterTable league="AL" batterRoster={alBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} />
-      <LeagueBatterTable league="NL" batterRoster={nlBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} />
+      <LeagueBatterTable league="AL" batterRoster={alBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={nlPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} />
+      <LeagueBatterTable league="NL" batterRoster={nlBatterRoster} hand={hand} sort={batterSort} onSort={col => toggleSort(setBatterSort, col)} expanded={expanded} onToggleExpand={toggleExpand} markets={allMarkets} flags={crossBookFlags} dataFlags={dataMismatchFlags} containmentFlags={containmentFlags} opposingPitchers={alPitcherRoster} statSplits={data.statSplits} timingSplits={data.timingSplits} batterPitchRecent={data.batterPitchRecent ?? []} pitcherPitchRecent={data.pitcherPitchRecent ?? []} />
 
       {/* Pitching staffs */}
       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)', margin: '28px 0 12px' }}>Pitching Staffs</h2>
