@@ -15,7 +15,7 @@ const EMPTY = {
   playerStatus: {}, currentBatterId: null, onDeckBatterId: null, currentPitcherId: null,
   pitchers: {}, firstPaOutcome: {}, firstInningPitcher: { top: null, bottom: null },
   teamTotalStrikeouts: { away: 0, home: 0 }, bothTeamsDouble: false, bothTeamsTriple: false,
-  hrDistances: [], doublePlayRecorded: false,
+  hrDistances: [], doublePlayRecorded: false, playerNames: {},
 }
 
 // A half-inning-1 play "keeps the bases clean" only if the batter himself
@@ -64,14 +64,23 @@ export async function GET() {
       hits: number; hr: number; doubles: number; triples: number
       rbi: number; runs: number; totalBases: number; pa: number
     }> = {}
+    // Real full names for every rostered player (both sides, batters +
+    // pitchers) — backs name-based fallback matching for the handful of
+    // scraped markets whose options are missing a real mlbId (e.g. some
+    // "1st PA - <Player>" and "Home Run / Moneyline Parlay" rows), so those
+    // can still be matched against the real player instead of staying
+    // ungraded over a scraper gap.
+    const playerNames: Record<number, string> = {}
     const boxTeams = feed.liveData?.boxscore?.teams ?? {}
     for (const side of ['away', 'home'] as const) {
       const raw = boxTeams[side]?.players ?? {}
       for (const key of Object.keys(raw)) {
         const p = raw[key]
-        const b = p.stats?.batting
         const id = p.person?.id
-        if (!b || !id) continue
+        if (!id) continue
+        if (p.person?.fullName) playerNames[id] = p.person.fullName
+        const b = p.stats?.batting
+        if (!b) continue
         players[id] = {
           hits: b.hits ?? 0, hr: b.homeRuns ?? 0, doubles: b.doubles ?? 0, triples: b.triples ?? 0,
           rbi: b.rbi ?? 0, runs: b.runs ?? 0, totalBases: b.totalBases ?? 0, pa: b.plateAppearances ?? 0,
@@ -225,7 +234,7 @@ export async function GET() {
         gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression, firstPitch,
         playerStatus, currentBatterId, onDeckBatterId, currentPitcherId,
         pitchers, firstPaOutcome, firstInningPitcher, teamTotalStrikeouts, bothTeamsDouble, bothTeamsTriple,
-        hrDistances, doublePlayRecorded,
+        hrDistances, doublePlayRecorded, playerNames,
       },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
     )

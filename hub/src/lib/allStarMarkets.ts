@@ -551,6 +551,7 @@ export type LiveGameState = {
   bothTeamsTriple: boolean
   hrDistances: { mlbId: number; distance: number }[]
   doublePlayRecorded: boolean
+  playerNames: Record<number, string>
 }
 export type MarketOutcome = 'won' | 'lost' | 'void'
 
@@ -681,7 +682,10 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
 
   for (const m of allMarkets) {
     const title = m.title.trim()
-    if (/parlay/i.test(title)) continue
+    // "Home Run / Moneyline Parlay" is a different shape (player HR leg,
+    // not a run line/total) — graded separately in
+    // computeHrMoneylineParlaySettlement.
+    if (title === 'Home Run / Moneyline Parlay') continue
     // "Inning Money Line" bundles 3 identical AL/NL pairs with no inning
     // number attached to tell them apart — genuinely ambiguous, stays
     // ungraded rather than guessing which pair is which inning. Caesars'
@@ -690,6 +694,34 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
     // team-name regex below already naturally excludes it; no special case
     // needed.
     if (title === 'Inning Money Line') continue
+
+    // ── Run Line/Total Runs and Money Line/Total Runs parlays ────────────
+    // Once the game (or, for the First 5 Innings version, that window) is
+    // decided, both legs are deterministic real facts — grading their
+    // combination is exactly as safe as any single-leg market here, unlike
+    // a genuinely uncertain mid-game joint probability.
+    if (/(Run Line|Money Line) \/ Total Runs Parlay$/.test(title)) {
+      const isFirst5 = title.startsWith('First 5 Innings')
+      const window = isFirst5 ? sumInningsWindow(innings, 5) : { awayRuns: teamTotals.awayRuns, homeRuns: teamTotals.homeRuns, complete: isFinal }
+      const total = window.awayRuns + window.homeRuns
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        if (!window.complete) continue
+        const legs = o.label.split(' / ')
+        if (legs.length !== 2) continue
+        const rl = legs[0].match(/^(American League|National League)\s*([+-][\d.]+)$/)
+        const ml = legs[0].match(/^(American League|National League)$/)
+        const tot = legs[1].match(/^(Over|Under)\s*([\d.]+)$/)
+        if (!tot) continue
+        let leg1Won: boolean | null = null
+        if (rl) { const diff = rl[1] === AWAY_LABEL ? window.awayRuns - window.homeRuns : window.homeRuns - window.awayRuns; leg1Won = diff + Number(rl[2]) > 0 }
+        else if (ml) { leg1Won = window.awayRuns === window.homeRuns ? false : (ml[1] === AWAY_LABEL ? window.awayRuns > window.homeRuns : window.homeRuns > window.awayRuns) }
+        if (leg1Won == null) continue
+        const leg2Won = tot[1] === 'Over' ? total > Number(tot[2]) : total < Number(tot[2])
+        out.set(rowKey, leg1Won && leg2Won ? 'won' : 'lost')
+      }
+      continue
+    }
 
     // ── Caesars "1st 3/5 Innings" combo card ─────────────────────────────
     // Bundles a real run line (signed, e.g. "(+0.5)") and a real moneyline
@@ -1203,11 +1235,28 @@ export function computeH2HSettlement(allMarkets: Market[], live: LiveGameState |
   return out
 }
 
+// Real full-name substring match — stronger than the pitcher-only surname
+// matcher above, used as a fallback wherever a scraped option is missing
+// its own mlbId (a real gap in a couple of markets) but the market's own
+// title or label text already names the exact real player. Full name
+// (not just surname) avoids false positives on common surnames and
+// correctly ignores suffixes like "Jr." since we're checking containment,
+// not an exact match.
+function resolveMlbIdByName(text: string, names: Record<number, string>): number | null {
+  const t = stripAccents(text)
+  for (const [id, name] of Object.entries(names)) {
+    if (name && t.includes(stripAccents(name))) return Number(id)
+  }
+  return null
+}
+
 // ─── Exact first-plate-appearance outcome (FanDuel) ────────────────────────
 // "1st PA - <Player>" markets ask what specifically happened in a player's
 // very first trip, not just a binary. Matched by the option's own real
 // mlbId against the live feed's real per-play classification (single / XBH
-// / walk-HBP / strikeout / any other out) — no name parsing needed.
+// / walk-HBP / strikeout / any other out); when an option is missing its
+// mlbId (a real scraper gap — the market title still literally names the
+// player) it's resolved by matching the real roster name instead.
 const FIRST_PA_LABEL: Record<string, string> = {
   single: 'Single', xbh: 'Extra Base Hit (Double/Triple/Home Run)',
   walk_hbp: 'Walk / HBP', strikeout: 'Strikeout', other: 'Any Other Out / Outcome',
@@ -1219,10 +1268,12 @@ export function computeFirstPaOutcomeSettlement(allMarkets: Market[], live: Live
 
   for (const m of allMarkets) {
     if (!m.title.startsWith('1st PA - ')) continue
+    const titleMlbId = resolveMlbIdByName(m.title.slice('1st PA - '.length), live.playerNames)
     for (const o of m.options) {
-      if (o.mlbId == null) continue
+      const mlbId = o.mlbId ?? titleMlbId
+      if (mlbId == null) continue
       const rowKey = `${m.id}::${o.label}`
-      const outcome = live.firstPaOutcome[o.mlbId]
+      const outcome = live.firstPaOutcome[mlbId]
       if (!outcome) { if (isFinal) out.set(rowKey, 'void'); continue } // never got a PA tonight
       const matches = o.label.includes(FIRST_PA_LABEL[outcome])
       out.set(rowKey, matches ? 'won' : 'lost')
@@ -1255,9 +1306,9 @@ export function computeHrDistanceSettlement(allMarkets: Market[], live: LiveGame
 // ─── HR / Moneyline parlay (FanDuel) ───────────────────────────────────────
 // A well-defined 2-leg combo ("PlayerName/TeamName" = that player hits any
 // HR at all tonight AND that team wins the whole game) — both real,
-// independently-verifiable facts, unlike the continuous-line parlays
-// (run line + total runs) elsewhere on this page that stay unbuilt because
-// their joint distribution genuinely isn't derivable from final box totals.
+// independently-verifiable facts once the game is Final. None of these
+// options carry an mlbId (a real scraper gap), so the player leg is
+// resolved from the label's own name text against the real roster.
 export function computeHrMoneylineParlaySettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
   const out = new Map<string, MarketOutcome>()
   if (!live) return out
@@ -1270,9 +1321,11 @@ export function computeHrMoneylineParlaySettlement(allMarkets: Market[], live: L
     if (m.title !== 'Home Run / Moneyline Parlay') continue
     for (const o of m.options) {
       const m2 = o.label.match(/^(.+)\/(American League|National League)$/)
-      if (!m2 || o.mlbId == null) continue
+      if (!m2) continue
+      const mlbId = o.mlbId ?? resolveMlbIdByName(m2[1], live.playerNames)
+      if (mlbId == null) continue
       const teamWon = m2[2] === AWAY_LABEL ? awayWon : homeWon
-      const hit = (live.players[o.mlbId]?.hr ?? 0) > 0
+      const hit = (live.players[mlbId]?.hr ?? 0) > 0
       out.set(`${m.id}::${o.label}`, hit && teamWon ? 'won' : 'lost')
     }
   }
