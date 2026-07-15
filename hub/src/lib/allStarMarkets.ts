@@ -130,6 +130,27 @@ export function labelKey(key: string): string {
   return key
 }
 
+export function oddsStr(odds: number): string {
+  return odds > 0 ? `+${odds}` : `${odds}`
+}
+
+// The single real, concrete number a bettor would actually see for a given
+// canonical family + player — the shortest (most favorite) odds across
+// whichever books list it — used so a flag can point at an exact bet
+// instead of an abstract percentage.
+export function bestOption(allMarkets: Market[], key: string, mlbId: number): { book: Sportsbook; odds: number; prob: number } | null {
+  let best: { book: Sportsbook; odds: number; prob: number } | null = null
+  for (const m of allMarkets) {
+    if (canonicalizeTitle(m.title) !== key) continue
+    for (const o of m.options) {
+      if (o.mlbId !== mlbId) continue
+      const prob = impliedProb(o.odds)
+      if (!best || prob > best.prob) best = { book: m.book, odds: o.odds, prob }
+    }
+  }
+  return best
+}
+
 export type CrossBookEntry = { book: Sportsbook; odds: number; prob: number; option: MarketOption }
 export type CrossBookFlag = {
   key: string
@@ -181,7 +202,12 @@ export function crossBookFlagsForPlayer(flags: CrossBookFlag[], mlbId: number): 
 }
 
 export function describeCrossBookFlag(f: CrossBookFlag): string {
-  return `Books disagree on ${labelKey(f.key)} — ${Math.round(f.spread * 100)}pt spread across ${f.entries.map(e => e.book).join(', ')}`
+  const fav = f.entries[0], dog = f.entries[f.entries.length - 1]
+  return `${labelKey(f.key)}: ${fav.book} ${oddsStr(fav.odds)} vs ${dog.book} ${oddsStr(dog.odds)}`
+}
+
+export function crossBookSeverity(f: CrossBookFlag): number {
+  return f.spread
 }
 
 // ─── Market price vs our own real data ─────────────────────────────────────
@@ -200,6 +226,8 @@ export type DataMismatchFlag = {
   bookRank: number   // 1 = the market's biggest consensus favorite for this prop
   realRank: number    // 1 = our own data's biggest real HR threat
   consensusProb: number
+  book: Sportsbook
+  odds: number
 }
 
 export function computeMarketVsDataFlags(
@@ -235,7 +263,9 @@ export function computeMarketVsDataFlags(
       const realRank = realRankByMlbId.get(entry.mlbId)
       if (realRank == null) return
       if (Math.abs(bookRank - realRank) >= gapThreshold) {
-        flags.push({ key, mlbId: entry.mlbId, bookRank, realRank, consensusProb: entry.prob })
+        const opt = bestOption(allMarkets, key, entry.mlbId)
+        if (!opt) return
+        flags.push({ key, mlbId: entry.mlbId, bookRank, realRank, consensusProb: entry.prob, book: opt.book, odds: opt.odds })
       }
     })
   }
@@ -247,7 +277,11 @@ export function dataMismatchFlagsForPlayer(flags: DataMismatchFlag[], mlbId: num
 }
 
 export function describeDataMismatchFlag(f: DataMismatchFlag): string {
-  return `${labelKey(f.key)} market favorite ranks him #${f.bookRank} — our own bat-tracking data has him #${f.realRank}`
+  return `${labelKey(f.key)} ${f.book} ${oddsStr(f.odds)}: market has him #${f.bookRank}, our data says #${f.realRank}`
+}
+
+export function dataMismatchSeverity(f: DataMismatchFlag): number {
+  return Math.abs(f.bookRank - f.realRank)
 }
 
 // ─── Cross-market logical containment ──────────────────────────────────────
@@ -305,6 +339,10 @@ export type ContainmentFlag = {
   mlbId: number
   narrowProb: number
   broadProb: number
+  narrowBook: Sportsbook
+  narrowOdds: number
+  broadBook: Sportsbook
+  broadOdds: number
 }
 
 export function computeContainmentFlags(
@@ -344,7 +382,13 @@ export function computeContainmentFlags(
       const broadProb = broadMap.get(mlbId)
       if (broadProb == null) continue
       if (narrowProb > broadProb + minGap) {
-        flags.push({ narrowKey: rule.narrow, broadKey: rule.broad, mlbId, narrowProb, broadProb })
+        const narrowOpt = bestOption(allMarkets, rule.narrow, mlbId)
+        const broadOpt = bestOption(allMarkets, rule.broad, mlbId)
+        if (!narrowOpt || !broadOpt) continue
+        flags.push({
+          narrowKey: rule.narrow, broadKey: rule.broad, mlbId, narrowProb, broadProb,
+          narrowBook: narrowOpt.book, narrowOdds: narrowOpt.odds, broadBook: broadOpt.book, broadOdds: broadOpt.odds,
+        })
       }
     }
   }
@@ -356,5 +400,43 @@ export function containmentFlagsForPlayer(flags: ContainmentFlag[], mlbId: numbe
 }
 
 export function describeContainmentFlag(f: ContainmentFlag): string {
-  return `${labelKey(f.narrowKey)} (${(f.narrowProb * 100).toFixed(1)}%) priced above ${labelKey(f.broadKey)} (${(f.broadProb * 100).toFixed(1)}%) — the narrower event can't be more likely than the broader one it's contained in`
+  return `${labelKey(f.narrowKey)} ${f.narrowBook} ${oddsStr(f.narrowOdds)} vs ${labelKey(f.broadKey)} ${f.broadBook} ${oddsStr(f.broadOdds)}`
+}
+
+export function containmentSeverity(f: ContainmentFlag): number {
+  return f.narrowProb - f.broadProb
+}
+
+// ─── Single worst flag per player, across all three flag types ────────────
+// The actual ask: not a wall of every derived consequence, just the one
+// bet that looks most wrong, ranked so the biggest edges surface first.
+// Cross-book spread and containment gap are both real probability-point
+// deltas (directly comparable); data-mismatch is a rank gap, normalized by
+// roster size so it lands on roughly the same 0-1 scale for sorting only.
+export type TopFlag =
+  | { kind: 'cross-book'; flag: CrossBookFlag; severity: number }
+  | { kind: 'data-mismatch'; flag: DataMismatchFlag; severity: number }
+  | { kind: 'containment'; flag: ContainmentFlag; severity: number }
+
+export function describeTopFlag(t: TopFlag): string {
+  if (t.kind === 'cross-book') return describeCrossBookFlag(t.flag)
+  if (t.kind === 'data-mismatch') return describeDataMismatchFlag(t.flag)
+  return describeContainmentFlag(t.flag)
+}
+
+export function topFlagForPlayer(
+  mlbId: number,
+  crossBook: CrossBookFlag[],
+  dataMismatch: DataMismatchFlag[],
+  containment: ContainmentFlag[],
+  rosterSize: number,
+): { top: TopFlag; extraCount: number } | null {
+  const candidates: TopFlag[] = [
+    ...crossBookFlagsForPlayer(crossBook, mlbId).map(f => ({ kind: 'cross-book' as const, flag: f, severity: crossBookSeverity(f) })),
+    ...dataMismatchFlagsForPlayer(dataMismatch, mlbId).map(f => ({ kind: 'data-mismatch' as const, flag: f, severity: dataMismatchSeverity(f) / Math.max(1, rosterSize) })),
+    ...containmentFlagsForPlayer(containment, mlbId).map(f => ({ kind: 'containment' as const, flag: f, severity: containmentSeverity(f) })),
+  ]
+  if (candidates.length === 0) return null
+  candidates.sort((a, b) => b.severity - a.severity)
+  return { top: candidates[0], extraCount: candidates.length - 1 }
 }

@@ -9,12 +9,12 @@ import { MLB_TEAM_IDS } from '@/lib/mlbTeamColors'
 import { BookLogo } from '@/components/BookLogo'
 import {
   groupByBook, marketsForPlayer, groupBySection, searchMarkets, devig,
-  computeCrossBookFlags, crossBookFlagsForPlayer, describeCrossBookFlag,
-  computeMarketVsDataFlags, dataMismatchFlagsForPlayer, describeDataMismatchFlag,
-  computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer, describeContainmentFlag,
+  computeCrossBookFlags, crossBookFlagsForPlayer,
+  computeMarketVsDataFlags, dataMismatchFlagsForPlayer,
+  computeReserveMlbIds, computeContainmentFlags, containmentFlagsForPlayer,
+  topFlagForPlayer, describeTopFlag,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook,
-  type CrossBookFlag, type DataMismatchFlag, type ContainmentFlag,
 } from '@/lib/allStarMarkets'
 
 const BOOK_LABEL: Record<Sportsbook, string> = { fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars' }
@@ -231,42 +231,37 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
 
-// Ranked "worst first" list of every flagged batter — the actual ask isn't
-// just a bare emoji buried in a row, it's knowing at a glance who's most
-// mispriced and why, in plain English (which two real markets contradict),
-// without exposing the underlying thresholds/formula.
+// Ranked "worst first" list, ONE line per player — the single most-wrong
+// bet, with its real book + odds, not a wall of every derived consequence.
+// Biggest gap first, so the top of the list IS the answer to "which bet
+// doesn't make sense the most."
 function ContradictionBoard({
   entries,
 }: {
-  entries: { player: Roster; cb: CrossBookFlag[]; dm: DataMismatchFlag[]; ct: ContainmentFlag[]; count: number }[]
+  entries: { player: Roster; headline: string; extraCount: number; severity: number }[]
 }) {
   if (entries.length === 0) return null
+  const shown = entries.slice(0, 12)
   return (
     <div style={{ marginBottom: 24, border: '1px solid #f87171', borderRadius: 14, padding: 16, background: 'rgba(248,113,113,0.04)' }}>
       <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 2 }}>🚩 Contradiction Board</h2>
-      <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>
-        Every player with a real, mechanical pricing contradiction (cross-book disagreement, market price vs. our own bat-tracking data, or a logical containment violation) — worst first.
-      </p>
-      {entries.map((e, i) => {
+      <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Worst mispricing first — the specific bet, real book, real odds.</p>
+      {shown.map((e, i) => {
         const abbr = e.player.teamId != null ? ID_TO_ABBR[e.player.teamId] : undefined
         const logo = e.player.teamId != null ? mlbTeamLogo(e.player.teamId) : undefined
         return (
-          <div key={e.player.mlb_id} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: i < entries.length - 1 ? '1px solid var(--border)' : 'none' }}>
+          <div key={e.player.mlb_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < shown.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-3)', width: 20, flexShrink: 0, textAlign: 'right' }}>#{i + 1}</span>
-            <PlayerAvatar headshot={mlbHeadshot(e.player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={e.player.name} size={26} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-1)' }}>{e.player.name}</span>
-                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{e.player.league} · {e.player.position}</span>
-                <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px' }}>🚩 {e.count}</span>
-              </div>
-              {e.cb.map((f, j) => <div key={`cb-${j}`} style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3 }}>• {describeCrossBookFlag(f)}</div>)}
-              {e.dm.map((f, j) => <div key={`dm-${j}`} style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3 }}>• {describeDataMismatchFlag(f)}</div>)}
-              {e.ct.map((f, j) => <div key={`ct-${j}`} style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 3 }}>• {describeContainmentFlag(f)}</div>)}
-            </div>
+            <PlayerAvatar headshot={mlbHeadshot(e.player.mlb_id)} teamLogo={logo} teamAbbr={abbr} name={e.player.name} size={24} />
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-1)', flexShrink: 0 }}>{e.player.name}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.headline}</span>
+            {e.extraCount > 0 && <span style={{ fontSize: 10, color: 'var(--text-3)', flexShrink: 0, marginLeft: 'auto' }}>+{e.extraCount} more</span>}
           </div>
         )
       })}
+      {entries.length > shown.length && (
+        <p style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 8 }}>+{entries.length - shown.length} more players flagged further down the board.</p>
+      )}
     </div>
   )
 }
@@ -355,9 +350,7 @@ function LeagueBatterTable({
               const logo = r.teamId != null ? mlbTeamLogo(r.teamId) : undefined
               const handColor = HAND_COLOR[r.bats] ?? 'var(--text-3)'
               const playerMarkets = marketsForPlayer(markets, r.mlb_id)
-              const playerFlags = crossBookFlagsForPlayer(flags, r.mlb_id)
-              const playerDataFlags = dataMismatchFlagsForPlayer(dataFlags, r.mlb_id)
-              const playerContainmentFlags = containmentFlagsForPlayer(containmentFlags, r.mlb_id)
+              const playerTop = topFlagForPlayer(r.mlb_id, flags, dataFlags, containmentFlags, batterRoster.length)
               const isOpen = expanded.has(r.mlb_id)
               return (
                 <>
@@ -392,14 +385,11 @@ function LeagueBatterTable({
                   {isOpen && (
                     <tr key={`${r.mlb_id}-exp`}>
                       <td colSpan={BATTER_COLS.length + 2 + (selectedPitcher ? 1 : 0)} style={{ padding: '10px 16px', background: 'var(--surface-2)' }}>
-                        {r.flagCount > 0 && (
-                          <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
-                              🚩 {r.flagCount} contradiction{r.flagCount !== 1 ? 's' : ''} flagged
-                            </div>
-                            {playerFlags.map((f, i) => <div key={`cb-${i}`} style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '2px 0' }}>• {describeCrossBookFlag(f)}</div>)}
-                            {playerDataFlags.map((f, i) => <div key={`dm-${i}`} style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '2px 0' }}>• {describeDataMismatchFlag(f)}</div>)}
-                            {playerContainmentFlags.map((f, i) => <div key={`ct-${i}`} style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '2px 0' }}>• {describeContainmentFlag(f)}</div>)}
+                        {playerTop && (
+                          <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>🚩</span>
+                            <span style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{describeTopFlag(playerTop.top)}</span>
+                            {playerTop.extraCount > 0 && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>+{playerTop.extraCount} more</span>}
                           </div>
                         )}
                         {playerMarkets.length === 0 ? (
@@ -670,19 +660,18 @@ export function AllStarClient() {
   const reserveMlbIds = computeReserveMlbIds(allMarkets)
   const containmentFlags = computeContainmentFlags(allMarkets, reserveMlbIds)
 
-  // Ranked "who's most mispriced" list — every batter with at least one
-  // flag, worst (most flags) first, so it doesn't take digging into every
-  // row to see what's actually contradicting.
+  // Ranked "who's most mispriced" list — one line per player, their single
+  // worst flag (biggest gap), worst overall first. No wall of every derived
+  // consequence, just the specific bet that looks most wrong.
+  const allBattersCount = alBatterRoster.length + nlBatterRoster.length
   const contradictionEntries = [...alBatterRoster, ...nlBatterRoster]
-    .map(p => ({
-      player: p,
-      cb: crossBookFlagsForPlayer(crossBookFlags, p.mlb_id),
-      dm: dataMismatchFlagsForPlayer(dataMismatchFlags, p.mlb_id),
-      ct: containmentFlagsForPlayer(containmentFlags, p.mlb_id),
-    }))
-    .map(e => ({ ...e, count: e.cb.length + e.dm.length + e.ct.length }))
-    .filter(e => e.count > 0)
-    .sort((a, b) => b.count - a.count)
+    .map(p => {
+      const top = topFlagForPlayer(p.mlb_id, crossBookFlags, dataMismatchFlags, containmentFlags, allBattersCount)
+      if (!top) return null
+      return { player: p, headline: describeTopFlag(top.top), extraCount: top.extraCount, severity: top.top.severity }
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null)
+    .sort((a, b) => b.severity - a.severity)
 
   const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
