@@ -151,6 +151,22 @@ export function bestOption(allMarkets: Market[], key: string, mlbId: number): { 
   return best
 }
 
+// Same lookup, scoped to one specific book — used to build a real per-book
+// column instead of an abstracted single "best" number.
+export function bestOptionForBook(allMarkets: Market[], book: Sportsbook, key: string, mlbId: number): { odds: number; prob: number } | null {
+  let best: { odds: number; prob: number } | null = null
+  for (const m of allMarkets) {
+    if (m.book !== book) continue
+    if (canonicalizeTitle(m.title) !== key) continue
+    for (const o of m.options) {
+      if (o.mlbId !== mlbId) continue
+      const prob = impliedProb(o.odds)
+      if (!best || prob > best.prob) best = { odds: o.odds, prob }
+    }
+  }
+  return best
+}
+
 export type CrossBookEntry = { book: Sportsbook; odds: number; prob: number; option: MarketOption }
 export type CrossBookFlag = {
   key: string
@@ -333,41 +349,51 @@ export function computeReserveMlbIds(allMarkets: Market[]): Set<number> {
   return ids
 }
 
-// ─── First HR of the Game vs. First PA HR, side by side ───────────────────
-// The one comparison that actually matters here: most players get at most
-// one plate appearance tonight, so if that PA is a HR it's very often ALSO
-// a real shot at the whole game's first HR — unless a lot of the game
-// already happened before he batted. Real book + real odds on both sides,
-// ranked by the tightest (most suspicious) gap first, not a wall of derived
-// consequences — this is the exact side-by-side comparison, nothing more.
+// ─── HR race odds, one column per book ─────────────────────────────────────
+// Every player who's raced by at least 2 of the 3 books on "how early does
+// he homer" — Caesars/FanDuel/BetMGM each get their own column, showing
+// whichever real market that specific book quotes for it (First HR of the
+// Game > First PA HR > Anytime HR, most specific/relevant first), ranked by
+// the biggest spread between whatever real prices exist for that player —
+// not filtered down to only players who happen to have one specific pair of
+// markets. A player with only 1 book's price is left out (nothing to
+// compare); everyone else shows up, missing cells included.
+const RACE_KEYS = ['first_hr_of_game', 'first_pa_hr', 'anytime_hr']
+const RACE_BOOKS: Sportsbook[] = ['caesars', 'fanduel', 'betmgm']
+
+export type HrRaceCell = { key: string; odds: number; prob: number } | null
 export type HrRaceRow = {
   mlbId: number
-  firstHrOfGame: { book: Sportsbook; odds: number; prob: number } | null
-  firstPaHr: { book: Sportsbook; odds: number; prob: number } | null
-  gap: number | null
+  cells: Record<Sportsbook, HrRaceCell>
+  spread: number
   isReserve: boolean
+}
+
+function bestRaceCellForBook(allMarkets: Market[], book: Sportsbook, mlbId: number): HrRaceCell {
+  for (const key of RACE_KEYS) {
+    const opt = bestOptionForBook(allMarkets, book, key, mlbId)
+    if (opt) return { key, odds: opt.odds, prob: opt.prob }
+  }
+  return null
 }
 
 export function computeHrRaceBoard(allMarkets: Market[], reserveMlbIds: Set<number>): HrRaceRow[] {
   const ids = new Set<number>()
   for (const m of allMarkets) {
     const key = canonicalizeTitle(m.title)
-    if (key !== 'first_hr_of_game' && key !== 'first_pa_hr') continue
+    if (!key || !RACE_KEYS.includes(key)) continue
     for (const o of m.options) if (o.mlbId != null) ids.add(o.mlbId)
   }
   const rows: HrRaceRow[] = []
   for (const mlbId of ids) {
-    const firstHrOfGame = bestOption(allMarkets, 'first_hr_of_game', mlbId)
-    const firstPaHr = bestOption(allMarkets, 'first_pa_hr', mlbId)
-    const gap = firstHrOfGame && firstPaHr ? firstPaHr.prob - firstHrOfGame.prob : null
-    rows.push({ mlbId, firstHrOfGame, firstPaHr, gap, isReserve: reserveMlbIds.has(mlbId) })
+    const cells = {} as Record<Sportsbook, HrRaceCell>
+    for (const book of RACE_BOOKS) cells[book] = bestRaceCellForBook(allMarkets, book, mlbId)
+    const probs = RACE_BOOKS.map(b => cells[b]?.prob).filter((p): p is number => p != null)
+    if (probs.length < 2) continue
+    const spread = Math.max(...probs) - Math.min(...probs)
+    rows.push({ mlbId, cells, spread, isReserve: reserveMlbIds.has(mlbId) })
   }
-  return rows.sort((a, b) => {
-    if (a.gap == null && b.gap == null) return 0
-    if (a.gap == null) return 1
-    if (b.gap == null) return -1
-    return a.gap - b.gap
-  })
+  return rows.sort((a, b) => b.spread - a.spread)
 }
 
 export type ContainmentFlag = {

@@ -232,12 +232,15 @@ function TH({ label, title, sortKey, sort, onSort }: { label: string; title: str
 
 const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c084fc' }
 
-// Direct side-by-side: First HR of the Game vs. First PA HR, real book, real
-// odds, both columns, every player who has both — ranked tightest gap
-// first. Most players get at most one PA tonight, so a HR in that one PA is
-// very often ALSO a real shot at the game's first HR; the tighter the gap
-// (or negative — First HR of Game priced shorter than First PA HR outright,
-// impossible), the more the pricing looks wrong.
+const RACE_BOOK_ORDER: Sportsbook[] = ['caesars', 'fanduel', 'betmgm']
+const RACE_KEY_SHORT: Record<string, string> = { first_hr_of_game: 'First HR', first_pa_hr: 'First PA HR', anytime_hr: 'Anytime HR' }
+
+// Real HR-race odds, one column per book, every player raced by at least 2
+// of the 3 — no market restricted down to only the pair that happened to be
+// available for every player. Each cell shows whichever real market that
+// specific book actually quotes (First HR of the Game > First PA HR >
+// Anytime HR, most specific first) plus its real odds; biggest spread
+// between whatever's actually priced, worst first.
 function ContradictionBoard({
   rows,
   rosterById,
@@ -245,19 +248,20 @@ function ContradictionBoard({
   rows: HrRaceRow[]
   rosterById: Map<number, Roster>
 }) {
-  const shown = rows.filter(r => r.firstHrOfGame && r.firstPaHr).slice(0, 20)
+  const shown = rows.slice(0, 25)
   if (shown.length === 0) return null
   return (
     <div style={{ marginBottom: 24, border: '1px solid #f87171', borderRadius: 14, padding: 16, background: 'rgba(248,113,113,0.04)', overflowX: 'auto' }}>
-      <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 2 }}>🚩 First HR of the Game vs. First PA HR</h2>
-      <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Real book, real odds, both sides — tightest (most suspicious) gap first.</p>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 480 }}>
+      <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', marginBottom: 2 }}>🚩 HR Race Odds — Caesars vs FanDuel vs BetMGM</h2>
+      <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Every player priced by at least 2 books — real market, real odds per book — biggest spread first.</p>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
             <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Player</th>
-            <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>First HR of Game</th>
-            <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>First PA HR</th>
-            <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Gap</th>
+            {RACE_BOOK_ORDER.map(b => (
+              <th key={b} style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>{BOOK_LABEL[b]}</th>
+            ))}
+            <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Spread</th>
           </tr>
         </thead>
         <tbody>
@@ -266,8 +270,8 @@ function ContradictionBoard({
             if (!p) return null
             const abbr = p.teamId != null ? ID_TO_ABBR[p.teamId] : undefined
             const logo = p.teamId != null ? mlbTeamLogo(p.teamId) : undefined
-            const gapPts = r.gap! * 100
-            const gapColor = gapPts < 0 ? '#f87171' : gapPts < 5 ? '#fbbf24' : 'var(--text-3)'
+            const spreadPts = r.spread * 100
+            const spreadColor = spreadPts >= 10 ? '#f87171' : spreadPts >= 5 ? '#fbbf24' : 'var(--text-3)'
             return (
               <tr key={r.mlbId} style={{ borderBottom: i < shown.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <td style={{ padding: '6px 8px' }}>
@@ -278,20 +282,23 @@ function ContradictionBoard({
                     {r.isReserve && <span style={{ fontSize: 8.5, fontWeight: 800, color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '0 4px' }}>RES</span>}
                   </div>
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <BookLogo vendor={r.firstHrOfGame!.book} size={13} />
-                    <span style={{ fontWeight: 800, color: 'var(--text-1)' }}>{oddsStr(r.firstHrOfGame!.odds)}</span>
-                  </span>
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <BookLogo vendor={r.firstPaHr!.book} size={13} />
-                    <span style={{ fontWeight: 800, color: 'var(--text-1)' }}>{oddsStr(r.firstPaHr!.odds)}</span>
-                  </span>
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 800, color: gapColor }}>
-                  {gapPts >= 0 ? '+' : ''}{gapPts.toFixed(1)}pt
+                {RACE_BOOK_ORDER.map(b => {
+                  const cell = r.cells[b]
+                  return (
+                    <td key={b} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                      {cell ? (
+                        <span>
+                          <span style={{ color: 'var(--text-3)', marginRight: 4 }}>{RACE_KEY_SHORT[cell.key] ?? cell.key}</span>
+                          <span style={{ fontWeight: 800, color: 'var(--text-1)' }}>{oddsStr(cell.odds)}</span>
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-3)' }}>—</span>
+                      )}
+                    </td>
+                  )
+                })}
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, fontWeight: 800, color: spreadColor }}>
+                  {spreadPts.toFixed(1)}pt
                 </td>
               </tr>
             )
