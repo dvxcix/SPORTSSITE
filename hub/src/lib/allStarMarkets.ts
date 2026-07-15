@@ -632,9 +632,33 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
   const isFinal = live.gameState === 'Final'
   const { innings, teamTotals } = live
 
-  const grade = (rowKey: string, won: boolean, decidable: boolean) => {
-    if (won) out.set(rowKey, 'won')
+  // THE bug this replaced: a single `grade(won, decidable)` helper treated
+  // any "currently true" condition as safe to commit as 'won' immediately,
+  // which only holds for a monotonically-increasing "at least N" check
+  // (Over/N+ — once crossed, permanent). For everything else — Under
+  // thresholds, Result, Run Line, Correct Score, Odd/Even, Bands, Margin,
+  // Money Line — "currently true" can still flip before the window (that
+  // inning / that innings range / the whole game) actually closes, so it
+  // must NOT be marked 'won' early. Three explicit helpers instead of one
+  // ambiguous one:
+  //   gradeOver  — "at least N" checks: safe to grade 'won' the instant
+  //                it's true (can never un-happen); 'lost' only once decided.
+  //   gradeUnder — "fewer than N" checks: safe to grade 'lost' the instant
+  //                the threshold is breached (Under can never recover);
+  //                'won' only once the window is actually closed.
+  //   gradeAtClose — anything else (exact match / parity / margin / who's
+  //                  currently ahead): not safe to call either way until
+  //                  the window is fully decided.
+  const gradeOver = (rowKey: string, metNow: boolean, decidable: boolean) => {
+    if (metNow) out.set(rowKey, 'won')
     else if (decidable) out.set(rowKey, 'lost')
+  }
+  const gradeUnder = (rowKey: string, stillUnderNow: boolean, decidable: boolean) => {
+    if (!stillUnderNow) out.set(rowKey, 'lost')
+    else if (decidable) out.set(rowKey, 'won')
+  }
+  const gradeAtClose = (rowKey: string, won: boolean, decidable: boolean) => {
+    if (decidable) out.set(rowKey, won ? 'won' : 'lost')
   }
 
   for (const m of allMarkets) {
@@ -659,29 +683,32 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
         const rowKey = `${m.id}::${o.label}`
         const label = o.label
         if (rest === 'Result') {
-          grade(rowKey, label === 'Tie' ? awayR === homeR : label === AWAY_LABEL ? awayR > homeR : label === HOME_LABEL ? homeR > awayR : false, complete)
+          gradeAtClose(rowKey, label === 'Tie' ? awayR === homeR : label === AWAY_LABEL ? awayR > homeR : label === HOME_LABEL ? homeR > awayR : false, complete)
         } else if (rest === 'Run Line') {
           const rl = parseRunLine(label)
-          if (rl) { const diff = rl.team === AWAY_LABEL ? awayR - homeR : homeR - awayR; grade(rowKey, diff + rl.line > 0, complete) }
+          if (rl) { const diff = rl.team === AWAY_LABEL ? awayR - homeR : homeR - awayR; gradeAtClose(rowKey, diff + rl.line > 0, complete) }
         } else if (rest === 'Total Runs') {
           const orMore = label.match(/^(\d+)\s*Runs?\s*Or More$/i)
           const exact = label.match(/^(\d+)\s*Runs?$/i)
-          grade(rowKey, orMore ? totalR >= Number(orMore[1]) : exact ? totalR === Number(exact[1]) : false, complete)
+          if (orMore) gradeOver(rowKey, totalR >= Number(orMore[1]), complete)
+          else if (exact) gradeAtClose(rowKey, totalR === Number(exact[1]), complete)
         } else if (runsMatch && (label === 'Over' || label === 'Under')) {
           const threshold = Number(runsMatch[1])
-          grade(rowKey, label === 'Over' ? totalR > threshold : totalR < threshold, complete)
+          if (label === 'Over') gradeOver(rowKey, totalR > threshold, complete)
+          else gradeUnder(rowKey, totalR < threshold, complete)
         } else if (rest === 'Hits') {
           const plus = label.match(/^(\d+)\+\s*Hits Recorded$/)
-          grade(rowKey, label === '0-1 Hits Recorded' ? totalH <= 1 : plus ? totalH >= Number(plus[1]) : false, complete)
+          if (label === '0-1 Hits Recorded') gradeUnder(rowKey, totalH <= 1, complete)
+          else if (plus) gradeOver(rowKey, totalH >= Number(plus[1]), complete)
         } else if (rest === 'Runs Odd/Even') {
-          grade(rowKey, label === 'Odd' ? totalR % 2 === 1 : label === 'Even' ? totalR % 2 === 0 : false, complete)
+          gradeAtClose(rowKey, label === 'Odd' ? totalR % 2 === 1 : label === 'Even' ? totalR % 2 === 0 : false, complete)
         } else if (rest === 'Correct Score') {
           const tie = label.match(/^Tie (\d+)-(\d+)$/)
           const side = label.match(/^(American League|National League) (\d+)-(\d+)$/)
-          if (tie) grade(rowKey, awayR === homeR && awayR === Number(tie[1]), complete)
+          if (tie) gradeAtClose(rowKey, awayR === homeR && awayR === Number(tie[1]), complete)
           else if (side) {
             const teamR = Number(side[2]), oppR = Number(side[3])
-            grade(rowKey, side[1] === AWAY_LABEL ? (awayR === teamR && homeR === oppR) : (homeR === teamR && awayR === oppR), complete)
+            gradeAtClose(rowKey, side[1] === AWAY_LABEL ? (awayR === teamR && homeR === oppR) : (homeR === teamR && awayR === oppR), complete)
           } else if (label === 'Any Other Score' && complete) {
             const matchesAny = m.options.some(o2 => {
               if (o2.label === label) return false
@@ -710,22 +737,25 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
         const rowKey = `${m.id}::${o.label}`
         const label = o.label
         if (rest === 'Result') {
-          grade(rowKey, label === 'Tie' ? awayRuns === homeRuns : label === AWAY_LABEL ? awayRuns > homeRuns : label === HOME_LABEL ? homeRuns > awayRuns : false, complete)
+          gradeAtClose(rowKey, label === 'Tie' ? awayRuns === homeRuns : label === AWAY_LABEL ? awayRuns > homeRuns : label === HOME_LABEL ? homeRuns > awayRuns : false, complete)
         } else if (rest === 'Run Line' || rest === 'Alternate Run Lines') {
           const rl = parseRunLine(label)
-          if (rl) { const diff = rl.team === AWAY_LABEL ? awayRuns - homeRuns : homeRuns - awayRuns; grade(rowKey, diff + rl.line > 0, complete) }
+          if (rl) { const diff = rl.team === AWAY_LABEL ? awayRuns - homeRuns : homeRuns - awayRuns; gradeAtClose(rowKey, diff + rl.line > 0, complete) }
         } else if (rest === 'Total Runs' || rest === 'Alternate Total Runs') {
           const total = awayRuns + homeRuns
           const num = label.match(/(Over|Under)\s*([\d.]+)/)
-          if (num) grade(rowKey, num[1] === 'Over' ? total > Number(num[2]) : total < Number(num[2]), complete)
+          if (num) {
+            if (num[1] === 'Over') gradeOver(rowKey, total > Number(num[2]), complete)
+            else gradeUnder(rowKey, total < Number(num[2]), complete)
+          }
         } else if (rest === 'Money Line') {
           const isAway = /American League/.test(label), isHome = /National League/.test(label)
           if (complete) {
             if (awayRuns === homeRuns) out.set(rowKey, 'void')
-            else grade(rowKey, isAway ? awayRuns > homeRuns : isHome ? homeRuns > awayRuns : false, true)
-          } else if ((isAway && awayRuns > homeRuns) || (isHome && homeRuns > awayRuns)) out.set(rowKey, 'won')
+            else out.set(rowKey, (isAway ? awayRuns > homeRuns : isHome ? homeRuns > awayRuns : false) ? 'won' : 'lost')
+          }
         } else if (rest.startsWith('Winning Margin')) {
-          if (label === 'Tie') { grade(rowKey, awayRuns === homeRuns, complete); continue }
+          if (label === 'Tie') { gradeAtClose(rowKey, awayRuns === homeRuns, complete); continue }
           const teamM = label.match(/^(American League|National League) Win By/)
           if (!teamM) continue
           const margin = teamM[1] === AWAY_LABEL ? awayRuns - homeRuns : homeRuns - awayRuns
@@ -733,7 +763,7 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
           const range = label.match(/Win By (\d+)\s*-\s*(\d+) Runs?/)
           const exact = label.match(/Win By (\d+) Runs?$/)
           const won = plus ? margin >= Number(plus[1]) : range ? margin >= Number(range[1]) && margin <= Number(range[2]) : exact ? margin === Number(exact[1]) : false
-          grade(rowKey, won, complete)
+          gradeAtClose(rowKey, won, complete)
         }
       }
       continue
@@ -746,18 +776,19 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
       for (const o of m.options) {
         const num = o.label.match(/(Over|Under)\s*([\d.]+)/)
         if (!num) continue
-        grade(`${m.id}::${o.label}`, num[1] === 'Over' ? value > Number(num[2]) : value < Number(num[2]), isFinal)
+        if (num[1] === 'Over') gradeOver(`${m.id}::${o.label}`, value > Number(num[2]), isFinal)
+        else gradeUnder(`${m.id}::${o.label}`, value < Number(num[2]), isFinal)
       }
       continue
     }
     if (title === 'American League Total Runs Odd/Even' || title === 'National League Total Runs Odd/Even') {
       const value = title.startsWith(AWAY_LABEL) ? teamTotals.awayRuns : teamTotals.homeRuns
-      for (const o of m.options) grade(`${m.id}::${o.label}`, o.label === 'Odd' ? value % 2 === 1 : o.label === 'Even' ? value % 2 === 0 : false, isFinal)
+      for (const o of m.options) gradeAtClose(`${m.id}::${o.label}`, o.label === 'Odd' ? value % 2 === 1 : o.label === 'Even' ? value % 2 === 0 : false, isFinal)
       continue
     }
     if (title === 'Total Runs Odd/Even') {
       const total = teamTotals.awayRuns + teamTotals.homeRuns
-      for (const o of m.options) grade(`${m.id}::${o.label}`, o.label === 'Odd' ? total % 2 === 1 : o.label === 'Even' ? total % 2 === 0 : false, isFinal)
+      for (const o of m.options) gradeAtClose(`${m.id}::${o.label}`, o.label === 'Odd' ? total % 2 === 1 : o.label === 'Even' ? total % 2 === 0 : false, isFinal)
       continue
     }
     if (title === 'Total Runs (Bands)') {
@@ -766,7 +797,7 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
         const range = o.label.match(/^(\d+)-(\d+)$/)
         const plus = o.label.match(/^(\d+)\+$/)
         const won = range ? total >= Number(range[1]) && total <= Number(range[2]) : plus ? total >= Number(plus[1]) : false
-        grade(`${m.id}::${o.label}`, won, isFinal)
+        gradeAtClose(`${m.id}::${o.label}`, won, isFinal)
       }
       continue
     }
@@ -776,7 +807,8 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
         const num = o.label.match(/(Over|Under)\s*([\d.]+)/)
         if (!team || !num) continue
         const value = team[1] === AWAY_LABEL ? teamTotals.awayRuns : teamTotals.homeRuns
-        grade(`${m.id}::${o.label}`, num[1] === 'Over' ? value > Number(num[2]) : value < Number(num[2]), isFinal)
+        if (num[1] === 'Over') gradeOver(`${m.id}::${o.label}`, value > Number(num[2]), isFinal)
+        else gradeUnder(`${m.id}::${o.label}`, value < Number(num[2]), isFinal)
       }
       continue
     }
@@ -786,7 +818,7 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
         const exact = o.label.match(/^By Exactly (\d+) Runs?$/)
         const plus = o.label.match(/^By (\d+) Or More Runs?$/)
         const won = exact ? margin === Number(exact[1]) : plus ? margin >= Number(plus[1]) : false
-        grade(`${m.id}::${o.label}`, won, isFinal)
+        gradeAtClose(`${m.id}::${o.label}`, won, isFinal)
       }
       continue
     }
