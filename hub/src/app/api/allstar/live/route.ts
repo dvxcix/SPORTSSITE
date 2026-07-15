@@ -13,7 +13,19 @@ const EMPTY = {
   innings: [], teamTotals: { awayRuns: 0, homeRuns: 0, awayHits: 0, homeHits: 0 }, scoreProgression: [],
   firstPitch: { top: null, bottom: null },
   playerStatus: {}, currentBatterId: null, onDeckBatterId: null, currentPitcherId: null,
+  pitchers: {}, firstPaOutcome: {}, firstInningPitcher: { top: null, bottom: null },
+  teamTotalStrikeouts: { away: 0, home: 0 }, bothTeamsDouble: false, bothTeamsTriple: false,
+  hrDistances: [], doublePlayRecorded: false,
 }
+
+// A half-inning-1 play "keeps the bases clean" only if the batter himself
+// didn't reach — used for the real "3 Up 3 Down" / "Strike Out the Side"
+// Specials props. Anything not in this set (a strikeout, a fielded out, a
+// sac, a double/triple play) leaves nobody new on base.
+const BATTER_REACHED_EVENTS = new Set([
+  'single', 'double', 'triple', 'home_run', 'walk', 'intent_walk',
+  'hit_by_pitch', 'error', 'fielders_choice', 'catcher_interf',
+])
 
 // Real pitch-level detail for the very first pitch of a half-inning — same
 // playEvents-filtered-by-type-'pitch' pattern /sports' own live MLB game
@@ -74,8 +86,14 @@ export async function GET() {
     const allPlays = feed.liveData?.plays?.allPlays ?? []
     const seenFirstPa = new Set<number>()
     const firstPaResult: Record<number, 'hr' | 'other'> = {}
+    // Exact first-PA outcome (not just hr/other) — backs FanDuel's real
+    // "1st PA - <Player>" markets (Single / XBH / Walk-HBP / Strikeout / Any
+    // Other Out), classified straight off that play's real eventType.
+    const firstPaOutcome: Record<number, 'single' | 'xbh' | 'walk_hbp' | 'strikeout' | 'other'> = {}
     let firstHrMlbId: number | null = null
     const scoreProgression: { away: number; home: number }[] = []
+    const hrDistances: { mlbId: number; distance: number }[] = []
+    let doublePlayRecorded = false
     for (const play of allPlays) {
       if (!play.about?.isComplete) continue
       const batterId = play.matchup?.batter?.id
@@ -83,12 +101,71 @@ export async function GET() {
       if (batterId && !seenFirstPa.has(batterId)) {
         seenFirstPa.add(batterId)
         firstPaResult[batterId] = eventType === 'home_run' ? 'hr' : 'other'
+        firstPaOutcome[batterId] =
+          eventType === 'single' ? 'single'
+          : eventType === 'double' || eventType === 'triple' || eventType === 'home_run' ? 'xbh'
+          : eventType === 'walk' || eventType === 'intent_walk' || eventType === 'hit_by_pitch' ? 'walk_hbp'
+          : eventType === 'strikeout' ? 'strikeout'
+          : 'other'
       }
-      if (eventType === 'home_run' && batterId != null && firstHrMlbId == null) {
-        firstHrMlbId = batterId
+      if (eventType === 'home_run' && batterId != null) {
+        if (firstHrMlbId == null) firstHrMlbId = batterId
+        const inPlayEvent = (play.playEvents ?? []).find((e: any) => e.details?.isInPlay)
+        const distance = inPlayEvent?.hitData?.totalDistance
+        if (typeof distance === 'number') hrDistances.push({ mlbId: batterId, distance })
       }
+      if (/double play/i.test(play.result?.event ?? '')) doublePlayRecorded = true
       scoreProgression.push({ away: play.result?.awayScore ?? 0, home: play.result?.homeScore ?? 0 })
     }
+
+    // Real per-pitcher game totals (both sides merged — mlbId is globally
+    // unique) — backs every strikeout prop (starters, relief "Reserves"
+    // props, whole-team strikeout totals) with MLB's own boxscore numbers.
+    const pitchers: Record<number, { name: string; strikeOuts: number; battersFaced: number; hits: number; runs: number; earnedRuns: number }> = {}
+    const teamTotalStrikeouts = { away: 0, home: 0 }
+    let bothTeamsDouble = true
+    let bothTeamsTriple = true
+    for (const side of ['away', 'home'] as const) {
+      const raw = boxTeams[side]?.players ?? {}
+      let sideHasDouble = false, sideHasTriple = false
+      for (const key of Object.keys(raw)) {
+        const p = raw[key]
+        const id = p.person?.id
+        if (!id) continue
+        const pitching = p.stats?.pitching
+        if (pitching) {
+          const k = pitching.strikeOuts ?? 0
+          pitchers[id] = {
+            name: p.person?.fullName ?? '', strikeOuts: k, battersFaced: pitching.battersFaced ?? 0,
+            hits: pitching.hits ?? 0, runs: pitching.runs ?? 0, earnedRuns: pitching.earnedRuns ?? 0,
+          }
+          teamTotalStrikeouts[side] += k
+        }
+        const batting = p.stats?.batting
+        if (batting?.doubles > 0) sideHasDouble = true
+        if (batting?.triples > 0) sideHasTriple = true
+      }
+      bothTeamsDouble = bothTeamsDouble && sideHasDouble
+      bothTeamsTriple = bothTeamsTriple && sideHasTriple
+    }
+
+    // Real per-half-inning-1 starter line — backs the "3 Up 3 Down" / "Strike
+    // Out the Side" / "Combine for N+ Strikeouts in the 1st" Specials props.
+    function firstInningPitcherStats(half: 'top' | 'bottom') {
+      const plays = allPlays.filter((p: any) => p.about?.inning === 1 && p.about?.halfInning === half && p.about?.isComplete)
+      if (plays.length === 0) return null
+      const mlbId = plays[0].matchup?.pitcher?.id ?? null
+      if (mlbId == null) return null
+      const outs = plays.filter((p: any) => p.result?.isOut).length
+      const strikeouts = plays.filter((p: any) => p.result?.eventType === 'strikeout').length
+      const clean = plays.every((p: any) => !BATTER_REACHED_EVENTS.has(p.result?.eventType))
+      return {
+        mlbId, strikeouts, battersFaced: plays.length,
+        threeUpThreeDown: plays.length === 3 && outs === 3 && clean,
+        struckOutTheSide: outs === 3 && strikeouts === 3,
+      }
+    }
+    const firstInningPitcher = { top: firstInningPitcherStats('top'), bottom: firstInningPitcherStats('bottom') }
 
     // Real per-inning + running team totals straight from MLB's own
     // linescore — backs every innings/team-total market on the page.
@@ -147,6 +224,8 @@ export async function GET() {
       {
         gameState, players, firstPaResult, firstHrMlbId, innings, teamTotals, scoreProgression, firstPitch,
         playerStatus, currentBatterId, onDeckBatterId, currentPitcherId,
+        pitchers, firstPaOutcome, firstInningPitcher, teamTotalStrikeouts, bothTeamsDouble, bothTeamsTriple,
+        hrDistances, doublePlayRecorded,
       },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
     )

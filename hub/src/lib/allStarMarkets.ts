@@ -524,10 +524,13 @@ export type LiveFirstPitch = {
   isBall: boolean; isStrike: boolean; isInPlay: boolean; isHbp: boolean
   startSpeed: number | null; resultEvent: string | null; pitcherName: string | null
 } | null
+export type LivePitcherStats = { name: string; strikeOuts: number; battersFaced: number; hits: number; runs: number; earnedRuns: number }
+export type FirstInningPitcherStats = { mlbId: number; strikeouts: number; battersFaced: number; threeUpThreeDown: boolean; struckOutTheSide: boolean }
 export type LiveGameState = {
   gameState: string | null
   players: Record<number, LivePlayerStats>
   firstPaResult: Record<number, 'hr' | 'other'>
+  firstPaOutcome: Record<number, 'single' | 'xbh' | 'walk_hbp' | 'strikeout' | 'other'>
   firstHrMlbId: number | null
   innings: LiveInning[]
   teamTotals: LiveTeamTotals
@@ -537,6 +540,13 @@ export type LiveGameState = {
   currentBatterId: number | null
   onDeckBatterId: number | null
   currentPitcherId: number | null
+  pitchers: Record<number, LivePitcherStats>
+  firstInningPitcher: { top: FirstInningPitcherStats | null; bottom: FirstInningPitcherStats | null }
+  teamTotalStrikeouts: { away: number; home: number }
+  bothTeamsDouble: boolean
+  bothTeamsTriple: boolean
+  hrDistances: { mlbId: number; distance: number }[]
+  doublePlayRecorded: boolean
 }
 export type MarketOutcome = 'won' | 'lost' | 'void'
 
@@ -668,7 +678,107 @@ export function computeTeamAndInningsSettlement(allMarkets: Market[], live: Live
   for (const m of allMarkets) {
     const title = m.title.trim()
     if (/parlay/i.test(title)) continue
-    if (title === 'Inning Money Line' || title === '1st 3 Innings' || title === '1st 5 Innings') continue
+    // "Inning Money Line" bundles 3 identical AL/NL pairs with no inning
+    // number attached to tell them apart — genuinely ambiguous, stays
+    // ungraded rather than guessing which pair is which inning. Caesars'
+    // "Winning Margin" has the same problem (two identically-labeled "By
+    // Exactly N Runs" options per margin, no team name on either) — its
+    // team-name regex below already naturally excludes it; no special case
+    // needed.
+    if (title === 'Inning Money Line') continue
+
+    // ── Caesars "1st 3/5 Innings" combo card ─────────────────────────────
+    // Bundles a real run line (signed, e.g. "(+0.5)") and a real moneyline
+    // (bare team name) with a third, genuinely ambiguous bare-number option
+    // ("American League (2.5)") that could be a mislabeled combined total —
+    // grade the two unambiguous parts, leave the bare-number one alone.
+    const combo3Or5 = title === '1st 3 Innings' ? 3 : title === '1st 5 Innings' ? 5 : null
+    if (combo3Or5 != null) {
+      const { awayRuns, homeRuns, complete } = sumInningsWindow(innings, combo3Or5)
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        const rl = o.label.match(/^(American League|National League)\s*\(([+-][\d.]+)\)$/)
+        const ml = o.label.match(/^(American League|National League)$/)
+        if (rl) {
+          const diff = rl[1] === AWAY_LABEL ? awayRuns - homeRuns : homeRuns - awayRuns
+          gradeAtClose(rowKey, diff + Number(rl[2]) > 0, complete)
+        } else if (ml) {
+          gradeAtClose(rowKey, awayRuns === homeRuns ? false : (ml[1] === AWAY_LABEL ? awayRuns > homeRuns : homeRuns > awayRuns), complete)
+        }
+      }
+      continue
+    }
+
+    // ── Whole-game core markets (Caesars) ────────────────────────────────
+    if (title === 'To Lift The Trophy') {
+      for (const o of m.options) {
+        const isAway = o.label === AWAY_LABEL, isHome = o.label === HOME_LABEL
+        if (!isAway && !isHome) continue
+        gradeAtClose(`${m.id}::${o.label}`, teamTotals.awayRuns === teamTotals.homeRuns ? false : (isAway ? teamTotals.awayRuns > teamTotals.homeRuns : teamTotals.homeRuns > teamTotals.awayRuns), isFinal)
+      }
+      continue
+    }
+    if (title === 'Spread') {
+      for (const o of m.options) {
+        const m2 = o.label.match(/^(American League|National League)\s*\(([+-][\d.]+)\)$/)
+        if (!m2) continue
+        const diff = m2[1] === AWAY_LABEL ? teamTotals.awayRuns - teamTotals.homeRuns : teamTotals.homeRuns - teamTotals.awayRuns
+        gradeAtClose(`${m.id}::${o.label}`, diff + Number(m2[2]) > 0, isFinal)
+      }
+      continue
+    }
+    if (title === 'Total') {
+      const total = teamTotals.awayRuns + teamTotals.homeRuns
+      for (const o of m.options) {
+        const m2 = o.label.match(/^(Over|Under)\s*\(([\d.]+)\)$/)
+        if (!m2) continue
+        if (m2[1] === 'Over') gradeOver(`${m.id}::${o.label}`, total > Number(m2[2]), isFinal)
+        else gradeUnder(`${m.id}::${o.label}`, total < Number(m2[2]), isFinal)
+      }
+      continue
+    }
+    if (title === '1st Team To Score') {
+      const first = live.scoreProgression.find(p => p.away > 0 || p.home > 0)
+      for (const o of m.options) {
+        const isAway = o.label === AWAY_LABEL, isHome = o.label === HOME_LABEL
+        if (!isAway && !isHome) continue
+        if (first) gradeAtClose(`${m.id}::${o.label}`, isAway ? first.away > 0 : first.home > 0, true)
+        else gradeAtClose(`${m.id}::${o.label}`, false, isFinal) // nobody ever scored
+      }
+      continue
+    }
+    if (title === 'Run In 1st Inning') {
+      const inn1 = innings[0]
+      const complete = inn1?.awayRuns != null && inn1?.homeRuns != null
+      const ranIn1st = (inn1?.awayRuns ?? 0) + (inn1?.homeRuns ?? 0) > 0
+      for (const o of m.options) {
+        if (o.label === 'Yes') gradeOver(`${m.id}::${o.label}`, ranIn1st, complete)
+        else if (o.label === 'No') gradeUnder(`${m.id}::${o.label}`, !ranIn1st, complete)
+      }
+      continue
+    }
+    if (title === 'Quality Pitching?') {
+      const { awayRuns, homeRuns, complete } = sumInningsWindow(innings, 6)
+      for (const o of m.options) {
+        const m2 = o.label.match(/^(American League|National League) - (\d+) or (less|more) runs conceded after \d+ Innings$/i)
+        if (!m2) continue
+        // "Team X runs conceded" = the OPPONENT's runs (X's pitching allowed them).
+        const conceded = m2[1] === AWAY_LABEL ? homeRuns : awayRuns
+        const threshold = Number(m2[2])
+        const won = m2[3].toLowerCase() === 'less' ? conceded <= threshold : conceded >= threshold
+        gradeAtClose(`${m.id}::${o.label}`, won, complete)
+      }
+      continue
+    }
+    if (title === 'Shutout Pitching?') {
+      for (const o of m.options) {
+        const m2 = o.label.match(/^(American League|National League) - 0 runs conceded after \d+ Innings$/i)
+        if (!m2) continue
+        const conceded = m2[1] === AWAY_LABEL ? teamTotals.homeRuns : teamTotals.awayRuns
+        gradeAtClose(`${m.id}::${o.label}`, conceded === 0, isFinal)
+      }
+      continue
+    }
 
     // ── Single inning N ──────────────────────────────────────────────────
     const inningMatch = title.match(/^(\d+)(?:st|nd|rd|th) Inning\s+(.+)$/)
@@ -917,6 +1027,249 @@ export function computeFirstPitchSettlement(allMarkets: Market[], live: LiveGame
         out.set(`${m.id}::${o.label}`, won ? 'won' : 'lost')
       }
       continue
+    }
+  }
+  return out
+}
+
+// ─── Pitcher strikeout props (starters, relief "Reserves", 1st-inning Specials) ─
+// Free-text market titles here (BetMGM's starter cards, Caesars' "Pitcher
+// Strikeouts"/"Specials") name a pitcher in prose with no mlbId on the
+// option — matched against MLB's own real per-pitcher boxscore names by
+// surname (accent-stripped, so "Cristopher Sánchez" matches "Sanchez" in
+// scraped text) rather than guessed.
+function pitcherIdByName(text: string, pitchers: Record<number, LivePitcherStats>): number | null {
+  const t = stripAccents(text)
+  for (const [id, p] of Object.entries(pitchers)) {
+    const surname = stripAccents(p.name).trim().split(/\s+/).pop() ?? ''
+    if (surname.length >= 3 && t.includes(surname)) return Number(id)
+  }
+  return null
+}
+
+export function computePitcherPropSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+  const { pitchers, firstInningPitcher, teamTotalStrikeouts } = live
+
+  for (const m of allMarkets) {
+    const title = m.title.trim()
+
+    // BetMGM starter cards: "<Pitcher> (<Team>): Starting pitcher props
+    // (Void if pitcher does not start)" — options "Have N+ Strikeouts".
+    const starterMatch = title.match(/^(.+?)\s*\([A-Z]{2,3}\)\s*:?\s*Starting pitcher props/)
+    if (starterMatch) {
+      const pid = pitcherIdByName(starterMatch[1], pitchers)
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        const n = o.label.match(/^Have (\d+)\+ Strikeouts$/)
+        if (!n) continue
+        if (pid == null) { if (isFinal) out.set(rowKey, 'void'); continue }
+        if (pitchers[pid].strikeOuts >= Number(n[1])) out.set(rowKey, 'won')
+        else if (isFinal) out.set(rowKey, 'lost')
+      }
+      continue
+    }
+
+    // BetMGM reserves: "Player to record N+ strikeout(s) (Reserves)" — real mlbId on each option.
+    if (/^Player to record \d\+ strikeouts? \(Reserves\)$/.test(title)) {
+      for (const o of m.options) {
+        if (o.mlbId == null) continue
+        const rowKey = `${m.id}::${o.label}`
+        const n = title.match(/(\d)\+/)?.[1] ?? '1'
+        const p = pitchers[o.mlbId]
+        if (!p) { if (isFinal) out.set(rowKey, 'void'); continue } // never actually pitched tonight
+        if (p.strikeOuts >= Number(n)) out.set(rowKey, 'won')
+        else if (isFinal) out.set(rowKey, 'lost')
+      }
+      continue
+    }
+
+    // Caesars "Pitcher Strikeouts": "<Pitcher> - Alternate Pitching Strikeouts, N+"
+    if (title === 'Pitcher Strikeouts') {
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        const m2 = o.label.match(/^(.+?) - Alternate Pitching Strikeouts,\s*(\d+)\+$/)
+        if (!m2) continue
+        const pid = pitcherIdByName(m2[1], pitchers)
+        if (pid == null) { if (isFinal) out.set(rowKey, 'void'); continue }
+        if (pitchers[pid].strikeOuts >= Number(m2[2])) out.set(rowKey, 'won')
+        else if (isFinal) out.set(rowKey, 'lost')
+      }
+      continue
+    }
+
+    // Caesars "Specials" grab-bag — several distinct, precisely-worded real props.
+    if (title === 'Specials') {
+      for (const o of m.options) {
+        const rowKey = `${m.id}::${o.label}`
+        const label = o.label
+
+        const kProp = label.match(/^(.+?) To Record (\d+)\+ Strikeouts$/)
+        if (kProp) {
+          const pid = pitcherIdByName(kProp[1], pitchers)
+          if (pid == null) { if (isFinal) out.set(rowKey, 'void'); continue }
+          gradeVal(out, rowKey, pitchers[pid].strikeOuts, Number(kProp[2]), isFinal)
+          continue
+        }
+        if (label === 'Both Teams to Record a Double') { if (isFinal) out.set(rowKey, live.bothTeamsDouble ? 'won' : 'lost'); continue }
+        if (label === 'Both Teams to Record a Triple') { if (isFinal) out.set(rowKey, live.bothTeamsTriple ? 'won' : 'lost'); continue }
+        if (label === 'Double Play Recorded with the Bases Loaded') {
+          // Zero double plays this game makes this trivially false — a
+          // real DP would need runner-state reconstruction we don't have,
+          // but "none happened at all" already settles it either way.
+          if (!live.doublePlayRecorded && isFinal) out.set(rowKey, 'lost')
+          continue
+        }
+
+        const tud = label.match(/^(.+?) to go 3 Up 3 Down in the 1st Inning$/)
+        if (tud) {
+          const pid = pitcherIdByName(tud[1], pitchers)
+          const half = firstInningPitcher.top?.mlbId === pid ? firstInningPitcher.top : firstInningPitcher.bottom?.mlbId === pid ? firstInningPitcher.bottom : null
+          if (half && isFinal) out.set(rowKey, half.threeUpThreeDown ? 'won' : 'lost')
+          continue
+        }
+        const kSide = label.match(/^(.+?) to Strike Out the Side in the 1st Inning$/)
+        if (kSide) {
+          const pid = pitcherIdByName(kSide[1], pitchers)
+          const half = firstInningPitcher.top?.mlbId === pid ? firstInningPitcher.top : firstInningPitcher.bottom?.mlbId === pid ? firstInningPitcher.bottom : null
+          if (half && isFinal) out.set(rowKey, half.struckOutTheSide ? 'won' : 'lost')
+          continue
+        }
+        const bothTud = label.match(/^(.+?) and (.+?) Both go 3 up 3 down in the 1st Inning$/)
+        if (bothTud) {
+          if (isFinal && firstInningPitcher.top && firstInningPitcher.bottom) {
+            out.set(rowKey, firstInningPitcher.top.threeUpThreeDown && firstInningPitcher.bottom.threeUpThreeDown ? 'won' : 'lost')
+          }
+          continue
+        }
+        const combine = label.match(/^(.+?) and (.+?) to Combine for (\d+)\+ Strikeouts in the 1st Inning$/)
+        if (combine) {
+          if (firstInningPitcher.top && firstInningPitcher.bottom) {
+            gradeVal(out, rowKey, firstInningPitcher.top.strikeouts + firstInningPitcher.bottom.strikeouts, Number(combine[3]), isFinal)
+          }
+          continue
+        }
+        const teamK = label.match(/^(American League|National League) Pitchers Record (\d+)\+ Strikeouts$/)
+        if (teamK) {
+          const value = teamK[1] === 'American League' ? teamTotalStrikeouts.away : teamTotalStrikeouts.home
+          gradeVal(out, rowKey, value, Number(teamK[2]), isFinal)
+          continue
+        }
+      }
+      continue
+    }
+  }
+  return out
+}
+
+// "At least N" grading shared by the pitcher-prop helpers above — safe to
+// grade 'won' the moment the real value clears the bar, 'lost' only once
+// the game (or window) is actually decided.
+function gradeVal(out: Map<string, MarketOutcome>, rowKey: string, value: number, threshold: number, decidable: boolean) {
+  if (value >= threshold) out.set(rowKey, 'won')
+  else if (decidable) out.set(rowKey, 'lost')
+}
+
+// ─── Head-to-head player props (Caesars) ───────────────────────────────────
+// Caesars' "H2H Total Bases" flattens what are really N separate 2-player
+// matchups into one option array with no explicit pairing — but consecutive
+// pairs devig to ~100% combined (a real, verifiable structural signal, not a
+// guess), confirming the array order IS the pairing: [0]v[1], [2]v[3], etc.
+export function computeH2HSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+  if (!isFinal) return out
+
+  for (const m of allMarkets) {
+    if (m.title !== 'H2H Total Bases') continue
+    for (let i = 0; i + 1 < m.options.length; i += 2) {
+      const a = m.options[i], b = m.options[i + 1]
+      if (a.mlbId == null || b.mlbId == null) continue
+      const aTb = live.players[a.mlbId]?.totalBases ?? 0
+      const bTb = live.players[b.mlbId]?.totalBases ?? 0
+      const aKey = `${m.id}::${a.label}`, bKey = `${m.id}::${b.label}`
+      if (aTb === bTb) { out.set(aKey, 'void'); out.set(bKey, 'void'); continue }
+      out.set(aKey, aTb > bTb ? 'won' : 'lost')
+      out.set(bKey, bTb > aTb ? 'won' : 'lost')
+    }
+  }
+  return out
+}
+
+// ─── Exact first-plate-appearance outcome (FanDuel) ────────────────────────
+// "1st PA - <Player>" markets ask what specifically happened in a player's
+// very first trip, not just a binary. Matched by the option's own real
+// mlbId against the live feed's real per-play classification (single / XBH
+// / walk-HBP / strikeout / any other out) — no name parsing needed.
+const FIRST_PA_LABEL: Record<string, string> = {
+  single: 'Single', xbh: 'Extra Base Hit (Double/Triple/Home Run)',
+  walk_hbp: 'Walk / HBP', strikeout: 'Strikeout', other: 'Any Other Out / Outcome',
+}
+export function computeFirstPaOutcomeSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+
+  for (const m of allMarkets) {
+    if (!m.title.startsWith('1st PA - ')) continue
+    for (const o of m.options) {
+      if (o.mlbId == null) continue
+      const rowKey = `${m.id}::${o.label}`
+      const outcome = live.firstPaOutcome[o.mlbId]
+      if (!outcome) { if (isFinal) out.set(rowKey, 'void'); continue } // never got a PA tonight
+      const matches = o.label.includes(FIRST_PA_LABEL[outcome])
+      out.set(rowKey, matches ? 'won' : 'lost')
+    }
+  }
+  return out
+}
+
+// ─── Real HR distance (FanDuel) ────────────────────────────────────────────
+// Real Statcast hitData.totalDistance off the live feed's own play-by-play
+// for every actual HR hit tonight — not season averages.
+export function computeHrDistanceSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+  if (!isFinal) return out
+  const maxDistance = live.hrDistances.length ? Math.max(...live.hrDistances.map(h => h.distance)) : 0
+
+  for (const m of allMarkets) {
+    if (m.title !== 'Any Player to Hit a Home Run X+ Feet') continue
+    for (const o of m.options) {
+      const n = o.label.match(/(\d+)\+\s*Feet/)
+      if (!n) continue
+      out.set(`${m.id}::${o.label}`, maxDistance >= Number(n[1]) ? 'won' : 'lost')
+    }
+  }
+  return out
+}
+
+// ─── HR / Moneyline parlay (FanDuel) ───────────────────────────────────────
+// A well-defined 2-leg combo ("PlayerName/TeamName" = that player hits any
+// HR at all tonight AND that team wins the whole game) — both real,
+// independently-verifiable facts, unlike the continuous-line parlays
+// (run line + total runs) elsewhere on this page that stay unbuilt because
+// their joint distribution genuinely isn't derivable from final box totals.
+export function computeHrMoneylineParlaySettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live) return out
+  const isFinal = live.gameState === 'Final'
+  if (!isFinal) return out
+  const awayWon = live.teamTotals.awayRuns > live.teamTotals.homeRuns
+  const homeWon = live.teamTotals.homeRuns > live.teamTotals.awayRuns
+
+  for (const m of allMarkets) {
+    if (m.title !== 'Home Run / Moneyline Parlay') continue
+    for (const o of m.options) {
+      const m2 = o.label.match(/^(.+)\/(American League|National League)$/)
+      if (!m2 || o.mlbId == null) continue
+      const teamWon = m2[2] === AWAY_LABEL ? awayWon : homeWon
+      const hit = (live.players[o.mlbId]?.hr ?? 0) > 0
+      out.set(`${m.id}::${o.label}`, hit && teamWon ? 'won' : 'lost')
     }
   }
   return out
