@@ -16,7 +16,7 @@ import {
   computeHrRaceBoard, oddsStr,
   computeLiveSettlement, computeTeamAndInningsSettlement, computeFirstPitchSettlement,
   computePitcherPropSettlement, computeH2HSettlement, computeFirstPaOutcomeSettlement,
-  computeHrDistanceSettlement, computeHrMoneylineParlaySettlement, outcomeBg, outcomeMark,
+  computeHrDistanceSettlement, computeHrMoneylineParlaySettlement, computeMvpSettlement, outcomeBg, outcomeMark,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook, type HrRaceRow, type LiveGameState, type MarketOutcome,
 } from '@/lib/allStarMarkets'
@@ -803,6 +803,7 @@ export function AllStarClient() {
       ...computeFirstPaOutcomeSettlement(marketsNow, live),
       ...computeHrDistanceSettlement(marketsNow, live),
       ...computeHrMoneylineParlaySettlement(marketsNow, live),
+      ...computeMvpSettlement(marketsNow, live),
     ])
     setLiveSettlement(merged)
     const newlyWon: { key: string; market: Market; option: MarketOption }[] = []

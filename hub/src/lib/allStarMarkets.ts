@@ -508,11 +508,15 @@ export function topFlagForPlayer(
 // Real counting stats straight from MLB's own live boxscore + linescore (see
 // /api/allstar/live) compared against the real scraped odds — the same
 // "grade it as the real game happens" pattern the HR Derby page used. Player
-// props, innings props, and team-total props all settle here; H2H
-// comparisons, MVP, whole-game Exact Result grids, Caesars' ambiguous
-// "1st 3/5 Innings" and "Inning Money Line" formats, and pitch-level markets
-// (First Pitch Result) have no clean, verifiable real data source on this
-// page and stay unhighlighted rather than being guessed.
+// props, innings props, team-total props, pitcher strikeout props, H2H
+// total-base comparisons, exact first-PA outcomes, real HR distance, and
+// MVP (hardcoded from the real announced result — not in the MLB Stats API
+// feed at all) all settle across this and the other compute*Settlement
+// functions below. Genuinely NOT built, because no real data resolves them:
+// Caesars' "Inning Money Line" and "Winning Margin" (duplicate AL/NL-
+// labeled options with nothing distinguishing which pair is which), and
+// the bare-number third option inside "1st 3/5 Innings" (ambiguous — could
+// be a mislabeled combined total, not confirmed).
 export type LivePlayerStats = {
   hits: number; hr: number; doubles: number; triples: number
   rbi: number; runs: number; totalBases: number; pa: number
@@ -1270,6 +1274,26 @@ export function computeHrMoneylineParlaySettlement(allMarkets: Market[], live: L
       const teamWon = m2[2] === AWAY_LABEL ? awayWon : homeWon
       const hit = (live.players[o.mlbId]?.hr ?? 0) > 0
       out.set(`${m.id}::${o.label}`, hit && teamWon ? 'won' : 'lost')
+    }
+  }
+  return out
+}
+
+// ─── All-Star Game MVP ──────────────────────────────────────────────────
+// Not exposed anywhere in the MLB Stats API feed (confirmed: gameData has
+// no awards field, live or final) — a real voted/announced honor, not a
+// stat-computable one. The actual real winner is hardcoded from the
+// announced result, same as this page already hardcodes other one-off real
+// facts about this specific event (gamePk, AL/NL side assignment).
+const MVP_WINNER_MLB_ID = 641355 // Cody Bellinger — real 2026 ASG MVP
+export function computeMvpSettlement(allMarkets: Market[], live: LiveGameState | null): Map<string, MarketOutcome> {
+  const out = new Map<string, MarketOutcome>()
+  if (!live || live.gameState !== 'Final') return out
+  for (const m of allMarkets) {
+    if (m.title !== 'All-Star Game MVP') continue
+    for (const o of m.options) {
+      if (o.mlbId == null) continue
+      out.set(`${m.id}::${o.label}`, o.mlbId === MVP_WINNER_MLB_ID ? 'won' : 'lost')
     }
   }
   return out
