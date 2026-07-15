@@ -333,6 +333,43 @@ export function computeReserveMlbIds(allMarkets: Market[]): Set<number> {
   return ids
 }
 
+// ─── First HR of the Game vs. First PA HR, side by side ───────────────────
+// The one comparison that actually matters here: most players get at most
+// one plate appearance tonight, so if that PA is a HR it's very often ALSO
+// a real shot at the whole game's first HR — unless a lot of the game
+// already happened before he batted. Real book + real odds on both sides,
+// ranked by the tightest (most suspicious) gap first, not a wall of derived
+// consequences — this is the exact side-by-side comparison, nothing more.
+export type HrRaceRow = {
+  mlbId: number
+  firstHrOfGame: { book: Sportsbook; odds: number; prob: number } | null
+  firstPaHr: { book: Sportsbook; odds: number; prob: number } | null
+  gap: number | null
+  isReserve: boolean
+}
+
+export function computeHrRaceBoard(allMarkets: Market[], reserveMlbIds: Set<number>): HrRaceRow[] {
+  const ids = new Set<number>()
+  for (const m of allMarkets) {
+    const key = canonicalizeTitle(m.title)
+    if (key !== 'first_hr_of_game' && key !== 'first_pa_hr') continue
+    for (const o of m.options) if (o.mlbId != null) ids.add(o.mlbId)
+  }
+  const rows: HrRaceRow[] = []
+  for (const mlbId of ids) {
+    const firstHrOfGame = bestOption(allMarkets, 'first_hr_of_game', mlbId)
+    const firstPaHr = bestOption(allMarkets, 'first_pa_hr', mlbId)
+    const gap = firstHrOfGame && firstPaHr ? firstPaHr.prob - firstHrOfGame.prob : null
+    rows.push({ mlbId, firstHrOfGame, firstPaHr, gap, isReserve: reserveMlbIds.has(mlbId) })
+  }
+  return rows.sort((a, b) => {
+    if (a.gap == null && b.gap == null) return 0
+    if (a.gap == null) return 1
+    if (b.gap == null) return -1
+    return a.gap - b.gap
+  })
+}
+
 export type ContainmentFlag = {
   narrowKey: string
   broadKey: string
