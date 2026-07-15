@@ -237,21 +237,34 @@ const HAND_COLOR: Record<string, string> = { L: '#60a5fa', R: '#fb923c', S: '#c0
 // newest first, never removed once it appears (same pattern the deleted HR
 // Derby tracker used). Real book, real odds, real market — no fabricated
 // "confidence" score, just what's already happened.
+const CASH_SORT_LABEL: Record<'recent' | 'highest' | 'lowest', string> = {
+  recent: 'Most recent ▼', highest: 'Highest odds ▼', lowest: 'Lowest odds ▲',
+}
+
 function LiveCashedFeed({
   feed, rosterById,
 }: {
   feed: { key: string; market: Market; option: MarketOption }[]
   rosterById: Map<number, Roster>
 }) {
+  const [sortMode, setSortMode] = useState<'recent' | 'highest' | 'lowest'>('recent')
   if (feed.length === 0) return null
+  const sorted = sortMode === 'recent' ? feed
+    : [...feed].sort((a, b) => sortMode === 'highest' ? b.option.odds - a.option.odds : a.option.odds - b.option.odds)
   return (
     <div style={{ marginBottom: 24, border: '1px solid var(--accent)', borderRadius: 14, padding: 16, background: 'rgba(180,255,77,0.05)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span style={{ background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 10, fontWeight: 900, borderRadius: 6, padding: '2px 8px', letterSpacing: '0.03em' }}>✅ CASHED LIVE</span>
         <h2 style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{feed.length} prop{feed.length !== 1 ? 's' : ''} hit so far</h2>
+        <button
+          onClick={() => setSortMode(m => (m === 'recent' ? 'highest' : m === 'highest' ? 'lowest' : 'recent'))}
+          style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', padding: 0 }}
+        >
+          Sort: {CASH_SORT_LABEL[sortMode]}
+        </button>
       </div>
       <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {feed.map(f => {
+        {sorted.map(f => {
           const player = f.option.mlbId != null ? rosterById.get(f.option.mlbId) : undefined
           const abbr = player?.teamId != null ? ID_TO_ABBR[player.teamId] : undefined
           const logo = player?.teamId != null ? mlbTeamLogo(player.teamId) : undefined
