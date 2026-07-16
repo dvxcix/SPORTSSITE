@@ -98,8 +98,11 @@ export async function fetchSavantCsv(url: string): Promise<Record<string, string
   const text = await res.text()
   if (!res.ok) throw new Error(`Savant CSV ${res.status}: ${url} :: ${text.slice(0, 300)}`)
   const rows = parseCsv(text)
-  if (!rows.length || !('player_id' in rows[0])) {
-    console.error('[savant] unexpected response shape', { url, status: res.status, contentType: res.headers.get('content-type'), preview: text.slice(0, 300) })
+  // Generic sanity check only — different Savant leaderboards key their id
+  // column differently ('player_id' on /leaderboard/custom, plain 'id' on
+  // /leaderboard/bat-tracking), so this can't assume a specific column name.
+  if (!rows.length) {
+    console.error('[savant] empty/unparseable response', { url, status: res.status, contentType: res.headers.get('content-type'), preview: text.slice(0, 300) })
   }
   return rows
 }
