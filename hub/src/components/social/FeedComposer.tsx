@@ -44,8 +44,24 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     setUploadingImage(true)
     try {
       const path = `posts/${user.id}/${Date.now()}-${file.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      // Storage RLS requires a live `authenticated` session — if the
+      // client's access token silently expired, one refresh + retry
+      // recovers the common case instead of surfacing a raw RLS error.
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return
+      }
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
       setImageUrl(publicUrl)
     } catch (e: any) {

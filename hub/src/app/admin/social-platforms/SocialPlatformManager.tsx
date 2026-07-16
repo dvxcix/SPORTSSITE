@@ -29,8 +29,24 @@ export function SocialPlatformManager({ userId, initialPlatforms }: { userId: st
     setUploading(true)
     try {
       const path = `social-platforms/${userId}/${Date.now()}-${file.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      // Storage RLS requires a live `authenticated` session — if the
+      // client's access token silently expired, one refresh + retry
+      // recovers the common case instead of surfacing a raw RLS error.
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return
+      }
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
 
       const { data, error: insertErr } = await supabase.from('social_platforms')
@@ -53,8 +69,24 @@ export function SocialPlatformManager({ userId, initialPlatforms }: { userId: st
     const update: Record<string, any> = { name: patch.name.trim(), url_template: patch.urlTemplate.trim() || null }
     if (patch.file) {
       const path = `social-platforms/${userId}/${Date.now()}-${patch.file.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.file, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return false }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.file, { upsert: true })
+      // Storage RLS requires a live `authenticated` session — if the
+      // client's access token silently expired, one refresh + retry
+      // recovers the common case instead of surfacing a raw RLS error.
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, patch.file, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return false
+      }
       update.icon_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
     }
     const { data, error: err } = await supabase.from('social_platforms').update(update).eq('id', id).select('*').single()

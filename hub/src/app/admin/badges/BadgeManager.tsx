@@ -35,8 +35,24 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     setUploading(true)
     try {
       const path = `badges/${userId}/${Date.now()}-${file.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      // Storage RLS requires a live `authenticated` session — if the
+      // client's access token silently expired, one refresh + retry
+      // recovers the common case instead of surfacing a raw RLS error.
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return
+      }
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
 
       const { data, error: insertErr } = await supabase.from('badges')
@@ -59,14 +75,43 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     const update: Record<string, any> = { name: patch.name.trim(), description: patch.description.trim() }
     if (patch.iconFile) {
       const path = `badges/${userId}/${Date.now()}-${patch.iconFile.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.iconFile, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return false }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.iconFile, { upsert: true })
+      // Storage RLS requires a live `authenticated` session — if the
+      // client's access token silently expired, one refresh + retry
+      // recovers the common case instead of surfacing a raw RLS error.
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, patch.iconFile, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return false
+      }
       update.icon_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
     }
     if (patch.cardFile) {
       const path = `badge-cards/${userId}/${Date.now()}-${patch.cardFile.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.cardFile, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return false }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.cardFile, { upsert: true })
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, patch.cardFile, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return false
+      }
       update.card_image_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
     } else if (patch.removeCard) {
       update.card_image_url = null
