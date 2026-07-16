@@ -49,6 +49,27 @@ export const BATTED_BALL_PROFILE: SplitLeaderboard = {
     `&csv=true`,
 }
 
+// Same confirmed pattern as bat-tracking/batted-ball: `split[]` returns
+// every pitch-type x bat-side x pitch-hand x contact-type combination for
+// every qualifying player in one response. Swing timing (tied up/centered/
+// flail, early/on-time/late, under/lined-up/over) + whiff/miss-distance
+// data — left the 3 swingTiming[XYZ][] filters at "all values" (matching
+// the page's own defaults) so nothing is excluded, since those are really
+// output dimensions here, not a filter the user asked to narrow by.
+export const SWING_TIMING_MISS_DISTANCE: SplitLeaderboard = {
+  category: 'swing_timing_miss_distance',
+  dimColumns: ['bat_side', 'pitch_hand', 'api_pitch_type', 'bat_contact_code'],
+  url: ({ role, dateStart, dateEnd, season }) =>
+    `https://baseballsavant.mlb.com/leaderboard/bat-tracking/swing-timing-miss-distance?type=${role}&season%5B%5D=${season}` +
+    `&splitYear=0&min=1&split%5B%5D=api_pitch_type_group03&split%5B%5D=bat_contact_code&split%5B%5D=pitch_hand&split%5B%5D=bat_side` +
+    `&minSplit=1&gameType%5B%5D=R&dateStart=${dateStart}&dateEnd=${dateEnd}&batSide=&contactType=&attackZone=&pitchHand=` +
+    ALL_PITCH_TYPES.map(pt => `&pitchType%5B%5D=${pt}`).join('') +
+    `&swingTimingX%5B%5D=Tiedup&swingTimingX%5B%5D=Centered&swingTimingX%5B%5D=Flail` +
+    `&swingTimingY%5B%5D=Early&swingTimingY%5B%5D=OnTime&swingTimingY%5B%5D=Late` +
+    `&swingTimingZ%5B%5D=Under&swingTimingZ%5B%5D=Linedup&swingTimingZ%5B%5D=Over` +
+    `&sortColumn=bat_contact_code&sortDirection=asc&csv=true`,
+}
+
 export async function syncSplitLeaderboard(
   admin: AdminClient, board: SplitLeaderboard, season: number,
   role: 'batter' | 'pitcher', windowType: 'season' | 'recency', dateStart: string, dateEnd: string
