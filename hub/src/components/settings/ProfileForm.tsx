@@ -181,8 +181,28 @@ export function ProfileForm({ profile }: { profile: any }) {
     setUploading(kind)
     try {
       const path = `${kind}s/${profile.id}/${Date.now()}-${file.name}`
-      const { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      if (uploadErr) { setError(uploadErr.message); return }
+      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
+      // The storage RLS policy requires a live `authenticated` session
+      // matching this exact user id — if the client's access token silently
+      // expired (long-idle tab, etc.) the upload fails RLS instead of
+      // auth, surfacing as "new row violates row-level security policy."
+      // One session refresh + retry recovers the common case; if it's
+      // still failing after that it's a real expired/invalid session, not
+      // something a retry can fix.
+      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        if (refreshed.session) {
+          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
+        }
+      }
+      if (uploadErr) {
+        setError(
+          /row-level security/i.test(uploadErr.message)
+            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
+            : uploadErr.message
+        )
+        return
+      }
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
       setForm(f => ({ ...f, [`${kind}_url`]: publicUrl }))
     } catch (e: any) {
