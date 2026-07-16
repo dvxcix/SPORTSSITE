@@ -36,7 +36,11 @@ export async function GET(req: Request) {
   await Promise.all(claimed.map(async ({ entity_id: mlbIdStr }) => {
     const mlbId = Number(mlbIdStr)
     try {
-      const data = await fetchMlbJson(`https://statsapi.mlb.com/api/v1/people/${mlbId}`)
+      // hydrate=currentTeam is required — confirmed live that the bare
+      // /people/{id} endpoint omits currentTeam entirely (unlike the bulk
+      // roster endpoint used for seeding), which silently left every
+      // synced player's team null.
+      const data = await fetchMlbJson(`https://statsapi.mlb.com/api/v1/people/${mlbId}?hydrate=currentTeam`)
       const person = data.people?.[0]
       if (!person) throw new Error('no person in response')
 
@@ -97,7 +101,14 @@ async function seedRosterIfStale(admin: ReturnType<typeof createAdminClient>, se
     people.map(p => ({ mlb_id: p.id, full_name: p.fullName, active: p.active ?? true })),
     { onConflict: 'mlb_id', ignoreDuplicates: true }
   )
-  await Promise.all(people.map(p => seedPending(admin, 'player_bio', String(p.id), 0)))
+  // One bulk upsert, not ~1500 individual seedPending() round trips — that
+  // many concurrent outbound requests from a single invocation blew past
+  // the function's file descriptor limit (EMFILE) and took the rest of the
+  // run down with it, confirmed live in production logs.
+  await admin.from('sync_state').upsert(
+    people.map(p => ({ source: 'mlb_stats_api', entity_type: 'player_bio', entity_id: String(p.id), season: 0, status: 'pending' })),
+    { onConflict: 'source,entity_type,entity_id,season', ignoreDuplicates: true }
+  )
 
   await admin.from('sync_state').upsert({
     source: 'mlb_stats_api', entity_type: 'job', entity_id: 'roster_seed', season,
