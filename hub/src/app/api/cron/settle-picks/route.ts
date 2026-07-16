@@ -1,22 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, settleFinalPick } from '@/lib/pickGrading'
 
 export const revalidate = 0
 export const maxDuration = 60
-
-function requireCronAuth(req: Request): NextResponse | null {
-  const secret = process.env.CRON_SECRET
-  if (!secret) {
-    return NextResponse.json({ error: 'CRON_SECRET is not configured — refusing to run an unauthenticated settlement job' }, { status: 500 })
-  }
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return null
-}
 
 export async function GET(req: Request) {
   const authError = requireCronAuth(req)

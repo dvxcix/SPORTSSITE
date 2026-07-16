@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, checkEarlyWin, settleFinalPick, applyLegResultToPost } from '@/lib/pickGrading'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
@@ -18,18 +19,6 @@ export const maxDuration = 60
 //    ended gets graded within ~2 minutes instead of sitting pending until
 //    the once-daily settle-picks run. That daily cron still runs too, as a
 //    backstop in case this one ever misses a beat — not the primary path.
-function requireCronAuth(req: Request): NextResponse | null {
-  const secret = process.env.CRON_SECRET
-  if (!secret) {
-    return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 500 })
-  }
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return null
-}
-
 const FINAL_MESSAGES: Record<string, string> = {
   win: '🎉 Your pick hit! Final result: WIN',
   loss: 'Your pick settled — final result: LOSS',
