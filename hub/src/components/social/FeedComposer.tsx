@@ -114,6 +114,12 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
     const legsSummary = legs.map(l => ({
       player_name: l.player_name, team: l.team, mlb_id: l.mlb_id, headshot_url: l.headshot_url,
+      // game_pk/game_date were previously dropped here, leaving a parlay
+      // leg with no way to identify which exact game it belongs to except
+      // team abbreviation — the game detail page's "community picks" tab
+      // then had to fall back to abbreviation-only matching, which bleeds
+      // in unrelated games (and even other sports) sharing the same abbr.
+      game_pk: l.game_pk, game_date: l.game_date,
       prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, odds: l.odds, result: 'pending',
     }))
 
