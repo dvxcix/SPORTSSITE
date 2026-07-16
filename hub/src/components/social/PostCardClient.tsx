@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2 } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -82,7 +82,16 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   // bookmarked in the background (visible symptom: opening a post's
   // comments and finding more comments there than the badge showed).
   const [pickData, setPickData] = useState(initialPost.pick_data)
-  const post = { ...initialPost, pick_data: pickData }
+  const [content, setContent] = useState(initialPost.content)
+  const [isDeleted, setIsDeleted] = useState(false)
+  const [isEditingPost, setIsEditingPost] = useState(false)
+  const [editPostText, setEditPostText] = useState(initialPost.content ?? '')
+  const post = { ...initialPost, pick_data: pickData, content }
+  const isOwnPost = !!user && user.id === post.author_id
+  // Edit window matches the "edit within 10 minutes" behavior the rest of
+  // the app doesn't otherwise enforce anywhere — delete has no such limit,
+  // same as every mainstream social app (X included).
+  const canEditPost = isOwnPost && Date.now() - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
 
   useEffect(() => {
     const channel = supabase
@@ -302,6 +311,26 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     setCommentCount(c => Math.max(0, c - 1))
   }
 
+  async function deletePost() {
+    if (!confirm('Delete this post? This cannot be undone.')) return
+    const { error } = await supabase.from('posts').delete().eq('id', post.id)
+    if (error) { alert('Could not delete post — please try again.'); return }
+    setIsDeleted(true)
+  }
+
+  function startEditPost() {
+    setEditPostText(content ?? '')
+    setIsEditingPost(true)
+  }
+
+  async function saveEditPost() {
+    const text = editPostText.trim()
+    const { error } = await supabase.from('posts').update({ content: text, updated_at: new Date().toISOString() }).eq('id', post.id)
+    if (error) { alert('Could not save changes — please try again.'); return }
+    setContent(text)
+    setIsEditingPost(false)
+  }
+
   async function votePoll(idx: number) {
     if (!user || pollVoted !== null) return
     const prevCounts = pollCounts
@@ -320,6 +349,8 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
 
   const pickBorderColor = pickResult === 'win' ? 'rgba(46,213,115,0.3)' : pickResult === 'loss' ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,77,0.2)'
   const pickBg = pickResult === 'win' ? 'rgba(46,213,115,0.05)' : pickResult === 'loss' ? 'rgba(255,77,106,0.05)' : 'rgba(255,184,77,0.04)'
+
+  if (isDeleted) return null
 
   return (
     <>
@@ -409,10 +440,24 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                   </button>
                   {showMenu && (
                     <div className="ss-dropdown" style={{ position: 'absolute', right: 0, top: 28, minWidth: 150, zIndex: 30 }}>
-                      <button onClick={() => { setShowReport(true); setShowMenu(false) }}
-                        className="ss-dropdown-item danger" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Flag size={12} /> Report post
-                      </button>
+                      {isOwnPost && canEditPost && (
+                        <button onClick={() => { startEditPost(); setShowMenu(false) }}
+                          className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Pencil size={12} /> Edit post
+                        </button>
+                      )}
+                      {isOwnPost && (
+                        <button onClick={() => { deletePost(); setShowMenu(false) }}
+                          className="ss-dropdown-item danger" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Trash2 size={12} /> Delete post
+                        </button>
+                      )}
+                      {!isOwnPost && (
+                        <button onClick={() => { setShowReport(true); setShowMenu(false) }}
+                          className="ss-dropdown-item danger" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Flag size={12} /> Report post
+                        </button>
+                      )}
                       <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
                         className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Link2 size={12} /> Copy link
@@ -438,7 +483,30 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
               )}
 
               {/* Content */}
-              {post.content && (
+              {isEditingPost ? (
+                <div style={{ marginTop: 8 }}>
+                  <textarea
+                    value={editPostText}
+                    onChange={e => setEditPostText(e.target.value)}
+                    autoFocus
+                    style={{
+                      width: '100%', minHeight: 70, resize: 'vertical', fontSize: 14, lineHeight: 1.55,
+                      color: 'var(--text-1)', background: 'var(--surface-2)', border: '1px solid var(--border-2)',
+                      borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit',
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6, justifyContent: 'flex-end' }}>
+                    <button onClick={() => setIsEditingPost(false)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
+                      Cancel
+                    </button>
+                    <button onClick={saveEditPost}
+                      style={{ background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#000' }}>
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : post.content && (
                 <p style={{ marginTop: 8, fontSize: 14, color: 'var(--text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                   <LinkifiedText text={post.content} />
                 </p>
