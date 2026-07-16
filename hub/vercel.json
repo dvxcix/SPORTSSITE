@@ -26,15 +26,15 @@
     },
     {
       "path": "/api/cron/savant-sync-tier-a",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/cron/savant-sync-bat-tracking",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/cron/savant-sync-batted-ball",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 10 * * *"
     }
   ]
 }

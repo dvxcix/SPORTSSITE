@@ -9,12 +9,15 @@ export const maxDuration = 60
 
 const CATEGORY_STALE_HOURS = 20
 
-// Each Savant leaderboard is a single request returning every qualified
-// player for that category/season at once — unlike the per-player MLB
-// Stats API crons, there's no per-player claiming here. This just re-pulls
-// whichever Tier A categories haven't synced in the last ~20h, all in one
-// tick (5 categories, cheap enough not to need spreading across ticks the
-// way per-player batching does).
+// Runs once daily, ~6am ET (see vercel.json — a fixed UTC hour, so it'll
+// drift an hour off 6am ET across the DST changeover until adjusted).
+// Savant's own leaderboards only update once a day anyway (not live
+// in-game data), so there's nothing to gain from polling more often — this
+// just catches yesterday's now-final numbers each morning. Each Savant
+// leaderboard is a single request returning every qualified player for
+// that category/season at once — unlike the per-player MLB Stats API
+// crons, there's no per-player claiming here. The staleness check still
+// guards against a manual + scheduled run landing the same day.
 export async function GET(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
