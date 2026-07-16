@@ -33,11 +33,27 @@ export const BAT_TRACKING: SplitLeaderboard = {
     `&type=${role}&sortColumn=avg_bat_speed&sortDirection=desc&csv=true`,
 }
 
+const ALL_PITCH_TYPES = ['FF', 'SI', 'FC', 'CH', 'FS', 'FO', 'SC', 'CU', 'SL', 'ST', 'SV', 'KN']
+
+// Same confirmed pattern: `split[]` params return every combination of
+// pitch type x bat side x pitch hand for every qualifying player in one
+// response.
+export const BATTED_BALL_PROFILE: SplitLeaderboard = {
+  category: 'batted_ball_splits',
+  dimColumns: ['bat_side', 'pitch_hand', 'api_pitch_type'],
+  url: ({ role, dateStart, dateEnd, season }) =>
+    `https://baseballsavant.mlb.com/leaderboard/batted-ball?type=${role}&season%5B%5D=${season}` +
+    `&splitYear=0&min=1&split%5B%5D=api_pitch_type_group03&split%5B%5D=bat_side&split%5B%5D=pitch_hand` +
+    `&minSplit=1&gameType%5B%5D=R&dateStart=${dateStart}&dateEnd=${dateEnd}&batSide=&pitchHand=` +
+    ALL_PITCH_TYPES.map(pt => `&pitchType%5B%5D=${pt}`).join('') +
+    `&csv=true`,
+}
+
 export async function syncSplitLeaderboard(
-  admin: AdminClient, board: SplitLeaderboard,
+  admin: AdminClient, board: SplitLeaderboard, season: number,
   role: 'batter' | 'pitcher', windowType: 'season' | 'recency', dateStart: string, dateEnd: string
 ) {
-  const rows = await fetchSavantCsv(board.url({ role, dateStart, dateEnd, season: Number(dateStart.slice(0, 4)) }))
+  const rows = await fetchSavantCsv(board.url({ role, dateStart, dateEnd, season }))
   const withId = rows.filter(r => r.id)
   if (!withId.length) return { rows: 0 }
 
@@ -73,4 +89,51 @@ export async function syncSplitLeaderboard(
   if (error) throw error
 
   return { rows: upsertRows.length }
+}
+
+// MLB's own season-schedule endpoint confirmed 2026's regularSeasonStartDate.
+// Falls back to a March 25 guess for a season this map doesn't have yet
+// rather than hard-failing.
+const REGULAR_SEASON_START: Record<number, string> = { 2026: '2026-03-25' }
+const RECENCY_DAYS = 6
+
+export function seasonStartDate(season: number): string {
+  return REGULAR_SEASON_START[season] ?? `${season}-03-25`
+}
+export function todayET(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+}
+export function daysAgoET(days: number): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - days)
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+}
+
+// The shared cron body for every split-and-recency category: pulls both
+// batter and pitcher roles for both a season-to-date window and a rolling
+// recency window (4 requests total). Each new category's cron route is
+// just this one call plus its own SplitLeaderboard config.
+export async function syncBothWindows(admin: AdminClient, board: SplitLeaderboard, season: number) {
+  const seasonStart = seasonStartDate(season)
+  const today = todayET()
+  const recencyStart = daysAgoET(RECENCY_DAYS)
+
+  const results: Record<string, { rows: number } | { error: string }> = {}
+
+  for (const role of ['batter', 'pitcher'] as const) {
+    for (const [windowType, dateStart, dateEnd] of [
+      ['season', seasonStart, today],
+      ['recency', recencyStart, today],
+    ] as const) {
+      const key = `${role}_${windowType}`
+      try {
+        results[key] = await syncSplitLeaderboard(admin, board, season, role, windowType, dateStart, dateEnd)
+      } catch (e: any) {
+        console.error(`[savant-splits:${board.category}] failed`, key, e)
+        results[key] = { error: e?.message || String(e) }
+      }
+    }
+  }
+
+  return { season, seasonStart, today, recencyStart, results }
 }

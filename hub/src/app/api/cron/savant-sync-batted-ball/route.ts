@@ -2,19 +2,19 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
-import { BAT_TRACKING, syncBothWindows } from '@/lib/savantSplitsSync'
+import { BATTED_BALL_PROFILE, syncBothWindows } from '@/lib/savantSplitsSync'
 
 export const revalidate = 0
 export const maxDuration = 60
 
-// The first "recency vs season" category — the actual competitive-edge
-// data, not just season aggregates. See syncBothWindows for the shared
-// batter/pitcher x season/recency loop every split-based category uses.
+// Ground/fly/line-drive/popup + pull/straight/oppo rates, split by pitch
+// type x bat side x pitch hand, both season-to-date and rolling recency —
+// second category on the same shared engine bat tracking uses.
 export async function GET(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
   const admin = createAdminClient()
-  const result = await syncBothWindows(admin, BAT_TRACKING, currentSeason())
+  const result = await syncBothWindows(admin, BATTED_BALL_PROFILE, currentSeason())
   return NextResponse.json(result)
 }
