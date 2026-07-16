@@ -55,6 +55,14 @@
     {
       "path": "/api/cron/savant-sync-hr-details",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/savant-sync-pitch-arsenal-stats",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/savant-sync-pitch-arsenal-details",
+      "schedule": "5 10 * * *"
     }
   ]
 }

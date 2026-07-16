@@ -349,3 +349,64 @@ export async function syncBothWindows(admin: AdminClient, board: SplitLeaderboar
 
   return { season, seasonStart, today, recencyStart, results }
 }
+
+// Pitch Arsenal Stats — the aggregate leaderboard behind
+// /leaderboard/pitch-arsenal-stats: one row per (player, pitch_type), e.g.
+// "Devers vs 4-Seam Fastball". Confirmed live: a single request per role
+// (`type=batter`/`type=pitcher`) already returns every player x pitch_type
+// combination in one response (~4,750 batter rows / ~3,170 pitcher rows) —
+// same id/name shape as Tier A (`player_id` + `last_name, first_name`), not
+// the bat-tracking id/name shape, so this gets its own small function
+// rather than forcing it through `syncSplitLeaderboard`. Season-only, no
+// recency window mentioned for this leaderboard. The per-pitch drill-down
+// behind each pitch_type row (`savantPitchArsenalSync.ts`) is a separate,
+// much larger sync.
+function pitchArsenalStatsUrl(role: 'batter' | 'pitcher', season: number): string {
+  return `https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=${role}&pitchType=&year=${season}&team=&min=1&minPitches=1&sort=4&sortDir=desc&csv=true`
+}
+
+export async function syncPitchArsenalStats(admin: AdminClient, season: number) {
+  const seasonStart = seasonStartDate(season)
+  const today = todayET()
+  const results: Record<string, { rows: number } | { error: string }> = {}
+
+  for (const role of ['batter', 'pitcher'] as const) {
+    try {
+      const rows = await fetchSavantCsv(pitchArsenalStatsUrl(role, season))
+      const withId = rows.filter(r => r.player_id && r.pitch_type)
+      if (!withId.length) { results[role] = { rows: 0 }; continue }
+
+      await admin.from('players').upsert(
+        withId.map(r => ({ mlb_id: Number(r.player_id), full_name: r['last_name, first_name'] || `Player ${r.player_id}` })),
+        { onConflict: 'mlb_id', ignoreDuplicates: true }
+      )
+
+      const upsertRows = withId.map(r => {
+        const dims = { pitch_type: r.pitch_type }
+        const metrics: Record<string, number | string | null> = {}
+        for (const [k, v] of Object.entries(r)) {
+          if (k === 'player_id' || k === 'last_name, first_name' || k === 'pitch_type' || v === '') continue
+          if (v === 'NaN') { metrics[k] = null; continue }
+          const n = Number(v)
+          metrics[k] = Number.isFinite(n) ? n : v
+        }
+        return {
+          mlb_id: Number(r.player_id), role, category: 'pitch_arsenal_stats', window_type: 'season' as const,
+          date_start: seasonStart, date_end: today,
+          dims, dims_key: dimsKey(dims), metrics, last_synced_at: new Date().toISOString(),
+        }
+      })
+
+      const { error } = await admin.from('player_statcast_splits')
+        .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
+      if (error) throw error
+
+      results[role] = { rows: upsertRows.length }
+    } catch (e: any) {
+      console.error('[savant-pitch-arsenal-stats] failed', role, e)
+      results[role] = { error: e?.message || String(e) }
+    }
+  }
+
+  return { season, results }
+}
