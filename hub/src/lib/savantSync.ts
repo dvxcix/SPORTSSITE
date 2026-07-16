@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // as a known, explicit gap rather than guessed at.
 export type SavantCategory = {
   name: string
-  target: 'hitting' | 'fielding' | 'baserunning'
+  target: 'hitting' | 'pitching' | 'fielding' | 'baserunning'
   url: (year: number) => string
 }
 
@@ -44,6 +44,23 @@ export const SAVANT_TIER_A: SavantCategory[] = [
     name: 'sprint_speed',
     target: 'baserunning',
     url: year => `https://baseballsavant.mlb.com/leaderboard/sprint_speed?year=${year}&position=&team=&min=10&csv=true`,
+  },
+  // Savant's "Statcast" leaderboard — a richer, distinct quality-of-contact
+  // set (angle sweet-spot %, EV50, fly-ball/line-drive avg, ground-ball avg,
+  // max/avg/HR distance, 95mph+ count & rate, raw barrel count + brl/PA)
+  // beyond what exit_velocity_barrels above captures. Same shape for both
+  // roles, just a different `type` param and target table — batter results
+  // are the player's own contact quality, pitcher results are the contact
+  // quality they allow.
+  {
+    name: 'statcast_quality_of_contact',
+    target: 'hitting',
+    url: year => `https://baseballsavant.mlb.com/leaderboard/statcast?type=batter&year=${year}&position=&team=&min=1&sort=barrels_per_pa&sortDir=desc&csv=true`,
+  },
+  {
+    name: 'statcast_quality_of_contact',
+    target: 'pitching',
+    url: year => `https://baseballsavant.mlb.com/leaderboard/statcast?type=pitcher&year=${year}&position=&team=&min=1&sort=barrels_per_pa&sortDir=desc&csv=true`,
   },
 ]
 
@@ -138,6 +155,15 @@ export async function upsertSavantCategory(admin: AdminClient, category: SavantC
 
   if (category.target === 'hitting') {
     const { error } = await admin.from('player_statcast_hitting_season').upsert(
+      withId.map(r => ({
+        mlb_id: Number(r.player_id), season, category: category.name,
+        metrics: toMetrics(r), last_synced_at: new Date().toISOString(),
+      })),
+      { onConflict: 'mlb_id,season,category' }
+    )
+    if (error) throw error
+  } else if (category.target === 'pitching') {
+    const { error } = await admin.from('player_statcast_pitching_season').upsert(
       withId.map(r => ({
         mlb_id: Number(r.player_id), season, category: category.name,
         metrics: toMetrics(r), last_synced_at: new Date().toISOString(),
