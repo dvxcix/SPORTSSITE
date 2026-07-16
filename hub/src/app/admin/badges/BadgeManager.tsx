@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { invalidateBadgeCache } from '@/lib/badges'
+import { uploadMedia } from '@/lib/uploadMedia'
 import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight, Users, Pencil, Sparkles } from 'lucide-react'
 
 type BadgeRow = { id: string; name: string; icon_url: string; description: string; card_image_url: string | null }
@@ -34,26 +35,9 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     setError('')
     setUploading(true)
     try {
-      const path = `badges/${userId}/${Date.now()}-${file.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      // Storage RLS requires a live `authenticated` session — if the
-      // client's access token silently expired, one refresh + retry
-      // recovers the common case instead of surfacing a raw RLS error.
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return
-      }
-      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+      const uploaded = await uploadMedia(file, 'badges')
+      if ('error' in uploaded) { setError(uploaded.error); return }
+      const { publicUrl } = uploaded
 
       const { data, error: insertErr } = await supabase.from('badges')
         .insert({ name: name.trim(), description: description.trim(), icon_url: publicUrl })
@@ -74,45 +58,14 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     setError('')
     const update: Record<string, any> = { name: patch.name.trim(), description: patch.description.trim() }
     if (patch.iconFile) {
-      const path = `badges/${userId}/${Date.now()}-${patch.iconFile.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.iconFile, { upsert: true })
-      // Storage RLS requires a live `authenticated` session — if the
-      // client's access token silently expired, one refresh + retry
-      // recovers the common case instead of surfacing a raw RLS error.
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, patch.iconFile, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return false
-      }
-      update.icon_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+      const uploaded = await uploadMedia(patch.iconFile, 'badges')
+      if ('error' in uploaded) { setError(uploaded.error); return false }
+      update.icon_url = uploaded.publicUrl
     }
     if (patch.cardFile) {
-      const path = `badge-cards/${userId}/${Date.now()}-${patch.cardFile.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.cardFile, { upsert: true })
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, patch.cardFile, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return false
-      }
-      update.card_image_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+      const uploaded = await uploadMedia(patch.cardFile, 'badge-cards')
+      if ('error' in uploaded) { setError(uploaded.error); return false }
+      update.card_image_url = uploaded.publicUrl
     } else if (patch.removeCard) {
       update.card_image_url = null
     }

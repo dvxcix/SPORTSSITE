@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
 import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe } from 'lucide-react'
 import { PickComposer, type ComposedPick } from './PickComposer'
@@ -43,27 +44,9 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     setError('')
     setUploadingImage(true)
     try {
-      const path = `posts/${user.id}/${Date.now()}-${file.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      // Storage RLS requires a live `authenticated` session — if the
-      // client's access token silently expired, one refresh + retry
-      // recovers the common case instead of surfacing a raw RLS error.
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return
-      }
-      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
-      setImageUrl(publicUrl)
+      const result = await uploadMedia(file, 'posts')
+      if ('error' in result) { setError(result.error); return }
+      setImageUrl(result.publicUrl)
     } catch (e: any) {
       setError(e?.message || 'Image upload failed — please try again.')
     } finally {

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'motion/react'
@@ -48,27 +49,9 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   async function uploadAvatar(file: File) {
     setError(''); setUploading(true)
     try {
-      const path = `avatars/${userId}/${Date.now()}-${file.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      // Storage RLS requires a live `authenticated` session — if the
-      // client's access token silently expired, one refresh + retry
-      // recovers the common case instead of surfacing a raw RLS error.
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return
-      }
-      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
-      setAvatarUrl(publicUrl)
+      const result = await uploadMedia(file, 'avatars')
+      if ('error' in result) { setError(result.error); return }
+      setAvatarUrl(result.publicUrl)
     } catch (e: any) {
       setError(e?.message || 'Upload failed — please try again.')
     } finally {

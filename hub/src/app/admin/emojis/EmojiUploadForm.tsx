@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { invalidateCustomEmojiCache } from '@/lib/emoji'
+import { uploadMedia } from '@/lib/uploadMedia'
 import { Trash2, Plus, Pencil } from 'lucide-react'
 
 type Category = { id: string; name: string; sort_order: number }
@@ -63,26 +64,9 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
     setError('')
     setUploading(true)
     try {
-      const path = `emojis/${userId}/${Date.now()}-${file.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      // Storage RLS requires a live `authenticated` session — if the
-      // client's access token silently expired, one refresh + retry
-      // recovers the common case instead of surfacing a raw RLS error.
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, file, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return
-      }
-      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+      const uploaded = await uploadMedia(file, 'emojis')
+      if ('error' in uploaded) { setError(uploaded.error); return }
+      const { publicUrl } = uploaded
 
       const { data, error: insertErr } = await supabase.from('custom_emojis')
         .insert({ code: normalized, image_url: publicUrl, uploaded_by: userId, category_id: categoryId || null })
@@ -106,26 +90,9 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
     setError('')
     const update: Record<string, any> = { code: normalized, category_id: patch.categoryId || null }
     if (patch.file) {
-      const path = `emojis/${userId}/${Date.now()}-${patch.file.name}`
-      let { error: uploadErr } = await supabase.storage.from('media').upload(path, patch.file, { upsert: true })
-      // Storage RLS requires a live `authenticated` session — if the
-      // client's access token silently expired, one refresh + retry
-      // recovers the common case instead of surfacing a raw RLS error.
-      if (uploadErr && /row-level security/i.test(uploadErr.message)) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        if (refreshed.session) {
-          ;({ error: uploadErr } = await supabase.storage.from('media').upload(path, patch.file, { upsert: true }))
-        }
-      }
-      if (uploadErr) {
-        setError(
-          /row-level security/i.test(uploadErr.message)
-            ? 'Your session has expired — please refresh the page and sign in again, then retry the upload.'
-            : uploadErr.message
-        )
-        return false
-      }
-      update.image_url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+      const uploaded = await uploadMedia(patch.file, 'emojis')
+      if ('error' in uploaded) { setError(uploaded.error); return false }
+      update.image_url = uploaded.publicUrl
     }
     const { data, error: err } = await supabase.from('custom_emojis').update(update).eq('id', id)
       .select('*, category:custom_emoji_categories(name)').single()
