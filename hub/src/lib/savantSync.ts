@@ -83,9 +83,25 @@ export function parseCsv(text: string): Record<string, string>[] {
 }
 
 export async function fetchSavantCsv(url: string): Promise<Record<string, string>[]> {
-  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } })
-  if (!res.ok) throw new Error(`Savant CSV ${res.status}: ${url}`)
-  return parseCsv(await res.text())
+  // Real browser headers — a previous plain fetch (User-Agent only) got a
+  // silent 200 with unusable content in production (parsed to zero rows,
+  // no thrown error) while an identical request worked fine from a normal
+  // dev machine, consistent with Savant's bot protection treating
+  // Vercel's serverless IP ranges differently than a residential one.
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/csv,text/plain,*/*',
+    },
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Savant CSV ${res.status}: ${url} :: ${text.slice(0, 300)}`)
+  const rows = parseCsv(text)
+  if (!rows.length || !('player_id' in rows[0])) {
+    console.error('[savant] unexpected response shape', { url, status: res.status, contentType: res.headers.get('content-type'), preview: text.slice(0, 300) })
+  }
+  return rows
 }
 
 type AdminClient = ReturnType<typeof createAdminClient>
