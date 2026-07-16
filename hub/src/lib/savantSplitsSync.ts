@@ -229,6 +229,74 @@ export async function syncSwingTake(admin: AdminClient, season: number) {
   return { season, seasonStart, today, results: Object.fromEntries(entries) }
 }
 
+// Batting Stance — batter-only (Savant's /visuals/batting-stance has no
+// batter/pitcher `type` toggle at all, unlike every other category so
+// far), and its only real groupBy dimension is bat_side, which is baked
+// into every response automatically. Pitch Hand is a plain top-level
+// FILTER, not a groupBy option, so getting "vs LHP" and "vs RHP" splits
+// needs 2 separate filtered requests (plus a blank "vs all" baseline) —
+// same one-request-per-filter-value shape as Swing/Take, just a much
+// smaller combination space (3 filters x 2 windows = 6 requests, no
+// concurrency limiter needed).
+function battingStanceUrl(pitchHand: '' | 'L' | 'R', dateStart: string, dateEnd: string, season: number): string {
+  return `https://baseballsavant.mlb.com/visuals/batting-stance?seasonStart=${season}&seasonEnd=${season}&dateStart=${dateStart}&dateEnd=${dateEnd}&gameType=Regular&team=&batSide=&pitchHand=${pitchHand}&contactType=&isHardHit=&min=1&minGroupSwings=1&csv=true`
+}
+
+export async function syncBattingStance(admin: AdminClient, season: number) {
+  const seasonStart = seasonStartDate(season)
+  const today = todayET()
+  const recencyStart = daysAgoET(RECENCY_DAYS)
+
+  const results: Record<string, { rows: number } | { error: string }> = {}
+
+  for (const [windowType, dateStart, dateEnd] of [
+    ['season', seasonStart, today],
+    ['recency', recencyStart, today],
+  ] as const) {
+    for (const pitchHand of ['', 'L', 'R'] as const) {
+      const key = `${windowType}_vs_${pitchHand || 'all'}`
+      try {
+        const rows = await fetchSavantCsv(battingStanceUrl(pitchHand, dateStart, dateEnd, season))
+        const withId = rows.filter(r => r.id)
+        if (!withId.length) { results[key] = { rows: 0 }; continue }
+
+        await admin.from('players').upsert(
+          withId.map(r => ({ mlb_id: Number(r.id), full_name: r.name || `Player ${r.id}` })),
+          { onConflict: 'mlb_id', ignoreDuplicates: true }
+        )
+
+        const dims = { pitch_hand: pitchHand || 'All' }
+        const dk = dimsKey(dims)
+        const upsertRows = withId.map(r => {
+          const metrics: Record<string, number | string | null> = {}
+          for (const [k, v] of Object.entries(r)) {
+            if (k === 'id' || k === 'name' || v === '') continue
+            if (v === 'NaN') { metrics[k] = null; continue }
+            const n = Number(v)
+            metrics[k] = Number.isFinite(n) ? n : v
+          }
+          return {
+            mlb_id: Number(r.id), role: 'batter' as const, category: 'batting_stance', window_type: windowType,
+            date_start: dateStart, date_end: dateEnd,
+            dims, dims_key: dk, metrics, last_synced_at: new Date().toISOString(),
+          }
+        })
+
+        const { error } = await admin.from('player_statcast_splits')
+          .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
+        if (error) throw error
+
+        results[key] = { rows: upsertRows.length }
+      } catch (e: any) {
+        console.error('[savant-batting-stance] job failed', key, e)
+        results[key] = { error: e?.message || String(e) }
+      }
+    }
+  }
+
+  return { season, seasonStart, today, recencyStart, results }
+}
+
 // The shared cron body for every split-and-recency category: pulls both
 // batter and pitcher roles for both a season-to-date window and a rolling
 // recency window (4 requests total). Each new category's cron route is
