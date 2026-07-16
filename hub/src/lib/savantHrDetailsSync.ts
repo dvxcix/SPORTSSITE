@@ -1,0 +1,163 @@
+import { createAdminClient } from '@/lib/supabase/admin'
+
+type AdminClient = ReturnType<typeof createAdminClient>
+
+// The per-event home run log behind Savant's expandable leaderboard row —
+// a genuinely different endpoint from the aggregate CSV leaderboard
+// (`SAVANT_TIER_A`'s `home_runs` category): confirmed live via the page's
+// own client bundle, which calls this on row-expand as
+// `GET /leaderboard/home-runs?type=details&player_id=<id>&year=<y>&player_type=Batter&cat=xhr`.
+// Returns real per-batted-ball JSON (not CSV) — every home run AND every
+// "would-be" near-miss barrel (result can be a real double/field_out, not
+// just home_run), each with the batter+pitcher id/name, exit velo, launch
+// angle, distance, trot time, and a boolean per MLB ballpark for whether
+// that specific ball would have left THAT park. Fetching only the batter
+// side is sufficient for full coverage — every event already carries the
+// opposing pitcher's id/name, so a pitcher's "who's hit off me" view is
+// just `WHERE pitcher_id = X` on the same table, no separate pitcher-side
+// fetch needed.
+const PARK_COLUMNS = [
+  'laa', 'bal', 'bos', 'cws', 'cle', 'kc', 'oak', 'tb', 'tex', 'tor',
+  'ari', 'chc', 'col', 'lad', 'pit', 'mil', 'sea', 'hou', 'det', 'sf',
+  'cin', 'sd', 'phi', 'stl', 'nym', 'wsh', 'min', 'nyy', 'mia', 'atl',
+]
+
+function toNum(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = typeof v === 'number' ? v : parseFloat(String(v))
+  return Number.isFinite(n) ? n : null
+}
+
+async function fetchHrDetails(playerId: number, season: number): Promise<any[]> {
+  const url = `https://baseballsavant.mlb.com/leaderboard/home-runs?type=details&player_id=${playerId}&year=${season}&player_type=Batter&cat=xhr`
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json,text/plain,*/*',
+    },
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Savant HR details ${res.status}: player ${playerId} :: ${text.slice(0, 300)}`)
+  try {
+    const parsed = JSON.parse(text)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    console.error('[savant-hr-details] unparseable response', { playerId, preview: text.slice(0, 300) })
+    return []
+  }
+}
+
+const SOURCE = 'savant_hr_details'
+const ENTITY_TYPE = 'hr_detail_batter'
+const STALE_CLAIM_MINUTES = 12
+const BATCH_SIZE = 25
+const RECHECK_COMPLETE_HOURS = 20
+
+// Seeds a 'pending' claim row for every batter who actually has a home run
+// this season, drawn straight from the already-synced Tier A `home_runs`
+// leaderboard rows (`player_statcast_hitting_season`) rather than
+// re-deriving the qualifying-player list from scratch — `ignoreDuplicates`
+// means a batter already seeded (mid-progress or complete) is left alone.
+async function seedPendingBatters(admin: AdminClient, season: number) {
+  const { data: rows } = await admin
+    .from('player_statcast_hitting_season')
+    .select('mlb_id, metrics')
+    .eq('season', season)
+    .eq('category', 'home_runs')
+
+  const qualifying = (rows ?? []).filter(r => Number((r.metrics as any)?.hr_total) > 0)
+  if (!qualifying.length) return
+
+  await admin.from('sync_state').upsert(
+    qualifying.map(r => ({
+      source: SOURCE, entity_type: ENTITY_TYPE, entity_id: String(r.mlb_id), season, status: 'pending',
+    })),
+    { onConflict: 'source,entity_type,entity_id,season', ignoreDuplicates: true }
+  )
+}
+
+// Claims up to BATCH_SIZE pending/error/stale-claimed batter jobs — same
+// claim-a-small-batch-per-tick shape as the MLB Stats API bio/season-stats
+// crons, since a full sweep (one request per qualifying batter, likely
+// several hundred) doesn't fit one 60s invocation the way every other
+// Savant category so far has. Also re-checks 'complete' rows once they're
+// over RECHECK_COMPLETE_HOURS old — otherwise a batter who's already
+// caught up would never get re-synced for home runs hit AFTER their first
+// successful pull.
+export async function syncHrDetailBatch(admin: AdminClient, season: number) {
+  await seedPendingBatters(admin, season)
+
+  const staleClaimBefore = new Date(Date.now() - STALE_CLAIM_MINUTES * 60_000).toISOString()
+  const recheckBefore = new Date(Date.now() - RECHECK_COMPLETE_HOURS * 60 * 60_000).toISOString()
+  const { data: jobs } = await admin
+    .from('sync_state')
+    .select('entity_id')
+    .eq('source', SOURCE).eq('entity_type', ENTITY_TYPE).eq('season', season)
+    .or(`status.eq.pending,status.eq.error,and(status.eq.claimed,claimed_at.lt.${staleClaimBefore}),and(status.eq.complete,last_synced_at.lt.${recheckBefore})`)
+    .limit(BATCH_SIZE)
+
+  const claimedIds = (jobs ?? []).map(j => j.entity_id)
+  if (!claimedIds.length) return { claimed: 0, results: {} }
+
+  await admin.from('sync_state').upsert(
+    claimedIds.map(id => ({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: id, season, status: 'claimed', claimed_at: new Date().toISOString() })),
+    { onConflict: 'source,entity_type,entity_id,season' }
+  )
+
+  const results: Record<string, { rows: number } | { error: string }> = {}
+
+  for (const idStr of claimedIds) {
+    const mlbId = Number(idStr)
+    try {
+      const events = await fetchHrDetails(mlbId, season)
+
+      if (events.length) {
+        // Every pitcher named here needs at least a stub `players` row —
+        // the batter already has one (that's how they were seeded), but an
+        // opposing pitcher who hasn't synced via mlb-sync-bio yet would
+        // otherwise fail the FK on player_home_run_events.pitcher_id.
+        const pitcherStubs = new Map<number, string>()
+        for (const e of events) {
+          const pid = Number(e.pitcher_id)
+          if (pid && !pitcherStubs.has(pid)) pitcherStubs.set(pid, e.pitcher_name || `Player ${pid}`)
+        }
+        await admin.from('players').upsert(
+          Array.from(pitcherStubs, ([mlb_id, full_name]) => ({ mlb_id, full_name })),
+          { onConflict: 'mlb_id', ignoreDuplicates: true }
+        )
+
+        const upsertRows = events.map(e => ({
+          game_pk: Number(e.game_pk), play_id: e.play_id, play_url: e.play_url || null,
+          season, game_date: e.game_date || null,
+          batter_id: Number(e.batter_id), batter_name: e.batter_name || null,
+          pitcher_id: Number(e.pitcher_id), pitcher_name: e.pitcher_name || null,
+          result: e.result || null,
+          exit_velocity: toNum(e.exit_velocity), launch_angle: toNum(e.launch_angle),
+          hr_distance: toNum(e.hr_distance), hr_trot: toNum(e.hr_trot),
+          hr_cat: e.hr_cat || null, hr_type: e.hr_type || null,
+          parks: Object.fromEntries(PARK_COLUMNS.map(p => [p, e[p] === '1'])),
+          last_synced_at: new Date().toISOString(),
+        }))
+
+        const { error } = await admin.from('player_home_run_events').upsert(upsertRows, { onConflict: 'game_pk,play_id' })
+        if (error) throw error
+      }
+
+      results[idStr] = { rows: events.length }
+      await admin.from('sync_state').upsert(
+        { source: SOURCE, entity_type: ENTITY_TYPE, entity_id: idStr, season, status: 'complete', last_synced_at: new Date().toISOString() },
+        { onConflict: 'source,entity_type,entity_id,season' }
+      )
+    } catch (e: any) {
+      console.error('[savant-hr-details] batter failed', idStr, e)
+      results[idStr] = { error: e?.message || String(e) }
+      await admin.from('sync_state').upsert(
+        { source: SOURCE, entity_type: ENTITY_TYPE, entity_id: idStr, season, status: 'error' },
+        { onConflict: 'source,entity_type,entity_id,season' }
+      )
+    }
+  }
+
+  return { claimed: claimedIds.length, results }
+}
