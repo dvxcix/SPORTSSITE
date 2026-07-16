@@ -7,14 +7,15 @@ import { syncHrDetailBatch } from '@/lib/savantHrDetailsSync'
 export const revalidate = 0
 export const maxDuration = 60
 
-// Ticks every 15 min, claiming ~25 batters per tick (see
-// savantHrDetailsSync.ts) — a full sweep is one request per qualifying
-// batter (likely several hundred), which doesn't fit a single 60s
-// invocation the way every other Savant category so far has. Seeds its own
-// pending queue from the already-synced Tier A `home_runs` leaderboard, so
-// it naturally catches up over a few hours, then just tops up new HRs
-// daily once caught up (a batter finishes a HR-less day untouched — no
-// re-fetch needed until their hr_total actually changes and re-seeds).
+// Ticks every 5 min, claiming ~300 batters per tick, fetched concurrently
+// (see savantHrDetailsSync.ts) — confirmed live that Savant's details
+// endpoint has no meaningful rate limit (the entire ~500-batter leaderboard
+// fetched concurrently in ~9s with zero errors), so the real constraint is
+// just Vercel's 60s invocation cap, not the source. Clears the current
+// backlog in 1-2 ticks instead of hours. Seeds its own pending queue from
+// the already-synced Tier A `home_runs` leaderboard, and re-checks
+// 'complete' rows after 20h so batters keep accumulating new home runs
+// instead of going stale after their first sync.
 export async function GET(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError

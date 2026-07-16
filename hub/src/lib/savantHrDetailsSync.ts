@@ -51,8 +51,31 @@ async function fetchHrDetails(playerId: number, season: number): Promise<any[]> 
 const SOURCE = 'savant_hr_details'
 const ENTITY_TYPE = 'hr_detail_batter'
 const STALE_CLAIM_MINUTES = 12
-const BATCH_SIZE = 25
+// Confirmed live: this endpoint has no meaningful rate limiting — 514
+// concurrent requests (the entire batter leaderboard) at concurrency 40
+// completed in 9s with zero errors. The real bottleneck wasn't fetch
+// speed, it was doing one sequential Supabase round-trip per player; fixed
+// by fetching concurrently and writing in one bulk upsert per tick. 300/
+// tick (with real headroom to spare) clears the current ~475-batter
+// backlog in 2 ticks instead of ~19.
+const BATCH_SIZE = 300
+const FETCH_CONCURRENCY = 20
+const WRITE_CHUNK_SIZE = 500
 const RECHECK_COMPLETE_HOURS = 20
+
+// Runs a bounded number of jobs concurrently.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const idx = next++
+      results[idx] = await fn(items[idx])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
 
 // Seeds a 'pending' claim row for every batter who actually has a home run
 // this season, drawn straight from the already-synced Tier A `home_runs`
@@ -105,59 +128,95 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
     { onConflict: 'source,entity_type,entity_id,season' }
   )
 
-  const results: Record<string, { rows: number } | { error: string }> = {}
-
-  for (const idStr of claimedIds) {
-    const mlbId = Number(idStr)
+  // Fetch every claimed batter concurrently — the slow part was never the
+  // fetches, it was doing a Supabase round-trip per player sequentially.
+  const fetched = await mapWithConcurrency(claimedIds, FETCH_CONCURRENCY, async idStr => {
     try {
-      const events = await fetchHrDetails(mlbId, season)
+      return { idStr, events: await fetchHrDetails(Number(idStr), season), error: null as string | null }
+    } catch (e: any) {
+      console.error('[savant-hr-details] batter fetch failed', idStr, e)
+      return { idStr, events: [] as any[], error: e?.message || String(e) }
+    }
+  })
 
-      if (events.length) {
-        // Every pitcher named here needs at least a stub `players` row —
-        // the batter already has one (that's how they were seeded), but an
-        // opposing pitcher who hasn't synced via mlb-sync-bio yet would
-        // otherwise fail the FK on player_home_run_events.pitcher_id.
-        const pitcherStubs = new Map<number, string>()
-        for (const e of events) {
-          const pid = Number(e.pitcher_id)
-          if (pid && !pitcherStubs.has(pid)) pitcherStubs.set(pid, e.pitcher_name || `Player ${pid}`)
-        }
-        await admin.from('players').upsert(
-          Array.from(pitcherStubs, ([mlb_id, full_name]) => ({ mlb_id, full_name })),
-          { onConflict: 'mlb_id', ignoreDuplicates: true }
-        )
+  const allEvents = fetched.flatMap(f => f.events)
 
-        const upsertRows = events.map(e => ({
-          game_pk: Number(e.game_pk), play_id: e.play_id, play_url: e.play_url || null,
-          season, game_date: e.game_date || null,
-          batter_id: Number(e.batter_id), batter_name: e.batter_name || null,
-          pitcher_id: Number(e.pitcher_id), pitcher_name: e.pitcher_name || null,
-          result: e.result || null,
-          exit_velocity: toNum(e.exit_velocity), launch_angle: toNum(e.launch_angle),
-          hr_distance: toNum(e.hr_distance), hr_trot: toNum(e.hr_trot),
-          hr_cat: e.hr_cat || null, hr_type: e.hr_type || null,
-          parks: Object.fromEntries(PARK_COLUMNS.map(p => [p, e[p] === '1'])),
-          last_synced_at: new Date().toISOString(),
-        }))
+  // Every pitcher named across the whole batch needs at least a stub
+  // `players` row — the batter already has one (that's how they were
+  // seeded), but an opposing pitcher who hasn't synced via mlb-sync-bio
+  // yet would otherwise fail the FK on player_home_run_events.pitcher_id.
+  // A write failure here is caught (not thrown) so it can't strand this
+  // whole batch's sync_state rows on 'claimed' forever — leaving them
+  // claimed-but-unmarked just means the stale-claim window picks them back
+  // up on a later tick instead of wrongly recording 'complete'.
+  let writeFailed: string | null = null
+  if (allEvents.length) {
+    try {
+      const pitcherStubs = new Map<number, string>()
+      for (const e of allEvents) {
+        const pid = Number(e.pitcher_id)
+        if (pid && !pitcherStubs.has(pid)) pitcherStubs.set(pid, e.pitcher_name || `Player ${pid}`)
+      }
+      await admin.from('players').upsert(
+        Array.from(pitcherStubs, ([mlb_id, full_name]) => ({ mlb_id, full_name })),
+        { onConflict: 'mlb_id', ignoreDuplicates: true }
+      )
 
-        const { error } = await admin.from('player_home_run_events').upsert(upsertRows, { onConflict: 'game_pk,play_id' })
+      const upsertRows = allEvents.map(e => ({
+        game_pk: Number(e.game_pk), play_id: e.play_id, play_url: e.play_url || null,
+        season, game_date: e.game_date || null,
+        batter_id: Number(e.batter_id), batter_name: e.batter_name || null,
+        pitcher_id: Number(e.pitcher_id), pitcher_name: e.pitcher_name || null,
+        result: e.result || null,
+        exit_velocity: toNum(e.exit_velocity), launch_angle: toNum(e.launch_angle),
+        hr_distance: toNum(e.hr_distance), hr_trot: toNum(e.hr_trot),
+        hr_cat: e.hr_cat || null, hr_type: e.hr_type || null,
+        parks: Object.fromEntries(PARK_COLUMNS.map(p => [p, e[p] === '1'])),
+        last_synced_at: new Date().toISOString(),
+      }))
+
+      for (let i = 0; i < upsertRows.length; i += WRITE_CHUNK_SIZE) {
+        const { error } = await admin.from('player_home_run_events')
+          .upsert(upsertRows.slice(i, i + WRITE_CHUNK_SIZE), { onConflict: 'game_pk,play_id' })
         if (error) throw error
       }
-
-      results[idStr] = { rows: events.length }
-      await admin.from('sync_state').upsert(
-        { source: SOURCE, entity_type: ENTITY_TYPE, entity_id: idStr, season, status: 'complete', last_synced_at: new Date().toISOString() },
-        { onConflict: 'source,entity_type,entity_id,season' }
-      )
     } catch (e: any) {
-      console.error('[savant-hr-details] batter failed', idStr, e)
-      results[idStr] = { error: e?.message || String(e) }
-      await admin.from('sync_state').upsert(
-        { source: SOURCE, entity_type: ENTITY_TYPE, entity_id: idStr, season, status: 'error' },
-        { onConflict: 'source,entity_type,entity_id,season' }
-      )
+      console.error('[savant-hr-details] bulk write failed', e)
+      writeFailed = e?.message || String(e)
     }
   }
+
+  // Mark each player's own claim complete/error based on whether ITS fetch
+  // succeeded AND the shared bulk write above landed — a batter with zero
+  // home runs this recheck cycle legitimately returns an empty (successful)
+  // events array, but if the write step failed, nothing actually persisted
+  // for anyone in this batch, so no one should be marked 'complete'.
+  const results: Record<string, { rows: number } | { error: string }> = {}
+  const now = new Date().toISOString()
+  const completeRows: { source: string; entity_type: string; entity_id: string; season: number; status: string; last_synced_at: string }[] = []
+  const errorRows: { source: string; entity_type: string; entity_id: string; season: number; status: string }[] = []
+
+  if (writeFailed) {
+    for (const f of fetched) {
+      results[f.idStr] = { error: f.error ?? writeFailed }
+      errorRows.push({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: f.idStr, season, status: 'error' })
+    }
+    if (errorRows.length) await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
+    return { claimed: claimedIds.length, results }
+  }
+
+  for (const f of fetched) {
+    if (f.error) {
+      results[f.idStr] = { error: f.error }
+      errorRows.push({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: f.idStr, season, status: 'error' })
+    } else {
+      results[f.idStr] = { rows: f.events.length }
+      completeRows.push({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: f.idStr, season, status: 'complete', last_synced_at: now })
+    }
+  }
+
+  if (completeRows.length) await admin.from('sync_state').upsert(completeRows, { onConflict: 'source,entity_type,entity_id,season' })
+  if (errorRows.length) await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
 
   return { claimed: claimedIds.length, results }
 }
