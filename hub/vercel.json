@@ -54,7 +54,7 @@
     },
     {
       "path": "/api/cron/savant-sync-hr-details",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 10 * * *"
     }
   ]
 }
