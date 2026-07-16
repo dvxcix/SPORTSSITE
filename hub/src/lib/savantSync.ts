@@ -62,6 +62,22 @@ export const SAVANT_TIER_A: SavantCategory[] = [
     target: 'pitching',
     url: year => `https://baseballsavant.mlb.com/leaderboard/statcast?type=pitcher&year=${year}&position=&team=&min=1&sort=barrels_per_pa&sortDir=desc&csv=true`,
   },
+  // Home Runs leaderboard — actual vs. expected (xHR) home run counts,
+  // average trot time, and doubters/mostly-gone/no-doubter distance-tier
+  // breakdowns. Batter results are a player's own home runs; pitcher
+  // results are the home runs they allowed. Uses a `player` name column
+  // (not `last_name, first_name` like the other Tier A leaderboards) —
+  // toMetrics/upsertSavantCategory below check for either.
+  {
+    name: 'home_runs',
+    target: 'hitting',
+    url: year => `https://baseballsavant.mlb.com/leaderboard/home-runs?player_type=Batter&team=&min=0&cat=xhr&year=${year}&csv=true`,
+  },
+  {
+    name: 'home_runs',
+    target: 'pitching',
+    url: year => `https://baseballsavant.mlb.com/leaderboard/home-runs?player_type=Pitcher&team=&min=0&cat=xhr&year=${year}&csv=true`,
+  },
 ]
 
 // Minimal but correct CSV parser — handles quoted fields containing commas
@@ -149,7 +165,7 @@ export async function upsertSavantCategory(admin: AdminClient, category: SavantC
   // that player yet, and every statcast table FKs to players(mlb_id), so an
   // unrecognized id would fail the WHOLE batch upsert, not just that row.
   await admin.from('players').upsert(
-    withId.map(r => ({ mlb_id: Number(r.player_id), full_name: r['last_name, first_name'] || `Player ${r.player_id}` })),
+    withId.map(r => ({ mlb_id: Number(r.player_id), full_name: r['last_name, first_name'] || r.player || `Player ${r.player_id}` })),
     { onConflict: 'mlb_id', ignoreDuplicates: true }
   )
 
