@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/savant-sync-batted-ball",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/savant-sync-swing-take",
+      "schedule": "0 10 * * *"
     }
   ]
 }

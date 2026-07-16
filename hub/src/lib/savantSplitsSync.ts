@@ -109,6 +109,105 @@ export function daysAgoET(days: number): string {
   return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 }
 
+// Swing/Take (Batting Run Value) leaderboard — a different shape class from
+// bat-tracking/batted-ball: Savant has no `groupBy` here, so each of the 4
+// "Group Type" dimensions x their sub-types needs its own separate request
+// (confirmed live: the CSV always returns the SAME 5 metrics — runs_all +
+// the 4 attack-region splits — regardless of filter, EXCEPT when filtering
+// by Attack Region itself, which instead breaks out by pitch type). Real
+// param names/values confirmed from the page's own client bundle (not
+// guessed) since the visible dropdown labels don't match the URL params:
+// type=`Swing-Take` (hyphenated, not "Swing/Take") and type=`Bat-side` (not
+// "Bat/Throw Side"). No recency window — this leaderboard has no date-range
+// params to support one, only `year`.
+export type SwingTakeGroup = { groupType: string; subTypes: string[] }
+
+export const SWING_TAKE_GROUPS: SwingTakeGroup[] = [
+  {
+    groupType: 'Pitch Type',
+    subTypes: ['4-Seam Fastball', 'Changeup', 'Curveball', 'Cutter', 'Knuckleball', 'Screwball', 'Sinker', 'Slider', 'Slurve', 'Split-Finger', 'Sweeper'],
+  },
+  { groupType: 'Swing-Take', subTypes: ['Swing', 'Take'] },
+  { groupType: 'Attack Region', subTypes: ['Heart', 'Shadow', 'Chase', 'Waste'] },
+  { groupType: 'Bat-side', subTypes: ['R', 'L'] },
+]
+
+function swingTakeUrl(role: 'batter' | 'pitcher', groupType: string, subType: string, season: number): string {
+  const group = role === 'batter' ? 'Batter' : 'Pitcher'
+  return `https://baseballsavant.mlb.com/leaderboard/swing-take?year=${season}&team=&leverage=Neutral&group=${group}&type=${encodeURIComponent(groupType)}&sub_type=${encodeURIComponent(subType)}&min=10&csv=true`
+}
+
+// Runs a bounded number of jobs concurrently — 38 total requests here (2
+// roles x 19 sub-types across the 4 group dimensions), one per HTTP call,
+// batched so the cron stays well inside its 60s cap without firing all 38
+// at once.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const idx = next++
+      results[idx] = await fn(items[idx])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
+export async function syncSwingTake(admin: AdminClient, season: number) {
+  const seasonStart = seasonStartDate(season)
+  const today = todayET()
+
+  const jobs: { role: 'batter' | 'pitcher'; groupType: string; subType: string }[] = []
+  for (const role of ['batter', 'pitcher'] as const) {
+    for (const group of SWING_TAKE_GROUPS) {
+      for (const subType of group.subTypes) jobs.push({ role, groupType: group.groupType, subType })
+    }
+  }
+
+  const entries = await mapWithConcurrency(jobs, 6, async job => {
+    const key = `${job.role}_${job.groupType}_${job.subType}`
+    try {
+      const rows = await fetchSavantCsv(swingTakeUrl(job.role, job.groupType, job.subType, season))
+      const withId = rows.filter(r => r.player_id)
+      if (!withId.length) return [key, { rows: 0 }] as const
+
+      await admin.from('players').upsert(
+        withId.map(r => ({ mlb_id: Number(r.player_id), full_name: r['last_name, first_name'] || `Player ${r.player_id}` })),
+        { onConflict: 'mlb_id', ignoreDuplicates: true }
+      )
+
+      const dims = { group_type: job.groupType, sub_type: job.subType }
+      const dk = dimsKey(dims)
+      const upsertRows = withId.map(r => {
+        const metrics: Record<string, number | string | null> = {}
+        for (const [k, v] of Object.entries(r)) {
+          if (k === 'player_id' || k === 'last_name, first_name' || k === 'year' || v === '') continue
+          if (v === 'NaN') { metrics[k] = null; continue }
+          const n = Number(v)
+          metrics[k] = Number.isFinite(n) ? n : v
+        }
+        return {
+          mlb_id: Number(r.player_id), role: job.role, category: 'swing_take', window_type: 'season' as const,
+          date_start: seasonStart, date_end: today,
+          dims, dims_key: dk, metrics, last_synced_at: new Date().toISOString(),
+        }
+      })
+
+      const { error } = await admin.from('player_statcast_splits')
+        .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
+      if (error) throw error
+
+      return [key, { rows: upsertRows.length }] as const
+    } catch (e: any) {
+      console.error('[savant-swing-take] job failed', key, e)
+      return [key, { error: e?.message || String(e) }] as const
+    }
+  })
+
+  return { season, seasonStart, today, results: Object.fromEntries(entries) }
+}
+
 // The shared cron body for every split-and-recency category: pulls both
 // batter and pitcher roles for both a season-to-date window and a rolling
 // recency window (4 requests total). Each new category's cron route is
