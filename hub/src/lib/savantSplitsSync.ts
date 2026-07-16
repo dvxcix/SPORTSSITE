@@ -51,11 +51,15 @@ export async function syncSplitLeaderboard(
   const upsertRows = withId.map(r => {
     const dims: Record<string, string | number> = {}
     for (const col of board.dimColumns) dims[col] = r[col] ?? ''
-    const metrics: Record<string, number | string> = {}
+    const metrics: Record<string, number | string | null> = {}
     for (const [k, v] of Object.entries(r)) {
       if (k === 'id' || k === 'name' || board.dimColumns.includes(k) || v === '') continue
+      // Savant emits a literal "NaN" for metrics that don't apply to a given
+      // split (e.g. no squared-up rate on a swinging strike) — a real null,
+      // not a value worth keeping as the string "NaN".
+      if (v === 'NaN') { metrics[k] = null; continue }
       const n = Number(v)
-      metrics[k] = Number.isFinite(n) && !/[a-zA-Z]/.test(v) ? n : v
+      metrics[k] = Number.isFinite(n) ? n : v
     }
     return {
       mlb_id: Number(r.id), role, category: board.category, window_type: windowType,
