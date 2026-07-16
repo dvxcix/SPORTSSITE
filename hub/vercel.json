@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/savant-sync-batting-stance",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/savant-sync-swing-path",
+      "schedule": "0 10 * * *"
     }
   ]
 }

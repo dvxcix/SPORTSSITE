@@ -16,6 +16,10 @@ export type SplitLeaderboard = {
   // CSV columns that ARE the split dimensions, not metrics — everything
   // else (besides id/name) gets stored in `metrics`.
   dimColumns: string[]
+  // Some Savant leaderboards (batting stance, swing path/attack angle) are
+  // batter-only biomechanics pages with no pitcher variant at all — default
+  // both when omitted, override to ['batter'] for those.
+  roles?: readonly ('batter' | 'pitcher')[]
   url: (opts: { role: 'batter' | 'pitcher'; dateStart: string; dateEnd: string; season: number }) => string
 }
 
@@ -47,6 +51,26 @@ export const BATTED_BALL_PROFILE: SplitLeaderboard = {
     `&minSplit=1&gameType%5B%5D=R&dateStart=${dateStart}&dateEnd=${dateEnd}&batSide=&pitchHand=` +
     ALL_PITCH_TYPES.map(pt => `&pitchType%5B%5D=${pt}`).join('') +
     `&csv=true`,
+}
+
+// Swing Path / Attack Angle — batter-only (confirmed: this leaderboard's
+// own Type dropdown only offers Batters/Batters-Team/League, no Pitchers,
+// same as Batting Stance). Its `groupBy` param is a single pipe-delimited
+// STRING (confirmed: passing repeated `groupBy[]` params like bat-tracking/
+// batted-ball use gets a real 500 — "groupBy.split is not a function" —
+// this endpoint expects the exact `groupBy=a%7Cb%7Cc` shape the original
+// non-split /leaderboard/bat-tracking endpoint also uses), not the `split[]`
+// array style. Avg bat speed, swing tilt, attack angle/direction, ideal-
+// attack-angle rate, plate/batter intercept position.
+export const SWING_PATH_ATTACK_ANGLE: SplitLeaderboard = {
+  category: 'swing_path_attack_angle',
+  dimColumns: ['bat_side', 'pitch_hand', 'api_pitch_type'],
+  roles: ['batter'],
+  url: ({ dateStart, dateEnd, season }) =>
+    `https://baseballsavant.mlb.com/leaderboard/bat-tracking/swing-path-attack-angle?type=batter&gameType=Regular&team=&min=1` +
+    `&seasonStart=${season}&seasonEnd=${season}&dateStart=${dateStart}&dateEnd=${dateEnd}` +
+    `&batSide=&contactType=&isHardHit=&attackZone=&pitchHand=` +
+    `&groupBy=api_pitch_type_group03%7Cpitch_hand%7Cbat_side&minGroupSwings=1&csv=true`,
 }
 
 // Same confirmed pattern as bat-tracking/batted-ball: `split[]` returns
@@ -308,7 +332,7 @@ export async function syncBothWindows(admin: AdminClient, board: SplitLeaderboar
 
   const results: Record<string, { rows: number } | { error: string }> = {}
 
-  for (const role of ['batter', 'pitcher'] as const) {
+  for (const role of board.roles ?? (['batter', 'pitcher'] as const)) {
     for (const [windowType, dateStart, dateEnd] of [
       ['season', seasonStart, today],
       ['recency', recencyStart, today],
