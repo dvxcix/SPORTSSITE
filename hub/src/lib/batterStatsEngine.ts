@@ -18,6 +18,7 @@ export type PitchLogRow = {
   bat_speed: number | null; run_value: number | null; velocity: number | null; spin_rate: number | null
   stand: string | null; p_throws: string | null
   opponent_id: number; opponent_name: string; opponent_team: string | null; day_night: string | null
+  bb_type?: string | null
 }
 // Role-flavored aliases — same shape, just a clearer name at each call site.
 export type BatterPitchRow = PitchLogRow
