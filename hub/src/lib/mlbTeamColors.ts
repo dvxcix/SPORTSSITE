@@ -50,6 +50,27 @@ export function getTeamLogoUrl(abbr?: string | null): string | undefined {
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : undefined
 }
 
+// Full team names, keyed by abbreviation — the logo already carries the
+// team identity visually everywhere it's shown next to a name, so full
+// names (not the 2-3 letter code) read better as the accompanying text.
+export const MLB_TEAM_NAMES: Record<string, string> = {
+  ARI: 'Arizona Diamondbacks', AZ: 'Arizona Diamondbacks', ATL: 'Atlanta Braves',
+  BAL: 'Baltimore Orioles', BOS: 'Boston Red Sox', CHC: 'Chicago Cubs',
+  CWS: 'Chicago White Sox', CIN: 'Cincinnati Reds', CLE: 'Cleveland Guardians',
+  COL: 'Colorado Rockies', DET: 'Detroit Tigers', HOU: 'Houston Astros',
+  KC: 'Kansas City Royals', LAA: 'Los Angeles Angels', LAD: 'Los Angeles Dodgers',
+  MIA: 'Miami Marlins', MIL: 'Milwaukee Brewers', MIN: 'Minnesota Twins',
+  NYM: 'New York Mets', NYY: 'New York Yankees', ATH: 'Athletics', OAK: 'Athletics',
+  PHI: 'Philadelphia Phillies', PIT: 'Pittsburgh Pirates', SD: 'San Diego Padres',
+  SF: 'San Francisco Giants', SEA: 'Seattle Mariners', STL: 'St. Louis Cardinals',
+  TB: 'Tampa Bay Rays', TEX: 'Texas Rangers', TOR: 'Toronto Blue Jays', WSH: 'Washington Nationals',
+}
+
+export function getTeamName(abbr?: string | null): string {
+  if (!abbr) return ''
+  return MLB_TEAM_NAMES[abbr.toUpperCase()] ?? abbr
+}
+
 // Teams whose logo nearly disappears directly on a plain dark surface (e.g.
 // a modal header) — fine sitting on their own team-color backdrop elsewhere
 // in the app, just not on flat dark. A brightness-off-the-primary-color
