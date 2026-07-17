@@ -286,8 +286,12 @@ export function mlbGameLabel(game: MLBGame): string {
   }
   if (game.status.startTimeTBD) return 'TBD'
   try {
+    // No explicit timeZone — only ever called from 'use client' components
+    // (MLBGameCard, MLBScoreRow), so this already renders in whatever
+    // timezone the visitor's own browser/OS is set to. Do not call this
+    // from a server component or reintroduce a hardcoded zone here.
     const d = new Date(game.gameDate)
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET'
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   } catch {
     return game.status.detailedState
   }

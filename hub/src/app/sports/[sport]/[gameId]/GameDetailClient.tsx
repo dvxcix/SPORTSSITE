@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, TrendingUp, BarChart2, List } from 'lucide-react'
 import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@/lib/espn-api'
+import { getGameStatus } from '@/lib/espn-api'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
 
@@ -745,7 +746,7 @@ type Tab = 'summary' | 'plays' | 'boxscore' | 'picks'
 
 export function GameDetailClient({
   sport, gameId, sportLabel,
-  game, summary, gameStatus, teams,
+  game, summary, gameStatus: serverGameStatus, teams,
   communityPicks, initialReactions, isLoggedIn,
 }: {
   sport: SportKey
@@ -761,6 +762,13 @@ export function GameDetailClient({
 }) {
   const [tab, setTab] = useState<Tab>('summary')
   const [reactions, setReactions] = useState<Reactions>(initialReactions)
+  // serverGameStatus.label was formatted server-side (getGameStatus's
+  // toLocaleTimeString call runs on Vercel's own server clock/timezone when
+  // called there, not the visitor's) — recomputed here instead so a
+  // pre-game start time actually reflects whatever timezone this browser
+  // is in. state/isLive don't depend on formatting, so those are fine as
+  // the server computed them either way.
+  const gameStatus = game && serverGameStatus.state === 'pre' ? getGameStatus(game) : serverGameStatus
   const isLive = gameStatus.isLive
   const teamMap = buildTeamMap(summary, game)
   const athleteMap = buildAthleteMap(summary, teamMap)

@@ -885,8 +885,10 @@ export function AllStarClient() {
 
   const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
+  // No explicit timeZone — renders in the viewer's own browser/OS timezone
+  // instead of a hardcoded Eastern label.
   const gameDateLabel = data.gameDate
-    ? new Date(data.gameDate).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET'
+    ? new Date(data.gameDate).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : ''
 
   return (

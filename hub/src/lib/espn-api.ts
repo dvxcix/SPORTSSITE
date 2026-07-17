@@ -167,12 +167,20 @@ export async function getAllScoreboards(): Promise<Record<SportKey, ESPNGame[]>>
   ) as Record<SportKey, ESPNGame[]>
 }
 
+// Only ever called from 'use client' components (see GameCard.tsx,
+// MLBScoreRow.tsx) — no explicit timeZone means toLocaleTimeString already
+// renders in whatever timezone the visitor's own browser/OS is set to,
+// which is what every viewer should see a game's start time in, not a
+// hardcoded Eastern label. Do not call this from a server component: the
+// server has no idea what timezone the visitor is in, so the same call
+// there would render in the SERVER's timezone instead (see the comment on
+// sports/[sport]/[gameId]/page.tsx, which used to do exactly that).
 export function getGameStatus(game: ESPNGame): { state: 'pre' | 'in' | 'post'; label: string; isLive: boolean } {
   const state = game.status.type.state
   if (state === 'in') return { state: 'in', label: game.status.type.shortDetail || 'LIVE', isLive: true }
   if (state === 'post') return { state: 'post', label: 'Final', isLive: false }
   const date = new Date(game.date)
-  const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET'
+  const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   return { state: 'pre', label: timeStr, isLive: false }
 }
 

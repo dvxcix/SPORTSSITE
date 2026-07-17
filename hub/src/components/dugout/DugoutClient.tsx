@@ -2492,7 +2492,8 @@ export function DugoutClient({ date }: { date: string }) {
               {(isLive || isFin) && <span style={{ fontSize: 10, fontFamily: 'monospace' }}>{g.awayScore}–{g.homeScore}</span>}
               {!isLive && !isFin && g.gameDate && (
                 <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'monospace' }}>
-                  {new Date(g.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })}
+                  {/* No explicit timeZone — this game-tab time chip should read in whichever timezone the viewer's own browser is set to, not a hardcoded Eastern label */}
+                  {new Date(g.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 </span>
               )}
             </button>

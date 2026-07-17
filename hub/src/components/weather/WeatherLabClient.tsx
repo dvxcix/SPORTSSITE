@@ -380,7 +380,9 @@ function GameCard({ game }: { game: WeatherGame }) {
   // colors, unrelated to the wind read.
   const teamPrimary = getTeamColor(game.homeAbbr)
   const teamSecondary = getTeamSecondaryColor(game.homeAbbr)
-  const gameTime = new Date(game.gameDate).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '')
+  // No explicit timeZone — this displayed game-card time should read in the
+  // viewer's own browser/OS timezone, not a hardcoded Eastern label.
+  const gameTime = new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '')
   const dirs = h?.windDirDeg != null ? compassFromTo(h.windDirDeg) : null
   const logoUrl = getTeamLogoUrl(game.homeAbbr)
   const isSheltered = game.park.roof !== 'open'
