@@ -83,17 +83,30 @@ async function seedPendingCombos(admin: AdminClient, season: number) {
   // here fails outright (real Postgres error), and this destructured only
   // `data`, silently discarding `error` — so the seed step failed instantly
   // and quietly every single run, leaving sync_state completely empty.
-  const { data: rows, error } = await admin
-    .from('player_statcast_splits')
-    .select('mlb_id, dims')
-    .eq('category', 'pitch_arsenal_stats').eq('role', 'pitcher').eq('window_type', 'season')
+  //
+  // Paginated in pages of 1000 — confirmed live that an un-paginated select
+  // here silently truncates to PostgREST's default row cap (1000), which
+  // seeded only 1000 of the real 3,172 pitcher-side combos and left the
+  // rest never even queued.
+  const PAGE_SIZE = 1000
+  const rows: { mlb_id: number; dims: unknown }[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data: page, error } = await admin
+      .from('player_statcast_splits')
+      .select('mlb_id, dims')
+      .eq('category', 'pitch_arsenal_stats').eq('role', 'pitcher').eq('window_type', 'season')
+      .range(from, from + PAGE_SIZE - 1)
 
-  if (error) {
-    console.error('[savant-pitch-arsenal-details] seed query failed', error)
-    return
+    if (error) {
+      console.error('[savant-pitch-arsenal-details] seed query failed', error)
+      return
+    }
+    if (!page?.length) break
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
   }
 
-  const combos = (rows ?? [])
+  const combos = rows
     .map(r => ({ mlbId: r.mlb_id as number, pitchType: (r.dims as any)?.pitch_type as string | undefined }))
     .filter((c): c is { mlbId: number; pitchType: string } => !!c.pitchType)
 

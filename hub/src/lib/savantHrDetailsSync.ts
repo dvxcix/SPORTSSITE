@@ -83,13 +83,31 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
 // re-deriving the qualifying-player list from scratch — `ignoreDuplicates`
 // means a batter already seeded (mid-progress or complete) is left alone.
 async function seedPendingBatters(admin: AdminClient, season: number) {
-  const { data: rows } = await admin
-    .from('player_statcast_hitting_season')
-    .select('mlb_id, metrics')
-    .eq('season', season)
-    .eq('category', 'home_runs')
+  // Paginated in pages of 1000 — an un-paginated select silently truncates
+  // to PostgREST's default row cap (confirmed live elsewhere, in the
+  // pitch-arsenal-details seed query, where it silently dropped ~2,170 of
+  // 3,172 real rows). Currently under 1000 qualifying batters, but this
+  // would fail the exact same silent way once that count grows past it.
+  const PAGE_SIZE = 1000
+  const rows: { mlb_id: number; metrics: unknown }[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data: page, error } = await admin
+      .from('player_statcast_hitting_season')
+      .select('mlb_id, metrics')
+      .eq('season', season)
+      .eq('category', 'home_runs')
+      .range(from, from + PAGE_SIZE - 1)
 
-  const qualifying = (rows ?? []).filter(r => Number((r.metrics as any)?.hr_total) > 0)
+    if (error) {
+      console.error('[savant-hr-details] seed query failed', error)
+      return
+    }
+    if (!page?.length) break
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
+  }
+
+  const qualifying = rows.filter(r => Number((r.metrics as any)?.hr_total) > 0)
   if (!qualifying.length) return
 
   await admin.from('sync_state').upsert(
