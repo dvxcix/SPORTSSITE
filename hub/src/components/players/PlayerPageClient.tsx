@@ -6,6 +6,8 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
+import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
+import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
 
 type SplitRow = { dims: Record<string, any>; metrics: Record<string, any> }
 type SplitWindow = { season: SplitRow[]; recency: SplitRow[] }
@@ -47,13 +49,13 @@ const p1 = (v: unknown) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—')
 const frac1 = (v: unknown) => (typeof v === 'number' ? `${(v * 100).toFixed(1)}%` : '—')
 const i0 = (v: unknown) => (typeof v === 'number' ? String(Math.round(v)) : '—')
 
-const cardStyle: React.CSSProperties = {
+export const cardStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   borderRadius: 14,
   padding: 16,
   background: 'var(--surface)',
 }
-const sectionTitleStyle: React.CSSProperties = {
+export const sectionTitleStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 800,
   color: 'var(--text-2)',
@@ -65,7 +67,7 @@ const sectionTitleStyle: React.CSSProperties = {
   gap: 8,
   flexWrap: 'wrap',
 }
-const windowTag: React.CSSProperties = {
+export const windowTag: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 700,
   color: 'var(--text-3)',
@@ -77,7 +79,7 @@ const windowTag: React.CSSProperties = {
   padding: '2px 6px',
 }
 
-function StatGrid({ pairs }: { pairs: [string, string][] }) {
+export function StatGrid({ pairs }: { pairs: [string, string][] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 }}>
       {pairs.map(([label, value]) => (
@@ -159,7 +161,7 @@ function DimCell({ dimKey, value }: { dimKey: string; value: string }) {
   return <span>{value}</span>
 }
 
-function ToggleBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+export function ToggleBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -174,7 +176,7 @@ function ToggleBtn({ active, onClick, children }: { active: boolean; onClick: ()
     </button>
   )
 }
-function DimChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+export function DimChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -528,12 +530,23 @@ function BattingStanceCard({ splitWindow }: { splitWindow: SplitWindow }) {
 export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   const [data, setData] = useState<PlayerData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Loaded separately from the rest of the page — this payload (every pitch
+  // thrown/seen this season) is far heavier than everything else combined,
+  // so it shouldn't block the initial render.
+  const [pitchLog, setPitchLog] = useState<{ pitcherRows: PitcherPitchRow[]; batterRows: BatterPitchRow[] } | null>(null)
 
   useEffect(() => {
     fetch(`/api/players/${mlbId}`)
       .then(r => r.json())
       .then(d => { if (d.error) setError(d.error); else setData(d) })
       .catch(() => setError('Failed to load player data'))
+  }, [mlbId])
+
+  useEffect(() => {
+    fetch(`/api/players/${mlbId}/pitch-log`)
+      .then(r => r.json())
+      .then(d => setPitchLog({ pitcherRows: d.pitcherRows ?? [], batterRows: d.batterRows ?? [] }))
+      .catch(() => setPitchLog({ pitcherRows: [], batterRows: [] }))
   }, [mlbId])
 
   if (error) return <div style={{ padding: 24, color: 'var(--red)' }}>{error}</div>
@@ -642,6 +655,12 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
           ].filter(Boolean)) as [string, string][]} />
         </div>
       )}
+
+      {/* Zone profile heatmap (pitcher) + full custom matchup explorer
+          (batter) — built directly off the raw pitch log, loaded
+          separately from the rest of this page (see pitchLog state) */}
+      {isPitcher && pitchLog && pitchLog.pitcherRows.length > 0 && <PitchZoneHeatmap rows={pitchLog.pitcherRows} />}
+      {isBatter && pitchLog && pitchLog.batterRows.length > 0 && <BatterMatchupExplorer rows={pitchLog.batterRows} />}
 
       {/* Fully customizable split explorers — pitch type / hand / contact
           type breakdowns, season or recency, user-picked grouping */}

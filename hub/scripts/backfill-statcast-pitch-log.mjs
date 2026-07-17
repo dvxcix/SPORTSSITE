@@ -173,6 +173,8 @@ async function syncPitchLogForDate(date) {
     launch_speed: numOrNull(r.launch_speed), launch_angle: numOrNull(r.launch_angle),
     xwoba: numOrNull(r.estimated_woba_using_speedangle),
     bat_speed: numOrNull(r.bat_speed),
+    plate_x: numOrNull(r.plate_x), plate_z: numOrNull(r.plate_z),
+    stand: r.stand || null, p_throws: r.p_throws || null,
     run_value: numOrNull(r.delta_run_exp),
     raw: r,
   }))

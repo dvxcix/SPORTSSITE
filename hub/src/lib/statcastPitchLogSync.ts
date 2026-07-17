@@ -117,6 +117,8 @@ export async function syncPitchLogForDate(admin: AdminClient, date: string, seas
     launch_speed: numOrNull(r.launch_speed), launch_angle: numOrNull(r.launch_angle),
     xwoba: numOrNull(r.estimated_woba_using_speedangle),
     bat_speed: numOrNull(r.bat_speed),
+    plate_x: numOrNull(r.plate_x), plate_z: numOrNull(r.plate_z),
+    stand: r.stand || null, p_throws: r.p_throws || null,
     // Closest available per-pitch "run value" — Savant's own change in win/
     // run expectancy attributable to this pitch. Not literally labeled
     // run_value in the CSV (that's `delta_run_exp`), but the same concept
