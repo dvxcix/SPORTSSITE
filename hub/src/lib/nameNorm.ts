@@ -43,6 +43,7 @@ const NICKNAME_GROUPS: string[][] = [
   ['fernando', 'nando'], ['ricky', 'richard', 'rick', 'ricardo'],
   ['tobias', 'toby'], ['isaac', 'ike'], ['gus', 'gustavo', 'augustus'],
   ['johnny', 'jonathan', 'john', 'jon'],
+  ['donnie', 'donovan', 'don', 'donald'],
 ]
 const NICKNAME_CANONICAL: Record<string, string> = {}
 for (const group of NICKNAME_GROUPS) {
