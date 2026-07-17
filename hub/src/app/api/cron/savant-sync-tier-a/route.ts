@@ -29,28 +29,38 @@ export async function GET(req: Request) {
   const results: Record<string, { rows: number } | { skipped: true } | { error: string }> = {}
 
   for (const category of SAVANT_TIER_A) {
+    // Keyed by name+target, not just name — home_runs and
+    // statcast_quality_of_contact each have separate hitting/pitching
+    // SAVANT_TIER_A entries sharing the same `name`. Keying by name alone
+    // meant the hitting entry's freshly-set timestamp made the pitching
+    // entry (processed moments later, same invocation) look "already
+    // synced" and skip itself every single run — confirmed live:
+    // player_statcast_pitching_season stayed empty for both categories
+    // even after real production runs.
+    const resultKey = `${category.name}:${category.target}`
+    const entityId = resultKey
     const { data: job } = await admin
       .from('sync_state')
       .select('last_synced_at')
-      .eq('source', 'savant_csv').eq('entity_type', 'savant_category').eq('entity_id', category.name).eq('season', season)
+      .eq('source', 'savant_csv').eq('entity_type', 'savant_category').eq('entity_id', entityId).eq('season', season)
       .maybeSingle()
 
     if (job?.last_synced_at && new Date(job.last_synced_at).getTime() > staleBefore) {
-      results[category.name] = { skipped: true }
+      results[resultKey] = { skipped: true }
       continue
     }
 
     try {
-      results[category.name] = await upsertSavantCategory(admin, category, season)
+      results[resultKey] = await upsertSavantCategory(admin, category, season)
       await admin.from('sync_state').upsert({
-        source: 'savant_csv', entity_type: 'savant_category', entity_id: category.name, season,
+        source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season,
         status: 'statcast_complete', last_synced_at: new Date().toISOString(),
       }, { onConflict: 'source,entity_type,entity_id,season' })
     } catch (e: any) {
-      console.error('[savant-sync-tier-a] category failed', category.name, e)
-      results[category.name] = { error: e?.message || String(e) }
+      console.error('[savant-sync-tier-a] category failed', resultKey, e)
+      results[resultKey] = { error: e?.message || String(e) }
       await admin.from('sync_state').upsert({
-        source: 'savant_csv', entity_type: 'savant_category', entity_id: category.name, season, status: 'error',
+        source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
       }, { onConflict: 'source,entity_type,entity_id,season' })
     }
   }

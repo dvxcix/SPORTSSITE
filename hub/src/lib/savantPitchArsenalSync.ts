@@ -77,10 +77,21 @@ function parseCombo(entityId: string): { mlbId: number; pitchType: string } {
 // combo list rather than re-deriving it. `ignoreDuplicates` leaves an
 // already-seeded combo (mid-progress or complete) untouched.
 async function seedPendingCombos(admin: AdminClient, season: number) {
-  const { data: rows } = await admin
+  // player_statcast_splits has no `season` column — season is implicit via
+  // date_start/date_end, not a literal column (unlike
+  // player_statcast_hitting_season/pitching_season). Filtering on `.eq('season', ...)`
+  // here fails outright (real Postgres error), and this destructured only
+  // `data`, silently discarding `error` — so the seed step failed instantly
+  // and quietly every single run, leaving sync_state completely empty.
+  const { data: rows, error } = await admin
     .from('player_statcast_splits')
     .select('mlb_id, dims')
-    .eq('season', season).eq('category', 'pitch_arsenal_stats').eq('role', 'pitcher').eq('window_type', 'season')
+    .eq('category', 'pitch_arsenal_stats').eq('role', 'pitcher').eq('window_type', 'season')
+
+  if (error) {
+    console.error('[savant-pitch-arsenal-details] seed query failed', error)
+    return
+  }
 
   const combos = (rows ?? [])
     .map(r => ({ mlbId: r.mlb_id as number, pitchType: (r.dims as any)?.pitch_type as string | undefined }))
