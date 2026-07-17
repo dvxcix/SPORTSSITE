@@ -27,6 +27,33 @@ function aggregateOverall(rows: SplitRow[], weightKey: string, rateKeys: string[
 
 const BAT_TRACKING_RATE_KEYS = ['avg_bat_speed', 'hard_swing_rate', 'squared_up_per_swing', 'blast_per_swing', 'whiff_per_swing', 'swing_length']
 
+// League-wide value pools for the Quality of Contact card's heat-coloring —
+// that card shows one player's single season number per metric, so unlike
+// every other heat-mapped table on this page (which colors relative to the
+// other rows already on screen) there's no natural comparison pool without
+// pulling every other qualified player's same-season value for that metric.
+const QOC_POOL_FIELDS = {
+  exit_velocity_barrels: ['exit_velocity_avg', 'barrel_batted_rate', 'hard_hit_percent'],
+  expected_stats: ['xba', 'xslg', 'xwoba'],
+  home_runs: ['hr_total', 'xhr'],
+  statcast_quality_of_contact: ['max_hit_speed', 'max_distance'],
+} as const
+
+async function fetchLeaguePool(admin: AdminClient, table: 'player_statcast_hitting_season' | 'player_statcast_pitching_season', season: number): Promise<Record<string, number[]>> {
+  const pools: Record<string, number[]> = {}
+  await Promise.all(Object.entries(QOC_POOL_FIELDS).map(async ([category, fields]) => {
+    const { data } = await admin.from(table).select('metrics').eq('season', season).eq('category', category)
+    for (const f of fields) pools[f] = []
+    for (const row of data ?? []) {
+      for (const f of fields) {
+        const v = (row.metrics as any)?.[f]
+        if (typeof v === 'number' && Number.isFinite(v)) pools[f].push(v)
+      }
+    }
+  }))
+  return pools
+}
+
 async function fetchSplitCategory(admin: AdminClient, mlbId: number, role: 'batter' | 'pitcher', category: string, windowType: 'season' | 'recency') {
   const { data } = await admin
     .from('player_statcast_splits')
@@ -75,6 +102,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     hrHitRes, hrAllowedRes,
     swingTakeBatRes, swingTakePitRes,
     stanceSeasonRes, stanceRecencyRes,
+    hittingPool, pitchingPool,
   ] = await Promise.all([
     admin.from('players').select('*').eq('mlb_id', mlbId).maybeSingle(),
     admin.from('player_season_stats_batting').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').maybeSingle(),
@@ -93,6 +121,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'pitcher').eq('category', 'swing_take').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'batting_stance').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'batting_stance').eq('window_type', 'recency'),
+    fetchLeaguePool(admin, 'player_statcast_hitting_season', season),
+    fetchLeaguePool(admin, 'player_statcast_pitching_season', season),
   ])
 
   if (!playerRes.data) {
@@ -192,5 +222,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       hit: hrHit.map(r => ({ ...r, opponent_team: opponentTeams[r.pitcher_id] ?? null })),
       allowed: hrAllowed.map(r => ({ ...r, opponent_team: opponentTeams[r.batter_id] ?? null })),
     },
+    leaguePools: { hitting: hittingPool, pitching: pitchingPool },
   })
 }

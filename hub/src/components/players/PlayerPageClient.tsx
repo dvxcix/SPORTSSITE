@@ -39,6 +39,7 @@ type PlayerData = {
   swingTake: Record<string, SplitRow[]>
   battingStance: SplitWindow | null
   homeRuns: { hit: Record<string, any>[]; allowed: Record<string, any>[] }
+  leaguePools: { hitting: Record<string, number[]>; pitching: Record<string, number[]> }
 }
 
 // ── formatting — each stat family gets the precision it actually reads
@@ -80,11 +81,11 @@ export const windowTag: React.CSSProperties = {
   padding: '2px 6px',
 }
 
-export function StatGrid({ pairs }: { pairs: [string, string][] }) {
+export function StatGrid({ pairs }: { pairs: [string, string, React.CSSProperties?][] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 }}>
-      {pairs.map(([label, value]) => (
-        <div key={label}>
+      {pairs.map(([label, value, heatStyle]) => (
+        <div key={label} style={{ padding: heatStyle ? '6px 8px' : 0, borderRadius: 8, ...heatStyle }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-1)' }}>{value}</div>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
         </div>
@@ -586,6 +587,15 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   const pitHr = statcastSeason.pitching.home_runs
   const pitQoc = statcastSeason.pitching.statcast_quality_of_contact
 
+  // Heat-color a Quality of Contact stat against every other qualified
+  // player's same-season value for that exact field — dir flips per card:
+  // high exit velo/barrel%/xwOBA etc. is good for a batter (hitting pool,
+  // 'hi'), but the same fields are good for a pitcher only when LOW, since
+  // that card is what he allows (pitching pool, 'lo').
+  const pools = data.leaguePools ?? { hitting: {}, pitching: {} }
+  const qh = (value: number | null | undefined, field: string, role: 'hitting' | 'pitching', dir: 'hi' | 'lo') =>
+    typeof value === 'number' ? heat(value, pools[role][field] ?? [], dir) : undefined
+
   return (
     <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 16px 64px', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
@@ -649,32 +659,43 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       {isBatter && form.batter && <FormComparisonCard role="batter" form={form.batter} />}
       {isPitcher && form.pitcher && <FormComparisonCard role="pitcher" form={form.pitcher} />}
 
-      {/* Quality of contact snapshot */}
+      {/* Quality of contact snapshot — heat-colored against every other
+          qualified player's same-season value (green = good for the batter) */}
       {isBatter && (evb || xs || bbp || hitHr || qoc) && (
         <div style={cardStyle}>
           <div style={sectionTitleStyle}>Quality of Contact<span style={windowTag}>{data.season} Season</span></div>
           <StatGrid pairs={([
-            evb && ['Exit Velo', d1(evb.exit_velocity_avg)],
-            evb && ['Barrel %', p1(evb.barrel_batted_rate)],
-            evb && ['Hard Hit %', p1(evb.hard_hit_percent)],
-            xs && ['xBA', r3(xs.xba)], xs && ['xSLG', r3(xs.xslg)], xs && ['xwOBA', r3(xs.xwoba)],
-            hitHr && ['HR', i0(hitHr.hr_total)], hitHr && ['xHR', d1(hitHr.xhr)],
-            qoc && ['Max EV', d1(qoc.max_hit_speed)], qoc && ['Max Dist', i0(qoc.max_distance)],
+            evb && ['Exit Velo', d1(evb.exit_velocity_avg), qh(evb.exit_velocity_avg, 'exit_velocity_avg', 'hitting', 'hi')],
+            evb && ['Barrel %', p1(evb.barrel_batted_rate), qh(evb.barrel_batted_rate, 'barrel_batted_rate', 'hitting', 'hi')],
+            evb && ['Hard Hit %', p1(evb.hard_hit_percent), qh(evb.hard_hit_percent, 'hard_hit_percent', 'hitting', 'hi')],
+            xs && ['xBA', r3(xs.xba), qh(xs.xba, 'xba', 'hitting', 'hi')],
+            xs && ['xSLG', r3(xs.xslg), qh(xs.xslg, 'xslg', 'hitting', 'hi')],
+            xs && ['xwOBA', r3(xs.xwoba), qh(xs.xwoba, 'xwoba', 'hitting', 'hi')],
+            hitHr && ['HR', i0(hitHr.hr_total), qh(hitHr.hr_total, 'hr_total', 'hitting', 'hi')],
+            hitHr && ['xHR', d1(hitHr.xhr), qh(hitHr.xhr, 'xhr', 'hitting', 'hi')],
+            qoc && ['Max EV', d1(qoc.max_hit_speed), qh(qoc.max_hit_speed, 'max_hit_speed', 'hitting', 'hi')],
+            qoc && ['Max Dist', i0(qoc.max_distance), qh(qoc.max_distance, 'max_distance', 'hitting', 'hi')],
+            // Pull%/FB% are batted-ball style, not a performance rate with a
+            // universal "good" direction — left uncolored rather than
+            // implying a value judgment that doesn't apply.
             bbp && ['Pull %', p1(bbp.pull_percent)], bbp && ['FB %', p1(bbp.flyballs_percent)],
-          ].filter(Boolean)) as [string, string][]} />
+          ].filter(Boolean)) as [string, string, React.CSSProperties?][]} />
         </div>
       )}
       {isPitcher && (pitEvb || pitXs || pitHr || pitQoc) && (
         <div style={cardStyle}>
           <div style={sectionTitleStyle}>Quality of Contact Allowed<span style={windowTag}>{data.season} Season</span></div>
           <StatGrid pairs={([
-            pitEvb && ['Exit Velo', d1(pitEvb.exit_velocity_avg)],
-            pitEvb && ['Barrel %', p1(pitEvb.barrel_batted_rate)],
-            pitEvb && ['Hard Hit %', p1(pitEvb.hard_hit_percent)],
-            pitXs && ['xBA', r3(pitXs.xba)], pitXs && ['xSLG', r3(pitXs.xslg)], pitXs && ['xwOBA', r3(pitXs.xwoba)],
-            pitHr && ['HR', i0(pitHr.hr_total)], pitHr && ['xHR', d1(pitHr.xhr)],
-            pitQoc && ['Max EV', d1(pitQoc.max_hit_speed)],
-          ].filter(Boolean)) as [string, string][]} />
+            pitEvb && ['Exit Velo', d1(pitEvb.exit_velocity_avg), qh(pitEvb.exit_velocity_avg, 'exit_velocity_avg', 'pitching', 'lo')],
+            pitEvb && ['Barrel %', p1(pitEvb.barrel_batted_rate), qh(pitEvb.barrel_batted_rate, 'barrel_batted_rate', 'pitching', 'lo')],
+            pitEvb && ['Hard Hit %', p1(pitEvb.hard_hit_percent), qh(pitEvb.hard_hit_percent, 'hard_hit_percent', 'pitching', 'lo')],
+            pitXs && ['xBA', r3(pitXs.xba), qh(pitXs.xba, 'xba', 'pitching', 'lo')],
+            pitXs && ['xSLG', r3(pitXs.xslg), qh(pitXs.xslg, 'xslg', 'pitching', 'lo')],
+            pitXs && ['xwOBA', r3(pitXs.xwoba), qh(pitXs.xwoba, 'xwoba', 'pitching', 'lo')],
+            pitHr && ['HR', i0(pitHr.hr_total), qh(pitHr.hr_total, 'hr_total', 'pitching', 'lo')],
+            pitHr && ['xHR', d1(pitHr.xhr), qh(pitHr.xhr, 'xhr', 'pitching', 'lo')],
+            pitQoc && ['Max EV', d1(pitQoc.max_hit_speed), qh(pitQoc.max_hit_speed, 'max_hit_speed', 'pitching', 'lo')],
+          ].filter(Boolean)) as [string, string, React.CSSProperties?][]} />
         </div>
       )}
 

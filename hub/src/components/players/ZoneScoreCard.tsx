@@ -92,9 +92,6 @@ export function ZoneScoreCard({ pageRole, myName, myRows, opponentId, opponentNa
         Zone Score
         <span style={windowTag}>{batterLabel} vs {pitcherLabel}</span>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 14, lineHeight: 1.5 }}>
-        {batterLabel}&apos;s own zone tendencies + {pitcherLabel}&apos;s own zone tendencies, combined per zone — green favors {pageRole === 'batter' ? batterLabel : pitcherLabel}. A simplified estimate from each player&apos;s season averages, not a full projection model — check the sample counts (batter · pitcher pitches) before trusting a thin cell.
-      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 72px)', gridTemplateRows: 'repeat(3, 72px)', gap: 3 }}>
         {cells.map(c => (
           <div
