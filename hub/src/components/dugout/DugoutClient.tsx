@@ -2224,81 +2224,89 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       title={title} w={w} sortKey={sortKey} sortState={sort} onSort={toggleSort}
     />
 
+  // Shared between the real <thead> and the repeated header row dropped in
+  // between the home and away sections — a 50+ column header scrolled out
+  // of view above the home lineup was otherwise unreadable by the time you
+  // reached the away team's rows further down the same table.
+  const headerCells = (
+    <>
+      <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" sortState={sort} onSort={toggleSort} />
+      {H('pk', 'Community HR pick count', 34, 'pk')}
+      <th style={SDIV_H} />
+      {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
+      {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
+      {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
+      {H('div', 'FD−CZ implied diff ×100', 36, 'div')}
+      {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
+      {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
+      {H('HR%', 'Anytime HR historical rate', 36, 'sa_pct')}
+      <th style={SDIV_H} />
+      {BL('fanduel', 'HR', 'FanDuel Anytime HR', 50, 'sa_fd')}
+      {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
+      {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
+      {BL('betrivers', 'HR', 'BetRivers Anytime HR', 50, 'sa_br')}
+      {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
+      {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
+      {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
+      {H('Laser', 'Laser market price', 50, 'laser105_fd')}
+      {H('Moon', 'Moonshot market price', 50, 'moonshot_fd')}
+      {H('1stPA', '1st Plate Appearance HR price', 50, 'pa1_fd')}
+      {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
+      {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi')}
+      {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
+      {H('HR÷RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
+      {H('HR÷HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr')}
+      {H('HR÷TB4', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
+      {H('HR÷TB5', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
+      {H('HR÷2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
+      <th style={SDIV_H} />
+      {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
+      {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
+      {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
+      {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd')}
+      {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd')}
+      {BL('fanduel', 'RUN', '1+ Run Scored (FD)', 44, 'runs_fd')}
+      <th style={SDIV_H} />
+      {H('paper', 'Composite Statcast score', 46, 'paper')}
+      {H('bk·rk', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
+      {H('pp·rk', 'Statcast rank', 30, 'pp_rk')}
+      {H('mm', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
+      <th style={SDIV_H} />
+      {H('BSpd', 'Season bat speed', 38, 's_spd')}
+      {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
+      {H('ΔSpd', 'Recent−season bat speed', 34, 'd_spd')}
+      {H('Timing', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
+      {H('R·Timing', 'Recent timing', 36, 'r_timing')}
+      {H('Miss', 'Season miss distance', 34, 's_miss')}
+      {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
+      {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
+      {H('Sq', 'Squared-up per swing', 36, 's_sq')}
+      {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
+      {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
+      {H('Blast', 'Blast per swing', 34, 's_bla')}
+      {H('R·Bla', 'Recent blast per swing', 34, 'r_bla')}
+      {H('SwLen', 'Swing length', 36, 's_len')}
+      {H('Atk°', 'Attack angle', 34, 's_atk')}
+      {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
+      {H('IdlAA', 'Ideal attack angle rate', 34, 's_iaa')}
+      {H('Tilt', 'Swing tilt', 32, 's_tlt')}
+      <th style={SDIV_H} />
+      {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
+      {H('HH%', 'Hard hit rate', 34, 's_hh')}
+      {H('PullAir', 'Pull air rate', 36, 's_pa')}
+      {H('FB%', 'Flyball rate', 34, 's_fb')}
+      {H('EV', 'Exit velocity', 34, 's_ev')}
+      {H('LA', 'Launch angle', 32, 's_la')}
+      {H('xHR', 'Expected HR (season)', 34, 's_xhr')}
+      {H('HR', 'Season HR total', 30, 's_hr')}
+    </>
+  )
+
   return (
     <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8 }}>
       <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
         <thead>
-          <tr>
-            <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" sortState={sort} onSort={toggleSort} />
-            {H('pk', 'Community HR pick count', 34, 'pk')}
-            <th style={SDIV_H} />
-            {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
-            {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
-            {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
-            {H('div', 'FD−CZ implied diff ×100', 36, 'div')}
-            {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
-            {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
-            {H('HR%', 'Anytime HR historical rate', 36, 'sa_pct')}
-            <th style={SDIV_H} />
-            {BL('fanduel', 'HR', 'FanDuel Anytime HR', 50, 'sa_fd')}
-            {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
-            {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
-            {BL('betrivers', 'HR', 'BetRivers Anytime HR', 50, 'sa_br')}
-            {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
-            {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
-            {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
-            {H('Laser', 'Laser market price', 50, 'laser105_fd')}
-            {H('Moon', 'Moonshot market price', 50, 'moonshot_fd')}
-            {H('1stPA', '1st Plate Appearance HR price', 50, 'pa1_fd')}
-            {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-            {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi')}
-            {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
-            {H('HR÷RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
-            {H('HR÷HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr')}
-            {H('HR÷TB4', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
-            {H('HR÷TB5', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
-            {H('HR÷2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
-            <th style={SDIV_H} />
-            {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
-            {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
-            {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
-            {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd')}
-            {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd')}
-            {BL('fanduel', 'RUN', '1+ Run Scored (FD)', 44, 'runs_fd')}
-            <th style={SDIV_H} />
-            {H('paper', 'Composite Statcast score', 46, 'paper')}
-            {H('bk·rk', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
-            {H('pp·rk', 'Statcast rank', 30, 'pp_rk')}
-            {H('mm', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
-            <th style={SDIV_H} />
-            {H('BSpd', 'Season bat speed', 38, 's_spd')}
-            {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
-            {H('ΔSpd', 'Recent−season bat speed', 34, 'd_spd')}
-            {H('Timing', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
-            {H('R·Timing', 'Recent timing', 36, 'r_timing')}
-            {H('Miss', 'Season miss distance', 34, 's_miss')}
-            {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
-            {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
-            {H('Sq', 'Squared-up per swing', 36, 's_sq')}
-            {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
-            {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
-            {H('Blast', 'Blast per swing', 34, 's_bla')}
-            {H('R·Bla', 'Recent blast per swing', 34, 'r_bla')}
-            {H('SwLen', 'Swing length', 36, 's_len')}
-            {H('Atk°', 'Attack angle', 34, 's_atk')}
-            {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
-            {H('IdlAA', 'Ideal attack angle rate', 34, 's_iaa')}
-            {H('Tilt', 'Swing tilt', 32, 's_tlt')}
-            <th style={SDIV_H} />
-            {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
-            {H('HH%', 'Hard hit rate', 34, 's_hh')}
-            {H('PullAir', 'Pull air rate', 36, 's_pa')}
-            {H('FB%', 'Flyball rate', 34, 's_fb')}
-            {H('EV', 'Exit velocity', 34, 's_ev')}
-            {H('LA', 'Launch angle', 32, 's_la')}
-            {H('xHR', 'Expected HR (season)', 34, 's_xhr')}
-            {H('HR', 'Season HR total', 30, 's_hr')}
-          </tr>
+          <tr>{headerCells}</tr>
         </thead>
         <tbody>
           {/* Home */}
@@ -2329,6 +2337,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
               </React.Fragment>
             )
           })}
+
+          {/* Repeated column header — the away team's rows can be 15-20+ rows
+              below the real <thead>, and this table runs 50+ columns wide,
+              so the away section gets its own reference row instead of
+              relying on a header the reader has long scrolled past. */}
+          <tr>{headerCells}</tr>
 
           {/* Away */}
           <tr>
