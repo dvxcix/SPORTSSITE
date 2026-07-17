@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   const { data: notification } = await admin
     .from('notifications')
-    .select('id, user_id, type, message, link, actor:users!notifications_actor_id_fkey(username, display_name)')
+    .select('id, user_id, type, message, link, data, actor:users!notifications_actor_id_fkey(username, display_name)')
     .eq('id', notificationId)
     .maybeSingle()
   if (!notification) return NextResponse.json({ ok: true, skipped: 'notification not found' })
@@ -63,6 +63,10 @@ export async function POST(request: Request) {
   const actorName = actor?.display_name || actor?.username
   const text = (actorName ? `${actorName} ` : '') + (notification.message || 'sent you a notification')
   const url = notification.link ? `https://www.slipsurge.com${notification.link}` : 'https://www.slipsurge.com/notifications'
+  // Same rich image NotificationsList/push already show (player headshot,
+  // team logo — see notifications.data) — omitted entirely when absent,
+  // same as every notification type before this.
+  const richImage = (notification.data as any)?.avatar_url as string | undefined
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -81,6 +85,7 @@ export async function POST(request: Request) {
 <div style="font-size:18px;font-weight:900;color:#F5F5F5;letter-spacing:-0.02em;">Slip<span style="color:#B4FF4D;">Surge</span></div>
 </td></tr>
 <tr><td style="padding:28px 32px 8px;text-align:center;">
+${richImage ? `<img src="${richImage}" width="56" height="56" style="display:block;margin:0 auto 14px;border-radius:50%;object-fit:cover;" alt="" />` : ''}
 <p style="margin:0;font-size:15px;line-height:1.6;color:#F5F5F5;">${text}</p>
 </td></tr>
 <tr><td style="padding:16px 32px 32px;text-align:center;">

@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   const { data: notification } = await admin
     .from('notifications')
-    .select('id, user_id, type, message, link, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
+    .select('id, user_id, type, message, link, data, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
     .eq('id', notificationId)
     .maybeSingle()
   if (!notification) return NextResponse.json({ ok: true, skipped: 'notification not found' })
@@ -66,10 +66,16 @@ export async function POST(request: Request) {
 
   const actor = notification.actor as any
   const actorName = actor?.display_name || actor?.username
+  // Notifications that carry a rich image (a player headshot, a team logo —
+  // see notifications.data across the various insert sites) show it as the
+  // OS push icon too — the same image NotificationsList already renders as
+  // the main circle in-app. Falls back to the static app icon exactly as
+  // before for every notification type that doesn't set data.avatar_url.
+  const richImage = (notification.data as any)?.avatar_url
   const payload = JSON.stringify({
     title: 'SlipSurge',
     body: (actorName ? `${actorName} ` : '') + (notification.message || 'sent you a notification'),
-    icon: '/icon-192.png',
+    icon: richImage || '/icon-192.png',
     url: notification.link || '/notifications',
   })
 

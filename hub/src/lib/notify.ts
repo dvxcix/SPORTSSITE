@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type NotificationType = 'follow' | 'reaction' | 'comment' | 'mention' | 'pick_result' | 'subscription' | 'message' | 'repost' | 'group_invite' | 'new_pick'
+export type NotificationType = 'follow' | 'reaction' | 'comment' | 'mention' | 'pick_result' | 'subscription' | 'message' | 'repost' | 'group_invite' | 'new_pick' | 'lineup_confirmed'
 
 // Maps each notification type to its toggle key in users.notification_settings
 // (see NotificationSettingsForm). Push uses this key directly (e.g.
@@ -19,6 +19,7 @@ export const SETTINGS_KEY_BY_TYPE: Record<NotificationType, string> = {
   repost: 'repost',
   group_invite: 'group_invite',
   new_pick: 'new_pick',
+  lineup_confirmed: 'lineup_confirmed',
 }
 
 // Thin wrapper around inserting into `notifications` — used from client

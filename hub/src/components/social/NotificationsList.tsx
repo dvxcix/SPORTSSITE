@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, X, Trash2 } from 'lucide-react'
+import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2 } from 'lucide-react'
 import { useCustomEmojis } from '@/lib/emoji'
 
 export const NOTIF_ICONS: Record<string, any> = {
@@ -17,6 +17,7 @@ export const NOTIF_ICONS: Record<string, any> = {
   repost: Repeat2,
   group_invite: Users,
   new_pick: TrendingUp,
+  lineup_confirmed: ClipboardCheck,
 }
 
 export type NotifRow = {

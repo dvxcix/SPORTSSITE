@@ -15,6 +15,7 @@ const SETTINGS = [
   { key: 'group_invite', label: 'Group invites', desc: 'When someone invites you to a group' },
   { key: 'dm', label: 'Direct messages', desc: 'When you receive a DM' },
   { key: 'subscription', label: 'Subscriptions', desc: 'New subscriber / subscription alerts' },
+  { key: 'lineup_confirmed', label: 'Lineup confirmed', desc: 'When a favorite team’s starting lineup is confirmed for today' },
 ]
 
 function Toggle({ on, onClick, size = 'md' }: { on: boolean; onClick: () => void; size?: 'sm' | 'md' }) {

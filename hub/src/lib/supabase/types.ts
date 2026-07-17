@@ -164,7 +164,7 @@ export interface Notification {
   user_id: string
   actor_id?: string
   actor?: User
-  type: 'follow' | 'reaction' | 'comment' | 'mention' | 'pick_result' | 'subscription' | 'message' | 'repost' | 'group_invite'
+  type: 'follow' | 'reaction' | 'comment' | 'mention' | 'pick_result' | 'subscription' | 'message' | 'repost' | 'group_invite' | 'new_pick' | 'lineup_confirmed'
   target_id?: string
   target_type?: string
   data?: Record<string, unknown>
