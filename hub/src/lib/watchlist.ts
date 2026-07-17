@@ -35,9 +35,15 @@ export const PROP_META: Record<string, { label: string; pickType: string }> = {
   // been confirmed the same way as the ones above — flagged for a follow-up
   // pass once that wording's been checked against FanDuel directly.
   hits:                { label: '1+ Hits',               pickType: 'hits' },
+  hits2:               { label: '2+ Hits',               pickType: 'hits_2plus' },
   tb:                  { label: '1.5+ Total Bases',      pickType: 'total_bases' },
   runs:                { label: '1+ Run Scored',         pickType: 'run_scored' },
+  runs2:               { label: '2+ Runs Scored',        pickType: 'run_scored_2plus' },
   stolen_bases:        { label: '1+ Stolen Base',        pickType: 'stolen_base' },
+  stolen_bases2:       { label: '2+ Stolen Bases',       pickType: 'stolen_base_2plus' },
+  singles2:            { label: '2+ Singles',            pickType: 'single_2plus' },
+  doubles2:            { label: '2+ Doubles',            pickType: 'double_2plus' },
+  triples2:            { label: '2+ Triples',            pickType: 'triple_2plus' },
   strikeouts:          { label: '1+ Strikeout (batter)', pickType: 'batter_strikeout' },
   pitcher_strikeouts:  { label: 'Pitcher Strikeouts',    pickType: 'pitcher_strikeouts' },
   laser105:            { label: 'Laser (105+ MPH Home Run)', pickType: 'laser_105' },
