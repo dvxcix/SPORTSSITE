@@ -791,12 +791,15 @@ const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, backgro
 const SDIV_D: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, borderRight: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.04)' }
 
 type SortState = { col: string; dir: 'desc' | 'asc' } | null
+// A single sticky-mode entry — `rank` is its 1-based priority in the active
+// multi-column sort chain (1 = primary key), shown as a small superscript so
+// it's clear which column is breaking ties for which.
+type MultiSortEntry = { col: string; dir: 'desc' | 'asc' }
 
-function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }: {
+function TH({ label, title, w = 40, sticky = false, sortKey, active = false, dir, rank, onSort }: {
   label: React.ReactNode; title?: string; w?: number; sticky?: boolean
-  sortKey?: string; sortState?: SortState; onSort?: (key: string) => void
+  sortKey?: string; active?: boolean; dir?: 'desc' | 'asc'; rank?: number; onSort?: (key: string) => void
 }) {
-  const active = !!sortKey && sortState?.col === sortKey
   // The sticky Player column (only sticky=true caller) gets a narrower fixed
   // width on mobile to match its <td>, so more of the ~60 scrollable stat
   // columns fit on screen — inline width has to move to a className for that
@@ -814,7 +817,10 @@ function TH({ label, title, w = 40, sticky = false, sortKey, sortState, onSort }
       }}
     >
       <Tooltip content={title ?? ''}>
-        <span>{label}{active ? (sortState!.dir === 'desc' ? '▼' : '▲') : ''}</span>
+        <span>
+          {label}{active ? (dir === 'desc' ? '▼' : '▲') : ''}
+          {active && rank != null && <sup style={{ fontSize: 7, marginLeft: 1 }}>{rank}</sup>}
+        </span>
       </Tooltip>
     </th>
   )
@@ -2076,15 +2082,22 @@ function sortValue(r: BatterRow, col: string): number | null {
   return r[col as keyof BatterRow] as unknown as number | null
 }
 
-function sortRows(rows: BatterRow[], sort: SortState): BatterRow[] {
-  if (!sort) return rows
+// Multi-key version — `keys` is priority order, first = primary sort, each
+// subsequent entry only breaks ties left by the ones before it. A plain
+// single-column sort is just this called with a one-element array.
+function sortRowsMulti(rows: BatterRow[], keys: MultiSortEntry[]): BatterRow[] {
+  if (!keys.length) return rows
   return [...rows].sort((a, b) => {
-    const av = sortValue(a, sort.col)
-    const bv = sortValue(b, sort.col)
-    if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    return sort.dir === 'desc' ? bv - av : av - bv
+    for (const { col, dir } of keys) {
+      const av = sortValue(a, col)
+      const bv = sortValue(b, col)
+      if (av == null && bv == null) continue
+      if (av == null) return 1
+      if (bv == null) return -1
+      if (av === bv) continue
+      return dir === 'desc' ? bv - av : av - bv
+    }
+    return 0
   })
 }
 
@@ -2133,6 +2146,15 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   date: string
 }) {
   const [sort, setSort] = useState<SortState>(null)
+  // Sticky multi-column sort — when on, each header click ADDS that column
+  // to the chain instead of replacing the sort outright (rank 1 = primary
+  // key, rank 2 = tiebreaker, ...). Clicking a column already in the chain
+  // cycles desc -> asc -> removed, so a single chain can mix directions
+  // (e.g. most picks, highest SB, but LOWEST HR). Persists across toggling
+  // sticky mode off/on so flipping it off to peek at a plain single sort
+  // doesn't throw away the chain you built.
+  const [stickyMode, setStickyMode] = useState(false)
+  const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>([])
   const highlightKey = highlightMlbId != null
     ? (game.homeLineup?.some((p: any) => p.mlb_id === highlightMlbId) ? `h-${highlightMlbId}` : `a-${highlightMlbId}`)
     : null
@@ -2192,8 +2214,33 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightKey])
 
-  const toggleSort = (col: string) =>
+  const toggleSort = (col: string) => {
+    if (stickyMode) {
+      setStickyCols(prev => {
+        const idx = prev.findIndex(s => s.col === col)
+        if (idx === -1) return [...prev, { col, dir: 'desc' }]
+        if (prev[idx].dir === 'desc') {
+          const next = [...prev]
+          next[idx] = { col, dir: 'asc' }
+          return next
+        }
+        return prev.filter(s => s.col !== col)
+      })
+      return
+    }
     setSort(prev => prev?.col === col ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { col, dir: 'desc' })
+  }
+
+  // Priority-ordered active sort keys — the sticky chain when sticky mode is
+  // on, else the single plain-sort column. Feeds both the row comparator and
+  // each header's active/direction/rank display.
+  const activeSortKeys: MultiSortEntry[] = stickyMode ? stickyCols : (sort ? [sort] : [])
+  const sortInfo = (key?: string): { active?: boolean; dir?: 'desc' | 'asc'; rank?: number } => {
+    if (!key) return {}
+    const idx = activeSortKeys.findIndex(s => s.col === key)
+    if (idx === -1) return {}
+    return { active: true, dir: activeSortKeys[idx].dir, rank: stickyMode && activeSortKeys.length > 1 ? idx + 1 : undefined }
+  }
 
   const { homeRows, awayRows, pool } = useMemo(() => {
     const ap = game.awayPitcher
@@ -2210,19 +2257,25 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
     return { homeRows, awayRows, pool }
   }, [game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap])
 
-  const displayHome = sortRows(homeRows, sort)
-  const displayAway = sortRows(awayRows, sort)
+  const displayHome = sortRowsMulti(homeRows, activeSortKeys)
+  const displayAway = sortRowsMulti(awayRows, activeSortKeys)
 
   const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: game.gameDate ? String(game.gameDate).slice(0, 10) : null }
 
-  const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string) =>
-    <TH label={label} title={title} w={w} sortKey={sortKey} sortState={sort} onSort={toggleSort} />
+  const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string) => {
+    const info = sortInfo(sortKey)
+    return <TH label={label} title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort} />
+  }
 
-  const BL = (vendor: string, prop: string, title?: string, w = 50, sortKey?: string) =>
-    <TH
-      label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><BookLogo vendor={vendor} size={13} />{prop}</span>}
-      title={title} w={w} sortKey={sortKey} sortState={sort} onSort={toggleSort}
-    />
+  const BL = (vendor: string, prop: string, title?: string, w = 50, sortKey?: string) => {
+    const info = sortInfo(sortKey)
+    return (
+      <TH
+        label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><BookLogo vendor={vendor} size={13} />{prop}</span>}
+        title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
+      />
+    )
+  }
 
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
@@ -2230,7 +2283,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   // reached the away team's rows further down the same table.
   const headerCells = (
     <>
-      <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" sortState={sort} onSort={toggleSort} />
+      <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
       {H('pk', 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
       {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
@@ -2321,6 +2374,33 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
                   </span>
                 )}
                 {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
+                <Tooltip content={stickyMode
+                  ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
+                  : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
+                >
+                  <button
+                    onClick={() => setStickyMode(v => !v)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 4,
+                      padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                      border: `1px solid ${stickyMode ? 'var(--accent)' : 'var(--border)'}`,
+                      background: stickyMode ? 'rgba(180,255,77,0.12)' : 'var(--surface)',
+                      color: stickyMode ? 'var(--accent)' : 'var(--text-2)',
+                    }}
+                  >
+                    📌 Sticky Columns{stickyMode && stickyCols.length > 0 ? ` (${stickyCols.length})` : ''}
+                  </button>
+                </Tooltip>
+                {stickyMode && stickyCols.length > 0 && (
+                  <Tooltip content="Clear the sticky sort chain">
+                    <button
+                      onClick={() => setStickyCols([])}
+                      style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+                    >
+                      ✕ Clear
+                    </button>
+                  </Tooltip>
+                )}
               </div>
             </td>
           </tr>
