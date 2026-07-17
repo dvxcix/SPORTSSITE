@@ -247,15 +247,17 @@ export function PitcherReportClient() {
   const splitMap = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
   const timingMap = useMemo(() => buildTimingMap(data?.timingSplits ?? []), [data?.timingSplits])
   const statcastPitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
-  // A player can have one row per market (home_runs, singles, doubles...) —
-  // prefer the home_runs row specifically, same as Dugout's own pikkitMap.
+  // Keep the home_runs row specifically — this table only ever displays an
+  // "Anytime HR picks" count, so a player with picks in some OTHER market
+  // (hrr, singles, tb...) but no home_runs row must show nothing here, not
+  // that other market's count mislabeled as HR (same fix as Dugout's map).
   const pikkitMap = useMemo(() => {
     const m: Record<string, any> = {}
     for (const r of (data?.pikkit ?? [])) {
       const nn = normName(r.player_name || '')
-      if (!nn) continue
-      const isHrRow = r.prop_type === 'home_runs' || r.market === 'home_runs'
-      if (!m[nn] || isHrRow) m[nn] = r
+      const market = r.prop_type || r.market
+      if (!nn || market !== 'home_runs') continue
+      m[nn] = r
     }
     return m
   }, [data?.pikkit])

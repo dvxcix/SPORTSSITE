@@ -506,7 +506,7 @@ function buildBatterRow(
   // earlier version of this (using sa_fd/rbi_fd directly) over-fired.
   const opening = openingMap[nn]
   const sa_rbi_raw_ratio = rawRatio(opening?.sa_open ?? null, opening?.rbi_open ?? null)
-  const picks_count = (pikkitMap[nn]?.picks as number | undefined) ?? null
+  const picks_count = (pikkitMap[nn]?.home_runs?.picks as number | undefined) ?? null
   const is_money_sa_rbi = sa_rbi_raw_ratio != null && sa_rbi_raw_ratio >= 3.5
                         && picks_count != null && picks_count <= 50
 
@@ -586,7 +586,16 @@ function buildBatterRow(
     d_spd, d_sq,
     s_timing, r_timing, s_miss, r_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
-    pk:      pikkitMap[nn] ?? null,
+    // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
+    // own entry now — a player can have picks in more than one market for
+    // the same game, and collapsing them into a single row (the old
+    // behavior) meant whichever market won the collapse got mislabeled as
+    // "HR" everywhere it rendered. `pk` stays HR-specific (matching its
+    // column header); the others ride along on their own matching odds cell.
+    pk:      pikkitMap[nn]?.home_runs ?? null,
+    pkHits:  pikkitMap[nn]?.hits ?? null,
+    pkRuns:  pikkitMap[nn]?.runs ?? null,
+    pkStolenBases: pikkitMap[nn]?.stolen_bases ?? null,
     hr_hits: hrMap[nn]    ?? [],
     near_hr: nearMap[nn]  ?? null,
     paper: null as number | null,
@@ -824,9 +833,14 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
   const saved = wl.isSaved(oppPitcher.id ?? null, propKey, 'fanduel')
 
   const handleClick = async () => {
-    if (saved || busy || !wl.signedIn) return
+    if (busy || !wl.signedIn) return
     setBusy(true)
     try {
+      if (saved) {
+        const existing = wl.items.find(i => i.status === 'pending' && i.mlb_id === (oppPitcher.id ?? null) && i.prop_key === propKey && i.book === 'fanduel')
+        if (existing) await wl.remove(existing.id)
+        return
+      }
       await wl.add({
         sport: gameInfo.sport,
         game_pk: gameInfo.game_pk,
@@ -866,7 +880,7 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
   )
 
   return wl.signedIn ? (
-    <Tooltip content={saved ? 'Saved to watchlist' : 'Click to add to watchlist'}>{pill}</Tooltip>
+    <Tooltip content={saved ? 'Saved to watchlist — click to remove' : 'Click to add to watchlist'}>{pill}</Tooltip>
   ) : pill
 }
 
@@ -1402,7 +1416,7 @@ function PlayerDrillDown({
 
 // ─── watchlist-able odds cell ─────────────────────────────────────────────────
 function OddsCell({
-  row, gameInfo, propKey, book, odds, style, display, badge, openOdds,
+  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount,
 }: {
   row: BatterRow
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
@@ -1417,6 +1431,10 @@ function OddsCell({
   // from the admin gap importers' "opening" checkbox (manual paste, since
   // these markets have no automated feed to snapshot automatically).
   openOdds?: number | null
+  // Community pick count from Pikkit for this EXACT market (not just HR) —
+  // rendered as a small corner tag so a pick count only ever shows up next
+  // to the specific stat it's actually for.
+  pickCount?: number | null
 }) {
   const wl = useWatchlist()
   const [busy, setBusy] = useState(false)
@@ -1427,9 +1445,17 @@ function OddsCell({
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (saved || busy || !wl.signedIn) return
+    if (busy || !wl.signedIn) return
     setBusy(true)
     try {
+      // Toggle: clicking an already-saved pick removes it instead of being a
+      // no-op — otherwise the only way off the watchlist was opening the
+      // panel and removing it from there.
+      if (saved) {
+        const existing = wl.items.find(i => i.status === 'pending' && i.mlb_id === row.mlb_id && i.prop_key === propKey && i.book === book)
+        if (existing) await wl.remove(existing.id)
+        return
+      }
       const oddsByBook = (row.rawProps?.[propKey] as Record<string, number>) || { [book]: odds }
       await wl.add({
         sport: gameInfo.sport,
@@ -1455,7 +1481,7 @@ function OddsCell({
   const hasDelta = openOdds != null && openOdds !== odds
   const deltaTitle = hasDelta ? `Opened ${oStr(openOdds)} → now ${oStr(odds)}` : null
   const title = [
-    wl.signedIn ? (saved ? 'Saved to watchlist' : `Click to add ${meta?.label ?? propKey} @ ${book} to watchlist`) : null,
+    wl.signedIn ? (saved ? 'Saved to watchlist — click to remove' : `Click to add ${meta?.label ?? propKey} @ ${book} to watchlist`) : null,
     deltaTitle,
   ].filter(Boolean).join(' · ') || undefined
 
@@ -1475,6 +1501,13 @@ function OddsCell({
         </span>
       )}
       {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
+      {pickCount != null && (
+        <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
+          <div style={{ position: 'absolute', bottom: 1, left: 1, fontSize: 6.5, fontWeight: 900, color: 'var(--gold)', cursor: 'help', lineHeight: 1 }}>
+            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}📊
+          </div>
+        </Tooltip>
+      )}
     </>
   )
 
@@ -1726,9 +1759,9 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       {/* Replaced HR÷C1/HR÷C2 (thin, manual-paste-only combine-for-HR
           ratios) with real BDL-sourced markets that were already flowing
           through buildPropMap but never shown. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} pickCount={row.pkStolenBases?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} />
 
       <td style={SDIV_D} />
 
@@ -2380,16 +2413,18 @@ export function DugoutClient({ date }: { date: string }) {
   }, [data?.saAvg])
 
   const pikkitMap = useMemo(() => {
-    // A player can have one row per market (home_runs, singles, doubles...).
-    // Prefer the home_runs row specifically — that's the pick count the
-    // SA÷RBI money-bag flag actually means ("field hasn't caught on to this
-    // guy for the homer"), not whichever market happened to come back last.
-    const m: Record<string, any> = {}
+    // A player can have one row per market (home_runs, hits, runs, singles,
+    // doubles, hrr...) for the same game — keep every market's row instead
+    // of collapsing them down to one, or whichever market wins the collapse
+    // silently gets displayed/labeled as if it were the others (e.g. an
+    // hrr-only row rendered under the "HR" column and tooltip).
+    const m: Record<string, Record<string, any>> = {}
     for (const r of (data?.pikkit ?? [])) {
       const nn = normName(r.player_name || '')
-      if (!nn) continue
-      const isHrRow = r.prop_type === 'home_runs' || r.market === 'home_runs'
-      if (!m[nn] || isHrRow) m[nn] = r
+      const market = r.prop_type || r.market
+      if (!nn || !market) continue
+      if (!m[nn]) m[nn] = {}
+      m[nn][market] = r
     }
     return m
   }, [data?.pikkit])

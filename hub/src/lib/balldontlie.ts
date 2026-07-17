@@ -74,19 +74,33 @@ export interface BDLPropMap {
     sa?: { [vendor: string]: number }         // Anytime HR / 1+ HR (line=0.5)
     hr2?: { [vendor: string]: number }        // 2+ HR (line=1.5)
     hr3?: { [vendor: string]: number }        // 3+ HR (line=2.5+)
-    hits?: { [vendor: string]: number }       // 1+ hits
+    hits?: { [vendor: string]: number }       // 1+ hits (line=0.5)
+    hits2?: { [vendor: string]: number }      // 2+ hits (line=1.5)
+    hits3?: { [vendor: string]: number }      // 3+ hits (line=2.5+)
     rbi?: { [vendor: string]: number }        // 1+ RBI (line=0.5)
     rbi2?: { [vendor: string]: number }       // 2+ RBI (line=1.5)
     rbi3?: { [vendor: string]: number }       // 3+ RBI (line=2.5)
     tb?: { [vendor: string]: number }         // 1.5+ TB
     tb4?: { [vendor: string]: number }        // 4+ TB (line=3.5)
     tb5?: { [vendor: string]: number }        // 5+ TB (line=4.5)
-    strikeouts?: { [vendor: string]: number }
-    singles?: { [vendor: string]: number }
-    doubles?: { [vendor: string]: number }
-    triples?: { [vendor: string]: number }
-    stolen_bases?: { [vendor: string]: number }
-    runs?: { [vendor: string]: number }
+    strikeouts?: { [vendor: string]: number }  // 1+ K (line=0.5)
+    strikeouts2?: { [vendor: string]: number } // 2+ K (line=1.5)
+    strikeouts3?: { [vendor: string]: number } // 3+ K (line=2.5+)
+    singles?: { [vendor: string]: number }     // 1+ single (line=0.5)
+    singles2?: { [vendor: string]: number }    // 2+ singles (line=1.5)
+    singles3?: { [vendor: string]: number }    // 3+ singles (line=2.5+)
+    doubles?: { [vendor: string]: number }     // 1+ double (line=0.5)
+    doubles2?: { [vendor: string]: number }    // 2+ doubles (line=1.5)
+    doubles3?: { [vendor: string]: number }    // 3+ doubles (line=2.5+)
+    triples?: { [vendor: string]: number }     // 1+ triple (line=0.5)
+    triples2?: { [vendor: string]: number }    // 2+ triples (line=1.5)
+    triples3?: { [vendor: string]: number }    // 3+ triples (line=2.5+)
+    stolen_bases?: { [vendor: string]: number }  // 1+ SB (line=0.5)
+    stolen_bases2?: { [vendor: string]: number } // 2+ SB (line=1.5)
+    stolen_bases3?: { [vendor: string]: number } // 3+ SB (line=2.5+)
+    runs?: { [vendor: string]: number }        // 1+ run (line=0.5)
+    runs2?: { [vendor: string]: number }       // 2+ runs (line=1.5)
+    runs3?: { [vendor: string]: number }       // 3+ runs (line=2.5+)
     hrr?: { [vendor: string]: number }         // Hits+Runs+RBIs combined (line varies)
     hrr_line?: { [vendor: string]: number }
     pitcher_strikeouts?: { [vendor: string]: number }
@@ -249,8 +263,22 @@ export function buildPropMap(props: BDLPlayerProp[], playerNames: Record<number,
       }
 
     } else if (p.prop_type === 'hits') {
-      if (!entry.hits) entry.hits = {}
-      entry.hits[vendor] = odds!
+      // Same bug class as home_runs: vendors post 0.5/1.5/2.5 hits lines
+      // under the identical prop_type, no other differentiator. Must bucket
+      // by line_value or "1+ Hit" silently shows whichever line processed
+      // last (this was the reported "some players show 2+ in the 1+ column"
+      // inconsistency).
+      const l = line ?? 0.5
+      if (l <= 0.5) {
+        if (!entry.hits) entry.hits = {}
+        entry.hits[vendor] = odds!
+      } else if (l <= 1.5) {
+        if (!entry.hits2) entry.hits2 = {}
+        entry.hits2[vendor] = odds!
+      } else {
+        if (!entry.hits3) entry.hits3 = {}
+        entry.hits3[vendor] = odds!
+      }
 
     } else if (p.prop_type === 'rbis') {
       const l = line ?? 0.5
@@ -282,23 +310,35 @@ export function buildPropMap(props: BDLPlayerProp[], playerNames: Record<number,
       }
 
     } else if (p.prop_type === 'strikeouts') {
-      if (!entry.strikeouts) entry.strikeouts = {}
-      entry.strikeouts[vendor] = odds!
+      const l = line ?? 0.5
+      if (l <= 0.5) { if (!entry.strikeouts) entry.strikeouts = {}; entry.strikeouts[vendor] = odds! }
+      else if (l <= 1.5) { if (!entry.strikeouts2) entry.strikeouts2 = {}; entry.strikeouts2[vendor] = odds! }
+      else { if (!entry.strikeouts3) entry.strikeouts3 = {}; entry.strikeouts3[vendor] = odds! }
     } else if (p.prop_type === 'singles') {
-      if (!entry.singles) entry.singles = {}
-      entry.singles[vendor] = odds!
+      const l = line ?? 0.5
+      if (l <= 0.5) { if (!entry.singles) entry.singles = {}; entry.singles[vendor] = odds! }
+      else if (l <= 1.5) { if (!entry.singles2) entry.singles2 = {}; entry.singles2[vendor] = odds! }
+      else { if (!entry.singles3) entry.singles3 = {}; entry.singles3[vendor] = odds! }
     } else if (p.prop_type === 'doubles') {
-      if (!entry.doubles) entry.doubles = {}
-      entry.doubles[vendor] = odds!
+      const l = line ?? 0.5
+      if (l <= 0.5) { if (!entry.doubles) entry.doubles = {}; entry.doubles[vendor] = odds! }
+      else if (l <= 1.5) { if (!entry.doubles2) entry.doubles2 = {}; entry.doubles2[vendor] = odds! }
+      else { if (!entry.doubles3) entry.doubles3 = {}; entry.doubles3[vendor] = odds! }
     } else if (p.prop_type === 'triples') {
-      if (!entry.triples) entry.triples = {}
-      entry.triples[vendor] = odds!
+      const l = line ?? 0.5
+      if (l <= 0.5) { if (!entry.triples) entry.triples = {}; entry.triples[vendor] = odds! }
+      else if (l <= 1.5) { if (!entry.triples2) entry.triples2 = {}; entry.triples2[vendor] = odds! }
+      else { if (!entry.triples3) entry.triples3 = {}; entry.triples3[vendor] = odds! }
     } else if (p.prop_type === 'runs_scored') {
-      if (!entry.runs) entry.runs = {}
-      entry.runs[vendor] = odds!
+      const l = line ?? 0.5
+      if (l <= 0.5) { if (!entry.runs) entry.runs = {}; entry.runs[vendor] = odds! }
+      else if (l <= 1.5) { if (!entry.runs2) entry.runs2 = {}; entry.runs2[vendor] = odds! }
+      else { if (!entry.runs3) entry.runs3 = {}; entry.runs3[vendor] = odds! }
     } else if (p.prop_type === 'stolen_bases') {
-      if (!entry.stolen_bases) entry.stolen_bases = {}
-      entry.stolen_bases[vendor] = odds!
+      const l = line ?? 0.5
+      if (l <= 0.5) { if (!entry.stolen_bases) entry.stolen_bases = {}; entry.stolen_bases[vendor] = odds! }
+      else if (l <= 1.5) { if (!entry.stolen_bases2) entry.stolen_bases2 = {}; entry.stolen_bases2[vendor] = odds! }
+      else { if (!entry.stolen_bases3) entry.stolen_bases3 = {}; entry.stolen_bases3[vendor] = odds! }
     } else if (p.prop_type === 'hits_runs_rbis') {
       if (!entry.hrr) entry.hrr = {}
       entry.hrr[vendor] = odds!
