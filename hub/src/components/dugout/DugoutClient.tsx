@@ -1644,7 +1644,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           always beat responsive Tailwind classes for the same property. */}
       <td
         onClick={onToggle}
-        className="w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
+        className="dg-sticky-col w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
         style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', cursor: 'pointer' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
@@ -2748,6 +2748,18 @@ export function DugoutClient({ date }: { date: string }) {
            down, not direct children, so their own heat-mapped cell colors
            survive hovering instead of getting flattened to this grey. */
         .dugout-dense-table > tbody > tr:hover > td{background:rgba(255,255,255,0.025)!important}
+        /* The sticky player-name column has to stay fully opaque at all
+           times — it's masking whatever's scrolled underneath it on a
+           horizontally-scrolled table. The rule above made it nearly
+           transparent on hover (a plain rgba over var(--bg), same as every
+           other cell), which let the scrolled-past stat values show right
+           through the name column. Composited as an opaque base color with
+           the same tint layered on top instead, so hovering still reads the
+           same visually but never goes see-through. */
+        .dugout-dense-table > tbody > tr:hover > td.dg-sticky-col{
+          background-color: var(--bg) !important;
+          background-image: linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025)) !important;
+        }
       `}</style>
     </div>
   )
