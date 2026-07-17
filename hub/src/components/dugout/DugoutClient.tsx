@@ -2311,10 +2311,10 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
         <tbody>
           {/* Home */}
           <tr>
-            <td colSpan={99} style={{ background: 'var(--surface)', padding: '5px 8px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+            <td colSpan={99} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TeamLogo abbr={game.homeAbbr} size={20} />
-                <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
+                <TeamLogo abbr={game.homeAbbr} size={22} />
+                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
                 {!game.homeLineupConfirmed && (
                   <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
                     {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
@@ -2338,18 +2338,16 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
             )
           })}
 
-          {/* Repeated column header — the away team's rows can be 15-20+ rows
-              below the real <thead>, and this table runs 50+ columns wide,
-              so the away section gets its own reference row instead of
-              relying on a header the reader has long scrolled past. */}
-          <tr>{headerCells}</tr>
-
-          {/* Away */}
+          {/* Away — spacer row + a visibly heavier divider than the home
+              section's, so the seam between the two teams reads as a real
+              break instead of the away header looking like a trailing part
+              of the home team's block above it. */}
+          <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
-            <td colSpan={99} style={{ background: 'var(--surface)', padding: '5px 8px', borderTop: '2px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+            <td colSpan={99} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TeamLogo abbr={game.awayAbbr} size={20} />
-                <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
+                <TeamLogo abbr={game.awayAbbr} size={22} />
+                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
                 {!game.awayLineupConfirmed && (
                   <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
                     {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
@@ -2359,6 +2357,10 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
               </div>
             </td>
           </tr>
+          {/* Repeated column header — placed directly under the away team's
+              own divider bar (not above it) so it visually belongs to the
+              away section, not the tail end of the home team's block. */}
+          <tr>{headerCells}</tr>
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
             const pitRow = pickPitcherRow(pitcherMap, game.homePitcher?.id, row.bats === 'S' ? (game.homePitcher?.hand === 'L' ? 'R' : 'L') : row.bats)
