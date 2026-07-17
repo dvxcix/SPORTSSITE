@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
+
+type SplitRow = { dims: Record<string, any>; metrics: Record<string, any> }
+type SplitWindow = { season: SplitRow[]; recency: SplitRow[] }
 
 type PlayerData = {
   season: number
@@ -29,7 +32,9 @@ type PlayerData = {
   statcastSeason: { hitting: Record<string, any>; pitching: Record<string, any> }
   pitchArsenal: { batter: Record<string, any>[]; pitcher: Record<string, any>[] }
   form: Record<string, { season: Record<string, number | null>; recency: Record<string, number | null> }>
-  heatmaps: Record<string, { batTracking: any[]; battedBall: any[] }>
+  splits: Record<string, Record<string, SplitWindow>>
+  swingTake: Record<string, SplitRow[]>
+  battingStance: SplitWindow | null
   homeRuns: { hit: Record<string, any>[]; allowed: Record<string, any>[] }
 }
 
@@ -58,6 +63,7 @@ const sectionTitleStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 8,
+  flexWrap: 'wrap',
 }
 const windowTag: React.CSSProperties = {
   fontSize: 10,
@@ -135,13 +141,52 @@ const HR_CAT_COLORS: Record<string, string> = {
   'Mostly Gone': 'var(--gold)',
   'Doubter': 'var(--red)',
 }
+const CONTACT_CODE_LABELS: Record<string, string> = { '2': 'In Play', '4': 'Foul', '9': 'Whiff' }
 
 function PitchBadge({ code }: { code: string }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', background: pitchColor(code), flexShrink: 0 }} />
       {pitchLabel(code)}
     </span>
+  )
+}
+
+function DimCell({ dimKey, value }: { dimKey: string; value: string }) {
+  if (dimKey === 'api_pitch_type') return <PitchBadge code={value} />
+  if (dimKey === 'pitch_hand' || dimKey === 'bat_side') return <HandBadge hand={value} />
+  if (dimKey === 'bat_contact_code') return <span>{CONTACT_CODE_LABELS[value] ?? value}</span>
+  return <span>{value}</span>
+}
+
+function ToggleBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+        background: active ? 'var(--accent-dim)' : 'var(--surface-2)',
+        color: active ? 'var(--accent)' : 'var(--text-3)',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+function DimChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
+        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+        background: active ? 'var(--accent-dim)' : 'transparent',
+        color: active ? 'var(--accent)' : 'var(--text-3)',
+      }}
+    >
+      {label}
+    </button>
   )
 }
 
@@ -199,39 +244,162 @@ function FormComparisonCard({ role, form }: { role: string; form: { season: Reco
   )
 }
 
-// Pitch-type x opponent-hand heatmap — same shape/coloring as Pitcher
-// Report's matchup tables (heat(), SortableTH, sort state all reused
-// directly from there rather than reimplemented).
-type HeatRow = { pitchType: string; hand: string; weight: number; [key: string]: any }
+// ── Fully customizable split explorer ───────────────────────────────
+// Users pick the window (season/recency) and which dims to group rows
+// by — everything else gets aggregated across, weighted by the category's
+// own count field rather than naively averaged.
+type ColConfig = { key: string; label: string; dir: 'hi' | 'lo'; isFrac?: boolean; digits?: number }
+type DimConfig = { key: string; label: string }
+type CategoryConfig = {
+  key: string
+  title: string
+  weightKey: string
+  weightLabel: string
+  dims: DimConfig[]
+  defaultGroupBy: string[]
+  cols: ColConfig[]
+}
 
-const HEAT_COLS: { key: string; label: string; dir: 'hi' | 'lo'; fmt: (v: number) => string }[] = [
-  { key: 'weight', label: 'SWINGS', dir: 'hi', fmt: v => String(Math.round(v)) },
-  { key: 'avg_bat_speed', label: 'BAT SPD', dir: 'hi', fmt: v => v.toFixed(1) },
-  { key: 'hard_swing_rate', label: 'HARD SW%', dir: 'hi', fmt: v => `${(v * 100).toFixed(1)}%` },
-  { key: 'squared_up_per_swing', label: 'SQ-UP%', dir: 'hi', fmt: v => `${(v * 100).toFixed(1)}%` },
-  { key: 'blast_per_swing', label: 'BLAST%', dir: 'hi', fmt: v => `${(v * 100).toFixed(1)}%` },
-  { key: 'whiff_per_swing', label: 'WHIFF%', dir: 'lo', fmt: v => `${(v * 100).toFixed(1)}%` },
-  { key: 'gb_rate', label: 'GB%', dir: 'lo', fmt: v => `${(v * 100).toFixed(1)}%` },
-  { key: 'fb_rate', label: 'FB%', dir: 'hi', fmt: v => `${(v * 100).toFixed(1)}%` },
-  { key: 'pull_rate', label: 'PULL%', dir: 'hi', fmt: v => `${(v * 100).toFixed(1)}%` },
+const CATEGORY_CONFIGS: CategoryConfig[] = [
+  {
+    key: 'bat_tracking', title: 'Bat Tracking', weightKey: 'swings_competitive', weightLabel: 'Swings',
+    dims: [
+      { key: 'api_pitch_type', label: 'Pitch Type' },
+      { key: 'pitch_hand', label: 'Pitch Hand' },
+      { key: 'bat_side', label: 'Bat Side' },
+      { key: 'bat_contact_code', label: 'Contact Type' },
+    ],
+    defaultGroupBy: ['api_pitch_type'],
+    cols: [
+      { key: 'avg_bat_speed', label: 'Bat Speed', dir: 'hi', digits: 1 },
+      { key: 'hard_swing_rate', label: 'Hard Swing %', dir: 'hi', isFrac: true },
+      { key: 'squared_up_per_swing', label: 'Squared-Up %', dir: 'hi', isFrac: true },
+      { key: 'blast_per_swing', label: 'Blast %', dir: 'hi', isFrac: true },
+      { key: 'whiff_per_swing', label: 'Whiff %', dir: 'lo', isFrac: true },
+      { key: 'swing_length', label: 'Swing Length', dir: 'lo', digits: 2 },
+    ],
+  },
+  {
+    key: 'batted_ball_splits', title: 'Batted Ball', weightKey: 'bbe', weightLabel: 'BBE',
+    dims: [
+      { key: 'api_pitch_type', label: 'Pitch Type' },
+      { key: 'pitch_hand', label: 'Pitch Hand' },
+      { key: 'bat_side', label: 'Bat Side' },
+    ],
+    defaultGroupBy: ['api_pitch_type'],
+    cols: [
+      { key: 'gb_rate', label: 'GB %', dir: 'lo', isFrac: true },
+      { key: 'fb_rate', label: 'FB %', dir: 'hi', isFrac: true },
+      { key: 'ld_rate', label: 'LD %', dir: 'hi', isFrac: true },
+      { key: 'pu_rate', label: 'PU %', dir: 'lo', isFrac: true },
+      { key: 'pull_rate', label: 'Pull %', dir: 'hi', isFrac: true },
+      { key: 'straight_rate', label: 'Straight %', dir: 'hi', isFrac: true },
+      { key: 'oppo_rate', label: 'Oppo %', dir: 'hi', isFrac: true },
+    ],
+  },
+  {
+    key: 'swing_timing_miss_distance', title: 'Swing Timing', weightKey: 'n_swings', weightLabel: 'Swings',
+    dims: [
+      { key: 'api_pitch_type', label: 'Pitch Type' },
+      { key: 'pitch_hand', label: 'Pitch Hand' },
+      { key: 'bat_side', label: 'Bat Side' },
+      { key: 'bat_contact_code', label: 'Contact Type' },
+    ],
+    defaultGroupBy: ['api_pitch_type'],
+    cols: [
+      { key: 'perfect_percent', label: 'Perfect %', dir: 'hi', isFrac: true },
+      { key: 'centered_percent', label: 'Centered %', dir: 'hi', isFrac: true },
+      { key: 'on_time_percent', label: 'On-Time %', dir: 'hi', isFrac: true },
+      { key: 'whiff_rate', label: 'Whiff %', dir: 'lo', isFrac: true },
+      { key: 'miss_distance', label: 'Miss Dist', dir: 'lo', digits: 2 },
+    ],
+  },
+  {
+    key: 'swing_path_attack_angle', title: 'Swing Path', weightKey: 'competitive_swings', weightLabel: 'Swings',
+    dims: [
+      { key: 'api_pitch_type', label: 'Pitch Type' },
+      { key: 'pitch_hand', label: 'Pitch Hand' },
+      { key: 'bat_side', label: 'Bat Side' },
+    ],
+    defaultGroupBy: ['api_pitch_type'],
+    cols: [
+      { key: 'avg_bat_speed', label: 'Bat Speed', dir: 'hi', digits: 1 },
+      { key: 'attack_angle', label: 'Attack Angle', dir: 'hi', digits: 1 },
+      { key: 'ideal_attack_angle_rate', label: 'Ideal AA %', dir: 'hi', isFrac: true },
+      { key: 'swing_tilt', label: 'Swing Tilt', dir: 'hi', digits: 1 },
+    ],
+  },
 ]
 
-function HeatTable({ rows, title }: { rows: HeatRow[]; title: string }) {
+function aggregateByDims(rows: SplitRow[], groupBy: string[], weightKey: string, metricKeys: string[]): Record<string, any>[] {
+  const groups = new Map<string, { dims: Record<string, string>; weight: number; sums: Record<string, number> }>()
+  for (const r of rows) {
+    const dims: Record<string, string> = {}
+    for (const k of groupBy) dims[k] = r.dims?.[k] ?? '—'
+    const key = groupBy.map(k => dims[k]).join('|') || 'all'
+    const w = Number(r.metrics?.[weightKey]) || 0
+    let g = groups.get(key)
+    if (!g) { g = { dims, weight: 0, sums: Object.fromEntries(metricKeys.map(k => [k, 0])) }; groups.set(key, g) }
+    g.weight += w
+    for (const k of metricKeys) {
+      const v = r.metrics?.[k]
+      if (typeof v === 'number' && Number.isFinite(v)) g.sums[k] += v * w
+    }
+  }
+  return Array.from(groups.values()).map(g => ({
+    ...g.dims, weight: g.weight,
+    ...Object.fromEntries(metricKeys.map(k => [k, g.weight > 0 ? g.sums[k] / g.weight : null])),
+  }))
+}
+
+function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitWindow: SplitWindow }) {
+  const hasRecency = splitWindow.recency.length > 0
+  const [windowSel, setWindowSel] = useState<'season' | 'recency'>(hasRecency ? 'recency' : 'season')
+  const [groupBy, setGroupBy] = useState<string[]>(config.defaultGroupBy)
   const [sort, setSort] = useState<SortState>({ col: 'weight', dir: 'desc' })
-  if (!rows.length) return null
+
+  const rows = windowSel === 'recency' ? splitWindow.recency : splitWindow.season
+  const metricKeys = config.cols.map(c => c.key)
+  const aggregated = useMemo(() => aggregateByDims(rows, groupBy, config.weightKey, metricKeys), [rows, groupBy])
+
+  if (!splitWindow.season.length && !splitWindow.recency.length) return null
+
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
-  const sorted = [...rows].sort((a, b) => cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir))
-  const allByCol = Object.fromEntries(HEAT_COLS.map(c => [c.key, rows.map(r => r[c.key])]))
+  const sorted = [...aggregated].sort((a, b) => cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir))
+  const allByCol = Object.fromEntries(config.cols.map(c => [c.key, aggregated.map(r => r[c.key])]))
+
+  function toggleDim(key: string) {
+    setGroupBy(prev => (prev.includes(key) ? (prev.length > 1 ? prev.filter(k => k !== key) : prev) : [...prev, key]))
+  }
 
   return (
-    <div>
-      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-2)', marginBottom: 8 }}>{title}</div>
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        {config.title}
+        {hasRecency && (
+          <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+            <ToggleBtn active={windowSel === 'season'} onClick={() => setWindowSel('season')}>Season</ToggleBtn>
+            <ToggleBtn active={windowSel === 'recency'} onClick={() => setWindowSel('recency')}>Last 6 Days</ToggleBtn>
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'none', letterSpacing: 0, marginRight: 2 }}>Group by:</span>
+        {config.dims.map(d => (
+          <DimChip key={d.key} label={d.label} active={groupBy.includes(d.key)} onClick={() => toggleDim(d.key)} />
+        ))}
+      </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>PITCH</th>
-              {HEAT_COLS.map(c => (
+              {groupBy.map(dk => (
+                <th key={dk} style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>
+                  {config.dims.find(d => d.key === dk)?.label}
+                </th>
+              ))}
+              <SortableTH label={config.weightLabel} colKey="weight" sort={sort} onSort={onSort} />
+              {config.cols.map(c => (
                 <SortableTH key={c.key} label={c.label} colKey={c.key} sort={sort} onSort={onSort} />
               ))}
             </tr>
@@ -239,20 +407,120 @@ function HeatTable({ rows, title }: { rows: HeatRow[]; title: string }) {
           <tbody>
             {sorted.map((row, i) => (
               <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ padding: '6px 8px', color: 'var(--text-1)', fontWeight: 700 }}><PitchBadge code={row.pitchType} /></td>
-                {HEAT_COLS.map(c => {
+                {groupBy.map(dk => (
+                  <td key={dk} style={{ padding: '6px 8px', color: 'var(--text-1)', fontWeight: 700 }}>
+                    <DimCell dimKey={dk} value={row[dk]} />
+                  </td>
+                ))}
+                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{i0(row.weight)}</td>
+                {config.cols.map(c => {
                   const v = row[c.key]
+                  const display = v == null ? '—' : c.isFrac ? frac1(v) : v.toFixed(c.digits ?? 1)
                   return (
                     <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', ...(v != null ? heat(v, allByCol[c.key], c.dir) : {}) }}>
-                      {v != null ? c.fmt(v) : '—'}
+                      {display}
                     </td>
                   )
                 })}
               </tr>
             ))}
+            {sorted.length === 0 && (
+              <tr><td colSpan={groupBy.length + 1 + config.cols.length} style={{ padding: '12px 8px', color: 'var(--text-3)', textAlign: 'center' }}>No data for this window.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+// Swing/Take (Batting Run Value) — a different dim shape (group_type +
+// sub_type, no recency window on this leaderboard) than the pitch/hand
+// categories above, so it gets its own explorer matching the real
+// Savant page's own Group Type + Sub Type pickers.
+function SwingTakeExplorer({ rows, title }: { rows: SplitRow[]; title: string }) {
+  const groupTypes = useMemo(() => Array.from(new Set(rows.map(r => r.dims.group_type))), [rows])
+  const [groupType, setGroupType] = useState(groupTypes[0])
+  const subTypes = useMemo(() => rows.filter(r => r.dims.group_type === groupType).map(r => r.dims.sub_type), [rows, groupType])
+  const [subType, setSubType] = useState(subTypes[0])
+
+  useEffect(() => {
+    if (!subTypes.includes(subType)) setSubType(subTypes[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupType])
+
+  if (!rows.length) return null
+
+  const row = rows.find(r => r.dims.group_type === groupType && r.dims.sub_type === subType)
+  const m = row?.metrics ?? {}
+  const isRegionBreakdown = 'runs_heart' in m
+
+  return (
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>{title}<span style={windowTag}>Season · Context-Neutral</span></div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+        {groupTypes.map(gt => (
+          <ToggleBtn key={gt} active={gt === groupType} onClick={() => setGroupType(gt)}>{gt}</ToggleBtn>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+        {subTypes.map(st => (
+          <DimChip key={st} label={st} active={st === subType} onClick={() => setSubType(st)} />
+        ))}
+      </div>
+      {row ? (
+        <StatGrid pairs={(isRegionBreakdown ? [
+          ['Runs (All)', d1(m.runs_all)], ['Heart', d1(m.runs_heart)], ['Shadow', d1(m.runs_shadow)],
+          ['Chase', d1(m.runs_chase)], ['Waste', d1(m.runs_waste)],
+        ] : [
+          ['Runs (All)', d1(m.runs_all)], ['vs 4-Seam', d1(m.runs_ff)], ['vs Sinker', d1(m.runs_si)],
+          ['vs Change', d1(m.runs_ch)], ['vs Slider', d1(m.runs_sl)], ['vs Curve', d1(m.runs_cu)],
+          ['vs Cutter', d1(m.runs_fc)], ['vs Splitter', d1(m.runs_fs)], ['vs Sweeper', d1(m.runs_st)], ['vs Slurve', d1(m.runs_sv)],
+        ]) as [string, string][]} />
+      ) : <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No data for this combination.</div>}
+    </div>
+  )
+}
+
+// Batting Stance — batter-only, dims are just {pitch_hand: 'All'|'L'|'R'}.
+function BattingStanceCard({ splitWindow }: { splitWindow: SplitWindow }) {
+  const hasRecency = splitWindow.recency.length > 0
+  const [windowSel, setWindowSel] = useState<'season' | 'recency'>(hasRecency ? 'recency' : 'season')
+  const rows = windowSel === 'recency' ? splitWindow.recency : splitWindow.season
+  const availableHands = useMemo(() => rows.map(r => r.dims.pitch_hand), [rows])
+  const [handSel, setHandSel] = useState('All')
+
+  if (!splitWindow.season.length && !splitWindow.recency.length) return null
+
+  const row = rows.find(r => r.dims.pitch_hand === handSel) ?? rows.find(r => r.dims.pitch_hand === 'All')
+  const m = row?.metrics ?? {}
+
+  return (
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        Batting Stance
+        {hasRecency && (
+          <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+            <ToggleBtn active={windowSel === 'season'} onClick={() => setWindowSel('season')}>Season</ToggleBtn>
+            <ToggleBtn active={windowSel === 'recency'} onClick={() => setWindowSel('recency')}>Last 6 Days</ToggleBtn>
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+        {['All', 'L', 'R'].filter(h => availableHands.includes(h)).map(h => (
+          <DimChip key={h} label={h === 'All' ? 'vs All' : `vs ${h}HP`} active={h === handSel} onClick={() => setHandSel(h)} />
+        ))}
+      </div>
+      {row ? (
+        <StatGrid pairs={[
+          ['Stance Angle', d1(m.avg_stance_angle)],
+          ['Foot Separation', d1(m.avg_foot_sep)],
+          ['Batter Y Pos', d1(m.avg_batter_y_position)],
+          ['Batter X Pos', d1(m.avg_batter_x_position)],
+          ['Intercept vs Plate', d1(m.avg_intercept_y_vs_plate)],
+          ['Intercept vs Batter', d1(m.avg_intercept_y_vs_batter)],
+        ]} />
+      ) : <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No data.</div>}
     </div>
   )
 }
@@ -271,7 +539,7 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   if (error) return <div style={{ padding: 24, color: 'var(--red)' }}>{error}</div>
   if (!data) return <div style={{ padding: 24, color: 'var(--text-3)' }}>Loading…</div>
 
-  const { player, seasonStats, careerStats, statcastSeason, pitchArsenal, form, heatmaps, homeRuns, isBatter, isPitcher } = data
+  const { player, seasonStats, careerStats, statcastSeason, pitchArsenal, form, splits, swingTake, battingStance, homeRuns, isBatter, isPitcher } = data
 
   const evb = statcastSeason.hitting.exit_velocity_barrels
   const xs = statcastSeason.hitting.expected_stats
@@ -375,25 +643,21 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
         </div>
       )}
 
-      {/* Pitch-type x hand heatmap (recency-weighted) */}
-      {isBatter && heatmaps.batter && (heatmaps.batter.batTracking.length > 0 || heatmaps.batter.battedBall.length > 0) && (
-        <div style={cardStyle}>
-          <div style={sectionTitleStyle}>vs. Pitch Type<span style={windowTag}>Recency-weighted</span></div>
-          <div style={{ display: 'grid', gap: 20 }}>
-            <HeatTable rows={mergeHeat(heatmaps.batter.batTracking, heatmaps.batter.battedBall).filter(r => r.hand === 'L')} title="vs. Left-Handed Pitching" />
-            <HeatTable rows={mergeHeat(heatmaps.batter.batTracking, heatmaps.batter.battedBall).filter(r => r.hand === 'R')} title="vs. Right-Handed Pitching" />
-          </div>
-        </div>
-      )}
-      {isPitcher && heatmaps.pitcher && (heatmaps.pitcher.batTracking.length > 0 || heatmaps.pitcher.battedBall.length > 0) && (
-        <div style={cardStyle}>
-          <div style={sectionTitleStyle}>Pitch Arsenal — By Hand<span style={windowTag}>Recency-weighted</span></div>
-          <div style={{ display: 'grid', gap: 20 }}>
-            <HeatTable rows={mergeHeat(heatmaps.pitcher.batTracking, heatmaps.pitcher.battedBall).filter(r => r.hand === 'L')} title="vs. Left-Handed Batters" />
-            <HeatTable rows={mergeHeat(heatmaps.pitcher.batTracking, heatmaps.pitcher.battedBall).filter(r => r.hand === 'R')} title="vs. Right-Handed Batters" />
-          </div>
-        </div>
-      )}
+      {/* Fully customizable split explorers — pitch type / hand / contact
+          type breakdowns, season or recency, user-picked grouping */}
+      {isBatter && splits.batter && CATEGORY_CONFIGS.map(cfg => (
+        splits.batter[cfg.key] ? <SplitExplorer key={`bat-${cfg.key}`} config={cfg} splitWindow={splits.batter[cfg.key]} /> : null
+      ))}
+      {isPitcher && splits.pitcher && CATEGORY_CONFIGS.map(cfg => (
+        splits.pitcher[cfg.key] ? <SplitExplorer key={`pit-${cfg.key}`} config={cfg} splitWindow={splits.pitcher[cfg.key]} /> : null
+      ))}
+
+      {/* Swing/Take run-value explorer */}
+      {isBatter && swingTake.batter && <SwingTakeExplorer rows={swingTake.batter} title="Swing/Take Run Value" />}
+      {isPitcher && swingTake.pitcher && <SwingTakeExplorer rows={swingTake.pitcher} title="Swing/Take Run Value (Pitching)" />}
+
+      {/* Batting stance */}
+      {isBatter && battingStance && <BattingStanceCard splitWindow={battingStance} />}
 
       {/* Season pitch-arsenal-stats summary table */}
       {isBatter && pitchArsenal.batter.length > 0 && (
@@ -424,16 +688,6 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       )}
     </div>
   )
-}
-
-function mergeHeat(batTracking: any[], battedBall: any[]): any[] {
-  const byKey = new Map<string, any>()
-  for (const r of batTracking) byKey.set(`${r.pitchType}:${r.hand}`, { ...r })
-  for (const r of battedBall) {
-    const key = `${r.pitchType}:${r.hand}`
-    byKey.set(key, { ...(byKey.get(key) ?? { pitchType: r.pitchType, hand: r.hand, weight: r.weight }), ...r, weight: byKey.get(key)?.weight ?? r.weight })
-  }
-  return Array.from(byKey.values())
 }
 
 function PitchArsenalTable({ rows }: { rows: Record<string, any>[] }) {
