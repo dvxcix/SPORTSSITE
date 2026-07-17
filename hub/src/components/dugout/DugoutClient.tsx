@@ -423,6 +423,8 @@ function buildBatterRow(
   const rbi_fd     = props?.rbi?.fanduel      ?? null
   const rbi2_fd    = props?.rbi2?.fanduel     ?? null
   const rbi3_fd    = props?.rbi3?.fanduel     ?? null
+  const tb_fd      = props?.tb?.fanduel       ?? null
+  const tb3_fd     = props?.tb3?.fanduel      ?? null
   const tb4_fd     = props?.tb4?.fanduel      ?? null
   const tb5_fd     = props?.tb5?.fanduel      ?? null
   const hr2_fd     = props?.hr2?.fanduel      ?? null
@@ -477,6 +479,8 @@ function buildBatterRow(
   const sa_div_rbi = implRatio(sa_fd, rbi_fd)
   const sa_div_rbi2 = implRatio(sa_fd, rbi2_fd)
   const sa_div_rbi3 = implRatio(sa_fd, rbi3_fd)
+  const sa_div_tb   = implRatio(sa_fd, tb_fd)
+  const sa_div_tb3  = implRatio(sa_fd, tb3_fd)
   const sa_div_tb4  = implRatio(sa_fd, tb4_fd)
   const sa_div_tb5  = implRatio(sa_fd, tb5_fd)
   const sa_div_hr2  = implRatio(sa_fd, hr2_fd)
@@ -581,8 +585,8 @@ function buildBatterRow(
       return delta * orderWeight
     })(),
     sa_fd, sa_cz, sa_mgm, sa_br, m_div_f,
-    sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
-    sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd, sb_fd, hits_fd, runs_fd,
+    sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb, sa_div_tb3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
+    sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd, sb_fd, hits_fd, runs_fd,
     sb2_fd, hits2_fd, runs2_fd,
     laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hrMl_fd, pa1_div_sa, sa_div_ml,
     fhr_open, saFd_open, hr2Fd_open, sngFd_open, dblFd_open, triFd_open, rbiFd_open, rbi2Fd_open, rbi3Fd_open, tb4Fd_open, tb5Fd_open, hrrFd_open,
@@ -611,6 +615,7 @@ function buildBatterRow(
     pkTriples: pikkitMap[nn]?.triples ?? null,
     pkRbi:     pikkitMap[nn]?.rbi ?? null,
     pkHrr:     pikkitMap[nn]?.hits_runs_rbi ?? null,
+    pkTb:      pikkitMap[nn]?.bases ?? null,
     hr_hits: hrMap[nn]    ?? [],
     near_hr: nearMap[nn]  ?? null,
     paper: null as number | null,
@@ -1764,6 +1769,10 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           2+/3+ line for a different player. Showing a delta would compare
           two different markets as if they were the same one. */}
       <OddsCell row={row} gameInfo={gameInfo} propKey="hrr" book="fanduel" odds={row.hrr_fd} display={f2(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hrr, g('sa_div_hrr')) }} pickCount={row.pkHrr?.picks ?? null} />
+      {/* No openOdds on tb/tb3 — same reasoning as hrr above: the "opening"
+          gap-import snapshot only ever captures the exact tb4/tb5 lines. */}
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb" book="fanduel" odds={row.tb_fd} display={f2(row.sa_div_tb)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb, g('sa_div_tb')) }} pickCount={row.pkTb?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb3" book="fanduel" odds={row.tb3_fd} display={f2(row.sa_div_tb3)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb3, g('sa_div_tb3')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb4" book="fanduel" odds={row.tb4_fd} openOdds={row.tb4Fd_open} display={f2(row.sa_div_tb4)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb4, g('sa_div_tb4')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb5" book="fanduel" odds={row.tb5_fd} openOdds={row.tb5Fd_open} display={f2(row.sa_div_tb5)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb5, g('sa_div_tb5')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hr2" book="fanduel" odds={row.hr2_fd} openOdds={row.hr2Fd_open} display={f2(row.sa_div_hr2)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hr2, g('sa_div_hr2')) }} />
@@ -2323,6 +2332,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
       {H('HR÷RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
       {H('HR÷HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr')}
+      {H('HR÷TB', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb')}
+      {H('HR÷TB3', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
       {H('HR÷TB4', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
       {H('HR÷TB5', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
       {H('HR÷2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}

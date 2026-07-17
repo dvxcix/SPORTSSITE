@@ -36,7 +36,8 @@ export const PROP_META: Record<string, { label: string; pickType: string }> = {
   // pass once that wording's been checked against FanDuel directly.
   hits:                { label: '1+ Hits',               pickType: 'hits' },
   hits2:               { label: '2+ Hits',               pickType: 'hits_2plus' },
-  tb:                  { label: '1.5+ Total Bases',      pickType: 'total_bases' },
+  tb:                  { label: '2+ Total Bases',        pickType: 'total_bases' },
+  tb3:                 { label: '3+ Total Bases',        pickType: 'total_bases_3plus' },
   runs:                { label: '1+ Run Scored',         pickType: 'run_scored' },
   runs2:               { label: '2+ Runs Scored',        pickType: 'run_scored_2plus' },
   stolen_bases:        { label: '1+ Stolen Base',        pickType: 'stolen_base' },

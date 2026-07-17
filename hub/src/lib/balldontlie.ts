@@ -80,7 +80,8 @@ export interface BDLPropMap {
     rbi?: { [vendor: string]: number }        // 1+ RBI (line=0.5)
     rbi2?: { [vendor: string]: number }       // 2+ RBI (line=1.5)
     rbi3?: { [vendor: string]: number }       // 3+ RBI (line=2.5)
-    tb?: { [vendor: string]: number }         // 1.5+ TB
+    tb?: { [vendor: string]: number }         // 2+ TB (line=1.5)
+    tb3?: { [vendor: string]: number }        // 3+ TB (line=2.5)
     tb4?: { [vendor: string]: number }        // 4+ TB (line=3.5)
     tb5?: { [vendor: string]: number }        // 5+ TB (line=4.5)
     strikeouts?: { [vendor: string]: number }  // 1+ K (line=0.5)
@@ -294,17 +295,22 @@ export function buildPropMap(props: BDLPlayerProp[], playerNames: Record<number,
       }
 
     } else if (p.prop_type === 'total_bases') {
+      // Same bug class as hits/stolen_bases/etc: vendors post FOUR separate
+      // total_bases lines per player (1.5/2.5/3.5/4.5 = 2+/3+/4+/5+), and
+      // 1.5 and 2.5 used to get merged into the same "tb" bucket — a 3+ TB
+      // line could silently overwrite (or lose to) the 2+ TB line depending
+      // on processing order. Each line now gets its own bucket.
       const l = line ?? 1.5
-      if (l <= 2.5) {
-        // 1.5 or 2.5 line — standard "TB" prop
+      if (l <= 1.5) {
         if (!entry.tb) entry.tb = {}
         entry.tb[vendor] = odds!
+      } else if (l <= 2.5) {
+        if (!entry.tb3) entry.tb3 = {}
+        entry.tb3[vendor] = odds!
       } else if (l <= 3.5) {
-        // 3.5 = 4+ total bases
         if (!entry.tb4) entry.tb4 = {}
         entry.tb4[vendor] = odds!
       } else {
-        // 4.5 = 5+ total bases
         if (!entry.tb5) entry.tb5 = {}
         entry.tb5[vendor] = odds!
       }
