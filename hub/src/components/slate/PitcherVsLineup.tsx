@@ -5,7 +5,8 @@ import { pitchLabel } from '@/lib/mlb-api'
 import { heat, SortableTH, SortState, toggleSortState, cmpAny, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
 import { HandBadge, PlayerLink, StatGrid, cardStyle, sectionTitleStyle, windowTag, ToggleBtn } from '@/components/players/PlayerPageClient'
 import { ZoneGrid, ChaseZoneStats, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
-import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, r3, d1, p1, i0, type PitchLogRow } from '@/lib/batterStatsEngine'
+import { PitchList } from '@/components/players/PitchList'
+import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, type PitchLogRow } from '@/lib/batterStatsEngine'
 import type { LineupPlayer, ProbablePitcher, TeamPitcher } from '@/lib/mlbSchedule'
 
 const PITCHER_RECENCY = [
@@ -25,11 +26,20 @@ const BATTER_SCOPES = [
   { key: 'vsTeam', label: 'Vs. This Team' },
 ] as const
 
+function PitchTypeCell({ pitchType }: { pitchType: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+      {pitchLabel(pitchType)}
+    </span>
+  )
+}
+
 // The core matchup unit: one probable starter's recency-selectable stat
-// line + pitch mix + zone profile, and every batter he's facing today,
-// each recomputed against exactly the pitch types that starter actually
-// throws — not "this batter vs this pitcher" history, "this batter vs
-// pitches like the ones he'll see today."
+// line + pitch mix (sortable/heat-mapped, pinnable — click a pitch row to
+// drill the batter table down to just that pitch) + zone profile, and
+// every batter he's facing today, each recomputed against exactly the
+// pitch types that starter actually throws.
 export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, opposingLineup, opposingTeamAbbr, opposingTeamName, lineupConfirmed }: {
   pitcher: ProbablePitcher
   pitcherTeamAbbr: string
@@ -46,6 +56,8 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
   const [batterScope, setBatterScope] = useState<typeof BATTER_SCOPES[number]['key']>('season')
   const [zoneMetric, setZoneMetric] = useState<ZoneMetricKey>('run_value')
   const [sort, setSort] = useState<SortState>({ col: 'pa', dir: 'desc' })
+  const [pitchSort, setPitchSort] = useState<SortState>({ col: 'pitches', dir: 'desc' })
+  const [pinnedPitches, setPinnedPitches] = useState<Set<string>>(new Set())
   const [expandedBatterId, setExpandedBatterId] = useState<number | null>(null)
 
   const lineupIdKey = opposingLineup.map(b => b.mlb_id).join(',')
@@ -97,9 +109,31 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
   const mixSet = new Set(mix.map(m => m.pitchType))
   const zoneMetricConfig = ZONE_METRICS.find(m => m.key === zoneMetric)!
 
+  // Pinning a pitch (or several) in the mix table below drills the whole
+  // batter table down to just those pitch types instead of the starter's
+  // full mix — same idea as Pitcher Report's pin-a-pitch cross-reference,
+  // just driving this page's own batter table instead of a side panel.
+  const effectiveMixSet = pinnedPitches.size > 0 ? pinnedPitches : mixSet
+  function togglePin(pt: string) {
+    setPinnedPitches(prev => {
+      const next = new Set(prev)
+      if (next.has(pt)) next.delete(pt); else next.add(pt)
+      return next
+    })
+  }
+
+  const mixRows = mix.map(m => ({ pitchType: m.pitchType, ...computeStatLine(pitcherWindowRows.filter(r => r.pitch_type === m.pitchType)), usage: m.usage }))
+  const onPitchSort = (col: string) => setPitchSort(prev => toggleSortState(prev, col))
+  const activePitchSort = pitchSort ?? { col: 'pitches', dir: 'desc' as const }
+  const sortedMixRows = [...mixRows].sort((a, b) => {
+    if (activePitchSort.col === 'pitchType') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), activePitchSort.dir)
+    return cmpNullsLast((a as any)[activePitchSort.col], (b as any)[activePitchSort.col], activePitchSort.dir)
+  })
+  const mixByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, mixRows.map(r => (r as any)[c.key])]))
+
   function batterRowsForScope(batterId: number): PitchLogRow[] {
     const rows = batterRowsById[batterId] ?? []
-    const pitchFiltered = rows.filter(r => r.pitch_type && mixSet.has(r.pitch_type))
+    const pitchFiltered = rows.filter(r => r.pitch_type && effectiveMixSet.has(r.pitch_type))
     if (batterScope === 'season') return pitchFiltered
     if (batterScope === 'vsPitcher') return pitchFiltered.filter(r => r.pitcher_id === pitcher.id)
     if (batterScope === 'vsTeam') return teamPitcherIds ? pitchFiltered.filter(r => teamPitcherIds.has(r.pitcher_id)) : []
@@ -110,11 +144,10 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
     return pitchFiltered.filter(r => dates.has(r.game_date))
   }
 
-  const batterRows = opposingLineup.map(b => ({
-    player: b,
-    stats: computeStatLine(batterRowsForScope(b.mlb_id)),
-    loaded: b.mlb_id in batterRowsById,
-  }))
+  const batterRows = opposingLineup.map(b => {
+    const filtered = batterRowsForScope(b.mlb_id)
+    return { player: b, filtered, stats: computeStatLine(filtered), loaded: b.mlb_id in batterRowsById }
+  })
 
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
   const activeSort = sort ?? { col: 'pa', dir: 'desc' as const }
@@ -137,24 +170,65 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
           {PITCHER_RECENCY.map(o => <ToggleBtn key={o.key} active={pitcherRecency === o.key} onClick={() => setPitcherRecency(o.key)}>{o.label}</ToggleBtn>)}
         </div>
 
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 20 }}>
           <StatGrid pairs={[
-            ['Pitches', i0(pitcherStats.pitches)], ['Games', String(pitcherStats.games)],
-            ['BF', i0(pitcherStats.pa)], ['AVG Allowed', r3(pitcherStats.avg)], ['SLG Allowed', r3(pitcherStats.slg)],
-            ['Whiff %', p1(pitcherStats.whiffPct)], ['Hard-Hit % Allowed', p1(pitcherStats.hardHitPct)],
-            ['xwOBA Allowed', r3(pitcherStats.xwobaContact)], ['RV/100', d1(pitcherStats.runValuePer100)],
+            ['Pitches', String(pitcherStats.pitches)], ['Games', String(pitcherStats.games)],
+            ['BF', String(pitcherStats.pa)], ['AVG Allowed', pitcherStats.avg == null ? '—' : pitcherStats.avg.toFixed(3)],
+            ['SLG Allowed', pitcherStats.slg == null ? '—' : pitcherStats.slg.toFixed(3)],
+            ['Whiff %', pitcherStats.whiffPct == null ? '—' : `${pitcherStats.whiffPct.toFixed(1)}%`],
+            ['Hard-Hit % Allowed', pitcherStats.hardHitPct == null ? '—' : `${pitcherStats.hardHitPct.toFixed(1)}%`],
+            ['xwOBA Allowed', pitcherStats.xwobaContact == null ? '—' : pitcherStats.xwobaContact.toFixed(3)],
+            ['RV/100', pitcherStats.runValuePer100 == null ? '—' : pitcherStats.runValuePer100.toFixed(1)],
           ]} />
         </div>
 
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 8 }}>
-          PITCH MIX — {mix.length} pitch{mix.length === 1 ? '' : 'es'} tracked
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
-          {mix.map(m => (
-            <span key={m.pitchType} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: '1px solid var(--border)', color: 'var(--text-2)' }}>
-              {pitchLabel(m.pitchType)} · {m.usage.toFixed(0)}%
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em' }}>
+            PITCH MIX — {mix.length} pitch{mix.length === 1 ? '' : 'es'} tracked
+          </span>
+          {pinnedPitches.size > 0 && (
+            <span
+              onClick={() => setPinnedPitches(new Set())}
+              style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
+            >
+              BATTERS FILTERED TO {mixLabel(pinnedPitches)} — CLEAR
             </span>
-          ))}
+          )}
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 8 }}>Click a pitch row to pin it — the batter table below drills down to just that pitch (or pitches).</div>
+        <div style={{ overflowX: 'auto', marginBottom: 20 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                <SortableTH label="Pitch" colKey="pitchType" sort={pitchSort} onSort={onPitchSort} align="left" />
+                {PITCHER_STAT_COLS.map(c => <SortableTH key={c.key} label={c.label} colKey={c.key} sort={pitchSort} onSort={onPitchSort} />)}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedMixRows.map(row => {
+                const isPinned = pinnedPitches.has(row.pitchType)
+                return (
+                  <tr
+                    key={row.pitchType}
+                    onClick={() => togglePin(row.pitchType)}
+                    style={{ borderTop: '1px solid var(--border)', cursor: 'pointer', background: isPinned ? 'var(--accent-dim)' : undefined }}
+                  >
+                    <td style={{ padding: '6px 8px', fontWeight: 700, color: isPinned ? 'var(--accent)' : 'var(--text-1)' }}>
+                      <PitchTypeCell pitchType={row.pitchType} />
+                    </td>
+                    {PITCHER_STAT_COLS.map(c => {
+                      const v = (row as any)[c.key]
+                      return (
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v as number | null, mixByCol[c.key], c.dir)) }}>
+                          {c.fmt(v)}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
@@ -170,7 +244,7 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
       <div style={cardStyle}>
         <div style={sectionTitleStyle}>
           {opposingTeamName} Batters
-          <span style={windowTag}>vs {pitcher.name}&apos;s pitch mix</span>
+          <span style={windowTag}>vs {pinnedPitches.size > 0 ? `${mixLabel(pinnedPitches)} only` : `${pitcher.name}'s pitch mix`}</span>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
           {BATTER_SCOPES.map(o => <ToggleBtn key={o.key} active={batterScope === o.key} onClick={() => setBatterScope(o.key)}>{o.label}</ToggleBtn>)}
@@ -184,7 +258,7 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
               </tr>
             </thead>
             <tbody>
-              {sortedBatters.map(({ player, stats, loaded }) => (
+              {sortedBatters.map(({ player, filtered, stats, loaded }) => (
                 <BatterRow
                   key={player.mlb_id}
                   player={player}
@@ -193,7 +267,7 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
                   allByCol={allByCol}
                   expanded={expandedBatterId === player.mlb_id}
                   onToggle={() => setExpandedBatterId(v => v === player.mlb_id ? null : player.mlb_id)}
-                  zoneRows={(batterRowsById[player.mlb_id] ?? []).filter(r => r.pitch_type && mixSet.has(r.pitch_type))}
+                  filteredRows={filtered}
                   zoneMetric={zoneMetric}
                   zoneDir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'}
                 />
@@ -209,15 +283,19 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
   )
 }
 
+function mixLabel(pitchTypes: Set<string>): string {
+  return Array.from(pitchTypes).map(pt => pitchLabel(pt)).join(', ')
+}
+
 // zoneDir is pre-flipped by the caller: the pitcher's own zone grid colors
 // green-for-pitcher, but a batter's own zone breakdown (shown on row expand)
 // should color green-for-the-batter instead — same metric, opposite "good"
 // direction, since these are two different players' outcomes in that zone.
-function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, zoneRows, zoneMetric, zoneDir }: {
+function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, filteredRows, zoneMetric, zoneDir }: {
   player: LineupPlayer; stats: ReturnType<typeof computeStatLine>; loaded: boolean
   allByCol: Record<string, (number | null)[]>
   expanded: boolean; onToggle: () => void
-  zoneRows: PitchLogRow[]; zoneMetric: ZoneMetricKey; zoneDir: 'hi' | 'lo'
+  filteredRows: PitchLogRow[]; zoneMetric: ZoneMetricKey; zoneDir: 'hi' | 'lo'
 }) {
   return (
     <>
@@ -242,12 +320,20 @@ function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, zoneRo
       {expanded && (
         <tr>
           <td colSpan={BATTER_STAT_COLS.length + 1} style={{ padding: '10px 12px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-            {zoneRows.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>No tracked pitches from this pitcher&apos;s mix in the current window.</div>
+            {filteredRows.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>No tracked pitches in the current pitch-mix/scope filter.</div>
             ) : (
               <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                <ZoneGrid rows={zoneRows} metric={zoneMetric} dir={zoneDir} cellSize={44} />
-                <div style={{ fontSize: 11, color: 'var(--text-3)', maxWidth: 240 }}>{player.name}&apos;s own zone tendencies, filtered to this pitcher&apos;s pitch mix and the current scope.</div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6 }}>ZONE</div>
+                  <ZoneGrid rows={filteredRows} metric={zoneMetric} dir={zoneDir} cellSize={44} />
+                </div>
+                <div style={{ flex: 1, minWidth: 320 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6 }}>
+                    {filteredRows.length} INDIVIDUAL PITCH{filteredRows.length === 1 ? '' : 'ES'}
+                  </div>
+                  <PitchList rows={filteredRows} />
+                </div>
               </div>
             )}
           </td>

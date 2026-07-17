@@ -8,7 +8,7 @@ type AdminClient = ReturnType<typeof createAdminClient>
 const SELECT_COLS = [
   'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'zone', 'plate_x', 'plate_z',
   'balls', 'strikes', 'inning', 'events', 'description', 'is_in_play', 'is_swing', 'is_whiff', 'is_home_run',
-  'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed',
+  'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed', 'velocity', 'spin_rate',
   // swing_length/attack_angle/bb_type aren't their own typed columns (see
   // statcastPitchLogSync.ts) — they're real Savant CSV fields all the same,
   // just still living in `raw` until something needs to filter/index on
