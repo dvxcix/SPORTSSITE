@@ -381,7 +381,7 @@ export async function GET(req: Request) {
     // events fetch above (see fetchBatterPitchEvents).
     const { data: gapRows } = await admin
       .from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
+      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
       .eq('game_date', date)
       .range(0, 19999)
     for (const r of gapRows ?? []) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
@@ -407,7 +407,7 @@ export async function GET(req: Request) {
   if (admin) {
     const [{ data: fdOpenRows }, { data: mgmOpenRows }] = await Promise.all([
       admin.from('fanduel_gap_odds_opening')
-        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo2_min')
+        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo2_min')
         .eq('game_date', date)
         .range(0, 19999),
       admin.from('mgm_gap_odds_opening')
@@ -561,6 +561,8 @@ export async function GET(req: Request) {
       if (gap.rbi_fd  != null && entry.rbi?.fanduel     == null) entry.rbi     = { ...entry.rbi,     fanduel: gap.rbi_fd }
       if (gap.rbi2_fd != null && entry.rbi2?.fanduel    == null) entry.rbi2    = { ...entry.rbi2,    fanduel: gap.rbi2_fd }
       if (gap.rbi3_fd != null && entry.rbi3?.fanduel    == null) entry.rbi3    = { ...entry.rbi3,    fanduel: gap.rbi3_fd }
+      if (gap.tb_fd   != null && entry.tb?.fanduel      == null) entry.tb      = { ...entry.tb,      fanduel: gap.tb_fd }
+      if (gap.tb3_fd  != null && entry.tb3?.fanduel     == null) entry.tb3     = { ...entry.tb3,     fanduel: gap.tb3_fd }
       if (gap.tb4_fd  != null && entry.tb4?.fanduel     == null) entry.tb4     = { ...entry.tb4,     fanduel: gap.tb4_fd }
       if (gap.tb5_fd  != null && entry.tb5?.fanduel     == null) entry.tb5     = { ...entry.tb5,     fanduel: gap.tb5_fd }
       if (gap.hrr_fd  != null && entry.hrr?.fanduel     == null) entry.hrr     = { ...entry.hrr,     fanduel: gap.hrr_fd }
@@ -596,6 +598,8 @@ export async function GET(req: Request) {
         rbiFd: open.rbi_fd ?? entry.open?.rbiFd,
         rbi2Fd: open.rbi2_fd ?? entry.open?.rbi2Fd,
         rbi3Fd: open.rbi3_fd ?? entry.open?.rbi3Fd,
+        tbFd: open.tb_fd ?? entry.open?.tbFd,
+        tb3Fd: open.tb3_fd ?? entry.open?.tb3Fd,
         tb4Fd: open.tb4_fd ?? entry.open?.tb4Fd,
         tb5Fd: open.tb5_fd ?? entry.open?.tb5Fd,
         hrrFd: open.hrr_fd ?? entry.open?.hrrFd,

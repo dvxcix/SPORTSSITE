@@ -79,6 +79,11 @@ const SECTION_MAP: Array<{ re: RegExp; col: string }> = [
   { re: /^to record an rbi$/i, col: 'rbi_fd' },
   { re: /^to record 2\+\s*rbis?$/i, col: 'rbi2_fd' },
   { re: /^to record 3\+\s*rbis?$/i, col: 'rbi3_fd' },
+  // 2+/3+ total bases — same "to record N+ total bases" phrasing as 4+/5+
+  // below, just never captured before now (BDL's own tb/tb3 lines just got
+  // their own bucket too — see balldontlie.ts's total_bases bucketing fix).
+  { re: /^to record 2\+\s*total bases$/i, col: 'tb_fd' },
+  { re: /^to record 3\+\s*total bases$/i, col: 'tb3_fd' },
   { re: /^to record 4\+\s*total bases$/i, col: 'tb4_fd' },
   { re: /^to record 5\+\s*total bases$/i, col: 'tb5_fd' },
   { re: /^player to record 1\+\s*hits\s*\+\s*runs\s*\+\s*rbis$/i, col: 'hrr_fd' },
