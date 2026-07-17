@@ -6,96 +6,10 @@ import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/co
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip, StatGrid } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
 import { ZoneScoreCard } from './ZoneScoreCard'
+import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, r3, d1, p1, i0 } from '@/lib/batterStatsEngine'
 
-export type BatterPitchRow = {
-  game_pk: string; game_date: string; pitcher_id: number; batter_id: number
-  pitch_type: string | null; zone: number | null; inning: number | null
-  events: string | null
-  is_in_play: boolean; is_swing: boolean; is_whiff: boolean
-  launch_speed: number | null; launch_angle: number | null; xwoba: number | null
-  bat_speed: number | null; run_value: number | null
-  p_throws: string | null
-  opponent_id: number; opponent_name: string; opponent_team: string | null; day_night: string | null
-}
-
-const r3 = (v: number | null) => (v == null ? '—' : v.toFixed(3))
-const d1 = (v: number | null) => (v == null ? '—' : v.toFixed(1))
-const p1 = (v: number | null) => (v == null ? '—' : `${v.toFixed(1)}%`)
-const i0 = (v: number | null) => (v == null ? '—' : String(Math.round(v)))
-const avg = (nums: number[]) => (nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null)
-
-// Real counting stats straight off the event log — Savant's own `events`
-// column is populated only on the pitch that ends a plate appearance, so
-// counting occurrences here IS the real total for whatever subset is
-// currently filtered, no separate boxscore/game-log needed.
-function computeStats(rows: BatterPitchRow[]) {
-  const pitches = rows.length
-  const games = new Set(rows.map(r => r.game_date)).size
-  const swings = rows.filter(r => r.is_swing)
-  const whiffs = rows.filter(r => r.is_whiff)
-  const inPlay = rows.filter(r => r.is_in_play)
-  const withEv = inPlay.filter((r): r is BatterPitchRow & { launch_speed: number } => r.launch_speed != null)
-  const withLa = inPlay.filter((r): r is BatterPitchRow & { launch_angle: number } => r.launch_angle != null)
-  const hardHit = withEv.filter(r => r.launch_speed >= 95)
-  const withXwoba = inPlay.filter((r): r is BatterPitchRow & { xwoba: number } => r.xwoba != null)
-  const outOfZone = rows.filter(r => r.zone != null && (r.zone as number) >= 11)
-  const withBatSpeed = swings.filter((r): r is BatterPitchRow & { bat_speed: number } => r.bat_speed != null)
-
-  const events = rows.map(r => r.events).filter((e): e is string => !!e)
-  const cnt = (name: string) => events.filter(e => e === name).length
-  const bb = cnt('walk') + cnt('intent_walk')
-  const hbp = cnt('hit_by_pitch')
-  const k = cnt('strikeout') + cnt('strikeout_double_play')
-  const single = cnt('single'), double = cnt('double'), triple = cnt('triple'), hr = cnt('home_run')
-  const hits = single + double + triple + hr
-  const sacFly = cnt('sac_fly') + cnt('sac_fly_double_play')
-  const sacBunt = cnt('sac_bunt') + cnt('sac_bunt_double_play')
-  const pa = events.length
-  const ab = pa - bb - hbp - sacFly - sacBunt
-  const obpDenom = ab + bb + hbp + sacFly
-  const totalBases = single + 2 * double + 3 * triple + 4 * hr
-
-  return {
-    pitches, games, pa, ab, hits, bb, k, hr,
-    avg: ab > 0 ? hits / ab : null,
-    obp: obpDenom > 0 ? (hits + bb + hbp) / obpDenom : null,
-    slg: ab > 0 ? totalBases / ab : null,
-    usage: null as number | null, // filled in relative to the "All" row once every pitch-type row is built
-    bbPerGame: games > 0 ? bb / games : null,
-    kPct: pa > 0 ? (k / pa) * 100 : null,
-    swingPct: pitches > 0 ? (swings.length / pitches) * 100 : null,
-    whiffPct: swings.length > 0 ? (whiffs.length / swings.length) * 100 : null,
-    chasePct: outOfZone.length > 0 ? (outOfZone.filter(r => r.is_swing).length / outOfZone.length) * 100 : null,
-    bbe: inPlay.length,
-    avgEv: withEv.length ? avg(withEv.map(r => r.launch_speed)) : null,
-    maxEv: withEv.length ? Math.max(...withEv.map(r => r.launch_speed)) : null,
-    avgLa: withLa.length ? avg(withLa.map(r => r.launch_angle)) : null,
-    hardHitPct: withEv.length ? (hardHit.length / withEv.length) * 100 : null,
-    xwobaContact: withXwoba.length ? avg(withXwoba.map(r => r.xwoba)) : null,
-    avgBatSpeed: withBatSpeed.length ? avg(withBatSpeed.map(r => r.bat_speed)) : null,
-  }
-}
-type Stats = ReturnType<typeof computeStats>
-
-// noHeat: pure sample-size columns (Pitches/Usage%/PA) don't have a "good or
-// bad" direction — heat-coloring a count implies a value judgment that
-// doesn't apply, unlike every other column here which is a real performance
-// rate for the batter (green = good for the batter, e.g. low Whiff %/Chase %,
-// high AVG/Hard-Hit%/xwOBA).
-const TABLE_COLS: { key: keyof Stats; label: string; dir: 'hi' | 'lo'; fmt: (v: any) => string; noHeat?: boolean }[] = [
-  { key: 'pitches', label: 'Pitches', dir: 'hi', fmt: i0, noHeat: true },
-  { key: 'usage', label: 'Usage %', dir: 'hi', fmt: p1, noHeat: true },
-  { key: 'pa', label: 'PA', dir: 'hi', fmt: i0, noHeat: true },
-  { key: 'avg', label: 'AVG', dir: 'hi', fmt: r3 },
-  { key: 'obp', label: 'OBP', dir: 'hi', fmt: r3 },
-  { key: 'slg', label: 'SLG', dir: 'hi', fmt: r3 },
-  { key: 'whiffPct', label: 'Whiff %', dir: 'lo', fmt: p1 },
-  { key: 'chasePct', label: 'Chase %', dir: 'lo', fmt: p1 },
-  { key: 'avgEv', label: 'Avg EV', dir: 'hi', fmt: d1 },
-  { key: 'hardHitPct', label: 'Hard-Hit %', dir: 'hi', fmt: p1 },
-  { key: 'xwobaContact', label: 'xwOBA (Ct)', dir: 'hi', fmt: r3 },
-  { key: 'avgBatSpeed', label: 'Bat Speed', dir: 'hi', fmt: d1 },
-]
+export type { BatterPitchRow }
+const computeStats = computeBatterStats
 
 const RECENCY_OPTIONS = [
   { key: 'season', label: 'Season' },

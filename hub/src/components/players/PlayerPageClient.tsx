@@ -97,8 +97,8 @@ export function StatGrid({ pairs }: { pairs: [string, string, React.CSSPropertie
 // Same L/R/Switch color convention already used on Dugout/Pitcher Report's
 // matchup tables (#60a5fa blue / #c084fc purple / #fb923c orange) — a
 // colored circle instead of plain text.
-const HAND_COLORS: Record<string, string> = { L: '#60a5fa', S: '#c084fc', R: '#fb923c' }
-function HandBadge({ hand }: { hand: string | null }) {
+export const HAND_COLORS: Record<string, string> = { L: '#60a5fa', S: '#c084fc', R: '#fb923c' }
+export function HandBadge({ hand }: { hand: string | null }) {
   if (!hand) return null
   const color = HAND_COLORS[hand] ?? HAND_COLORS.R
   return (
@@ -114,7 +114,7 @@ function HandBadge({ hand }: { hand: string | null }) {
   )
 }
 
-function PlayerLink({ mlbId, name, teamAbbr, size = 22 }: { mlbId: number; name: string; teamAbbr?: string | null; size?: number }) {
+export function PlayerLink({ mlbId, name, teamAbbr, size = 22 }: { mlbId: number; name: string; teamAbbr?: string | null; size?: number }) {
   return (
     <Link
       href={`/players/${mlbId}`}

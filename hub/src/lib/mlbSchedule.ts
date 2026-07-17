@@ -215,3 +215,35 @@ export function findPlayerToday(games: TodayGame[], mlbId: number): PlayerTodayC
   }
   return null
 }
+
+export type TeamPitcher = { id: number; name: string; hand: string }
+
+// Every pitcher on a team's current active roster, not just today's
+// probable starter — Slate Breakdown's "vs team" batter scope means "any
+// pitcher from this staff might face him today" (the bullpen included),
+// not literally just the announced starter.
+export async function fetchTeamPitcherIds(teamId: number): Promise<TeamPitcher[]> {
+  try {
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/${teamId}/roster?rosterType=Active`, {
+      cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
+    })
+    if (!res.ok) return []
+    const roster: any[] = (await res.json()).roster ?? []
+    const pitchers = roster.filter(p => p.position?.type === 'Pitcher')
+    const ids = pitchers.map(p => p.person?.id).filter(Boolean)
+    const handById = new Map<number, string>()
+    if (ids.length) {
+      try {
+        const peopleRes = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${ids.join(',')}`, {
+          cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
+        })
+        if (peopleRes.ok) {
+          for (const p of (await peopleRes.json()).people ?? []) {
+            if (p.id && p.pitchHand?.code) handById.set(p.id, p.pitchHand.code)
+          }
+        }
+      } catch { /* pitcher list still usable without hand */ }
+    }
+    return pitchers.map(p => ({ id: p.person.id, name: p.person.fullName || '', hand: handById.get(p.person.id) ?? 'R' }))
+  } catch { return [] }
+}
