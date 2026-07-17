@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip, StatGrid } from './PlayerPageClient'
@@ -122,7 +122,9 @@ function PitchTypeCell({ pitchType }: { pitchType: string }) {
 // range, and the resulting per-pitch-type breakdown table recomputes live,
 // entirely client-side over the season's raw pitch log (same "raw rows in,
 // filter/aggregate in the browser" pattern the split explorers use).
-export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
+export type TodayOpponentPitcher = { pitcherId: number; pitcherName: string; teamAbbr: string | null }
+
+export function BatterMatchupExplorer({ rows, todayOpponent }: { rows: BatterPitchRow[]; todayOpponent?: TodayOpponentPitcher | null }) {
   const [recency, setRecency] = useState<typeof RECENCY_OPTIONS[number]['key']>('season')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -131,6 +133,7 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
   const [inningSel, setInningSel] = useState<number | 'all'>('all')
   const [inPlayOnly, setInPlayOnly] = useState(false)
   const [opponentSel, setOpponentSel] = useState<number | 'all'>('all')
+  const [autoAppliedToday, setAutoAppliedToday] = useState(false)
   const [sort, setSort] = useState<SortState>({ col: 'pitches', dir: 'desc' })
 
   const allGameDates = useMemo(() => Array.from(new Set(rows.map(r => r.game_date))).sort(), [rows])
@@ -143,6 +146,18 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
     }
     return Array.from(counts.values()).sort((a, b) => b.count - a.count)
   }, [rows])
+
+  // Defaults to today's real probable opposing pitcher the moment that
+  // context loads (a separate, slightly-slower fetch than this card's own
+  // pitch-log rows) — fires once; a manual pick from the dropdown afterward
+  // is never overwritten since this only runs while autoAppliedToday is
+  // still false.
+  useEffect(() => {
+    if (todayOpponent && !autoAppliedToday) {
+      setOpponentSel(todayOpponent.pitcherId)
+      setAutoAppliedToday(true)
+    }
+  }, [todayOpponent, autoAppliedToday])
 
   if (!rows.length) return null
 
@@ -212,6 +227,11 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
         <DimChip label="Night" active={dayNightSel === 'night'} onClick={() => setDayNightSel('night')} />
         <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>Vs. pitcher:</span>
         <PlayerPicker options={opponents} value={opponentSel} onChange={setOpponentSel} placeholder="All pitchers" />
+        {todayOpponent && opponentSel === todayOpponent.pitcherId && (
+          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 6, padding: '2px 8px' }}>
+            TODAY&apos;S MATCHUP
+          </span>
+        )}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Inning:</span>

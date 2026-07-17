@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { pitchLabel } from '@/lib/mlb-api'
 import { heat } from '@/components/pitcher-report/MatchupTables'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip } from './PlayerPageClient'
@@ -64,10 +64,12 @@ const dateInputStyle: React.CSSProperties = {
   border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-1)',
 }
 
+export type TodayOpponentTeam = { teamAbbr: string; teamName: string; lineupIds: number[]; confirmed: boolean }
+
 // Aggregate + zone-bin a pitcher's own pitch log — green = favorable to the
 // pitcher, red = vulnerable, using the same min/max heat() scale the split
 // tables already use, just fed zone cells instead of table columns.
-export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
+export function PitchZoneHeatmap({ rows, todayOpponent }: { rows: PitcherPitchRow[]; todayOpponent?: TodayOpponentTeam | null }) {
   const pitchTypes = useMemo(() => Array.from(new Set(rows.map(r => r.pitch_type).filter((v): v is string => !!v))), [rows])
   const batters = useMemo(() => {
     const counts = new Map<number, PickerOption>()
@@ -82,17 +84,40 @@ export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
   const [pitchTypeSel, setPitchTypeSel] = useState('all')
   const [handSel, setHandSel] = useState<'all' | 'L' | 'R'>('all')
   const [batterSel, setBatterSel] = useState<number | 'all'>('all')
+  const [useTodayLineup, setUseTodayLineup] = useState(false)
+  const [autoAppliedToday, setAutoAppliedToday] = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [metric, setMetric] = useState<MetricKey>('run_value')
 
+  // Defaults to today's actual opposing lineup the moment that context
+  // loads — fires once, same pattern as BatterMatchupExplorer's opponent
+  // default; a manual pick afterward is never overwritten.
+  useEffect(() => {
+    if (todayOpponent && todayOpponent.lineupIds.length && !autoAppliedToday) {
+      setUseTodayLineup(true)
+      setAutoAppliedToday(true)
+    }
+  }, [todayOpponent, autoAppliedToday])
+
+  const todayLineupIds = useMemo(() => new Set(todayOpponent?.lineupIds ?? []), [todayOpponent])
+
+  function selectBatter(v: number | 'all') {
+    setBatterSel(v)
+    setUseTodayLineup(false)
+  }
+  function selectTodayLineup() {
+    setUseTodayLineup(true)
+    setBatterSel('all')
+  }
+
   const filtered = useMemo(() => rows.filter(r =>
     (pitchTypeSel === 'all' || r.pitch_type === pitchTypeSel) &&
     (handSel === 'all' || r.stand === handSel) &&
-    (batterSel === 'all' || r.batter_id === batterSel) &&
+    (useTodayLineup ? todayLineupIds.has(r.batter_id) : (batterSel === 'all' || r.batter_id === batterSel)) &&
     (!dateFrom || r.game_date >= dateFrom) &&
     (!dateTo || r.game_date <= dateTo)
-  ), [rows, pitchTypeSel, handSel, batterSel, dateFrom, dateTo])
+  ), [rows, pitchTypeSel, handSel, useTodayLineup, todayLineupIds, batterSel, dateFrom, dateTo])
 
   if (!rows.length) return null
 
@@ -135,7 +160,14 @@ export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
         <DimChip label="vs LHB" active={handSel === 'L'} onClick={() => setHandSel('L')} />
         <DimChip label="vs RHB" active={handSel === 'R'} onClick={() => setHandSel('R')} />
         <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>Vs. batter:</span>
-        <PlayerPicker options={batters} value={batterSel} onChange={setBatterSel} placeholder="All batters" />
+        {todayOpponent && todayOpponent.lineupIds.length > 0 && (
+          <DimChip
+            label={`Today vs ${todayOpponent.teamAbbr}${todayOpponent.confirmed ? '' : ' (Projected)'}`}
+            active={useTodayLineup}
+            onClick={selectTodayLineup}
+          />
+        )}
+        <PlayerPicker options={batters} value={useTodayLineup ? 'all' : batterSel} onChange={selectBatter} placeholder="All batters" />
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Pitch:</span>

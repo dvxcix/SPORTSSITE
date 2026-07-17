@@ -8,6 +8,7 @@ import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
 import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
+import type { PlayerTodayContext } from '@/lib/mlbSchedule'
 
 type SplitRow = { dims: Record<string, any>; metrics: Record<string, any> }
 type SplitWindow = { season: SplitRow[]; recency: SplitRow[] }
@@ -544,6 +545,10 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   // thrown/seen this season) is far heavier than everything else combined,
   // so it shouldn't block the initial render.
   const [pitchLog, setPitchLog] = useState<{ pitcherRows: PitcherPitchRow[]; batterRows: BatterPitchRow[] } | null>(null)
+  // undefined = still loading, null = not in today's schedule at all —
+  // distinct from "loaded, no context" so the cards don't flash a default
+  // before this arrives.
+  const [todayContext, setTodayContext] = useState<PlayerTodayContext | null | undefined>(undefined)
 
   useEffect(() => {
     fetch(`/api/players/${mlbId}`)
@@ -557,6 +562,13 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       .then(r => r.json())
       .then(d => setPitchLog({ pitcherRows: d.pitcherRows ?? [], batterRows: d.batterRows ?? [] }))
       .catch(() => setPitchLog({ pitcherRows: [], batterRows: [] }))
+  }, [mlbId])
+
+  useEffect(() => {
+    fetch(`/api/players/${mlbId}/today`)
+      .then(r => r.json())
+      .then(d => setTodayContext(d.context ?? null))
+      .catch(() => setTodayContext(null))
   }, [mlbId])
 
   if (error) return <div style={{ padding: 24, color: 'var(--red)' }}>{error}</div>
@@ -669,8 +681,24 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       {/* Zone profile heatmap (pitcher) + full custom matchup explorer
           (batter) — built directly off the raw pitch log, loaded
           separately from the rest of this page (see pitchLog state) */}
-      {isPitcher && pitchLog && pitchLog.pitcherRows.length > 0 && <PitchZoneHeatmap rows={pitchLog.pitcherRows} />}
-      {isBatter && pitchLog && pitchLog.batterRows.length > 0 && <BatterMatchupExplorer rows={pitchLog.batterRows} />}
+      {isPitcher && pitchLog && pitchLog.pitcherRows.length > 0 && (
+        <PitchZoneHeatmap
+          rows={pitchLog.pitcherRows}
+          todayOpponent={todayContext && todayContext.role === 'pitcher' ? {
+            teamAbbr: todayContext.opponentTeam, teamName: todayContext.opponentTeamName,
+            lineupIds: todayContext.opponentLineup.map(p => p.mlb_id), confirmed: todayContext.lineupConfirmed,
+          } : null}
+        />
+      )}
+      {isBatter && pitchLog && pitchLog.batterRows.length > 0 && (
+        <BatterMatchupExplorer
+          rows={pitchLog.batterRows}
+          todayOpponent={todayContext && todayContext.role === 'batter' && todayContext.opponentPitcher ? {
+            pitcherId: todayContext.opponentPitcher.id, pitcherName: todayContext.opponentPitcher.name,
+            teamAbbr: todayContext.opponentTeam,
+          } : null}
+        />
+      )}
 
       {/* Fully customizable split explorers — pitch type / hand / contact
           type breakdowns, season or recency, user-picked grouping */}
