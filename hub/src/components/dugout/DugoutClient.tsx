@@ -436,14 +436,12 @@ function buildBatterRow(
   // The 2+ line for each of these markets — buildPropMap already buckets
   // them separately from the 1+ line (that's the exact fix for the "some
   // players showed 2+ under the 1+ column" bug), but the 2+ bucket itself
-  // was never given its own column. Same six markets whose 1+ line is
-  // already shown above/below.
+  // was never given its own column. Singles/doubles/triples deliberately
+  // excluded here — FanDuel/BDL never actually posts a 2+ line for those
+  // three, so sng2_fd/dbl2_fd/tri2_fd were always-empty columns.
   const sb2_fd     = props?.stolen_bases2?.fanduel ?? null
   const hits2_fd   = props?.hits2?.fanduel    ?? null
   const runs2_fd   = props?.runs2?.fanduel    ?? null
-  const sng2_fd    = props?.singles2?.fanduel ?? null
-  const dbl2_fd    = props?.doubles2?.fanduel ?? null
-  const tri2_fd    = props?.triples2?.fanduel ?? null
   // FanDuel-only markets BDL doesn't carry — backfilled via the admin
   // fanduel-import tool (console scraper paste), see /admin/fanduel-import.
   const laser105_fd = props?.laser105?.fanduel ?? null
@@ -585,7 +583,7 @@ function buildBatterRow(
     sa_fd, sa_cz, sa_mgm, sa_br, m_div_f,
     sa_div_rbi, sa_div_rbi2, sa_div_rbi3, sa_div_tb4, sa_div_tb5, sa_div_hr2, sa_div_hrr,
     sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb4_fd, tb5_fd, hr2_fd, hrr_fd, sb_fd, hits_fd, runs_fd,
-    sb2_fd, hits2_fd, runs2_fd, sng2_fd, dbl2_fd, tri2_fd,
+    sb2_fd, hits2_fd, runs2_fd,
     laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hrMl_fd, pa1_div_sa, sa_div_ml,
     fhr_open, saFd_open, hr2Fd_open, sngFd_open, dblFd_open, triFd_open, rbiFd_open, rbi2Fd_open, rbi3Fd_open, tb4Fd_open, tb5Fd_open, hrrFd_open,
     laser105_open, laser110_open, moonshot_open, pa1_open, hrMl_open, saMgm_open, hr2Mgm_open,
@@ -612,6 +610,7 @@ function buildBatterRow(
     pkDoubles: pikkitMap[nn]?.doubles ?? null,
     pkTriples: pikkitMap[nn]?.triples ?? null,
     pkRbi:     pikkitMap[nn]?.rbi ?? null,
+    pkHrr:     pikkitMap[nn]?.hits_runs_rbi ?? null,
     hr_hits: hrMap[nn]    ?? [],
     near_hr: nearMap[nn]  ?? null,
     paper: null as number | null,
@@ -1764,7 +1763,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           always the exact "1+" section, so BDL's current could silently be a
           2+/3+ line for a different player. Showing a delta would compare
           two different markets as if they were the same one. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hrr" book="fanduel" odds={row.hrr_fd} display={f2(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hrr, g('sa_div_hrr')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hrr" book="fanduel" odds={row.hrr_fd} display={f2(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hrr, g('sa_div_hrr')) }} pickCount={row.pkHrr?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb4" book="fanduel" odds={row.tb4_fd} openOdds={row.tb4Fd_open} display={f2(row.sa_div_tb4)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb4, g('sa_div_tb4')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="tb5" book="fanduel" odds={row.tb5_fd} openOdds={row.tb5Fd_open} display={f2(row.sa_div_tb5)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb5, g('sa_div_tb5')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hr2" book="fanduel" odds={row.hr2_fd} openOdds={row.hr2Fd_open} display={f2(row.sa_div_hr2)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hr2, g('sa_div_hr2')) }} />
@@ -1783,7 +1782,6 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power Vehicle — this player\'s HR, double, and total-bases pricing all line up with real book conviction on power tonight' } : undefined}
         pickCount={row.pkSingles?.picks ?? null}
       />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="singles2" book="fanduel" odds={row.sng2_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sng2_fd, g('sng2_fd')) }} />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="doubles" book="fanduel" odds={row.dbl_fd} openOdds={row.dblFd_open}
         style={{
@@ -1792,7 +1790,6 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         }}
         pickCount={row.pkDoubles?.picks ?? null}
       />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="doubles2" book="fanduel" odds={row.dbl2_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.dbl2_fd, g('dbl2_fd')) }} />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="triples" book="fanduel" odds={row.tri_fd} openOdds={row.triFd_open}
         style={{
@@ -1801,7 +1798,6 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         }}
         pickCount={row.pkTriples?.picks ?? null}
       />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="triples2" book="fanduel" odds={row.tri2_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.tri2_fd, g('tri2_fd')) }} />
       {/* Replaced HR÷C1/HR÷C2 (thin, manual-paste-only combine-for-HR
           ratios) with real BDL-sourced markets that were already flowing
           through buildPropMap but never shown. */}
@@ -2332,11 +2328,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {H('HR÷2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
       <th style={SDIV_H} />
       {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
-      {BL('fanduel', 'SNG2', '2+ Singles (FD)', 50, 'sng2_fd')}
       {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
-      {BL('fanduel', 'DBL2', '2+ Doubles (FD)', 50, 'dbl2_fd')}
       {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
-      {BL('fanduel', 'TRI2', '2+ Triples (FD)', 50, 'tri2_fd')}
       {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd')}
       {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
       {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd')}
