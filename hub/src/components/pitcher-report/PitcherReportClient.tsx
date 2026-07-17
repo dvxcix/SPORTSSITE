@@ -1,6 +1,7 @@
 ﻿'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -395,9 +396,17 @@ export function PitcherReportClient() {
             {starters.map(s => {
               const isSel = s.key === selectedKey
               return (
-                <button
+                // A <div role="button"> instead of a real <button> — the
+                // avatar below needs to be its own nested <Link> to the
+                // player profile (clicking anywhere else here still selects
+                // this starter same as before), and a real <a> nested inside
+                // a real <button> is invalid HTML.
+                <div
                   key={s.key}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedKey(s.key)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedKey(s.key) } }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '7px 12px', borderRadius: 10,
@@ -406,7 +415,9 @@ export function PitcherReportClient() {
                     cursor: 'pointer', textAlign: 'left',
                   }}
                 >
-                  <PlayerAvatar headshot={mlbHeadshot(s.pitcher.id)} teamLogo={getTeamLogoUrl(s.teamAbbr)} teamAbbr={s.teamAbbr} name={s.pitcher.name} size={32} />
+                  <Link href={`/players/${s.pitcher.id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', flexShrink: 0 }}>
+                    <PlayerAvatar headshot={mlbHeadshot(s.pitcher.id)} teamLogo={getTeamLogoUrl(s.teamAbbr)} teamAbbr={s.teamAbbr} name={s.pitcher.name} size={32} />
+                  </Link>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: isSel ? 'var(--accent)' : 'var(--text-1)' }}>{s.pitcher.name}</div>
                     <div style={{ fontSize: 9, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -421,25 +432,32 @@ export function PitcherReportClient() {
                       <TeamLogoImg abbr={s.oppAbbr} size={12} />
                     </div>
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
 
           {selected && (
             <>
-              {/* selected pitcher header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                <PlayerAvatar headshot={mlbHeadshot(selected.pitcher.id)} teamLogo={getTeamLogoUrl(selected.teamAbbr)} teamAbbr={selected.teamAbbr} name={selected.pitcher.name} size={44} />
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)' }}>
-                    {selected.pitcher.name} <span style={{ color: 'var(--accent)' }}>{selected.pitcher.hand}HP</span>
+              {/* selected pitcher header — links to his player profile, plain hover-underline since nothing else in this header competes for the click */}
+              <Tooltip content={`Open ${selected.pitcher.name}'s player profile`}>
+                <Link
+                  href={`/players/${selected.pitcher.id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6, textDecoration: 'none', color: 'inherit', width: 'fit-content' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
+                >
+                  <PlayerAvatar headshot={mlbHeadshot(selected.pitcher.id)} teamLogo={getTeamLogoUrl(selected.teamAbbr)} teamAbbr={selected.teamAbbr} name={selected.pitcher.name} size={44} />
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)' }}>
+                      {selected.pitcher.name} <span style={{ color: 'var(--accent)' }}>{selected.pitcher.hand}HP</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                      {selected.teamName} · facing {selected.oppName} · {selected.oppLineupConfirmed ? 'Confirmed lineup' : 'Projected lineup (roster, not confirmed batting order)'}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                    {selected.teamName} · facing {selected.oppName} · {selected.oppLineupConfirmed ? 'Confirmed lineup' : 'Projected lineup (roster, not confirmed batting order)'}
-                  </div>
-                </div>
-              </div>
+                </Link>
+              </Tooltip>
               {/* window mode toggle */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>

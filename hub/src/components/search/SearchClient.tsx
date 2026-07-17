@@ -170,20 +170,22 @@ export function SearchClient() {
                 ))}
                 {players.map(p => (
                   <div key={p.mlbId} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-                    <PlayerAvatar
-                      headshot={mlbHeadshot(p.mlbId)}
-                      teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null}
-                      name={p.name}
-                      size={44}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{p.name}</p>
-                      <p className="text-xs text-zinc-500 truncate">
-                        {p.position && <span>{p.position}</span>}
-                        {p.position && p.teamName && <span> · </span>}
-                        {p.teamName}
-                      </p>
-                    </div>
+                    <Link href={`/players/${p.mlbId}`} className="flex items-center gap-3 flex-1 min-w-0">
+                      <PlayerAvatar
+                        headshot={mlbHeadshot(p.mlbId)}
+                        teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null}
+                        name={p.name}
+                        size={44}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-sm truncate">{p.name}</p>
+                        <p className="text-xs text-zinc-500 truncate">
+                          {p.position && <span>{p.position}</span>}
+                          {p.position && p.teamName && <span> · </span>}
+                          {p.teamName}
+                        </p>
+                      </div>
+                    </Link>
                     <div className="flex gap-1.5 shrink-0">
                       <Link href={`/dugout?highlight=${p.mlbId}`}
                         className="text-[11px] font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors">

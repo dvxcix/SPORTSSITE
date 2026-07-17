@@ -35,7 +35,7 @@ export function FavoritesSection({ teams, players }: { teams: string[]; players:
           <h2 className="text-xs font-black text-zinc-400 uppercase tracking-wider mb-2">Favorite Players</h2>
           <div className="flex flex-wrap gap-3">
             {players.map(p => (
-              <Link key={p.mlb_id} href={`/dugout?highlight=${p.mlb_id}`}
+              <Link key={p.mlb_id} href={`/players/${p.mlb_id}`}
                 className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-2.5 py-2 hover:border-zinc-600 transition-colors">
                 <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={32} />
                 <div className="min-w-0">

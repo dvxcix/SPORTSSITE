@@ -322,7 +322,7 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
                   {withHrs.map(b => (
                     <Link
                       key={b.mlbId}
-                      href={`/dugout?date=${dugoutDate}&highlight=${b.mlbId}`}
+                      href={`/players/${b.mlbId}`}
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 4px', borderTop: '1px solid var(--border)', textDecoration: 'none', color: 'inherit', borderRadius: 6 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
@@ -352,7 +352,7 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 8 }}>NO HRs HERE SINCE 2015</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {withoutHrs.map(b => (
-                      <Link key={b.mlbId} href={`/dugout?date=${dugoutDate}&highlight=${b.mlbId}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 56, textDecoration: 'none' }}>
+                      <Link key={b.mlbId} href={`/players/${b.mlbId}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 56, textDecoration: 'none' }}>
                         <PlayerAvatar headshot={mlbHeadshot(b.mlbId)} teamLogo={getTeamLogoUrl(b.team)} teamAbbr={b.team} name={b.name} size={36} style={{ opacity: 0.6 }} />
                         <span style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{b.name}</span>
                       </Link>

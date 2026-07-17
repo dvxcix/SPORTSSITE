@@ -251,7 +251,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </button>
                 ))}
                 {quickResults.players.map(p => (
-                  <button key={`p-${p.mlbId}`} onClick={() => goTo(`/dugout?highlight=${p.mlbId}`)}
+                  <button key={`p-${p.mlbId}`} onClick={() => goTo(`/players/${p.mlbId}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <PlayerAvatar headshot={mlbHeadshot(p.mlbId)} teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null} name={p.name} size={26} />

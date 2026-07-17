@@ -53,17 +53,17 @@ export function computeStatLine(rows: PitchLogRow[]) {
   const bb = cnt('walk') + cnt('intent_walk')
   const hbp = cnt('hit_by_pitch')
   const k = cnt('strikeout') + cnt('strikeout_double_play')
-  const single = cnt('single'), double = cnt('double'), triple = cnt('triple'), hr = cnt('home_run')
-  const hits = single + double + triple + hr
+  const singles = cnt('single'), doubles = cnt('double'), triples = cnt('triple'), hr = cnt('home_run')
+  const hits = singles + doubles + triples + hr
   const sacFly = cnt('sac_fly') + cnt('sac_fly_double_play')
   const sacBunt = cnt('sac_bunt') + cnt('sac_bunt_double_play')
   const pa = events.length
   const ab = pa - bb - hbp - sacFly - sacBunt
   const obpDenom = ab + bb + hbp + sacFly
-  const totalBases = single + 2 * double + 3 * triple + 4 * hr
+  const totalBases = singles + 2 * doubles + 3 * triples + 4 * hr
 
   return {
-    pitches, games, pa, ab, hits, bb, k, hr,
+    pitches, games, pa, ab, hits, singles, doubles, triples, bb, k, hr,
     avg: ab > 0 ? hits / ab : null,
     obp: obpDenom > 0 ? (hits + bb + hbp) / obpDenom : null,
     slg: ab > 0 ? totalBases / ab : null,
@@ -96,6 +96,13 @@ export const BATTER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'hi
   { key: 'pitches', label: 'Pitches', dir: 'hi', fmt: i0, noHeat: true },
   { key: 'usage', label: 'Usage %', dir: 'hi', fmt: p1, noHeat: true },
   { key: 'pa', label: 'PA', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'hits', label: 'H', dir: 'hi', fmt: i0 },
+  { key: 'singles', label: '1B', dir: 'hi', fmt: i0 },
+  { key: 'doubles', label: '2B', dir: 'hi', fmt: i0 },
+  { key: 'triples', label: '3B', dir: 'hi', fmt: i0 },
+  { key: 'hr', label: 'HR', dir: 'hi', fmt: i0 },
+  { key: 'bb', label: 'BB', dir: 'hi', fmt: i0 },
+  { key: 'k', label: 'K', dir: 'lo', fmt: i0 },
   { key: 'avg', label: 'AVG', dir: 'hi', fmt: r3 },
   { key: 'obp', label: 'OBP', dir: 'hi', fmt: r3 },
   { key: 'slg', label: 'SLG', dir: 'hi', fmt: r3 },
@@ -115,6 +122,13 @@ export const PITCHER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'h
   { key: 'pitches', label: 'Pitches', dir: 'lo', fmt: i0, noHeat: true },
   { key: 'usage', label: 'Usage %', dir: 'lo', fmt: p1, noHeat: true },
   { key: 'pa', label: 'PA', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'hits', label: 'H', dir: 'lo', fmt: i0 },
+  { key: 'singles', label: '1B', dir: 'lo', fmt: i0 },
+  { key: 'doubles', label: '2B', dir: 'lo', fmt: i0 },
+  { key: 'triples', label: '3B', dir: 'lo', fmt: i0 },
+  { key: 'hr', label: 'HR', dir: 'lo', fmt: i0 },
+  { key: 'bb', label: 'BB', dir: 'lo', fmt: i0 },
+  { key: 'k', label: 'K', dir: 'hi', fmt: i0 },
   { key: 'avg', label: 'AVG', dir: 'lo', fmt: r3 },
   { key: 'obp', label: 'OBP', dir: 'lo', fmt: r3 },
   { key: 'slg', label: 'SLG', dir: 'lo', fmt: r3 },

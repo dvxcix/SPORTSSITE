@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
-  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, X
+  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, X
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 
@@ -31,6 +31,7 @@ const nav = [
   { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
   { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
+  { href: '/slate-breakdown', icon: Table2,    label: 'Slate Breakdown', badge: 'NEW', badgeColor: 'var(--blue)' },
   null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
@@ -161,7 +162,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               {item.badge && (
                 <span style={{
                   fontSize: 9, fontWeight: 900, letterSpacing: '0.04em',
-                  background: 'var(--red)', color: '#fff',
+                  background: item.badgeColor ?? 'var(--red)', color: '#fff',
                   padding: '2px 5px', borderRadius: 99,
                 }}>
                   {item.badge}

@@ -1326,7 +1326,12 @@ function PlayerDrillDown({
           rebuild. Reuses the same windowMode/liveN toggle above. */}
       {pitcherRow && lineupPlayer && oppPitcher && (
         <div style={{ width: '100%', marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <Link
+            href={`/players/${oppPitcher.id}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, textDecoration: 'none', color: 'inherit', width: 'fit-content' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
+          >
             <PlayerAvatar mlbId={oppPitcher.id ?? null} size={40} teamAbbr={pitcherTeamAbbr} name={oppPitcher.name} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>
@@ -1336,7 +1341,7 @@ function PlayerDrillDown({
                 {pitcherTeamName} · facing {lineupPlayer.team_name || row.team} · {lineupConfirmed ? 'Confirmed lineup' : 'Projected lineup (roster, not confirmed batting order)'}
               </div>
             </div>
-          </div>
+          </Link>
 
           <PitchMixTable
             title={`${oppPitcher.name}'s mix vs ${effectiveBats === 'L' ? 'LHB' : 'RHB'} (${row.name})`}
@@ -1575,7 +1580,13 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
               }}
             >{row.bats || '?'}</span>
           </Tooltip>
-          <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
+          {row.mlb_id ? (
+            <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'flex' }}>
+              <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
+            </Link>
+          ) : (
+            <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
+          )}
           <div style={{ overflow: 'hidden', minWidth: 0, flex: 1, textAlign: 'left' }}>
             {/* Badges used to each render as their own flexShrink:0 chip on
                 this same line, so 2+ active signals could squeeze the name
@@ -1849,13 +1860,15 @@ function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void }) {
         }}
       >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: hasHr ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)', backdropFilter: 'blur(8px)' }}>
-          <PlayerAvatar mlbId={row.mlb_id} size={36} teamAbbr={row.team} name={row.name} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{row.name}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
-              {row.team} · {row.position}{hasHr && hits.length > 1 ? ` · ${hits.length} HRs today` : ''}
+          <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
+            <PlayerAvatar mlbId={row.mlb_id} size={36} teamAbbr={row.team} name={row.name} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{row.name}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                {row.team} · {row.position}{hasHr && hits.length > 1 ? ` · ${hits.length} HRs today` : ''}
+              </div>
             </div>
-          </div>
+          </Link>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
@@ -1969,7 +1982,9 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
                 onMouseEnter={e => h._gameKey && ((e.currentTarget as HTMLElement).style.background = 'var(--surface-2)')}
                 onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
               >
-                <PlayerAvatar mlbId={h.mlb_id} size={32} teamAbbr={h._team} name={h.player_name} />
+                <Link href={`/players/${h.mlb_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'flex' }}>
+                  <PlayerAvatar mlbId={h.mlb_id} size={32} teamAbbr={h._team} name={h.player_name} />
+                </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{h.player_name}</span>
@@ -2021,11 +2036,11 @@ function sortRows(rows: BatterRow[], sort: SortState): BatterRow[] {
 // straight into Pitcher Report with this exact pitcher pre-selected, same
 // full-site-fluidity pattern as the batter links elsewhere in this file
 // that jump the other direction (Pitcher Report -> Dugout via ?highlight=).
-function PitcherLinkChip({ pitcher, teamAbbr, date }: { pitcher: { id: number; name: string; hand: string }; teamAbbr: string; date: string }) {
+function PitcherLinkChip({ pitcher, teamAbbr }: { pitcher: { id: number; name: string; hand: string }; teamAbbr: string; date: string }) {
   return (
-    <Tooltip content={`Open ${pitcher.name} in Pitcher Report`}>
+    <Tooltip content={`Open ${pitcher.name}'s player profile`}>
       <Link
-        href={`/pitcher-report?date=${date}&pitcherId=${pitcher.id}`}
+        href={`/players/${pitcher.id}`}
         style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', textDecoration: 'none' }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}

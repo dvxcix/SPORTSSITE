@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { type WatchlistItem } from '@/lib/watchlist'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -46,9 +47,18 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
         showTeam={!!getTeamLogoUrl(item.team)}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {item.player_name} {item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
-        </div>
+        {item.mlb_id ? (
+          <Link
+            href={`/players/${item.mlb_id}`}
+            style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', width: 'fit-content', maxWidth: '100%' }}
+          >
+            {item.player_name} {item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
+          </Link>
+        ) : (
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {item.player_name} {item.team && <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>· {item.team}</span>}
+          </div>
+        )}
         <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginTop: 1 }}>{item.prop_label}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
           {item.book && (

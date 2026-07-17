@@ -424,9 +424,9 @@ export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHa
                       </Tooltip>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Tooltip content={`Open ${batter.name} in The Dugout`}>
+                        <Tooltip content={`Open ${batter.name}'s player profile`}>
                         <Link
-                          href={`/dugout?date=${date}&highlight=${batter.mlb_id}`}
+                          href={`/players/${batter.mlb_id}`}
                           style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit' }}
                           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
