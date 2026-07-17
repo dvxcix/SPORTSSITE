@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-const normName = (s: string) =>
-  (s || '').toLowerCase().normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z ]/g, '')
-    .replace(/\s+/g, ' ').trim()
+import { normName } from '@/lib/nameNorm'
 
 async function requireAdmin() {
   const supabase = await createClient()

@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normName, resolveNameEntry } from '@/lib/nameNorm'
 
 export const revalidate = 0
 export const maxDuration = 60
-
-const normName = (s: string) =>
-  (s || '').toLowerCase().normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z ]/g, '')
-    .replace(/\s+/g, ' ').trim()
 
 // MLB's own schedule API isn't stable about which abbreviation it returns
 // for a handful of teams — confirmed directly: Arizona came back as "ARI"
@@ -547,7 +542,7 @@ export async function GET(req: Request) {
     // player has no BDL props at all (e.g. a bench bat BDL doesn't price)
     // rather than silently dropping their gap-market data.
     for (const [nn, gap] of Object.entries(fanduelGapByName)) {
-      const entry = (bdlByName[nn] ??= { name: gap.player_name ?? nn })
+      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: gap.player_name ?? nn })
       if (gap.fhr_fd      != null) entry.fhr      = { ...entry.fhr,      fanduel: gap.fhr_fd }
       // SA/HR2-fanduel: BDL is the primary live source for these — only
       // backfill from our manual paste when BDL has nothing at all, same
@@ -579,14 +574,14 @@ export async function GET(req: Request) {
     // betmgm coverage is missing, since a pasted snapshot is staler than a
     // live pregame line. Never overwrites a BDL value that's already there.
     for (const [nn, mgm] of Object.entries(mgmGapByName)) {
-      const entry = (bdlByName[nn] ??= { name: mgm.player_name ?? nn })
+      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: mgm.player_name ?? nn })
       if (mgm.sa_mgm  != null && entry.sa?.betmgm  == null) entry.sa  = { ...entry.sa,  betmgm: mgm.sa_mgm }
       if (mgm.hr2_mgm != null && entry.hr2?.betmgm == null) entry.hr2 = { ...entry.hr2, betmgm: mgm.hr2_mgm }
     }
     // Opening/early baselines — attached as `.open` per market so the client
     // can show "opened X → now Y" deltas, mirroring mlb-party's b.open.fd_sa.
     for (const [nn, open] of Object.entries(fanduelGapOpeningByName)) {
-      const entry = (bdlByName[nn] ??= { name: nn })
+      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
       entry.open = {
         ...entry.open,
         fhr: open.fhr_fd ?? entry.open?.fhr,
@@ -613,15 +608,15 @@ export async function GET(req: Request) {
       }
     }
     for (const [nn, open] of Object.entries(mgmGapOpeningByName)) {
-      const entry = (bdlByName[nn] ??= { name: nn })
+      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
       entry.open = { ...entry.open, saMgm: open.sa_mgm ?? entry.open?.saMgm, hr2Mgm: open.hr2_mgm ?? entry.open?.hr2Mgm }
     }
 
     const homePitcherWithProps = homePitcher
-      ? { ...homePitcher, props: bdlByName[normName(homePitcher.name)] || null }
+      ? { ...homePitcher, props: resolveNameEntry(bdlByName, normName(homePitcher.name)) || null }
       : null
     const awayPitcherWithProps = awayPitcher
-      ? { ...awayPitcher, props: bdlByName[normName(awayPitcher.name)] || null }
+      ? { ...awayPitcher, props: resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null }
       : null
 
     return {
@@ -647,8 +642,8 @@ export async function GET(req: Request) {
         bdlNamesSample: Object.values(propMap).slice(0, 5).map((e: any) => e.name),
         homeLineupNamesSample: homeLineup.slice(0, 5).map(p => p.name_norm),
       },
-      homeLineup: homeLineup.map(p => ({ ...p, props: bdlByName[p.name_norm] || null })),
-      awayLineup: awayLineup.map(p => ({ ...p, props: bdlByName[p.name_norm] || null })),
+      homeLineup: homeLineup.map(p => ({ ...p, props: resolveNameEntry(bdlByName, p.name_norm) || null })),
+      awayLineup: awayLineup.map(p => ({ ...p, props: resolveNameEntry(bdlByName, p.name_norm) || null })),
     }
   }))
 
