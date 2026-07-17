@@ -120,7 +120,7 @@ export function FanduelImportForm() {
   const [isOpening, setIsOpening] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<{ rowsImported: number; marketSummary: Record<string, number>; openingSaved?: boolean; wasOpeningPaste?: boolean } | null>(null)
+  const [result, setResult] = useState<{ rowsImported: number; marketSummary: Record<string, number>; openingSaved?: boolean; wasOpeningPaste?: boolean; gamesDetected?: string[] } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -192,6 +192,7 @@ export function FanduelImportForm() {
       const chunks = Array.isArray(parsed) ? parsed : [parsed]
       let last: { rowsImported: number; marketSummary: Record<string, number>; openingSaved?: boolean; wasOpeningPaste?: boolean } | null = null
       const mergedSummary: Record<string, number> = {}
+      const gamesDetected = new Set<string>()
       let totalRows = 0
       let openingSaved = false
       let anySucceeded = false
@@ -214,13 +215,18 @@ export function FanduelImportForm() {
           mergedSummary[k] = (mergedSummary[k] ?? 0) + (v as number)
         }
         if (data.openingSaved) openingSaved = true
+        for (const gk of data.gamesDetected ?? []) gamesDetected.add(gk)
         last = data
       }
       if (!anySucceeded) {
         setError('Parsed the JSON but none of the pasted tab(s) contained any target markets (FHR, Laser 105/110, Moonshot, 1st PA HR, HR/ML Parlay, Combine-for-HR) — check you included those tabs in the scrape')
         return
       }
-      setResult({ rowsImported: totalRows, marketSummary: mergedSummary, openingSaved, wasOpeningPaste: !!isOpening && !!last })
+      // Surfaced so a doubleheader (or an accidental multi-game paste) is
+      // obvious at a glance — this exact game_key list is what actually got
+      // written, which may not match the dropdown selection if the scrape
+      // itself belonged to a different game.
+      setResult({ rowsImported: totalRows, marketSummary: mergedSummary, openingSaved, wasOpeningPaste: !!isOpening && !!last, gamesDetected: [...gamesDetected] })
       setJson('')
     } catch (e: any) {
       setError(e?.message || 'Something went wrong')
@@ -237,6 +243,14 @@ export function FanduelImportForm() {
       {result && (
         <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400">
           Imported {result.rowsImported} players — {Object.entries(result.marketSummary).map(([m, c]) => `${MARKET_LABELS[m] ?? m}: ${c}`).join(', ')}
+          {result.gamesDetected && result.gamesDetected.length > 0 && (
+            <div className="mt-1 text-green-300/80">
+              Saved under: {result.gamesDetected.join(', ')}
+              {selectedGame && !result.gamesDetected.includes(selectedGame.gameKey) && (
+                <span className="text-amber-400"> — doesn't match the selected game ({selectedGame.gameKey})!</span>
+              )}
+            </div>
+          )}
           {result.wasOpeningPaste && (
             <div className="mt-1 text-amber-400">
               {result.openingSaved ? '📸 Saved as this game\'s opening/early baseline.' : 'Opening baseline already exists for this game — this paste only updated current odds.'}

@@ -143,6 +143,12 @@ export async function POST(req: Request) {
   }
 
   const fallbackGameKey = gameKey ?? `${awayTeam}@${homeTeam}`
+  // The bare team-pair for whatever game is selected in the dropdown right
+  // now — title detection below only returns a bare pair too (FanDuel's own
+  // event.title has no way to say "Game 2"), so this is what a detected
+  // pair gets compared against to tell "genuinely a different game" apart
+  // from "same two teams, just game 2 of a doubleheader."
+  const selectedPairKey = `${awayTeam}@${homeTeam}`
 
   // Grouped per REAL game (detected from each scrape's own event.title),
   // not per the single game selected in the dropdown — a pasted batch can
@@ -153,7 +159,13 @@ export async function POST(req: Request) {
 
   for (const scrape of scrapes) {
     const detected = detectGameFromTitle(scrape.event?.title)
-    const thisGameKey = detected?.gameKey ?? fallbackGameKey
+    // A detected pair that matches the CURRENTLY SELECTED pair means trust
+    // the dropdown (and its possible -G2 suffix) — title detection can't
+    // distinguish a doubleheader's two legs since FanDuel's title is
+    // identical for both. Only a detected pair for a DIFFERENT pair of
+    // teams overrides the dropdown, which is the actual multi-game-paste
+    // case this was built for.
+    const thisGameKey = detected && detected.gameKey !== selectedPairKey ? detected.gameKey : fallbackGameKey
     gamesDetected.add(thisGameKey)
     const byPlayer = byGame.get(thisGameKey) ?? new Map()
     byGame.set(thisGameKey, byPlayer)
