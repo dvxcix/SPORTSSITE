@@ -2563,8 +2563,19 @@ export function DugoutClient({ date }: { date: string }) {
     // of collapsing them down to one, or whichever market wins the collapse
     // silently gets displayed/labeled as if it were the others (e.g. an
     // hrr-only row rendered under the "HR" column and tooltip).
+    //
+    // Also scoped to the ACTIVE game's own gameKey — a doubleheader's two
+    // legs share every player between them, and pikkit_public_picks now
+    // carries a real per-leg game_key (see the admin importer), so a row
+    // stamped for the other leg must not leak into this one. Rows imported
+    // before that fix (or via any other path) have game_key = '' and are
+    // still shown — same best-effort behavior as before this fix, just no
+    // longer able to CLOBBER a properly-tagged row for the other leg.
+    const activeGameKey = (data?.games ?? []).find((g: any) => g.gameKey === activeGame)?.gameKey
+      ?? (data?.games ?? [])[0]?.gameKey ?? null
     const m: Record<string, Record<string, any>> = {}
     for (const r of (data?.pikkit ?? [])) {
+      if (r.game_key && activeGameKey && r.game_key !== activeGameKey) continue
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
       if (!nn || !market) continue
@@ -2572,7 +2583,7 @@ export function DugoutClient({ date }: { date: string }) {
       m[nn][market] = r
     }
     return m
-  }, [data?.pikkit])
+  }, [data?.pikkit, data?.games, activeGame])
 
   const openingMap = useMemo<Record<string, { sa_open: number | null; rbi_open: number | null }>>(() => {
     const m: Record<string, { sa_open: number | null; rbi_open: number | null }> = {}

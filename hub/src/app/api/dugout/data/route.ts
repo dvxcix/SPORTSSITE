@@ -346,7 +346,7 @@ export async function GET(req: Request) {
     // the AZ@LAD game-key bug (a real upload "not showing"), but this one
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
-    mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type`, 300),
+    mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300),
     mpRpc('get_fhr_history_avg', { p_date: date }),
     mpRpc('get_sa_history_avg', { p_date: date }),
     mpRpc('get_opening_sa_rbi', { p_date: date }),

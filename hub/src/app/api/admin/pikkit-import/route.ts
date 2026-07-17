@@ -55,14 +55,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No "props" object found in the pasted JSON' }, { status: 400 })
   }
 
-  // NOTE: pikkit_public_picks' primary key is (player_name, game_date,
-  // market) — it has no column for which leg of a doubleheader a row
-  // belongs to. If the same player appears in both games, the second
-  // import for that date/market overwrites the first. The game picker
-  // prevents *importing to the wrong game* (typos, ambiguity), but can't
-  // by itself give two separate storage slots for a DH double-appearance
-  // without a schema change to a table mlb-party's own app also reads —
-  // flagged, not silently "fixed."
+  // pikkit_public_picks' primary key now includes game_key (widened via a
+  // backward-compatible migration — a bare player_name+game_date+market row
+  // used to be the whole key, which meant the second leg of a doubleheader
+  // silently overwrote the first game's picks for any player common to
+  // both). The game picker already resolves the exact per-leg key
+  // ("TB@BOS" / "TB@BOS-G2") the same way Dugout's own game tabs do —
+  // stamp every row with it so the two legs get separate storage slots.
   const rows: any[] = []
   const marketSummary: Record<string, number> = {}
   for (const [shortKey, players] of Object.entries(parsed.props)) {
@@ -79,6 +78,7 @@ export async function POST(req: Request) {
         pick_count: picks, // NOT NULL column, kept in sync with `picks`
         home_team: homeTeam,
         away_team: awayTeam,
+        game_key: gameKey ?? '',
         updated_at: new Date().toISOString(),
       })
       count++
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Parsed the JSON but found zero player picks inside it' }, { status: 400 })
   }
 
-  const res = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?on_conflict=player_name,game_date,market`, {
+  const res = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?on_conflict=player_name,game_date,market,game_key`, {
     method: 'POST',
     headers: mpH,
     body: JSON.stringify(rows),
