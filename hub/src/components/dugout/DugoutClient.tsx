@@ -1648,16 +1648,40 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', cursor: 'pointer' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
-          <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right', flexShrink: 0, marginTop: 2 }}>{row.batting_order}</span>
-          <Tooltip content={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}>
-            <span
-              style={{
-                flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2, cursor: 'help',
-                color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
-              }}
-            >{row.bats || '?'}</span>
-          </Tooltip>
+          {/* Order#/hand-circle "rail" — achievement-style flags (an FHR/HR
+              that already happened, or a near-miss dart count) now stack
+              underneath it instead of sharing the name line. Icon-only
+              here since this column is narrow; full detail is still in the
+              tooltip, and a "+N" marks additional active signals. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
+              <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right' }}>{row.batting_order}</span>
+              <Tooltip content={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}>
+                <span
+                  style={{
+                    flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
+                    color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
+                  }}
+                >{row.bats || '?'}</span>
+              </Tooltip>
+            </div>
+            {badgeSignals.length > 0 && (
+              <Tooltip content={badgeSignals.map(s => s.detail).join(' · ')}>
+                <span
+                  onClick={badgeSignals[0].clickable ? (e) => { e.stopPropagation(); onShowHr?.() } : undefined}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, lineHeight: 1,
+                    color: badgeSignals[0].color, background: badgeSignals[0].bg, border: `1px solid ${badgeSignals[0].border}`,
+                    borderRadius: 4, padding: '1px 3px', cursor: badgeSignals[0].clickable ? 'pointer' : 'help',
+                  }}
+                >
+                  {badgeSignals[0].icon}
+                  {badgeSignals.length > 1 && <span style={{ fontSize: 6, marginLeft: 1 }}>+{badgeSignals.length - 1}</span>}
+                </span>
+              </Tooltip>
+            )}
+          </div>
           {row.mlb_id ? (
             <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'flex' }}>
               <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
@@ -1666,46 +1690,15 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
             <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
           )}
           <div style={{ overflow: 'hidden', minWidth: 0, flex: 1, textAlign: 'left' }}>
-            {/* Badges used to each render as their own flexShrink:0 chip on
-                this same line, so 2+ active signals could squeeze the name
-                down to almost nothing (e.g. "E."). They're now collapsed
-                into a single capped-width chip (worst case "+N" more,
-                full detail in the tooltip) so the name always keeps a
-                guaranteed minimum of readable width. */}
+            {/* Name line's width is now fixed regardless of how many flags
+                are active — every badge moved off it (achievement flags to
+                the rail above, signal flags to the position/hand line
+                below), so a long name or a player with several flags at
+                once no longer squeezes it down to almost nothing. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
                 {row.name}
               </span>
-              {badgeSignals.length > 0 && (
-                <Tooltip content={badgeSignals.map(s => s.detail).join(' · ')}>
-                  <span
-                    onClick={badgeSignals[0].clickable ? (e) => { e.stopPropagation(); onShowHr?.() } : undefined}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 800, flexShrink: 0, whiteSpace: 'nowrap',
-                      color: badgeSignals[0].color, background: badgeSignals[0].bg, border: `1px solid ${badgeSignals[0].border}`,
-                      padding: '1px 4px', borderRadius: 4, cursor: badgeSignals[0].clickable ? 'pointer' : 'help',
-                    }}
-                  >{badgeSignals[0].icon} {badgeSignals[0].label}{badgeSignals.length > 1 ? ` +${badgeSignals.length - 1}` : ''}</span>
-                </Tooltip>
-              )}
-              {hasLiveMatchup && (
-                <Tooltip content="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too">
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', fontSize: 10, flexShrink: 0,
-                    color: '#4ade80', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
-                    padding: '1px 4px', borderRadius: 4, cursor: 'help',
-                  }}>⚡</span>
-                </Tooltip>
-              )}
-              {row.is_money_sa_rbi && (
-                <Tooltip content="Value flag — this player's HR price looks cheap relative to his RBI price, with low community attention so far">
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', fontSize: 10, flexShrink: 0,
-                    color: '#f59e0b', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
-                    padding: '1px 4px', borderRadius: 4, cursor: 'help',
-                  }}>💰</span>
-                </Tooltip>
-              )}
             </div>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4, textAlign: 'left',
@@ -1714,6 +1707,26 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
               <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>{row.position}</span>
               <span style={{ color: 'var(--text-4)' }}>·</span>
               <span style={{ color: handColor, fontWeight: 700 }}>{row.bats === 'S' ? 'SHB' : `${row.bats}HB`}</span>
+              {/* Signal-style flags (predictive, not history) — same
+                  relocation reasoning as the badges above. */}
+              {hasLiveMatchup && (
+                <Tooltip content="Live matchup edge — recently hitting the exact pitch(es) this pitcher throws hard, and this pitcher's been getting hit hard on that same pitch lately too">
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', fontSize: 9, flexShrink: 0, lineHeight: 1,
+                    color: '#4ade80', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)',
+                    padding: '1px 3px', borderRadius: 3, cursor: 'help',
+                  }}>⚡</span>
+                </Tooltip>
+              )}
+              {row.is_money_sa_rbi && (
+                <Tooltip content="Value flag — this player's HR price looks cheap relative to his RBI price, with low community attention so far">
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', fontSize: 9, flexShrink: 0, lineHeight: 1,
+                    color: '#f59e0b', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
+                    padding: '1px 3px', borderRadius: 3, cursor: 'help',
+                  }}>💰</span>
+                </Tooltip>
+              )}
             </div>
           </div>
           <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
