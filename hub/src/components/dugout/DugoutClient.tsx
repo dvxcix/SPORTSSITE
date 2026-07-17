@@ -596,6 +596,10 @@ function buildBatterRow(
     pkHits:  pikkitMap[nn]?.hits ?? null,
     pkRuns:  pikkitMap[nn]?.runs ?? null,
     pkStolenBases: pikkitMap[nn]?.stolen_bases ?? null,
+    pkSingles: pikkitMap[nn]?.singles ?? null,
+    pkDoubles: pikkitMap[nn]?.doubles ?? null,
+    pkTriples: pikkitMap[nn]?.triples ?? null,
+    pkRbi:     pikkitMap[nn]?.rbi ?? null,
     hr_hits: hrMap[nn]    ?? [],
     near_hr: nearMap[nn]  ?? null,
     paper: null as number | null,
@@ -1438,9 +1442,26 @@ function OddsCell({
 }) {
   const wl = useWatchlist()
   const [busy, setBusy] = useState(false)
-  if (odds == null) return <td style={style}>—</td>
-
   const meta = PROP_META[propKey]
+
+  if (odds == null) {
+    // No sportsbook line for this market doesn't mean no Pikkit picks for
+    // it — a pick count is independent of whether FanDuel happens to have
+    // posted odds yet, so it shouldn't silently disappear just because the
+    // odds side of the cell has nothing to show.
+    if (pickCount == null) return <td style={style}>—</td>
+    return (
+      <td style={{ ...style, position: 'relative' }}>
+        —
+        <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
+          <div style={{ position: 'absolute', bottom: 1, left: 1, fontSize: 6.5, fontWeight: 900, color: 'var(--gold)', cursor: 'help', lineHeight: 1 }}>
+            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}📊
+          </div>
+        </Tooltip>
+      </td>
+    )
+  }
+
   const saved = wl.isSaved(row.mlb_id, propKey, book)
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -1716,6 +1737,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="rbi" book="fanduel" odds={row.rbi_fd} openOdds={row.rbiFd_open} display={f2(row.sa_div_rbi)}
         style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi, g('sa_div_rbi')) }}
+        pickCount={row.pkRbi?.picks ?? null}
       />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi2" book="fanduel" odds={row.rbi2_fd} openOdds={row.rbi2Fd_open} display={f2(row.sa_div_rbi2)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi2, g('sa_div_rbi2')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="rbi3" book="fanduel" odds={row.rbi3_fd} openOdds={row.rbi3Fd_open} display={f2(row.sa_div_rbi3)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi3, g('sa_div_rbi3')) }} />
@@ -1741,6 +1763,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderLeft: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
         badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power Vehicle — this player\'s HR, double, and total-bases pricing all line up with real book conviction on power tonight' } : undefined}
+        pickCount={row.pkSingles?.picks ?? null}
       />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="doubles" book="fanduel" odds={row.dbl_fd} openOdds={row.dblFd_open}
@@ -1748,6 +1771,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.dbl_fd, g('dbl_fd')),
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b' } : {}),
         }}
+        pickCount={row.pkDoubles?.picks ?? null}
       />
       <OddsCell
         row={row} gameInfo={gameInfo} propKey="triples" book="fanduel" odds={row.tri_fd} openOdds={row.triFd_open}
@@ -1755,6 +1779,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.tri_fd, g('tri_fd')),
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderRight: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
+        pickCount={row.pkTriples?.picks ?? null}
       />
       {/* Replaced HR÷C1/HR÷C2 (thin, manual-paste-only combine-for-HR
           ratios) with real BDL-sourced markets that were already flowing
