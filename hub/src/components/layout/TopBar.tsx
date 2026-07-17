@@ -356,7 +356,20 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                           <div style={{ position: 'relative', flexShrink: 0 }}>
                             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
                               {(n.actor?.avatar_url || n.data?.avatar_url) && (
-                                <img src={n.actor?.avatar_url || n.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                // A team logo (lineup_confirmed) is a flat
+                                // mark on a square/transparent canvas, not a
+                                // portrait — cover crops right into it, so
+                                // it needs contain + a little padding
+                                // instead (same fix as NotificationsList).
+                                <img
+                                  src={n.actor?.avatar_url || n.data?.avatar_url}
+                                  alt=""
+                                  style={{
+                                    width: '100%', height: '100%', boxSizing: 'border-box',
+                                    objectFit: n.type === 'lineup_confirmed' ? 'contain' : 'cover',
+                                    padding: n.type === 'lineup_confirmed' ? 5 : 0,
+                                  }}
+                                />
                               )}
                             </div>
                             <div style={{ position: 'absolute', bottom: -3, right: -3, width: 16, height: 16, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
