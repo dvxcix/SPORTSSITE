@@ -8,7 +8,7 @@ import { PlayerPicker, type PickerOption } from './PlayerPicker'
 
 export type BatterPitchRow = {
   game_pk: string; game_date: string; pitcher_id: number; batter_id: number
-  pitch_type: string | null; zone: number | null
+  pitch_type: string | null; zone: number | null; inning: number | null
   events: string | null
   is_in_play: boolean; is_swing: boolean; is_whiff: boolean
   launch_speed: number | null; launch_angle: number | null; xwoba: number | null
@@ -76,10 +76,15 @@ function computeStats(rows: BatterPitchRow[]) {
 }
 type Stats = ReturnType<typeof computeStats>
 
-const TABLE_COLS: { key: keyof Stats; label: string; dir: 'hi' | 'lo'; fmt: (v: any) => string }[] = [
-  { key: 'pitches', label: 'Pitches', dir: 'hi', fmt: i0 },
-  { key: 'usage', label: 'Usage %', dir: 'hi', fmt: p1 },
-  { key: 'pa', label: 'PA', dir: 'hi', fmt: i0 },
+// noHeat: pure sample-size columns (Pitches/Usage%/PA) don't have a "good or
+// bad" direction — heat-coloring a count implies a value judgment that
+// doesn't apply, unlike every other column here which is a real performance
+// rate for the batter (green = good for the batter, e.g. low Whiff %/Chase %,
+// high AVG/Hard-Hit%/xwOBA).
+const TABLE_COLS: { key: keyof Stats; label: string; dir: 'hi' | 'lo'; fmt: (v: any) => string; noHeat?: boolean }[] = [
+  { key: 'pitches', label: 'Pitches', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'usage', label: 'Usage %', dir: 'hi', fmt: p1, noHeat: true },
+  { key: 'pa', label: 'PA', dir: 'hi', fmt: i0, noHeat: true },
   { key: 'avg', label: 'AVG', dir: 'hi', fmt: r3 },
   { key: 'obp', label: 'OBP', dir: 'hi', fmt: r3 },
   { key: 'slg', label: 'SLG', dir: 'hi', fmt: r3 },
@@ -123,6 +128,8 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
   const [dateTo, setDateTo] = useState('')
   const [handSel, setHandSel] = useState<'all' | 'L' | 'R'>('all')
   const [dayNightSel, setDayNightSel] = useState<'all' | 'day' | 'night'>('all')
+  const [inningSel, setInningSel] = useState<number | 'all'>('all')
+  const [inPlayOnly, setInPlayOnly] = useState(false)
   const [opponentSel, setOpponentSel] = useState<number | 'all'>('all')
   const [sort, setSort] = useState<SortState>({ col: 'pitches', dir: 'desc' })
 
@@ -147,11 +154,15 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
   const usingCustomRange = dateFrom !== '' || dateTo !== ''
   const recentDates = !usingCustomRange && recency !== 'season' ? new Set(allGameDates.slice(-Number(recency))) : null
 
+  const innings = Array.from(new Set(rows.map(r => r.inning).filter((v): v is number => v != null))).sort((a, b) => a - b)
+
   const filtered = rows.filter(r =>
     (usingCustomRange ? (!dateFrom || r.game_date >= dateFrom) && (!dateTo || r.game_date <= dateTo) : true) &&
     (recentDates === null || recentDates.has(r.game_date)) &&
     (handSel === 'all' || r.p_throws === handSel) &&
     (dayNightSel === 'all' || r.day_night === dayNightSel) &&
+    (inningSel === 'all' || r.inning === inningSel) &&
+    (!inPlayOnly || r.is_in_play) &&
     (opponentSel === 'all' || r.opponent_id === opponentSel)
   )
   const all = computeStats(filtered)
@@ -202,6 +213,14 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
         <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>Vs. pitcher:</span>
         <PlayerPicker options={opponents} value={opponentSel} onChange={setOpponentSel} placeholder="All pitchers" />
       </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Inning:</span>
+        <DimChip label="All" active={inningSel === 'all'} onClick={() => setInningSel('all')} />
+        {innings.map(inn => (
+          <DimChip key={inn} label={String(inn)} active={inningSel === inn} onClick={() => setInningSel(inn)} />
+        ))}
+        <ToggleBtn active={inPlayOnly} onClick={() => setInPlayOnly(v => !v)}>In Play Only</ToggleBtn>
+      </div>
 
       {all.pitches === 0 ? (
         <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No pitches match this combination of filters.</div>
@@ -217,7 +236,7 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>Pitch</th>
+                  <SortableTH label="Pitch" colKey="pitchType" sort={sort} onSort={onSort} align="left" />
                   {TABLE_COLS.map(c => (
                     <SortableTH key={c.key} label={c.label} colKey={c.key} sort={sort} onSort={onSort} />
                   ))}
@@ -239,7 +258,7 @@ export function BatterMatchupExplorer({ rows }: { rows: BatterPitchRow[] }) {
                     {TABLE_COLS.map(c => {
                       const v = row[c.key]
                       return (
-                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(v as number | null, allByCol[c.key], c.dir) }}>
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v as number | null, allByCol[c.key], c.dir)) }}>
                           {c.fmt(v)}
                         </td>
                       )

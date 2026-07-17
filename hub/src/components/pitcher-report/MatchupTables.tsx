@@ -64,6 +64,20 @@ export function cmpNullsLast(a: number | null | undefined, b: number | null | un
   return dir === 'desc' ? b - a : a - b
 }
 
+// Same null-handling as cmpNullsLast, but for tables where the sortable
+// columns are a mix of numbers and dimension/label strings (e.g. a "Pitch
+// Type" or "Contact Type" column next to numeric metric columns) — added
+// once group-by dimension columns needed to be sortable too, not just the
+// metric columns next to them.
+export function cmpAny(a: unknown, b: unknown, dir: 'desc' | 'asc'): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  if (typeof a === 'number' && typeof b === 'number') return dir === 'desc' ? b - a : a - b
+  const cmp = String(a).localeCompare(String(b))
+  return dir === 'desc' ? -cmp : cmp
+}
+
 export function SortableTH({ label, colKey, sort, onSort, align = 'right' }: {
   label: string; colKey: string; sort: SortState; onSort: (key: string) => void; align?: 'left' | 'right'
 }) {

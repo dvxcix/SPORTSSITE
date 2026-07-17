@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
-import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
+import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
 import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
 
@@ -367,7 +367,19 @@ function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitW
   if (!splitWindow.season.length && !splitWindow.recency.length) return null
 
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
-  const sorted = [...aggregated].sort((a, b) => cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir))
+  // Dim columns (pitch type / hand / bat side / contact type) hold strings,
+  // not numbers — api_pitch_type sorts by its readable label (FF -> "4-Seam")
+  // so it reads the same order a human scanning the column would expect,
+  // not raw Savant code order.
+  const dimKeySet = new Set(config.dims.map(d => d.key))
+  const sorted = [...aggregated].sort((a, b) => {
+    if (dimKeySet.has(sort!.col)) {
+      const av = sort!.col === 'api_pitch_type' ? pitchLabel(a[sort!.col]) : a[sort!.col]
+      const bv = sort!.col === 'api_pitch_type' ? pitchLabel(b[sort!.col]) : b[sort!.col]
+      return cmpAny(av, bv, sort!.dir)
+    }
+    return cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir)
+  })
   const allByCol = Object.fromEntries(config.cols.map(c => [c.key, aggregated.map(r => r[c.key])]))
 
   function toggleDim(key: string) {
@@ -396,9 +408,7 @@ function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitW
           <thead>
             <tr>
               {groupBy.map(dk => (
-                <th key={dk} style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>
-                  {config.dims.find(d => d.key === dk)?.label}
-                </th>
+                <SortableTH key={dk} label={config.dims.find(d => d.key === dk)?.label ?? dk} colKey={dk} sort={sort} onSort={onSort} align="left" />
               ))}
               <SortableTH label={config.weightLabel} colKey="weight" sort={sort} onSort={onSort} />
               {config.cols.map(c => (
@@ -712,14 +722,17 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
 function PitchArsenalTable({ rows }: { rows: Record<string, any>[] }) {
   const [sort, setSort] = useState<SortState>({ col: 'pitches', dir: 'desc' })
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
-  const sorted = [...rows].sort((a, b) => cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir))
+  const sorted = [...rows].sort((a, b) => {
+    if (sort!.col === 'pitchType') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), sort!.dir)
+    return cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir)
+  })
 
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>
-            <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--text-3)', fontWeight: 700 }}>Pitch</th>
+            <SortableTH label="Pitch" colKey="pitchType" sort={sort} onSort={onSort} align="left" />
             <SortableTH label="Pitches" colKey="pitches" sort={sort} onSort={onSort} />
             <SortableTH label="Usage %" colKey="pitch_usage" sort={sort} onSort={onSort} />
             <SortableTH label="PA" colKey="pa" sort={sort} onSort={onSort} />
@@ -751,22 +764,31 @@ function PitchArsenalTable({ rows }: { rows: Record<string, any>[] }) {
 }
 
 function HrTable({ rows, opponentIdKey, opponentNameKey }: { rows: Record<string, any>[]; opponentIdKey: 'pitcher_id' | 'batter_id'; opponentNameKey: 'pitcher_name' | 'batter_name' }) {
+  const [sort, setSort] = useState<SortState>({ col: 'game_date', dir: 'desc' })
+  const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
+  const sorted = [...rows].sort((a, b) => {
+    if (sort!.col === 'opponent') return cmpAny(a[opponentNameKey], b[opponentNameKey], sort!.dir)
+    if (sort!.col === 'result') return cmpAny(a.result, b.result, sort!.dir)
+    if (sort!.col === 'game_date') return cmpAny(a.game_date, b.game_date, sort!.dir)
+    return cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir)
+  })
+
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ color: 'var(--text-3)', textAlign: 'left' }}>
-            <th style={{ padding: '6px 10px' }}>Date</th>
-            <th style={{ padding: '6px 10px' }}>{opponentIdKey === 'pitcher_id' ? 'Pitcher' : 'Batter'}</th>
-            <th style={{ padding: '6px 10px' }}>Result</th>
-            <th style={{ padding: '6px 10px' }}>EV</th>
-            <th style={{ padding: '6px 10px' }}>LA</th>
-            <th style={{ padding: '6px 10px' }}>Dist</th>
-            <th style={{ padding: '6px 10px' }}>Category</th>
+          <tr>
+            <SortableTH label="Date" colKey="game_date" sort={sort} onSort={onSort} align="left" />
+            <SortableTH label={opponentIdKey === 'pitcher_id' ? 'Pitcher' : 'Batter'} colKey="opponent" sort={sort} onSort={onSort} align="left" />
+            <SortableTH label="Result" colKey="result" sort={sort} onSort={onSort} align="left" />
+            <SortableTH label="EV" colKey="exit_velocity" sort={sort} onSort={onSort} />
+            <SortableTH label="LA" colKey="launch_angle" sort={sort} onSort={onSort} />
+            <SortableTH label="Dist" colKey="hr_distance" sort={sort} onSort={onSort} />
+            <SortableTH label="Category" colKey="hr_cat" sort={sort} onSort={onSort} align="left" />
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
+          {sorted.map((r, i) => (
             <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
               <td style={{ padding: '6px 10px', color: 'var(--text-2)' }}>{r.game_date}</td>
               <td style={{ padding: '6px 10px' }}>
