@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { pitchLabel } from '@/lib/mlb-api'
 import { heat } from '@/components/pitcher-report/MatchupTables'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip } from './PlayerPageClient'
+import { PlayerPicker, type PickerOption } from './PlayerPicker'
 
 export type PitcherPitchRow = {
   game_pk: string; game_date: string; pitcher_id: number; batter_id: number
@@ -11,7 +12,7 @@ export type PitcherPitchRow = {
   is_in_play: boolean; is_swing: boolean; is_whiff: boolean
   launch_speed: number | null; run_value: number | null
   stand: string | null
-  opponent_id: number; opponent_name: string
+  opponent_id: number; opponent_name: string; opponent_team: string | null
 }
 
 // Savant's own 1-9 zone codes, laid out as the standard broadcast strike-
@@ -58,19 +59,40 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   )
 }
 
+const dateInputStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, padding: '4px 8px', borderRadius: 6,
+  border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-1)',
+}
+
 // Aggregate + zone-bin a pitcher's own pitch log — green = favorable to the
 // pitcher, red = vulnerable, using the same min/max heat() scale the split
 // tables already use, just fed zone cells instead of table columns.
 export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
   const pitchTypes = useMemo(() => Array.from(new Set(rows.map(r => r.pitch_type).filter((v): v is string => !!v))), [rows])
+  const batters = useMemo(() => {
+    const counts = new Map<number, PickerOption>()
+    for (const r of rows) {
+      const e = counts.get(r.batter_id)
+      if (e) e.count++
+      else counts.set(r.batter_id, { id: r.batter_id, name: r.opponent_name, teamAbbr: r.opponent_team, count: 1 })
+    }
+    return Array.from(counts.values()).sort((a, b) => b.count - a.count)
+  }, [rows])
+
   const [pitchTypeSel, setPitchTypeSel] = useState('all')
   const [handSel, setHandSel] = useState<'all' | 'L' | 'R'>('all')
+  const [batterSel, setBatterSel] = useState<number | 'all'>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [metric, setMetric] = useState<MetricKey>('run_value')
 
   const filtered = useMemo(() => rows.filter(r =>
     (pitchTypeSel === 'all' || r.pitch_type === pitchTypeSel) &&
-    (handSel === 'all' || r.stand === handSel)
-  ), [rows, pitchTypeSel, handSel])
+    (handSel === 'all' || r.stand === handSel) &&
+    (batterSel === 'all' || r.batter_id === batterSel) &&
+    (!dateFrom || r.game_date >= dateFrom) &&
+    (!dateTo || r.game_date <= dateTo)
+  ), [rows, pitchTypeSel, handSel, batterSel, dateFrom, dateTo])
 
   if (!rows.length) return null
 
@@ -93,7 +115,7 @@ export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
     <div style={cardStyle}>
       <div style={sectionTitleStyle}>
         Zone Profile
-        <span style={windowTag}>{filtered.length.toLocaleString()} pitches · {rows[0]?.game_date?.slice(0, 4) ?? ''} Season</span>
+        <span style={windowTag}>{filtered.length.toLocaleString()} pitches</span>
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
@@ -101,10 +123,19 @@ export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
         {METRICS.map(m => <ToggleBtn key={m.key} active={metric === m.key} onClick={() => setMetric(m.key)}>{m.label}</ToggleBtn>)}
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Date range:</span>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={dateInputStyle} />
+        <span style={{ color: 'var(--text-3)', fontSize: 11 }}>–</span>
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={dateInputStyle} />
+        {(dateFrom || dateTo) && <ToggleBtn active={false} onClick={() => { setDateFrom(''); setDateTo('') }}>Clear</ToggleBtn>}
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Batter hand:</span>
         <DimChip label="All" active={handSel === 'all'} onClick={() => setHandSel('all')} />
         <DimChip label="vs LHB" active={handSel === 'L'} onClick={() => setHandSel('L')} />
         <DimChip label="vs RHB" active={handSel === 'R'} onClick={() => setHandSel('R')} />
+        <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>Vs. batter:</span>
+        <PlayerPicker options={batters} value={batterSel} onChange={setBatterSel} placeholder="All batters" />
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Pitch:</span>
@@ -114,35 +145,39 @@ export function PitchZoneHeatmap({ rows }: { rows: PitcherPitchRow[] }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 68px)', gridTemplateRows: 'repeat(3, 68px)', gap: 3 }}>
-          {CORE_ZONES.map(z => {
-            const c = cellByZone.get(z)!
-            const v = c[metric]
-            return (
-              <div
-                key={z}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)',
-                  ...heat(v, coreValues, activeMetric.dir),
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{fmt(v, metric)}</span>
-                <span style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>{c.count} pitch{c.count === 1 ? '' : 'es'}</span>
-              </div>
-            )
-          })}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em' }}>CHASE ZONE (OUT OF ZONE)</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <MiniStat label="Pitches" value={String(chaseStats.count)} />
-            <MiniStat label="Chase Swing%" value={chaseSwingPct == null ? '—' : `${chaseSwingPct.toFixed(1)}%`} />
-            <MiniStat label="Whiff%" value={chaseStats.whiff_pct == null ? '—' : `${chaseStats.whiff_pct.toFixed(1)}%`} />
+      {filtered.length === 0 ? (
+        <div style={{ color: 'var(--text-3)', fontSize: 13 }}>No pitches match this combination of filters.</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 68px)', gridTemplateRows: 'repeat(3, 68px)', gap: 3 }}>
+            {CORE_ZONES.map(z => {
+              const c = cellByZone.get(z)!
+              const v = c[metric]
+              return (
+                <div
+                  key={z}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)',
+                    ...heat(v, coreValues, activeMetric.dir),
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{fmt(v, metric)}</span>
+                  <span style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>{c.count} pitch{c.count === 1 ? '' : 'es'}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em' }}>CHASE ZONE (OUT OF ZONE)</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <MiniStat label="Pitches" value={String(chaseStats.count)} />
+              <MiniStat label="Chase Swing%" value={chaseSwingPct == null ? '—' : `${chaseSwingPct.toFixed(1)}%`} />
+              <MiniStat label="Whiff%" value={chaseStats.whiff_pct == null ? '—' : `${chaseStats.whiff_pct.toFixed(1)}%`} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
