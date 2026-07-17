@@ -63,6 +63,10 @@
     {
       "path": "/api/cron/savant-sync-pitch-arsenal-details",
       "schedule": "5 10 * * *"
+    },
+    {
+      "path": "/api/cron/savant-sync-pitch-log",
+      "schedule": "10 10 * * *"
     }
   ]
 }
