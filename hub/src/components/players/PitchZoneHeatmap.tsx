@@ -5,6 +5,7 @@ import { pitchLabel } from '@/lib/mlb-api'
 import { heat } from '@/components/pitcher-report/MatchupTables'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
+import { ZoneScoreCard } from './ZoneScoreCard'
 
 export type PitcherPitchRow = {
   game_pk: string; game_date: string; pitcher_id: number; batter_id: number
@@ -69,7 +70,7 @@ export type TodayOpponentTeam = { teamAbbr: string; teamName: string; lineupIds:
 // Aggregate + zone-bin a pitcher's own pitch log — green = favorable to the
 // pitcher, red = vulnerable, using the same min/max heat() scale the split
 // tables already use, just fed zone cells instead of table columns.
-export function PitchZoneHeatmap({ rows, todayOpponent }: { rows: PitcherPitchRow[]; todayOpponent?: TodayOpponentTeam | null }) {
+export function PitchZoneHeatmap({ rows, myName, todayOpponent }: { rows: PitcherPitchRow[]; myName: string; todayOpponent?: TodayOpponentTeam | null }) {
   const pitchTypes = useMemo(() => Array.from(new Set(rows.map(r => r.pitch_type).filter((v): v is string => !!v))), [rows])
   const batters = useMemo(() => {
     const counts = new Map<number, PickerOption>()
@@ -135,8 +136,13 @@ export function PitchZoneHeatmap({ rows, todayOpponent }: { rows: PitcherPitchRo
   const chaseRows = CHASE_ZONES.flatMap(z => byZone.get(z) ?? [])
   const chaseStats = cellStats(chaseRows)
   const chaseSwingPct = chaseRows.length ? (chaseRows.filter(r => r.is_swing).length / chaseRows.length) * 100 : null
+  // Zone Score only makes sense against one specific batter, not a whole
+  // lineup — "today's opposing lineup" mode blends 9 different batters'
+  // tendencies, which isn't a real single zone profile to compare against.
+  const selectedBatter = !useTodayLineup && batterSel !== 'all' ? batters.find(b => b.id === batterSel) ?? null : null
 
   return (
+    <>
     <div style={cardStyle}>
       <div style={sectionTitleStyle}>
         Zone Profile
@@ -211,5 +217,9 @@ export function PitchZoneHeatmap({ rows, todayOpponent }: { rows: PitcherPitchRo
         </div>
       )}
     </div>
+    {selectedBatter && (
+      <ZoneScoreCard pageRole="pitcher" myName={myName} myRows={rows} opponentId={selectedBatter.id} opponentName={selectedBatter.name} />
+    )}
+    </>
   )
 }

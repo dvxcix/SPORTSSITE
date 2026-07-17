@@ -5,6 +5,7 @@ import { pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip, StatGrid } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
+import { ZoneScoreCard } from './ZoneScoreCard'
 
 export type BatterPitchRow = {
   game_pk: string; game_date: string; pitcher_id: number; batter_id: number
@@ -12,7 +13,7 @@ export type BatterPitchRow = {
   events: string | null
   is_in_play: boolean; is_swing: boolean; is_whiff: boolean
   launch_speed: number | null; launch_angle: number | null; xwoba: number | null
-  bat_speed: number | null
+  bat_speed: number | null; run_value: number | null
   p_throws: string | null
   opponent_id: number; opponent_name: string; opponent_team: string | null; day_night: string | null
 }
@@ -124,7 +125,7 @@ function PitchTypeCell({ pitchType }: { pitchType: string }) {
 // filter/aggregate in the browser" pattern the split explorers use).
 export type TodayOpponentPitcher = { pitcherId: number; pitcherName: string; teamAbbr: string | null }
 
-export function BatterMatchupExplorer({ rows, todayOpponent }: { rows: BatterPitchRow[]; todayOpponent?: TodayOpponentPitcher | null }) {
+export function BatterMatchupExplorer({ rows, myName, todayOpponent }: { rows: BatterPitchRow[]; myName: string; todayOpponent?: TodayOpponentPitcher | null }) {
   const [recency, setRecency] = useState<typeof RECENCY_OPTIONS[number]['key']>('season')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -196,8 +197,10 @@ export function BatterMatchupExplorer({ rows, todayOpponent }: { rows: BatterPit
     return cmpNullsLast((a as any)[activeSort.col], (b as any)[activeSort.col], activeSort.dir)
   })
   const allByCol = Object.fromEntries(TABLE_COLS.map(c => [c.key, byPitch.map(r => r[c.key])]))
+  const selectedOpponent = opponentSel === 'all' ? null : opponents.find(o => o.id === opponentSel) ?? null
 
   return (
+    <>
     <div style={cardStyle}>
       <div style={sectionTitleStyle}>
         Matchup Explorer
@@ -294,5 +297,9 @@ export function BatterMatchupExplorer({ rows, todayOpponent }: { rows: BatterPit
         </>
       )}
     </div>
+    {selectedOpponent && (
+      <ZoneScoreCard pageRole="batter" myName={myName} myRows={rows} opponentId={selectedOpponent.id} opponentName={selectedOpponent.name} />
+    )}
+    </>
   )
 }

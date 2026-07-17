@@ -684,6 +684,7 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       {isPitcher && pitchLog && pitchLog.pitcherRows.length > 0 && (
         <PitchZoneHeatmap
           rows={pitchLog.pitcherRows}
+          myName={player.full_name ?? `Player ${player.mlb_id}`}
           todayOpponent={todayContext && todayContext.role === 'pitcher' ? {
             teamAbbr: todayContext.opponentTeam, teamName: todayContext.opponentTeamName,
             lineupIds: todayContext.opponentLineup.map(p => p.mlb_id), confirmed: todayContext.lineupConfirmed,
@@ -693,6 +694,7 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       {isBatter && pitchLog && pitchLog.batterRows.length > 0 && (
         <BatterMatchupExplorer
           rows={pitchLog.batterRows}
+          myName={player.full_name ?? `Player ${player.mlb_id}`}
           todayOpponent={todayContext && todayContext.role === 'batter' && todayContext.opponentPitcher ? {
             pitcherId: todayContext.opponentPitcher.id, pitcherName: todayContext.opponentPitcher.name,
             teamAbbr: todayContext.opponentTeam,
