@@ -2580,7 +2580,15 @@ export function DugoutClient({ date }: { date: string }) {
       const market = r.prop_type || r.market
       if (!nn || !market) continue
       if (!m[nn]) m[nn] = {}
-      m[nn][market] = r
+      const existing = m[nn][market]
+      // A row explicitly tagged for THIS game always wins over a legacy/
+      // untagged ('') row for the same player+market, regardless of which
+      // one the API happened to return last — otherwise a pre-fix import
+      // for the OTHER leg of today's doubleheader can still win this
+      // overwrite and bleed onto this game exactly like before the fix.
+      if (!existing || (r.game_key && r.game_key === activeGameKey && !existing.game_key)) {
+        m[nn][market] = r
+      }
     }
     return m
   }, [data?.pikkit, data?.games, activeGame])

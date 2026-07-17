@@ -31,6 +31,7 @@ interface DugoutData {
 
 interface StarterOption {
   key: string
+  gameKey: string
   pitcher: PitcherInfo
   teamAbbr: string; teamName: string
   oppAbbr: string; oppName: string
@@ -216,7 +217,7 @@ export function PitcherReportClient() {
     for (const g of data.games) {
       if (g.awayPitcher) {
         out.push({
-          key: `${g.gameKey}-away`, pitcher: g.awayPitcher,
+          key: `${g.gameKey}-away`, gameKey: g.gameKey, pitcher: g.awayPitcher,
           teamAbbr: g.awayAbbr, teamName: g.awayTeam,
           oppAbbr: g.homeAbbr, oppName: g.homeTeam,
           oppLineup: g.homeLineup, oppLineupConfirmed: g.homeLineupConfirmed,
@@ -224,7 +225,7 @@ export function PitcherReportClient() {
       }
       if (g.homePitcher) {
         out.push({
-          key: `${g.gameKey}-home`, pitcher: g.homePitcher,
+          key: `${g.gameKey}-home`, gameKey: g.gameKey, pitcher: g.homePitcher,
           teamAbbr: g.homeAbbr, teamName: g.homeTeam,
           oppAbbr: g.awayAbbr, oppName: g.awayTeam,
           oppLineup: g.awayLineup, oppLineupConfirmed: g.awayLineupConfirmed,
@@ -251,16 +252,28 @@ export function PitcherReportClient() {
   // "Anytime HR picks" count, so a player with picks in some OTHER market
   // (hrr, singles, tb...) but no home_runs row must show nothing here, not
   // that other market's count mislabeled as HR (same fix as Dugout's map).
+  //
+  // Also scoped to the selected starter's own gameKey — a doubleheader's
+  // two legs share every batter between them, and pikkit rows now carry a
+  // real per-leg game_key. A row explicitly tagged for THIS game always
+  // wins over a legacy/untagged ('') row for the same player, regardless
+  // of array order — otherwise a pre-fix import for the OTHER leg can
+  // still win the overwrite and bleed onto this one.
   const pikkitMap = useMemo(() => {
+    const gameKey = selected?.gameKey ?? null
     const m: Record<string, any> = {}
     for (const r of (data?.pikkit ?? [])) {
+      if (r.game_key && gameKey && r.game_key !== gameKey) continue
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
       if (!nn || market !== 'home_runs') continue
-      m[nn] = r
+      const existing = m[nn]
+      if (!existing || (r.game_key && r.game_key === gameKey && !existing.game_key)) {
+        m[nn] = r
+      }
     }
     return m
-  }, [data?.pikkit])
+  }, [data?.pikkit, selected?.gameKey])
 
   // 14-day pre-aggregated window (mlb-party) — the default, cheap source.
   const dayWindowRows = useMemo(() => {

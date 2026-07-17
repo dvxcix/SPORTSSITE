@@ -38,6 +38,11 @@ export type TodayGame = {
   homePitcher: ProbablePitcher | null; awayPitcher: ProbablePitcher | null
   homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
   homeLineupConfirmed: boolean; awayLineupConfirmed: boolean
+  // MLB's own detailedState (e.g. "Scheduled", "Pre-Game", "Warmup",
+  // "In Progress", "Delayed Start", "Postponed", "Final") — used by the
+  // lineup-confirmed cron to also catch postponements/delays, not just
+  // lineup posts.
+  status: string
 }
 
 async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: string): Promise<LineupPlayer[]> {
@@ -169,6 +174,7 @@ export async function getTodaysMatchups(date?: string): Promise<TodayGame[]> {
       homePitcher, awayPitcher, homeLineup, awayLineup,
       homeLineupConfirmed: (g.lineups?.homePlayers?.length ?? 0) > 0,
       awayLineupConfirmed: (g.lineups?.awayPlayers?.length ?? 0) > 0,
+      status: g.status?.detailedState || g.status?.abstractGameState || 'Scheduled',
     }
   }))
 }
