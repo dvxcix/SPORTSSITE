@@ -76,17 +76,19 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
           <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', marginTop: 4, letterSpacing: '0.04em' }}>POSTED TO FEED</div>
         )}
       </div>
-      {item.status === 'pending' && !selectMode && (
+      {!selectMode && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-          <button
-            onClick={() => onPostSingle(item)}
-            style={{
-              fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 6,
-              background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', cursor: 'pointer',
-            }}
-          >
-            Post
-          </button>
+          {item.status === 'pending' && (
+            <button
+              onClick={() => onPostSingle(item)}
+              style={{
+                fontSize: 10, fontWeight: 700, padding: '5px 10px', borderRadius: 6,
+                background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', cursor: 'pointer',
+              }}
+            >
+              Post
+            </button>
+          )}
           <button
             disabled={removing}
             onClick={async () => { setRemoving(true); try { await wl.remove(item.id) } finally { setRemoving(false) } }}

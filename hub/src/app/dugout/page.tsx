@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { DugoutClient } from '@/components/dugout/DugoutClient'
 import { WatchlistProvider } from '@/context/WatchlistContext'
 import { WatchlistButton } from '@/components/dugout/WatchlistPanel'
+import { MyPicksButton } from '@/components/dugout/MyPicksPanel'
 import Link from 'next/link'
 
 export const revalidate = 0
@@ -40,6 +41,7 @@ export default async function DugoutPage({
     <WatchlistProvider>
     <div style={{ padding: '20px 16px' }}>
       <WatchlistButton />
+      <MyPicksButton />
       {/* Header */}
       <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <div>

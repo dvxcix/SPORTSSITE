@@ -5,6 +5,7 @@ import {
   fetchWatchlist, addWatchlistItem, removeWatchlistItem, postWatchlistItemToFeed, postBetToFeed,
   type WatchlistItem, type NewWatchlistItem,
 } from '@/lib/watchlist'
+import { createClient } from '@/lib/supabase/client'
 
 type WatchlistCtx = {
   items: WatchlistItem[]
@@ -44,7 +45,17 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
         const d = item.game_date || item.created_at?.slice(0, 10)
         return !d || d >= localToday
       }
-      setItems(rows.filter(isFromToday))
+      // Legacy rows from before posting started removing items outright —
+      // once something's posted it belongs in My Picks, not lingering here
+      // greyed out, so sweep any leftover 'posted' rows on load instead of
+      // making every affected user find and click Remove on each one.
+      const stalePosted = rows.filter(i => i.status === 'posted')
+      if (stalePosted.length > 0) {
+        const supabase = createClient()
+        supabase.from('watchlist_items').delete().in('id', stalePosted.map(i => i.id))
+          .then(({ error }) => { if (error) console.error('[watchlist] failed to sweep stale posted items', error) })
+      }
+      setItems(rows.filter(isFromToday).filter(i => i.status !== 'posted'))
       setError(null)
     } catch (e: any) {
       setError(e.message || String(e))
@@ -75,7 +86,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   const postToFeed = useCallback(async (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean }) => {
     if (!user) throw new Error('Sign in to post')
     const result = await postWatchlistItemToFeed(user.id, item, opts)
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'posted', posted_pick_id: result.pickId } : i))
+    setItems(prev => prev.filter(i => i.id !== item.id))
     return result
   }, [user])
 
@@ -83,7 +94,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('Sign in to post')
     const result = await postBetToFeed(user.id, legs, opts)
     const legIds = new Set(legs.map(l => l.id))
-    setItems(prev => prev.map(i => legIds.has(i.id) ? { ...i, status: 'posted' } : i))
+    setItems(prev => prev.filter(i => !legIds.has(i.id)))
     return result
   }, [user])
 

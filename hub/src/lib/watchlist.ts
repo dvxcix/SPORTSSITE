@@ -212,18 +212,17 @@ export async function postBetToFeed(
   if (pickErr) throw pickErr
 
   // The post + picks rows are already live at this point — a failure here
-  // only means a watchlist item's own status badge won't flip to "posted"
-  // (it stays actionable/visible in the watchlist instead), not that the
-  // actual post silently didn't happen. Logged rather than thrown so one
-  // bad update doesn't roll back an already-successful post.
-  const nowIso = new Date().toISOString()
-  const updateResults = await Promise.all(legs.map((l, i) =>
-    supabase.from('watchlist_items')
-      .update({ status: 'posted', posted_pick_id: picks![i].id, updated_at: nowIso })
-      .eq('id', l.id)
+  // only means a watchlist item lingers instead of being cleared out, not
+  // that the actual post silently didn't happen. Logged rather than thrown
+  // so one bad delete doesn't roll back an already-successful post. Once
+  // posted, a leg becomes a tracked pick (visible in My Picks) — it no
+  // longer belongs in the watchlist at all, so it's removed outright rather
+  // than just marked 'posted'.
+  const deleteResults = await Promise.all(legs.map(l =>
+    supabase.from('watchlist_items').delete().eq('id', l.id)
   ))
-  for (const { error: updateErr } of updateResults) {
-    if (updateErr) console.error('[postBetToFeed] failed to mark watchlist item as posted', updateErr)
+  for (const { error: deleteErr } of deleteResults) {
+    if (deleteErr) console.error('[postBetToFeed] failed to remove posted watchlist item', deleteErr)
   }
 
   return { postId: post.id, pickIds: (picks ?? []).map((p: any) => p.id) }
