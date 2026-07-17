@@ -88,6 +88,12 @@ async function seedPendingBatters(admin: AdminClient, season: number) {
   // pitch-arsenal-details seed query, where it silently dropped ~2,170 of
   // 3,172 real rows). Currently under 1000 qualifying batters, but this
   // would fail the exact same silent way once that count grows past it.
+  // `.range()` without an explicit `.order()` has no guaranteed row
+  // ordering between separate calls — real bug hit in the sibling
+  // pitch-arsenal-details seed query (see savantPitchArsenalSync.ts),
+  // where pagination without an order plateaued short of the real total.
+  // `(mlb_id, season, category)` is this table's real unique constraint, so
+  // ordering by mlb_id alone is enough for gap-free pages here.
   const PAGE_SIZE = 1000
   const rows: { mlb_id: number; metrics: unknown }[] = []
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -96,6 +102,7 @@ async function seedPendingBatters(admin: AdminClient, season: number) {
       .select('mlb_id, metrics')
       .eq('season', season)
       .eq('category', 'home_runs')
+      .order('mlb_id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) {

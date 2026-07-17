@@ -88,6 +88,13 @@ async function seedPendingCombos(admin: AdminClient, season: number) {
   // here silently truncates to PostgREST's default row cap (1000), which
   // seeded only 1000 of the real 3,172 pitcher-side combos and left the
   // rest never even queued.
+  // `.range()` without an explicit `.order()` has no guaranteed row
+  // ordering between separate calls — confirmed live: the first version of
+  // this pagination (no `.order()`) plateaued at 2,507 of 3,172 real combos
+  // across 9 real invocations, consistent with page boundaries silently
+  // skipping/duplicating rows. Ordering by the table's own unique `id`
+  // makes every page boundary well-defined regardless of concurrent writes
+  // elsewhere in the table.
   const PAGE_SIZE = 1000
   const rows: { mlb_id: number; dims: unknown }[] = []
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -95,6 +102,7 @@ async function seedPendingCombos(admin: AdminClient, season: number) {
       .from('player_statcast_splits')
       .select('mlb_id, dims')
       .eq('category', 'pitch_arsenal_stats').eq('role', 'pitcher').eq('window_type', 'season')
+      .order('id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) {
