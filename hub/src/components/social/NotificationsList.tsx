@@ -136,7 +136,20 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
           {(n.actor?.avatar_url || n.data?.avatar_url) && (
-            <img src={n.actor?.avatar_url || n.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            // A player headshot is a portrait photo meant to fill the circle
+            // (cover). A team logo (lineup_confirmed) is a flat mark on a
+            // square/transparent canvas — cover crops right into the
+            // artwork; it needs to shrink to fit inside instead, with a
+            // little breathing room so it doesn't touch the circle's edge.
+            <img
+              src={n.actor?.avatar_url || n.data?.avatar_url}
+              alt=""
+              style={{
+                width: '100%', height: '100%', boxSizing: 'border-box',
+                objectFit: n.type === 'lineup_confirmed' ? 'contain' : 'cover',
+                padding: n.type === 'lineup_confirmed' ? 6 : 0,
+              }}
+            />
           )}
         </div>
         <div style={{

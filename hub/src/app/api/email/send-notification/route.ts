@@ -85,7 +85,16 @@ export async function POST(request: Request) {
 <div style="font-size:18px;font-weight:900;color:#F5F5F5;letter-spacing:-0.02em;">Slip<span style="color:#B4FF4D;">Surge</span></div>
 </td></tr>
 <tr><td style="padding:28px 32px 8px;text-align:center;">
-${richImage ? `<img src="${richImage}" width="56" height="56" style="display:block;margin:0 auto 14px;border-radius:50%;object-fit:cover;" alt="" />` : ''}
+${richImage ? (
+  notification.type === 'lineup_confirmed'
+    // object-fit is unreliable across email clients (Outlook ignores it
+    // outright), and a team logo cropped to fill a circle via cover just
+    // zooms into the artwork — sizing the <img> itself SMALLER than its
+    // circular cell, so the logo sits centered with natural whitespace
+    // around it, works everywhere without depending on object-fit at all.
+    ? `<table role="presentation" width="56" height="56" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;border-radius:50%;background:#1A1D24;"><tr><td align="center" valign="middle"><img src="${richImage}" width="36" style="display:block;" alt="" /></td></tr></table>`
+    : `<img src="${richImage}" width="56" height="56" style="display:block;margin:0 auto 14px;border-radius:50%;object-fit:cover;" alt="" />`
+) : ''}
 <p style="margin:0;font-size:15px;line-height:1.6;color:#F5F5F5;">${text}</p>
 </td></tr>
 <tr><td style="padding:16px 32px 32px;text-align:center;">
