@@ -35,7 +35,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
 }
 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
-  const bb = await openSession({ contextId, metadata: { book: 'pikkit', gameKey: g.gameKey, gamePk: g.gamePk } })
+  const bb = await openSession({ contextId, metadata: { book: 'pikkit', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     // Pikkit scraping is pure text/DOM extraction (team names, a market
     // <select>, pick counts) — no visual rendering is ever needed, and

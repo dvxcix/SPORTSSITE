@@ -33,7 +33,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
   // nc.betmgm.com is state-gated real-money content — without a North
   // Carolina-located proxy IP, BetMGM's backend won't serve the actual page
   // body (the site loads, but the events/odds content never appears).
-  const bb = await openSession({ geoState: 'NC', metadata: { book: 'mgm', gameKey: g.gameKey, gamePk: g.gamePk } })
+  const bb = await openSession({ geoState: 'NC', metadata: { book: 'mgm', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     await bb.page.goto('https://www.nc.betmgm.com/en/sports/baseball-23/betting/usa-9/mlb-75', { waitUntil: 'domcontentloaded' })
     // "EVENTS" not "Futures" — best-effort, harmless if already active.
