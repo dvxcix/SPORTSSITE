@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireCronAuth } from '@/lib/cron-auth'
+import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@/lib/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/stripe'
 
@@ -15,7 +15,7 @@ export const maxDuration = 280
 // per game to scrape-pikkit?gamePk=... (see fanOutToSelf's reasoning in
 // that route) rather than looping — bounded by the slowest single game.
 export async function GET(req: Request) {
-  const authError = requireCronAuth(req)
+  const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
