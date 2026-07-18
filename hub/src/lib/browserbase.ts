@@ -65,7 +65,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
 // so every future openSession({ contextId }) call for Pikkit starts already
 // logged in. No password is ever read, stored, or typed by this codebase —
 // you do the actual sign-in by hand, once, in the Live View.
-export async function createPersistentContext(): Promise<{ contextId: string; liveViewUrl: string }> {
+export async function createPersistentContext(navigateUrl = 'https://app.pikkit.com/leagues/mlb'): Promise<{ contextId: string; liveViewUrl: string }> {
   const bb = client()
   const pid = optionalProjectId()
   const context = await bb.contexts.create(pid ? { projectId: pid } : {})
@@ -74,6 +74,18 @@ export async function createPersistentContext(): Promise<{ contextId: string; li
     keepAlive: true,
     browserSettings: { context: { id: context.id, persist: true } },
   })
+  // The Live View has no address bar — it's just a viewport onto whatever
+  // page the remote browser is already on. Without navigating it first, the
+  // admin opens Live View to a dead-end about:blank tab with no way to reach
+  // Pikkit's login screen. Navigate here, then hand off the Live View URL.
+  // Deliberately not closing this Playwright/CDP connection afterward —
+  // doing so would tear down the remote session before the admin gets a
+  // chance to log in. The connection just drops when this function returns;
+  // the Browserbase-hosted browser (keepAlive: true) keeps running on its own.
+  const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
+  const bctx = browser.contexts()[0] ?? await browser.newContext()
+  const page = bctx.pages()[0] ?? await bctx.newPage()
+  await page.goto(navigateUrl, { waitUntil: 'domcontentloaded' }).catch(() => {})
   const live = await bb.sessions.debug(session.id)
   return { contextId: context.id, liveViewUrl: live.debuggerFullscreenUrl }
 }
