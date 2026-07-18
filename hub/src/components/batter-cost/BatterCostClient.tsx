@@ -32,7 +32,7 @@ const MARKETS: { key: string; label: string; current: (p: any) => number | null;
 
 type MarketDelta = { current: number | null; open: number | null; delta: number | null }
 type FlatBatter = {
-  mlb_id: number; name: string; team: string; bats: string; position: string
+  mlb_id: number; gameKey: string; name: string; team: string; bats: string; position: string
   opponentId: number | null; opponentName: string; opponentHand: string; opponentTeam: string
   fhr_pct: number | null; sa_pct: number | null
   deltas: Record<string, MarketDelta>
@@ -64,7 +64,10 @@ function pctColor(pct: number | null, maxAbs: number): React.CSSProperties {
 export function BatterCostClient({ date }: { date: string }) {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [hovered, setHovered] = useState<number | null>(null)
+  // Keyed by mlb_id+gameKey, not mlb_id alone — a doubleheader batter has
+  // two distinct rows sharing an mlb_id, and hover should only ever
+  // highlight the one actually under the cursor.
+  const [hovered, setHovered] = useState<string | null>(null)
   // Default: biggest HR% drop vs. this player's own season-average price
   // first — the "who's the biggest opening-day mover" view the page exists
   // for. Click any column to re-sort by it instead.
@@ -114,7 +117,7 @@ export function BatterCostClient({ date }: { date: string }) {
   const flatBatters: FlatBatter[] = useMemo(() => {
     if (!data?.games) return []
     const out: FlatBatter[] = []
-    const addSide = (lineup: any[], opponentPitcher: any, opponentTeam: string) => {
+    const addSide = (lineup: any[], opponentPitcher: any, opponentTeam: string, gameKey: string) => {
       for (const p of lineup ?? []) {
         const deltas: Record<string, MarketDelta> = {}
         let hasAny = false
@@ -138,16 +141,21 @@ export function BatterCostClient({ date }: { date: string }) {
 
         if (!hasAny && fhr_pct == null && sa_pct == null) continue
         out.push({
-          mlb_id: p.mlb_id, name: p.name, team: p.team, bats: p.bats, position: p.position,
+          mlb_id: p.mlb_id, gameKey, name: p.name, team: p.team, bats: p.bats, position: p.position,
           opponentId: opponentPitcher?.id ?? null, opponentName: opponentPitcher?.name ?? '',
           opponentHand: opponentPitcher?.hand ?? '', opponentTeam,
           fhr_pct, sa_pct, deltas,
         })
       }
     }
+    // gameKey (not just mlb_id) makes each row's React key unique even on a
+    // doubleheader day, where the same batter can legitimately appear twice
+    // — once per leg. Sharing a key across two rows was making repeated
+    // re-sorts visually "stop working" (React reconciling the duplicate-key
+    // rows unpredictably instead of just reordering two distinct nodes).
     for (const g of data.games) {
-      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr)
-      addSide(g.awayLineup, g.homePitcher, g.homeAbbr)
+      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr, g.gameKey)
+      addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey)
     }
     return out
   }, [data, fhrAvgMap, saAvgMap])
@@ -187,11 +195,6 @@ export function BatterCostClient({ date }: { date: string }) {
 
   return (
     <div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
-        {sorted.length} batter{sorted.length === 1 ? '' : 's'} with at least one market that has moved.
-        FHR%/HR% = today&apos;s price vs. this player&apos;s own season-average price. Every other column = today&apos;s price vs. this game&apos;s opening line.
-        Negative (green) = price shortened — book conviction. Click any column to sort by it.
-      </div>
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
@@ -205,15 +208,15 @@ export function BatterCostClient({ date }: { date: string }) {
           <tbody>
             {sorted.map(b => (
               <tr
-                key={b.mlb_id}
-                onMouseEnter={() => setHovered(b.mlb_id)}
+                key={`${b.mlb_id}_${b.gameKey}`}
+                onMouseEnter={() => setHovered(`${b.mlb_id}_${b.gameKey}`)}
                 onMouseLeave={() => setHovered(null)}
               >
                 <td
                   style={{
                     padding: '6px 8px', position: 'sticky', left: 0, zIndex: 2, minWidth: 200,
                     backgroundColor: 'var(--bg)',
-                    backgroundImage: hovered === b.mlb_id ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
+                    backgroundImage: hovered === `${b.mlb_id}_${b.gameKey}` ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
