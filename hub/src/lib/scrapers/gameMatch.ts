@@ -36,6 +36,21 @@ export function legIndexer() {
   }
 }
 
+// Stateless equivalent of legIndexer() for the per-game invocation model —
+// each game now scrapes in its own separate serverless invocation (fired
+// concurrently rather than looped in one process), so there's no shared
+// process memory to count clicks across a run. Instead, derives the same
+// leg index purely from today's full games list: among every game sharing
+// this team pairing (a doubleheader), sorts by gamePk and returns this
+// game's rank. Deterministic — every invocation that fetches the same
+// games list computes the identical index for a given gamePk.
+export function legIndexFor(games: { gamePk: number; awayTeam: string; homeTeam: string }[], target: { gamePk: number; awayTeam: string; homeTeam: string }): number {
+  const pair = games
+    .filter(g => g.awayTeam === target.awayTeam && g.homeTeam === target.homeTeam)
+    .sort((a, b) => a.gamePk - b.gamePk)
+  return Math.max(0, pair.findIndex(g => g.gamePk === target.gamePk))
+}
+
 export async function clickTabByText(page: Page, label: string, exact = true): Promise<boolean> {
   const el = page.getByText(label, { exact }).first()
   if (!(await el.count())) return false

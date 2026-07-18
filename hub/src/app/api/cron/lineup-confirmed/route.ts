@@ -60,12 +60,26 @@ export async function GET(req: Request) {
   let notified = 0
   const lineupUpserts: { game_pk: number; side: 'home' | 'away'; team_abbr: string; confirmed: boolean; lineup_signature: string | null }[] = []
   const statusUpserts: { game_pk: number; status: string }[] = []
+  const scrapeQueueInserts: { game_pk: number; ready_at: string }[] = []
 
   for (const g of games) {
     const sides: { side: 'home' | 'away'; abbr: string; confirmed: boolean; lineup: LineupPlayer[] }[] = [
       { side: 'home', abbr: g.homeAbbr, confirmed: g.homeLineupConfirmed, lineup: g.homeLineup },
       { side: 'away', abbr: g.awayAbbr, confirmed: g.awayLineupConfirmed, lineup: g.awayLineup },
     ]
+
+    // The FIRST moment both lineups for this game go confirmed is roughly
+    // when books' First Home Run market actually appears (~5 min behind) —
+    // queue a scrape for dispatch-scrapes to pick up then, rather than
+    // relying only on the coarse fixed-schedule sweep. Only fires once per
+    // game per day (checked against PREVIOUS run's state, and the queue
+    // insert itself is a no-op on conflict) — a later lineup change
+    // (scratch/swap) doesn't re-trigger it.
+    const wasFullyConfirmed = (lineupStateByKey.get(`${g.gamePk}-home`)?.confirmed ?? false) && (lineupStateByKey.get(`${g.gamePk}-away`)?.confirmed ?? false)
+    const isFullyConfirmedNow = g.homeLineupConfirmed && g.awayLineupConfirmed
+    if (!wasFullyConfirmed && isFullyConfirmedNow) {
+      scrapeQueueInserts.push({ game_pk: g.gamePk, ready_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() })
+    }
     for (const s of sides) {
       const key = `${g.gamePk}-${s.side}`
       const prev = lineupStateByKey.get(key)
@@ -94,8 +108,9 @@ export async function GET(req: Request) {
 
   if (lineupUpserts.length) await admin.from('lineup_confirmation_state').upsert(lineupUpserts, { onConflict: 'game_pk,side' })
   if (statusUpserts.length) await admin.from('game_status_state').upsert(statusUpserts, { onConflict: 'game_pk' })
+  if (scrapeQueueInserts.length) await admin.from('scrape_dispatch_queue').upsert(scrapeQueueInserts, { onConflict: 'game_pk', ignoreDuplicates: true })
 
-  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified })
+  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length })
 }
 
 const lineupSignature = (lineup: LineupPlayer[]) => lineup.map(p => p.mlb_id).sort((a, b) => a - b).join(',')
