@@ -48,7 +48,20 @@ export type BBSession = {
 // real odds to what it believes is a North Carolina IP; a generic proxy
 // location reads as out-of-state and the page body never renders real
 // content). Overrides the plain proxies:true/false default when set.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string } = {}): Promise<BBSession> {
+//
+// region is hardcoded to us-east-1 — Browserbase's own docs call region
+// localization "the most impactful" latency lever, citing an 8-9x gain,
+// and we were never setting it at all (defaulting away from wherever
+// Vercel actually runs these functions from — iad1, US East). Every CDP
+// round-trip for every click/goto/evaluate crosses the country otherwise;
+// since session cost bills by duration, that's paying for cross-country
+// latency on every single one of these scrapes for no reason.
+//
+// metadata is opt-in session tagging (book, mode, gamePk) — shows up in
+// Browserbase's own dashboard/Usage API so cost can be broken down by
+// which book/workflow is actually driving spend, per their own guidance
+// on measuring usage.
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const bb = client()
   const pid = optionalProjectId()
   const proxies = opts.geoState
@@ -56,11 +69,13 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     : (opts.proxies ?? true)
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
+    region: 'us-east-1',
     proxies,
     browserSettings: {
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },
+    ...(opts.metadata ? { userMetadata: opts.metadata } : {}),
   })
   const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
   const context = browser.contexts()[0] ?? await browser.newContext()

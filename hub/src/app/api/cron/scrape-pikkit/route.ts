@@ -35,8 +35,17 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
 }
 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
-  const bb = await openSession({ contextId })
+  const bb = await openSession({ contextId, metadata: { book: 'pikkit', gameKey: g.gameKey, gamePk: g.gamePk } })
   try {
+    // Pikkit scraping is pure text/DOM extraction (team names, a market
+    // <select>, pick counts) — no visual rendering is ever needed, and
+    // unlike FD/MGM this isn't a bot-detection-sensitive site (we're
+    // already signed in via a persisted context), so blocking images is
+    // low-risk here specifically. Per Browserbase's own cost-optimization
+    // guidance, this cuts proxy bandwidth without touching page behavior.
+    await bb.page.route('**/*', route =>
+      route.request().resourceType() === 'image' ? route.abort() : route.continue()
+    )
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(1500)
 
