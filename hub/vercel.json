@@ -71,6 +71,18 @@
     {
       "path": "/api/cron/savant-sync-pitch-log",
       "schedule": "10 10 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-fanduel",
+      "schedule": "0 14,16,18,20,22 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-mgm",
+      "schedule": "5 14,16,18,20,22 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-pikkit",
+      "schedule": "10 14,16,18,20,22 * * *"
     }
   ]
 }

@@ -26,7 +26,15 @@ const MARKET_MAP: Record<string, string> = {
   strikeouts: 'strikouts', // matches the existing (typo'd) historical value
 }
 
-async function requireAdmin() {
+// A real admin session (cookie-based) OR the same CRON_SECRET bearer token
+// the /api/cron/* jobs already use — the latter lets the scrape-books
+// automation call this route without ever holding a real login session/
+// password for this site.
+async function requireAdmin(req: Request) {
+  const cronSecret = process.env.CRON_SECRET
+  const auth = req.headers.get('authorization')
+  if (cronSecret && auth === `Bearer ${cronSecret}`) return {}
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
@@ -36,7 +44,7 @@ async function requireAdmin() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAdmin()
+  const auth = await requireAdmin(req)
   if (auth.error) return auth.error
 
   const body = await req.json().catch(() => null)
