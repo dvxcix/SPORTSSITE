@@ -119,12 +119,16 @@ export function BatterCostClient({ date }: { date: string }) {
   // Filters narrow WHICH rows show up at all; sorting (above) still just
   // reorders whatever's left. Default 'all' on every one — customizing is
   // opt-in, the page behaves exactly as before until a filter is touched.
+  // FHR%/HR% are their own two sign-only filters; every MARKETS column
+  // (FHR, HR, HR2+, singles...HRR) gets a +/−/0 delta filter, keyed by
+  // market key so adding a new market doesn't require new filter state.
   const [fhrPctFilter, setFhrPctFilter] = useState<SignFilter>('all')
   const [saPctFilter, setSaPctFilter] = useState<SignFilter>('all')
-  const [fhrDeltaFilter, setFhrDeltaFilter] = useState<DeltaFilter>('all')
-  const [saDeltaFilter, setSaDeltaFilter] = useState<DeltaFilter>('all')
-  const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || fhrDeltaFilter !== 'all' || saDeltaFilter !== 'all'
-  const resetFilters = () => { setFhrPctFilter('all'); setSaPctFilter('all'); setFhrDeltaFilter('all'); setSaDeltaFilter('all') }
+  const [deltaFilters, setDeltaFilters] = useState<Record<string, DeltaFilter>>({})
+  const getDeltaFilter = (key: string): DeltaFilter => deltaFilters[key] ?? 'all'
+  const setDeltaFilter = (key: string, v: DeltaFilter) => setDeltaFilters(prev => ({ ...prev, [key]: v }))
+  const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || Object.values(deltaFilters).some(v => v && v !== 'all')
+  const resetFilters = () => { setFhrPctFilter('all'); setSaPctFilter('all'); setDeltaFilters({}) }
 
   useEffect(() => {
     let cancelled = false
@@ -240,9 +244,8 @@ export function BatterCostClient({ date }: { date: string }) {
   const filtered = useMemo(() => flatBatters.filter(b =>
     matchesSign(b.fhr_pct, fhrPctFilter) &&
     matchesSign(b.sa_pct, saPctFilter) &&
-    matchesDelta(b.deltas.fhr?.delta ?? null, fhrDeltaFilter) &&
-    matchesDelta(b.deltas.sa?.delta ?? null, saDeltaFilter)
-  ), [flatBatters, fhrPctFilter, saPctFilter, fhrDeltaFilter, saDeltaFilter])
+    MARKETS.every(m => matchesDelta(b.deltas[m.key]?.delta ?? null, getDeltaFilter(m.key)))
+  ), [flatBatters, fhrPctFilter, saPctFilter, deltaFilters])
 
   const sorted = useMemo(() => {
     if (!sort) return filtered
@@ -270,12 +273,11 @@ export function BatterCostClient({ date }: { date: string }) {
         <FilterGroup label="HR%" value={saPctFilter} onChange={setSaPctFilter} options={[
           { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' },
         ]} />
-        <FilterGroup label="FHR Δ" value={fhrDeltaFilter} onChange={setFhrDeltaFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
-        ]} />
-        <FilterGroup label="HR Δ" value={saDeltaFilter} onChange={setSaDeltaFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
-        ]} />
+        {MARKETS.map(m => (
+          <FilterGroup key={m.key} label={`${m.label} Δ`} value={getDeltaFilter(m.key)} onChange={(v: DeltaFilter) => setDeltaFilter(m.key, v)} options={[
+            { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
+          ]} />
+        ))}
         {filtersActive && (
           <button
             onClick={resetFilters}
