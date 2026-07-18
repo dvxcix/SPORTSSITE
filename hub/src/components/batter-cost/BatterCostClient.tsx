@@ -68,7 +68,28 @@ type FlatBatter = {
   // badges use, just flattened across every game instead of scoped to one
   // active game tab.
   picks: Record<string, number | null>
+  // "⚡PWR" — Dugout's own "Power Vehicle" gate (ported from mlb-party
+  // Signals), duplicated here rather than imported so this page can never
+  // affect Dugout's behavior. See rawRatio/is_pwr below for the math.
+  is_pwr: boolean
 }
+
+// Ported from DugoutClient.tsx's buildBatterRow (same exact thresholds) —
+// a stuffed single + expensive double, both priced consistent with real
+// HR/total-bases conviction, flags a real power threat tonight. Uses the
+// builder's own simplified (odds+100) ratio on CURRENT FanDuel prices for
+// sa/doubles/tb4, not the implied-probability math the delta columns use.
+const rawRatio = (a: number | null, b: number | null) =>
+  a != null && b != null ? Math.round(((a + 100) / (b + 100)) * 10) / 10 : null
+function computeIsPwr(props: any): boolean {
+  const saFd = props?.sa?.fanduel ?? null
+  const dblFd = props?.doubles?.fanduel ?? null
+  const tb4Fd = props?.tb4?.fanduel ?? null
+  const pvRatio = rawRatio(saFd, dblFd)
+  const saTb4Gate = rawRatio(saFd, tb4Fd)
+  return pvRatio != null && pvRatio >= 1.35 && pvRatio <= 1.60 && saTb4Gate != null && saTb4Gate <= 3.8
+}
+const PWR_TITLE = 'Power Vehicle — this player\'s HR, double, and total-bases pricing all line up with real book conviction on power tonight'
 
 const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
 const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`
@@ -194,8 +215,9 @@ export function BatterCostClient({ date }: { date: string }) {
   const [deltaFilters, setDeltaFilters] = useState<Record<string, DeltaFilter>>({})
   const getDeltaFilter = (key: string): DeltaFilter => deltaFilters[key] ?? 'all'
   const setDeltaFilter = (key: string, v: DeltaFilter) => setDeltaFilters(prev => ({ ...prev, [key]: v }))
-  const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || Object.values(deltaFilters).some(v => v && v !== 'all')
-  const resetFilters = () => { setFhrPctFilter('all'); setSaPctFilter('all'); setDeltaFilters({}) }
+  const [pwrFilter, setPwrFilter] = useState<'all' | 'pwr'>('all')
+  const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || pwrFilter !== 'all' || Object.values(deltaFilters).some(v => v && v !== 'all')
+  const resetFilters = () => { setFhrPctFilter('all'); setSaPctFilter('all'); setDeltaFilters({}); setPwrFilter('all') }
 
   useEffect(() => {
     let cancelled = false
@@ -301,6 +323,7 @@ export function BatterCostClient({ date }: { date: string }) {
           opponentId: opponentPitcher?.id ?? null, opponentName: opponentPitcher?.name ?? '',
           opponentHand: opponentPitcher?.hand ?? '', opponentTeam,
           fhr_pct, sa_pct, deltas, rawProps: p.props ?? null, picks: picksFor(nn, gameKey),
+          is_pwr: computeIsPwr(p.props),
         })
       }
     }
@@ -345,8 +368,9 @@ export function BatterCostClient({ date }: { date: string }) {
   const filtered = useMemo(() => flatBatters.filter(b =>
     matchesSign(b.fhr_pct, fhrPctFilter) &&
     matchesSign(b.sa_pct, saPctFilter) &&
+    (pwrFilter === 'all' || b.is_pwr) &&
     MARKETS.every(m => matchesDelta(b.deltas[m.key]?.delta ?? null, getDeltaFilter(m.key)))
-  ), [flatBatters, fhrPctFilter, saPctFilter, deltaFilters])
+  ), [flatBatters, fhrPctFilter, saPctFilter, pwrFilter, deltaFilters])
 
   const sorted = useMemo(() => {
     if (!sort) return filtered
@@ -373,6 +397,9 @@ export function BatterCostClient({ date }: { date: string }) {
         ]} />
         <FilterGroup label="HR%" value={saPctFilter} onChange={setSaPctFilter} options={[
           { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' },
+        ]} />
+        <FilterGroup label="⚡PWR" value={pwrFilter} onChange={setPwrFilter} options={[
+          { key: 'all', label: 'All' }, { key: 'pwr', label: 'PWR only' },
         ]} />
         {MARKETS.map(m => (
           <FilterGroup key={m.key} label={`${m.label} Δ`} value={getDeltaFilter(m.key)} onChange={(v: DeltaFilter) => setDeltaFilter(m.key, v)} options={[
@@ -411,18 +438,38 @@ export function BatterCostClient({ date }: { date: string }) {
                     padding: '6px 6px', position: 'sticky', left: 0, zIndex: 2,
                     backgroundColor: 'var(--bg)',
                     backgroundImage: hovered === `${b.mlb_id}_${b.gameKey}` ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
+                    // inset box-shadow instead of a real border — doesn't
+                    // add to the cell's box model, so the fixed 130/156px
+                    // width classes above stay exact.
+                    ...(b.is_pwr ? { boxShadow: 'inset 0 0 0 2px #f59e0b' } : {}),
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {/* flexWrap on both lines here (not overflow:hidden) —
+                      same fix as Dugout's sticky column, applied
+                      preventively: a fixed-width sticky column with no
+                      wrap risks long names/badges visually overlapping the
+                      next column instead of being clipped, since this cell
+                      never had overflow:hidden to begin with. Wrapping
+                      keeps everything inside the column's own width. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', rowGap: 2 }}>
                     <HandBadge hand={b.bats} />
                     <PlayerLink mlbId={b.mlb_id} name={b.name} teamAbbr={b.team} size={22} />
+                    {b.is_pwr && (
+                      <Tooltip content={PWR_TITLE}>
+                        <span style={{
+                          fontSize: 9, fontWeight: 900, color: '#f59e0b', background: 'rgba(245,158,11,0.15)',
+                          border: '1px solid rgba(245,158,11,0.4)', borderRadius: 4, padding: '1px 4px',
+                          cursor: 'help', flexShrink: 0,
+                        }}>⚡PWR</span>
+                      </Tooltip>
+                    )}
                     <WatchlistStarButton
                       mlbId={b.mlb_id} name={b.name} team={b.team} position={b.position} bats={b.bats}
                       gameInfo={{ sport: 'MLB', game_pk: b.gamePk != null ? String(b.gamePk) : null, game_date: b.gameDate }}
                       odds={b.deltas.sa?.current ?? null}
                     />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, marginLeft: 27 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, marginLeft: 27, flexWrap: 'wrap', rowGap: 2 }}>
                     <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{b.position} · vs</span>
                     {b.opponentId ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
