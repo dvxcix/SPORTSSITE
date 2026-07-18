@@ -50,7 +50,13 @@ export function MovingBorderGlow({ children, borderRadius = 8, duration = 3000 }
       <div style={{ position: 'absolute', inset: 0 }}>
         <MovingDot duration={duration} rx={borderRadius - 1} ry={borderRadius - 1} />
       </div>
-      <div style={{ position: 'relative' }}>
+      {/* Guaranteed-opaque backing — the wrapped nav item's own active-state
+          background (var(--accent-dim)) is semi-transparent by design, so
+          without this the moving dot showed straight through as a blob the
+          moment the item became active instead of staying masked to a thin
+          edge sliver. Any background the child sets composites over this
+          solid layer instead of over the glow directly, active or not. */}
+      <div style={{ position: 'relative', borderRadius: borderRadius - 1, background: 'var(--surface)' }}>
         {children}
       </div>
     </div>
