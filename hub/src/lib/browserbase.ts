@@ -42,12 +42,21 @@ export type BBSession = {
 // tier of it — confirmed live: passing it 403s with "Verified mode is only
 // available on the Enterprise plan" on this Startup-plan project. Don't
 // pass stealth:true from anywhere until/unless the plan changes.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean } = {}): Promise<BBSession> {
+// geoState (2-letter US state code) requests a proxy IP physically located
+// in that state via Browserbase's proxy geolocation config — needed for
+// state-gated regulated sportsbooks (BetMGM's nc.betmgm.com only serves
+// real odds to what it believes is a North Carolina IP; a generic proxy
+// location reads as out-of-state and the page body never renders real
+// content). Overrides the plain proxies:true/false default when set.
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string } = {}): Promise<BBSession> {
   const bb = client()
   const pid = optionalProjectId()
+  const proxies = opts.geoState
+    ? [{ type: 'browserbase' as const, geolocation: { country: 'US', state: opts.geoState } }]
+    : (opts.proxies ?? true)
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
-    proxies: opts.proxies ?? true,
+    proxies,
     browserSettings: {
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
