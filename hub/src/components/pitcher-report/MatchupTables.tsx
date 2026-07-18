@@ -6,6 +6,7 @@ import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip } from '@/components/ui/tooltip-card'
+import { normName, resolveNameEntry } from '@/lib/nameNorm'
 
 // Pulled out of PitcherReportClient.tsx so Dugout's per-batter drilldown can
 // render the exact same matchup tables — headers, heat-mapping, sort, the
@@ -20,8 +21,6 @@ export interface LineupPlayer {
   props?: any
 }
 
-const normName = (s: string) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim()
 export const pct = (v: any) => v != null ? `${Number(v).toFixed(1)}%` : '—'
 export const num = (v: any, dp = 1) => v != null ? Number(v).toFixed(dp) : '—'
 export const int = (v: any) => v != null ? String(v) : '—'
@@ -136,9 +135,15 @@ function computeTiming(batterId: string, batterName: string, pitcherHand: string
     ['FS', pitcherRow.pct_splitter || 0],
   ] as [string, number][]).filter(([, p]) => p > 0.08)
   if (!mix.length) return { s_timing: null, r_timing: null, s_miss: null, r_miss: null }
+  // Fuzzy fallback resolved once, not per pitch-type in the loop below —
+  // same nickname/suffix-tolerant matching as everywhere else (see
+  // src/lib/nameNorm.ts), since timingMap.byName is keyed by whatever name
+  // string the timing source used, which doesn't always match the roster's
+  // own MLB-fullName-derived name.
+  const byNameEntry = timingMap.byName[batterName] ?? resolveNameEntry(timingMap.byName, batterName)
   let st = 0, rt = 0, sm = 0, rm = 0, sw = 0, rw = 0, smw = 0, rmw = 0
   for (const [pt, w] of mix) {
-    const tRows = timingMap.byId[batterId]?.[pitcherHand]?.[pt] || timingMap.byName[batterName]?.[pitcherHand]?.[pt]
+    const tRows = timingMap.byId[batterId]?.[pitcherHand]?.[pt] || byNameEntry?.[pitcherHand]?.[pt]
     if (!tRows) continue
     const { season: tse, recent: tre } = tRows as { season?: any; recent?: any }
     if (tse?.on_time_percent != null) { st += w * tse.on_time_percent; sw += w }
@@ -161,7 +166,7 @@ export function computeBatterStatcastStats(
 ) {
   const idKey = String(player.mlb_id || '')
   const nn = player.name_norm || ''
-  const playerSplits = splitMap.byId[idKey] ?? splitMap.byName[nn]
+  const playerSplits = splitMap.byId[idKey] ?? splitMap.byName[nn] ?? resolveNameEntry(splitMap.byName, nn)
   const handSplits = playerSplits?.[pitcherHand] ?? playerSplits?.['R'] ?? (playerSplits ? Object.values(playerSplits)[0] : null)
   const se = (handSplits as any)?.season ?? null
   const re = (handSplits as any)?.recent ?? null
@@ -408,7 +413,7 @@ export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHa
           {withRows.map(({ batter, row }) => {
             const isExpanded = expandedId === batter.mlb_id
             const sa = batter.props?.sa
-            const picks = pikkitMap[batter.name_norm]?.picks as number | undefined
+            const picks = resolveNameEntry(pikkitMap, batter.name_norm)?.picks as number | undefined
             return (
               <Fragment key={batter.mlb_id}>
                 <tr style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)', opacity: row ? 1 : 0.45 }}>

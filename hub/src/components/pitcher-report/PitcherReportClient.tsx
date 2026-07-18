@@ -7,6 +7,7 @@ import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { PitchMixTable, BatterVsPitchTable, TeamLogoImg, effectiveBatSide, pct } from './MatchupTables'
+import { normName, resolveNameEntry } from '@/lib/nameNorm'
 
 // ─── shapes from /api/dugout/data ──────────────────────────────────────────
 interface PitcherInfo { id: number; name: string; hand: string }
@@ -139,8 +140,6 @@ function buildPitcherMap(rows: any[]) {
 // Every rate field on batter_pitch_type_recent/pitcher_pitch_type_recent
 // already comes out of mlb-party on a 0-100 scale (41.3 meaning 41.3%), not
 // a 0-1 fraction — confirmed against real rows, not assumed.
-const normName = (s: string) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim()
 
 function windowLabel(rows: any[]): string {
   const r = rows.find(x => x.window_start && x.window_end)
@@ -592,7 +591,7 @@ export function PitcherReportClient() {
                               pikkitMap={pikkitMap}
                               getRow={b => windowMode === 'live'
                                 ? liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null
-                                : batterPitchMap[b.name_norm]?.[pitchType]?.[selected.pitcher.hand] ?? null}
+                                : (batterPitchMap[b.name_norm] ?? resolveNameEntry(batterPitchMap, b.name_norm))?.[pitchType]?.[selected.pitcher.hand] ?? null}
                             />
                           )}
                         </div>
