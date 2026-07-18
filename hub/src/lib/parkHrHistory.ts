@@ -1,8 +1,4 @@
-const normName = (s: string) =>
-  (s || '').toLowerCase().normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z ]/g, '')
-    .replace(/\s+/g, ' ').trim()
+import { normName } from '@/lib/nameNorm'
 
 const POS_ORDER: Record<string, number> = {
   C: 2, '1B': 3, '2B': 4, '3B': 5, SS: 6,
