@@ -41,6 +41,49 @@ type FlatBatter = {
 const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
 const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`
 
+// FHR%/HR% are computed ratios that essentially never land on exactly
+// zero, so their filter only offers +/−. The FHR/HR delta columns are
+// whole odds points (current − open) that legitimately land on exactly 0
+// often (a line that hasn't moved since opening at all), so those also
+// get a "flat" option.
+type SignFilter = 'all' | 'pos' | 'neg'
+type DeltaFilter = SignFilter | 'flat'
+const matchesSign = (v: number | null, f: SignFilter) => {
+  if (f === 'all') return true
+  if (v == null) return false
+  return f === 'pos' ? v > 0 : v < 0
+}
+const matchesDelta = (v: number | null, f: DeltaFilter) => {
+  if (f === 'flat') return v === 0
+  return matchesSign(v, f)
+}
+
+function FilterGroup<T extends string>({ label, value, options, onChange }: {
+  label: string; value: T; options: { key: T; label: string }[]; onChange: (v: T) => void
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.03em' }}>{label}</span>
+      <div style={{ display: 'flex', gap: 4 }}>
+        {options.map(o => (
+          <button
+            key={o.key}
+            onClick={() => onChange(o.key)}
+            style={{
+              fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, cursor: 'pointer',
+              border: `1px solid ${value === o.key ? 'var(--accent)' : 'var(--border)'}`,
+              background: value === o.key ? 'var(--accent-dim)' : 'var(--surface-2)',
+              color: value === o.key ? 'var(--accent)' : 'var(--text-3)',
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function deltaColor(delta: number | null, maxAbs: number): React.CSSProperties {
   if (delta == null) return { color: 'var(--text-3)' }
   if (Math.abs(delta) < 3) return { color: 'var(--text-2)', fontWeight: 600 }
@@ -72,6 +115,16 @@ export function BatterCostClient({ date }: { date: string }) {
   // first — the "who's the biggest opening-day mover" view the page exists
   // for. Click any column to re-sort by it instead.
   const [sort, setSort] = useState<SortState>({ col: 'sa_pct', dir: 'asc' })
+
+  // Filters narrow WHICH rows show up at all; sorting (above) still just
+  // reorders whatever's left. Default 'all' on every one — customizing is
+  // opt-in, the page behaves exactly as before until a filter is touched.
+  const [fhrPctFilter, setFhrPctFilter] = useState<SignFilter>('all')
+  const [saPctFilter, setSaPctFilter] = useState<SignFilter>('all')
+  const [fhrDeltaFilter, setFhrDeltaFilter] = useState<DeltaFilter>('all')
+  const [saDeltaFilter, setSaDeltaFilter] = useState<DeltaFilter>('all')
+  const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || fhrDeltaFilter !== 'all' || saDeltaFilter !== 'all'
+  const resetFilters = () => { setFhrPctFilter('all'); setSaPctFilter('all'); setFhrDeltaFilter('all'); setSaDeltaFilter('all') }
 
   useEffect(() => {
     let cancelled = false
@@ -180,21 +233,58 @@ export function BatterCostClient({ date }: { date: string }) {
 
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
 
+  // Heat-map intensity (maxAbsByMarket/maxAbsFhrPct/maxAbsSaPct above) stays
+  // scaled to the FULL unfiltered pool on purpose — otherwise a player's
+  // color would shift every time a filter gets toggled, which reads as the
+  // data itself changing rather than just which rows are shown.
+  const filtered = useMemo(() => flatBatters.filter(b =>
+    matchesSign(b.fhr_pct, fhrPctFilter) &&
+    matchesSign(b.sa_pct, saPctFilter) &&
+    matchesDelta(b.deltas.fhr?.delta ?? null, fhrDeltaFilter) &&
+    matchesDelta(b.deltas.sa?.delta ?? null, saDeltaFilter)
+  ), [flatBatters, fhrPctFilter, saPctFilter, fhrDeltaFilter, saDeltaFilter])
+
   const sorted = useMemo(() => {
-    if (!sort) return flatBatters
-    return [...flatBatters].sort((a, b) => {
+    if (!sort) return filtered
+    return [...filtered].sort((a, b) => {
       if (sort.col === 'name') return cmpAny(a.name, b.name, sort.dir)
       if (sort.col === 'fhr_pct') return cmpNullsLast(a.fhr_pct, b.fhr_pct, sort.dir)
       if (sort.col === 'sa_pct') return cmpNullsLast(a.sa_pct, b.sa_pct, sort.dir)
       return cmpNullsLast(a.deltas[sort.col]?.delta ?? null, b.deltas[sort.col]?.delta ?? null, sort.dir)
     })
-  }, [flatBatters, sort])
+  }, [filtered, sort])
 
   if (error) return <div style={{ padding: 24, color: 'var(--red)', fontSize: 13 }}>{error}</div>
   if (!data) return <div style={{ padding: 24, color: 'var(--text-3)', fontSize: 13 }}>Loading today&apos;s odds…</div>
 
   return (
     <div>
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16,
+        padding: '10px 12px', marginBottom: 12,
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
+      }}>
+        <FilterGroup label="FHR%" value={fhrPctFilter} onChange={setFhrPctFilter} options={[
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' },
+        ]} />
+        <FilterGroup label="HR%" value={saPctFilter} onChange={setSaPctFilter} options={[
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' },
+        ]} />
+        <FilterGroup label="FHR Δ" value={fhrDeltaFilter} onChange={setFhrDeltaFilter} options={[
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
+        ]} />
+        <FilterGroup label="HR Δ" value={saDeltaFilter} onChange={setSaDeltaFilter} options={[
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
+        ]} />
+        {filtersActive && (
+          <button
+            onClick={resetFilters}
+            style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer' }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
@@ -254,7 +344,9 @@ export function BatterCostClient({ date }: { date: string }) {
               </tr>
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={MARKETS.length + 3} style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>No opening-line movement captured for this date yet.</td></tr>
+              <tr><td colSpan={MARKETS.length + 3} style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
+                {filtersActive && flatBatters.length > 0 ? 'No batters match the current filters.' : 'No opening-line movement captured for this date yet.'}
+              </td></tr>
             )}
           </tbody>
         </table>
