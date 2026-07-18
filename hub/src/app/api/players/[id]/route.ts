@@ -105,8 +105,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     hittingPool, pitchingPool,
   ] = await Promise.all([
     admin.from('players').select('*').eq('mlb_id', mlbId).maybeSingle(),
-    admin.from('player_season_stats_batting').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').maybeSingle(),
-    admin.from('player_season_stats_pitching').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').maybeSingle(),
+    // A player traded mid-season gets one row per team PLUS an aggregate
+    // row (team_id null, MLB's own season total) — all three share the
+    // same (mlb_id, season, game_type), just different team_id, so a bare
+    // .maybeSingle() here threw a "multiple rows" error on anyone traded
+    // this year and silently fell back to "no stats synced" (confirmed on
+    // Derek Hill: PHI split + CWS split + a null-team total, all for 2026).
+    // Ordering team_id nulls-first means the season-total row wins when it
+    // exists; a never-traded player only ever has the one real-team row.
+    admin.from('player_season_stats_batting').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').order('team_id', { ascending: true, nullsFirst: true }).limit(1).maybeSingle(),
+    admin.from('player_season_stats_pitching').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').order('team_id', { ascending: true, nullsFirst: true }).limit(1).maybeSingle(),
     admin.from('player_career_stats_batting').select('*').eq('mlb_id', mlbId).maybeSingle(),
     admin.from('player_career_stats_pitching').select('*').eq('mlb_id', mlbId).maybeSingle(),
     admin.from('player_statcast_hitting_season').select('category, metrics').eq('mlb_id', mlbId).eq('season', season),
