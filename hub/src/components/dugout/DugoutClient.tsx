@@ -16,6 +16,7 @@ import {
 } from '@/components/pitcher-report/MatchupTables'
 import type { SortState as MatchupSortState } from '@/components/pitcher-report/MatchupTables'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -1447,6 +1448,7 @@ function PlayerDrillDown({
                           pitcherMap={pitcherMap}
                           pikkitMap={pikkitMap}
                           getRow={matchupGetRow(pitchType)}
+                          gameInfo={gameInfo}
                         />
                       </div>
                     )
@@ -1739,6 +1741,10 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
               <span style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
                 {row.name}
               </span>
+              <WatchlistStarButton
+                mlbId={row.mlb_id} name={row.name} team={row.team} position={row.position} bats={row.bats}
+                gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
+              />
             </div>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4, textAlign: 'left',

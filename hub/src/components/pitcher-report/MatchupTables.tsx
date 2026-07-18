@@ -7,6 +7,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 
 // Pulled out of PitcherReportClient.tsx so Dugout's per-batter drilldown can
 // render the exact same matchup tables — headers, heat-mapping, sort, the
@@ -362,7 +363,7 @@ export function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
 // pre-aggregated table or a live-computed map, and `batters` can be the
 // whole opposing lineup (Pitcher Report) or a single player (Dugout,
 // scoped to just the batter whose row is expanded).
-export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap, pikkitMap }: {
+export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap, pikkitMap, gameInfo }: {
   pitchType: string
   batters: LineupPlayer[]
   getRow: (batter: LineupPlayer) => any | null
@@ -373,6 +374,10 @@ export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHa
   timingMap: { byId: any; byName: any }
   pitcherMap: Record<string, Record<string, { season?: any; recent?: any }>>
   pikkitMap: Record<string, any>
+  // Real game context for the watchlist star next to each batter's name —
+  // optional since not every caller has a real game_pk to offer (falls back
+  // to null, same as any other watchlist item missing game context).
+  gameInfo?: { sport: string; game_pk: string | null; game_date: string | null }
 }) {
   const [sort, setSort] = useState<SortState>(null)
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
@@ -451,6 +456,12 @@ export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHa
                             }}
                           >{batter.bats || '?'}</span>
                         </Tooltip>
+                        {gameInfo && (
+                          <WatchlistStarButton
+                            mlbId={batter.mlb_id} name={batter.name} team={batter.team} position={batter.position} bats={batter.bats}
+                            gameInfo={gameInfo} odds={sa?.fanduel ?? null} oddsByBook={sa}
+                          />
+                        )}
                         </div>
                         {(sa?.fanduel != null || sa?.caesars != null || sa?.betmgm != null || picks != null) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2, marginLeft: 26 }}>

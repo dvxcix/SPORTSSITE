@@ -33,6 +33,8 @@ interface DugoutData {
 interface StarterOption {
   key: string
   gameKey: string
+  gamePk: number
+  gameDate: string
   pitcher: PitcherInfo
   teamAbbr: string; teamName: string
   oppAbbr: string; oppName: string
@@ -216,7 +218,7 @@ export function PitcherReportClient() {
     for (const g of data.games) {
       if (g.awayPitcher) {
         out.push({
-          key: `${g.gameKey}-away`, gameKey: g.gameKey, pitcher: g.awayPitcher,
+          key: `${g.gameKey}-away`, gameKey: g.gameKey, gamePk: g.gamePk, gameDate: g.gameDate, pitcher: g.awayPitcher,
           teamAbbr: g.awayAbbr, teamName: g.awayTeam,
           oppAbbr: g.homeAbbr, oppName: g.homeTeam,
           oppLineup: g.homeLineup, oppLineupConfirmed: g.homeLineupConfirmed,
@@ -224,7 +226,7 @@ export function PitcherReportClient() {
       }
       if (g.homePitcher) {
         out.push({
-          key: `${g.gameKey}-home`, gameKey: g.gameKey, pitcher: g.homePitcher,
+          key: `${g.gameKey}-home`, gameKey: g.gameKey, gamePk: g.gamePk, gameDate: g.gameDate, pitcher: g.homePitcher,
           teamAbbr: g.homeAbbr, teamName: g.homeTeam,
           oppAbbr: g.awayAbbr, oppName: g.awayTeam,
           oppLineup: g.awayLineup, oppLineupConfirmed: g.awayLineupConfirmed,
@@ -589,6 +591,7 @@ export function PitcherReportClient() {
                               timingMap={timingMap}
                               pitcherMap={statcastPitcherMap}
                               pikkitMap={pikkitMap}
+                              gameInfo={{ sport: 'MLB', game_pk: String(selected.gamePk), game_date: selected.gameDate.slice(0, 10) }}
                               getRow={b => windowMode === 'live'
                                 ? liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null
                                 : (batterPitchMap[b.name_norm] ?? resolveNameEntry(batterPitchMap, b.name_norm))?.[pitchType]?.[selected.pitcher.hand] ?? null}

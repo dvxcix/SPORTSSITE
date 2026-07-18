@@ -4,6 +4,7 @@ import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { normName } from '@/lib/nameNorm'
+import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 
 // Every market that carries an opening-line baseline (see dugout/data/
 // route.ts's entry.open merge) — current value lives on the vendor-keyed
@@ -32,7 +33,8 @@ const MARKETS: { key: string; label: string; current: (p: any) => number | null;
 
 type MarketDelta = { current: number | null; open: number | null; delta: number | null }
 type FlatBatter = {
-  mlb_id: number; gameKey: string; name: string; team: string; bats: string; position: string
+  mlb_id: number; gameKey: string; gamePk: number | null; gameDate: string | null
+  name: string; team: string; bats: string; position: string
   opponentId: number | null; opponentName: string; opponentHand: string; opponentTeam: string
   fhr_pct: number | null; sa_pct: number | null
   deltas: Record<string, MarketDelta>
@@ -174,7 +176,7 @@ export function BatterCostClient({ date }: { date: string }) {
   const flatBatters: FlatBatter[] = useMemo(() => {
     if (!data?.games) return []
     const out: FlatBatter[] = []
-    const addSide = (lineup: any[], opponentPitcher: any, opponentTeam: string, gameKey: string) => {
+    const addSide = (lineup: any[], opponentPitcher: any, opponentTeam: string, gameKey: string, gamePk: number | null, gameDate: string | null) => {
       for (const p of lineup ?? []) {
         const deltas: Record<string, MarketDelta> = {}
         let hasAny = false
@@ -198,7 +200,7 @@ export function BatterCostClient({ date }: { date: string }) {
 
         if (!hasAny && fhr_pct == null && sa_pct == null) continue
         out.push({
-          mlb_id: p.mlb_id, gameKey, name: p.name, team: p.team, bats: p.bats, position: p.position,
+          mlb_id: p.mlb_id, gameKey, gamePk, gameDate, name: p.name, team: p.team, bats: p.bats, position: p.position,
           opponentId: opponentPitcher?.id ?? null, opponentName: opponentPitcher?.name ?? '',
           opponentHand: opponentPitcher?.hand ?? '', opponentTeam,
           fhr_pct, sa_pct, deltas,
@@ -211,8 +213,10 @@ export function BatterCostClient({ date }: { date: string }) {
     // re-sorts visually "stop working" (React reconciling the duplicate-key
     // rows unpredictably instead of just reordering two distinct nodes).
     for (const g of data.games) {
-      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr, g.gameKey)
-      addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey)
+      const gamePk = g.gamePk != null ? Number(g.gamePk) : null
+      const gameDate = g.gameDate ? String(g.gameDate).slice(0, 10) : null
+      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr, g.gameKey, gamePk, gameDate)
+      addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, gameDate)
     }
     return out
   }, [data, fhrAvgMap, saAvgMap])
@@ -314,6 +318,11 @@ export function BatterCostClient({ date }: { date: string }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <HandBadge hand={b.bats} />
                     <PlayerLink mlbId={b.mlb_id} name={b.name} teamAbbr={b.team} size={26} />
+                    <WatchlistStarButton
+                      mlbId={b.mlb_id} name={b.name} team={b.team} position={b.position} bats={b.bats}
+                      gameInfo={{ sport: 'MLB', game_pk: b.gamePk != null ? String(b.gamePk) : null, game_date: b.gameDate }}
+                      odds={b.deltas.sa?.current ?? null}
+                    />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, marginLeft: 32 }}>
                     <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{b.position} · vs</span>
