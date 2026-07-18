@@ -22,6 +22,24 @@ export async function findAndClickGame(page: Page, awayTeam: string, homeTeam: s
   return true
 }
 
+// Pikkit's schedule list has a different shape than FD/MGM's — each team
+// gets its OWN row (away team row, then home team row stacked directly
+// below it), not one element containing both names, so findAndClickGame's
+// "both teams in one element" match never finds anything here. The actual
+// click target is the "More wagers →" link that follows each game's row
+// pair. Locates the away team's row (by nickname, Nth occurrence for a
+// doubleheader), then clicks the nearest "More wagers" link that follows
+// it in document order.
+export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeTeam: string, legIndex = 0): Promise<boolean> {
+  const awayWord = escapeRe(awayTeam.split(' ').pop() || awayTeam)
+  const awayRow = page.getByText(new RegExp(awayWord, 'i')).nth(legIndex)
+  if (!(await awayRow.count())) return false
+  const wagersLink = awayRow.locator('xpath=following::*[contains(text(), "More wagers") or contains(text(), "more wagers")][1]')
+  if (!(await wagersLink.count())) return false
+  await wagersLink.click({ timeout: 8000 })
+  return true
+}
+
 // Tracks how many times each team-pair has already been clicked during one
 // run, so a doubleheader's second leg clicks the SECOND matching listing
 // element instead of re-clicking the first. Call once per book-run, reuse

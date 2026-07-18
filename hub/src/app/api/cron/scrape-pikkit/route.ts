@@ -3,7 +3,7 @@ import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, type TodayGame } from '@/lib/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
-import { findAndClickGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
+import { findAndClickPikkitGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
 
@@ -40,13 +40,13 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(1500)
 
-    // Same reasoning as FanDuel/MGM's retry — confirmed live the account
-    // stays signed in fine, it's the listing SPA still rendering game
-    // cards after domcontentloaded that was making the search miss.
-    let clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    // Pikkit's schedule list is row-per-team, not one element with both
+    // team names like FD/MGM — findAndClickPikkitGame locates the away
+    // team's row then clicks the nearest following "More wagers" link.
+    let clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
     if (!clicked) {
       await bb.page.waitForTimeout(3000)
-      clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+      clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
     }
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on Pikkit MLB listing page — check the persisted context is still signed in' }
     await bb.page.waitForTimeout(2000)
