@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireCronAuth } from '@/lib/cron-auth'
+import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@/lib/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
@@ -26,7 +26,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
 }
 
 export async function GET(req: Request) {
-  const authError = requireCronAuth(req)
+  const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })

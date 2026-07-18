@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireCronAuth } from '@/lib/cron-auth'
+import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@/lib/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
@@ -26,7 +26,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
 }
 
 export async function GET(req: Request) {
-  const authError = requireCronAuth(req)
+  const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
   const contextId = process.env.PIKKIT_CONTEXT_ID
