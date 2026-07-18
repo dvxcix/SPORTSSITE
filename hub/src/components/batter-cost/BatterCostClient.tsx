@@ -3,49 +3,43 @@ import { useEffect, useMemo, useState } from 'react'
 import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { Tooltip } from '@/components/ui/tooltip-card'
+import { normName } from '@/lib/nameNorm'
 
 // Every market that carries an opening-line baseline (see dugout/data/
 // route.ts's entry.open merge) — current value lives on the vendor-keyed
-// BDL/FD field, open lives on the matching open.*Fd/open.*Mgm key. Every
-// market here shares the same sign convention: a NEGATIVE delta means the
-// price got shorter since opening (more likely per the book = real
-// conviction), same "negative = green/hot" rule DugoutClient's own
-// fhr_pct/sa_pct shading uses — including combo1/combo2, where a lower
-// price is the same "cheapest pairing = strongest conviction" signal.
+// BDL/FD field, open lives on the matching open.*Fd key. Every market here
+// shares the same sign convention: a NEGATIVE delta means the price got
+// shorter since opening (more likely per the book = real conviction), same
+// "negative = green/hot" rule DugoutClient's own fhr_pct/sa_pct shading
+// uses. Deliberately excludes the parlay/combo/BetMGM/laser/moonshot/PA1/
+// HR-ML markets — not wanted on this page.
 const MARKETS: { key: string; label: string; current: (p: any) => number | null; open: (p: any) => number | null }[] = [
-  { key: 'fhr',      label: 'FHR',        current: p => p?.fhr?.fanduel ?? null,      open: p => p?.open?.fhr ?? null },
-  { key: 'sa',       label: 'HR',         current: p => p?.sa?.fanduel ?? null,       open: p => p?.open?.saFd ?? null },
-  { key: 'hr2',      label: 'HR 2+',      current: p => p?.hr2?.fanduel ?? null,      open: p => p?.open?.hr2Fd ?? null },
-  { key: 'singles',  label: '1B',         current: p => p?.singles?.fanduel ?? null,  open: p => p?.open?.sngFd ?? null },
-  { key: 'doubles',  label: '2B',         current: p => p?.doubles?.fanduel ?? null,  open: p => p?.open?.dblFd ?? null },
-  { key: 'triples',  label: '3B',         current: p => p?.triples?.fanduel ?? null,  open: p => p?.open?.triFd ?? null },
-  { key: 'rbi',      label: 'RBI',        current: p => p?.rbi?.fanduel ?? null,      open: p => p?.open?.rbiFd ?? null },
-  { key: 'rbi2',     label: 'RBI 2+',     current: p => p?.rbi2?.fanduel ?? null,     open: p => p?.open?.rbi2Fd ?? null },
-  { key: 'rbi3',     label: 'RBI 3+',     current: p => p?.rbi3?.fanduel ?? null,     open: p => p?.open?.rbi3Fd ?? null },
-  { key: 'tb',       label: 'TB 2+',      current: p => p?.tb?.fanduel ?? null,       open: p => p?.open?.tbFd ?? null },
-  { key: 'tb3',      label: 'TB 3+',      current: p => p?.tb3?.fanduel ?? null,      open: p => p?.open?.tb3Fd ?? null },
-  { key: 'tb4',      label: 'TB 4+',      current: p => p?.tb4?.fanduel ?? null,      open: p => p?.open?.tb4Fd ?? null },
-  { key: 'tb5',      label: 'TB 5+',      current: p => p?.tb5?.fanduel ?? null,      open: p => p?.open?.tb5Fd ?? null },
-  { key: 'hrr',      label: 'HRR',        current: p => p?.hrr?.fanduel ?? null,      open: p => p?.open?.hrrFd ?? null },
-  { key: 'laser105', label: 'LSR 105',    current: p => p?.laser105?.fanduel ?? null, open: p => p?.open?.laser105 ?? null },
-  { key: 'laser110', label: 'LSR 110',    current: p => p?.laser110?.fanduel ?? null, open: p => p?.open?.laser110 ?? null },
-  { key: 'moonshot', label: 'MOON',       current: p => p?.moonshot?.fanduel ?? null, open: p => p?.open?.moonshot ?? null },
-  { key: 'pa1',      label: 'PA1',        current: p => p?.pa1?.fanduel ?? null,      open: p => p?.open?.pa1 ?? null },
-  { key: 'hrMl',     label: 'HR/ML',      current: p => p?.hrMl?.fanduel ?? null,     open: p => p?.open?.hrMl ?? null },
-  { key: 'combo1',   label: 'COMBO 1',    current: p => p?.combo1Min ?? null,         open: p => p?.open?.combo1Min ?? null },
-  { key: 'combo2',   label: 'COMBO 2',    current: p => p?.combo2Min ?? null,         open: p => p?.open?.combo2Min ?? null },
-  { key: 'saMgm',    label: 'HR (MGM)',   current: p => p?.sa?.betmgm ?? null,        open: p => p?.open?.saMgm ?? null },
-  { key: 'hr2Mgm',   label: 'HR 2+ (MGM)', current: p => p?.hr2?.betmgm ?? null,      open: p => p?.open?.hr2Mgm ?? null },
+  { key: 'fhr',      label: 'FHR',    current: p => p?.fhr?.fanduel ?? null,     open: p => p?.open?.fhr ?? null },
+  { key: 'sa',       label: 'HR',     current: p => p?.sa?.fanduel ?? null,      open: p => p?.open?.saFd ?? null },
+  { key: 'hr2',      label: 'HR 2+',  current: p => p?.hr2?.fanduel ?? null,     open: p => p?.open?.hr2Fd ?? null },
+  { key: 'singles',  label: '1B',     current: p => p?.singles?.fanduel ?? null, open: p => p?.open?.sngFd ?? null },
+  { key: 'doubles',  label: '2B',     current: p => p?.doubles?.fanduel ?? null, open: p => p?.open?.dblFd ?? null },
+  { key: 'triples',  label: '3B',     current: p => p?.triples?.fanduel ?? null, open: p => p?.open?.triFd ?? null },
+  { key: 'rbi',      label: 'RBI',    current: p => p?.rbi?.fanduel ?? null,     open: p => p?.open?.rbiFd ?? null },
+  { key: 'rbi2',     label: 'RBI 2+', current: p => p?.rbi2?.fanduel ?? null,    open: p => p?.open?.rbi2Fd ?? null },
+  { key: 'rbi3',     label: 'RBI 3+', current: p => p?.rbi3?.fanduel ?? null,    open: p => p?.open?.rbi3Fd ?? null },
+  { key: 'tb',       label: 'TB 2+',  current: p => p?.tb?.fanduel ?? null,      open: p => p?.open?.tbFd ?? null },
+  { key: 'tb3',      label: 'TB 3+',  current: p => p?.tb3?.fanduel ?? null,     open: p => p?.open?.tb3Fd ?? null },
+  { key: 'tb4',      label: 'TB 4+',  current: p => p?.tb4?.fanduel ?? null,     open: p => p?.open?.tb4Fd ?? null },
+  { key: 'tb5',      label: 'TB 5+',  current: p => p?.tb5?.fanduel ?? null,     open: p => p?.open?.tb5Fd ?? null },
+  { key: 'hrr',      label: 'HRR',    current: p => p?.hrr?.fanduel ?? null,     open: p => p?.open?.hrrFd ?? null },
 ]
 
 type MarketDelta = { current: number | null; open: number | null; delta: number | null }
 type FlatBatter = {
   mlb_id: number; name: string; team: string; bats: string; position: string
   opponentName: string; opponentHand: string
+  fhr_pct: number | null; sa_pct: number | null
   deltas: Record<string, MarketDelta>
 }
 
 const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
+const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`
 
 function deltaColor(delta: number | null, maxAbs: number): React.CSSProperties {
   if (delta == null) return { color: 'var(--text-3)' }
@@ -55,11 +49,26 @@ function deltaColor(delta: number | null, maxAbs: number): React.CSSProperties {
   return { color: delta < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
 }
 
+// Same sign convention as deltaColor, just on a 0..1 fraction instead of raw
+// odds points — negative (price cheaper than this player's own season
+// average = book conviction) is green, matching DugoutClient's fhr_pct/
+// sa_pct shading exactly.
+function pctColor(pct: number | null, maxAbs: number): React.CSSProperties {
+  if (pct == null) return { color: 'var(--text-3)' }
+  if (Math.abs(pct) < 0.03) return { color: '#eab308', fontWeight: 700 }
+  const intensity = maxAbs > 0 ? Math.min(Math.abs(pct) / maxAbs, 1) : 0
+  const alpha = 0.55 + intensity * 0.45
+  return { color: pct < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
+}
+
 export function BatterCostClient({ date }: { date: string }) {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [hovered, setHovered] = useState<number | null>(null)
-  const [sort, setSort] = useState<SortState>({ col: 'fhr', dir: 'asc' })
+  // Default: biggest HR% drop vs. this player's own season-average price
+  // first — the "who's the biggest opening-day mover" view the page exists
+  // for. Click any column to re-sort by it instead.
+  const [sort, setSort] = useState<SortState>({ col: 'sa_pct', dir: 'asc' })
 
   useEffect(() => {
     let cancelled = false
@@ -70,6 +79,37 @@ export function BatterCostClient({ date }: { date: string }) {
       .catch(() => { if (!cancelled) setError('Failed to load today\'s odds') })
     return () => { cancelled = true }
   }, [date])
+
+  // Same source, same map-building, and the exact same fhr_pct/sa_pct math
+  // DugoutClient.tsx's buildBatterRow already uses (today's FanDuel price
+  // vs. this player's own season-average price, sourced from mlb-party's
+  // get_fhr_history_avg/get_sa_history_avg RPCs, already included in
+  // /api/dugout/data's response as data.fhrAvg/data.saAvg) — duplicated
+  // here deliberately rather than importing DugoutClient's own private
+  // buildBatterRow, so this page can never affect Dugout's behavior.
+  const fhrAvgMap = useMemo<Record<string, { fd?: number; cz?: number }>>(() => {
+    const m: Record<string, { fd?: number; cz?: number }> = {}
+    for (const r of (data?.fhrAvg ?? [])) {
+      const nn = normName(r.name_norm || r.player_name || '')
+      if (!nn) continue
+      if (!m[nn]) m[nn] = {}
+      if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
+      if (r.bookmaker === 'williamhill_us') m[nn].cz = Number(r.avg_price)
+    }
+    return m
+  }, [data?.fhrAvg])
+
+  const saAvgMap = useMemo<Record<string, { fd?: number; cz?: number }>>(() => {
+    const m: Record<string, { fd?: number; cz?: number }> = {}
+    for (const r of (data?.saAvg ?? [])) {
+      const nn = normName(r.name_norm || r.player_name || '')
+      if (!nn) continue
+      if (!m[nn]) m[nn] = {}
+      if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
+      if (r.bookmaker === 'williamhill_us') m[nn].cz = Number(r.avg_price)
+    }
+    return m
+  }, [data?.saAvg])
 
   const flatBatters: FlatBatter[] = useMemo(() => {
     if (!data?.games) return []
@@ -85,11 +125,22 @@ export function BatterCostClient({ date }: { date: string }) {
           if (delta != null) hasAny = true
           deltas[m.key] = { current, open, delta }
         }
-        if (!hasAny) continue
+
+        const nn = p.name_norm || normName(p.name || '')
+        const fhrFd = p.props?.fhr?.fanduel ?? null
+        const saFd = p.props?.sa?.fanduel ?? null
+        const fhrAvg = fhrAvgMap[nn]?.fd
+        const fhr_pct = fhrFd != null && fhrAvg ? (fhrFd - fhrAvg) / fhrAvg : null
+        const saAvg = saAvgMap[nn] ?? {}
+        const sa_pct = saFd != null && saAvg.fd ? (saFd - saAvg.fd) / saAvg.fd
+          : saFd != null && saAvg.cz ? (saFd - saAvg.cz) / saAvg.cz
+          : null
+
+        if (!hasAny && fhr_pct == null && sa_pct == null) continue
         out.push({
           mlb_id: p.mlb_id, name: p.name, team: p.team, bats: p.bats, position: p.position,
           opponentName: opponentPitcher?.name ?? '', opponentHand: opponentPitcher?.hand ?? '',
-          deltas,
+          fhr_pct, sa_pct, deltas,
         })
       }
     }
@@ -98,7 +149,7 @@ export function BatterCostClient({ date }: { date: string }) {
       addSide(g.awayLineup, g.homePitcher)
     }
     return out
-  }, [data])
+  }, [data, fhrAvgMap, saAvgMap])
 
   const maxAbsByMarket = useMemo(() => {
     const m: Record<string, number> = {}
@@ -109,12 +160,23 @@ export function BatterCostClient({ date }: { date: string }) {
     return m
   }, [flatBatters])
 
+  const maxAbsFhrPct = useMemo(() => {
+    const vals = flatBatters.map(b => b.fhr_pct).filter((x): x is number => x != null).map(Math.abs)
+    return vals.length ? Math.max(...vals) : 0
+  }, [flatBatters])
+  const maxAbsSaPct = useMemo(() => {
+    const vals = flatBatters.map(b => b.sa_pct).filter((x): x is number => x != null).map(Math.abs)
+    return vals.length ? Math.max(...vals) : 0
+  }, [flatBatters])
+
   const onSort = (col: string) => setSort(prev => toggleSortState(prev, col))
 
   const sorted = useMemo(() => {
     if (!sort) return flatBatters
     return [...flatBatters].sort((a, b) => {
       if (sort.col === 'name') return cmpAny(a.name, b.name, sort.dir)
+      if (sort.col === 'fhr_pct') return cmpNullsLast(a.fhr_pct, b.fhr_pct, sort.dir)
+      if (sort.col === 'sa_pct') return cmpNullsLast(a.sa_pct, b.sa_pct, sort.dir)
       return cmpNullsLast(a.deltas[sort.col]?.delta ?? null, b.deltas[sort.col]?.delta ?? null, sort.dir)
     })
   }, [flatBatters, sort])
@@ -125,14 +187,17 @@ export function BatterCostClient({ date }: { date: string }) {
   return (
     <div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
-        {sorted.length} batter{sorted.length === 1 ? '' : 's'} with at least one market that has moved since opening.
-        Negative (green) = price shortened since opening — book conviction. Click any column to sort by it.
+        {sorted.length} batter{sorted.length === 1 ? '' : 's'} with at least one market that has moved.
+        FHR%/HR% = today&apos;s price vs. this player&apos;s own season-average price. Every other column = today&apos;s price vs. this game&apos;s opening line.
+        Negative (green) = price shortened — book conviction. Click any column to sort by it.
       </div>
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
             <tr>
               <SortableTH label="Batter" colKey="name" sort={sort} onSort={onSort} align="left" />
+              <SortableTH label="FHR%" colKey="fhr_pct" sort={sort} onSort={onSort} />
+              <SortableTH label="HR%" colKey="sa_pct" sort={sort} onSort={onSort} />
               {MARKETS.map(m => <SortableTH key={m.key} label={m.label} colKey={m.key} sort={sort} onSort={onSort} />)}
             </tr>
           </thead>
@@ -158,6 +223,12 @@ export function BatterCostClient({ date }: { date: string }) {
                     {b.position} · vs {b.opponentHand ? `${b.opponentHand}HP ` : ''}{b.opponentName || '—'}
                   </div>
                 </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', ...pctColor(b.fhr_pct, maxAbsFhrPct) }}>
+                  {pctStr(b.fhr_pct)}
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', ...pctColor(b.sa_pct, maxAbsSaPct) }}>
+                  {pctStr(b.sa_pct)}
+                </td>
                 {MARKETS.map(m => {
                   const d = b.deltas[m.key]
                   return (
@@ -173,7 +244,7 @@ export function BatterCostClient({ date }: { date: string }) {
               </tr>
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={MARKETS.length + 1} style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>No opening-line movement captured for this date yet.</td></tr>
+              <tr><td colSpan={MARKETS.length + 3} style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>No opening-line movement captured for this date yet.</td></tr>
             )}
           </tbody>
         </table>
