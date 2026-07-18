@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, type LineupPlayer } from '@/lib/mlbSchedule'
+import { getTodaysMatchups, isPregame, type LineupPlayer } from '@/lib/mlbSchedule'
 import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
 
 export const revalidate = 0
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     // (scratch/swap) doesn't re-trigger it.
     const wasFullyConfirmed = (lineupStateByKey.get(`${g.gamePk}-home`)?.confirmed ?? false) && (lineupStateByKey.get(`${g.gamePk}-away`)?.confirmed ?? false)
     const isFullyConfirmedNow = g.homeLineupConfirmed && g.awayLineupConfirmed
-    if (!wasFullyConfirmed && isFullyConfirmedNow) {
+    if (!wasFullyConfirmed && isFullyConfirmedNow && isPregame(g.status)) {
       scrapeQueueInserts.push({ game_pk: g.gamePk, ready_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() })
     }
     for (const s of sides) {

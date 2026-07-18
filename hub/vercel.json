@@ -81,12 +81,12 @@
       "schedule": "5 14,16,18,20,22 * * *"
     },
     {
-      "path": "/api/cron/scrape-pikkit",
-      "schedule": "10 14,16,18,20,22 * * *"
-    },
-    {
       "path": "/api/cron/dispatch-scrapes",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/poll-pikkit-picks",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

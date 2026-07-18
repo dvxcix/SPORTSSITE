@@ -45,6 +45,12 @@ export type TodayGame = {
   status: string
 }
 
+// Pregame = hasn't started and isn't cancelled — used by the Browserbase
+// scrapers to decide whether a game is still worth checking (FanDuel/MGM
+// odds and Pikkit's pick counts both stop mattering, or the page changes
+// shape entirely, once a game goes live).
+export const isPregame = (status: string) => !/in progress|final|postpon|cancel/i.test(status)
+
 async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: string): Promise<LineupPlayer[]> {
   try {
     const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/${teamId}/roster?rosterType=Active`, {

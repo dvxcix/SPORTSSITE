@@ -37,7 +37,14 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
     await clickTabByText(bb.page, 'EVENTS')
     await bb.page.waitForTimeout(1500)
 
-    const clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    // Same reasoning as FanDuel's retry — the listing SPA can still be
+    // rendering game cards after domcontentloaded, so one retry after a
+    // longer wait catches a too-early search without slowing the common case.
+    let clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    if (!clicked) {
+      await bb.page.waitForTimeout(3000)
+      clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    }
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on MGM listing page' }
     await bb.page.waitForTimeout(2000)
 

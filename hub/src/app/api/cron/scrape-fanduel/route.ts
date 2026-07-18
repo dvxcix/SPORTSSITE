@@ -43,7 +43,15 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
     await bb.page.getByText('GAMES', { exact: true }).first().click({ timeout: 5000 }).catch(() => {})
     await bb.page.waitForTimeout(1500)
 
-    const clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    // The listing SPA can still be rendering game cards after
+    // domcontentloaded — a miss here doesn't necessarily mean the game
+    // isn't listed, just that the search ran too early. One retry after a
+    // longer wait catches that without slowing down the common case.
+    let clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    if (!clicked) {
+      await bb.page.waitForTimeout(3000)
+      clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    }
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on FD listing page' }
     await bb.page.waitForTimeout(2500)
 
