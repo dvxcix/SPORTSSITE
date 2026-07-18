@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
+import { MovingBorderGlow } from './MovingBorderGlow'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
@@ -183,32 +184,20 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               )}
             </Link>
           )
-          // Golden moving-border treatment (à la Aceternity's Moving Border
-          // component) to flag the newest MLB tool without yet another text
-          // "NEW" badge — a rotating conic-gradient sits behind the item,
-          // clipped by overflow:hidden so only a thin ring shows past the
-          // item's own opaque idle background.
+          // Golden moving-border treatment (Aceternity's actual technique,
+          // see MovingBorderGlow.tsx) to flag the newest MLB tool without
+          // yet another text "NEW" badge — a small point of light travels
+          // around the item's own outline continuously.
           if (item.movingBorder) {
             return (
-              <div key={`glow-${item.href}`} className="mb-glow-wrap">
+              <MovingBorderGlow key={`glow-${item.href}`} borderRadius={8}>
                 {link}
-              </div>
+              </MovingBorderGlow>
             )
           }
           return link
         })}
       </nav>
-      <style>{`
-        .mb-glow-wrap { position: relative; border-radius: 8px; padding: 1.5px; overflow: hidden; }
-        .mb-glow-wrap::before {
-          content: '';
-          position: absolute;
-          inset: -100%;
-          background: conic-gradient(from 0deg, transparent 0deg, transparent 265deg, #f5d576 295deg, #fff6d6 320deg, #f5d576 345deg, transparent 360deg);
-          animation: mb-glow-spin 3s linear infinite;
-        }
-        @keyframes mb-glow-spin { to { transform: rotate(360deg); } }
-      `}</style>
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
