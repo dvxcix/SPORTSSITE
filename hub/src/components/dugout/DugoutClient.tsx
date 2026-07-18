@@ -1731,7 +1731,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           ) : (
             <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
           )}
-          <div style={{ overflow: 'hidden', minWidth: 0, flex: 1, textAlign: 'left' }}>
+          <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
             {/* Name line's width is now fixed regardless of how many flags
                 are active — every badge moved off it (achievement flags to
                 the rail above, signal flags to the position/hand line
@@ -1746,8 +1746,15 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
                 gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
               />
             </div>
+            {/* flexWrap here (not nowrap) is the fix for a real bug: on the
+                narrow 140px mobile sticky column there often isn't room for
+                position + hand + both signal badges on one line, and the
+                parent's overflow:hidden (removed above) was silently
+                clipping whichever badge didn't fit — invisible, not just
+                truncated. Wrapping to a second line means everything stays
+                visible; the row just gets a little taller when it needs to. */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 4, textAlign: 'left',
+              display: 'flex', alignItems: 'center', gap: 4, textAlign: 'left', flexWrap: 'wrap', rowGap: 2,
               fontSize: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif",
             }}>
               <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>{row.position}</span>
