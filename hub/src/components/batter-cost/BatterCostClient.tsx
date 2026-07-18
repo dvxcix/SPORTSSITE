@@ -113,11 +113,17 @@ function PickBadge({ picks, label }: { picks: number | null; label: string }) {
 // FHR%/HR% columns (showing the OPENING price that % is relative to) and
 // every MARKETS column (showing the CURRENT price the delta was computed
 // from) — same "actual odds, not just the ratio/delta" request for both.
+// A fixed 2-column grid, not flex+flexWrap: flex-wrap's line count depends
+// on the container's actual rendered width, so the same cell could wrap to
+// 1, 2, or 3 lines depending on viewport/zoom — different cells in the same
+// row ending up wildly different heights is what was letting sticky-column
+// content visually desync from its row on mobile. A grid always wraps at
+// exactly 2 per row regardless of width, so row height stays predictable.
 function BookBadges({ prices, books }: { prices: any; books: string[] }) {
   const entries = books.map(b => [b, prices?.[b]] as const).filter((e): e is [string, number] => e[1] != null)
   if (!entries.length) return null
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 3, flexWrap: 'wrap' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, auto)', justifyContent: 'center', columnGap: 6, rowGap: 1, marginTop: 3 }}>
       {entries.map(([book, v]) => (
         <Tooltip key={book} content={book}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>
@@ -469,14 +475,14 @@ export function BatterCostClient({ date }: { date: string }) {
                       odds={b.deltas.sa?.current ?? null}
                     />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, marginLeft: 27, flexWrap: 'wrap', rowGap: 2 }}>
-                    <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{b.position} · vs</span>
-                    {b.opponentId ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <HandBadge hand={b.opponentHand} />
-                        <PlayerLink mlbId={b.opponentId} name={b.opponentName} teamAbbr={b.opponentTeam} size={14} />
-                      </span>
-                    ) : <span style={{ fontSize: 9, color: 'var(--text-3)' }}>—</span>}
+                  {/* Opposing-pitcher info (name/hand/avatar) was dropped
+                      from this card — this page is about batters, and that
+                      extra content made an already-tall row taller and more
+                      variable-height still, worsening the sticky-column
+                      row-desync issue on mobile. Pitcher matchup detail
+                      still lives on Dugout/Pitcher Report. */}
+                  <div style={{ marginTop: 3, marginLeft: 27, fontSize: 9, color: 'var(--text-3)' }}>
+                    {b.position}
                   </div>
                 </td>
                 {/* FHR%/HR% are season-average ratios, not opening-vs-current
