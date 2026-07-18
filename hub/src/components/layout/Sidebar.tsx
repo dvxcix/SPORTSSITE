@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
-  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, X
+  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, X,
+  type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 
@@ -14,7 +15,13 @@ import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
 const MLB_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png'
 
-const nav = [
+type NavLink = {
+  href: string; icon: LucideIcon; label: string
+  flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean
+}
+type NavItem = NavLink | { section: string; logo: string } | null
+
+const nav: NavItem[] = [
   { href: '/feed',        icon: Home,          label: 'Feed' },
   { href: '/explore',     icon: Compass,       label: 'Explore' },
   { href: '/search',      icon: Search,        label: 'Search' },
@@ -31,7 +38,8 @@ const nav = [
   { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
   { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
-  { href: '/slate-breakdown', icon: Table2,    label: 'Slate Breakdown', badge: 'NEW', badgeColor: 'var(--blue)' },
+  { href: '/slate-breakdown', icon: Table2,    label: 'Slate Breakdown' },
+  { href: '/batter-cost', icon: Coins,         label: 'Batter Cost', movingBorder: true },
   null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
@@ -144,19 +152,24 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           }
           const Icon = item.icon
           const isActive = active(item.href)
-          return (
+          // A plain 'transparent' idle background would let the glow ring's
+          // conic-gradient pseudo-element show through the whole button
+          // instead of just its border — glowing items need an opaque idle
+          // fill so only the 1.5px ring around the edge reads as lit.
+          const idleBg = item.movingBorder ? 'var(--surface)' : 'transparent'
+          const link = (
             <Link key={item.href} href={item.href} className="nav-item" data-active={isActive} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 10px', borderRadius: 8,
+              position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 10px', borderRadius: item.movingBorder ? 7 : 8,
               fontSize: 13, fontWeight: isActive ? 700 : 500,
               color: isActive ? 'var(--accent)' : 'var(--text-2)',
-              background: isActive ? 'var(--accent-dim)' : 'transparent',
+              background: isActive ? 'var(--accent-dim)' : idleBg,
               transition: 'all 130ms',
               textDecoration: 'none',
               userSelect: 'none',
             }}
             onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; } }}
-            onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
+            onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = idleBg; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
               <Icon size={16} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />
               <span style={{ flex: 1, lineHeight: 1.2 }}>{item.label}</span>
               {item.badge && (
@@ -170,8 +183,32 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               )}
             </Link>
           )
+          // Golden moving-border treatment (à la Aceternity's Moving Border
+          // component) to flag the newest MLB tool without yet another text
+          // "NEW" badge — a rotating conic-gradient sits behind the item,
+          // clipped by overflow:hidden so only a thin ring shows past the
+          // item's own opaque idle background.
+          if (item.movingBorder) {
+            return (
+              <div key={`glow-${item.href}`} className="mb-glow-wrap">
+                {link}
+              </div>
+            )
+          }
+          return link
         })}
       </nav>
+      <style>{`
+        .mb-glow-wrap { position: relative; border-radius: 8px; padding: 1.5px; overflow: hidden; }
+        .mb-glow-wrap::before {
+          content: '';
+          position: absolute;
+          inset: -100%;
+          background: conic-gradient(from 0deg, transparent 0deg, transparent 265deg, #f5d576 295deg, #fff6d6 320deg, #f5d576 345deg, transparent 360deg);
+          animation: mb-glow-spin 3s linear infinite;
+        }
+        @keyframes mb-glow-spin { to { transform: rotate(360deg); } }
+      `}</style>
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>

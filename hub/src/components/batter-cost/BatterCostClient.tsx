@@ -33,7 +33,7 @@ const MARKETS: { key: string; label: string; current: (p: any) => number | null;
 type MarketDelta = { current: number | null; open: number | null; delta: number | null }
 type FlatBatter = {
   mlb_id: number; name: string; team: string; bats: string; position: string
-  opponentName: string; opponentHand: string
+  opponentId: number | null; opponentName: string; opponentHand: string; opponentTeam: string
   fhr_pct: number | null; sa_pct: number | null
   deltas: Record<string, MarketDelta>
 }
@@ -114,7 +114,7 @@ export function BatterCostClient({ date }: { date: string }) {
   const flatBatters: FlatBatter[] = useMemo(() => {
     if (!data?.games) return []
     const out: FlatBatter[] = []
-    const addSide = (lineup: any[], opponentPitcher: any) => {
+    const addSide = (lineup: any[], opponentPitcher: any, opponentTeam: string) => {
       for (const p of lineup ?? []) {
         const deltas: Record<string, MarketDelta> = {}
         let hasAny = false
@@ -139,14 +139,15 @@ export function BatterCostClient({ date }: { date: string }) {
         if (!hasAny && fhr_pct == null && sa_pct == null) continue
         out.push({
           mlb_id: p.mlb_id, name: p.name, team: p.team, bats: p.bats, position: p.position,
-          opponentName: opponentPitcher?.name ?? '', opponentHand: opponentPitcher?.hand ?? '',
+          opponentId: opponentPitcher?.id ?? null, opponentName: opponentPitcher?.name ?? '',
+          opponentHand: opponentPitcher?.hand ?? '', opponentTeam,
           fhr_pct, sa_pct, deltas,
         })
       }
     }
     for (const g of data.games) {
-      addSide(g.homeLineup, g.awayPitcher)
-      addSide(g.awayLineup, g.homePitcher)
+      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr)
+      addSide(g.awayLineup, g.homePitcher, g.homeAbbr)
     }
     return out
   }, [data, fhrAvgMap, saAvgMap])
@@ -219,8 +220,14 @@ export function BatterCostClient({ date }: { date: string }) {
                     <HandBadge hand={b.bats} />
                     <PlayerLink mlbId={b.mlb_id} name={b.name} teamAbbr={b.team} size={26} />
                   </div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2, marginLeft: 32 }}>
-                    {b.position} · vs {b.opponentHand ? `${b.opponentHand}HP ` : ''}{b.opponentName || '—'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, marginLeft: 32 }}>
+                    <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{b.position} · vs</span>
+                    {b.opponentId ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <HandBadge hand={b.opponentHand} />
+                        <PlayerLink mlbId={b.opponentId} name={b.opponentName} teamAbbr={b.opponentTeam} size={16} />
+                      </span>
+                    ) : <span style={{ fontSize: 9, color: 'var(--text-3)' }}>—</span>}
                   </div>
                 </td>
                 <td style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', ...pctColor(b.fhr_pct, maxAbsFhrPct) }}>
