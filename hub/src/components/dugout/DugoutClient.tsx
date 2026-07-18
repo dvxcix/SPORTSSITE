@@ -15,10 +15,9 @@ import {
   pct as matchupPct,
 } from '@/components/pitcher-report/MatchupTables'
 import type { SortState as MatchupSortState } from '@/components/pitcher-report/MatchupTables'
+import { normName, resolveNameEntry } from '@/lib/nameNorm'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-const normName = (s: string) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim()
 
 const nv = (v: any): number | null => { const x = parseFloat(v); return isNaN(x) ? null : x }
 const f1 = (v: number | null | undefined) => v != null ? v.toFixed(1) : '—'
@@ -245,13 +244,17 @@ function computeTiming(
     ['FS', pitcherRow.pct_splitter || 0],
   ] as [string, number][]).filter(([, p]) => p > 0.08)
   if (!mix.length) return { s_timing: null, r_timing: null, s_miss: null, r_miss: null }
+  // Same fuzzy fallback as everywhere else — only actually needed on the
+  // by-name path (by-id is exact regardless of spelling), so resolved once
+  // here rather than per pitch-type in the loop below.
+  const byNameEntry = timingMap.byName[batterName] ?? resolveNameEntry(timingMap.byName, batterName)
 
   let st = 0, rt = 0, sm = 0, rm = 0
   let sw = 0, rw = 0, smw = 0, rmw = 0
   for (const [pt, w] of mix) {
     const tRows =
       timingMap.byId[batterId]?.[pitcherHand]?.[pt] ||
-      timingMap.byName[batterName]?.[pitcherHand]?.[pt]
+      byNameEntry?.[pitcherHand]?.[pt]
     if (!tRows) continue
     const { season: tse, recent: tre } = tRows as { season?: any; recent?: any }
     if (tse?.on_time_percent != null) { st += w * tse.on_time_percent; sw += w }
@@ -296,9 +299,10 @@ function computeMatchupEdge(
     ['FS', pitRow.pct_splitter  || 0],
   ] as [string, number][]).filter(([, p]) => p > 4)
   if (!mix.length) return null
+  const batterEntry = batterPitchMap[nn] ?? resolveNameEntry(batterPitchMap, nn)
   let sum = 0, wsum = 0
   for (const [pt, usage] of mix) {
-    const batEdge = batterPitchMap[nn]?.[pt]?.[pitcherHand]
+    const batEdge = batterEntry?.[pt]?.[pitcherHand]
     const pitEdge = pitcherPitchMap[pitcherIdKey]?.[pt]?.[batterHand || 'R']
     if (!batEdge || !pitEdge || batEdge.pitches < 8 || pitEdge.pitches < 8) continue
     const batScore = (batEdge.hard_hit_pct ?? 30) - (batEdge.whiff_pct ?? 25)
@@ -349,7 +353,21 @@ function buildBatterRow(
   const idKey = String(player.mlb_id || '')
   const nn    = player.name_norm || normName(player.name || '')
 
-  const playerSplits = splitMap.byId[idKey] ?? splitMap.byName[nn]
+  // Same nickname/suffix-tolerant matching as the FanDuel/BetMGM join in
+  // /api/dugout/data — each of these maps is keyed by a name_norm computed
+  // from a DIFFERENT source (Pikkit's own scrape, mlb-party's HR feed,
+  // BDL's own opening-odds average) than the roster's own MLB-fullName-
+  // derived nn, so an exact-string lookup silently drops a player's picks/
+  // averages on the same class of mismatch (Cam/Cameron, Jr./no-Jr., etc.)
+  // that was already fixed for FD/MGM.
+  const pikkitEntry  = resolveNameEntry(pikkitMap, nn)
+  const openingEntry = resolveNameEntry(openingMap, nn)
+  const hrEntry       = resolveNameEntry(hrMap, nn)
+  const nearEntry     = resolveNameEntry(nearMap, nn)
+  const fhrAvgEntry   = resolveNameEntry(fhrAvgMap, nn)
+  const saAvgEntry    = resolveNameEntry(saAvgMap, nn)
+
+  const playerSplits = splitMap.byId[idKey] ?? splitMap.byName[nn] ?? resolveNameEntry(splitMap.byName, nn)
   const handSplits = playerSplits?.[pitcherHand]
     ?? playerSplits?.['R']
     ?? (playerSplits ? Object.values(playerSplits)[0] : null)
@@ -404,7 +422,7 @@ function buildBatterRow(
   // that's different from an everyday player's 25% off 200 batted balls.
   // Used to dampen paper score for anyone we barely have data on, in
   // computePaper below.
-  const recent_pitch_count = Object.values(batterPitchMap[nn] ?? {})
+  const recent_pitch_count = Object.values(batterPitchMap[nn] ?? resolveNameEntry(batterPitchMap, nn) ?? {})
     .reduce((sum, byHand) => sum + Object.values(byHand).reduce((s2, r: any) => s2 + (r.pitches || 0), 0), 0)
 
   const props      = player.props
@@ -519,9 +537,9 @@ function buildBatterRow(
   // odds. Opening lines barely move, so crossing 3.5x is rare (~1/game);
   // live odds drift constantly and cross it far more often, which is why an
   // earlier version of this (using sa_fd/rbi_fd directly) over-fired.
-  const opening = openingMap[nn]
+  const opening = openingEntry
   const sa_rbi_raw_ratio = rawRatio(opening?.sa_open ?? null, opening?.rbi_open ?? null)
-  const picks_count = (pikkitMap[nn]?.home_runs?.picks as number | undefined) ?? null
+  const picks_count = (pikkitEntry?.home_runs?.picks as number | undefined) ?? null
   const is_money_sa_rbi = sa_rbi_raw_ratio != null && sa_rbi_raw_ratio >= 3.5
                         && picks_count != null && picks_count <= 50
 
@@ -546,11 +564,11 @@ function buildBatterRow(
     // compares FanDuel-to-FanDuel; HR% (SA) falls back to Caesars if FD's own
     // average is missing.
     fhr_pct: (() => {
-      const avgFd = fhrAvgMap[nn]?.fd
+      const avgFd = fhrAvgEntry?.fd
       return fhr_fd != null && avgFd ? (fhr_fd - avgFd) / avgFd : null
     })(),
     sa_pct: (() => {
-      const av = saAvgMap[nn] ?? {}
+      const av = saAvgEntry ?? {}
       if (sa_fd != null && av.fd) return (sa_fd - av.fd) / av.fd
       if (sa_fd != null && av.cz) return (sa_fd - av.cz) / av.cz
       return null
@@ -562,11 +580,11 @@ function buildBatterRow(
     // the percentage alone treats those as equally significant, the raw
     // point swing correctly doesn't.
     fhr_delta: (() => {
-      const avgFd = fhrAvgMap[nn]?.fd
+      const avgFd = fhrAvgEntry?.fd
       return fhr_fd != null && avgFd ? fhr_fd - avgFd : null
     })(),
     sa_delta: (() => {
-      const av = saAvgMap[nn] ?? {}
+      const av = saAvgEntry ?? {}
       if (sa_fd != null && av.fd) return sa_fd - av.fd
       if (sa_fd != null && av.cz) return sa_fd - av.cz
       return null
@@ -580,7 +598,7 @@ function buildBatterRow(
     // move on a leadoff man who was already likely to be first up regardless.
     // Falls back to the plain (unweighted) delta until the lineup posts.
     fhr_delta_weighted: (() => {
-      const avgFd = fhrAvgMap[nn]?.fd
+      const avgFd = fhrAvgEntry?.fd
       const delta = fhr_fd != null && avgFd ? fhr_fd - avgFd : null
       if (delta == null || bat_rank == null) return delta
       const orderWeight = 0.75 + (bat_rank - 1) / 17 * 0.75
@@ -608,18 +626,18 @@ function buildBatterRow(
     // behavior) meant whichever market won the collapse got mislabeled as
     // "HR" everywhere it rendered. `pk` stays HR-specific (matching its
     // column header); the others ride along on their own matching odds cell.
-    pk:      pikkitMap[nn]?.home_runs ?? null,
-    pkHits:  pikkitMap[nn]?.hits ?? null,
-    pkRuns:  pikkitMap[nn]?.runs ?? null,
-    pkStolenBases: pikkitMap[nn]?.stolen_bases ?? null,
-    pkSingles: pikkitMap[nn]?.singles ?? null,
-    pkDoubles: pikkitMap[nn]?.doubles ?? null,
-    pkTriples: pikkitMap[nn]?.triples ?? null,
-    pkRbi:     pikkitMap[nn]?.rbi ?? null,
-    pkHrr:     pikkitMap[nn]?.hits_runs_rbi ?? null,
-    pkTb:      pikkitMap[nn]?.bases ?? null,
-    hr_hits: hrMap[nn]    ?? [],
-    near_hr: nearMap[nn]  ?? null,
+    pk:      pikkitEntry?.home_runs ?? null,
+    pkHits:  pikkitEntry?.hits ?? null,
+    pkRuns:  pikkitEntry?.runs ?? null,
+    pkStolenBases: pikkitEntry?.stolen_bases ?? null,
+    pkSingles: pikkitEntry?.singles ?? null,
+    pkDoubles: pikkitEntry?.doubles ?? null,
+    pkTriples: pikkitEntry?.triples ?? null,
+    pkRbi:     pikkitEntry?.rbi ?? null,
+    pkHrr:     pikkitEntry?.hits_runs_rbi ?? null,
+    pkTb:      pikkitEntry?.bases ?? null,
+    hr_hits: hrEntry    ?? [],
+    near_hr: nearEntry  ?? null,
     paper: null as number | null,
     bk_rk: null as number | null,
     pp_rk: null as number | null,
@@ -999,9 +1017,10 @@ function PlayerDrillDown({
   // season," which side depends on who's on the mound tonight.
   const platoonRow = pitcherHand === 'L' ? platoon?.vl : platoon?.vr
 
+  const timingByNameEntry = timingMap.byName[row.name_norm] ?? resolveNameEntry(timingMap.byName, row.name_norm)
   const rows = mix.map(([pt, pct]) => {
     const tRows = timingMap.byId[idKey]?.[pitcherHand]?.[pt]
-              || timingMap.byName[row.name_norm]?.[pitcherHand]?.[pt]
+              || timingByNameEntry?.[pitcherHand]?.[pt]
     const se = (tRows as any)?.season
     const re = (tRows as any)?.recent
 
@@ -1583,6 +1602,18 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   onShowHr?: () => void
   id?: string
 }) {
+  // Sticky column's hover treatment is computed here in JS rather than via
+  // the table's generic `tr:hover > td` CSS rule — that rule needed an
+  // !important override to stay opaque on hover (see the stylesheet at the
+  // bottom of this file), which reintroduced the exact bleed-through bug
+  // it was fixing whenever Sticky Columns re-sorts and reorders the tbody's
+  // <tr> nodes out from under a stationary cursor: the browser's :hover
+  // match can end up on stale DOM state right after a reorder, which the
+  // !important war is powerless to fix since it's not a specificity
+  // problem. Tracking hover as real component state sidesteps the whole
+  // class of issue — it's driven by actual mouseenter/mouseleave on this
+  // row's own node, not a CSS pseudo-class that has to survive reordering.
+  const [hovered, setHovered] = useState(false)
   const g = (f: keyof BatterRow) => pool.map(r => r[f] as number | null)
   // FHR%'s shade is meaningful across the WHOLE game (all ~18 batters, both
   // teams — BDL's FanDuel FHR average is one shared per-game market), but
@@ -1636,7 +1667,12 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   }
 
   return (
-    <tr id={id} style={hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}>
+    <tr
+      id={id}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}
+    >
       {/* sticky player cell — narrower on mobile (140px vs 190px) so more of
           the ~60 scrollable stat columns are visible without scrolling past
           a name column that's eating half a 375px viewport. Width/min/max
@@ -1645,7 +1681,11 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       <td
         onClick={onToggle}
         className="dg-sticky-col w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
-        style={{ ...STD, position: 'sticky', left: 0, zIndex: 2, background: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)', cursor: 'pointer' }}
+        style={{
+          ...STD, position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
+          backgroundColor: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)',
+          backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
+        }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
           {/* Order#/hand-circle "rail" — achievement-style flags (an FHR/HR
@@ -2760,19 +2800,12 @@ export function DugoutClient({ date }: { date: string }) {
            nested pitch-mix/matchup tables inside it are many levels further
            down, not direct children, so their own heat-mapped cell colors
            survive hovering instead of getting flattened to this grey. */
-        .dugout-dense-table > tbody > tr:hover > td{background:rgba(255,255,255,0.025)!important}
-        /* The sticky player-name column has to stay fully opaque at all
-           times — it's masking whatever's scrolled underneath it on a
-           horizontally-scrolled table. The rule above made it nearly
-           transparent on hover (a plain rgba over var(--bg), same as every
-           other cell), which let the scrolled-past stat values show right
-           through the name column. Composited as an opaque base color with
-           the same tint layered on top instead, so hovering still reads the
-           same visually but never goes see-through. */
-        .dugout-dense-table > tbody > tr:hover > td.dg-sticky-col{
-          background-color: var(--bg) !important;
-          background-image: linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025)) !important;
-        }
+        /* :not(.dg-sticky-col) — the sticky player-name column handles its
+           own hover tint via JS state (see the hovered local state in
+           BatterRowEl) instead of this rule, since a CSS !important war
+           here previously reintroduced the exact bleed-through bug it was
+           meant to fix (see BatterRowEl's comment on that state for why). */
+        .dugout-dense-table > tbody > tr:hover > td:not(.dg-sticky-col){background:rgba(255,255,255,0.025)!important}
       `}</style>
     </div>
   )
