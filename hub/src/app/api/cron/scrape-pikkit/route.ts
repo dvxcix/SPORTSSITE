@@ -60,14 +60,16 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     }
     await bb.page.waitForTimeout(2000)
 
-    // Confirmed live: this one flakes intermittently even when Odds itself
-    // clicked fine — the same game succeeded once then failed here seconds
-    // later, reading as Pikkit's own sub-tab render timing varying between
-    // runs rather than a wrong selector. Give it up to 3 total attempts.
-    let propsClicked = await clickTabByText(bb.page, 'Batting Props')
-    for (let attempt = 0; !propsClicked && attempt < 2; attempt++) {
+    // Confirmed live: this one failed consistently across 2 real attempts
+    // even after the retry-for-timing fix, unlike Odds — reads as an exact-
+    // text-match miss (clickTabByText defaults to exact), not a timing
+    // issue. Pikkit likely renders something alongside the label itself
+    // (a count badge, icon text) that breaks an exact match. Non-exact
+    // (substring) match instead, still with one retry for genuine timing.
+    let propsClicked = await clickTabByText(bb.page, 'Batting Props', false)
+    if (!propsClicked) {
       await bb.page.waitForTimeout(2500)
-      propsClicked = await clickTabByText(bb.page, 'Batting Props')
+      propsClicked = await clickTabByText(bb.page, 'Batting Props', false)
     }
     await bb.page.waitForTimeout(1500)
 
