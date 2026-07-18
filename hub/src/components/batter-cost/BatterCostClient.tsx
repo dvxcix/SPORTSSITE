@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { Tooltip } from '@/components/ui/tooltip-card'
-import { normName } from '@/lib/nameNorm'
+import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { BookLogo } from '@/components/BookLogo'
 
@@ -42,6 +42,15 @@ const MARKET_BOOKS: Record<string, string[]> = {
 }
 const booksFor = (key: string) => MARKET_BOOKS[key] ?? ['fanduel']
 
+// Pikkit only ever tracks one base-line prop per stat category — no alt-line
+// thresholds (fhr, hr2, rbi2/3, tb3/4/5 never get a pick count, same as on
+// Dugout/Pitcher Report). Maps this page's MARKETS key to Pikkit's own
+// prop_type string (see api/admin/pikkit-import/route.ts's MARKET_MAP).
+const MARKET_TO_PIKKIT: Record<string, string> = {
+  sa: 'home_runs', singles: 'singles', doubles: 'doubles', triples: 'triples',
+  rbi: 'rbi', tb: 'bases', hrr: 'hits_runs_rbi',
+}
+
 type MarketDelta = { current: number | null; open: number | null; delta: number | null }
 type FlatBatter = {
   mlb_id: number; gameKey: string; gamePk: number | null; gameDate: string | null
@@ -54,6 +63,11 @@ type FlatBatter = {
   // `deltas` above so the per-book badge rows below can pull real book
   // prices without re-deriving them from the FanDuel-only delta shape.
   rawProps: any
+  // Community pick count per market (only the 7 keys in MARKET_TO_PIKKIT
+  // are ever populated) — same source/matching Dugout's own pk*/pick-count
+  // badges use, just flattened across every game instead of scoped to one
+  // active game tab.
+  picks: Record<string, number | null>
 }
 
 const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
@@ -63,6 +77,21 @@ const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${
 // FHR%/HR% columns (showing the OPENING price that % is relative to) and
 // every MARKETS column (showing the CURRENT price the delta was computed
 // from) — same "actual odds, not just the ratio/delta" request for both.
+// Same small gold 📊 corner tag Dugout/Pitcher Report already use for
+// community Pikkit pick counts — anchored bottom-left of the cell via
+// absolute positioning (the cell itself needs position:relative) so it
+// never disturbs the value/book-badge layout above it.
+function PickBadge({ picks, label }: { picks: number | null; label: string }) {
+  if (picks == null) return null
+  return (
+    <Tooltip content={`${picks.toLocaleString()} community ${label} picks`}>
+      <div style={{ position: 'absolute', bottom: 1, left: 2, fontSize: 6.5, fontWeight: 900, color: 'var(--gold, #eab308)', cursor: 'help', lineHeight: 1 }}>
+        {picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}📊
+      </div>
+    </Tooltip>
+  )
+}
+
 function BookBadges({ prices, books }: { prices: any; books: string[] }) {
   const entries = books.map(b => [b, prices?.[b]] as const).filter((e): e is [string, number] => e[1] != null)
   if (!entries.length) return null
@@ -209,6 +238,38 @@ export function BatterCostClient({ date }: { date: string }) {
     return m
   }, [data?.saAvg])
 
+  // Same raw data.pikkit array + normName/resolveNameEntry fuzzy matching
+  // Dugout's own pikkitMap uses — the one difference is Dugout scopes to a
+  // single active game tab (it only ever shows one game at a time), while
+  // this page is flat across every game at once, so the map here is keyed
+  // by market → game_key too (not just name), and an explicitly-tagged row
+  // for a player's real game always wins over an untagged legacy row for
+  // that same market at lookup time (same tie-break Dugout applies, just
+  // resolved per-row here instead of against one shared active tab).
+  const pikkitMap = useMemo(() => {
+    const m: Record<string, Record<string, Record<string, any>>> = {}
+    for (const r of (data?.pikkit ?? [])) {
+      const nn = normName(r.player_name || '')
+      const market = r.prop_type || r.market
+      if (!nn || !market) continue
+      if (!m[nn]) m[nn] = {}
+      if (!m[nn][market]) m[nn][market] = {}
+      m[nn][market][r.game_key || ''] = r
+    }
+    return m
+  }, [data?.pikkit])
+
+  const picksFor = (nameNorm: string, gameKey: string): Record<string, number | null> => {
+    const entry = resolveNameEntry(pikkitMap, nameNorm)
+    const out: Record<string, number | null> = {}
+    for (const [mktKey, prop] of Object.entries(MARKET_TO_PIKKIT)) {
+      const byGame = entry?.[prop]
+      const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
+      out[mktKey] = row?.picks ?? null
+    }
+    return out
+  }
+
   const flatBatters: FlatBatter[] = useMemo(() => {
     if (!data?.games) return []
     const out: FlatBatter[] = []
@@ -239,7 +300,7 @@ export function BatterCostClient({ date }: { date: string }) {
           mlb_id: p.mlb_id, gameKey, gamePk, gameDate, name: p.name, team: p.team, bats: p.bats, position: p.position,
           opponentId: opponentPitcher?.id ?? null, opponentName: opponentPitcher?.name ?? '',
           opponentHand: opponentPitcher?.hand ?? '', opponentTeam,
-          fhr_pct, sa_pct, deltas, rawProps: p.props ?? null,
+          fhr_pct, sa_pct, deltas, rawProps: p.props ?? null, picks: picksFor(nn, gameKey),
         })
       }
     }
@@ -255,7 +316,7 @@ export function BatterCostClient({ date }: { date: string }) {
       addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, gameDate)
     }
     return out
-  }, [data, fhrAvgMap, saAvgMap])
+  }, [data, fhrAvgMap, saAvgMap, pikkitMap])
 
   const maxAbsByMarket = useMemo(() => {
     const m: Record<string, number> = {}
@@ -345,8 +406,9 @@ export function BatterCostClient({ date }: { date: string }) {
                 onMouseLeave={() => setHovered(null)}
               >
                 <td
+                  className="w-[130px] min-w-[130px] max-w-[130px] sm:w-[156px] sm:min-w-[156px] sm:max-w-[156px]"
                   style={{
-                    padding: '6px 6px', position: 'sticky', left: 0, zIndex: 2, minWidth: 156, maxWidth: 156,
+                    padding: '6px 6px', position: 'sticky', left: 0, zIndex: 2,
                     backgroundColor: 'var(--bg)',
                     backgroundImage: hovered === `${b.mlb_id}_${b.gameKey}` ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
                   }}
@@ -386,13 +448,14 @@ export function BatterCostClient({ date }: { date: string }) {
                 {MARKETS.map(m => {
                   const d = b.deltas[m.key]
                   return (
-                    <td key={m.key} style={{ padding: '6px 6px', textAlign: 'center', whiteSpace: 'nowrap', ...deltaColor(d?.delta ?? null, maxAbsByMarket[m.key]) }}>
+                    <td key={m.key} style={{ padding: '6px 6px', paddingBottom: 10, position: 'relative', textAlign: 'center', whiteSpace: 'nowrap', ...deltaColor(d?.delta ?? null, maxAbsByMarket[m.key]) }}>
                       {d?.delta == null ? '—' : (
                         <Tooltip content={`Opened ${oStr(d.open)} → now ${oStr(d.current)}`}>
                           <span>{oStr(d.delta)}</span>
                         </Tooltip>
                       )}
                       <BookBadges prices={b.rawProps?.[m.key]} books={booksFor(m.key)} />
+                      <PickBadge picks={b.picks[m.key]} label={m.label} />
                     </td>
                   )
                 })}
