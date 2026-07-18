@@ -5,6 +5,7 @@ import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { normName } from '@/lib/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
+import { BookLogo } from '@/components/BookLogo'
 
 // Every market that carries an opening-line baseline (see dugout/data/
 // route.ts's entry.open merge) — current value lives on the vendor-keyed
@@ -31,6 +32,16 @@ const MARKETS: { key: string; label: string; current: (p: any) => number | null;
   { key: 'hrr',      label: 'HRR',    current: p => p?.hrr?.fanduel ?? null,     open: p => p?.open?.hrrFd ?? null },
 ]
 
+// Which books actually carry a current price for a given market — fhr/sa
+// are the only two markets BDL gives us multiple books for (see Dugout's
+// own OddsCell usage); every other market here is FanDuel-only, same as
+// its `current`/`open` accessors above already assume.
+const MARKET_BOOKS: Record<string, string[]> = {
+  fhr: ['fanduel', 'caesars', 'fanatics'],
+  sa: ['fanduel', 'caesars', 'betmgm', 'betrivers'],
+}
+const booksFor = (key: string) => MARKET_BOOKS[key] ?? ['fanduel']
+
 type MarketDelta = { current: number | null; open: number | null; delta: number | null }
 type FlatBatter = {
   mlb_id: number; gameKey: string; gamePk: number | null; gameDate: string | null
@@ -38,10 +49,35 @@ type FlatBatter = {
   opponentId: number | null; opponentName: string; opponentHand: string; opponentTeam: string
   fhr_pct: number | null; sa_pct: number | null
   deltas: Record<string, MarketDelta>
+  // Raw per-book props for this player (fhr/sa/hr2/... objects + the
+  // FanDuel-only `open` baseline) — kept alongside the already-computed
+  // `deltas` above so the per-book badge rows below can pull real book
+  // prices without re-deriving them from the FanDuel-only delta shape.
+  rawProps: any
 }
 
 const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
 const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`
+
+// Small centered row of book-logo + raw-price badges, used under both the
+// FHR%/HR% columns (showing the OPENING price that % is relative to) and
+// every MARKETS column (showing the CURRENT price the delta was computed
+// from) — same "actual odds, not just the ratio/delta" request for both.
+function BookBadges({ prices, books }: { prices: any; books: string[] }) {
+  const entries = books.map(b => [b, prices?.[b]] as const).filter((e): e is [string, number] => e[1] != null)
+  if (!entries.length) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 2, flexWrap: 'wrap' }}>
+      {entries.map(([book, v]) => (
+        <Tooltip key={book} content={book}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8.5, fontWeight: 700, color: 'var(--text-3)' }}>
+            <BookLogo vendor={book} size={9} />{oStr(v)}
+          </span>
+        </Tooltip>
+      ))}
+    </div>
+  )
+}
 
 // FHR%/HR% are computed ratios that essentially never land on exactly
 // zero, so their filter only offers +/−. The FHR/HR delta columns are
@@ -203,7 +239,7 @@ export function BatterCostClient({ date }: { date: string }) {
           mlb_id: p.mlb_id, gameKey, gamePk, gameDate, name: p.name, team: p.team, bats: p.bats, position: p.position,
           opponentId: opponentPitcher?.id ?? null, opponentName: opponentPitcher?.name ?? '',
           opponentHand: opponentPitcher?.hand ?? '', opponentTeam,
-          fhr_pct, sa_pct, deltas,
+          fhr_pct, sa_pct, deltas, rawProps: p.props ?? null,
         })
       }
     }
@@ -296,9 +332,9 @@ export function BatterCostClient({ date }: { date: string }) {
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
             <tr>
               <SortableTH label="Batter" colKey="name" sort={sort} onSort={onSort} align="left" />
-              <SortableTH label="FHR%" colKey="fhr_pct" sort={sort} onSort={onSort} />
-              <SortableTH label="HR%" colKey="sa_pct" sort={sort} onSort={onSort} />
-              {MARKETS.map(m => <SortableTH key={m.key} label={m.label} colKey={m.key} sort={sort} onSort={onSort} />)}
+              <SortableTH label="FHR%" colKey="fhr_pct" sort={sort} onSort={onSort} align="center" />
+              <SortableTH label="HR%" colKey="sa_pct" sort={sort} onSort={onSort} align="center" />
+              {MARKETS.map(m => <SortableTH key={m.key} label={m.label} colKey={m.key} sort={sort} onSort={onSort} align="center" />)}
             </tr>
           </thead>
           <tbody>
@@ -310,45 +346,53 @@ export function BatterCostClient({ date }: { date: string }) {
               >
                 <td
                   style={{
-                    padding: '6px 8px', position: 'sticky', left: 0, zIndex: 2, minWidth: 200,
+                    padding: '6px 6px', position: 'sticky', left: 0, zIndex: 2, minWidth: 156, maxWidth: 156,
                     backgroundColor: 'var(--bg)',
                     backgroundImage: hovered === `${b.mlb_id}_${b.gameKey}` ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <HandBadge hand={b.bats} />
-                    <PlayerLink mlbId={b.mlb_id} name={b.name} teamAbbr={b.team} size={26} />
+                    <PlayerLink mlbId={b.mlb_id} name={b.name} teamAbbr={b.team} size={22} />
                     <WatchlistStarButton
                       mlbId={b.mlb_id} name={b.name} team={b.team} position={b.position} bats={b.bats}
                       gameInfo={{ sport: 'MLB', game_pk: b.gamePk != null ? String(b.gamePk) : null, game_date: b.gameDate }}
                       odds={b.deltas.sa?.current ?? null}
                     />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, marginLeft: 32 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, marginLeft: 27 }}>
                     <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{b.position} · vs</span>
                     {b.opponentId ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <HandBadge hand={b.opponentHand} />
-                        <PlayerLink mlbId={b.opponentId} name={b.opponentName} teamAbbr={b.opponentTeam} size={16} />
+                        <PlayerLink mlbId={b.opponentId} name={b.opponentName} teamAbbr={b.opponentTeam} size={14} />
                       </span>
                     ) : <span style={{ fontSize: 9, color: 'var(--text-3)' }}>—</span>}
                   </div>
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', ...pctColor(b.fhr_pct, maxAbsFhrPct) }}>
+                {/* FHR%/HR% are season-average ratios, not opening-vs-current
+                    deltas — the badge row underneath repurposes that space to
+                    show the OPENING FanDuel price the ratio doesn't otherwise
+                    surface anywhere, so a reader can see the real number
+                    behind the percentage. */}
+                <td style={{ padding: '6px 6px', textAlign: 'center', whiteSpace: 'nowrap', ...pctColor(b.fhr_pct, maxAbsFhrPct) }}>
                   {pctStr(b.fhr_pct)}
+                  <BookBadges prices={{ fanduel: b.rawProps?.open?.fhr ?? null }} books={['fanduel']} />
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', ...pctColor(b.sa_pct, maxAbsSaPct) }}>
+                <td style={{ padding: '6px 6px', textAlign: 'center', whiteSpace: 'nowrap', ...pctColor(b.sa_pct, maxAbsSaPct) }}>
                   {pctStr(b.sa_pct)}
+                  <BookBadges prices={{ fanduel: b.rawProps?.open?.saFd ?? null }} books={['fanduel']} />
                 </td>
                 {MARKETS.map(m => {
                   const d = b.deltas[m.key]
                   return (
-                    <td key={m.key} style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap', ...deltaColor(d?.delta ?? null, maxAbsByMarket[m.key]) }}>
+                    <td key={m.key} style={{ padding: '6px 6px', textAlign: 'center', whiteSpace: 'nowrap', ...deltaColor(d?.delta ?? null, maxAbsByMarket[m.key]) }}>
                       {d?.delta == null ? '—' : (
                         <Tooltip content={`Opened ${oStr(d.open)} → now ${oStr(d.current)}`}>
                           <span>{oStr(d.delta)}</span>
                         </Tooltip>
                       )}
+                      <BookBadges prices={b.rawProps?.[m.key]} books={booksFor(m.key)} />
                     </td>
                   )
                 })}

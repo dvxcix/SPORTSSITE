@@ -79,7 +79,7 @@ export function cmpAny(a: unknown, b: unknown, dir: 'desc' | 'asc'): number {
 }
 
 export function SortableTH({ label, colKey, sort, onSort, align = 'right' }: {
-  label: string; colKey: string; sort: SortState; onSort: (key: string) => void; align?: 'left' | 'right'
+  label: string; colKey: string; sort: SortState; onSort: (key: string) => void; align?: 'left' | 'right' | 'center'
 }) {
   const active = sort?.col === colKey
   return (
