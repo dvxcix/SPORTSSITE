@@ -34,7 +34,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string) {
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
   const bb = await openSession({ contextId })
   try {
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
@@ -52,6 +52,8 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     const scrape = await bb.page.evaluate(runPikkitScrape)
     const marketCount = Object.keys(scrape.props).length
     if (!marketCount) return { gameKey: g.gameKey, error: 'no markets scraped' }
+
+    if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, dryRun: true, scrape }
 
     const imported = await postImport(scrape, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, marketsScraped: marketCount, imported }
@@ -75,15 +77,17 @@ export async function GET(req: Request) {
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ date, games: 0, results: [] })
 
-  const gamePkParam = new URL(req.url).searchParams.get('gamePk')
+  const reqUrl = new URL(req.url)
+  const gamePkParam = reqUrl.searchParams.get('gamePk')
+  const dryRun = reqUrl.searchParams.get('dryRun') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(games, g), contextId)
+    const result = await scrapeOneGame(g, date, legIndexFor(games, g), contextId, dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
-  const results = await fanOutToSelf('/api/cron/scrape-pikkit', games.map(g => g.gamePk))
+  const results = await fanOutToSelf('/api/cron/scrape-pikkit', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
   return NextResponse.json({ date, games: games.length, results })
 }

@@ -29,7 +29,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
   const bb = await openSession()
   try {
     await bb.page.goto('https://www.nc.betmgm.com/en/sports/baseball-23/betting/usa-9/mlb-75', { waitUntil: 'domcontentloaded' })
@@ -48,10 +48,12 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on MGM listing page' }
     await bb.page.waitForTimeout(2000)
 
-    const url = bb.page.url()
-    const propsUrl = url + (url.includes('?') ? '&' : '?') + 'market=PlayerProps'
+    const pageUrl = bb.page.url()
+    const propsUrl = pageUrl + (pageUrl.includes('?') ? '&' : '?') + 'market=PlayerProps'
     const scrapes = await scrapeMgmGame(bb.page, propsUrl)
     if (!scrapes.length) return { gameKey: g.gameKey, error: 'no thresholds scraped — is "Batter home runs" present for this game?' }
+
+    if (dryRun) return { gameKey: g.gameKey, thresholdsScraped: scrapes.length, dryRun: true, scrapes }
 
     const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, thresholdsScraped: scrapes.length, imported }
@@ -70,15 +72,17 @@ export async function GET(req: Request) {
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ date, games: 0, results: [] })
 
-  const gamePkParam = new URL(req.url).searchParams.get('gamePk')
+  const reqUrl = new URL(req.url)
+  const gamePkParam = reqUrl.searchParams.get('gamePk')
+  const dryRun = reqUrl.searchParams.get('dryRun') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(games, g))
+    const result = await scrapeOneGame(g, date, legIndexFor(games, g), dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
-  const results = await fanOutToSelf('/api/cron/scrape-mgm', games.map(g => g.gamePk))
+  const results = await fanOutToSelf('/api/cron/scrape-mgm', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
   return NextResponse.json({ date, games: games.length, results })
 }

@@ -35,7 +35,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
   const bb = await openSession()
   try {
     await bb.page.goto('https://sportsbook.fanduel.com/navigation/mlb', { waitUntil: 'domcontentloaded' })
@@ -58,6 +58,8 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
     const scrapes = await bb.page.evaluate(runFanduelScrape)
     if (!scrapes.length) return { gameKey: g.gameKey, error: 'no tabs scraped' }
 
+    if (dryRun) return { gameKey: g.gameKey, tabsScraped: scrapes.length, dryRun: true, scrapes }
+
     const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, tabsScraped: scrapes.length, imported }
   } catch (e: any) {
@@ -75,15 +77,17 @@ export async function GET(req: Request) {
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ date, games: 0, results: [] })
 
-  const gamePkParam = new URL(req.url).searchParams.get('gamePk')
+  const url = new URL(req.url)
+  const gamePkParam = url.searchParams.get('gamePk')
+  const dryRun = url.searchParams.get('dryRun') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(games, g))
+    const result = await scrapeOneGame(g, date, legIndexFor(games, g), dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
-  const results = await fanOutToSelf('/api/cron/scrape-fanduel', games.map(g => g.gamePk))
+  const results = await fanOutToSelf('/api/cron/scrape-fanduel', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
   return NextResponse.json({ date, games: games.length, results })
 }

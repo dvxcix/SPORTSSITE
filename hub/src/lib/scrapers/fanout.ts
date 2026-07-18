@@ -5,10 +5,10 @@ import { PLATFORM_URL } from '@/lib/stripe'
 // this is what lets a full-slate "sweep" run finish in roughly one game's
 // worth of time instead of the sum of every game's time, which is what
 // blew past the function's time budget when everything ran in one loop.
-export async function fanOutToSelf(routePath: string, gamePks: number[]): Promise<any[]> {
+export async function fanOutToSelf(routePath: string, gamePks: number[], extraQuery = ''): Promise<any[]> {
   const settled = await Promise.allSettled(
     gamePks.map(async gamePk => {
-      const res = await fetch(`${PLATFORM_URL}${routePath}?gamePk=${gamePk}`, {
+      const res = await fetch(`${PLATFORM_URL}${routePath}?gamePk=${gamePk}${extraQuery}`, {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
       })
       return { gamePk, status: res.status, body: await res.json().catch(() => null) }
