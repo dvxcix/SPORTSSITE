@@ -73,34 +73,34 @@ type FlatBatter = {
 const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
 const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`
 
-// Small centered row of book-logo + raw-price badges, used under both the
-// FHR%/HR% columns (showing the OPENING price that % is relative to) and
-// every MARKETS column (showing the CURRENT price the delta was computed
-// from) — same "actual odds, not just the ratio/delta" request for both.
-// Same small gold 📊 corner tag Dugout/Pitcher Report already use for
-// community Pikkit pick counts — anchored bottom-left of the cell via
-// absolute positioning (the cell itself needs position:relative) so it
-// never disturbs the value/book-badge layout above it.
+// Same small gold 📊 pick-count tag Dugout/Pitcher Report already use for
+// community Pikkit picks — its own normal-flow line under the book badges
+// (not an absolutely-positioned corner tag) so it gets real space instead
+// of being crammed illegibly small into a corner.
 function PickBadge({ picks, label }: { picks: number | null; label: string }) {
   if (picks == null) return null
   return (
     <Tooltip content={`${picks.toLocaleString()} community ${label} picks`}>
-      <div style={{ position: 'absolute', bottom: 1, left: 2, fontSize: 6.5, fontWeight: 900, color: 'var(--gold, #eab308)', cursor: 'help', lineHeight: 1 }}>
-        {picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}📊
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 2, fontSize: 10, fontWeight: 800, color: 'var(--gold, #eab308)', cursor: 'help', lineHeight: 1 }}>
+        📊{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
       </div>
     </Tooltip>
   )
 }
 
+// Centered row of book-logo + raw-price badges, used under both the
+// FHR%/HR% columns (showing the OPENING price that % is relative to) and
+// every MARKETS column (showing the CURRENT price the delta was computed
+// from) — same "actual odds, not just the ratio/delta" request for both.
 function BookBadges({ prices, books }: { prices: any; books: string[] }) {
   const entries = books.map(b => [b, prices?.[b]] as const).filter((e): e is [string, number] => e[1] != null)
   if (!entries.length) return null
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 2, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 3, flexWrap: 'wrap' }}>
       {entries.map(([book, v]) => (
         <Tooltip key={book} content={book}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 8.5, fontWeight: 700, color: 'var(--text-3)' }}>
-            <BookLogo vendor={book} size={9} />{oStr(v)}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>
+            <BookLogo vendor={book} size={13} />{oStr(v)}
           </span>
         </Tooltip>
       ))}
@@ -437,18 +437,18 @@ export function BatterCostClient({ date }: { date: string }) {
                     show the OPENING FanDuel price the ratio doesn't otherwise
                     surface anywhere, so a reader can see the real number
                     behind the percentage. */}
-                <td style={{ padding: '6px 6px', textAlign: 'center', whiteSpace: 'nowrap', ...pctColor(b.fhr_pct, maxAbsFhrPct) }}>
+                <td style={{ padding: '8px 8px', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 14, ...pctColor(b.fhr_pct, maxAbsFhrPct) }}>
                   {pctStr(b.fhr_pct)}
                   <BookBadges prices={{ fanduel: b.rawProps?.open?.fhr ?? null }} books={['fanduel']} />
                 </td>
-                <td style={{ padding: '6px 6px', textAlign: 'center', whiteSpace: 'nowrap', ...pctColor(b.sa_pct, maxAbsSaPct) }}>
+                <td style={{ padding: '8px 8px', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 14, ...pctColor(b.sa_pct, maxAbsSaPct) }}>
                   {pctStr(b.sa_pct)}
                   <BookBadges prices={{ fanduel: b.rawProps?.open?.saFd ?? null }} books={['fanduel']} />
                 </td>
                 {MARKETS.map(m => {
                   const d = b.deltas[m.key]
                   return (
-                    <td key={m.key} style={{ padding: '6px 6px', paddingBottom: 10, position: 'relative', textAlign: 'center', whiteSpace: 'nowrap', ...deltaColor(d?.delta ?? null, maxAbsByMarket[m.key]) }}>
+                    <td key={m.key} style={{ padding: '8px 8px', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 14, ...deltaColor(d?.delta ?? null, maxAbsByMarket[m.key]) }}>
                       {d?.delta == null ? '—' : (
                         <Tooltip content={`Opened ${oStr(d.open)} → now ${oStr(d.current)}`}>
                           <span>{oStr(d.delta)}</span>
