@@ -110,6 +110,16 @@ export async function GET(req: Request) {
   if (upserts.length) {
     const { error } = await admin.from('pregame_odds_snapshots').upsert(upserts, { onConflict: 'game_pk' })
     if (error) console.error('[bdl-odds cron] snapshot upsert failed', error)
+
+    // Append-only companion to the upsert above — the upsert only ever
+    // keeps the LATEST value per game_pk, so this is the only place an
+    // intraday trail of odds movement actually survives (see Batter Cost).
+    // Best-effort: a failure here shouldn't affect the live snapshot the
+    // rest of the app depends on.
+    const { error: historyError } = await admin.from('pregame_odds_snapshot_history').insert(
+      upserts.map(u => ({ game_pk: u.game_pk, game_date: u.game_date, prop_map: u.prop_map, captured_at: u.captured_at }))
+    )
+    if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', historyError)
   }
 
   return NextResponse.json({ date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length })
