@@ -77,10 +77,6 @@
       "schedule": "0 14,16,18,20,22 * * *"
     },
     {
-      "path": "/api/cron/scrape-mgm",
-      "schedule": "5 14,16,18,20,22 * * *"
-    },
-    {
       "path": "/api/cron/dispatch-scrapes",
       "schedule": "*/2 * * * *"
     },
