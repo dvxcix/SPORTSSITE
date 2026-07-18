@@ -12,6 +12,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // The Browserbase scrape-* cron routes POST here server-to-server via a
+  // CRON_SECRET bearer header, no session cookie — same bug class as cron
+  // above: the proxy redirected these to /auth/login (HTML) before each
+  // route's own requireAdmin() (which independently checks for that bearer
+  // header) ever got a chance to run. Confirmed live via Vercel logs: every
+  // automated import has been silently 307ing instead of ever actually
+  // writing anything, despite the scrapers themselves working fine. Each
+  // route still requires either that bearer token or a real signed-in
+  // admin session internally — this only skips the proxy's own cookie-only
+  // check for these three exact paths, not auth itself.
+  if (['/api/admin/fanduel-import', '/api/admin/mgm-import', '/api/admin/pikkit-import'].includes(request.nextUrl.pathname)) {
+    return NextResponse.next({ request })
+  }
+
   // Share-image PNGs are meant to be fetched by whoever a pick got shared
   // to — the recipient's browser, an external site's link-preview crawler —
   // none of whom carry a SlipSurge session cookie. Same problem as cron:
