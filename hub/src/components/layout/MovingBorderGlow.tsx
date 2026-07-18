@@ -46,8 +46,19 @@ export function MovingBorderGlow({ children, borderRadius = 8, duration = 3000 }
   children: ReactNode; borderRadius?: number; duration?: number
 }) {
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', borderRadius, padding: 1.25 }}>
-      <div style={{ position: 'absolute', inset: 0 }}>
+    <div style={{ position: 'relative', padding: 1.25 }}>
+      {/* overflow:hidden lives on THIS inset:0 layer, not the outer
+          auto-height wrapper. An overflow:hidden block whose own height is
+          'auto' collapses to 0 the instant it contains an inset:0
+          absolutely-positioned child — the abspos child's size resolution
+          races the outer's auto-height calculation instead of waiting on
+          the in-flow child below it, in every browser tested. Confirmed via
+          a standalone repro outside the app: this exact structure rendered
+          the whole nav row at 0px tall, silently vanishing it regardless of
+          viewport size (nothing zoom/mobile-specific about it — just where
+          it finally got noticed) — moving overflow:hidden down here was
+          the entire fix. */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius }}>
         <MovingDot duration={duration} rx={borderRadius - 1} ry={borderRadius - 1} />
       </div>
       {/* Guaranteed-opaque backing — the wrapped nav item's own active-state
