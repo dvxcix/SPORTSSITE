@@ -36,7 +36,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
 }
 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
-  const bb = await openSession({ stealth: true })
+  const bb = await openSession()
   try {
     await bb.page.goto('https://sportsbook.fanduel.com/navigation/mlb', { waitUntil: 'domcontentloaded' })
     // Best-effort — harmless no-op if "GAMES" is already the active tab.

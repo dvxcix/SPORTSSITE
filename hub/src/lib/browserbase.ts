@@ -37,6 +37,11 @@ export type BBSession = {
 // bot detection" capability the paid plan exists for, and FanDuel/BetMGM
 // are the sites most likely to actually need it; pass proxies:false to
 // disable for a specific call if it turns out not to be needed there.
+// NOTE: opts.stealth maps to Browserbase's `advancedStealth` session flag,
+// which turned out to BE "Verified" mode itself, not a lesser included
+// tier of it — confirmed live: passing it 403s with "Verified mode is only
+// available on the Enterprise plan" on this Startup-plan project. Don't
+// pass stealth:true from anywhere until/unless the plan changes.
 export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean } = {}): Promise<BBSession> {
   const bb = client()
   const pid = optionalProjectId()

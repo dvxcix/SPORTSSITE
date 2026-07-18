@@ -30,7 +30,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
 }
 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number) {
-  const bb = await openSession({ stealth: true })
+  const bb = await openSession()
   try {
     await bb.page.goto('https://www.nc.betmgm.com/en/sports/baseball-23/betting/usa-9/mlb-75', { waitUntil: 'domcontentloaded' })
     // "EVENTS" not "Futures" — best-effort, harmless if already active.
