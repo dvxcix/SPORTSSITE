@@ -147,11 +147,19 @@ export async function POST(req: Request) {
 
   const fallbackGameKey = gameKey ?? `${awayTeam}@${homeTeam}`
   // The bare team-pair for whatever game is selected in the dropdown right
-  // now — title detection below only returns a bare pair too (FanDuel's own
-  // event.title has no way to say "Game 2"), so this is what a detected
-  // pair gets compared against to tell "genuinely a different game" apart
-  // from "same two teams, just game 2 of a doubleheader."
-  const selectedPairKey = `${awayTeam}@${homeTeam}`
+  // now — title detection below only returns a bare ABBR@ABBR pair too
+  // (FanDuel's own event.title has no way to say "Game 2"), so this is what
+  // a detected pair gets compared against to tell "genuinely a different
+  // game" apart from "same two teams, just game 2 of a doubleheader."
+  // MUST be derived from gameKey (already ABBR@ABBR[-G2]), not from the
+  // full team names — comparing "PIT@CLE" against "Pittsburgh Pirates@
+  // Cleveland Guardians" can never match, which silently made title
+  // detection win over the passed-in gameKey on every single FD import,
+  // discarding any -G2 suffix every time (invisible on a normal day, since
+  // the result is the same string either way, but real corruption on a
+  // doubleheader — confirmed live: today's PIT@CLE game 2 scrape landed
+  // under plain "PIT@CLE", mixed in with game 1's already-finished data).
+  const selectedPairKey = gameKey ? gameKey.replace(/-G\d+$/, '') : `${awayTeam}@${homeTeam}`
 
   // Grouped per REAL game (detected from each scrape's own event.title),
   // not per the single game selected in the dropdown — a pasted batch can
