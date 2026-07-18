@@ -12,10 +12,15 @@ function client(): Browserbase {
   return new Browserbase({ apiKey })
 }
 
-function projectId(): string {
-  const id = process.env.BROWSERBASE_PROJECT_ID
-  if (!id) throw new Error('BROWSERBASE_PROJECT_ID is not configured')
-  return id
+// projectId is genuinely optional on every Browserbase SDK call — omitted,
+// the project is inferred from the API key itself (confirmed directly in
+// @browserbasehq/sdk's own SessionCreateParams/ContextCreateParams type
+// comments: "Optional - if not provided, the project will be inferred from
+// the API key"). Pass it through if it happens to be set, but never require
+// it — this used to throw when BROWSERBASE_PROJECT_ID wasn't configured,
+// which was an unnecessary extra setup step that isn't actually needed.
+function optionalProjectId(): string | undefined {
+  return process.env.BROWSERBASE_PROJECT_ID || undefined
 }
 
 export type BBSession = {
@@ -28,11 +33,16 @@ export type BBSession = {
 // Pass `contextId` to resume a persisted, already-authenticated context
 // (Pikkit) instead of starting logged out every run — see
 // createPersistentContext() below for how that context gets its login in
-// the first place.
-export async function openSession(opts: { contextId?: string; stealth?: boolean } = {}): Promise<BBSession> {
+// the first place. Proxies default ON — this is exactly the "bypass basic
+// bot detection" capability the paid plan exists for, and FanDuel/BetMGM
+// are the sites most likely to actually need it; pass proxies:false to
+// disable for a specific call if it turns out not to be needed there.
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean } = {}): Promise<BBSession> {
   const bb = client()
+  const pid = optionalProjectId()
   const session = await bb.sessions.create({
-    projectId: projectId(),
+    ...(pid ? { projectId: pid } : {}),
+    proxies: opts.proxies ?? true,
     browserSettings: {
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
@@ -57,9 +67,10 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean 
 // you do the actual sign-in by hand, once, in the Live View.
 export async function createPersistentContext(): Promise<{ contextId: string; liveViewUrl: string }> {
   const bb = client()
-  const context = await bb.contexts.create({ projectId: projectId() })
+  const pid = optionalProjectId()
+  const context = await bb.contexts.create(pid ? { projectId: pid } : {})
   const session = await bb.sessions.create({
-    projectId: projectId(),
+    ...(pid ? { projectId: pid } : {}),
     keepAlive: true,
     browserSettings: { context: { id: context.id, persist: true } },
   })
