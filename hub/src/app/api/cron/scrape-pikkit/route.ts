@@ -40,7 +40,14 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(1500)
 
-    const clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    // Same reasoning as FanDuel/MGM's retry — confirmed live the account
+    // stays signed in fine, it's the listing SPA still rendering game
+    // cards after domcontentloaded that was making the search miss.
+    let clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    if (!clicked) {
+      await bb.page.waitForTimeout(3000)
+      clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+    }
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on Pikkit MLB listing page — check the persisted context is still signed in' }
     await bb.page.waitForTimeout(2000)
 
