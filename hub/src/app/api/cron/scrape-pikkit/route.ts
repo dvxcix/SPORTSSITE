@@ -49,16 +49,32 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
     }
     if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on Pikkit MLB listing page — check the persisted context is still signed in' }
-    await bb.page.waitForTimeout(2000)
+    // "More wagers" navigates to a whole new page (the game's event page),
+    // not just an in-place DOM update — give it real time to load.
+    await bb.page.waitForTimeout(3000)
 
-    await clickTabByText(bb.page, 'Odds')
-    await bb.page.waitForTimeout(1000)
-    await clickTabByText(bb.page, 'Batting Props')
-    await bb.page.waitForTimeout(1000)
+    let oddsClicked = await clickTabByText(bb.page, 'Odds')
+    if (!oddsClicked) {
+      await bb.page.waitForTimeout(2000)
+      oddsClicked = await clickTabByText(bb.page, 'Odds')
+    }
+    await bb.page.waitForTimeout(1500)
 
-    const scrape = await bb.page.evaluate(runPikkitScrape)
-    const marketCount = Object.keys(scrape.props).length
-    if (!marketCount) return { gameKey: g.gameKey, error: 'no markets scraped' }
+    let propsClicked = await clickTabByText(bb.page, 'Batting Props')
+    if (!propsClicked) {
+      await bb.page.waitForTimeout(2000)
+      propsClicked = await clickTabByText(bb.page, 'Batting Props')
+    }
+    await bb.page.waitForTimeout(1500)
+
+    let scrape = await bb.page.evaluate(runPikkitScrape)
+    let marketCount = Object.keys(scrape.props).length
+    if (!marketCount) {
+      await bb.page.waitForTimeout(3000)
+      scrape = await bb.page.evaluate(runPikkitScrape)
+      marketCount = Object.keys(scrape.props).length
+    }
+    if (!marketCount) return { gameKey: g.gameKey, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked }
 
     if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, dryRun: true, scrape }
 
