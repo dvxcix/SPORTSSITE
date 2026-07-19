@@ -57,6 +57,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Whop's webhook — server-to-server POST with no browser session, same bug
+  // class as the routes above. Authenticates itself independently via the
+  // Standard Webhooks signature header, not a session cookie.
+  if (request.nextUrl.pathname === '/api/webhooks/whop') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
