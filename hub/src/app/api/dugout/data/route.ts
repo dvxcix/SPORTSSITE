@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -274,6 +275,9 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
 }
 
 export async function GET(req: Request) {
+  const gate = await requireTier('ultimate')
+  if (gate.error) return gate.error
+
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   // If the service-role key isn't configured, degrade gracefully: skip

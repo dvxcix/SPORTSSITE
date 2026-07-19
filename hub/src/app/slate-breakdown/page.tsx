@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SlateBreakdownClient } from '@/components/slate/SlateBreakdownClient'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 0
 
@@ -47,6 +48,7 @@ export default async function SlateBreakdownPage({
   const nextDate = offsetDate(date, 1)
 
   return (
+    <TierGate requiredTier="advanced" label="Slate Breakdown">
     <div style={{ padding: '20px 16px', maxWidth: 1400, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <div>
@@ -100,5 +102,6 @@ export default async function SlateBreakdownPage({
         <SlateBreakdownClient date={date} />
       </Suspense>
     </div>
+    </TierGate>
   )
 }

@@ -3,6 +3,7 @@ import { attachUserReactions } from '@/lib/queries'
 import { redirect } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { Bookmark } from 'lucide-react'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,7 @@ export default async function BookmarksPage() {
   const posts = (await attachUserReactions(bookmarkedPosts, user.id)).map(p => ({ ...p, user_bookmarked: true }))
 
   return (
+    <TierGate requiredTier="basic" label="Bookmarks">
     <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-zinc-800 rounded-lg">
@@ -50,5 +52,6 @@ export default async function BookmarksPage() {
         </div>
       )}
     </div>
+    </TierGate>
   )
 }

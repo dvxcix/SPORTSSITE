@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { BatterCostClient } from '@/components/batter-cost/BatterCostClient'
 import Link from 'next/link'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 0
 
@@ -40,6 +41,7 @@ export default async function BatterCostPage({
   const nextDate = offsetDate(date, 1)
 
   return (
+    <TierGate requiredTier="ultimate" label="Batter Cost">
     <div style={{ padding: '20px 16px' }}>
       {/* Header */}
       <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -106,5 +108,6 @@ export default async function BatterCostPage({
         <BatterCostClient date={date} />
       </Suspense>
     </div>
+    </TierGate>
   )
 }

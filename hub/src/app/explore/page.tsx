@@ -6,6 +6,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { UserBadges } from '@/components/social/UserBadges'
 import { FollowButton } from '@/components/social/FollowButton'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 300
 
@@ -88,6 +89,7 @@ export default async function ExplorePage() {
   ]
 
   return (
+    <TierGate requiredTier="basic" label="Explore">
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
       {/* Sport categories */}
       <section>
@@ -143,6 +145,7 @@ export default async function ExplorePage() {
         <PeopleSection title="Top Bettors" icon={<Users size={14} />} users={topBettors as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />
       )}
     </div>
+    </TierGate>
   )
 }
 

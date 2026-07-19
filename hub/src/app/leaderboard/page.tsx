@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { LeaderboardClient } from './LeaderboardClient'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 120
 
@@ -114,5 +115,9 @@ export default async function LeaderboardPage() {
 
   const allSports = Array.from(new Set((pickStats ?? []).map(p => p.sport).filter(Boolean))) as string[]
 
-  return <LeaderboardClient users={ranked} allSports={allSports} />
+  return (
+    <TierGate requiredTier="basic" label="Leaderboard">
+      <LeaderboardClient users={ranked} allSports={allSports} />
+    </TierGate>
+  )
 }

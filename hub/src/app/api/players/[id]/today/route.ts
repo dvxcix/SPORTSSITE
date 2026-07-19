@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getTodaysMatchups, findPlayerToday } from '@/lib/mlbSchedule'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 
@@ -10,6 +11,9 @@ export const revalidate = 0
 // /api/players/[id]/pitch-log): live MLB schedule fetch, nothing to do
 // with Supabase or the pitch log at all.
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const { id } = await params
   const mlbId = Number(id)
   if (!Number.isFinite(mlbId)) {

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { Hash } from 'lucide-react'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 60
 
@@ -20,6 +21,7 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
   const posts = await attachUserReactions(rawPosts ?? [], user?.id)
 
   return (
+    <TierGate requiredTier="basic" label="Hashtags">
     <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
@@ -42,5 +44,6 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
         </div>
       )}
     </div>
+    </TierGate>
   )
 }

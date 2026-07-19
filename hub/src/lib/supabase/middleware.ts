@@ -86,13 +86,17 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  // Only the marketing homepage and static legal/info pages (no real member
-  // data on any of them) are visible signed-out — /feed, /channels, and
-  // /leaderboard used to be in this list too, which meant anyone with the
-  // URL could browse real members' posts, picks, and win/loss records
-  // without an account. Homepage handles its own signed-in redirect to
-  // /feed itself (see app/page.tsx), so it stays public here.
-  const isPublicRoute = ['/', '/about', '/faq', '/terms', '/privacy', '/responsible-gambling', '/support'].some(p =>
+  // Only the marketing homepage, static legal/info pages, and pricing (no
+  // real member data on any of them) are visible signed-out — /feed,
+  // /channels, and /leaderboard used to be in this list too, which meant
+  // anyone with the URL could browse real members' posts, picks, and
+  // win/loss records without an account. Homepage handles its own signed-in
+  // redirect to /feed itself (see app/page.tsx), so it stays public here.
+  // /pricing must stay public too — it's the tier sign-up funnel, and a
+  // prospective subscriber needs to see plans before they have an account
+  // to log into; PricingCheckoutButton itself handles sending a logged-out
+  // click to /auth/login.
+  const isPublicRoute = ['/', '/about', '/faq', '/terms', '/privacy', '/responsible-gambling', '/support', '/pricing'].some(p =>
     request.nextUrl.pathname === p
   )
 

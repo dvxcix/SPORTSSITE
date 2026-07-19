@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { DugoutClient } from '@/components/dugout/DugoutClient'
 import Link from 'next/link'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 0
 
@@ -35,6 +36,7 @@ export default async function DugoutPage({
   const nextDate = offsetDate(date, 1)
 
   return (
+    <TierGate requiredTier="ultimate" label="The Dugout">
     <div style={{ padding: '20px 16px' }}>
       {/* Header */}
       <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -101,5 +103,6 @@ export default async function DugoutPage({
         <DugoutClient date={date} />
       </Suspense>
     </div>
+    </TierGate>
   )
 }

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { PlayerPageClient } from '@/components/players/PlayerPageClient'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 0
 
@@ -18,8 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   return (
-    <Suspense fallback={null}>
-      <PlayerPageClient mlbId={id} />
-    </Suspense>
+    <TierGate requiredTier="basic" label="Player Pages">
+      <Suspense fallback={null}>
+        <PlayerPageClient mlbId={id} />
+      </Suspense>
+    </TierGate>
   )
 }

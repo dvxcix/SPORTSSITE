@@ -3,6 +3,7 @@ import {
   getPitcherStarts, getBatterGames, fetchManyGamePitchEvents,
   pitcherRowsByHand, batterRowsByPitchTypeAndHand,
 } from '@/lib/pitchLog'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 
@@ -14,6 +15,9 @@ export const revalidate = 0
 // opt-in endpoint the Pitcher Report page calls only when the user asks for
 // a real N-start/N-game window instead of the 14-day one.
 export async function GET(req: Request) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const { searchParams } = new URL(req.url)
   const pitcherId = Number(searchParams.get('pitcherId'))
   const batterIdsParam = searchParams.get('batterIds') || ''

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 
@@ -51,6 +52,9 @@ async function fetchPlayerPitches(admin: AdminClient, mlbId: number, role: 'pitc
 // heavier than everything else on the page combined, so it loads
 // independently rather than blocking the rest of the page on it.
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const { id } = await params
   const mlbId = Number(id)
   if (!Number.isFinite(mlbId)) {

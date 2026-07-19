@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { currentSeason } from '@/lib/playerSync'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 
@@ -83,6 +84,9 @@ const DIM_SPLIT_CATEGORIES: { key: string; category: string; roles: ('batter' | 
 // batting stance), and a recent home-run log (as batter, and separately
 // allowed as pitcher).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const { id } = await params
   const mlbId = Number(id)
   if (!Number.isFinite(mlbId)) {
