@@ -10,10 +10,10 @@ export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
 
-  const { data } = await supabase.from('users').select('tier, account_type').eq('id', user.id).single()
+  const { data } = await supabase.from('users').select('tier, account_type, beta_access_active').eq('id', user.id).single()
   const userTier = (data?.tier as Tier | undefined) ?? 'free'
 
-  if ((await hasFullAccessOverride(supabase, user.id, data?.account_type)) || hasTierAccess(userTier, minTier)) {
+  if (hasFullAccessOverride(data?.account_type, data?.beta_access_active) || hasTierAccess(userTier, minTier)) {
     return { userId: user.id }
   }
   return { error: NextResponse.json({ error: 'Upgrade required' }, { status: 403 }) }
