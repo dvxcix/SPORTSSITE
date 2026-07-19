@@ -10,7 +10,7 @@ import { X } from 'lucide-react'
 // logged-in user's internal id attached as metadata (see
 // /api/whop/checkout-session), so the webhook can map a completed payment
 // back to the right SlipSurge account without email-matching.
-export function PricingCheckoutButton({ planId, label, loggedIn }: { planId: string; label: string; loggedIn: boolean }) {
+export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { planId: string; label: string; loggedIn: boolean; highlight?: boolean }) {
   const router = useRouter()
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -48,6 +48,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn }: { planId: str
           width: '100%', fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent)',
           padding: '10px 16px', borderRadius: 10, border: 'none', cursor: loading ? 'default' : 'pointer',
           opacity: loading ? 0.7 : 1,
+          boxShadow: highlight ? '0 0 0 3px rgba(180,255,77,0.15)' : 'none',
         }}
       >
         {loading ? 'Loading…' : label}
