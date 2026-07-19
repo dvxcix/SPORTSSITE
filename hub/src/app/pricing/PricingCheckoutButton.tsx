@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 // Whop's embed accepts EITHER planId OR sessionId (mutually exclusive per its
 // own types) — we always use sessionId here, created server-side with the
@@ -41,18 +42,15 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
 
   return (
     <>
-      <button
+      <Button
         onClick={startCheckout}
         disabled={loading}
-        style={{
-          width: '100%', fontSize: 13, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent)',
-          padding: '10px 16px', borderRadius: 10, border: 'none', cursor: loading ? 'default' : 'pointer',
-          opacity: loading ? 0.7 : 1,
-          boxShadow: highlight ? '0 0 0 3px rgba(180,255,77,0.15)' : 'none',
-        }}
+        size="lg"
+        className="w-full bg-[#B4FF4D] text-black hover:bg-[#A3EE3C]"
+        style={highlight ? { boxShadow: '0 0 0 3px rgba(180,255,77,0.15)' } : undefined}
       >
         {loading ? 'Loading…' : label}
-      </button>
+      </Button>
       {error && <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>{error}</p>}
       {sessionId && (
         <div style={{
