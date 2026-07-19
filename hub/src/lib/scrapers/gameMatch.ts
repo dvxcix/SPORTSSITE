@@ -57,16 +57,27 @@ export function legIndexer() {
 // Stateless equivalent of legIndexer() for the per-game invocation model —
 // each game now scrapes in its own separate serverless invocation (fired
 // concurrently rather than looped in one process), so there's no shared
-// process memory to count clicks across a run. Instead, derives the same
-// leg index purely from today's full games list: among every game sharing
-// this team pairing (a doubleheader), sorts by gamePk and returns this
-// game's rank. Deterministic — every invocation that fetches the same
-// games list computes the identical index for a given gamePk.
-export function legIndexFor(games: { gamePk: number; awayTeam: string; homeTeam: string }[], target: { gamePk: number; awayTeam: string; homeTeam: string }): number {
-  const pair = games
-    .filter(g => g.awayTeam === target.awayTeam && g.homeTeam === target.homeTeam)
-    .sort((a, b) => a.gamePk - b.gamePk)
-  return Math.max(0, pair.findIndex(g => g.gamePk === target.gamePk))
+// process memory to count clicks across a run.
+//
+// USED TO sort today's games by gamePk and rank this game within its team
+// pairing — broke live on a real doubleheader: the Dodgers/Yankees game
+// postponed the day before got made up as today's "Game 1" but landed a
+// HIGHER gamePk (823523) than the already-separately-scheduled "Game 2"
+// (823521), since gamePks are assigned in whatever order MLB's own systems
+// create the schedule rows in, not necessarily gameNumber order. Sorting by
+// gamePk ranked Game 2 first, so Game 1's dispatch-scrapes trigger clicked
+// the SECOND "Dodgers @ Yankees" listing on FanDuel (the 7pm game) while
+// still posting under Game 1's bare gameKey — the 7pm game's real odds
+// silently landed mislabeled as Game 1's.
+//
+// gameKey itself already encodes the correct order — it's built from MLB's
+// own explicit gameNumber field in mlbSchedule.ts (bare key for game 1,
+// "-G2" for game 2, etc.), which is authoritative and doesn't depend on
+// gamePk assignment order at all. Reading that suffix directly instead of
+// re-deriving order from gamePk sidesteps the whole class of bug.
+export function legIndexFor(target: { gameKey: string }): number {
+  const m = /-G(\d+)$/.exec(target.gameKey)
+  return m ? Number(m[1]) - 1 : 0
 }
 
 export async function clickTabByText(page: Page, label: string, exact = true): Promise<boolean> {

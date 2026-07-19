@@ -84,7 +84,7 @@ export async function GET(req: Request) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(games, g), dryRun)
+    const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
