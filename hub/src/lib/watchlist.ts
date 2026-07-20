@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { combineOdds, calcPayout } from '@/lib/parlayCalc'
+import { combineOdds } from '@/lib/parlayCalc'
 
 // ─── Prop metadata ─────────────────────────────────────────────────────────
 // Maps a raw BDL propMap key (or synthetic key) to what shows on the
@@ -126,6 +126,18 @@ export async function removeWatchlistItem(id: string): Promise<void> {
 // legs.length > 1 -> a parlay, which requires every leg to share a book —
 // sportsbooks don't let you parlay legs across different books, since each
 // book only pays out its own combined price.
+//
+// Reported live: people posting picks for games that had already started
+// (in one case, already finished). Root cause — this function used to
+// insert straight into posts/picks from the browser client, completely
+// bypassing the "has this game already started" check that only ever got
+// added to /api/posts/pick (the FeedComposer/PickComposer path). The Dugout
+// Watchlist -> Post flow (PostBetModal, via WatchlistContext.postBet) never
+// went through that route at all, so a leg sitting in someone's watchlist
+// from earlier in the day (or left over from a prior slate) could be
+// posted with zero server-side validation. Now routes through the same
+// endpoint every other pick/parlay post uses, so there's exactly one place
+// that check can be forgotten again, not two.
 export async function postBetToFeed(
   userId: string,
   legs: WatchlistItem[],
@@ -138,14 +150,10 @@ export async function postBetToFeed(
   if (isParlay && books.size !== 1) {
     throw new Error('All parlay legs must be from the same sportsbook')
   }
-  const book = legs[0].book ?? null
 
   const oddsList = legs.map(l => l.odds)
   if (oddsList.some(o => o == null)) throw new Error('Every leg needs odds to post')
   const combined = isParlay ? combineOdds(oddsList as number[]) : (oddsList[0] as number)
-
-  const wager = opts.wagerAmount ?? null
-  const payout = wager != null && wager > 0 ? calcPayout(wager, combined).payout : null
 
   const supabase = createClient()
 
@@ -159,57 +167,22 @@ export async function postBetToFeed(
     ? `${legs.length}-Leg Parlay · ${combined > 0 ? `+${combined}` : combined}`
     : `${legs[0].player_name} — ${legs[0].prop_label}${legs[0].odds != null ? ` ${legs[0].odds! > 0 ? '+' : ''}${legs[0].odds}` : ''}`)
 
-  const legsSummary = legs.map(l => ({
-    player_name: l.player_name,
-    team: l.team,
-    mlb_id: l.mlb_id,
-    headshot_url: l.headshot_url,
-    prop_key: l.prop_key,
-    prop_label: l.prop_label,
-    line: l.line,
-    odds: l.odds,
-    result: 'pending',
-  }))
-
-  const { data: post, error: postErr } = await supabase
-    .from('posts')
-    .insert({
-      author_id: userId,
+  const res = await fetch('/api/posts/pick', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      legs: legs.map(l => ({
+        mlb_id: l.mlb_id, player_name: l.player_name, team: l.team, headshot_url: l.headshot_url,
+        game_pk: l.game_pk, game_date: l.game_date,
+        prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, book: l.book, odds: l.odds,
+      })),
       content,
-      post_type: isParlay ? 'parlay' : 'pick',
-      sport: legs[0].sport,
-      game_pk: isParlay ? null : legs[0].game_pk,
-      is_premium: !!opts.isPremium,
+      wager: opts.wagerAmount ?? null,
       visibility: opts.visibility ?? 'public',
-      book,
-      combined_odds: combined,
-      wager_amount: wager,
-      potential_payout: payout,
-      pick_data: isParlay
-        ? { legs: legsSummary, book, combined_odds: combined, wager_amount: wager, potential_payout: payout, result: 'pending' }
-        : { ...legsSummary[0], book, odds_by_book: legs[0].odds_by_book, wager_amount: wager, potential_payout: payout },
-    })
-    .select('id')
-    .single()
-  if (postErr) throw postErr
-
-  const pickRows = legs.map(l => ({
-    user_id: userId,
-    post_id: post.id,
-    sport: l.sport,
-    game_pk: l.game_pk,
-    game_date: l.game_date,
-    mlb_id: l.mlb_id,
-    pick_type: PROP_META[l.prop_key]?.pickType ?? l.prop_key,
-    team: l.team,
-    player_name: l.player_name,
-    line: l.line,
-    odds: l.odds,
-    book: l.book,
-    result: 'pending',
-  }))
-  const { data: picks, error: pickErr } = await supabase.from('picks').insert(pickRows).select('id')
-  if (pickErr) throw pickErr
+    }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || 'Failed to post')
 
   // The post + picks rows are already live at this point — a failure here
   // only means a watchlist item lingers instead of being cleared out, not
@@ -225,7 +198,10 @@ export async function postBetToFeed(
     if (deleteErr) console.error('[postBetToFeed] failed to remove posted watchlist item', deleteErr)
   }
 
-  return { postId: post.id, pickIds: (picks ?? []).map((p: any) => p.id) }
+  // /api/posts/pick doesn't return individual pick row ids (only whether
+  // picks tracking succeeded overall) — nothing currently reads this
+  // array's contents, only its presence, so an empty array is fine here.
+  return { postId: data.id, pickIds: [] }
 }
 
 // Legacy single-item wrapper — kept for any existing callers.
