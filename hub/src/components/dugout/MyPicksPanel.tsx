@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchMyPicks } from '@/lib/myPicks'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import type { Post } from '@/lib/supabase/types'
+import { useDraggableFab } from '@/lib/useDraggableFab'
 
 // Same "local day" framing as the watchlist — this panel is for tracking
 // slips you're live-watching today, not an archive of every pick you've
@@ -17,6 +18,7 @@ function isFromToday(post: Post) {
 
 export function MyPicksButton() {
   const { user } = useAuth()
+  const fab = useDraggableFab('mp-fab-pos')
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
@@ -62,15 +64,20 @@ export function MyPicksButton() {
         .mp-fab { position: fixed; right: 20px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
       `}</style>
       <button
+        ref={fab.ref}
         className="mp-fab"
+        title="Drag to move"
         onClick={() => setOpen(true)}
+        {...fab.handlers}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '12px 16px', borderRadius: 999,
           background: 'var(--surface)', color: 'var(--text-1)',
-          border: '1px solid var(--border-2)', cursor: 'pointer',
+          border: '1px solid var(--border-2)', cursor: 'grab',
           fontSize: 13, fontWeight: 800,
           boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+          userSelect: 'none',
+          ...fab.style,
         }}
       >
         <ClipboardList size={15} /> My Picks

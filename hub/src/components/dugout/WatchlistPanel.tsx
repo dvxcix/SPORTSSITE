@@ -7,6 +7,7 @@ import { useWatchlist } from '@/context/WatchlistContext'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { PostBetModal } from './PostBetModal'
+import { useDraggableFab } from '@/lib/useDraggableFab'
 
 const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
 
@@ -107,6 +108,7 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
 
 export function WatchlistButton() {
   const wl = useWatchlist()
+  const fab = useDraggableFab('wl-fab-pos')
   const [open, setOpen] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -138,15 +140,20 @@ export function WatchlistButton() {
         .wl-fab { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
       `}</style>
       <button
+        ref={fab.ref}
         className="wl-fab"
+        title="Drag to move"
         onClick={() => setOpen(true)}
+        {...fab.handlers}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '12px 16px', borderRadius: 999,
           background: 'var(--accent)', color: 'var(--accent-fg)',
-          border: 'none', cursor: 'pointer',
+          border: 'none', cursor: 'grab',
           fontSize: 13, fontWeight: 800,
           boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+          userSelect: 'none',
+          ...fab.style,
         }}
       >
         <span style={{ fontSize: 15 }}>★</span> Watchlist
