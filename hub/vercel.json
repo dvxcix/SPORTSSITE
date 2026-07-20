@@ -87,6 +87,10 @@
     {
       "path": "/api/cron/whop-addon-reconcile",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/whop-reconcile",
+      "schedule": "0 * * * *"
     }
   ]
 }
