@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function AdminUserActions({ userId, currentType, isVerified, bannedUntil }: {
+export function AdminUserActions({ userId, currentType, isVerified, bannedUntil, adminGrantedTier }: {
   userId: string; currentType: string; isVerified: boolean; bannedUntil?: string | null
+  adminGrantedTier?: 'basic' | 'advanced' | 'ultimate' | null
 }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -32,6 +33,10 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil 
   }
 
   const setType = (type: string) => callManage({ userId, action: 'setType', value: type })
+  function setGrantedTier(value: string) {
+    if (!value) callManage({ userId, action: 'revokeGrantedTier' })
+    else callManage({ userId, action: 'grantTier', value })
+  }
   const toggleVerify = () => callManage({ userId, action: 'verify', value: !isVerified })
   const deleteUser = () => {
     if (!confirm('Permanently delete this user? This cannot be undone.')) return
@@ -55,7 +60,19 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil 
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 flex-wrap">
+      <select
+        value={adminGrantedTier ?? ''}
+        onChange={e => setGrantedTier(e.target.value)}
+        disabled={loading}
+        title="Manually grant a tier — separate from a real Whop purchase, never overwritten by one"
+        className="text-[10px] font-bold px-1.5 py-1 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 outline-none"
+      >
+        <option value="">No grant</option>
+        <option value="basic">Grant Basic</option>
+        <option value="advanced">Grant Advanced</option>
+        <option value="ultimate">Grant Ultimate</option>
+      </select>
       <button onClick={toggleVerify} disabled={loading}
         className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isVerified ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' : 'bg-zinc-800 text-zinc-500 hover:text-white'}`}>
         {isVerified ? '✓ Verified' : 'Verify'}

@@ -43,6 +43,10 @@ export interface User {
   whop_plan_id?: string | null
   discord_advanced_claimed?: boolean
   beta_access_active?: boolean
+  admin_granted_tier?: 'basic' | 'advanced' | 'ultimate' | null
+  admin_granted_tier_by?: string | null
+  admin_granted_tier_at?: string | null
+  admin_granted_tier_note?: string | null
 }
 
 export interface Post {

@@ -20,8 +20,8 @@ export async function TierGate({ requiredTier, label, children }: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return <TierUpsell requiredTier={requiredTier} label={label} />
 
-  const { data } = await supabase.from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed').eq('id', user.id).maybeSingle()
-  const userTier = effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed)
+  const { data } = await supabase.from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', user.id).maybeSingle()
+  const userTier = effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)
 
   if (hasFullAccessOverride(data?.account_type, data?.beta_access_active) || hasTierAccess(userTier, requiredTier)) {
     return <>{children}</>

@@ -71,7 +71,7 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
 ]
 const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
 
-export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, fullAccessReason = null, checkoutStatus }: {
+export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, adminGrantedTier = null, fullAccessReason = null, checkoutStatus }: {
   loggedIn: boolean
   currentTier: Tier
   // The real purchased tier (before the free Discord-Advanced floor is
@@ -82,6 +82,10 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   // to know about the distinction.
   rawTier?: Tier
   discordAdvancedClaimed?: boolean
+  // Same reasoning as discordAdvancedClaimed — a tier granted manually from
+  // /admin/users is also not a real Whop subscription, so it gets the same
+  // "nothing to cancel" treatment instead of the dead-end cancel link.
+  adminGrantedTier?: Tier | null
   // Admin/beta accounts bypass every tier gate outright — set, every card's
   // buy/cancel/claim CTA is suppressed in favor of one banner, instead of
   // showing a purchased-looking "Advanced — Current" or inviting a pointless
@@ -183,12 +187,18 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
             // "Cancel to Downgrade" only makes sense when the card is below
             // what was actually bought.
             const isClaimCovered = loggedIn && discordAdvancedClaimed && cardRank > realRank && cardRank <= TIER_RANK.advanced
+            // Same reasoning, for a manual /admin/users grant instead of the
+            // Discord claim — capped at whatever tier was actually granted,
+            // not always Advanced.
+            const adminGrantRank = adminGrantedTier ? TIER_RANK[adminGrantedTier] : -1
+            const isGrantCovered = loggedIn && adminGrantedTier != null && cardRank > realRank && cardRank <= adminGrantRank
+            const coverageNote = isGrantCovered ? 'Granted by admin' : isClaimCovered ? 'Included free via Discord' : null
             // Based on what was actually bought (realRank), not the
-            // claim-inflated floor — someone who's never paid for anything
-            // has no real subscription to cancel just because the Discord
-            // claim floor sits above this card.
+            // claim/grant-inflated floor — someone who's never paid for
+            // anything has no real subscription to cancel just because the
+            // floor sits above this card.
             const isRealDowngrade = loggedIn && cardRank < realRank
-            const isRealCurrent = isCurrent && !isClaimCovered
+            const isRealCurrent = isCurrent && !isClaimCovered && !isGrantCovered
             const hasAnnual = interval === 'annual' && !!t.annualPrice
             const displayPrice = t.tier === 'free' ? 0 : hasAnnual ? (t.annualPrice! / 12) : t.monthlyPrice
             const planId = interval === 'annual' && t.annualPlanId ? t.annualPlanId : t.monthlyPlanId
@@ -233,17 +243,17 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                   {!fullAccess && planId && !isCurrent && !isDowngrade && (
                     <PricingCheckoutButton planId={planId} label={`Get ${t.label}`} loggedIn={loggedIn} highlight={t.highlight === 'premium' || t.highlight === 'popular'} />
                   )}
-                  {/* Covered by the free Discord-Advanced claim, not an
-                      actual purchase — nothing to cancel or manage on Whop
-                      for this card, so no button, just the same explanation
-                      /settings/membership itself gives. Suppressed for
-                      full-access accounts too — the page banner above
-                      already covers it, and this card's cause may not even
-                      be the Discord claim (e.g. an admin who also happens to
-                      hold it). */}
-                  {!fullAccess && isClaimCovered && (
+                  {/* Covered by the free Discord-Advanced claim or a manual
+                      admin grant, not an actual purchase — nothing to cancel
+                      or manage on Whop for this card, so no button, just the
+                      same explanation /settings/membership itself gives.
+                      Suppressed for full-access accounts too — the page
+                      banner above already covers it, and this card's cause
+                      may not even be the claim/grant (e.g. an admin who also
+                      happens to hold one). */}
+                  {!fullAccess && coverageNote && (
                     <p style={{ fontSize: 11.5, color: 'var(--text-3)', textAlign: 'center', padding: '9px 0' }}>
-                      Included free via Discord
+                      {coverageNote}
                     </p>
                   )}
                   {/* Downgrading (including all the way back to Free) only

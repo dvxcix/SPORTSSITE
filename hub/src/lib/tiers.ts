@@ -1,6 +1,7 @@
 export type Tier = 'free' | 'basic' | 'advanced' | 'ultimate'
 
-const TIER_RANK: Record<Tier, number> = { free: 0, basic: 1, advanced: 2, ultimate: 3 }
+export const TIER_RANK: Record<Tier, number> = { free: 0, basic: 1, advanced: 2, ultimate: 3 }
+export const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
 export function hasTierAccess(userTier: Tier, required: Tier): boolean {
   return TIER_RANK[userTier] >= TIER_RANK[required]
@@ -58,9 +59,18 @@ export function checkoutApiKeyEnvFor(planId: string): 'ADDON_WHOP_KEY' | 'WHOP_A
 // (WHOP_PLANS.plan_Q1Ey6RMgjS9XQ) already has their `tier` column at
 // 'ultimate' from that purchase, so this only ever raises the floor, never
 // substitutes for a real purchase.
-export function effectiveTier(rawTier: Tier, discordAdvancedClaimed: boolean | null | undefined): Tier {
-  if (discordAdvancedClaimed && TIER_RANK[rawTier] < TIER_RANK.advanced) return 'advanced'
-  return rawTier
+//
+// adminGrantedTier is the same kind of floor-raise, set from /admin/users
+// (users.admin_granted_tier) instead of a Discord membership — deliberately
+// a separate column from `tier` (which only the Whop webhook/reconcile
+// crons write) so a manual grant can never be silently overwritten by a
+// real Whop event for that account, and never substitutes for what was
+// actually purchased either.
+export function effectiveTier(rawTier: Tier, discordAdvancedClaimed: boolean | null | undefined, adminGrantedTier?: Tier | null): Tier {
+  let t = rawTier
+  if (discordAdvancedClaimed && TIER_RANK[t] < TIER_RANK.advanced) t = 'advanced'
+  if (adminGrantedTier && TIER_RANK[adminGrantedTier] > TIER_RANK[t]) t = adminGrantedTier
+  return t
 }
 
 export function hasFullAccessOverride(

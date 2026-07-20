@@ -19,6 +19,7 @@ export default async function PricingPage({
   let currentTier: Tier = 'free'
   let rawTier: Tier = 'free'
   let discordAdvancedClaimed = false
+  let adminGrantedTier: Tier | null = null
   // Admin/beta full access bypasses every tier gate regardless of what's
   // actually purchased or claimed (see hasFullAccessOverride) — showing
   // "Advanced — Current" and a live "Get Ultimate" buy button to an admin
@@ -27,10 +28,11 @@ export default async function PricingPage({
   // per-card state.
   let fullAccessReason: 'admin' | 'beta' | null = null
   if (user) {
-    const { data } = await supabase.from('users').select('tier, discord_advanced_claimed, account_type, beta_access_active').eq('id', user.id).maybeSingle()
+    const { data } = await supabase.from('users').select('tier, discord_advanced_claimed, admin_granted_tier, account_type, beta_access_active').eq('id', user.id).maybeSingle()
     rawTier = (data?.tier as Tier | undefined) ?? 'free'
     discordAdvancedClaimed = !!data?.discord_advanced_claimed
-    currentTier = effectiveTier(rawTier, discordAdvancedClaimed)
+    adminGrantedTier = (data?.admin_granted_tier as Tier | null) ?? null
+    currentTier = effectiveTier(rawTier, discordAdvancedClaimed, adminGrantedTier)
     fullAccessReason = data?.account_type === 'admin' ? 'admin' : data?.beta_access_active ? 'beta' : null
   }
 
@@ -40,6 +42,7 @@ export default async function PricingPage({
       currentTier={currentTier}
       rawTier={rawTier}
       discordAdvancedClaimed={discordAdvancedClaimed}
+      adminGrantedTier={adminGrantedTier}
       fullAccessReason={fullAccessReason}
       checkoutStatus={status ?? null}
     />

@@ -62,14 +62,14 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
         tier_status: 'active',
         tier_current_period_end: periodEnd,
         whop_membership_id: membershipId ?? null,
-      }).eq('id', internalUserId).select('username, discord_advanced_claimed').single()
+      }).eq('id', internalUserId).select('username, discord_advanced_claimed, admin_granted_tier').single()
 
       if (error || !updated) {
         results.push({ planId, membershipId, internalUserId, error: error?.message ?? 'user not found' })
         continue
       }
 
-      await syncTierBadge(admin, internalUserId, effectiveTier(planInfo.tier as Tier, updated.discord_advanced_claimed))
+      await syncTierBadge(admin, internalUserId, effectiveTier(planInfo.tier as Tier, updated.discord_advanced_claimed, updated.admin_granted_tier))
       results.push({ planId, membershipId, internalUserId, username: updated.username, status, granted: planInfo.tier })
     }
   }

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { effectiveTier, type Tier } from '@/lib/tiers'
+import { syncTierBadge } from '@/lib/tierBadges'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -39,6 +41,39 @@ export async function POST(req: Request) {
     }
     const { error } = await admin.from('users').update({ account_type: value }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Deliberately a separate column from `tier` (which only the Whop
+  // webhook/reconcile crons write) — a manual grant can never be silently
+  // overwritten by a real Whop event for that account, and effectiveTier()
+  // only ever raises the floor with it, never substitutes for a real
+  // purchase. Re-syncs the profile badge immediately (same as every other
+  // place tier can change) instead of leaving it stale until next login/
+  // webhook.
+  if (action === 'grantTier') {
+    if (!['basic', 'advanced', 'ultimate'].includes(value)) {
+      return NextResponse.json({ error: 'value must be basic, advanced, or ultimate' }, { status: 400 })
+    }
+    const { data: updated, error } = await admin.from('users').update({
+      admin_granted_tier: value,
+      admin_granted_tier_by: auth.adminId,
+      admin_granted_tier_at: new Date().toISOString(),
+    }).eq('id', userId).select('tier, discord_advanced_claimed').single()
+    if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
+    await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, value as Tier))
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'revokeGrantedTier') {
+    const { data: updated, error } = await admin.from('users').update({
+      admin_granted_tier: null,
+      admin_granted_tier_by: null,
+      admin_granted_tier_at: null,
+      admin_granted_tier_note: null,
+    }).eq('id', userId).select('tier, discord_advanced_claimed').single()
+    if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
+    await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, null))
     return NextResponse.json({ ok: true })
   }
 

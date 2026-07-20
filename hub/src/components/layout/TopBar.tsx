@@ -113,7 +113,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   // dropdown is one more place someone can glance at their real access
   // level, so it can't show a different answer than any of those.
   const rawTier = (profile?.tier as Tier) ?? 'free'
-  const currentTier = effectiveTier(rawTier, profile?.discord_advanced_claimed)
+  const currentTier = effectiveTier(rawTier, profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null | undefined)
   const fullAccess = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active)
   const tierLabel = fullAccess ? (profile?.account_type === 'admin' ? 'Admin' : 'Beta — Full Access') : TIER_LABEL[currentTier]
 

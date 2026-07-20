@@ -26,13 +26,19 @@ export default async function MembershipSettingsPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('tier, tier_status, tier_current_period_end, whop_plan_id, beta_access_active, account_type, discord_advanced_claimed, whop_user_id')
+    .select('tier, tier_status, tier_current_period_end, whop_plan_id, beta_access_active, account_type, discord_advanced_claimed, admin_granted_tier, whop_user_id')
     .eq('id', user.id)
     .single()
 
   const rawTier = (profile?.tier as Tier) ?? 'free'
-  const tier = effectiveTier(rawTier, profile?.discord_advanced_claimed)
+  const adminGrantedTier = (profile?.admin_granted_tier as Tier | null) ?? null
+  const tier = effectiveTier(rawTier, profile?.discord_advanced_claimed, adminGrantedTier)
   const includedViaDiscord = !!profile?.discord_advanced_claimed && !hasTierAccess(rawTier, 'advanced')
+  // A manual grant raises the floor the same way the Discord claim does —
+  // "included" here just means "not the raw purchased tier," same test as
+  // includedViaDiscord but checked against whatever tier was actually
+  // granted instead of always Advanced.
+  const includedViaGrant = !!adminGrantedTier && !hasTierAccess(rawTier, adminGrantedTier)
   const plan = profile?.whop_plan_id ? WHOP_PLANS[profile.whop_plan_id] : null
   const isPaid = rawTier !== 'free'
   const isActive = profile?.tier_status === 'active'
@@ -100,10 +106,12 @@ export default async function MembershipSettingsPage({
         <p className="text-2xl font-black text-white mb-1">{TIER_LABEL[displayTier]}</p>
         {fullAccess
           ? <p className="text-sm text-zinc-500">{profile?.account_type === 'admin' ? 'Full access as an admin account.' : 'Full access during the beta program.'}</p>
-          : includedViaDiscord
-            ? <p className="text-sm text-zinc-500">Included free with your Discord membership.</p>
-            : plan && <p className="text-sm text-zinc-500">{plan.label}{renewalDate ? ` — renews ${renewalDate}` : ''}</p>}
-        {!isPaid && !includedViaDiscord && !fullAccess && <p className="text-sm text-zinc-500">Free forever — upgrade any time for the research tools.</p>}
+          : includedViaGrant
+            ? <p className="text-sm text-zinc-500">Granted by an admin.</p>
+            : includedViaDiscord
+              ? <p className="text-sm text-zinc-500">Included free with your Discord membership.</p>
+              : plan && <p className="text-sm text-zinc-500">{plan.label}{renewalDate ? ` — renews ${renewalDate}` : ''}</p>}
+        {!isPaid && !includedViaDiscord && !includedViaGrant && !fullAccess && <p className="text-sm text-zinc-500">Free forever — upgrade any time for the research tools.</p>}
 
         {!fullAccess && (
           <div className="mt-4 flex gap-2">

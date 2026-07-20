@@ -99,8 +99,8 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           tier_status: 'active',
           tier_current_period_end: periodEnd,
           whop_membership_id: membershipId ?? null,
-        }).eq('id', internalUserId).select('discord_advanced_claimed').single()
-        await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed))
+        }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
+        await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
         break
       }
       case 'payment.failed':
@@ -113,11 +113,12 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         const { data: updated } = await supabase.from('users').update({
           tier: 'free',
           tier_status: type,
-        }).eq('id', internalUserId).select('discord_advanced_claimed').single()
+        }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
         // Losing a purchased tier doesn't necessarily mean losing every
         // badge — someone who cancels the $10 add-on drops from Ultimate
-        // back to Advanced (still free via the Discord plan), not to nothing.
-        await syncTierBadge(supabase, internalUserId, effectiveTier('free', updated?.discord_advanced_claimed))
+        // back to Advanced (still free via the Discord plan or an admin
+        // grant), not to nothing.
+        await syncTierBadge(supabase, internalUserId, effectiveTier('free', updated?.discord_advanced_claimed, updated?.admin_granted_tier))
         break
       }
       default:
