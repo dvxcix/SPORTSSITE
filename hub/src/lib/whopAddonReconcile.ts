@@ -14,6 +14,19 @@ type ReconcileResult =
   | { error: string }
   | { totalMemberships: number; results: any[] }
 
+// Temporary — need to see the raw pagination metadata shape (page/next
+// cursor field names) that a single unpaginated call already proved exists:
+// the last real reconcile only saw 10 memberships and missed a real
+// purchase from 8 hours earlier. Returns the raw parsed body untouched.
+export async function debugRawMembershipsFetch(): Promise<any> {
+  const apiKey = process.env.ADDON_WHOP_KEY
+  if (!apiKey) return { error: 'ADDON_WHOP_KEY is not configured' }
+  const url = `https://api.whop.com/api/v2/memberships?plan_id=${ADDON_PLAN_ID}`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
+  const body = await res.json().catch(() => null)
+  return { status: res.status, keys: body ? Object.keys(body) : null, body }
+}
+
 export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const apiKey = process.env.ADDON_WHOP_KEY
   if (!apiKey) return { error: 'ADDON_WHOP_KEY is not configured' }
