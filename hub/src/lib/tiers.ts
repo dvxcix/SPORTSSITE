@@ -14,6 +14,13 @@ export const WHOP_PLANS: Record<string, { tier: Exclude<Tier, 'free'>; interval:
   plan_3HbuZZv6vhNu9: { tier: 'advanced', interval: 'annual', label: 'Advanced — Annual' },
   plan_tCrVAX62uKyEq: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate — Monthly' },
   plan_1eWRTXv0XXTrI: { tier: 'ultimate', interval: 'annual', label: 'Ultimate — Annual' },
+  // $10/mo add-on for people who already get Advanced free via the Discord
+  // community plan (see effectiveTier/discord_advanced_claimed below) — buying
+  // this on top bumps them to Ultimate through the exact same checkout/webhook
+  // path every other plan uses, just at the discounted add-on price. Not
+  // shown on the public /pricing page — only surfaced on /settings/membership
+  // to accounts that already have the claim, since it's meaningless without it.
+  plan_Q1Ey6RMgjS9XQ: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate Add-on — Discord Members' },
 }
 
 // Current beta cohort (169 users, backfilled from who held the "Beta Tester"
@@ -28,6 +35,19 @@ export const WHOP_PLANS: Record<string, { tier: Exclude<Tier, 'free'>; interval:
 // Reused by both TierGate (page rendering) and requireTier (API routes) —
 // admin or active beta access bypasses tier requirements entirely, same as
 // FeatureGate's admin-preview treatment.
+// Holding the Discord-community Whop plan bundles Advanced in for free —
+// "claimed" at Whop OAuth login (see auth/whop/callback), re-synced every
+// login since there's no webhook for it. This never lowers a real paid
+// tier — someone who bought Ultimate directly stays Ultimate even without
+// the claim, and someone with the claim who also buys the $10 add-on plan
+// (WHOP_PLANS.plan_Q1Ey6RMgjS9XQ) already has their `tier` column at
+// 'ultimate' from that purchase, so this only ever raises the floor, never
+// substitutes for a real purchase.
+export function effectiveTier(rawTier: Tier, discordAdvancedClaimed: boolean | null | undefined): Tier {
+  if (discordAdvancedClaimed && TIER_RANK[rawTier] < TIER_RANK.advanced) return 'advanced'
+  return rawTier
+}
+
 export function hasFullAccessOverride(
   accountType: string | null | undefined,
   betaAccessActive: boolean | null | undefined

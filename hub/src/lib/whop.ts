@@ -90,11 +90,14 @@ export async function fetchWhopUserInfo(accessToken: string): Promise<WhopUserIn
   } catch { return null }
 }
 
-// Whether this Whop user owns the configured Product — the actual beta
-// gate, not just "has a Whop account." WHOP_ACCESS_PASS_ID holds a `prod_`
-// ID (confirmed), which matches this endpoint's documented `prod_xxxx` =
-// "Product access" resource type — one of the stronger signals that this
-// is the right endpoint (see caveat below).
+// Whether this Whop user owns the given Product/access-pass — originally
+// just the beta gate (called with WHOP_ACCESS_PASS_ID), now also reused to
+// check the separate Discord-community product on the same Whop company
+// (see DISCORD_ADVANCED_PRODUCT_ID in auth/whop/callback) — hence
+// accessPassId being a parameter instead of only ever reading one env var.
+// WHOP_ACCESS_PASS_ID holds a `prod_` ID (confirmed), which matches this
+// endpoint's documented `prod_xxxx` = "Product access" resource type — one
+// of the stronger signals that this is the right endpoint (see caveat below).
 //
 // CAVEAT: Whop's own docs gave three different candidate paths for this
 // check across different pages (`/me/has_access/:id`, an experimental
@@ -105,8 +108,7 @@ export async function fetchWhopUserInfo(accessToken: string): Promise<WhopUserIn
 // real `prod_` ID in use) but still hasn't been exercised against a real
 // Whop account — verify against a live login, adjust the path here if it
 // 404s/behaves unexpectedly.
-export async function checkHasAccess(whopUserId: string, accessToken: string): Promise<boolean> {
-  const accessPassId = process.env.WHOP_ACCESS_PASS_ID
+export async function checkHasAccess(whopUserId: string, accessToken: string, accessPassId: string): Promise<boolean> {
   if (!accessPassId) return false
   try {
     const res = await fetch(`${WHOP_API_BASE}/api/v1/users/${whopUserId}/access/${accessPassId}`, {

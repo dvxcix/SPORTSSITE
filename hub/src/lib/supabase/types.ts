@@ -41,6 +41,7 @@ export interface User {
   tier_status?: string | null
   tier_current_period_end?: string | null
   whop_plan_id?: string | null
+  discord_advanced_claimed?: boolean
 }
 
 export interface Post {

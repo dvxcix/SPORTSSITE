@@ -5,6 +5,16 @@ import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess } from '@/lib/w
 
 const STATE_COOKIE = 'whop_oauth_state'
 
+// The Discord/community product — same Whop company as WHOP_CLIENT_ID's
+// OAuth app (confirmed by the user), just a different product than the
+// original beta pass (WHOP_ACCESS_PASS_ID). Holding this product's plan
+// (plan_XouplTDWLVzUG) bundles SlipSurge's Advanced tier in for free —
+// "claimed" by signing in with Whop, same mechanism as the beta gate below,
+// just checked against a second product instead of a hardcoded rejection.
+// Hardcoded (not env-configured) since it's stable product config, same as
+// every plan id already hardcoded in tiers.ts's WHOP_PLANS.
+const DISCORD_ADVANCED_PRODUCT_ID = 'prod_EA8yQduATdG8E'
+
 // Whop redirects back here after the user approves (or denies) the OAuth
 // request. Supabase Auth has no native Whop provider, so this can't just
 // call exchangeCodeForSession like the Google callback does — instead this
@@ -42,8 +52,19 @@ export async function GET(request: Request) {
   const whopUser = await fetchWhopUserInfo(tokenResponse.access_token)
   if (!whopUser || !whopUser.email) return loginFailed('whop_auth_failed')
 
-  const hasAccess = await checkHasAccess(whopUser.sub, tokenResponse.access_token)
-  if (!hasAccess) return loginFailed('whop_no_access')
+  // Two independent products can let someone through: the original beta
+  // pass, or the Discord-community product (which bundles Advanced tier).
+  // Neither write anything yet — betaHasAccess never has (beta access is
+  // granted by a one-time manual backfill onto beta_access_active,
+  // deliberately decoupled from any live check, see hasFullAccessOverride);
+  // discordHasAccess gets written to discord_advanced_claimed below, once
+  // we know which SlipSurge account this is.
+  const accessPassId = process.env.WHOP_ACCESS_PASS_ID
+  const [betaHasAccess, discordHasAccess] = await Promise.all([
+    accessPassId ? checkHasAccess(whopUser.sub, tokenResponse.access_token, accessPassId) : Promise.resolve(false),
+    checkHasAccess(whopUser.sub, tokenResponse.access_token, DISCORD_ADVANCED_PRODUCT_ID),
+  ])
+  if (!betaHasAccess && !discordHasAccess) return loginFailed('whop_no_access')
 
   const admin = createAdminClient()
 
@@ -69,6 +90,11 @@ export async function GET(request: Request) {
   if (existing) {
     authUserId = existing.id
     authUserEmail = existing.email
+    // Re-synced every login (not just set-once-true) — this is the only
+    // check we have without a webhook, so a login after cancelling the
+    // Discord plan is also what clears the claim.
+    const { error: claimErr } = await admin.from('users').update({ discord_advanced_claimed: discordHasAccess }).eq('id', authUserId)
+    if (claimErr) console.error('[whop/callback] failed to sync discord_advanced_claimed', claimErr)
   } else {
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email: whopUser.email,
@@ -112,6 +138,7 @@ export async function GET(request: Request) {
         whop_user_id: whopUser.sub,
         avatar_url: byEmail.avatar_url || whopUser.picture,
         display_name: byEmail.display_name || whopUser.name || whopUser.preferred_username,
+        discord_advanced_claimed: discordHasAccess,
       }).eq('id', authUserId)
       if (linkUpdateErr) console.error('[whop/callback] failed to link whop_user_id to existing account', linkUpdateErr)
     } else {
@@ -127,6 +154,7 @@ export async function GET(request: Request) {
         avatar_url: whopUser.picture,
         account_type: 'user',
         whop_user_id: whopUser.sub,
+        discord_advanced_claimed: discordHasAccess,
       }, { onConflict: 'id', ignoreDuplicates: true })
       // Unlike the existing-account branch above, this account has no
       // profile row at all if this fails — a real auth.users row now exists
