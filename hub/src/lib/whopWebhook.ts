@@ -40,11 +40,24 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
   const timestamp = req.headers.get('webhook-timestamp')
   const signature = req.headers.get('webhook-signature')
   if (!id || !timestamp || !signature || !secret) {
+    // Temporary — every real delivery is 400ing and this is the fastest way
+    // to see WHY without guessing: which of the three Standard Webhooks
+    // headers Whop is actually sending (names only, never header VALUES
+    // beyond presence) versus what this code assumes.
+    console.error('[whop-webhook] not configured', {
+      hasId: !!id, hasTimestamp: !!timestamp, hasSignature: !!signature, hasSecret: !!secret,
+      headerNames: Array.from(req.headers.keys()),
+    })
     return NextResponse.json({ error: 'Webhook not configured' }, { status: 400 })
   }
 
   const rawBody = await req.text()
   if (!verifyWhopSignature(rawBody, id, timestamp, signature, secret)) {
+    // Temporary — diagnostic only, never logs the secret or the full
+    // signature/body content.
+    console.error('[whop-webhook] signature verification failed', {
+      id, timestamp, signatureHeaderPreview: signature.slice(0, 12), bodyLength: rawBody.length,
+    })
     return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 })
   }
 
