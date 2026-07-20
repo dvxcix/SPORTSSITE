@@ -40,12 +40,26 @@ export async function GET(req: Request) {
   const planId = 'plan_Q1Ey6RMgjS9XQ'
   const planInfo = WHOP_PLANS[planId]
 
-  const res = await fetch(`https://api.whop.com/api/v1/memberships?plan=${planId}`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  })
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    return NextResponse.json({ error: `Whop memberships lookup failed: ${res.status} ${body}` }, { status: 502 })
+  // v1 with ?plan= came back "not authorized" against this specific key
+  // (confirmed live) despite the key working fine for v2 checkout_sessions
+  // creation — try v2 (matching the endpoint version already proven to work
+  // for this exact key) before giving up, since Whop's own docs disagree
+  // with themselves on membership-listing paths (same undocumented-API
+  // problem as everywhere else Whop is touched in this codebase).
+  const candidates = [
+    `https://api.whop.com/api/v2/memberships?plan_id=${planId}`,
+    `https://api.whop.com/api/v2/memberships?plan=${planId}`,
+    `https://api.whop.com/api/v1/memberships?plan_id=${planId}`,
+  ]
+  let res: Response | null = null
+  let lastErr = ''
+  for (const url of candidates) {
+    const attempt = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
+    if (attempt.ok) { res = attempt; break }
+    lastErr = `${url} -> ${attempt.status} ${await attempt.text().catch(() => '')}`
+  }
+  if (!res) {
+    return NextResponse.json({ error: `Whop memberships lookup failed on every candidate path. Last: ${lastErr}` }, { status: 502 })
   }
   const body = await res.json().catch(() => null)
   const memberships: any[] = body?.data ?? body?.memberships ?? (Array.isArray(body) ? body : [])
