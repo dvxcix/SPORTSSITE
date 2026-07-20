@@ -22,7 +22,7 @@ export async function updateSession(request: NextRequest) {
   // route still requires either that bearer token or a real signed-in
   // admin session internally — this only skips the proxy's own cookie-only
   // check for these three exact paths, not auth itself.
-  if (['/api/admin/fanduel-import', '/api/admin/mgm-import', '/api/admin/pikkit-import', '/api/admin/browserbase-sessions'].includes(request.nextUrl.pathname)) {
+  if (['/api/admin/fanduel-import', '/api/admin/mgm-import', '/api/admin/pikkit-import', '/api/admin/browserbase-sessions', '/api/admin/pikkit-context-check'].includes(request.nextUrl.pathname)) {
     return NextResponse.next({ request })
   }
 
