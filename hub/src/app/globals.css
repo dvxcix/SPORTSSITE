@@ -389,3 +389,17 @@ img { max-width: 100%; }
 @media (max-width: 480px) {
   .ss-4col-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Hide the global Watchlist/My Picks FABs while a full-screen modal
+   is open ─────────────────────────────────────────────────────────
+   Reported live: on mobile, the checkout modal's embedded payment form
+   can run taller than the visible viewport, and these two fixed-position
+   buttons (mounted site-wide via RootLayoutShell, not just on Dugout)
+   sat on top of it right where a lower field needed to be reached —
+   blocking the tap target even though the modal's own z-index is higher.
+   Any component opening a real full-screen modal sets this body class for
+   as long as it's open (see PricingCheckoutButton.tsx for the pattern). */
+body.ss-modal-open .wl-fab,
+body.ss-modal-open .mp-fab {
+  display: none !important;
+}
