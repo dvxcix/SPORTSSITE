@@ -1685,7 +1685,19 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
         className="dg-sticky-col w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
         style={{
           ...STD, position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
-          backgroundColor: expanded ? 'rgba(180,255,77,0.06)' : hasHr ? 'rgba(74,222,128,0.08)' : 'var(--bg)',
+          // Reported live (mobile): odds-column values from further right in
+          // the row showed up bleeding through the player name/position
+          // text on highlighted (confirmed-HR) rows specifically. Root
+          // cause — a `position: sticky` cell MUST be fully opaque, since
+          // its whole job is to mask the columns scrolling underneath it,
+          // but the highlighted-row background here was a translucent
+          // rgba() tint (8% alpha), so ~92% of whatever had scrolled
+          // beneath it showed straight through. Pre-blended to the same
+          // visual color against --bg (#06070A) as a solid hex instead —
+          // the non-sticky cells in the same row keep the real rgba() tint
+          // (they don't have anything to occlude, so translucency there is
+          // fine, same reasoning `expanded` already followed here).
+          backgroundColor: expanded ? '#10160e' : hasHr ? '#0b1813' : 'var(--bg)',
           backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
         }}
       >
