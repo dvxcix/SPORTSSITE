@@ -71,7 +71,19 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
 ]
 const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
 
-export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { loggedIn: boolean; currentTier: Tier; checkoutStatus: string | null }) {
+export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, checkoutStatus }: {
+  loggedIn: boolean
+  currentTier: Tier
+  // The real purchased tier (before the free Discord-Advanced floor is
+  // folded in) plus the claim flag itself — needed to tell "you'd have to
+  // cancel a real Whop subscription to leave this tier" apart from "this
+  // tier is just included free via Discord, there's nothing to cancel."
+  // Optional/defaulted so any other caller of this component doesn't need
+  // to know about the distinction.
+  rawTier?: Tier
+  discordAdvancedClaimed?: boolean
+  checkoutStatus: string | null
+}) {
   const [interval, setInterval] = useState<Interval>('monthly')
 
   return (
@@ -136,6 +148,8 @@ export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { logge
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
           {TIERS.map(t => {
             const isCurrent = t.tier === currentTier
+            const cardRank = TIER_RANK[t.tier]
+            const realRank = TIER_RANK[rawTier]
             // Whop is the billing system of record — a "downgrade" here can
             // only ever be a cancellation over there (which then reverts the
             // account to Free via the webhook), never a second purchase
@@ -143,7 +157,22 @@ export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { logge
             // already has doesn't get a buy button — that would just create
             // a separate, redundant Whop membership rather than actually
             // switching them down.
-            const isDowngrade = loggedIn && TIER_RANK[t.tier] < TIER_RANK[currentTier]
+            const isDowngrade = loggedIn && cardRank < TIER_RANK[currentTier]
+            // A card at or below the free Discord-Advanced floor, but above
+            // what was actually purchased, has nothing behind it to cancel —
+            // sending someone there to /settings/membership's "Manage on
+            // Whop" link would be a dead end (confirmed live: an account
+            // with Advanced only via the Discord claim saw no cancel/manage
+            // option there, because there's no real subscription to manage).
+            // "Cancel to Downgrade" only makes sense when the card is below
+            // what was actually bought.
+            const isClaimCovered = loggedIn && discordAdvancedClaimed && cardRank > realRank && cardRank <= TIER_RANK.advanced
+            // Based on what was actually bought (realRank), not the
+            // claim-inflated floor — someone who's never paid for anything
+            // has no real subscription to cancel just because the Discord
+            // claim floor sits above this card.
+            const isRealDowngrade = loggedIn && cardRank < realRank
+            const isRealCurrent = isCurrent && !isClaimCovered
             const hasAnnual = interval === 'annual' && !!t.annualPrice
             const displayPrice = t.tier === 'free' ? 0 : hasAnnual ? (t.annualPrice! / 12) : t.monthlyPrice
             const planId = interval === 'annual' && t.annualPlanId ? t.annualPlanId : t.monthlyPlanId
@@ -188,12 +217,21 @@ export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { logge
                   {planId && !isCurrent && !isDowngrade && (
                     <PricingCheckoutButton planId={planId} label={`Get ${t.label}`} loggedIn={loggedIn} highlight={t.highlight === 'premium' || t.highlight === 'popular'} />
                   )}
+                  {/* Covered by the free Discord-Advanced claim, not an
+                      actual purchase — nothing to cancel or manage on Whop
+                      for this card, so no button, just the same explanation
+                      /settings/membership itself gives. */}
+                  {isClaimCovered && (
+                    <p style={{ fontSize: 11.5, color: 'var(--text-3)', textAlign: 'center', padding: '9px 0' }}>
+                      Included free via Discord
+                    </p>
+                  )}
                   {/* Downgrading (including all the way back to Free) only
                       happens by cancelling the current plan on Whop — send
                       them to Membership settings, which has the real
                       "Manage on Whop" link, instead of a buy button that
                       would just stack a second plan on top. */}
-                  {isDowngrade && (
+                  {isRealDowngrade && (
                     <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
                       Cancel to Downgrade
                     </Link>
@@ -201,7 +239,7 @@ export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { logge
                   {/* Same reasoning for the plan you're already on — cancelling
                       is also a Whop action, not something this page can do
                       directly. */}
-                  {isCurrent && t.tier !== 'free' && (
+                  {isRealCurrent && t.tier !== 'free' && (
                     <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
                       Manage / Cancel
                     </Link>

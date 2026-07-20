@@ -17,10 +17,22 @@ export default async function PricingPage({
   // else access is actually checked (TierGate, requireTier), so this page
   // can't show a different answer than what's really enforced.
   let currentTier: Tier = 'free'
+  let rawTier: Tier = 'free'
+  let discordAdvancedClaimed = false
   if (user) {
     const { data } = await supabase.from('users').select('tier, discord_advanced_claimed').eq('id', user.id).maybeSingle()
-    currentTier = effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed)
+    rawTier = (data?.tier as Tier | undefined) ?? 'free'
+    discordAdvancedClaimed = !!data?.discord_advanced_claimed
+    currentTier = effectiveTier(rawTier, discordAdvancedClaimed)
   }
 
-  return <PricingClient loggedIn={!!user} currentTier={currentTier} checkoutStatus={status ?? null} />
+  return (
+    <PricingClient
+      loggedIn={!!user}
+      currentTier={currentTier}
+      rawTier={rawTier}
+      discordAdvancedClaimed={discordAdvancedClaimed}
+      checkoutStatus={status ?? null}
+    />
+  )
 }
