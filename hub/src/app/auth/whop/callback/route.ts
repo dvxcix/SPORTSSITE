@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
   if (!code || !state || !rawStateCookie) return loginFailed('whop_auth_failed')
 
-  let stored: { state: string; codeVerifier: string; nonce: string; next: string }
+  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string }
   try {
     stored = JSON.parse(rawStateCookie)
   } catch {
@@ -66,9 +66,21 @@ export async function GET(request: Request) {
     accessPassId ? checkHasAccess(whopUser.sub, tokenResponse.access_token, accessPassId) : Promise.resolve(false),
     checkHasAccess(whopUser.sub, tokenResponse.access_token, DISCORD_ADVANCED_PRODUCT_ID),
   ])
-  if (!betaHasAccess && !discordHasAccess) return loginFailed('whop_no_access')
 
   const admin = createAdminClient()
+
+  // Linking Whop onto an already-signed-in account (started at
+  // /auth/whop/login?mode=link, e.g. from Settings > Membership) is a
+  // completely different operation from logging in — there's no new
+  // account to find-or-create, and "no access to either product" isn't a
+  // failure here, just "nothing to grant." Handled entirely separately so
+  // it can't fall through into the login branches below and accidentally
+  // create a second account for someone who already has one.
+  if (stored.mode === 'link' && stored.linkUserId) {
+    return handleWhopLink(admin, stored.linkUserId, whopUser.sub, discordHasAccess, origin)
+  }
+
+  if (!betaHasAccess && !discordHasAccess) return loginFailed('whop_no_access')
 
   // Find an existing bridged account by Whop user ID first (stable across
   // email changes), falling back to nothing — a fresh Whop login always
@@ -186,4 +198,26 @@ export async function GET(request: Request) {
   completeUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
   completeUrl.searchParams.set('next', isNewAccount ? '/onboarding' : (stored.next || '/feed'))
   return NextResponse.redirect(completeUrl.toString())
+}
+
+// admin param typed loosely (matches createAdminClient()'s own inferred
+// return type) to avoid importing a Supabase generic just for this helper.
+async function handleWhopLink(admin: ReturnType<typeof createAdminClient>, linkUserId: string, whopUserId: string, discordHasAccess: boolean, origin: string) {
+  const linkFailed = (reason: string) => NextResponse.redirect(`${origin}/settings/membership?whop_link_error=${reason}`)
+
+  // This Whop identity might already be linked to someone — a DIFFERENT
+  // SlipSurge account (block it) or this same one (harmless re-link, just
+  // proceed and re-sync).
+  const { data: existingByWhop } = await admin.from('users').select('id').eq('whop_user_id', whopUserId).maybeSingle()
+  if (existingByWhop && existingByWhop.id !== linkUserId) return linkFailed('already_linked_elsewhere')
+
+  const { data: updated, error } = await admin.from('users').update({
+    whop_user_id: whopUserId,
+    discord_advanced_claimed: discordHasAccess,
+  }).eq('id', linkUserId).select('tier').single()
+  if (error || !updated) return linkFailed('link_failed')
+
+  await syncTierBadge(admin, linkUserId, effectiveTier((updated.tier as Tier) ?? 'free', discordHasAccess))
+
+  return NextResponse.redirect(`${origin}/settings/membership?whop_linked=1`)
 }

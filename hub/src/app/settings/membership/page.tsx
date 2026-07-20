@@ -8,14 +8,25 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 const DISCORD_ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
 
-export default async function MembershipSettingsPage() {
+const LINK_ERROR_LABEL: Record<string, string> = {
+  already_linked_elsewhere: 'That Whop account is already connected to a different SlipSurge account.',
+  link_failed: 'Could not connect your Whop account — please try again.',
+  whop_auth_failed: 'Whop sign-in failed — please try again.',
+}
+
+export default async function MembershipSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ whop_linked?: string; whop_link_error?: string }>
+}) {
+  const { whop_linked, whop_link_error } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/settings/membership')
 
   const { data: profile } = await supabase
     .from('users')
-    .select('tier, tier_status, tier_current_period_end, whop_plan_id, beta_access_active, account_type, discord_advanced_claimed')
+    .select('tier, tier_status, tier_current_period_end, whop_plan_id, beta_access_active, account_type, discord_advanced_claimed, whop_user_id')
     .eq('id', user.id)
     .single()
 
@@ -37,6 +48,30 @@ export default async function MembershipSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <h1 className="text-xl font-black text-white mb-6">Membership</h1>
+
+      {whop_linked && (
+        <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400 mb-4">
+          Whop connected{profile?.discord_advanced_claimed ? ' — your free Advanced tier is now active.' : '.'}
+        </div>
+      )}
+      {whop_link_error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400 mb-4">
+          {LINK_ERROR_LABEL[whop_link_error] || 'Could not connect your Whop account — please try again.'}
+        </div>
+      )}
+
+      {!profile?.whop_user_id && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-4">
+          <h3 className="font-bold text-white mb-1">Connect Whop</h3>
+          <p className="text-xs text-zinc-500 mb-3">
+            If you signed up with X or Discord, connecting your Whop account here checks it for a free Advanced tier through our Discord membership — you don't need to sign in with Whop again, just link it once.
+          </p>
+          <a href="/auth/whop/login?mode=link&next=/settings/membership"
+            className="inline-block bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">
+            Connect Whop
+          </a>
+        </div>
+      )}
 
       {(profile?.account_type === 'admin' || profile?.beta_access_active) && (
         <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400 mb-4">
