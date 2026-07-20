@@ -371,3 +371,9 @@ img { max-width: 100%; }
 .pick-loss { border-color: rgba(255,77,106,0.25); background: rgba(255,77,106,0.05); }
 .pick-push { border-color: rgba(255,184,77,0.15); background: rgba(255,184,77,0.05); }
 .pick-pending { border-color: var(--border-2); background: var(--surface-3); }
+
+/* ── Landing page flagship showcase (side-by-side copy + mockup) ──── */
+.ss-landing-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+@media (max-width: 760px) {
+  .ss-landing-grid { grid-template-columns: 1fr !important; }
+}
