@@ -93,12 +93,19 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           // product, or a Discord-business event unrelated to the add-on.
           break
         }
+        // This event fires on every recurring renewal payment too, not just
+        // the first purchase — only stamp tier_purchased_at when it's
+        // currently unset, so it tracks when the CURRENT subscription
+        // started, not the most recent renewal. Cleared on cancellation
+        // below, so a later resubscribe gets its own fresh start date.
+        const { data: existing } = await supabase.from('users').select('tier_purchased_at').eq('id', internalUserId).maybeSingle()
         const { data: updated } = await supabase.from('users').update({
           tier: planInfo.tier,
           whop_plan_id: planId,
           tier_status: 'active',
           tier_current_period_end: periodEnd,
           whop_membership_id: membershipId ?? null,
+          tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
         }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
         await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
         break
@@ -113,6 +120,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         const { data: updated } = await supabase.from('users').update({
           tier: 'free',
           tier_status: type,
+          tier_purchased_at: null,
         }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
         // Losing a purchased tier doesn't necessarily mean losing every
         // badge — someone who cancels the $10 add-on drops from Ultimate

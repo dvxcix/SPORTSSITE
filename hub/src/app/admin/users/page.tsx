@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { AdminUserActions } from '@/components/admin/AdminUserActions'
+import { AdminUserRow } from '@/components/admin/AdminUserRow'
 import { Search } from 'lucide-react'
-import { effectiveTier, hasTierAccess, TIER_LABEL, type Tier } from '@/lib/tiers'
+import { effectiveTier, hasTierAccess, type Tier } from '@/lib/tiers'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,19 +15,6 @@ function tierSubLabel(u: any): string | null {
   return null
 }
 
-function ConnectionDot({ label, connected }: { label: string; connected: boolean }) {
-  return (
-    <span
-      title={connected ? `${label} connected` : `${label} not connected`}
-      className={`inline-flex items-center justify-center w-6 h-5 rounded text-[9px] font-black ${
-        connected ? 'bg-green-500/15 text-green-400' : 'bg-zinc-800 text-zinc-600'
-      }`}
-    >
-      {label}
-    </span>
-  )
-}
-
 export default async function AdminUsersPage({
   searchParams,
 }: { searchParams: Promise<{ q?: string; type?: string; tier?: string }> }) {
@@ -36,7 +23,7 @@ export default async function AdminUsersPage({
   const admin = createAdminClient()
 
   let query = supabase.from('users')
-    .select('id, username, display_name, avatar_url, email, account_type, is_verified, is_active_member, follower_count, created_at, tier, discord_advanced_claimed, admin_granted_tier, beta_access_active, verified_identities, whop_user_id')
+    .select('id, username, display_name, avatar_url, email, account_type, is_verified, is_active_member, follower_count, created_at, tier, discord_advanced_claimed, admin_granted_tier, admin_granted_tier_at, beta_access_active, verified_identities, whop_user_id, whop_plan_id, tier_status, tier_current_period_end, tier_purchased_at, whop_membership_id')
     .order('created_at', { ascending: false })
 
   if (q) query = query.or(`username.ilike.%${q}%,display_name.ilike.%${q}%,email.ilike.%${q}%`)
@@ -120,55 +107,7 @@ export default async function AdminUsersPage({
               const subLabel = tierSubLabel(u)
               const emailVerified = emailVerifiedMap.get(u.id) ?? false
               return (
-                <tr key={u.id} className="hover:bg-zinc-800/40 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-black text-white overflow-hidden shrink-0">
-                        {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-white">{u.display_name || u.username}</p>
-                          {u.is_verified && <span className="text-green-400 text-xs">✓</span>}
-                        </div>
-                        <p className="text-xs text-zinc-500">{u.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      u.account_type === 'admin' ? 'bg-red-500/10 text-red-400' :
-                      u.account_type === 'creator' ? 'bg-yellow-500/10 text-yellow-400' :
-                      'bg-zinc-800 text-zinc-400'
-                    }`}>{u.account_type.toUpperCase()}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-white font-medium">{TIER_LABEL[displayTier]}</p>
-                    {subLabel && <p className="text-[10px] text-zinc-500">{subLabel}</p>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <ConnectionDot label="X" connected={!!u.verified_identities?.x} />
-                      <ConnectionDot label="DC" connected={!!u.verified_identities?.discord} />
-                      <ConnectionDot label="WH" connected={!!u.whop_user_id} />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-bold ${emailVerified ? 'text-green-400' : 'text-red-400'}`}>
-                      {emailVerified ? '✓' : '✗'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-400">{u.follower_count ?? 0}</td>
-                  <td className="px-4 py-3 text-xs text-zinc-500">{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <AdminUserActions
-                      userId={u.id}
-                      currentType={u.account_type}
-                      isVerified={u.is_verified}
-                      adminGrantedTier={u.admin_granted_tier}
-                    />
-                  </td>
-                </tr>
+                <AdminUserRow key={u.id} user={u} displayTier={displayTier} subLabel={subLabel} emailVerified={emailVerified} />
               )
             })}
           </tbody>

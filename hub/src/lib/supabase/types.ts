@@ -40,6 +40,7 @@ export interface User {
   tier?: 'free' | 'basic' | 'advanced' | 'ultimate'
   tier_status?: string | null
   tier_current_period_end?: string | null
+  tier_purchased_at?: string | null
   whop_plan_id?: string | null
   discord_advanced_claimed?: boolean
   beta_access_active?: boolean
