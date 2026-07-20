@@ -39,11 +39,19 @@ export default async function MembershipSettingsPage({
   const renewalDate = profile?.tier_current_period_end
     ? new Date(profile.tier_current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null
+  // Admin/beta full access already bypasses every tier gate regardless of
+  // what's actually purchased or claimed — showing "Advanced" here (because
+  // that's all the real tier + Discord claim add up to) undersold what the
+  // account can actually do. Display-only: doesn't touch tier/rawTier, which
+  // stay the real billing state everywhere else on this page.
+  const fullAccess = profile?.account_type === 'admin' || !!profile?.beta_access_active
+  const displayTier: Tier = fullAccess ? 'ultimate' : tier
   // The $10 add-on only makes sense on top of the free Discord-included
   // Advanced — someone who already bought Ultimate outright has no use for
-  // it, and someone without the claim at all can't use it either (it's not
-  // sold standalone on /pricing).
-  const showDiscordAddon = !!profile?.discord_advanced_claimed && !hasTierAccess(tier, 'ultimate')
+  // it, someone without the claim at all can't use it either (it's not sold
+  // standalone on /pricing), and a full-access account already has Ultimate
+  // regardless of any purchase.
+  const showDiscordAddon = !fullAccess && !!profile?.discord_advanced_claimed && !hasTierAccess(tier, 'ultimate')
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
@@ -89,17 +97,21 @@ export default async function MembershipSettingsPage({
             </span>
           )}
         </div>
-        <p className="text-2xl font-black text-white mb-1">{TIER_LABEL[tier]}</p>
-        {includedViaDiscord
-          ? <p className="text-sm text-zinc-500">Included free with your Discord membership.</p>
-          : plan && <p className="text-sm text-zinc-500">{plan.label}{renewalDate ? ` — renews ${renewalDate}` : ''}</p>}
-        {!isPaid && !includedViaDiscord && <p className="text-sm text-zinc-500">Free forever — upgrade any time for the research tools.</p>}
+        <p className="text-2xl font-black text-white mb-1">{TIER_LABEL[displayTier]}</p>
+        {fullAccess
+          ? <p className="text-sm text-zinc-500">{profile?.account_type === 'admin' ? 'Full access as an admin account.' : 'Full access during the beta program.'}</p>
+          : includedViaDiscord
+            ? <p className="text-sm text-zinc-500">Included free with your Discord membership.</p>
+            : plan && <p className="text-sm text-zinc-500">{plan.label}{renewalDate ? ` — renews ${renewalDate}` : ''}</p>}
+        {!isPaid && !includedViaDiscord && !fullAccess && <p className="text-sm text-zinc-500">Free forever — upgrade any time for the research tools.</p>}
 
-        <div className="mt-4 flex gap-2">
-          <Link href="/pricing" className="bg-green-500 hover:bg-green-400 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
-            {isPaid ? 'Change Plan' : 'Upgrade'}
-          </Link>
-        </div>
+        {!fullAccess && (
+          <div className="mt-4 flex gap-2">
+            <Link href="/pricing" className="bg-green-500 hover:bg-green-400 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+              {isPaid ? 'Change Plan' : 'Upgrade'}
+            </Link>
+          </div>
+        )}
       </div>
 
       {showDiscordAddon && (

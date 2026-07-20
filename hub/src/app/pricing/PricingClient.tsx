@@ -71,7 +71,7 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
 ]
 const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
 
-export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, checkoutStatus }: {
+export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, fullAccessReason = null, checkoutStatus }: {
   loggedIn: boolean
   currentTier: Tier
   // The real purchased tier (before the free Discord-Advanced floor is
@@ -82,9 +82,15 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   // to know about the distinction.
   rawTier?: Tier
   discordAdvancedClaimed?: boolean
+  // Admin/beta accounts bypass every tier gate outright — set, every card's
+  // buy/cancel/claim CTA is suppressed in favor of one banner, instead of
+  // showing a purchased-looking "Advanced — Current" or inviting a pointless
+  // real purchase on top of access they already have.
+  fullAccessReason?: 'admin' | 'beta' | null
   checkoutStatus: string | null
 }) {
   const [interval, setInterval] = useState<Interval>('monthly')
+  const fullAccess = !!fullAccessReason
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -145,6 +151,16 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           </div>
         </div>
 
+        {fullAccess && (
+          <div style={{
+            textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--accent)',
+            background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 10,
+            padding: '10px 16px', marginBottom: 24,
+          }}>
+            {fullAccessReason === 'admin' ? 'Admin account — full access to every tier.' : 'Beta access — full access to every tier while the beta program is active.'}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
           {TIERS.map(t => {
             const isCurrent = t.tier === currentTier
@@ -184,7 +200,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                   background: t.highlight === 'premium'
                     ? 'linear-gradient(160deg, rgba(180,255,77,0.10), var(--surface-1) 55%)'
                     : 'var(--surface-1)',
-                  border: `1px solid ${t.highlight === 'premium' || isCurrent ? 'var(--accent)' : 'var(--border)'}`,
+                  border: `1px solid ${t.highlight === 'premium' || (isCurrent && !fullAccess) ? 'var(--accent)' : 'var(--border)'}`,
                   borderRadius: 16, padding: '22px 20px', display: 'flex', flexDirection: 'column', height: '100%',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2, flexWrap: 'wrap', gap: 6 }}>
@@ -192,7 +208,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)' }}>{t.label}</h2>
                       {t.highlight === 'popular' && <Badge variant="popular">Most Popular</Badge>}
                     </div>
-                    {isCurrent && <Badge variant="upcoming">Current</Badge>}
+                    {isCurrent && !fullAccess && <Badge variant="upcoming">Current</Badge>}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, margin: '10px 0 2px' }}>
@@ -214,14 +230,18 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
 
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.4 }}>{t.tagline}</p>
 
-                  {planId && !isCurrent && !isDowngrade && (
+                  {!fullAccess && planId && !isCurrent && !isDowngrade && (
                     <PricingCheckoutButton planId={planId} label={`Get ${t.label}`} loggedIn={loggedIn} highlight={t.highlight === 'premium' || t.highlight === 'popular'} />
                   )}
                   {/* Covered by the free Discord-Advanced claim, not an
                       actual purchase — nothing to cancel or manage on Whop
                       for this card, so no button, just the same explanation
-                      /settings/membership itself gives. */}
-                  {isClaimCovered && (
+                      /settings/membership itself gives. Suppressed for
+                      full-access accounts too — the page banner above
+                      already covers it, and this card's cause may not even
+                      be the Discord claim (e.g. an admin who also happens to
+                      hold it). */}
+                  {!fullAccess && isClaimCovered && (
                     <p style={{ fontSize: 11.5, color: 'var(--text-3)', textAlign: 'center', padding: '9px 0' }}>
                       Included free via Discord
                     </p>
@@ -231,7 +251,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                       them to Membership settings, which has the real
                       "Manage on Whop" link, instead of a buy button that
                       would just stack a second plan on top. */}
-                  {isRealDowngrade && (
+                  {!fullAccess && isRealDowngrade && (
                     <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
                       Cancel to Downgrade
                     </Link>
@@ -239,7 +259,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                   {/* Same reasoning for the plan you're already on — cancelling
                       is also a Whop action, not something this page can do
                       directly. */}
-                  {isRealCurrent && t.tier !== 'free' && (
+                  {!fullAccess && isRealCurrent && t.tier !== 'free' && (
                     <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
                       Manage / Cancel
                     </Link>
