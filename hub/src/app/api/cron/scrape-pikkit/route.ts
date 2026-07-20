@@ -6,6 +6,7 @@ import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { findAndClickPikkitGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
+import { PIKKIT_SIGNED_OUT_ERROR, checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -57,7 +58,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       await bb.page.waitForTimeout(3000)
       clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
     }
-    if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on Pikkit MLB listing page — check the persisted context is still signed in' }
+    if (!clicked) return { gameKey: g.gameKey, error: `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}` }
     // "More wagers" navigates to a whole new page (the game's event page),
     // not just an in-place DOM update — give it real time to load.
     await bb.page.waitForTimeout(3000)
@@ -127,5 +128,16 @@ export async function GET(req: Request) {
   }
 
   const results = await fanOutToSelf('/api/cron/scrape-pikkit', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
+
+  // Every game in the sweep hitting the exact same "not found" error is the
+  // strong signal (one game missing a listing is normal noise; ALL of them
+  // failing identically isn't) — worth spending one extra Browserbase
+  // session to confirm directly whether that's a real sign-out. See
+  // pikkitAuth.ts for why this can't just trust the error string alone.
+  const allSignedOutError = results.length > 0 && results.every(r => r.body?.result?.error === `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`)
+  if (allSignedOutError) {
+    await checkPikkitAuthAndAlert(contextId).catch(e => console.error('[scrape-pikkit] auth alert check failed', e))
+  }
+
   return NextResponse.json({ date, games: games.length, results })
 }
