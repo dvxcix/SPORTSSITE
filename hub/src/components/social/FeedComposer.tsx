@@ -4,13 +4,11 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
-import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe } from 'lucide-react'
+import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe, Users, ChevronDown } from 'lucide-react'
 import { PickComposer, type ComposedPick } from './PickComposer'
-import { PROP_META } from '@/lib/watchlist'
 import { combineOdds, calcPayout, fmtUsd } from '@/lib/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { notifyMentions } from '@/lib/mentions'
-import { notifyFollowers } from '@/lib/notify'
 import { EmojiPicker } from './EmojiPicker'
 import { sportLogoUrl } from '@/lib/sportLogos'
 
@@ -35,6 +33,8 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const [error, setError] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [visibility, setVisibility] = useState<'public' | 'followers'>('public')
+  const [visibilityOpen, setVisibilityOpen] = useState(false)
   const supabase = createClient()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -85,43 +85,42 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     setError('')
 
     const hasPick = showPickForm && legs.length > 0
-    const isParlay = legs.length > 1
-    // Every leg is only ever added once it has real odds (see canAddLeg in
-    // PickComposer), so this is non-null in practice — the type is nullable
-    // only because ComposedPick's `odds` field is shared with the display path.
-    const oddsList = legs.map(l => l.odds ?? 0)
-    const combined = isParlay ? combineOdds(oddsList) : (oddsList[0] ?? null)
     const wagerNum = parseFloat(wager)
     const hasWager = !isNaN(wagerNum) && wagerNum > 0
-    const payout = hasPick && combined != null && hasWager ? calcPayout(wagerNum, combined).payout : null
 
-    const legsSummary = legs.map(l => ({
-      player_name: l.player_name, team: l.team, mlb_id: l.mlb_id, headshot_url: l.headshot_url,
-      // game_pk/game_date were previously dropped here, leaving a parlay
-      // leg with no way to identify which exact game it belongs to except
-      // team abbreviation — the game detail page's "community picks" tab
-      // then had to fall back to abbreviation-only matching, which bleeds
-      // in unrelated games (and even other sports) sharing the same abbr.
-      game_pk: l.game_pk, game_date: l.game_date,
-      prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, odds: l.odds, result: 'pending',
-    }))
-
-    const pickData = !hasPick ? null : isParlay
-      ? {
-          legs: legsSummary,
-          book: legs[0].book,
-          combined_odds: combined,
-          wager_amount: hasWager ? wagerNum : null,
-          potential_payout: payout,
-          result: 'pending',
-        }
-      : {
-          ...legsSummary[0],
-          book: legs[0].book,
-          wager_amount: hasWager ? wagerNum : null,
-          potential_payout: payout,
-          sport: 'MLB',
-        }
+    // Picks/parlays go through a server route instead of a direct client
+    // insert — it re-validates every leg's game against MLB's live status
+    // before allowing the post to exist at all. A client-side-only check
+    // here would just be UX, not enforcement (trivially bypassed from
+    // devtools), and "real graded records" doesn't mean anything if a pick
+    // can be posted after the game's already started.
+    if (hasPick) {
+      const res = await fetch('/api/posts/pick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: content.trim(),
+          legs,
+          wager: hasWager ? wagerNum : null,
+          imageUrl: imageUrl || null,
+          visibility,
+          groupId: groupId ?? null,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setError(data?.error || 'Failed to post. Please try again.')
+        setPosting(false)
+        return
+      }
+      if (data?.picksTracked === false) {
+        setError('Posted, but your pick couldn’t be tracked for grading — it won’t show a result.')
+      }
+      setContent(''); setLegs([]); setWager(''); setImageUrl('')
+      setShowPickForm(false); setPosting(false)
+      onPost?.()
+      return
+    }
 
     let pollData = null
     if (showPollForm && pollOptions.filter(o => o.trim()).length >= 2) {
@@ -135,17 +134,12 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     const { data: post, error: err } = await supabase.from('posts').insert({
       author_id: user.id,
       content: content.trim(),
-      post_type: pickData ? (isParlay ? 'parlay' : 'pick') : pollData ? 'poll' : 'text',
-      sport: hasPick ? 'MLB' : (sport || null),
-      game_pk: isParlay ? null : (legs[0]?.game_pk ?? null),
-      book: hasPick ? legs[0].book : null,
-      combined_odds: hasPick ? combined : null,
-      wager_amount: hasWager ? wagerNum : null,
-      potential_payout: payout,
-      pick_data: pickData,
+      post_type: pollData ? 'poll' : 'text',
+      sport: sport || null,
+      pick_data: null,
       poll_data: pollData,
       media_urls: imageUrl ? [imageUrl] : [],
-      visibility: 'public',
+      visibility,
       group_id: groupId ?? null,
     }).select('id').single()
 
@@ -155,56 +149,11 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
       return
     }
 
-    // Mirror into the picks table too — this is what the settlement job
-    // reads from (game_pk + mlb_id + prop_key), not posts.pick_data. One row
-    // per leg, so a parlay grades leg-by-leg the same way a straight pick does.
-    let picksSaved = true
-    if (hasPick) {
-      const { error: picksErr } = await supabase.from('picks').insert(legs.map(l => ({
-        user_id: user.id,
-        post_id: post.id,
-        sport: 'MLB',
-        game_pk: l.game_pk,
-        game_date: l.game_date,
-        mlb_id: l.mlb_id,
-        pick_type: PROP_META[l.prop_key]?.pickType ?? l.prop_key,
-        team: l.team,
-        player_name: l.player_name,
-        line: l.line,
-        odds: l.odds,
-        book: l.book,
-        result: 'pending',
-      })))
-      // The post itself is already live at this point (can't be undone
-      // without deleting it out from under the user) — but if this failed,
-      // the pick will never grade. Surface it instead of pretending it's
-      // being tracked.
-      if (picksErr) { picksSaved = false; setError('Posted, but your pick couldn’t be tracked for grading — it won’t show a result.') }
-    }
-
     await notifyMentions(supabase, user.id, content, `/posts/${post.id}`, post.id, 'a post')
 
-    // Followers previously got no signal at all when someone they follow
-    // dropped a pick/parlay — the only notification triggers were
-    // reactions/comments/reposts/mentions on a post already made, none of
-    // which fire on the post's own creation.
-    if (hasPick && picksSaved) {
-      await notifyFollowers(supabase, {
-        actorId: user.id,
-        type: 'new_pick',
-        message: `posted a new ${isParlay ? 'parlay' : 'pick'}`,
-        link: `/posts/${post.id}`,
-        targetId: post.id,
-        targetType: 'post',
-      })
-    }
-
     setContent('')
-    setLegs([])
-    setWager('')
     setPollOptions(['', ''])
     setImageUrl('')
-    setShowPickForm(false)
     setShowPollForm(false)
     setPosting(false)
     onPost?.()
@@ -417,9 +366,46 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               <EmojiPicker onSelect={insertAtCursor} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
-                <Globe size={11} /> <span className="hidden sm:inline">Public</span>
-              </span>
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setVisibilityOpen(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+                  }}
+                >
+                  {visibility === 'public' ? <Globe size={11} /> : <Users size={11} />}
+                  <span className="hidden sm:inline">{visibility === 'public' ? 'Public' : 'Followers'}</span>
+                  <ChevronDown size={11} />
+                </button>
+                {visibilityOpen && (
+                  <div style={{
+                    position: 'absolute', bottom: '100%', right: 0, marginBottom: 4, zIndex: 10,
+                    background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 8,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)', overflow: 'hidden', width: 150,
+                  }}>
+                    {([
+                      { key: 'public' as const, icon: <Globe size={12} />, label: 'Public', desc: 'Anyone can see this' },
+                      { key: 'followers' as const, icon: <Users size={12} />, label: 'Followers', desc: 'Only your followers' },
+                    ]).map(opt => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => { setVisibility(opt.key); setVisibilityOpen(false) }}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                          background: visibility === opt.key ? 'var(--surface-3)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                          color: visibility === opt.key ? 'var(--accent)' : 'var(--text-1)',
+                        }}
+                      >
+                        {opt.icon}
+                        <span style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {content.length > 400 && (
                 <span style={{ fontSize: 11, color: remaining < 50 ? 'var(--red)' : 'var(--text-3)' }}>{remaining}</span>
               )}

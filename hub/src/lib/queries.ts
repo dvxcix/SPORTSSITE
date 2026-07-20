@@ -49,10 +49,14 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function getFeedPosts(limit = 20, offset = 0): Promise<Post[]> {
   const supabase = await createClient()
+  // No .eq('visibility', 'public') here — RLS on posts already resolves
+  // exactly which rows this viewer is allowed to see (public from a
+  // non-private author, their own posts, or anyone they follow), so an
+  // app-level public-only filter on top would just hide followers-only
+  // posts from the people who are actually supposed to see them.
   const { data } = await supabase
     .from('posts')
     .select(`*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,is_verified,account_type,pick_record)`)
-    .eq('visibility', 'public')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
   return data ?? []
@@ -108,11 +112,14 @@ const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id,username,displ
 // is relevant (repost time for reposts, post time for original posts).
 export async function getUserPosts(userId: string): Promise<Post[]> {
   const supabase = await createClient()
+  // Same reasoning as getFeedPosts — no visibility filter here, RLS already
+  // decides whether the viewer can see this profile's followers-only posts
+  // (or, if the profile is a private account, whether they can see ANY of
+  // its posts at all regardless of the individual post's own visibility).
   const [{ data: authored }, { data: repostRows }] = await Promise.all([
     supabase.from('posts')
       .select(POST_WITH_AUTHOR)
       .eq('author_id', userId)
-      .eq('visibility', 'public')
       .order('created_at', { ascending: false })
       .limit(20),
     supabase.from('reposts')
@@ -123,7 +130,7 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
   ])
 
   const reposted = ((repostRows ?? []) as any[])
-    .filter(r => r.post && r.post.visibility === 'public')
+    .filter(r => r.post)
     .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
 
   return [...(authored ?? []), ...reposted]

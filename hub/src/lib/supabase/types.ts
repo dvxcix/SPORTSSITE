@@ -34,6 +34,13 @@ export interface User {
   whop_user_id?: string
   whop_membership_id?: string
   membership_expires_at?: string
+  is_private?: boolean
+  hide_win_rate?: boolean
+  allow_dms?: boolean
+  tier?: 'free' | 'basic' | 'advanced' | 'ultimate'
+  tier_status?: string | null
+  tier_current_period_end?: string | null
+  whop_plan_id?: string | null
 }
 
 export interface Post {

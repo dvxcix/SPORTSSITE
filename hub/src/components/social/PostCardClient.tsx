@@ -86,6 +86,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [isDeleted, setIsDeleted] = useState(false)
   const [isEditingPost, setIsEditingPost] = useState(false)
   const [editPostText, setEditPostText] = useState(initialPost.content ?? '')
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null)
   const post = { ...initialPost, pick_data: pickData, content }
   const isOwnPost = !!user && user.id === post.author_id
   // Edit window matches the "edit within 10 minutes" behavior the rest of
@@ -323,6 +324,21 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     setIsEditingPost(true)
   }
 
+  // Same cursor-preserving insert as the composer's — without restoring
+  // focus/caret afterward, every emoji click would jump the cursor to the
+  // end of the textarea instead of landing where you clicked.
+  function insertAtEditCursor(insertion: string) {
+    const el = editTextareaRef.current
+    const start = el?.selectionStart ?? editPostText.length
+    const end = el?.selectionEnd ?? editPostText.length
+    const next = editPostText.slice(0, start) + insertion + editPostText.slice(end)
+    setEditPostText(next)
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(start + insertion.length, start + insertion.length)
+    })
+  }
+
   async function saveEditPost() {
     const text = editPostText.trim()
     const { error } = await supabase.from('posts').update({ content: text, updated_at: new Date().toISOString() }).eq('id', post.id)
@@ -486,6 +502,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
               {isEditingPost ? (
                 <div style={{ marginTop: 8 }}>
                   <textarea
+                    ref={editTextareaRef}
                     value={editPostText}
                     onChange={e => setEditPostText(e.target.value)}
                     autoFocus
@@ -495,15 +512,18 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                       borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit',
                     }}
                   />
-                  <div style={{ display: 'flex', gap: 8, marginTop: 6, justifyContent: 'flex-end' }}>
-                    <button onClick={() => setIsEditingPost(false)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
-                      Cancel
-                    </button>
-                    <button onClick={saveEditPost}
-                      style={{ background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#000' }}>
-                      Save
-                    </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, justifyContent: 'space-between' }}>
+                    <EmojiPicker onSelect={insertAtEditCursor} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setIsEditingPost(false)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
+                        Cancel
+                      </button>
+                      <button onClick={saveEditPost}
+                        style={{ background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#000' }}>
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : post.content && (

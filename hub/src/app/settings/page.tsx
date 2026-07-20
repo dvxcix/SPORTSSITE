@@ -34,9 +34,7 @@ export default async function SettingsPage() {
     {
       title: 'Billing',
       items: [
-        // No self-serve billing portal yet — /pro is the only real
-        // subscription surface (shows current status + subscribe button).
-        { href: '/pro', icon: CreditCard, label: 'SlipSurge Pro', desc: 'Manage your Pro membership' },
+        { href: '/settings/membership', icon: CreditCard, label: 'Membership', desc: 'Current tier, renewal, and billing' },
       ]
     },
     {

@@ -21,7 +21,7 @@ export type ComposedPick = {
   odds: number | null
 }
 
-type Game = { gameKey: string; gamePk: string; homeAbbr: string; awayAbbr: string; homeTeam: string; awayTeam: string }
+type Game = { gameKey: string; gamePk: string; homeAbbr: string; awayAbbr: string; homeTeam: string; awayTeam: string; status: string }
 type Player = { mlb_id: number; name: string; name_norm: string; team: string; position: string; props: any }
 
 function TeamLogoImg({ abbr, size = 18 }: { abbr: string; size?: number }) {
@@ -78,21 +78,30 @@ function GamePicker({ games, loading, value, onChange }: {
       </button>
       {open && !disabled && (
         <div style={{ position: 'absolute', zIndex: 10, marginTop: 4, width: '100%', maxHeight: 260, overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-          {games.map(g => (
-            <button
-              key={g.gameKey}
-              type="button"
-              onClick={() => { onChange(g.gameKey); setOpen(false) }}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text-1)', fontSize: 13 }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-            >
-              <TeamLogoImg abbr={g.awayAbbr} />
-              <span style={{ color: 'var(--text-3)', fontSize: 11 }}>@</span>
-              <TeamLogoImg abbr={g.homeAbbr} />
-              <span>{g.awayAbbr} @ {g.homeAbbr}</span>
-            </button>
-          ))}
+          {games.map(g => {
+            const started = g.status !== 'Preview'
+            return (
+              <button
+                key={g.gameKey}
+                type="button"
+                disabled={started}
+                onClick={() => { if (!started) { onChange(g.gameKey); setOpen(false) } }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'none', border: 'none',
+                  cursor: started ? 'not-allowed' : 'pointer', textAlign: 'left', color: started ? 'var(--text-3)' : 'var(--text-1)', fontSize: 13,
+                  opacity: started ? 0.5 : 1,
+                }}
+                onMouseEnter={e => { if (!started) e.currentTarget.style.background = 'var(--surface-2)' }}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <TeamLogoImg abbr={g.awayAbbr} />
+                <span style={{ color: 'var(--text-3)', fontSize: 11 }}>@</span>
+                <TeamLogoImg abbr={g.homeAbbr} />
+                <span>{g.awayAbbr} @ {g.homeAbbr}</span>
+                {started && <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>Started</span>}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
@@ -167,10 +176,16 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(d => {
         if (cancelled) return
+        // status is MLB's abstractGameState (Preview/Live/Final) — only
+        // Preview games can still take a pick. This is UX only (grey out
+        // + block selection); the real enforcement happens server-side in
+        // POST /api/posts/pick, which re-checks live against MLB itself
+        // rather than trusting whatever was true when this list loaded.
         const gs: Game[] = (d.games ?? []).map((g: any) => ({
           gameKey: g.gameKey, gamePk: String(g.gamePk),
           homeAbbr: g.homeAbbr, awayAbbr: g.awayAbbr,
           homeTeam: g.homeTeam, awayTeam: g.awayTeam,
+          status: g.status || 'Preview',
         }))
         setGames(gs)
         // Stash full game payload for player lookups without a second fetch.

@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
 
-export function PrivacySettingsForm({ settings }: { settings: { is_private: boolean; allow_dms: boolean } }) {
+export function PrivacySettingsForm({ settings }: { settings: { is_private: boolean; allow_dms: boolean; hide_win_rate: boolean } }) {
   const supabase = createClient()
   const [isPrivate, setIsPrivate] = useState(settings.is_private ?? false)
   const [allowDms, setAllowDms] = useState(settings.allow_dms ?? true)
+  const [hideWinRate, setHideWinRate] = useState(settings.hide_win_rate ?? false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
@@ -19,13 +20,14 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
     // succeeded — for Private Account specifically, that meant someone
     // could believe their account was locked down (and post accordingly)
     // while it silently stayed fully public.
-    const { error: err } = await supabase.from('users').update({ is_private: isPrivate, allow_dms: allowDms }).eq('id', user.id)
+    const { error: err } = await supabase.from('users').update({ is_private: isPrivate, allow_dms: allowDms, hide_win_rate: hideWinRate }).eq('id', user.id)
     if (err) { setError('Could not save — please try again.'); return }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
   const toggleItems = [
-    { label: 'Private Account', desc: 'Only approved followers can see your posts and picks', value: isPrivate, set: setIsPrivate },
+    { label: 'Private Account', desc: 'Only your followers can see your posts and picks — your profile, username, and stats stay visible', value: isPrivate, set: setIsPrivate },
+    { label: 'Hide Win Rate', desc: 'Hide your pick record and win rate from your public profile', value: hideWinRate, set: setHideWinRate },
     { label: 'Allow Direct Messages', desc: 'Anyone can send you a DM', value: allowDms, set: setAllowDms },
   ]
 

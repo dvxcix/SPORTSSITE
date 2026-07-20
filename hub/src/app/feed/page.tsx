@@ -33,7 +33,11 @@ async function getPosts(filter: string, userId: string | null | undefined) {
     if (followedIds.length === 0) return []
   }
 
-  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public').limit(30)
+  // No .eq('visibility', 'public') — RLS already resolves exactly which
+  // posts this viewer can see (public from a non-private author, their own,
+  // or anyone they follow); an app-level public-only filter here would hide
+  // followers-only posts from the "following" tab's whole reason to exist.
+  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).limit(30)
   if (filter === 'picks') postQuery = postQuery.in('post_type', ['pick', 'parlay'])
   if (followedIds) postQuery = postQuery.in('author_id', followedIds)
   postQuery = filter === 'top'
@@ -50,7 +54,7 @@ async function getPosts(filter: string, userId: string | null | undefined) {
   const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
 
   let reposted = ((repostRows ?? []) as any[])
-    .filter(r => r.post && r.post.visibility === 'public')
+    .filter(r => r.post)
     .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
   if (filter === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
 

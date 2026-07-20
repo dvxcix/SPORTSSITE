@@ -65,7 +65,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
     getUserPosts(profile.id),
     supabase.auth.getUser(),
-    supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id).eq('visibility', 'public'),
+    supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     supabase.from('user_badges')
       .select('badge:badges(id, name, description, card_image_url)')
@@ -115,6 +115,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const losses = profile.pick_record?.losses ?? 0
   const total = wins + losses
   const winPct = total > 0 ? Math.round((wins / total) * 100) : 0
+
+  // Private account = only the owner or a follower can see the actual
+  // content (posts/picks) — profile info (avatar, username, bio, follower
+  // counts) stays visible either way, same as any mainstream app's private
+  // account. Win rate is a SEPARATE opt-out (hide_win_rate) independent of
+  // account privacy, so a public account can still hide just that one stat.
+  const canViewContent = isOwnProfile || !profile.is_private || isFollowing
+  const canViewWinRate = isOwnProfile || !profile.hide_win_rate
 
   // Map posts to PostCardClient shape. `author` comes straight from the
   // query now (getUserPosts embeds it per-post) rather than being forced to
@@ -237,7 +245,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             { value: String(repostsCount ?? 0), label: 'Reposts' },
             { value: String(profile.following_count ?? 0), label: 'Following' },
             { value: String(profile.follower_count ?? 0), label: 'Followers' },
-            ...(total > 0 ? [
+            ...(total > 0 && canViewWinRate ? [
               { value: `${wins}–${losses}`, label: 'Pick Record', accent: true },
               { value: `${winPct}%`, label: 'Win Rate' },
             ] : []),
@@ -257,39 +265,49 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
       <div className="border-t border-zinc-800" />
 
-      {/* Tabs */}
-      <div className="flex px-2">
-        {TABS.map(t => (
-          <Link
-            key={t.key}
-            href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
-            className={`flex-1 text-center text-sm font-bold py-3 border-b-2 transition-colors ${
-              tab === t.key ? 'text-white border-green-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      {canViewContent ? (
+        <>
+          {/* Tabs */}
+          <div className="flex px-2">
+            {TABS.map(t => (
+              <Link
+                key={t.key}
+                href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
+                className={`flex-1 text-center text-sm font-bold py-3 border-b-2 transition-colors ${
+                  tab === t.key ? 'text-white border-green-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                }`}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </div>
 
-      {/* Posts */}
-      <div className="px-4 py-4 space-y-3">
-        {mappedPosts.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">📭</p>
-            <p className="text-zinc-400 font-medium">
-              {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : 'No posts yet'}
-            </p>
-            {isOwnProfile && tab === 'all' && (
-              <p className="text-zinc-600 text-sm mt-1">Share your first pick on the <a href="/feed" className="text-green-400 hover:underline">feed</a></p>
+          {/* Posts */}
+          <div className="px-4 py-4 space-y-3">
+            {mappedPosts.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-4xl mb-3">📭</p>
+                <p className="text-zinc-400 font-medium">
+                  {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : 'No posts yet'}
+                </p>
+                {isOwnProfile && tab === 'all' && (
+                  <p className="text-zinc-600 text-sm mt-1">Share your first pick on the <a href="/feed" className="text-green-400 hover:underline">feed</a></p>
+                )}
+              </div>
+            ) : (
+              mappedPosts.map((p: any, i: number) => (
+                <PostCardClient key={p.reposted_by ? `repost-${p.id}-${p.reposted_by.username}` : p.id} post={p} index={i} />
+              ))
             )}
           </div>
-        ) : (
-          mappedPosts.map((p: any, i: number) => (
-            <PostCardClient key={p.reposted_by ? `repost-${p.id}-${p.reposted_by.username}` : p.id} post={p} index={i} />
-          ))
-        )}
-      </div>
+        </>
+      ) : (
+        <div className="text-center py-16 px-4">
+          <p className="text-4xl mb-3">🔒</p>
+          <p className="text-white font-bold">This account is private</p>
+          <p className="text-zinc-500 text-sm mt-1">Follow @{profile.username} to see their posts and picks.</p>
+        </div>
+      )}
     </div>
   )
 }
