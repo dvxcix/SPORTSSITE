@@ -20,10 +20,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'PIKKIT_CONTEXT_ID is not configured' }, { status: 500 })
   }
 
+  const reqUrl = new URL(req.url)
+  const waitMs = Number(reqUrl.searchParams.get('waitMs') ?? 2500)
+
   const bb = await openSession({ contextId })
   try {
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
-    await bb.page.waitForTimeout(2500)
+    await bb.page.waitForTimeout(waitMs)
     const url = bb.page.url()
     const title = await bb.page.title().catch(() => null)
     const bodyText = await bb.page.evaluate(() => document.body?.innerText?.slice(0, 800) ?? '').catch(() => null)
