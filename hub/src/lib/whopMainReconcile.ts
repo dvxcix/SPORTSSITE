@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, effectiveTier, type Tier } from '@/lib/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 
 // Same safety-net reasoning as whopAddonReconcile.ts, for the MAIN
 // tier-payments business — confirmed live that its webhook (/api/webhooks/whop)
@@ -23,32 +24,17 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
 
   const admin = createAdminClient()
   const results: any[] = []
-  const activeUserIds = new Set<string>()
   let totalMemberships = 0
 
   for (const planId of MAIN_PLAN_IDS) {
     const planInfo = WHOP_PLANS[planId]
 
-    // Same candidate-path fallback already proven necessary for the addon
-    // business's identical undocumented endpoint.
-    const candidates = [
-      `https://api.whop.com/api/v2/memberships?plan_id=${planId}`,
-      `https://api.whop.com/api/v2/memberships?plan=${planId}`,
-      `https://api.whop.com/api/v1/memberships?plan_id=${planId}`,
-    ]
-    let res: Response | null = null
-    let lastErr = ''
-    for (const url of candidates) {
-      const attempt = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
-      if (attempt.ok) { res = attempt; break }
-      lastErr = `${url} -> ${attempt.status} ${await attempt.text().catch(() => '')}`
-    }
-    if (!res) {
-      results.push({ planId, error: `Whop memberships lookup failed on every candidate path. Last: ${lastErr}` })
+    const fetched = await fetchAllWhopMemberships(apiKey, planId)
+    if ('error' in fetched) {
+      results.push({ planId, error: fetched.error })
       continue
     }
-    const body = await res.json().catch(() => null)
-    const memberships: any[] = body?.data ?? body?.memberships ?? (Array.isArray(body) ? body : [])
+    const memberships = fetched.memberships
     totalMemberships += memberships.length
 
     for (const m of memberships) {
@@ -70,8 +56,6 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
         continue
       }
 
-      activeUserIds.add(internalUserId)
-
       const { data: updated, error } = await admin.from('users').update({
         tier: planInfo.tier,
         whop_plan_id: planId,
@@ -90,16 +74,10 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     }
   }
 
-  // Downgrade side REMOVED — confirmed live on the addon route's identical
-  // logic that this was actively harmful: the memberships endpoint is
-  // almost certainly paginated (a run returned totalMemberships=10 while
-  // real active customers whose records weren't in that batch got treated
-  // as "no longer active" and stripped of tier they were still legitimately
-  // paying for). Never run against the main business before this was
-  // caught, but removed here proactively for the same reason. Now that the
-  // webhook signature bug is fixed (see whopWebhook.ts), real cancellations
-  // downgrade correctly via membership.deactivated/went_invalid — this
-  // route only needs to keep granting what a webhook might still miss.
+  // Downgrade side REMOVED — same reasoning as whopAddonReconcile.ts. Every
+  // page is now fetched (see fetchAllWhopMemberships), but the webhook fix
+  // already covers real cancellations, so there's no need to reintroduce
+  // grant-then-strip risk here.
 
   return { totalMemberships, results }
 }

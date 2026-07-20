@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { reconcileWhopAddon, debugRawMembershipsFetch } from '@/lib/whopAddonReconcile'
+import { reconcileWhopAddon } from '@/lib/whopAddonReconcile'
 
 export const revalidate = 0
 
@@ -24,10 +24,6 @@ async function requireAdmin(req: Request) {
 export async function GET(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
-
-  if (new URL(req.url).searchParams.get('debug') === '1') {
-    return NextResponse.json(await debugRawMembershipsFetch())
-  }
 
   const result = await reconcileWhopAddon()
   if ('error' in result) return NextResponse.json(result, { status: result.error.includes('not configured') ? 500 : 502 })

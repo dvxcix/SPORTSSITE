@@ -1,31 +1,19 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, effectiveTier, type Tier } from '@/lib/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 
 // Shared by the admin route (manual/emergency re-run) and the hourly cron
 // (see vercel.json) — safety net for the addon Whop business's webhook,
 // which was never registered in that business's dashboard (confirmed live:
 // zero deliveries ever to /api/webhooks/whop-addon despite real completed
 // checkouts). Pulls membership records directly via ADDON_WHOP_KEY instead
-// of waiting on a webhook, granting AND downgrading to match.
+// of waiting on a webhook.
 export const ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
 
 type ReconcileResult =
   | { error: string }
   | { totalMemberships: number; results: any[] }
-
-// Temporary — need to see the raw pagination metadata shape (page/next
-// cursor field names) that a single unpaginated call already proved exists:
-// the last real reconcile only saw 10 memberships and missed a real
-// purchase from 8 hours earlier. Returns the raw parsed body untouched.
-export async function debugRawMembershipsFetch(): Promise<any> {
-  const apiKey = process.env.ADDON_WHOP_KEY
-  if (!apiKey) return { error: 'ADDON_WHOP_KEY is not configured' }
-  const url = `https://api.whop.com/api/v2/memberships?plan_id=${ADDON_PLAN_ID}`
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
-  const body = await res.json().catch(() => null)
-  return { status: res.status, keys: body ? Object.keys(body) : null, body }
-}
 
 export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const apiKey = process.env.ADDON_WHOP_KEY
@@ -33,31 +21,12 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
 
   const planInfo = WHOP_PLANS[ADDON_PLAN_ID]
 
-  // v2 with ?plan_id= is the one confirmed working live against this key —
-  // the other two stay as fallbacks since Whop's docs disagree with
-  // themselves on membership-listing paths (same undocumented-API problem
-  // as everywhere else Whop is touched in this codebase).
-  const candidates = [
-    `https://api.whop.com/api/v2/memberships?plan_id=${ADDON_PLAN_ID}`,
-    `https://api.whop.com/api/v2/memberships?plan=${ADDON_PLAN_ID}`,
-    `https://api.whop.com/api/v1/memberships?plan_id=${ADDON_PLAN_ID}`,
-  ]
-  let res: Response | null = null
-  let lastErr = ''
-  for (const url of candidates) {
-    const attempt = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
-    if (attempt.ok) { res = attempt; break }
-    lastErr = `${url} -> ${attempt.status} ${await attempt.text().catch(() => '')}`
-  }
-  if (!res) {
-    return { error: `Whop memberships lookup failed on every candidate path. Last: ${lastErr}` }
-  }
-  const body = await res.json().catch(() => null)
-  const memberships: any[] = body?.data ?? body?.memberships ?? (Array.isArray(body) ? body : [])
+  const fetched = await fetchAllWhopMemberships(apiKey, ADDON_PLAN_ID)
+  if ('error' in fetched) return fetched
+  const memberships = fetched.memberships
 
   const admin = createAdminClient()
   const results: any[] = []
-  const activeUserIds = new Set<string>()
 
   for (const m of memberships) {
     // Defensive across a few plausible field shapes — same reasoning as the
@@ -81,8 +50,6 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
       continue
     }
 
-    activeUserIds.add(internalUserId)
-
     const { data: updated, error } = await admin.from('users').update({
       tier: planInfo.tier,
       whop_plan_id: ADDON_PLAN_ID,
@@ -100,18 +67,13 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     results.push({ membershipId, internalUserId, username: updated.username, status, granted: planInfo.tier })
   }
 
-  // Downgrade side REMOVED — confirmed live it was actively harmful: this
-  // call returned totalMemberships=10 while real active customers whose
-  // records just didn't happen to be in that batch (the endpoint is almost
-  // certainly paginated and this code never handled a next-page cursor)
-  // got treated as "no longer active" and stripped of Ultimate they were
-  // still legitimately paying for — including several already confirmed
-  // paying customers. Reverted by hand in the DB once caught.
-  // Now that the webhook signature bug is fixed (see whopWebhook.ts),
-  // membership.deactivated/went_invalid events downgrade correctly on
-  // their own — this route only needs to keep granting what a webhook
-  // might still miss, never take access away based on an unconfirmed-complete
-  // membership list.
+  // Downgrade side REMOVED — confirmed live it was actively harmful when
+  // this route only ever saw page 1 of a paginated response. Now that every
+  // page is fetched (see fetchAllWhopMemberships) it would be safe to add
+  // back, but the webhook signature bug is also fixed now, so real
+  // cancellations already downgrade correctly via
+  // membership.deactivated/went_invalid events — no need to re-add
+  // grant-then-strip risk here for coverage that already exists elsewhere.
 
   return { totalMemberships: memberships.length, results }
 }
