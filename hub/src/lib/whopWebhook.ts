@@ -28,6 +28,44 @@ function verifyWhopSignature(rawBody: string, id: string, timestamp: string, sig
   })
 }
 
+// Temporary — every real delivery is failing verifyWhopSignature above, on
+// BOTH businesses' secrets, neither of which was recently changed. That
+// points at a wrong assumption in the algorithm itself (never confirmed
+// against a real payload — see the comment on handleWhopWebhookRequest)
+// rather than a stale secret. Tries the plausible variations of secret
+// decoding × signed-content shape and reports back only WHICH combination
+// (if any) matches — never the secret, the digest, or the received
+// signature itself.
+function diagnoseWhopSignature(rawBody: string, id: string, timestamp: string, signatureHeader: string, secret: string): string {
+  const receivedSigs = signatureHeader.split(' ').map(p => p.split(',')[1]).filter(Boolean) as string[]
+  const strippedSecret = secret.startsWith('whsec_') ? secret.slice('whsec_'.length) : secret
+
+  const secretVariants: [string, Buffer | null][] = [
+    ['base64(strip whsec_)', (() => { try { return Buffer.from(strippedSecret, 'base64') } catch { return null } })()],
+    ['utf8(strip whsec_)', Buffer.from(strippedSecret, 'utf8')],
+    ['utf8(full secret incl. whsec_)', Buffer.from(secret, 'utf8')],
+    ['base64(full secret incl. whsec_)', (() => { try { return Buffer.from(secret, 'base64') } catch { return null } })()],
+  ]
+  const contentVariants: [string, string][] = [
+    ['id.timestamp.body', `${id}.${timestamp}.${rawBody}`],
+    ['body only', rawBody],
+    ['timestamp.body', `${timestamp}.${rawBody}`],
+  ]
+
+  const matches: string[] = []
+  for (const [sLabel, secretBytes] of secretVariants) {
+    if (!secretBytes) continue
+    for (const [cLabel, content] of contentVariants) {
+      const digestB64 = createHmac('sha256', secretBytes).update(content).digest('base64')
+      const digestHex = createHmac('sha256', secretBytes).update(content).digest('hex')
+      if (receivedSigs.includes(digestB64) || receivedSigs.includes(digestHex)) {
+        matches.push(`secret=${sLabel} content=${cLabel}`)
+      }
+    }
+  }
+  return matches.length ? matches.join(' | ') : 'no combination matched'
+}
+
 // Field names below (event.action vs event.type, data.plan_id vs
 // data.plan?.id, etc.) are read defensively across a few plausible shapes —
 // Whop's public docs don't expose a full payload schema for these events as
@@ -56,7 +94,8 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     // Temporary — diagnostic only, never logs the secret or the full
     // signature/body content.
     console.error('[whop-webhook] signature verification failed', {
-      id, timestamp, signatureHeaderPreview: signature.slice(0, 12), bodyLength: rawBody.length,
+      id, timestamp, bodyLength: rawBody.length,
+      diagnosis: diagnoseWhopSignature(rawBody, id, timestamp, signature, secret),
     })
     return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 })
   }
