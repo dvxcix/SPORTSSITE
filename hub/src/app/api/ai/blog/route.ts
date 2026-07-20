@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireTier } from '@/lib/requireTier'
 
 export async function POST(req: NextRequest) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const { prompt, sport, tone } = await req.json()
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY

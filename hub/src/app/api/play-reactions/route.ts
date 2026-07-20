@@ -1,7 +1,11 @@
 ﻿import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { requireTier } from '@/lib/requireTier'
 
 export async function POST(req: Request) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,6 +40,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
   const { searchParams } = new URL(req.url)
   const game_id = searchParams.get('game_id')
   if (!game_id) return NextResponse.json({ error: 'Missing game_id' }, { status: 400 })

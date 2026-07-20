@@ -30,7 +30,8 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       plan_id: planId,
       metadata: { internal_user_id: user.id },
-      redirect_url: `${PLATFORM_URL}/pricing?status=success`,
+      // No ?status= of our own — Whop appends the real outcome itself.
+      redirect_url: `${PLATFORM_URL}/pricing`,
     }),
   })
 

@@ -71,7 +71,13 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
             </button>
             <WhopCheckoutEmbed
               sessionId={sessionId}
-              returnUrl={`${window.location.origin}/pricing?status=success`}
+              // No ?status= of our own here — Whop appends the real
+              // "success" or "error" outcome to this URL itself for the
+              // redirect-based payment flows (3DS, etc). Hardcoding
+              // "success" ourselves would make a failed payment redirect
+              // to a URL that still claims success once Whop's own value
+              // gets appended alongside/after ours.
+              returnUrl={`${window.location.origin}/pricing`}
               theme="dark"
               themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
               onComplete={() => {

@@ -70,11 +70,29 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
 ]
 const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
 
-export function PricingClient({ loggedIn, currentTier }: { loggedIn: boolean; currentTier: Tier }) {
+export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { loggedIn: boolean; currentTier: Tier; checkoutStatus: string | null }) {
   const [interval, setInterval] = useState<Interval>('monthly')
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      {checkoutStatus === 'success' && (
+        <div style={{
+          position: 'relative', zIndex: 2, textAlign: 'center', fontSize: 13, fontWeight: 600,
+          color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderBottom: '1px solid rgba(74,222,128,0.25)',
+          padding: '10px 16px',
+        }}>
+          Payment received — your plan updates automatically within a few seconds. If it doesn't show yet, refresh the page.
+        </div>
+      )}
+      {checkoutStatus === 'error' && (
+        <div style={{
+          position: 'relative', zIndex: 2, textAlign: 'center', fontSize: 13, fontWeight: 600,
+          color: '#f87171', background: 'rgba(248,113,113,0.1)', borderBottom: '1px solid rgba(248,113,113,0.25)',
+          padding: '10px 16px',
+        }}>
+          Checkout didn't complete. No charge was made — try again whenever you're ready.
+        </div>
+      )}
       {/* Hero — same treatment as the main LandingPage: Spotlight + BackgroundBeams + Meteors */}
       <div style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={{
@@ -161,14 +179,15 @@ export function PricingClient({ loggedIn, currentTier }: { loggedIn: boolean; cu
                   {planId && !isCurrent && (
                     <PricingCheckoutButton planId={planId} label={`Get ${t.label}`} loggedIn={loggedIn} highlight={t.highlight === 'premium' || t.highlight === 'popular'} />
                   )}
-                  {t.tier === 'free' && !isCurrent && (
-                    loggedIn ? (
-                      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '10px 0' }}>Your current plan</p>
-                    ) : (
-                      <a href="/auth/register" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
-                        Sign Up Free
-                      </a>
-                    )
+                  {/* Free's own CTA only matters for a logged-out visitor — a
+                      logged-in user is either already on Free (the "Current"
+                      badge above already says so) or already on a paid tier
+                      (nothing useful to offer them on the Free card either
+                      way), so no button/label renders in either logged-in case. */}
+                  {t.tier === 'free' && !loggedIn && (
+                    <a href="/auth/register" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
+                      Sign Up Free
+                    </a>
                   )}
 
                   <ul style={{ listStyle: 'none', padding: 0, margin: '18px 0 8px', display: 'flex', flexDirection: 'column', gap: 9 }}>
