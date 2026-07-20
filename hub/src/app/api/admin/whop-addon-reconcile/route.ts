@@ -64,6 +64,15 @@ export async function GET(req: Request) {
   const body = await res.json().catch(() => null)
   const memberships: any[] = body?.data ?? body?.memberships ?? (Array.isArray(body) ? body : [])
 
+  // Temporary: surface one raw membership payload so the fields Whop
+  // actually sends (specifically a product/access-pass id, needed to move
+  // the addon grant off polling and onto the same OAuth-login check pattern
+  // already used for the Discord product) can be inspected without guessing
+  // at shapes again. Remove once that's read.
+  if (new URL(req.url).searchParams.get('debug') === '1') {
+    return NextResponse.json({ totalMemberships: memberships.length, sample: memberships[0] ?? null })
+  }
+
   const admin = createAdminClient()
   const results: any[] = []
 
