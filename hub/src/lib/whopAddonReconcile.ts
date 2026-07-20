@@ -87,28 +87,18 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     results.push({ membershipId, internalUserId, username: updated.username, status, granted: planInfo.tier })
   }
 
-  // Downgrade side — without this, a cancelled add-on stays granted forever,
-  // since this route was originally built grant-only. Scoped to accounts we
-  // ourselves last marked 'active' via this exact plan, so a real purchase
-  // through the main business (which overwrites whop_plan_id to one of ITS
-  // plan ids) is never touched here. Naturally idempotent: once downgraded,
-  // tier_status is no longer 'active', so the same account won't be
-  // reprocessed on the next run.
-  const { data: staleHolders } = await admin
-    .from('users')
-    .select('id, username, discord_advanced_claimed')
-    .eq('whop_plan_id', ADDON_PLAN_ID)
-    .eq('tier_status', 'active')
-
-  for (const holder of staleHolders ?? []) {
-    if (activeUserIds.has(holder.id)) continue
-    await admin.from('users').update({
-      tier: 'free',
-      tier_status: 'membership.went_invalid',
-    }).eq('id', holder.id)
-    await syncTierBadge(admin, holder.id, effectiveTier('free', holder.discord_advanced_claimed))
-    results.push({ internalUserId: holder.id, username: holder.username, downgraded: true })
-  }
+  // Downgrade side REMOVED — confirmed live it was actively harmful: this
+  // call returned totalMemberships=10 while real active customers whose
+  // records just didn't happen to be in that batch (the endpoint is almost
+  // certainly paginated and this code never handled a next-page cursor)
+  // got treated as "no longer active" and stripped of Ultimate they were
+  // still legitimately paying for — including several already confirmed
+  // paying customers. Reverted by hand in the DB once caught.
+  // Now that the webhook signature bug is fixed (see whopWebhook.ts),
+  // membership.deactivated/went_invalid events downgrade correctly on
+  // their own — this route only needs to keep granting what a webhook
+  // might still miss, never take access away based on an unconfirmed-complete
+  // membership list.
 
   return { totalMemberships: memberships.length, results }
 }

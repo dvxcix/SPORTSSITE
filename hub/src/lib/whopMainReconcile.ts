@@ -90,25 +90,16 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     }
   }
 
-  // Downgrade side — mirrors whopAddonReconcile.ts. Scoped to accounts we
-  // ourselves last marked 'active' on one of the 5 MAIN plan ids, so it never
-  // touches an account whose whop_plan_id points at the addon business's
-  // plan instead.
-  const { data: staleHolders } = await admin
-    .from('users')
-    .select('id, username, discord_advanced_claimed')
-    .in('whop_plan_id', MAIN_PLAN_IDS)
-    .eq('tier_status', 'active')
-
-  for (const holder of staleHolders ?? []) {
-    if (activeUserIds.has(holder.id)) continue
-    await admin.from('users').update({
-      tier: 'free',
-      tier_status: 'membership.went_invalid',
-    }).eq('id', holder.id)
-    await syncTierBadge(admin, holder.id, effectiveTier('free', holder.discord_advanced_claimed))
-    results.push({ internalUserId: holder.id, username: holder.username, downgraded: true })
-  }
+  // Downgrade side REMOVED — confirmed live on the addon route's identical
+  // logic that this was actively harmful: the memberships endpoint is
+  // almost certainly paginated (a run returned totalMemberships=10 while
+  // real active customers whose records weren't in that batch got treated
+  // as "no longer active" and stripped of tier they were still legitimately
+  // paying for). Never run against the main business before this was
+  // caught, but removed here proactively for the same reason. Now that the
+  // webhook signature bug is fixed (see whopWebhook.ts), real cancellations
+  // downgrade correctly via membership.deactivated/went_invalid — this
+  // route only needs to keep granting what a webhook might still miss.
 
   return { totalMemberships, results }
 }
