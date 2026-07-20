@@ -9,6 +9,10 @@ import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { useCustomEmojis } from '@/lib/emoji'
+import { effectiveTier, hasFullAccessOverride, type Tier } from '@/lib/tiers'
+import { Badge } from '@/components/ui/badge'
+
+const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
 const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart, comment: MessageCircle, follow: UserPlus,
@@ -103,6 +107,15 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0
+
+  // Same effectiveTier() fold used everywhere else tier is checked or shown
+  // (TierGate, requireTier, /pricing, /settings/membership) — the profile
+  // dropdown is one more place someone can glance at their real access
+  // level, so it can't show a different answer than any of those.
+  const rawTier = (profile?.tier as Tier) ?? 'free'
+  const currentTier = effectiveTier(rawTier, profile?.discord_advanced_claimed)
+  const fullAccess = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active)
+  const tierLabel = fullAccess ? (profile?.account_type === 'admin' ? 'Admin' : 'Beta — Full Access') : TIER_LABEL[currentTier]
 
   function goTo(href: string) {
     setQuickOpen(false)
@@ -455,6 +468,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       {profile?.display_name || profile?.username}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>@{profile?.username}</div>
+                    <Link href="/settings/membership" onClick={() => setMenuOpen(false)} style={{ display: 'inline-block', marginTop: 6, textDecoration: 'none' }}>
+                      <Badge variant="save">{tierLabel}</Badge>
+                    </Link>
                   </div>
                   <Link href={`/profile/${profile?.username}`} className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
                     <User size={14} /> My Profile

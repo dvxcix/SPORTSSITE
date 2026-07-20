@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { Check, X } from 'lucide-react'
@@ -135,6 +136,14 @@ export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { logge
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
           {TIERS.map(t => {
             const isCurrent = t.tier === currentTier
+            // Whop is the billing system of record — a "downgrade" here can
+            // only ever be a cancellation over there (which then reverts the
+            // account to Free via the webhook), never a second purchase
+            // stacked under an existing one. So a tier below what someone
+            // already has doesn't get a buy button — that would just create
+            // a separate, redundant Whop membership rather than actually
+            // switching them down.
+            const isDowngrade = loggedIn && TIER_RANK[t.tier] < TIER_RANK[currentTier]
             const hasAnnual = interval === 'annual' && !!t.annualPrice
             const displayPrice = t.tier === 'free' ? 0 : hasAnnual ? (t.annualPrice! / 12) : t.monthlyPrice
             const planId = interval === 'annual' && t.annualPlanId ? t.annualPlanId : t.monthlyPlanId
@@ -176,14 +185,32 @@ export function PricingClient({ loggedIn, currentTier, checkoutStatus }: { logge
 
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.4 }}>{t.tagline}</p>
 
-                  {planId && !isCurrent && (
+                  {planId && !isCurrent && !isDowngrade && (
                     <PricingCheckoutButton planId={planId} label={`Get ${t.label}`} loggedIn={loggedIn} highlight={t.highlight === 'premium' || t.highlight === 'popular'} />
+                  )}
+                  {/* Downgrading (including all the way back to Free) only
+                      happens by cancelling the current plan on Whop — send
+                      them to Membership settings, which has the real
+                      "Manage on Whop" link, instead of a buy button that
+                      would just stack a second plan on top. */}
+                  {isDowngrade && (
+                    <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
+                      Cancel to Downgrade
+                    </Link>
+                  )}
+                  {/* Same reasoning for the plan you're already on — cancelling
+                      is also a Whop action, not something this page can do
+                      directly. */}
+                  {isCurrent && t.tier !== 'free' && (
+                    <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
+                      Manage / Cancel
+                    </Link>
                   )}
                   {/* Free's own CTA only matters for a logged-out visitor — a
                       logged-in user is either already on Free (the "Current"
-                      badge above already says so) or already on a paid tier
-                      (nothing useful to offer them on the Free card either
-                      way), so no button/label renders in either logged-in case. */}
+                      badge above already says so) or on a paid tier (handled
+                      by the downgrade case above), so no button/label renders
+                      in either logged-in case. */}
                   {t.tier === 'free' && !loggedIn && (
                     <a href="/auth/register" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>
                       Sign Up Free
