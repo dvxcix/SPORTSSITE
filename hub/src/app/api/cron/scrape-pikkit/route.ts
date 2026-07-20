@@ -35,7 +35,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, debug = false) {
   const bb = await openSession({ contextId, metadata: { book: 'pikkit', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     // Pikkit scraping is pure text/DOM extraction (team names, a market
@@ -90,7 +90,18 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       scrape = await bb.page.evaluate(runPikkitScrape)
       marketCount = Object.keys(scrape.props).length
     }
-    if (!marketCount) return { gameKey: g.gameKey, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked }
+    if (!marketCount) {
+      // Diagnostic only, opt-in via ?debug=1 — dumps the actual page text at
+      // the point of failure instead of guessing why the Batting Props tab
+      // wasn't found (Pikkit renaming/restructuring the tab vs. it genuinely
+      // not existing yet for this game look identical from the outside
+      // otherwise). Not run on every cron invocation — this is extra page
+      // read time on top of an already long scrape.
+      const pageText = debug
+        ? await bb.page.evaluate(() => document.body?.innerText?.slice(0, 2000) ?? '').catch(() => null)
+        : undefined
+      return { gameKey: g.gameKey, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked, ...(debug ? { pageText } : {}) }
+    }
 
     if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, dryRun: true, scrape }
 
@@ -119,11 +130,12 @@ export async function GET(req: Request) {
   const reqUrl = new URL(req.url)
   const gamePkParam = reqUrl.searchParams.get('gamePk')
   const dryRun = reqUrl.searchParams.get('dryRun') === '1'
+  const debug = reqUrl.searchParams.get('debug') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun)
+    const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun, debug)
     return NextResponse.json({ date, gamePk, result })
   }
 
