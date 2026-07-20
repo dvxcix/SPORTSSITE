@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { WHOP_PLANS } from '@/lib/tiers'
+import { WHOP_PLANS, checkoutApiKeyEnvFor } from '@/lib/tiers'
 import { PLATFORM_URL } from '@/lib/stripe'
 
 export const revalidate = 0
@@ -21,8 +21,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
   }
 
-  const apiKey = process.env.WHOP_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'WHOP_API_KEY is not configured' }, { status: 500 })
+  // plan_Q1Ey6RMgjS9XQ (the Discord add-on) lives under a completely
+  // separate Whop business from every other plan here — using WHOP_API_KEY
+  // for it 404s ("No such Plan found"), confirmed live, since that key only
+  // sees plans in the main business.
+  const apiKeyEnv = checkoutApiKeyEnvFor(planId)
+  const apiKey = process.env[apiKeyEnv]
+  if (!apiKey) return NextResponse.json({ error: `${apiKeyEnv} is not configured` }, { status: 500 })
 
   const res = await fetch('https://api.whop.com/api/v2/checkout_sessions', {
     method: 'POST',

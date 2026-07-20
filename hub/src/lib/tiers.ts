@@ -8,7 +8,14 @@ export function hasTierAccess(userTier: Tier, required: Tier): boolean {
 
 // The 5 real Whop plans backing paid tiers — see plan doc for how these were
 // sourced. Basic has no annual plan (deliberately, per the pricing design).
-export const WHOP_PLANS: Record<string, { tier: Exclude<Tier, 'free'>; interval: 'monthly' | 'annual'; label: string }> = {
+// `company` marks which Whop business a plan lives under — 'main' (default,
+// omitted) is the WHOP_API_KEY/WHOP_WEBHOOK_KEY business every normal
+// customer pays into; 'addon' is the entirely separate Whop business the
+// Discord-community plan (and this add-on) live under, using its own
+// ADDON_WHOP_KEY/ADDON_WHOP_WEBHOOK credentials. A plan id only exists in
+// ONE of these two businesses — using the wrong key 404s ("No such Plan
+// found"), confirmed live. See checkoutApiKeyFor() / the addon webhook route.
+export const WHOP_PLANS: Record<string, { tier: Exclude<Tier, 'free'>; interval: 'monthly' | 'annual'; label: string; company?: 'addon' }> = {
   plan_C0wvFkX0sqiPm: { tier: 'basic', interval: 'monthly', label: 'Basic — Monthly' },
   plan_3QSVT9Mr4cxVt: { tier: 'advanced', interval: 'monthly', label: 'Advanced — Monthly' },
   plan_3HbuZZv6vhNu9: { tier: 'advanced', interval: 'annual', label: 'Advanced — Annual' },
@@ -17,10 +24,18 @@ export const WHOP_PLANS: Record<string, { tier: Exclude<Tier, 'free'>; interval:
   // $10/mo add-on for people who already get Advanced free via the Discord
   // community plan (see effectiveTier/discord_advanced_claimed below) — buying
   // this on top bumps them to Ultimate through the exact same checkout/webhook
-  // path every other plan uses, just at the discounted add-on price. Not
-  // shown on the public /pricing page — only surfaced on /settings/membership
-  // to accounts that already have the claim, since it's meaningless without it.
-  plan_Q1Ey6RMgjS9XQ: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate Add-on — Discord Members' },
+  // path every other plan uses, just at the discounted add-on price, under the
+  // addon Whop business. Not shown on the public /pricing page — only
+  // surfaced on /settings/membership to accounts that already have the claim,
+  // since it's meaningless without it.
+  plan_Q1Ey6RMgjS9XQ: { tier: 'ultimate', interval: 'monthly', label: 'Ultimate Add-on — Discord Members', company: 'addon' },
+}
+
+// Which WHOP_API_KEY-equivalent env var a checkout session for this plan
+// must be created with — picking the wrong one 404s, since a plan id only
+// ever exists under one of the two separate Whop businesses.
+export function checkoutApiKeyEnvFor(planId: string): 'ADDON_WHOP_KEY' | 'WHOP_API_KEY' {
+  return WHOP_PLANS[planId]?.company === 'addon' ? 'ADDON_WHOP_KEY' : 'WHOP_API_KEY'
 }
 
 // Current beta cohort (169 users, backfilled from who held the "Beta Tester"
