@@ -119,10 +119,13 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   // Private account = only the owner or a follower can see the actual
   // content (posts/picks) — profile info (avatar, username, bio, follower
   // counts) stays visible either way, same as any mainstream app's private
-  // account. Win rate is a SEPARATE opt-out (hide_win_rate) independent of
-  // account privacy, so a public account can still hide just that one stat.
+  // account. Pick Record/Win Rate now follows the same rule (a private
+  // account's stats are content too — a non-follower shouldn't see the W/L
+  // record just because the individual picks are hidden), on top of
+  // hide_win_rate, which is a SEPARATE opt-out a public account can also use
+  // to hide just that one stat without going private.
   const canViewContent = isOwnProfile || !profile.is_private || isFollowing
-  const canViewWinRate = isOwnProfile || !profile.hide_win_rate
+  const canViewWinRate = isOwnProfile || (canViewContent && !profile.hide_win_rate)
 
   // Map posts to PostCardClient shape. `author` comes straight from the
   // query now (getUserPosts embeds it per-post) rather than being forced to

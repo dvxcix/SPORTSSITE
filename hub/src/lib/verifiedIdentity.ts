@@ -1,13 +1,20 @@
-// Maps a social_platforms.key to the Supabase auth provider slot that can
-// verify it — only X and Discord have a real OAuth link today (matches the
-// two providers actually wired on the login/register pages).
-export const PROVIDER_BY_PLATFORM_KEY: Record<string, 'discord' | 'x'> = {
+// Maps a social_platforms.key to the identity provider that can verify it.
+// Discord and X go through Supabase's own OAuth identity linking
+// (linkIdentity/unlinkIdentity, handled in ProfileForm). 'whop' is NOT a
+// Supabase-native provider — Whop OAuth is hand-rolled (see whop.ts's top
+// comment) — so it's verified through a separate flow
+// (/auth/whop/login?mode=link) and unlinked through /api/whop/unlink, but
+// still shows in this same Connected Accounts list once linked, keyed the
+// same way in users.verified_identities.
+export const PROVIDER_BY_PLATFORM_KEY: Record<string, 'discord' | 'x' | 'whop'> = {
   x_twitter: 'x',
   discord: 'discord',
+  whop: 'whop',
 }
-export const PLATFORM_KEY_BY_PROVIDER: Record<'discord' | 'x', string> = {
+export const PLATFORM_KEY_BY_PROVIDER: Record<'discord' | 'x' | 'whop', string> = {
   discord: 'discord',
   x: 'x_twitter',
+  whop: 'whop',
 }
 
 export type VerifiedIdentity = { handle: string; profileUrl: string }

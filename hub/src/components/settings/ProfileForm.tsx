@@ -70,7 +70,7 @@ export function ProfileForm({ profile }: { profile: any }) {
   // since getUserIdentities() only reflects what's true *right now*, not
   // what was last saved to the users row.
   const [verified, setVerified] = useState<Record<string, VerifiedIdentity>>(profile?.verified_identities ?? {})
-  const [linkingProvider, setLinkingProvider] = useState<'discord' | 'x' | null>(null)
+  const [linkingProvider, setLinkingProvider] = useState<'discord' | 'x' | 'whop' | null>(null)
   // Separate from the top-of-form `error` — that one renders far above this
   // section, so a failed link/unlink click looked like it "did nothing"
   // when really the error was just scrolled out of view (or, before this,
@@ -78,15 +78,18 @@ export function ProfileForm({ profile }: { profile: any }) {
   // had no error handling at all).
   const [connectedError, setConnectedError] = useState('')
   // /auth/callback redirects a failed linkIdentity() attempt back here with
-  // ?link_error=... (plain URLSearchParams, not next/navigation's
-  // useSearchParams — that needs a Suspense boundary this page doesn't have,
-  // and this only needs to run once on mount anyway).
+  // ?link_error=..., and the hand-rolled Whop link flow (handleWhopLink in
+  // /auth/whop/callback) redirects back with ?whop_linked=1 / ?whop_link_error=...
+  // (plain URLSearchParams, not next/navigation's useSearchParams — that
+  // needs a Suspense boundary this page doesn't have, and this only needs to
+  // run once on mount anyway).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const linkError = params.get('link_error')
-    if (linkError) {
-      setConnectedError(linkError)
-      params.delete('link_error')
+    const linkError = params.get('link_error') || params.get('whop_link_error')
+    const whopLinked = params.get('whop_linked')
+    if (linkError) setConnectedError(linkError)
+    if (linkError || whopLinked) {
+      params.delete('link_error'); params.delete('whop_link_error'); params.delete('whop_linked')
       const qs = params.toString()
       window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
     }
@@ -98,7 +101,14 @@ export function ProfileForm({ profile }: { profile: any }) {
       if (cancelled) return
       if (err) { setConnectedError(err.message); return }
       if (!data) return
-      const next: Record<string, VerifiedIdentity> = {}
+      // Only discord/x come from Supabase's own identities — start from
+      // whatever's already stored (e.g. 'whop', synced separately by the
+      // hand-rolled Whop link flow, not through getUserIdentities() at all)
+      // and only ever touch the discord/x keys, or a stale read here would
+      // silently wipe the whop entry out of verified_identities.
+      const next: Record<string, VerifiedIdentity> = { ...(profile?.verified_identities ?? {}) }
+      delete next.discord
+      delete next.x
       for (const identity of data.identities) {
         if (identity.provider !== 'discord' && identity.provider !== 'x') continue
         const extracted = extractIdentityHandle(identity.provider, identity.identity_data ?? {})
@@ -117,9 +127,18 @@ export function ProfileForm({ profile }: { profile: any }) {
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function linkIdentity(provider: 'discord' | 'x') {
-    setLinkingProvider(provider)
+  async function linkIdentity(provider: 'discord' | 'x' | 'whop') {
     setConnectedError('')
+    if (provider === 'whop') {
+      // Whop isn't a Supabase-native provider (see whop.ts) — this is a
+      // full-page redirect into the hand-rolled OAuth flow, not
+      // supabase.auth.linkIdentity(), which only knows providers Supabase
+      // itself supports.
+      setLinkingProvider('whop')
+      window.location.href = `/auth/whop/login?mode=link&next=${encodeURIComponent('/settings/profile')}`
+      return
+    }
+    setLinkingProvider(provider)
     try {
       const { error: err } = await supabase.auth.linkIdentity({
         provider,
@@ -137,8 +156,27 @@ export function ProfileForm({ profile }: { profile: any }) {
     }
   }
 
-  async function unlinkIdentity(provider: 'discord' | 'x') {
+  async function unlinkIdentity(provider: 'discord' | 'x' | 'whop') {
     setConnectedError('')
+    if (provider === 'whop') {
+      // No Supabase identity to unlink — /api/whop/unlink clears
+      // whop_user_id/discord_advanced_claimed/verified_identities.whop and
+      // re-syncs the tier badge server-side (same hand-rolled-flow reason
+      // as linkIdentity above).
+      try {
+        const res = await fetch('/api/whop/unlink', { method: 'POST' })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) { setConnectedError(body?.error || 'Unlink failed — please try again.'); return }
+      } catch (e: any) {
+        setConnectedError(e?.message || 'Unlink failed — please try again.')
+        return
+      }
+      const next = { ...verified }
+      delete next.whop
+      setVerified(next)
+      router.refresh()
+      return
+    }
     let identity, err
     try {
       const res = await supabase.auth.getUserIdentities()

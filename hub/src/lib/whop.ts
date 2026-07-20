@@ -90,6 +90,19 @@ export async function fetchWhopUserInfo(accessToken: string): Promise<WhopUserIn
   } catch { return null }
 }
 
+// The shape shown in Settings > Connected Accounts and on the public
+// profile (see verifiedIdentity.ts's VerifiedIdentity type) — Whop doesn't
+// go through Supabase's own identity system, so this is built by hand from
+// the same userinfo response every other Whop flow already fetches, instead
+// of a second lookup.
+export function buildWhopVerifiedIdentity(whopUser: WhopUserInfo): { handle: string; profileUrl: string } {
+  const handle = whopUser.preferred_username || whopUser.name || 'Whop'
+  return {
+    handle,
+    profileUrl: whopUser.preferred_username ? `https://whop.com/@${whopUser.preferred_username}` : 'https://whop.com',
+  }
+}
+
 // Whether this Whop user owns the given Product/access-pass — originally
 // just the beta gate (called with WHOP_ACCESS_PASS_ID), now also reused to
 // check the separate Discord-community product on the same Whop company

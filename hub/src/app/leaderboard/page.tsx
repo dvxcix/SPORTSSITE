@@ -21,10 +21,18 @@ function wilsonLowerBound(wins: number, total: number): number {
 export default async function LeaderboardPage() {
   const supabase = await createClient()
 
-  const { data: users } = await supabase
+  // Private accounts never appear here — this is a public ranking with no
+  // per-viewer follow check (unlike the profile page, which can show a
+  // private account's stats to its own followers), so the only correct
+  // answer for "does the public see this account's record" is no. Filtered
+  // in JS rather than `.eq('is_private', false)` — is_private predates a
+  // default and can be NULL on older rows, which Postgres's `= false` would
+  // wrongly exclude.
+  const { data: rawUsers } = await supabase
     .from('users')
-    .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
-    .limit(100)
+    .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record, is_private')
+    .limit(200)
+  const users = (rawUsers ?? []).filter(u => !u.is_private).slice(0, 100)
 
   const { data: pickStats } = await supabase
     .from('posts')

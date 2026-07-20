@@ -26,7 +26,7 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
   }
 
   const toggleItems = [
-    { label: 'Private Account', desc: 'Only your followers can see your posts and picks — your profile, username, and stats stay visible', value: isPrivate, set: setIsPrivate },
+    { label: 'Private Account', desc: 'Only your followers can see your posts, picks, and pick record — you\'re also removed from the public leaderboard. Your profile, username, and bio stay visible', value: isPrivate, set: setIsPrivate },
     { label: 'Hide Win Rate', desc: 'Hide your pick record and win rate from your public profile', value: hideWinRate, set: setHideWinRate },
     { label: 'Allow Direct Messages', desc: 'Anyone can send you a DM', value: allowDms, set: setAllowDms },
   ]

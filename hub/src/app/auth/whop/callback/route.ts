@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess } from '@/lib/whop'
+import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess, buildWhopVerifiedIdentity, type WhopUserInfo } from '@/lib/whop'
 import { effectiveTier, type Tier } from '@/lib/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 
@@ -77,7 +77,11 @@ export async function GET(request: Request) {
   // it can't fall through into the login branches below and accidentally
   // create a second account for someone who already has one.
   if (stored.mode === 'link' && stored.linkUserId) {
-    return handleWhopLink(admin, stored.linkUserId, whopUser.sub, discordHasAccess, origin)
+    // stored.next is user-suppliable (came from ?next= on the /auth/whop/login
+    // request) — must be a same-site relative path, not "//host/..." (a
+    // protocol-relative external redirect).
+    const linkNext = stored.next && stored.next.startsWith('/') && !stored.next.startsWith('//') ? stored.next : '/settings/membership'
+    return handleWhopLink(admin, stored.linkUserId, whopUser, discordHasAccess, origin, linkNext)
   }
 
   if (!betaHasAccess && !discordHasAccess) return loginFailed('whop_no_access')
@@ -180,8 +184,14 @@ export async function GET(request: Request) {
   // One unified sync regardless of which branch above resolved authUserId —
   // discordHasAccess is already known from the check up top, just need the
   // account's real purchased tier to fold it in via effectiveTier() before
-  // awarding/stripping the Advanced/Ultimate profile badge.
-  const { data: tierRow } = await admin.from('users').select('tier').eq('id', authUserId).maybeSingle()
+  // awarding/stripping the Advanced/Ultimate profile badge. Also records the
+  // Whop identity as verified (Settings > Connected Accounts, public profile
+  // badge) — merged onto whatever's already in verified_identities rather
+  // than overwritten, since discord/x entries live in the same column.
+  const { data: tierRow } = await admin.from('users').select('tier, verified_identities').eq('id', authUserId).maybeSingle()
+  await admin.from('users').update({
+    verified_identities: { ...(tierRow?.verified_identities ?? {}), whop: buildWhopVerifiedIdentity(whopUser) },
+  }).eq('id', authUserId)
   await syncTierBadge(admin, authUserId, effectiveTier((tierRow?.tier as Tier) ?? 'free', discordHasAccess))
 
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
@@ -202,22 +212,29 @@ export async function GET(request: Request) {
 
 // admin param typed loosely (matches createAdminClient()'s own inferred
 // return type) to avoid importing a Supabase generic just for this helper.
-async function handleWhopLink(admin: ReturnType<typeof createAdminClient>, linkUserId: string, whopUserId: string, discordHasAccess: boolean, origin: string) {
-  const linkFailed = (reason: string) => NextResponse.redirect(`${origin}/settings/membership?whop_link_error=${reason}`)
+async function handleWhopLink(admin: ReturnType<typeof createAdminClient>, linkUserId: string, whopUser: WhopUserInfo, discordHasAccess: boolean, origin: string, next: string) {
+  // `next` is whatever page started the link (Settings > Membership or
+  // Settings > Profile's Connected Accounts) — round-tripping back there
+  // keeps both entry points working without hardcoding one destination.
+  const redirectTo = (params: string) => NextResponse.redirect(`${origin}${next}${next.includes('?') ? '&' : '?'}${params}`)
+  const linkFailed = (reason: string) => redirectTo(`whop_link_error=${reason}`)
 
   // This Whop identity might already be linked to someone — a DIFFERENT
   // SlipSurge account (block it) or this same one (harmless re-link, just
   // proceed and re-sync).
-  const { data: existingByWhop } = await admin.from('users').select('id').eq('whop_user_id', whopUserId).maybeSingle()
+  const { data: existingByWhop } = await admin.from('users').select('id').eq('whop_user_id', whopUser.sub).maybeSingle()
   if (existingByWhop && existingByWhop.id !== linkUserId) return linkFailed('already_linked_elsewhere')
 
+  const { data: current } = await admin.from('users').select('tier, verified_identities').eq('id', linkUserId).maybeSingle()
+
   const { data: updated, error } = await admin.from('users').update({
-    whop_user_id: whopUserId,
+    whop_user_id: whopUser.sub,
     discord_advanced_claimed: discordHasAccess,
+    verified_identities: { ...(current?.verified_identities ?? {}), whop: buildWhopVerifiedIdentity(whopUser) },
   }).eq('id', linkUserId).select('tier').single()
   if (error || !updated) return linkFailed('link_failed')
 
   await syncTierBadge(admin, linkUserId, effectiveTier((updated.tier as Tier) ?? 'free', discordHasAccess))
 
-  return NextResponse.redirect(`${origin}/settings/membership?whop_linked=1`)
+  return redirectTo('whop_linked=1')
 }
