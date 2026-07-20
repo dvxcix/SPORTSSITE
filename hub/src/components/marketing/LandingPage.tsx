@@ -4,10 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'motion/react'
-import { CloudSun, Activity, Rows3, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react'
+import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users } from 'lucide-react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { Spotlight } from '@/components/ui/spotlight'
-import { HoverEffect } from '@/components/ui/card-hover-effect'
 import { CometCard } from '@/components/ui/comet-card'
 import { Badge } from '@/components/ui/badge'
 import { BookLogo } from '@/components/BookLogo'
@@ -19,12 +18,15 @@ const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Mete
 
 // Deliberately generic/benefit-level descriptions only — no mention of any
 // internal signal, formula, or threshold (PWR, shade%, Pikkit, etc.).
-// Same rule already applied to member-facing tooltips.
-const FEATURES = [
-  { title: 'Post picks & parlays', description: 'Same-book parlay building, live odds, and payout math built right into the composer.', link: '/auth/register?utm_feature=picks' },
-  { title: 'Live scores', description: 'Every game, every league, updating in real time — without leaving the app.', link: '/auth/register?utm_feature=scores' },
-  { title: 'Leaderboard', description: 'Real rankings by record, streaks, and per-sport performance — see who\'s actually hot.', link: '/leaderboard' },
-  { title: 'Real community', description: 'Channels, groups, and a feed built around sports conversation — not noise.', link: '/auth/register?utm_feature=community' },
+// Same rule already applied to member-facing tooltips. Icons + a fixed
+// 4-column grid (not HoverEffect's 3-col breakpoint, which split these 4
+// into an awkward 3-then-1 row) keep this visually even with the tool bento
+// grid above it instead of reading as a leftover plain-text list.
+const FEATURES: { icon: React.ReactNode; title: string; description: string; link: string }[] = [
+  { icon: <Layers size={18} />, title: 'Post picks & parlays', description: 'Build parlays with live odds and payout math calculated automatically as you compose.', link: '/auth/register?utm_feature=picks' },
+  { icon: <Radio size={18} />, title: 'Live scores', description: 'Every game, every league, updating in real time — without leaving the app.', link: '/auth/register?utm_feature=scores' },
+  { icon: <Trophy size={18} />, title: 'Leaderboard', description: 'Real rankings by record, streaks, and per-sport performance — see who\'s actually hot.', link: '/leaderboard' },
+  { icon: <Users size={18} />, title: 'Real community', description: 'Channels, groups, and a feed built around sports conversation — not noise.', link: '/auth/register?utm_feature=community' },
 ]
 
 const STEPS = [
@@ -102,7 +104,7 @@ const PRICING_TEASER = [
 
 const FAQS = [
   { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks — we never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
-  { q: 'Why can I only parlay legs from the same sportsbook?', a: 'Real books only pay out combined odds within their own platform — you can\'t parlay a leg priced on FanDuel with one priced on BetMGM. SlipSurge enforces the same rule so the combined odds shown are actually correct.' },
+  { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile — their picks land in your feed automatically, and their record updates the moment each pick grades. No screenshots, no self-reported win rates.' },
   { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded — any single loss fails the whole thing, all-push is a push, otherwise it\'s a win, same as a real sportsbook slip.' },
   { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. The community (posting, DMs, groups), player research, live scores, and our analytics tools (Weather Lab, Pitcher Report, Slate Breakdown, The Dugout) are unlocked across Basic, Advanced, and Ultimate.' },
 ]
@@ -182,7 +184,7 @@ export function LandingPage() {
             The social hub for<br />sports & picks.
           </h1>
           <p style={{ fontSize: 17, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 500, margin: '0 auto 32px' }}>
-            Drop picks, build parlays, follow cappers with real graded records, and dig into live stats — all in one place.
+            Post picks, build parlays, and see who's actually winning — every record graded automatically, every stat live.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/auth/register" style={{
@@ -202,7 +204,7 @@ export function LandingPage() {
           initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.15 }}
           style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 24px 56px', flexWrap: 'wrap' }}
         >
-          <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>Same-book parlay math for</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>Post picks from</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {['fanduel', 'draftkings', 'betmgm', 'caesars'].map(b => (
               <div key={b} style={{ width: 22, height: 22, borderRadius: 5, overflow: 'hidden', background: 'var(--surface-2)', border: '1px solid var(--border-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -241,7 +243,7 @@ export function LandingPage() {
           </motion.div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        <div className="ss-4col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           {TOOLS.map((t, i) => (
             <motion.div
               key={t.title}
@@ -271,8 +273,24 @@ export function LandingPage() {
         >
           Plus everything a social platform needs
         </motion.h2>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>No more juggling five different apps to follow the action.</p>
-        <HoverEffect items={FEATURES} />
+        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', marginBottom: 32 }}>No more juggling five different apps to follow the action.</p>
+        <div className="ss-4col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.06 }}
+            >
+              <Link href={f.link} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
+                <div className="ss-card" style={{ padding: 18, height: '100%', borderRadius: 14 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>{f.icon}</div>
+                  <h4 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-1)', marginBottom: 6 }}>{f.title}</h4>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{f.description}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       {/* How it works */}

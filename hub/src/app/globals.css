@@ -377,3 +377,15 @@ img { max-width: 100%; }
 @media (max-width: 760px) {
   .ss-landing-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Landing page 4-card grids (tools, features) ───────────────────
+   auto-fit/minmax alone can land on 3 columns at in-between widths,
+   stranding the 4th card alone on its own row — jump straight from 2
+   columns to 4 instead so it's never an uneven 3-then-1 split. */
+.ss-4col-grid { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 900px) {
+  .ss-4col-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .ss-4col-grid { grid-template-columns: 1fr !important; }
+}
