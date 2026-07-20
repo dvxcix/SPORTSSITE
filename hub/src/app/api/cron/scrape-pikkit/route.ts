@@ -3,7 +3,7 @@ import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, type TodayGame } from '@/lib/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
-import { findAndClickPikkitGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
+import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
 import { PIKKIT_SIGNED_OUT_ERROR, checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
@@ -62,6 +62,28 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     // "More wagers" navigates to a whole new page (the game's event page),
     // not just an in-place DOM update — give it real time to load.
     await bb.page.waitForTimeout(3000)
+
+    // Confirmed live: this click can land on the WRONG game's event page —
+    // a debug dump for a game reporting "no markets scraped" (CWS@TEX)
+    // showed a completely unrelated matchup (Orioles @ Red Sox) instead,
+    // most likely findAndClickPikkitGame's "nearest following More wagers
+    // link" xpath skipping past this game's own row (e.g. a still-pregame
+    // game not showing that link yet) and landing on some other game's.
+    // Scraping+importing whatever markets happen to be on that wrong page
+    // would silently mislabel a different game's real prop picks as this
+    // one's — a real data-integrity risk, not just a missed scrape. Verify
+    // both teams actually appear on the page before trusting anything
+    // scraped from it.
+    const awayWord = escapeRe(g.awayTeam.split(' ').pop() || g.awayTeam)
+    const homeWord = escapeRe(g.homeTeam.split(' ').pop() || g.homeTeam)
+    const landedText = await bb.page.evaluate(() => document.body?.innerText ?? '').catch(() => '')
+    if (!new RegExp(awayWord, 'i').test(landedText) || !new RegExp(homeWord, 'i').test(landedText)) {
+      return {
+        gameKey: g.gameKey,
+        error: 'landed on the wrong game page after clicking "More wagers" on the Pikkit listing — expected teams not found',
+        ...(debug ? { landedOnSnippet: landedText.slice(0, 300) } : {}),
+      }
+    }
 
     let oddsClicked = await clickTabByText(bb.page, 'Odds')
     if (!oddsClicked) {

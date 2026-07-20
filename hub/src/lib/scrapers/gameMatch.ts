@@ -1,6 +1,6 @@
 import type { Page } from 'playwright-core'
 
-function escapeRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+export function escapeRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
 
 // Finds a listing-page link/row for a specific game by matching BOTH teams'
 // last-word nickname (e.g. "Pirates"/"Guardians" out of the full "Pittsburgh
