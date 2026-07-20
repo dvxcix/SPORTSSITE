@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess } from '@/lib/whop'
+import { effectiveTier, type Tier } from '@/lib/tiers'
+import { syncTierBadge } from '@/lib/tierBadges'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -162,6 +164,13 @@ export async function GET(request: Request) {
       if (profileErr) return loginFailed('whop_auth_failed')
     }
   }
+
+  // One unified sync regardless of which branch above resolved authUserId —
+  // discordHasAccess is already known from the check up top, just need the
+  // account's real purchased tier to fold it in via effectiveTier() before
+  // awarding/stripping the Advanced/Ultimate profile badge.
+  const { data: tierRow } = await admin.from('users').select('tier').eq('id', authUserId).maybeSingle()
+  await syncTierBadge(admin, authUserId, effectiveTier((tierRow?.tier as Tier) ?? 'free', discordHasAccess))
 
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',

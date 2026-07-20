@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { WHOP_PLANS } from '@/lib/tiers'
+import { WHOP_PLANS, effectiveTier } from '@/lib/tiers'
+import { syncTierBadge } from '@/lib/tierBadges'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -82,13 +83,14 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           // product, or a Discord-business event unrelated to the add-on.
           break
         }
-        await supabase.from('users').update({
+        const { data: updated } = await supabase.from('users').update({
           tier: planInfo.tier,
           whop_plan_id: planId,
           tier_status: 'active',
           tier_current_period_end: periodEnd,
           whop_membership_id: membershipId ?? null,
-        }).eq('id', internalUserId)
+        }).eq('id', internalUserId).select('discord_advanced_claimed').single()
+        await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed))
         break
       }
       case 'payment.failed':
@@ -98,10 +100,14 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           console.error('[whop-webhook] no metadata.internal_user_id on', type, JSON.stringify(event))
           break
         }
-        await supabase.from('users').update({
+        const { data: updated } = await supabase.from('users').update({
           tier: 'free',
           tier_status: type,
-        }).eq('id', internalUserId)
+        }).eq('id', internalUserId).select('discord_advanced_claimed').single()
+        // Losing a purchased tier doesn't necessarily mean losing every
+        // badge — someone who cancels the $10 add-on drops from Ultimate
+        // back to Advanced (still free via the Discord plan), not to nothing.
+        await syncTierBadge(supabase, internalUserId, effectiveTier('free', updated?.discord_advanced_claimed))
         break
       }
       default:
