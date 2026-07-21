@@ -1,7 +1,9 @@
+import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, effectiveTier, type Tier } from '@/lib/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
+import { sendXConversion } from '@/lib/xConversion'
 
 // Same safety-net reasoning as whopAddonReconcile.ts, for the MAIN
 // tier-payments business — confirmed live that its webhook (/api/webhooks/whop)
@@ -60,6 +62,7 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
       // schedule and would otherwise bump it to "now" every time it sees
       // the same still-active membership, same reasoning as the webhook.
       const { data: existing } = await admin.from('users').select('tier_purchased_at').eq('id', internalUserId).maybeSingle()
+      const isFirstPurchase = !existing?.tier_purchased_at
       const { data: updated, error } = await admin.from('users').update({
         tier: planInfo.tier,
         whop_plan_id: planId,
@@ -67,7 +70,7 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
         tier_current_period_end: periodEnd,
         whop_membership_id: membershipId ?? null,
         tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
-      }).eq('id', internalUserId).select('username, discord_advanced_claimed, admin_granted_tier').single()
+      }).eq('id', internalUserId).select('username, discord_advanced_claimed, admin_granted_tier, email').single()
 
       if (error || !updated) {
         results.push({ planId, membershipId, internalUserId, error: error?.message ?? 'user not found' })
@@ -75,6 +78,13 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
       }
 
       await syncTierBadge(admin, internalUserId, effectiveTier(planInfo.tier as Tier, updated.discord_advanced_claimed, updated.admin_granted_tier))
+      // Only a genuine first-time purchase, never a still-active membership
+      // this cron already saw on a previous run — same fire-and-forget
+      // reasoning as whopWebhook.ts, must never delay this reconcile job.
+      if (isFirstPurchase && updated.email) {
+        const email = updated.email
+        after(() => sendXConversion({ conversionId: `purchase-${internalUserId}`, email }))
+      }
       results.push({ planId, membershipId, internalUserId, username: updated.username, status, granted: planInfo.tier })
     }
   }

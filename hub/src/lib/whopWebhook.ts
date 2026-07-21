@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, effectiveTier } from '@/lib/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { sendXConversion } from '@/lib/xConversion'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -99,6 +100,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         // started, not the most recent renewal. Cleared on cancellation
         // below, so a later resubscribe gets its own fresh start date.
         const { data: existing } = await supabase.from('users').select('tier_purchased_at').eq('id', internalUserId).maybeSingle()
+        const isFirstPurchase = !existing?.tier_purchased_at
         const { data: updated } = await supabase.from('users').update({
           tier: planInfo.tier,
           whop_plan_id: planId,
@@ -106,8 +108,16 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           tier_current_period_end: periodEnd,
           whop_membership_id: membershipId ?? null,
           tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
-        }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
+        }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
         await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
+        // Only a genuine first-time purchase, never a renewal (see the
+        // comment above on tier_purchased_at) — fire-and-forget via after(),
+        // same reasoning as the signup call sites: must never delay this
+        // webhook's ack to Whop or fail the tier grant itself.
+        if (isFirstPurchase && updated?.email) {
+          const email = updated.email
+          after(() => sendXConversion({ conversionId: `purchase-${internalUserId}`, email }))
+        }
         break
       }
       case 'payment.failed':

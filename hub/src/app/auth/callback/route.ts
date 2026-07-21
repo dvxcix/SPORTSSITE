@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -58,6 +59,23 @@ export async function GET(request: Request) {
       // them into the app in that state.
       if (upsertErr && isNewAccount) {
         return NextResponse.redirect(`${origin}/auth/login?error=profile_setup_failed`)
+      }
+      if (isNewAccount) {
+        // after() (not a bare dangling promise) — runs once this redirect has
+        // already gone out, but Vercel still keeps the function alive via
+        // waitUntil() until it settles, so a slow/down X API can never delay
+        // or fail the signup itself, and also can't get silently truncated
+        // the way an un-awaited fetch would risk in a serverless invocation.
+        const email = data.user.email
+        const ip = clientIpFromRequest(request)
+        const userAgent = request.headers.get('user-agent')
+        after(() => sendXConversion({
+          conversionId: `signup-${data.user.id}`,
+          email,
+          eventSourceUrl: `${origin}/auth/callback`,
+          ip,
+          userAgent,
+        }))
       }
       return NextResponse.redirect(`${origin}${isNewAccount ? '/onboarding' : next}`)
     }

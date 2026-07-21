@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess, buildWhopVerifiedIdentity, type WhopUserInfo } from '@/lib/whop'
 import { effectiveTier, type Tier } from '@/lib/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -178,6 +179,20 @@ export async function GET(request: Request) {
       // profile row at all if this fails — a real auth.users row now exists
       // with nothing to back it, so don't bridge them into a broken session.
       if (profileErr) return loginFailed('whop_auth_failed')
+
+      // after() so a slow/down X API can never delay or fail this login —
+      // runs once the eventual redirect has gone out, but Vercel keeps the
+      // function alive via waitUntil() until it settles.
+      const email = whopUser.email
+      const ip = clientIpFromRequest(request)
+      const userAgent = request.headers.get('user-agent')
+      after(() => sendXConversion({
+        conversionId: `signup-${authUserId}`,
+        email,
+        eventSourceUrl: `${origin}/auth/whop/callback`,
+        ip,
+        userAgent,
+      }))
     }
   }
 
