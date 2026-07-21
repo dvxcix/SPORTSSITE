@@ -71,6 +71,7 @@ const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'Pitcher Report + Weather Lab', minTier: 'basic' },
   { label: 'Full Slate Breakdown', minTier: 'advanced' },
   { label: 'The Dugout — our proprietary Game Matrix', minTier: 'ultimate' },
+  { label: 'The Public — crowd picks ranked against real book odds', minTier: 'ultimate' },
   { label: 'Line Movement Tracker', minTier: 'ultimate' },
 ]
 const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']

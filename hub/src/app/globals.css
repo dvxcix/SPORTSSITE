@@ -390,6 +390,21 @@ img { max-width: 100%; }
   .ss-4col-grid { grid-template-columns: 1fr !important; }
 }
 
+/* Same jump-straight-past-3-columns reasoning as .ss-4col-grid above, sized
+   for the 5-tool grid (adding The Public made it 5, not 4) instead of
+   sharing that class and accidentally reflowing the unrelated 4-item
+   FEATURES grid below it. */
+.ss-5col-grid { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 1100px) {
+  .ss-5col-grid { grid-template-columns: repeat(3, 1fr) !important; }
+}
+@media (max-width: 700px) {
+  .ss-5col-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .ss-5col-grid { grid-template-columns: 1fr !important; }
+}
+
 /* ── Hide the global Watchlist/My Picks FABs while a full-screen modal
    is open ─────────────────────────────────────────────────────────
    Reported live: on mobile, the checkout modal's embedded payment form

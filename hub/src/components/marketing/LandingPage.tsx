@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'motion/react'
-import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users } from 'lucide-react'
+import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, Megaphone } from 'lucide-react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { Spotlight } from '@/components/ui/spotlight'
 import { CometCard } from '@/components/ui/comet-card'
@@ -54,6 +54,7 @@ const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: 
   { icon: <Activity size={18} />, title: 'Pitcher Report', description: 'See exactly what a starter has thrown lately and who in tonight\'s lineup has been hitting it hard.', tier: 'basic', link: '/auth/register?utm_feature=pitcher' },
   { icon: <Rows3 size={18} />, title: 'Slate Breakdown', description: 'Every pitcher and batter matchup on tonight\'s slate, laid out side by side before first pitch.', tier: 'advanced', link: '/auth/register?utm_feature=slate' },
   { icon: <TrendingUp size={18} />, title: 'Batter Cost', description: 'Tracks how a prop\'s price has actually moved since the line opened — see who the market\'s shading.', tier: 'ultimate', link: '/auth/register?utm_feature=batter-cost' },
+  { icon: <Megaphone size={18} />, title: 'The Public', description: 'Who the crowd is betting on tonight, every prop, ranked by real pick volume against the actual book price.', tier: 'ultimate', link: '/auth/register?utm_feature=public' },
 ]
 
 // Illustrative mockup only — not a live screenshot. Team pairs and numbers
@@ -102,14 +103,14 @@ const PRICING_TEASER = [
   // config) — this teaser only ever shows the monthly price, so it's always
   // safe to show here without an interval check like /pricing needs.
   { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'Everything in Basic + Slate Breakdown.', trialDays: 7 },
-  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout.', popular: true, trialDays: 3 },
+  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout and The Public.', popular: true, trialDays: 3 },
 ]
 
 const FAQS = [
   { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks — we never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
   { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile — their picks land in your feed automatically, and their record updates the moment each pick grades. No screenshots, no self-reported win rates.' },
   { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded — any single loss fails the whole thing, all-push is a push, otherwise it\'s a win, same as a real sportsbook slip.' },
-  { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. The community (posting, DMs, groups), player research, live scores, and our analytics tools (Weather Lab, Pitcher Report, Slate Breakdown, The Dugout) are unlocked across Basic, Advanced, and Ultimate.' },
+  { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. The community (posting, DMs, groups), player research, live scores, and our analytics tools (Weather Lab, Pitcher Report, Slate Breakdown, The Dugout, The Public) are unlocked across Basic, Advanced, and Ultimate.' },
 ]
 
 function FaqAccordion() {
@@ -246,7 +247,7 @@ export function LandingPage() {
           </motion.div>
         </div>
 
-        <div className="ss-4col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div className="ss-5col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
           {TOOLS.map((t, i) => (
             <motion.div
               key={t.title}

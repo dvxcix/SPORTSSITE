@@ -5,7 +5,7 @@ import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
-import { BookLogo } from '@/components/BookLogo'
+import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
 
 // Every market that carries an opening-line baseline (see dugout/data/
 // route.ts's entry.open merge) — current value lives on the vendor-keyed
@@ -91,49 +91,7 @@ function computeIsPwr(props: any): boolean {
 }
 const PWR_TITLE = 'Power Vehicle — this player\'s HR, double, and total-bases pricing all line up with real book conviction on power tonight'
 
-const oStr = (v: number | null) => v == null ? '—' : (v > 0 ? `+${v}` : String(v))
 const pctStr = (v: number | null) => v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`
-
-// Same small gold 📊 pick-count tag Dugout/Pitcher Report already use for
-// community Pikkit picks — its own normal-flow line under the book badges
-// (not an absolutely-positioned corner tag) so it gets real space instead
-// of being crammed illegibly small into a corner.
-function PickBadge({ picks, label }: { picks: number | null; label: string }) {
-  if (picks == null) return null
-  return (
-    <Tooltip content={`${picks.toLocaleString()} community ${label} picks`}>
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 2, fontSize: 10, fontWeight: 800, color: 'var(--gold, #eab308)', cursor: 'help', lineHeight: 1 }}>
-        📊{picks >= 1000 ? `${(picks / 1000).toFixed(1)}k` : picks}
-      </div>
-    </Tooltip>
-  )
-}
-
-// Centered row of book-logo + raw-price badges, used under both the
-// FHR%/HR% columns (showing the OPENING price that % is relative to) and
-// every MARKETS column (showing the CURRENT price the delta was computed
-// from) — same "actual odds, not just the ratio/delta" request for both.
-// A fixed 2-column grid, not flex+flexWrap: flex-wrap's line count depends
-// on the container's actual rendered width, so the same cell could wrap to
-// 1, 2, or 3 lines depending on viewport/zoom — different cells in the same
-// row ending up wildly different heights is what was letting sticky-column
-// content visually desync from its row on mobile. A grid always wraps at
-// exactly 2 per row regardless of width, so row height stays predictable.
-function BookBadges({ prices, books }: { prices: any; books: string[] }) {
-  const entries = books.map(b => [b, prices?.[b]] as const).filter((e): e is [string, number] => e[1] != null)
-  if (!entries.length) return null
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, auto)', justifyContent: 'center', columnGap: 6, rowGap: 1, marginTop: 3 }}>
-      {entries.map(([book, v]) => (
-        <Tooltip key={book} content={book}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>
-            <BookLogo vendor={book} size={13} />{oStr(v)}
-          </span>
-        </Tooltip>
-      ))}
-    </div>
-  )
-}
 
 // FHR%/HR% are computed ratios that essentially never land on exactly
 // zero, so their "flat" option means something different than the delta
