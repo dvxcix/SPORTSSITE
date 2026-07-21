@@ -72,18 +72,36 @@ async function mpGetAll(path: string, cache = 3600): Promise<any[]> {
   return out
 }
 
+// Confirmed via a live diagnostic (2026-07-21): get_fhr_history_avg and
+// get_sa_history_avg both came back at EXACTLY 1000 rows despite requesting
+// Range 0-4999 — the same silent per-request cap mpGetAll already works
+// around for the plain-table fetches above, just never applied here since
+// this hits an RPC endpoint instead. ~500 distinct players (2 bookmaker rows
+// each) made it into the response; whichever players fell past whatever
+// order the RPC returns rows in were silently missing from both season-
+// average maps every single day — the real cause of a consistent subset of
+// batters (Trea Turner, Willson Contreras, Wilyer Abreu, Vladimir Guerrero
+// Jr., Jasson Dominguez, and presumably ~250 others) always rendering blank
+// FHR%/HR%, unrelated to buildBatterRow's matching/formula logic.
 async function mpRpc(fn: string, body: any): Promise<any[]> {
-  try {
-    const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
-      method: 'POST',
-      headers: { ...mpH, Range: '0-4999' },
-      body: JSON.stringify(body),
-      next: { revalidate: 3600 },
-    })
-    if (!res.ok) return []
-    const d = await res.json()
-    return Array.isArray(d) ? d : []
-  } catch { return [] }
+  const PAGE = 1000
+  const out: any[] = []
+  for (let offset = 0; offset < 100_000; offset += PAGE) {
+    try {
+      const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` },
+        body: JSON.stringify(body),
+        next: { revalidate: 3600 },
+      })
+      if (!res.ok) break
+      const page = await res.json()
+      if (!Array.isArray(page)) break
+      out.push(...page)
+      if (page.length < PAGE) break
+    } catch { break }
+  }
+  return out
 }
 
 const STAT_COLS = 'mlb_id,name_norm,pitch_hand,win,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,ideal_attack_angle_rate,swing_tilt,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,pull_air_rate,fb_rate,xhr,hr_total,avg_hr_distance'

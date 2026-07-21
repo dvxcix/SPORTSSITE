@@ -20,18 +20,31 @@ const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
 const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
 
+// Mirrors the identical fix in api/dugout/data/route.ts's mpRpc — confirmed
+// live (2026-07-21, via this same endpoint) that both RPCs came back at
+// exactly 1000 rows regardless of the Range header requesting 5000, the same
+// silent per-request cap mpGetAll already works around elsewhere in that
+// file. Paginating here too so this diagnostic reports the same fixed
+// behavior it's being used to verify.
 async function mpRpc(fn: string, body: any): Promise<any[]> {
-  try {
-    const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
-      method: 'POST',
-      headers: { ...mpH, Range: '0-4999' },
-      body: JSON.stringify(body),
-      cache: 'no-store',
-    })
-    if (!res.ok) return []
-    const d = await res.json()
-    return Array.isArray(d) ? d : []
-  } catch { return [] }
+  const PAGE = 1000
+  const out: any[] = []
+  for (let offset = 0; offset < 100_000; offset += PAGE) {
+    try {
+      const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` },
+        body: JSON.stringify(body),
+        cache: 'no-store',
+      })
+      if (!res.ok) break
+      const page = await res.json()
+      if (!Array.isArray(page)) break
+      out.push(...page)
+      if (page.length < PAGE) break
+    } catch { break }
+  }
+  return out
 }
 
 // Exactly mirrors the fhrAvgMap/saAvgMap useMemo blocks in DugoutClient.tsx
