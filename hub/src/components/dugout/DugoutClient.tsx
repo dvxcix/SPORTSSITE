@@ -2105,7 +2105,12 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
     return [...withMeta].sort((a, b) => {
       if (sortBy === 'ev') return (b.exit_velocity ?? -1) - (a.exit_velocity ?? -1)
       if (sortBy === 'dist') return (b.hit_distance ?? -1) - (a.hit_distance ?? -1)
-      return (a.game_pk ?? 0) - (b.game_pk ?? 0) || (a.ab_index ?? 0) - (b.ab_index ?? 0)
+      // hr_time is a real ISO timestamp (MLB's playByPlay about.endTime) —
+      // game_pk/ab_index only orders at-bats WITHIN one game, so two
+      // different games' HRs had no real relationship to each other and
+      // this used to group the whole list by game first instead of true
+      // chronological order across the slate.
+      return new Date(a.hr_time ?? 0).getTime() - new Date(b.hr_time ?? 0).getTime()
     })
   }, [hits, teamByMlbId, sortBy])
 
@@ -2163,8 +2168,27 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                  {/* Reported live: picking "Distance" (or "Time") re-sorted
+                      the list correctly, but Exit Velo stayed the bold/primary
+                      number on every row regardless — the visual hierarchy
+                      never followed the active tab. The bold line now shows
+                      whichever stat is actually being sorted on. */}
+                  {sortBy === 'dist' ? (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                    </>
+                  ) : sortBy === 'time' ? (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{h.hr_time ? new Date(h.hr_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                    </>
+                  )}
                 </div>
               </div>
             )

@@ -199,6 +199,12 @@ async function fetchHrFeed(mlbGames: any[]): Promise<any[]> {
             exit_velocity: hitEvent?.hitData?.launchSpeed ?? null,
             launch_angle: hitEvent?.hitData?.launchAngle ?? null,
             hit_distance: hitEvent?.hitData?.totalDistance ?? null,
+            // Real wall-clock moment the HR happened — needed to sort
+            // "Today's Home Runs" chronologically ACROSS games. ab_index only
+            // orders at-bats within one game; two games' at-bats have no
+            // relationship to each other, so sorting by ab_index (or game_pk)
+            // groups everything by game first instead of real slate order.
+            hr_time: p.about?.endTime ?? p.about?.startTime ?? null,
           }
         })
     } catch { return [] }
