@@ -172,7 +172,13 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
 
   useEffect(() => {
     let cancelled = false
-    fetch(`/api/dugout/data?date=${gameDate}`)
+    // Not /api/dugout/data — that route is requireTier('ultimate') for the
+    // Dugout/Batter Cost/The Public analytics payload it also returns, but
+    // posting a pick has never been tier-gated anywhere else (FeedComposer
+    // renders this unconditionally, POST /api/posts/pick has no tier check).
+    // An Advanced-tier member hit a silent 403 here that looked identical to
+    // "no real games today" — see /api/composer/games's own header comment.
+    fetch(`/api/composer/games?date=${gameDate}`)
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(d => {
         if (cancelled) return
