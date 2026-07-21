@@ -4,8 +4,16 @@ import { ChevronDown } from 'lucide-react'
 import { PlayerLink } from '@/components/players/PlayerPageClient'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
+import { BookLogo } from '@/components/BookLogo'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+
+// Every book we actually store odds under (see BookLogo.tsx) — every
+// category shows whichever of these actually have a real price for that
+// specific player/line rather than being artificially capped to FanDuel;
+// confirmed live that most markets here (TB, RBI, Hits, etc.) commonly
+// carry 4-5 real books, not just one.
+const ALL_BOOKS = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'betrivers', 'fanatics']
 
 // Every prop category we track odds AND community Pikkit picks for —
 // anything else (walks, strikeouts, runs) has one or the other but not
@@ -36,14 +44,14 @@ type CategoryDef = {
   outcomeKey: string; gradeType: 'binary' | 'count'; ladder?: LadderRung[]; dynamicLine?: boolean
 }
 const CATEGORIES: CategoryDef[] = [
-  { key: 'hr', label: 'Home Run', short: 'HR', pikkitProp: 'home_runs', propsKey: 'sa', books: ['fanduel', 'caesars', 'betmgm', 'betrivers'], outcomeKey: 'hr', gradeType: 'binary' },
-  { key: 'hits', label: 'To Record a Hit', short: 'Hits', pikkitProp: 'hits', propsKey: 'hits', books: ['fanduel'], outcomeKey: 'h', gradeType: 'binary' },
-  { key: 'singles', label: 'Singles', short: '1B', pikkitProp: 'singles', propsKey: 'singles', books: ['fanduel'], outcomeKey: 'singles', gradeType: 'binary' },
-  { key: 'doubles', label: 'Doubles', short: '2B', pikkitProp: 'doubles', propsKey: 'doubles', books: ['fanduel'], outcomeKey: 'doubles', gradeType: 'binary' },
-  { key: 'triples', label: 'Triples', short: '3B', pikkitProp: 'triples', propsKey: 'triples', books: ['fanduel'], outcomeKey: 'triples', gradeType: 'binary' },
-  { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', pikkitProp: 'stolen_bases', propsKey: 'stolen_bases', books: ['fanduel'], outcomeKey: 'sb', gradeType: 'binary' },
+  { key: 'hr', label: 'Home Run', short: 'HR', pikkitProp: 'home_runs', propsKey: 'sa', books: ALL_BOOKS, outcomeKey: 'hr', gradeType: 'binary' },
+  { key: 'hits', label: 'To Record a Hit', short: 'Hits', pikkitProp: 'hits', propsKey: 'hits', books: ALL_BOOKS, outcomeKey: 'h', gradeType: 'binary' },
+  { key: 'singles', label: 'Singles', short: '1B', pikkitProp: 'singles', propsKey: 'singles', books: ALL_BOOKS, outcomeKey: 'singles', gradeType: 'binary' },
+  { key: 'doubles', label: 'Doubles', short: '2B', pikkitProp: 'doubles', propsKey: 'doubles', books: ALL_BOOKS, outcomeKey: 'doubles', gradeType: 'binary' },
+  { key: 'triples', label: 'Triples', short: '3B', pikkitProp: 'triples', propsKey: 'triples', books: ALL_BOOKS, outcomeKey: 'triples', gradeType: 'binary' },
+  { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', pikkitProp: 'stolen_bases', propsKey: 'stolen_bases', books: ALL_BOOKS, outcomeKey: 'sb', gradeType: 'binary' },
   {
-    key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ['fanduel'], outcomeKey: 'tb', gradeType: 'count',
+    key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ALL_BOOKS, outcomeKey: 'tb', gradeType: 'count',
     ladder: [
       { propsKey: 'tb', threshold: 2, label: '2+' },
       { propsKey: 'tb3', threshold: 3, label: '3+' },
@@ -52,20 +60,22 @@ const CATEGORIES: CategoryDef[] = [
     ],
   },
   {
-    key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ['fanduel'], outcomeKey: 'rbi', gradeType: 'count',
+    key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ALL_BOOKS, outcomeKey: 'rbi', gradeType: 'count',
     ladder: [
       { propsKey: 'rbi', threshold: 1, label: '1+' },
       { propsKey: 'rbi2', threshold: 2, label: '2+' },
       { propsKey: 'rbi3', threshold: 3, label: '3+' },
     ],
   },
-  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ['fanduel'], outcomeKey: 'hrr', gradeType: 'count', dynamicLine: true },
+  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ALL_BOOKS, outcomeKey: 'hrr', gradeType: 'count', dynamicLine: true },
 ]
 
 // TB/RBI: every offered rung the real outcome actually cleared, each with
-// its own real odds. HRR: the one line actually offered (its numeric
-// threshold varies by player/book, stored in props.hrr_line) — a single
-// "rung" if the outcome cleared it, none otherwise.
+// every book's own real odds for that specific rung. HRR: only ever has
+// ONE line per book (its numeric threshold varies by player AND by book —
+// FanDuel might post "2+" while DraftKings posts "3+" for the same guy),
+// so books are grouped by their actual threshold first, and each distinct
+// cleared threshold becomes its own line with just the books that posted it.
 type HitLine = { label: string; prices: any }
 function computeHitLines(cat: CategoryDef, props: any, outcome: any | null): HitLine[] {
   if (!outcome) return []
@@ -76,15 +86,22 @@ function computeHitLines(cat: CategoryDef, props: any, outcome: any | null): Hit
       .map(rung => ({ label: rung.label, prices: props?.[rung.propsKey] }))
   }
   if (cat.dynamicLine) {
-    const book = cat.books.find(b => props?.[cat.propsKey]?.[b] != null)
-    if (!book) return []
-    const line = props?.hrr_line?.[book]
     // A real line always sits at X.5 (no pushes) — line=1.5 means "2+",
     // line=2.5 means "3+", so the label the user actually bet on is the
     // next whole number up, and clearing it means the outcome reached that.
-    const roundedThreshold = typeof line === 'number' ? Math.ceil(line) : 1
-    if (value < roundedThreshold) return []
-    return [{ label: `${roundedThreshold}+`, prices: props?.[cat.propsKey] }]
+    const byThreshold: Record<number, Record<string, number>> = {}
+    for (const book of cat.books) {
+      const price = props?.[cat.propsKey]?.[book]
+      if (price == null) continue
+      const line = props?.hrr_line?.[book]
+      const threshold = typeof line === 'number' ? Math.ceil(line) : 1
+      ;(byThreshold[threshold] ??= {})[book] = price
+    }
+    return Object.entries(byThreshold)
+      .map(([threshold, prices]) => [Number(threshold), prices] as const)
+      .filter(([threshold]) => value >= threshold)
+      .sort((a, b) => a[0] - b[0])
+      .map(([threshold, prices]) => ({ label: `${threshold}+`, prices }))
   }
   return []
 }
@@ -120,15 +137,21 @@ type PublicRow = { mlb_id: number; name: string; team: string; gameKey: string; 
 // of these render side by side when a player cleared more than one offered
 // line (e.g. 6 total bases clears the 2+, 3+, 4+, AND 5+ lines at once).
 function HitLineChip({ hl, books }: { hl: HitLine; books: string[] }) {
-  const entries = books.map(b => hl.prices?.[b]).filter((v): v is number => v != null)
+  const entries = books.map(b => [b, hl.prices?.[b]] as const).filter((e): e is [string, number] => e[1] != null)
   if (!entries.length) return null
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 6,
+      display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 6,
       background: 'rgba(180,255,77,0.12)', border: '1px solid rgba(180,255,77,0.35)', fontSize: 10, fontWeight: 800,
     }}>
       <span style={{ color: 'var(--accent)' }}>{hl.label}</span>
-      <span style={{ color: 'var(--text-2)' }}>{entries.map(oStr).join(' / ')}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+        {entries.map(([book, v]) => (
+          <span key={book} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--text-2)' }}>
+            <BookLogo vendor={book} size={12} />{oStr(v)}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -323,34 +346,41 @@ export function ThePublicClient({ date }: { date: string }) {
             key={`${r.mlb_id}_${r.gameKey}`}
             className="ss-card"
             style={{
-              display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 12,
+              display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px', borderRadius: 12,
               background: grade ? grade.bg : undefined,
               border: grade ? `1px solid ${grade.border}` : undefined,
             }}
           >
-            <div style={{ width: 26, textAlign: 'center', fontSize: 16, fontWeight: 900, color: i < 3 ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
-              {i + 1}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <PlayerLink mlbId={r.mlb_id} name={r.name} teamAbbr={r.team} size={36} />
-            </div>
-            {grade && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                minWidth: 30, height: 30, borderRadius: 8, fontSize: 14, fontWeight: 900,
-                color: grade.text, background: 'rgba(0,0,0,0.2)', border: `1px solid ${grade.border}`,
-              }}>
-                {grade.checkmark ? '✅' : grade.value}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 26, textAlign: 'center', fontSize: 16, fontWeight: 900, color: i < 3 ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
+                {i + 1}
               </div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0, maxWidth: 220 }}>
-              <PickBadge picks={r.picks} label={activeCat.short} />
-              <BookBadges prices={r.prices} books={activeCat.books} />
-              {r.hitLines.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4, justifyContent: 'flex-end' }}>
-                  {r.hitLines.map(hl => <HitLineChip key={hl.label} hl={hl} books={activeCat.books} />)}
+              <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                <PlayerLink mlbId={r.mlb_id} name={r.name} teamAbbr={r.team} size={36} />
+              </div>
+              {grade && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  minWidth: 30, height: 30, borderRadius: 8, fontSize: 14, fontWeight: 900,
+                  color: grade.text, background: 'rgba(0,0,0,0.2)', border: `1px solid ${grade.border}`,
+                }}>
+                  {grade.checkmark ? '✅' : grade.value}
                 </div>
               )}
+              <div style={{ flexShrink: 0 }}>
+                <PickBadge picks={r.picks} label={activeCat.short} />
+              </div>
+            </div>
+            {/* Every book's real price for the base line, plus every
+                graduated line the real outcome actually cleared — a
+                separate full-width row so a player with several books and/or
+                several cleared lines never squeezes the name column above
+                (a real bug when this used to share the header row: covering
+                5-6 books per line made that column wide enough to overlap
+                the name on mobile). */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 40, alignItems: 'center' }}>
+              <BookBadges prices={r.prices} books={activeCat.books} />
+              {r.hitLines.map(hl => <HitLineChip key={hl.label} hl={hl} books={activeCat.books} />)}
             </div>
           </div>
           )
