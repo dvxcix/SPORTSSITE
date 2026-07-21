@@ -20,11 +20,10 @@ const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
 const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
 
-// Reverted the pagination attempt — confirmed live (2026-07-21) that paging
-// this RPC via Range offsets returns the exact same first-1000 rows on
-// every page regardless of offset, so it doesn't support offset pagination
-// at all (unlike the plain table endpoints elsewhere in the real route,
-// which do). It only multiplied the request count with no effect.
+// Confirmed dead end (2026-07-21): the RPC returns the identical first-1000
+// rows on every page regardless of Range offset. Kept only for the
+// side-by-side comparison in the response below, not used as the real
+// data source anymore.
 async function mpRpc(fn: string, body: any): Promise<any[]> {
   try {
     const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
@@ -37,6 +36,43 @@ async function mpRpc(fn: string, body: any): Promise<any[]> {
     const d = await res.json()
     return Array.isArray(d) ? d : []
   } catch { return [] }
+}
+
+async function mpGetAll(path: string): Promise<any[]> {
+  const PAGE = 1000
+  const out: any[] = []
+  for (let offset = 0; offset < 100_000; offset += PAGE) {
+    try {
+      const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' })
+      if (!res.ok) break
+      const page = await res.json()
+      if (!Array.isArray(page)) break
+      out.push(...page)
+      if (page.length < PAGE) break
+    } catch { break }
+  }
+  return out
+}
+
+// The actual fix now shipped in api/dugout/data/route.ts — reads
+// player_price_season_avg directly (real Range pagination, unlike the RPC)
+// instead of the broken get_fhr_history_avg/get_sa_history_avg RPCs. Mirrored
+// here so this diagnostic verifies the exact same code path going to
+// production, not just a similar one.
+async function fetchSeasonAvgDirect(marketKey: string, date: string): Promise<any[]> {
+  const cutoff = new Date(`${date}T00:00:00Z`)
+  cutoff.setUTCDate(cutoff.getUTCDate() + 1)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+  const rows = await mpGetAll(
+    `/rest/v1/player_price_season_avg?select=name_norm,bookmaker,avg_price,through_date&market_key=eq.${marketKey}&bookmaker=in.(fanduel,williamhill_us)&through_date=lte.${cutoffStr}`
+  )
+  const latest = new Map<string, any>()
+  for (const r of rows) {
+    const key = `${r.name_norm}|${r.bookmaker}`
+    const existing = latest.get(key)
+    if (!existing || r.through_date > existing.through_date) latest.set(key, r)
+  }
+  return Array.from(latest.values())
 }
 
 // Read-only introspection: does the underlying table exist and paginate
@@ -97,7 +133,9 @@ export async function GET(req: Request) {
   const namesParam = searchParams.get('names')
   const names = namesParam ? namesParam.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_NAMES
 
-  const [fhrAvgRaw, saAvgRaw, tableSample] = await Promise.all([
+  const [fhrAvgRaw, saAvgRaw, fhrAvgRpcRaw, saAvgRpcRaw, tableSample] = await Promise.all([
+    fetchSeasonAvgDirect('batter_first_home_run', date),
+    fetchSeasonAvgDirect('batter_home_runs', date),
     mpRpc('get_fhr_history_avg', { p_date: date }),
     mpRpc('get_sa_history_avg', { p_date: date }),
     mpTableSample('player_price_season_avg'),
@@ -134,14 +172,18 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     date,
-    fhrAvgRowCount: fhrAvgRaw.length,
-    saAvgRowCount: saAvgRaw.length,
+    // Now sourced via the direct-table fix (fetchSeasonAvgDirect), same
+    // code path as api/dugout/data/route.ts.
     fhrAvgDistinctPlayers: Object.keys(fhrAvgMap).length,
     saAvgDistinctPlayers: Object.keys(saAvgMap).length,
     results,
-    // Introspection only — does player_price_season_avg exist and what
-    // columns does it actually have? Tells us whether querying it directly
-    // (bypassing the RPC's broken pagination) is even viable.
+    // Kept for comparison only — the old, still-broken RPC path.
+    rpcComparison: {
+      fhrAvgRowCount: fhrAvgRpcRaw.length,
+      saAvgRowCount: saAvgRpcRaw.length,
+      fhrAvgDistinctPlayers: Object.keys(buildAvgMap(fhrAvgRpcRaw)).length,
+      saAvgDistinctPlayers: Object.keys(buildAvgMap(saAvgRpcRaw)).length,
+    },
     underlyingTableProbe: tableSample,
   })
 }

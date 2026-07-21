@@ -72,16 +72,6 @@ async function mpGetAll(path: string, cache = 3600): Promise<any[]> {
   return out
 }
 
-// get_fhr_history_avg/get_sa_history_avg come back capped at exactly 1000
-// rows (~500 distinct players, 2 bookmaker rows each) — confirmed live
-// (2026-07-21) this is NOT the same per-request Range cap mpGetAll works
-// around above: paginating via Range offsets on this RPC returned the exact
-// same first-1000-rows on every single page regardless of offset, so the
-// endpoint doesn't support offset pagination at all here (unlike the plain
-// table endpoints). Reverted the pagination attempt — it only multiplied
-// the request count with no effect. The real fix has to bypass this RPC and
-// read the underlying table directly, since that DOES paginate correctly
-// (same as every mpGetAll call above); not done yet, pending investigation.
 async function mpRpc(fn: string, body: any): Promise<any[]> {
   try {
     const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
@@ -94,6 +84,41 @@ async function mpRpc(fn: string, body: any): Promise<any[]> {
     const d = await res.json()
     return Array.isArray(d) ? d : []
   } catch { return [] }
+}
+
+// Bypasses get_fhr_history_avg/get_sa_history_avg entirely for the two
+// season-average maps. Confirmed live (2026-07-21) via a direct per-name
+// probe: those RPCs silently cap at exactly 1000 rows (~500 of the ~900+
+// rostered players) with NO working offset pagination — Range headers on
+// the RPC endpoint returned the identical first-1000-rows on every page,
+// while a direct exact-name filter against the underlying table found
+// fresh same-day data for players the RPC was dropping (Trea Turner,
+// Willson Contreras, Wilyer Abreu, Vladimir Guerrero Jr. — all present and
+// current, just never reaching the RPC's response). The underlying table
+// paginates correctly via the same Range-header mechanism mpGetAll already
+// uses for every other table in this file, so this reads it directly:
+// one row per (name_norm, bookmaker, market_key, through_date), filtered to
+// the target market + the two bookmakers actually charted, then keeps only
+// the most recent through_date per (name_norm, bookmaker) — the same
+// "latest observation on or before the target date" semantics the RPC was
+// meant to provide. Shape (name_norm, bookmaker, avg_price) matches exactly
+// what DugoutClient.tsx's fhrAvgMap/saAvgMap already expect, so no client
+// change is needed.
+async function fetchSeasonAvgDirect(marketKey: string, date: string): Promise<any[]> {
+  const cutoff = new Date(`${date}T00:00:00Z`)
+  cutoff.setUTCDate(cutoff.getUTCDate() + 1)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+  const rows = await mpGetAll(
+    `/rest/v1/player_price_season_avg?select=name_norm,bookmaker,avg_price,through_date&market_key=eq.${marketKey}&bookmaker=in.(fanduel,williamhill_us)&through_date=lte.${cutoffStr}`,
+    3600
+  )
+  const latest = new Map<string, any>()
+  for (const r of rows) {
+    const key = `${r.name_norm}|${r.bookmaker}`
+    const existing = latest.get(key)
+    if (!existing || r.through_date > existing.through_date) latest.set(key, r)
+  }
+  return Array.from(latest.values())
 }
 
 const STAT_COLS = 'mlb_id,name_norm,pitch_hand,win,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,ideal_attack_angle_rate,swing_tilt,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,pull_air_rate,fb_rate,xhr,hr_total,avg_hr_distance'
@@ -373,8 +398,8 @@ export async function GET(req: Request) {
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
     mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300),
-    mpRpc('get_fhr_history_avg', { p_date: date }),
-    mpRpc('get_sa_history_avg', { p_date: date }),
+    fetchSeasonAvgDirect('batter_first_home_run', date),
+    fetchSeasonAvgDirect('batter_home_runs', date),
     mpRpc('get_opening_sa_rbi', { p_date: date }),
     fetchHrFeed(mlbGames),
     mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30),
