@@ -101,8 +101,8 @@ const PRICING_TEASER = [
   // trialDays is monthly-plan-only (confirmed against the real Whop plan
   // config) — this teaser only ever shows the monthly price, so it's always
   // safe to show here without an interval check like /pricing needs.
-  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'Everything in Basic + Slate Breakdown.', popular: true, trialDays: 7 },
-  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout.', trialDays: 3 },
+  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'Everything in Basic + Slate Breakdown.', trialDays: 7 },
+  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout.', popular: true, trialDays: 3 },
 ]
 
 const FAQS = [

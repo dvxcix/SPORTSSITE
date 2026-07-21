@@ -30,7 +30,7 @@ type TierDef = {
   annualPlanId?: string
   monthlyPrice?: number
   annualPrice?: number
-  highlight?: 'popular' | 'premium'
+  highlight?: 'premium'
   // Configured on the Whop plan itself, not tracked anywhere in our own DB
   // — these two numbers just mirror what's actually set up there. Monthly
   // only (confirmed): the annual plans for both tiers have no trial.
@@ -46,7 +46,7 @@ const TIERS: TierDef[] = [
   {
     tier: 'advanced', label: 'Advanced', tagline: 'For sharps who track the market before it moves.',
     monthlyPlanId: 'plan_3QSVT9Mr4cxVt', annualPlanId: 'plan_3HbuZZv6vhNu9',
-    monthlyPrice: 24.99, annualPrice: 249.99, highlight: 'popular', trialDaysMonthly: 7,
+    monthlyPrice: 24.99, annualPrice: 249.99, trialDaysMonthly: 7,
   },
   {
     tier: 'ultimate', label: 'Ultimate', tagline: 'Every tool, every edge — for serious bettors only.',
@@ -221,7 +221,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2, flexWrap: 'wrap', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)' }}>{t.label}</h2>
-                      {t.highlight === 'popular' && <Badge variant="popular">Most Popular</Badge>}
+                      {t.highlight === 'premium' && <Badge variant="popular">Most Popular</Badge>}
                     </div>
                     {isCurrent && !fullAccess && <Badge variant="upcoming">Current</Badge>}
                   </div>
@@ -259,7 +259,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                       planId={planId}
                       label={interval === 'monthly' && t.trialDaysMonthly ? `Start ${t.trialDaysMonthly}-Day Trial` : `Get ${t.label}`}
                       loggedIn={loggedIn}
-                      highlight={t.highlight === 'premium' || t.highlight === 'popular'}
+                      highlight={t.highlight === 'premium'}
                     />
                   )}
                   {/* Covered by the free Discord-Advanced claim or a manual
