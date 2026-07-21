@@ -111,8 +111,13 @@ function computeHitLines(cat: CategoryDef, props: any, outcome: any | null): Hit
 // has no real outcome yet, so every card stays neutral rather than red.
 // Live games grade exactly like Final ones (the box score just keeps
 // updating), which is what makes this update in real time as it happens.
-type Grade = { bg: string; border: string; text: string; checkmark: boolean; value: number }
-function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null): Grade | null {
+// A postponed/cancelled game reports abstractGameState 'Final' from MLB
+// with no distinction from a real completed game (confirmed live) — void
+// takes priority over everything else so those players show a neutral
+// "did not play" marker instead of red/0 against a game that never happened.
+type Grade = { bg: string; border: string; text: string; checkmark: boolean; value: number; isVoid?: boolean }
+function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null, isVoid?: boolean): Grade | null {
+  if (isVoid) return { bg: 'rgba(120,130,140,0.10)', border: 'rgba(120,130,140,0.35)', text: 'var(--text-3)', checkmark: false, value: 0, isVoid: true }
   if (gameStatus !== 'Live' && gameStatus !== 'Final') return null
   if (!outcome) return null
   const value: number = outcome[cat.outcomeKey] ?? 0
@@ -135,7 +140,7 @@ type GameOption = { gameKey: string; awayAbbr: string; homeAbbr: string; gameDat
 type PublicRow = {
   mlb_id: number; name: string; team: string; position: string | null; bats: string | null
   gameKey: string; gamePk: string | null; gameDate: string | null
-  picks: number; prices: any; gameStatus: string; outcome: any | null; hitLines: HitLine[]
+  picks: number; prices: any; gameStatus: string; isVoid: boolean; outcome: any | null; hitLines: HitLine[]
 }
 
 // One cleared threshold's real odds — "2+ +150", "4+ +500", etc. Multiple
@@ -288,7 +293,7 @@ export function ThePublicClient({ date }: { date: string }) {
       hr: [], hits: [], singles: [], doubles: [], triples: [], stolen_bases: [], tb: [], rbi: [], hrr: [],
     }
     if (!data?.games) return out
-    const addSide = (lineup: any[], gameKey: string, gamePk: string | null, gameDate: string | null, gameStatus: string, outcomes: Record<string, any>) => {
+    const addSide = (lineup: any[], gameKey: string, gamePk: string | null, gameDate: string | null, gameStatus: string, isVoid: boolean, outcomes: Record<string, any>) => {
       for (const p of lineup ?? []) {
         const nn = p.name_norm || normName(p.name || '')
         const entry = resolveNameEntry(pikkitMap, nn)
@@ -300,19 +305,20 @@ export function ThePublicClient({ date }: { date: string }) {
           const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
           const picks: number | null = row?.picks ?? null
           if (picks == null || picks <= 0) continue
-          const graded = gameStatus === 'Live' || gameStatus === 'Final'
+          const graded = (gameStatus === 'Live' || gameStatus === 'Final') && !isVoid
           const hitLines = graded ? computeHitLines(cat, p.props, outcome) : []
           out[cat.key].push({
             mlb_id: p.mlb_id, name: p.name, team: p.team, position: p.position ?? null, bats: p.bats ?? null,
-            gameKey, gamePk, gameDate, picks, prices: p.props?.[cat.propsKey], gameStatus, outcome, hitLines,
+            gameKey, gamePk, gameDate, picks, prices: p.props?.[cat.propsKey], gameStatus, isVoid, outcome, hitLines,
           })
         }
       }
     }
     for (const g of data.games) {
       const gamePk = g.gamePk != null ? String(g.gamePk) : null
-      addSide(g.homeLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, g.outcomes ?? {})
-      addSide(g.awayLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, g.outcomes ?? {})
+      const isVoid = !!g.isVoid
+      addSide(g.homeLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, isVoid, g.outcomes ?? {})
+      addSide(g.awayLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, isVoid, g.outcomes ?? {})
     }
     for (const cat of CATEGORIES) out[cat.key].sort((a, b) => b.picks - a.picks)
     return out
@@ -349,7 +355,7 @@ export function ThePublicClient({ date }: { date: string }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {rows.map((r, i) => {
-          const grade = gradeRow(activeCat, r.gameStatus, r.outcome)
+          const grade = gradeRow(activeCat, r.gameStatus, r.outcome, r.isVoid)
           // Same book-preference order the star already assumes elsewhere
           // (Dugout/Batter Cost) — FanDuel if it's priced, else whichever
           // book actually has this exact line.
@@ -375,10 +381,12 @@ export function ThePublicClient({ date }: { date: string }) {
               {grade && (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  minWidth: 30, height: 30, borderRadius: 8, fontSize: 14, fontWeight: 900,
+                  minWidth: grade.isVoid ? 'auto' : 30, height: 30, padding: grade.isVoid ? '0 10px' : undefined,
+                  borderRadius: 8, fontSize: grade.isVoid ? 11 : 14, fontWeight: 900,
                   color: grade.text, background: 'rgba(0,0,0,0.2)', border: `1px solid ${grade.border}`,
+                  whiteSpace: 'nowrap',
                 }}>
-                  {grade.checkmark ? '✅' : grade.value}
+                  {grade.isVoid ? '⚠️ VOID' : grade.checkmark ? '✅' : grade.value}
                 </div>
               )}
               <div style={{ flexShrink: 0 }}>

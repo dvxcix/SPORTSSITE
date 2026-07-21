@@ -789,6 +789,15 @@ export async function GET(req: Request) {
       gameDate: g.gameDate,
       status: g.status?.abstractGameState || 'Preview',
       detailedStatus: g.status?.detailedState || '',
+      // MLB reports abstractGameState as 'Final' for a postponed/cancelled
+      // game (confirmed live: PIT@NYY 2026-07-21, detailedState
+      // "Postponed", reason "Rain", abstractGameState still "Final") — with
+      // no distinction from a genuinely completed game, so anything keying
+      // off `status` alone (The Public's outcome heatmap) would grade every
+      // player red/0 against a box score that was never actually played.
+      // "Suspended" is deliberately excluded — a rain-suspended game's
+      // already-accrued stats are real and should still grade normally.
+      isVoid: /postpon|cancel/i.test(g.status?.detailedState || ''),
       venue: g.venue?.name || '',
       homePitcher: homePitcherWithProps, awayPitcher: awayPitcherWithProps,
       homeLineupConfirmed: (g.lineups?.homePlayers?.length ?? 0) > 0,
