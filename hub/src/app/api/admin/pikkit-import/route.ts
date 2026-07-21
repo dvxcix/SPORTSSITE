@@ -11,6 +11,15 @@ const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type':
 
 // Maps the short keys the Pikkit bookmarklet groups results under to the
 // long market names pikkit_public_picks.market already uses historically.
+// The scraper (pikkitScraper.ts) now walks every real <option> on Pikkit's
+// own market <select> instead of a fixed 6-entry list, so the shortKey
+// reaching this route is whatever literal value string Pikkit's page uses
+// for a market we've never scraped before (rbi/triples/stolen_bases/runs/
+// walks) — these aliases exist only as a defensive fallback in case
+// Pikkit's actual option value differs from the plain singular/plural
+// spelling this map already assumes; anything not listed here still passes
+// through unchanged (see `MARKET_MAP[shortKey] ?? shortKey` below), so a
+// wrong guess here is a labeling mismatch to fix, not a dropped pick.
 const MARKET_MAP: Record<string, string> = {
   hr: 'home_runs',
   tb: 'bases',
@@ -19,11 +28,16 @@ const MARKET_MAP: Record<string, string> = {
   doubles: 'doubles',
   hits: 'hits',
   rbi: 'rbi',
+  rbis: 'rbi',
   triples: 'triples',
+  triple: 'triples',
   runs: 'runs',
+  runs_scored: 'runs',
   stolen_bases: 'stolen_bases',
+  stolen_base: 'stolen_bases',
   walks: 'walks',
   strikeouts: 'strikouts', // matches the existing (typo'd) historical value
+  strike_outs: 'strikouts',
 }
 
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token

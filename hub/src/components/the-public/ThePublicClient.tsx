@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { PlayerLink } from '@/components/players/PlayerPageClient'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
-import { PickBadge, BookBadges } from '@/components/shared/OddsBadges'
+import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
@@ -16,12 +16,25 @@ import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 // `books` mirrors BatterCostClient's own MARKET_BOOKS — fhr/sa are the only
 // two markets BDL gives multiple books for, everything else is FanDuel-only.
 type CategoryKey = 'hr' | 'hits' | 'singles' | 'doubles' | 'triples' | 'stolen_bases' | 'tb' | 'rbi' | 'hrr'
+// A graduated line — TB and RBI each have multiple real pregame lines
+// (2+/3+/4+/5+ TB, 1+/2+/3+ RBI, see BDLPropMap in balldontlie.ts) beyond
+// the single base propsKey this card's primary badge already shows.
+// `threshold` is the real stat count needed to clear it, matched against
+// the game's real outcome (fetchBoxscoreOutcomes) — not just whichever one
+// line Pikkit happens to track picks for.
+type LadderRung = { propsKey: string; threshold: number; label: string }
 // outcomeKey indexes into each game's real per-player outcome object (see
 // fetchBoxscoreOutcomes in dugout/data/route.ts: h/hr/doubles/triples/
 // singles/sb/tb/rbi/hrr). gradeType 'binary' just checks >=1 (did they
 // record it at all); 'count' heatmaps the real quantity — rbi/tb/hrr are
-// all genuinely accumulative stats, not yes/no.
-type CategoryDef = { key: CategoryKey; label: string; short: string; pikkitProp: string; propsKey: string; books: string[]; outcomeKey: string; gradeType: 'binary' | 'count' }
+// all genuinely accumulative stats, not yes/no. `ladder` is only set for
+// TB/RBI (multiple distinct pregame lines); `dynamicLine` is only set for
+// HRR, which only ever has ONE real line per player/book — its actual
+// numeric threshold lives in props.hrr_line, not a fixed ladder.
+type CategoryDef = {
+  key: CategoryKey; label: string; short: string; pikkitProp: string; propsKey: string; books: string[]
+  outcomeKey: string; gradeType: 'binary' | 'count'; ladder?: LadderRung[]; dynamicLine?: boolean
+}
 const CATEGORIES: CategoryDef[] = [
   { key: 'hr', label: 'Home Run', short: 'HR', pikkitProp: 'home_runs', propsKey: 'sa', books: ['fanduel', 'caesars', 'betmgm', 'betrivers'], outcomeKey: 'hr', gradeType: 'binary' },
   { key: 'hits', label: 'To Record a Hit', short: 'Hits', pikkitProp: 'hits', propsKey: 'hits', books: ['fanduel'], outcomeKey: 'h', gradeType: 'binary' },
@@ -29,10 +42,52 @@ const CATEGORIES: CategoryDef[] = [
   { key: 'doubles', label: 'Doubles', short: '2B', pikkitProp: 'doubles', propsKey: 'doubles', books: ['fanduel'], outcomeKey: 'doubles', gradeType: 'binary' },
   { key: 'triples', label: 'Triples', short: '3B', pikkitProp: 'triples', propsKey: 'triples', books: ['fanduel'], outcomeKey: 'triples', gradeType: 'binary' },
   { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', pikkitProp: 'stolen_bases', propsKey: 'stolen_bases', books: ['fanduel'], outcomeKey: 'sb', gradeType: 'binary' },
-  { key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ['fanduel'], outcomeKey: 'tb', gradeType: 'count' },
-  { key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ['fanduel'], outcomeKey: 'rbi', gradeType: 'count' },
-  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ['fanduel'], outcomeKey: 'hrr', gradeType: 'count' },
+  {
+    key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ['fanduel'], outcomeKey: 'tb', gradeType: 'count',
+    ladder: [
+      { propsKey: 'tb', threshold: 2, label: '2+' },
+      { propsKey: 'tb3', threshold: 3, label: '3+' },
+      { propsKey: 'tb4', threshold: 4, label: '4+' },
+      { propsKey: 'tb5', threshold: 5, label: '5+' },
+    ],
+  },
+  {
+    key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ['fanduel'], outcomeKey: 'rbi', gradeType: 'count',
+    ladder: [
+      { propsKey: 'rbi', threshold: 1, label: '1+' },
+      { propsKey: 'rbi2', threshold: 2, label: '2+' },
+      { propsKey: 'rbi3', threshold: 3, label: '3+' },
+    ],
+  },
+  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ['fanduel'], outcomeKey: 'hrr', gradeType: 'count', dynamicLine: true },
 ]
+
+// TB/RBI: every offered rung the real outcome actually cleared, each with
+// its own real odds. HRR: the one line actually offered (its numeric
+// threshold varies by player/book, stored in props.hrr_line) — a single
+// "rung" if the outcome cleared it, none otherwise.
+type HitLine = { label: string; prices: any }
+function computeHitLines(cat: CategoryDef, props: any, outcome: any | null): HitLine[] {
+  if (!outcome) return []
+  const value: number = outcome[cat.outcomeKey] ?? 0
+  if (cat.ladder) {
+    return cat.ladder
+      .filter(rung => value >= rung.threshold && cat.books.some(b => props?.[rung.propsKey]?.[b] != null))
+      .map(rung => ({ label: rung.label, prices: props?.[rung.propsKey] }))
+  }
+  if (cat.dynamicLine) {
+    const book = cat.books.find(b => props?.[cat.propsKey]?.[b] != null)
+    if (!book) return []
+    const line = props?.hrr_line?.[book]
+    // A real line always sits at X.5 (no pushes) — line=1.5 means "2+",
+    // line=2.5 means "3+", so the label the user actually bet on is the
+    // next whole number up, and clearing it means the outcome reached that.
+    const roundedThreshold = typeof line === 'number' ? Math.ceil(line) : 1
+    if (value < roundedThreshold) return []
+    return [{ label: `${roundedThreshold}+`, prices: props?.[cat.propsKey] }]
+  }
+  return []
+}
 
 // Only graded once a game is actually underway — a game still in Preview
 // has no real outcome yet, so every card stays neutral rather than red.
@@ -59,7 +114,24 @@ function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null): Gr
 }
 
 type GameOption = { gameKey: string; awayAbbr: string; homeAbbr: string; gameDate: string | null }
-type PublicRow = { mlb_id: number; name: string; team: string; gameKey: string; picks: number; prices: any; gameStatus: string; outcome: any | null }
+type PublicRow = { mlb_id: number; name: string; team: string; gameKey: string; picks: number; prices: any; gameStatus: string; outcome: any | null; hitLines: HitLine[] }
+
+// One cleared threshold's real odds — "2+ +150", "4+ +500", etc. Multiple
+// of these render side by side when a player cleared more than one offered
+// line (e.g. 6 total bases clears the 2+, 3+, 4+, AND 5+ lines at once).
+function HitLineChip({ hl, books }: { hl: HitLine; books: string[] }) {
+  const entries = books.map(b => hl.prices?.[b]).filter((v): v is number => v != null)
+  if (!entries.length) return null
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 6,
+      background: 'rgba(180,255,77,0.12)', border: '1px solid rgba(180,255,77,0.35)', fontSize: 10, fontWeight: 800,
+    }}>
+      <span style={{ color: 'var(--accent)' }}>{hl.label}</span>
+      <span style={{ color: 'var(--text-2)' }}>{entries.map(oStr).join(' / ')}</span>
+    </div>
+  )
+}
 
 function GameSelector({ games, value, onChange }: { games: GameOption[]; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -200,7 +272,9 @@ export function ThePublicClient({ date }: { date: string }) {
           const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
           const picks: number | null = row?.picks ?? null
           if (picks == null || picks <= 0) continue
-          out[cat.key].push({ mlb_id: p.mlb_id, name: p.name, team: p.team, gameKey, picks, prices: p.props?.[cat.propsKey], gameStatus, outcome })
+          const graded = gameStatus === 'Live' || gameStatus === 'Final'
+          const hitLines = graded ? computeHitLines(cat, p.props, outcome) : []
+          out[cat.key].push({ mlb_id: p.mlb_id, name: p.name, team: p.team, gameKey, picks, prices: p.props?.[cat.propsKey], gameStatus, outcome, hitLines })
         }
       }
     }
@@ -269,9 +343,14 @@ export function ThePublicClient({ date }: { date: string }) {
                 {grade.checkmark ? '✅' : grade.value}
               </div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0, maxWidth: 220 }}>
               <PickBadge picks={r.picks} label={activeCat.short} />
               <BookBadges prices={r.prices} books={activeCat.books} />
+              {r.hitLines.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4, justifyContent: 'flex-end' }}>
+                  {r.hitLines.map(hl => <HitLineChip key={hl.label} hl={hl} books={activeCat.books} />)}
+                </div>
+              )}
             </div>
           </div>
           )

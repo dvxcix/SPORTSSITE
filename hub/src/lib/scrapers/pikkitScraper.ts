@@ -23,18 +23,26 @@ export async function runPikkitScrape(): Promise<{ url: string; game: string; pr
     }
     return res
   }
-  const mkts: [string, string][] = [
-    ['home_runs', 'hr'], ['bases', 'tb'], ['hits_runs_rbi', 'hrr'],
-    ['singles', 'singles'], ['doubles', 'doubles'], ['hits', 'hits'],
-  ]
-  for (const [value, shortKey] of mkts) {
-    const sel = document.querySelector('select')
-    if (!sel) break
+  // Used to be a hardcoded 6-market whitelist (home_runs/bases/hits_runs_rbi/
+  // singles/doubles/hits) — RBI, Triples, and Stolen Base never got scraped
+  // even though parsePage's own regex above already strips " RBI$"/
+  // " Triples$"/" Stolen Bases$" from player names, meaning whoever wrote it
+  // clearly expected those labels to show up. Confirmed live: pikkit_public_
+  // picks has never once had a row for those three prop types, on any date
+  // back to when scraping started — a real gap in what got scraped, not
+  // Pikkit lacking the market. Walking every real <option> on the page's own
+  // market <select> instead of a fixed list picks up whatever Pikkit
+  // actually offers (however many markets that is) without needing to guess
+  // each one's exact option value string.
+  const sel = document.querySelector('select')
+  if (!sel) return out
+  const values = Array.from((sel as HTMLSelectElement).options).map(o => o.value).filter(Boolean)
+  for (const value of values) {
     ;(sel as HTMLSelectElement).value = value
     sel.dispatchEvent(new Event('change', { bubbles: true }))
     await sleep(900)
     const d = parsePage()
-    if (Object.keys(d).length > 0) out.props[shortKey] = d
+    if (Object.keys(d).length > 0) out.props[value] = d
   }
   return out
 }
