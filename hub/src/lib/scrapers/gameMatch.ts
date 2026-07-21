@@ -2,6 +2,18 @@ import type { Page } from 'playwright-core'
 
 export function escapeRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
 
+// A single trailing word isn't always a unique nickname — "Chicago White Sox"
+// and "Boston Red Sox" both end in "Sox". Confirmed live: on a slate where
+// both are playing the same day, findAndClickPikkitGame's own away-team match
+// (built from just the last word) matched Red Sox's row instead of White
+// Sox's, clicking the wrong game's "More wagers" link entirely. The last TWO
+// words ("White Sox" / "Red Sox") disambiguate every real MLB city+nickname
+// pair without needing a hardcoded team list.
+export function distinguishingSuffix(team: string): string {
+  const words = team.trim().split(/\s+/)
+  return words.length > 1 ? words.slice(-2).join(' ') : team
+}
+
 // Finds a listing-page link/row for a specific game by matching BOTH teams'
 // last-word nickname (e.g. "Pirates"/"Guardians" out of the full "Pittsburgh
 // Pirates"/"Cleveland Guardians") against real interactive elements —
@@ -31,7 +43,7 @@ export async function findAndClickGame(page: Page, awayTeam: string, homeTeam: s
 // doubleheader), then clicks the nearest "More wagers" link that follows
 // it in document order.
 export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeTeam: string, legIndex = 0): Promise<boolean> {
-  const awayWord = escapeRe(awayTeam.split(' ').pop() || awayTeam)
+  const awayWord = escapeRe(distinguishingSuffix(awayTeam))
   const awayRow = page.getByText(new RegExp(awayWord, 'i')).nth(legIndex)
   if (!(await awayRow.count())) return false
   const wagersLink = awayRow.locator('xpath=following::*[contains(text(), "More wagers") or contains(text(), "more wagers")][1]')

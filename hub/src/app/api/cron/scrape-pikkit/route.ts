@@ -3,7 +3,7 @@ import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, type TodayGame } from '@/lib/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
-import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe } from '@/lib/scrapers/gameMatch'
+import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe, distinguishingSuffix } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
 import { PIKKIT_SIGNED_OUT_ERROR, checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
@@ -74,8 +74,8 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     // one's — a real data-integrity risk, not just a missed scrape. Verify
     // both teams actually appear on the page before trusting anything
     // scraped from it.
-    const awayWord = escapeRe(g.awayTeam.split(' ').pop() || g.awayTeam)
-    const homeWord = escapeRe(g.homeTeam.split(' ').pop() || g.homeTeam)
+    const awayWord = escapeRe(distinguishingSuffix(g.awayTeam))
+    const homeWord = escapeRe(distinguishingSuffix(g.homeTeam))
     const landedText = await bb.page.evaluate(() => document.body?.innerText ?? '').catch(() => '')
     if (!new RegExp(awayWord, 'i').test(landedText) || !new RegExp(homeWord, 'i').test(landedText)) {
       return {
