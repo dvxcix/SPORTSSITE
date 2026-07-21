@@ -153,12 +153,19 @@ export async function GET(req: Request) {
   const namesParam = searchParams.get('names')
   const names = namesParam ? namesParam.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_NAMES
 
-  const [fhrAvgRaw, saAvgRaw, fhrAvgRpcRaw, saAvgRpcRaw, tableSample] = await Promise.all([
+  const [fhrAvgRaw, saAvgRaw, fhrAvgRpcRaw, saAvgRpcRaw, tableSample, propsHistorySample] = await Promise.all([
     fetchSeasonAvgDirect('batter_first_home_run', date),
     fetchSeasonAvgDirect('batter_home_runs', date),
     mpRpc('get_fhr_history_avg', { p_date: date }),
     mpRpc('get_sa_history_avg', { p_date: date }),
     mpTableSample('player_price_season_avg'),
+    // props_history is the raw, per-scrape feed player_price_season_avg is
+    // itself rolled up FROM (via refresh_price_season_avg_incremental,
+    // nightly). If a player has real rows here but none in the rollup, the
+    // aggregation step is the bug, not a genuine "TheOddsAPI never carries
+    // them" gap. Unfiltered sample first to learn the real column names
+    // before attempting a targeted per-player query against it.
+    mpTableSample('props_history'),
   ])
 
   const fhrAvgMap = buildAvgMap(fhrAvgRaw)
@@ -218,5 +225,9 @@ export async function GET(req: Request) {
       saAvgDistinctPlayers: Object.keys(buildAvgMap(saAvgRpcRaw)).length,
     },
     underlyingTableProbe: tableSample,
+    // Introspection only — real column names for the raw feed table, to
+    // design the next targeted query against it (per-player existence +
+    // a broader audit of any other players with raw rows but no rollup).
+    propsHistoryProbe: propsHistorySample,
   })
 }
