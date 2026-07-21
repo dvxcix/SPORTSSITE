@@ -395,7 +395,7 @@ export function ThePublicClient({ date }: { date: string }) {
               <div style={{ flexShrink: 0 }}>
                 <WatchlistStarButton
                   mlbId={r.mlb_id} name={r.name} team={r.team} position={r.position} bats={r.bats}
-                  gameInfo={{ sport: 'MLB', game_pk: r.gamePk, game_date: r.gameDate }}
+                  gameInfo={{ sport: 'MLB', game_pk: r.gamePk, game_date: date }}
                   odds={starOdds}
                   oddsByBook={r.prices}
                   propKey={activeCat.propsKey}

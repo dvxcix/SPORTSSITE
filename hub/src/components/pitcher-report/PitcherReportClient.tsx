@@ -591,7 +591,7 @@ export function PitcherReportClient() {
                               timingMap={timingMap}
                               pitcherMap={statcastPitcherMap}
                               pikkitMap={pikkitMap}
-                              gameInfo={{ sport: 'MLB', game_pk: String(selected.gamePk), game_date: selected.gameDate.slice(0, 10) }}
+                              gameInfo={{ sport: 'MLB', game_pk: String(selected.gamePk), game_date: date }}
                               getRow={b => windowMode === 'live'
                                 ? liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null
                                 : (batterPitchMap[b.name_norm] ?? resolveNameEntry(batterPitchMap, b.name_norm))?.[pitchType]?.[selected.pitcher.hand] ?? null}

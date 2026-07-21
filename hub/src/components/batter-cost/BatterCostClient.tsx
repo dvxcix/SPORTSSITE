@@ -308,12 +308,17 @@ export function BatterCostClient({ date }: { date: string }) {
     // rows unpredictably instead of just reordering two distinct nodes).
     for (const g of data.games) {
       const gamePk = g.gamePk != null ? Number(g.gamePk) : null
-      const gameDate = g.gameDate ? String(g.gameDate).slice(0, 10) : null
-      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr, g.gameKey, gamePk, gameDate)
-      addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, gameDate)
+      // The page's own schedule day, NOT g.gameDate (MLB's raw first-pitch
+      // timestamp) — for a late-night West Coast game, slicing that
+      // timestamp's UTC calendar day can land on a different date than the
+      // real schedule day the games list was fetched for, producing a
+      // game_date that doesn't match any gamePk when /api/posts/pick
+      // re-validates it server-side (real incident, 2026-07-21).
+      addSide(g.homeLineup, g.awayPitcher, g.awayAbbr, g.gameKey, gamePk, date)
+      addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, date)
     }
     return out
-  }, [data, fhrAvgMap, saAvgMap, pikkitMap])
+  }, [data, fhrAvgMap, saAvgMap, pikkitMap, date])
 
   const maxAbsByMarket = useMemo(() => {
     const m: Record<string, number> = {}

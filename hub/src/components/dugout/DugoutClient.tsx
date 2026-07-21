@@ -2516,7 +2516,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   const displayHome = sortRowsMulti(homeRows, activeSortKeys)
   const displayAway = sortRowsMulti(awayRows, activeSortKeys)
 
-  const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: game.gameDate ? String(game.gameDate).slice(0, 10) : null }
+  const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
 
   const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string) => {
     const info = sortInfo(sortKey)
