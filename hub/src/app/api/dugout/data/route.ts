@@ -266,6 +266,55 @@ async function fetchHrFeed(mlbGames: any[]): Promise<{ hrFeed: any[]; pitcherIdB
   return { hrFeed, pitcherIdByName }
 }
 
+// Real per-player box score outcomes for live/final games — same MLB
+// endpoint (feed/live) hub/src/lib/pickGrading.ts already uses to grade
+// real picks win/loss, reused here so The Public's outcome heatmap grades
+// identically to how a pick itself settles. fetchHrFeed above hits the
+// lighter playByPlay endpoint instead, which has no aggregated batting line
+// at all — this needs the actual box score, not just play events.
+async function fetchBoxscoreOutcomes(mlbGames: any[]): Promise<Record<number, Record<number, any>>> {
+  const gradedPks = mlbGames
+    .filter((g: any) => { const s = g.status?.abstractGameState; return s === 'Live' || s === 'Final' })
+    .map((g: any) => g.gamePk)
+    .filter(Boolean)
+  if (!gradedPks.length) return {}
+
+  const byGamePk: Record<number, Record<number, any>> = {}
+  await Promise.all(gradedPks.map(async (pk: number) => {
+    try {
+      const r = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${pk}/feed/live`, { cache: 'no-store' })
+      if (!r.ok) return
+      const feed = await r.json()
+      const teams = feed?.liveData?.boxscore?.teams
+      if (!teams) return
+      const byMlbId: Record<number, any> = {}
+      for (const side of ['home', 'away']) {
+        const players = teams[side]?.players ?? {}
+        for (const p of Object.values(players) as any[]) {
+          const mlbId = p?.person?.id
+          const b = p?.stats?.batting
+          if (!mlbId || !b) continue
+          const h = b.hits ?? 0
+          const doubles = b.doubles ?? 0
+          const triples = b.triples ?? 0
+          const hr = b.homeRuns ?? 0
+          const rbi = b.rbi ?? 0
+          const runs = b.runs ?? 0
+          byMlbId[mlbId] = {
+            h, doubles, triples, hr, rbi, runs,
+            singles: h - doubles - triples - hr,
+            tb: b.totalBases ?? 0,
+            sb: b.stolenBases ?? 0,
+            hrr: h + runs + rbi,
+          }
+        }
+      }
+      byGamePk[pk] = byMlbId
+    } catch {}
+  }))
+  return byGamePk
+}
+
 // Position priority for projected lineup ordering
 const POS_ORDER: Record<string, number> = {
   C:2, '1B':3, '2B':4, '3B':5, SS:6,
@@ -386,7 +435,7 @@ export async function GET(req: Request) {
   // 2. Parallel: mlb-party tables (BDL odds no longer fetched live here —
   // see /api/cron/bdl-odds, which polls BDL on a fixed schedule and writes
   // to pregame_odds_snapshots; this route just reads that table below).
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents] = await Promise.all([
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents, outcomesByGamePk] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -408,6 +457,7 @@ export async function GET(req: Request) {
     fetchBatterGameLogs(lineupBatterIdList),
     fetchBatterPlatoonSplits(lineupBatterIdList),
     fetchBatterPitchEvents(lineupBatterIdList),
+    fetchBoxscoreOutcomes(mlbGames),
   ])
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
@@ -700,6 +750,10 @@ export async function GET(req: Request) {
       awayLineupConfirmed: (g.lineups?.awayPlayers?.length ?? 0) > 0,
       homeScore: g.teams?.home?.score,
       awayScore: g.teams?.away?.score,
+      // Real per-player box score outcomes (h/hr/2b/3b/rbi/runs/tb/sb),
+      // keyed by mlb_id — empty until the game goes Live, see
+      // fetchBoxscoreOutcomes above. Powers The Public's outcome heatmap.
+      outcomes: outcomesByGamePk[g.gamePk] ?? {},
       bdlGameId: bdlGameId ?? null,
       _bdlDebug: {
         matchedBdlId: bdlGameId,

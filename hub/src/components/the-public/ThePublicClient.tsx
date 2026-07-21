@@ -16,20 +16,50 @@ import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 // `books` mirrors BatterCostClient's own MARKET_BOOKS — fhr/sa are the only
 // two markets BDL gives multiple books for, everything else is FanDuel-only.
 type CategoryKey = 'hr' | 'hits' | 'singles' | 'doubles' | 'triples' | 'stolen_bases' | 'tb' | 'rbi' | 'hrr'
-const CATEGORIES: { key: CategoryKey; label: string; short: string; pikkitProp: string; propsKey: string; books: string[] }[] = [
-  { key: 'hr', label: 'Home Run', short: 'HR', pikkitProp: 'home_runs', propsKey: 'sa', books: ['fanduel', 'caesars', 'betmgm', 'betrivers'] },
-  { key: 'hits', label: 'To Record a Hit', short: 'Hits', pikkitProp: 'hits', propsKey: 'hits', books: ['fanduel'] },
-  { key: 'singles', label: 'Singles', short: '1B', pikkitProp: 'singles', propsKey: 'singles', books: ['fanduel'] },
-  { key: 'doubles', label: 'Doubles', short: '2B', pikkitProp: 'doubles', propsKey: 'doubles', books: ['fanduel'] },
-  { key: 'triples', label: 'Triples', short: '3B', pikkitProp: 'triples', propsKey: 'triples', books: ['fanduel'] },
-  { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', pikkitProp: 'stolen_bases', propsKey: 'stolen_bases', books: ['fanduel'] },
-  { key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ['fanduel'] },
-  { key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ['fanduel'] },
-  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ['fanduel'] },
+// outcomeKey indexes into each game's real per-player outcome object (see
+// fetchBoxscoreOutcomes in dugout/data/route.ts: h/hr/doubles/triples/
+// singles/sb/tb/rbi/hrr). gradeType 'binary' just checks >=1 (did they
+// record it at all); 'count' heatmaps the real quantity — rbi/tb/hrr are
+// all genuinely accumulative stats, not yes/no.
+type CategoryDef = { key: CategoryKey; label: string; short: string; pikkitProp: string; propsKey: string; books: string[]; outcomeKey: string; gradeType: 'binary' | 'count' }
+const CATEGORIES: CategoryDef[] = [
+  { key: 'hr', label: 'Home Run', short: 'HR', pikkitProp: 'home_runs', propsKey: 'sa', books: ['fanduel', 'caesars', 'betmgm', 'betrivers'], outcomeKey: 'hr', gradeType: 'binary' },
+  { key: 'hits', label: 'To Record a Hit', short: 'Hits', pikkitProp: 'hits', propsKey: 'hits', books: ['fanduel'], outcomeKey: 'h', gradeType: 'binary' },
+  { key: 'singles', label: 'Singles', short: '1B', pikkitProp: 'singles', propsKey: 'singles', books: ['fanduel'], outcomeKey: 'singles', gradeType: 'binary' },
+  { key: 'doubles', label: 'Doubles', short: '2B', pikkitProp: 'doubles', propsKey: 'doubles', books: ['fanduel'], outcomeKey: 'doubles', gradeType: 'binary' },
+  { key: 'triples', label: 'Triples', short: '3B', pikkitProp: 'triples', propsKey: 'triples', books: ['fanduel'], outcomeKey: 'triples', gradeType: 'binary' },
+  { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', pikkitProp: 'stolen_bases', propsKey: 'stolen_bases', books: ['fanduel'], outcomeKey: 'sb', gradeType: 'binary' },
+  { key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ['fanduel'], outcomeKey: 'tb', gradeType: 'count' },
+  { key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ['fanduel'], outcomeKey: 'rbi', gradeType: 'count' },
+  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ['fanduel'], outcomeKey: 'hrr', gradeType: 'count' },
 ]
 
+// Only graded once a game is actually underway — a game still in Preview
+// has no real outcome yet, so every card stays neutral rather than red.
+// Live games grade exactly like Final ones (the box score just keeps
+// updating), which is what makes this update in real time as it happens.
+type Grade = { bg: string; border: string; text: string; checkmark: boolean; value: number }
+function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null): Grade | null {
+  if (gameStatus !== 'Live' && gameStatus !== 'Final') return null
+  if (!outcome) return null
+  const value: number = outcome[cat.outcomeKey] ?? 0
+
+  if (cat.gradeType === 'binary') {
+    return value >= 1
+      ? { bg: 'rgba(180,255,77,0.16)', border: 'rgba(180,255,77,0.55)', text: 'var(--accent)', checkmark: true, value }
+      : { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#ef4444', checkmark: false, value }
+  }
+  // Count heatmap: 0 red, 1 yellow, 2+ green — brighter/greener the higher
+  // it goes, brightest at 4+.
+  if (value <= 0) return { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#ef4444', checkmark: false, value }
+  if (value === 1) return { bg: 'rgba(234,179,8,0.14)', border: 'rgba(234,179,8,0.45)', text: '#eab308', checkmark: false, value }
+  if (value === 2) return { bg: 'rgba(163,230,53,0.14)', border: 'rgba(163,230,53,0.4)', text: '#a3e635', checkmark: false, value }
+  if (value === 3) return { bg: 'rgba(180,255,77,0.20)', border: 'rgba(180,255,77,0.5)', text: 'var(--accent)', checkmark: false, value }
+  return { bg: 'rgba(180,255,77,0.30)', border: 'var(--accent)', text: 'var(--accent)', checkmark: false, value }
+}
+
 type GameOption = { gameKey: string; awayAbbr: string; homeAbbr: string; gameDate: string | null }
-type PublicRow = { mlb_id: number; name: string; team: string; gameKey: string; picks: number; prices: any }
+type PublicRow = { mlb_id: number; name: string; team: string; gameKey: string; picks: number; prices: any; gameStatus: string; outcome: any | null }
 
 function GameSelector({ games, value, onChange }: { games: GameOption[]; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -118,6 +148,21 @@ export function ThePublicClient({ date }: { date: string }) {
     return () => { cancelled = true }
   }, [date])
 
+  // Re-poll while any game on this date is actually in progress, so the
+  // outcome heatmap updates in real time as hits/runs/RBIs happen — a
+  // Preview/Final-only slate never re-fetches at all.
+  const anyLive = (data?.games ?? []).some((g: any) => g.status === 'Live')
+  useEffect(() => {
+    if (!anyLive) return
+    const id = setInterval(() => {
+      fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => setData(d))
+        .catch(() => {})
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [anyLive, date])
+
   // Same shape/matching Batter Cost's own pikkitMap uses — keyed by
   // name -> prop_type -> game_key, with an untagged '' game_key as the
   // legacy fallback a real game_key always wins over at lookup time.
@@ -143,10 +188,11 @@ export function ThePublicClient({ date }: { date: string }) {
       hr: [], hits: [], singles: [], doubles: [], triples: [], stolen_bases: [], tb: [], rbi: [], hrr: [],
     }
     if (!data?.games) return out
-    const addSide = (lineup: any[], gameKey: string) => {
+    const addSide = (lineup: any[], gameKey: string, gameStatus: string, outcomes: Record<string, any>) => {
       for (const p of lineup ?? []) {
         const nn = p.name_norm || normName(p.name || '')
         const entry = resolveNameEntry(pikkitMap, nn)
+        const outcome = outcomes?.[p.mlb_id] ?? null
         for (const cat of CATEGORIES) {
           const hasOdds = cat.books.some(b => p.props?.[cat.propsKey]?.[b] != null)
           if (!hasOdds) continue
@@ -154,13 +200,13 @@ export function ThePublicClient({ date }: { date: string }) {
           const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
           const picks: number | null = row?.picks ?? null
           if (picks == null || picks <= 0) continue
-          out[cat.key].push({ mlb_id: p.mlb_id, name: p.name, team: p.team, gameKey, picks, prices: p.props?.[cat.propsKey] })
+          out[cat.key].push({ mlb_id: p.mlb_id, name: p.name, team: p.team, gameKey, picks, prices: p.props?.[cat.propsKey], gameStatus, outcome })
         }
       }
     }
     for (const g of data.games) {
-      addSide(g.homeLineup, g.gameKey)
-      addSide(g.awayLineup, g.gameKey)
+      addSide(g.homeLineup, g.gameKey, g.status, g.outcomes ?? {})
+      addSide(g.awayLineup, g.gameKey, g.status, g.outcomes ?? {})
     }
     for (const cat of CATEGORIES) out[cat.key].sort((a, b) => b.picks - a.picks)
     return out
@@ -196,12 +242,16 @@ export function ThePublicClient({ date }: { date: string }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {rows.map((r, i) => (
+        {rows.map((r, i) => {
+          const grade = gradeRow(activeCat, r.gameStatus, r.outcome)
+          return (
           <div
             key={`${r.mlb_id}_${r.gameKey}`}
             className="ss-card"
             style={{
               display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 12,
+              background: grade ? grade.bg : undefined,
+              border: grade ? `1px solid ${grade.border}` : undefined,
             }}
           >
             <div style={{ width: 26, textAlign: 'center', fontSize: 16, fontWeight: 900, color: i < 3 ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
@@ -210,12 +260,22 @@ export function ThePublicClient({ date }: { date: string }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <PlayerLink mlbId={r.mlb_id} name={r.name} teamAbbr={r.team} size={36} />
             </div>
+            {grade && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                minWidth: 30, height: 30, borderRadius: 8, fontSize: 14, fontWeight: 900,
+                color: grade.text, background: 'rgba(0,0,0,0.2)', border: `1px solid ${grade.border}`,
+              }}>
+                {grade.checkmark ? '✅' : grade.value}
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
               <PickBadge picks={r.picks} label={activeCat.short} />
               <BookBadges prices={r.prices} books={activeCat.books} />
             </div>
           </div>
-        ))}
+          )
+        })}
         {rows.length === 0 && (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13, border: '1px solid var(--border)', borderRadius: 12 }}>
             No {activeCat.label} picks with real book odds yet {activeGame === 'all' ? 'today' : 'for this game'}.
