@@ -48,9 +48,6 @@ export default async function ThePublicPage({
               CROWD PICKS
             </span>
           </h1>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-            Who the public is on tonight, ranked by real pick volume — with the actual book price behind every name
-          </p>
         </div>
         <Link href="/dugout" style={{
           marginLeft: 'auto', padding: '7px 14px', borderRadius: 8,
