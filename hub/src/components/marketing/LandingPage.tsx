@@ -98,8 +98,11 @@ function DugoutMockup() {
 const PRICING_TEASER = [
   { tier: 'free' as const, label: 'Free', price: '$0', period: '', tagline: 'Browse the community & your profile.' },
   { tier: 'basic' as const, label: 'Basic', price: '$9.99', period: '/mo', tagline: 'Community, research, live scores.' },
-  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'Everything in Basic + Slate Breakdown.', popular: true },
-  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout.' },
+  // trialDays is monthly-plan-only (confirmed against the real Whop plan
+  // config) — this teaser only ever shows the monthly price, so it's always
+  // safe to show here without an interval check like /pricing needs.
+  { tier: 'advanced' as const, label: 'Advanced', price: '$24.99', period: '/mo', tagline: 'Everything in Basic + Slate Breakdown.', popular: true, trialDays: 7 },
+  { tier: 'ultimate' as const, label: 'Ultimate', price: '$34.99', period: '/mo', tagline: 'Every tool, including The Dugout.', trialDays: 3 },
 ]
 
 const FAQS = [
@@ -342,6 +345,9 @@ export function LandingPage() {
                 <span style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-1)' }}>{p.price}</span>
                 <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{p.period}</span>
               </div>
+              {'trialDays' in p && p.trialDays && (
+                <div style={{ marginBottom: 8 }}><Badge variant="save">{p.trialDays}-day free trial</Badge></div>
+              )}
               <p style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{p.tagline}</p>
             </div>
           ))}

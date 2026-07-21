@@ -31,6 +31,10 @@ type TierDef = {
   monthlyPrice?: number
   annualPrice?: number
   highlight?: 'popular' | 'premium'
+  // Configured on the Whop plan itself, not tracked anywhere in our own DB
+  // — these two numbers just mirror what's actually set up there. Monthly
+  // only (confirmed): the annual plans for both tiers have no trial.
+  trialDaysMonthly?: number
 }
 
 const TIERS: TierDef[] = [
@@ -42,12 +46,12 @@ const TIERS: TierDef[] = [
   {
     tier: 'advanced', label: 'Advanced', tagline: 'For sharps who track the market before it moves.',
     monthlyPlanId: 'plan_3QSVT9Mr4cxVt', annualPlanId: 'plan_3HbuZZv6vhNu9',
-    monthlyPrice: 24.99, annualPrice: 249.99, highlight: 'popular',
+    monthlyPrice: 24.99, annualPrice: 249.99, highlight: 'popular', trialDaysMonthly: 7,
   },
   {
     tier: 'ultimate', label: 'Ultimate', tagline: 'Every tool, every edge — for serious bettors only.',
     monthlyPlanId: 'plan_tCrVAX62uKyEq', annualPlanId: 'plan_1eWRTXv0XXTrI',
-    monthlyPrice: 34.99, annualPrice: 329.99, highlight: 'premium',
+    monthlyPrice: 34.99, annualPrice: 329.99, highlight: 'premium', trialDaysMonthly: 3,
   },
 ]
 
@@ -139,6 +143,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           </h1>
           <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
             Free tools to get started. Upgrade for live analytics, line movement, and the deepest breakdown on the slate.
+            Try Advanced free for 7 days or Ultimate free for 3 — monthly plans only.
           </p>
         </motion.div>
       </div>
@@ -240,8 +245,22 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
 
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.4 }}>{t.tagline}</p>
 
+                  {/* Monthly-only (confirmed against the actual Whop plan
+                      config) — switching to Annual drops this, since that
+                      plan has no trial behind it. */}
+                  {interval === 'monthly' && t.trialDaysMonthly && (
+                    <div style={{ marginBottom: 14, marginTop: -6 }}>
+                      <Badge variant="save">{t.trialDaysMonthly}-day free trial</Badge>
+                    </div>
+                  )}
+
                   {!fullAccess && planId && !isCurrent && !isDowngrade && (
-                    <PricingCheckoutButton planId={planId} label={`Get ${t.label}`} loggedIn={loggedIn} highlight={t.highlight === 'premium' || t.highlight === 'popular'} />
+                    <PricingCheckoutButton
+                      planId={planId}
+                      label={interval === 'monthly' && t.trialDaysMonthly ? `Start ${t.trialDaysMonthly}-Day Trial` : `Get ${t.label}`}
+                      loggedIn={loggedIn}
+                      highlight={t.highlight === 'premium' || t.highlight === 'popular'}
+                    />
                   )}
                   {/* Covered by the free Discord-Advanced claim or a manual
                       admin grant, not an actual purchase — nothing to cancel
