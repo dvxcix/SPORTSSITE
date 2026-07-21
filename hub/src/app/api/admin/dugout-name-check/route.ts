@@ -53,6 +53,24 @@ async function mpTableSample(table: string): Promise<{ ok: boolean; status: numb
   }
 }
 
+// Bypasses the RPC entirely — a direct, exact-name filter against the real
+// table can never hit the RPC's 1000-row cap since it only ever matches a
+// handful of rows. If THIS comes back empty for a flagged player, the data
+// genuinely never made it into player_price_season_avg for them (an
+// upstream pipeline gap); if it comes back non-empty, the bug is purely in
+// how the RPC/route queries and dedupes, not a real data gap.
+async function mpDirectNameLookup(nameNorm: string): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `${MP_URL}/rest/v1/player_price_season_avg?select=name_norm,bookmaker,market_key,avg_price,through_date&name_norm=eq.${encodeURIComponent(nameNorm)}&order=through_date.desc&limit=20`,
+      { headers: mpH, cache: 'no-store' }
+    )
+    if (!res.ok) return []
+    const d = await res.json()
+    return Array.isArray(d) ? d : []
+  } catch { return [] }
+}
+
 // Exactly mirrors the fhrAvgMap/saAvgMap useMemo blocks in DugoutClient.tsx
 // (lines ~2774-2796) — same dedup-by-name_norm, same fanduel/williamhill_us
 // bucketing — so this shows precisely what buildBatterRow itself would see.
@@ -88,7 +106,7 @@ export async function GET(req: Request) {
   const fhrAvgMap = buildAvgMap(fhrAvgRaw)
   const saAvgMap = buildAvgMap(saAvgRaw)
 
-  const results = names.map(name => {
+  const results = await Promise.all(names.map(async name => {
     const nn = normName(name)
     const fhrExact = fhrAvgMap[nn] ?? null
     const saExact = saAvgMap[nn] ?? null
@@ -100,13 +118,19 @@ export async function GET(req: Request) {
     const lastWord = nn.split(' ').pop() || nn
     const similarFhrKeys = lastWord.length >= 4 ? Object.keys(fhrAvgMap).filter(k => k.includes(lastWord) && k !== nn) : []
     const similarSaKeys = lastWord.length >= 4 ? Object.keys(saAvgMap).filter(k => k.includes(lastWord) && k !== nn) : []
+    const directTableRows = await mpDirectNameLookup(nn)
     return {
       name,
       name_norm: nn,
       fhrAvg: { exactMatch: fhrExact, fuzzyMatch: fhrFuzzy, similarKeysInMap: similarFhrKeys },
       saAvg: { exactMatch: saExact, fuzzyMatch: saFuzzy, similarKeysInMap: similarSaKeys },
+      // Bypasses the RPC entirely — a direct exact-name filter against the
+      // real table. Non-empty here + null exactMatch above means the RPC
+      // dropped real data; empty here means it never existed for this
+      // player in the first place (an upstream pipeline gap, not a query bug).
+      directTableRows,
     }
-  })
+  }))
 
   return NextResponse.json({
     date,
