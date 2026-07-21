@@ -136,16 +136,26 @@ function BookBadges({ prices, books }: { prices: any; books: string[] }) {
 }
 
 // FHR%/HR% are computed ratios that essentially never land on exactly
-// zero, so their filter only offers +/−. The FHR/HR delta columns are
-// whole odds points (current − open) that legitimately land on exactly 0
-// often (a line that hasn't moved since opening at all), so those also
-// get a "flat" option.
+// zero, so their "flat" option means something different than the delta
+// columns' — it catches rows where the ratio couldn't be computed at all
+// (no FanDuel FHR/HR price, or no season-average price to compare against),
+// which render as "—" in the table. Reported live: no way to isolate those
+// blank rows from real 0%-movers, and there ARE no real 0%-movers for a
+// ratio like this anyway. The FHR/HR delta columns are whole odds points
+// (current − open) that legitimately land on exactly 0 often (a line that
+// hasn't moved since opening at all), so those keep their own "flat" = 0
+// meaning, unrelated to this one.
 type SignFilter = 'all' | 'pos' | 'neg'
+type PctFilter = SignFilter | 'blank'
 type DeltaFilter = SignFilter | 'flat'
 const matchesSign = (v: number | null, f: SignFilter) => {
   if (f === 'all') return true
   if (v == null) return false
   return f === 'pos' ? v > 0 : v < 0
+}
+const matchesPct = (v: number | null, f: PctFilter) => {
+  if (f === 'blank') return v == null
+  return matchesSign(v, f)
 }
 const matchesDelta = (v: number | null, f: DeltaFilter) => {
   if (f === 'flat') return v === 0
@@ -216,8 +226,8 @@ export function BatterCostClient({ date }: { date: string }) {
   // FHR%/HR% are their own two sign-only filters; every MARKETS column
   // (FHR, HR, HR2+, singles...HRR) gets a +/−/0 delta filter, keyed by
   // market key so adding a new market doesn't require new filter state.
-  const [fhrPctFilter, setFhrPctFilter] = useState<SignFilter>('all')
-  const [saPctFilter, setSaPctFilter] = useState<SignFilter>('all')
+  const [fhrPctFilter, setFhrPctFilter] = useState<PctFilter>('all')
+  const [saPctFilter, setSaPctFilter] = useState<PctFilter>('all')
   const [deltaFilters, setDeltaFilters] = useState<Record<string, DeltaFilter>>({})
   const getDeltaFilter = (key: string): DeltaFilter => deltaFilters[key] ?? 'all'
   const setDeltaFilter = (key: string, v: DeltaFilter) => setDeltaFilters(prev => ({ ...prev, [key]: v }))
@@ -372,8 +382,8 @@ export function BatterCostClient({ date }: { date: string }) {
   // color would shift every time a filter gets toggled, which reads as the
   // data itself changing rather than just which rows are shown.
   const filtered = useMemo(() => flatBatters.filter(b =>
-    matchesSign(b.fhr_pct, fhrPctFilter) &&
-    matchesSign(b.sa_pct, saPctFilter) &&
+    matchesPct(b.fhr_pct, fhrPctFilter) &&
+    matchesPct(b.sa_pct, saPctFilter) &&
     (pwrFilter === 'all' || b.is_pwr) &&
     MARKETS.every(m => matchesDelta(b.deltas[m.key]?.delta ?? null, getDeltaFilter(m.key)))
   ), [flatBatters, fhrPctFilter, saPctFilter, pwrFilter, deltaFilters])
@@ -399,10 +409,10 @@ export function BatterCostClient({ date }: { date: string }) {
         background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
       }}>
         <FilterGroup label="FHR%" value={fhrPctFilter} onChange={setFhrPctFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' },
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'blank', label: '0' },
         ]} />
         <FilterGroup label="HR%" value={saPctFilter} onChange={setSaPctFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' },
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'blank', label: '0' },
         ]} />
         <FilterGroup label="⚡PWR" value={pwrFilter} onChange={setPwrFilter} options={[
           { key: 'all', label: 'All' }, { key: 'pwr', label: 'PWR only' },
