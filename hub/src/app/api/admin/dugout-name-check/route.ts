@@ -20,31 +20,37 @@ const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
 const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
 
-// Mirrors the identical fix in api/dugout/data/route.ts's mpRpc — confirmed
-// live (2026-07-21, via this same endpoint) that both RPCs came back at
-// exactly 1000 rows regardless of the Range header requesting 5000, the same
-// silent per-request cap mpGetAll already works around elsewhere in that
-// file. Paginating here too so this diagnostic reports the same fixed
-// behavior it's being used to verify.
+// Reverted the pagination attempt — confirmed live (2026-07-21) that paging
+// this RPC via Range offsets returns the exact same first-1000 rows on
+// every page regardless of offset, so it doesn't support offset pagination
+// at all (unlike the plain table endpoints elsewhere in the real route,
+// which do). It only multiplied the request count with no effect.
 async function mpRpc(fn: string, body: any): Promise<any[]> {
-  const PAGE = 1000
-  const out: any[] = []
-  for (let offset = 0; offset < 100_000; offset += PAGE) {
-    try {
-      const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
-        method: 'POST',
-        headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` },
-        body: JSON.stringify(body),
-        cache: 'no-store',
-      })
-      if (!res.ok) break
-      const page = await res.json()
-      if (!Array.isArray(page)) break
-      out.push(...page)
-      if (page.length < PAGE) break
-    } catch { break }
+  try {
+    const res = await fetch(`${MP_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: { ...mpH, Range: '0-4999' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    })
+    if (!res.ok) return []
+    const d = await res.json()
+    return Array.isArray(d) ? d : []
+  } catch { return [] }
+}
+
+// Read-only introspection: does the underlying table exist and paginate
+// normally via plain REST (unlike the RPC above)? A single unfiltered
+// sample row tells us the real column names without guessing, before
+// attempting to bypass the RPC and query the table directly.
+async function mpTableSample(table: string): Promise<{ ok: boolean; status: number; sample: any[] }> {
+  try {
+    const res = await fetch(`${MP_URL}/rest/v1/${table}?select=*&limit=2`, { headers: mpH, cache: 'no-store' })
+    const sample = res.ok ? await res.json() : []
+    return { ok: res.ok, status: res.status, sample: Array.isArray(sample) ? sample : [] }
+  } catch {
+    return { ok: false, status: 0, sample: [] }
   }
-  return out
 }
 
 // Exactly mirrors the fhrAvgMap/saAvgMap useMemo blocks in DugoutClient.tsx
@@ -73,9 +79,10 @@ export async function GET(req: Request) {
   const namesParam = searchParams.get('names')
   const names = namesParam ? namesParam.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_NAMES
 
-  const [fhrAvgRaw, saAvgRaw] = await Promise.all([
+  const [fhrAvgRaw, saAvgRaw, tableSample] = await Promise.all([
     mpRpc('get_fhr_history_avg', { p_date: date }),
     mpRpc('get_sa_history_avg', { p_date: date }),
+    mpTableSample('player_price_season_avg'),
   ])
 
   const fhrAvgMap = buildAvgMap(fhrAvgRaw)
@@ -108,5 +115,9 @@ export async function GET(req: Request) {
     fhrAvgDistinctPlayers: Object.keys(fhrAvgMap).length,
     saAvgDistinctPlayers: Object.keys(saAvgMap).length,
     results,
+    // Introspection only — does player_price_season_avg exist and what
+    // columns does it actually have? Tells us whether querying it directly
+    // (bypassing the RPC's broken pagination) is even viable.
+    underlyingTableProbe: tableSample,
   })
 }
