@@ -16,6 +16,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#B4FF4D',
+  // Without this, mobile Safari/Chrome leave the layout viewport (and every
+  // dvh unit sized off it, like the checkout modal) at full height when the
+  // on-screen keyboard opens — only the visual viewport shrinks. The keyboard
+  // then sits on top of whatever was at the bottom (e.g. the checkout
+  // embed's submit button) with no on-screen affordance to reveal it, since
+  // there's nothing telling the layout it needs to shrink to make room.
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
