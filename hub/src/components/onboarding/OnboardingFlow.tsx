@@ -16,7 +16,7 @@ import { SuggestedUsers, type SuggestedUser } from '@/components/social/Suggeste
 // instead — this component is already 'use client'.
 const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
-const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Follow', 'Done']
+const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Privacy', 'Follow', 'Done']
 
 const slide = {
   enter: { opacity: 0, x: 16 },
@@ -37,6 +37,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   const [bio, setBio] = useState(initialProfile?.bio ?? '')
   const [avatarUrl, setAvatarUrl] = useState(initialProfile?.avatar_url ?? '')
   const [teams, setTeams] = useState<string[]>(initialProfile?.favorite_teams ?? [])
+  // Same two toggles/copy as Settings > Privacy (PrivacySettingsForm) — new
+  // members had no way to know these existed at all before this step, since
+  // nothing pointed them at Settings unless they went looking on their own.
+  const [isPrivate, setIsPrivate] = useState(initialProfile?.is_private ?? false)
+  const [hideWinRate, setHideWinRate] = useState(initialProfile?.hide_win_rate ?? false)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -66,6 +71,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       bio: bio.trim() || undefined,
       avatar_url: avatarUrl.trim() || undefined,
       favorite_teams: teams,
+      is_private: isPrivate,
+      hide_win_rate: hideWinRate,
       // The proxy (src/lib/supabase/middleware.ts) redirects any
       // authenticated request back to /onboarding until this is set —
       // this is the one place that ever sets it.
@@ -221,6 +228,33 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
           {step === 4 && (
             <div className="space-y-6">
               <div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Your Privacy</h2>
+                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>You're in control of what others can see. Change these anytime in Settings.</p>
+              </div>
+              <div className="ss-card" style={{ padding: 0 }}>
+                {[
+                  { label: 'Private Account', desc: 'Only your followers can see your posts, picks, and pick record — you\'re also removed from the public leaderboard. Your profile, username, and bio stay visible', value: isPrivate, set: setIsPrivate },
+                  { label: 'Hide Win Rate', desc: 'Hide your pick record and win rate from your public profile', value: hideWinRate, set: setHideWinRate },
+                ].map(s => (
+                  <div key={s.label} className="flex items-center justify-between" style={{ padding: '14px 16px', borderBottom: s.label === 'Private Account' ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ paddingRight: 12 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{s.label}</p>
+                      <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, lineHeight: 1.4 }}>{s.desc}</p>
+                    </div>
+                    <button type="button" onClick={() => s.set(!s.value)}
+                      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${s.value ? 'bg-green-500' : 'bg-zinc-700'}`}>
+                      <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${s.value ? 'translate-x-5' : ''}`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <StepNav onBack={() => setStep(3)} onNext={() => setStep(5)} />
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-6">
+              <div>
                 <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Who to Follow</h2>
                 <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Follow a few to get your feed going — you can always find more later.</p>
               </div>
@@ -233,11 +267,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                   No suggestions yet — you'll find people to follow all over the app.
                 </div>
               )}
-              <StepNav onBack={() => setStep(3)} onNext={() => setStep(5)} />
+              <StepNav onBack={() => setStep(4)} onNext={() => setStep(6)} />
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="text-center space-y-6">
               <div>
                 <p className="text-5xl mb-4">🎉</p>
