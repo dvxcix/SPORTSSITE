@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { WHOP_PLANS, TIER_LABEL, type Tier } from '@/lib/tiers'
 import { AdminUserActions } from './AdminUserActions'
+import { AdminUserSupportActions } from './AdminUserSupportActions'
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Active',
@@ -85,6 +86,9 @@ export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: 
       {open && (
         <tr className="bg-zinc-950/60">
           <td colSpan={8} className="px-4 py-4">
+            <div className="mb-4 pb-4 border-b border-zinc-800">
+              <AdminUserSupportActions userId={u.id} emailVerified={emailVerified} />
+            </div>
             {!hasSubscription && !u.admin_granted_tier && !u.discord_advanced_claimed && u.account_type !== 'admin' && !u.beta_access_active ? (
               <p className="text-xs text-zinc-500">No subscription or grant on this account — Free tier by default.</p>
             ) : (
