@@ -54,7 +54,7 @@ const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: 
   { icon: <Activity size={18} />, title: 'Pitcher Report', description: 'See exactly what a starter has thrown lately and who in tonight\'s lineup has been hitting it hard.', tier: 'basic', link: '/auth/register?utm_feature=pitcher' },
   { icon: <Rows3 size={18} />, title: 'Slate Breakdown', description: 'Every pitcher and batter matchup on tonight\'s slate, laid out side by side before first pitch.', tier: 'advanced', link: '/auth/register?utm_feature=slate' },
   { icon: <TrendingUp size={18} />, title: 'Batter Cost', description: 'Tracks how a prop\'s price has actually moved since the line opened — see who the market\'s shading.', tier: 'ultimate', link: '/auth/register?utm_feature=batter-cost' },
-  { icon: <Megaphone size={18} />, title: 'The Public', description: '', tier: 'ultimate', link: '/auth/register?utm_feature=public' },
+  { icon: <Megaphone size={18} />, title: 'The Public', description: '', tier: 'advanced', link: '/auth/register?utm_feature=public' },
 ]
 
 // Illustrative mockup only — not a live screenshot. Team pairs and numbers

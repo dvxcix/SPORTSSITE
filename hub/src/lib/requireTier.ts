@@ -18,3 +18,22 @@ export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse
   }
   return { error: NextResponse.json({ error: 'Upgrade required' }, { status: 403 }) }
 }
+
+// For routes shared across pages with DIFFERENT tier floors (e.g.
+// /api/dugout/data serves Pitcher Report at 'basic', The Public at
+// 'advanced', and Dugout/Batter Cost at 'ultimate') — returns the caller's
+// real effective tier instead of a single pass/fail, so the route can reject
+// below its lowest legitimate floor and then compute/return only the field
+// subset that tier is actually entitled to. A full-access override
+// (admin/beta) always resolves to 'ultimate' — same as requireTier.
+export async function getEffectiveTier(): Promise<{ error?: NextResponse; userId?: string; tier?: Tier }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
+
+  const { data } = await supabase.from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', user.id).single()
+  const tier: Tier = hasFullAccessOverride(data?.account_type, data?.beta_access_active)
+    ? 'ultimate'
+    : effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)
+  return { userId: user.id, tier }
+}

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
-import { requireTier } from '@/lib/requireTier'
+import { getEffectiveTier } from '@/lib/requireTier'
+import { hasTierAccess } from '@/lib/tiers'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -375,9 +376,32 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
   } catch { return [] }
 }
 
+// This route is shared by four pages with DIFFERENT real tier floors —
+// Pitcher Report ('basic'), The Public ('advanced'), Dugout/Batter Cost
+// ('ultimate') — plus three admin-only import forms (which always resolve
+// to 'ultimate' via the admin full-access override, see getEffectiveTier).
+// A single flat requireTier('ultimate') here used to silently 403 every
+// Pitcher Report request from Basic/Advanced members (confirmed live: the
+// page's own TierGate said 'basic', but every fetch to this endpoint
+// rejected below Ultimate) and blocked The Public from ever being anything
+// but Ultimate-exclusive. Rather than gating the whole response, this now
+// rejects only below the lowest real floor ('basic') and then computes/
+// includes each field only for the tier that's actually supposed to see
+// it — Statcast splits, HR feeds, season averages, opening-line deltas,
+// and pitcher/lineup live odds (`.props`, `.props.open`) stay genuinely
+// Ultimate-exclusive; Pitcher Report's basic-tier fields (schedule,
+// lineups without props, pitch-type recency, Statcast splits, pikkit) are
+// always computed; The Public's advanced-tier needs (lineup `.props` for
+// pricing, real box-score `outcomes`) are added on top of that floor.
 export async function GET(req: Request) {
-  const gate = await requireTier('ultimate')
+  const gate = await getEffectiveTier()
   if (gate.error) return gate.error
+  const tier = gate.tier!
+  if (!hasTierAccess(tier, 'basic')) {
+    return NextResponse.json({ error: 'Upgrade required' }, { status: 403 })
+  }
+  const isAdvancedPlus = hasTierAccess(tier, 'advanced')
+  const isUltimate = hasTierAccess(tier, 'ultimate')
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
@@ -435,6 +459,14 @@ export async function GET(req: Request) {
   // 2. Parallel: mlb-party tables (BDL odds no longer fetched live here —
   // see /api/cron/bdl-odds, which polls BDL on a fixed schedule and writes
   // to pregame_odds_snapshots; this route just reads that table below).
+  //
+  // Statcast splits/pitch-recency/pikkit are computed for every basic+
+  // caller (Pitcher Report needs all of these at its own 'basic' floor).
+  // Everything else here is genuinely Ultimate-exclusive analytics
+  // (season averages, HR feeds, game logs, platoon/pitch-event splits) or
+  // The Public's advanced-tier outcome heatmap — short-circuited to an
+  // empty default rather than computed and then discarded, so a lower-tier
+  // request doesn't pay for work whose result it's not entitled to anyway.
   const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents, outcomesByGamePk] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
@@ -447,17 +479,17 @@ export async function GET(req: Request) {
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
     mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300),
-    fetchSeasonAvgDirect('batter_first_home_run', date),
-    fetchSeasonAvgDirect('batter_home_runs', date),
-    mpRpc('get_opening_sa_rbi', { p_date: date }),
-    fetchHrFeed(mlbGames),
-    mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30),
+    isUltimate ? fetchSeasonAvgDirect('batter_first_home_run', date) : Promise.resolve([]),
+    isUltimate ? fetchSeasonAvgDirect('batter_home_runs', date) : Promise.resolve([]),
+    isUltimate ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([]),
+    isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> }),
+    isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([]),
     fetchBatterPitchTypeRecent(),
     fetchPitcherPitchTypeRecent(),
-    fetchBatterGameLogs(lineupBatterIdList),
-    fetchBatterPlatoonSplits(lineupBatterIdList),
-    fetchBatterPitchEvents(lineupBatterIdList),
-    fetchBoxscoreOutcomes(mlbGames),
+    isUltimate ? fetchBatterGameLogs(lineupBatterIdList) : Promise.resolve([]),
+    isUltimate ? fetchBatterPlatoonSplits(lineupBatterIdList) : Promise.resolve([]),
+    isUltimate ? fetchBatterPitchEvents(lineupBatterIdList) : Promise.resolve([]),
+    isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
   ])
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
@@ -482,7 +514,7 @@ export async function GET(req: Request) {
   // players. Keeping game_key as the outer key means a wrong-game row can
   // never be looked up when rendering the right game.
   const fanduelGapByGameKey: Record<string, Record<string, any>> = {}
-  if (admin) {
+  if (admin && isAdvancedPlus) {
     // Explicit .range() — PostgREST silently caps unpaginated selects at
     // 1000 rows by default. A full slate's worth of gap-market pastes across
     // every game now regularly exceeds that (1312 rows on 2026-07-10), which
@@ -502,7 +534,7 @@ export async function GET(req: Request) {
   // Manually-imported BetMGM anytime-HR odds — backs up/fills sa.betmgm and
   // hr2.betmgm when BDL's own BetMGM coverage is sparse. See /admin/mgm-import.
   const mgmGapByGameKey: Record<string, Record<string, any>> = {}
-  if (admin) {
+  if (admin && isAdvancedPlus) {
     const { data: mgmRows } = await admin
       .from('mgm_gap_odds')
       .select('game_key, name_norm, sa_mgm, hr2_mgm')
@@ -514,9 +546,12 @@ export async function GET(req: Request) {
   // Opening/early baselines for the gap markets — permanent first-of-the-day
   // snapshots, so the client can show open-vs-current deltas. See
   // /admin/fanduel-import and /admin/mgm-import's "opening" checkbox.
+  // Ultimate-only (not just advanced+) — BatterCostClient's open-vs-current
+  // delta view is a Dugout/Batter Cost-exclusive analysis, not something
+  // The Public's advanced-tier access should also carry in its response.
   const fanduelGapOpeningByGameKey: Record<string, Record<string, any>> = {}
   const mgmGapOpeningByGameKey: Record<string, Record<string, any>> = {}
-  if (admin) {
+  if (admin && isUltimate) {
     const [{ data: fdOpenRows }, { data: mgmOpenRows }] = await Promise.all([
       admin.from('fanduel_gap_odds_opening')
         .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo2_min')
@@ -577,9 +612,13 @@ export async function GET(req: Request) {
   // started or not; a started-but-not-yet-frozen game gets permanently
   // frozen right here so its odds stop drifting once in-game/settled markets
   // would otherwise take over — same freeze-on-first-observation as before.
+  // Basic-tier callers (Pitcher Report) never read a player's `.props` at
+  // all, so there's nothing here for them — skipping this entirely also
+  // means their request never needs the freeze side-effect below, which
+  // still runs correctly off of every advanced+ request instead.
   const gamePksToday = mlbGames.map((g: any) => String(g.gamePk))
   const snapshotByGamePk = new Map<string, { bdl_game_id: number | null; prop_map: BDLPropMap; is_frozen: boolean }>()
-  if (admin && gamePksToday.length) {
+  if (admin && isAdvancedPlus && gamePksToday.length) {
     const { data: snapRows } = await admin
       .from('pregame_odds_snapshots')
       .select('game_pk, bdl_game_id, prop_map, is_frozen')
@@ -729,11 +768,17 @@ export async function GET(req: Request) {
       entry.open = { ...entry.open, saMgm: open.sa_mgm ?? entry.open?.saMgm, hr2Mgm: open.hr2_mgm ?? entry.open?.hr2Mgm }
     }
 
+    // Pitcher odds are a Dugout-only feature (PlayerDrillDown's oppPitcher
+    // props) — advanced+ already populates bdlByName for the LINEUP's sake,
+    // so this must be gated on isUltimate explicitly rather than reusing
+    // that same "do we have any props data at all" check, or The Public's
+    // advanced-tier response would leak pitcher odds nobody there reads but
+    // an Ultimate-exclusive page charges for.
     const homePitcherWithProps = homePitcher
-      ? { ...homePitcher, props: resolveNameEntry(bdlByName, normName(homePitcher.name)) || null }
+      ? { ...homePitcher, props: isUltimate ? (resolveNameEntry(bdlByName, normName(homePitcher.name)) || null) : null }
       : null
     const awayPitcherWithProps = awayPitcher
-      ? { ...awayPitcher, props: resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null }
+      ? { ...awayPitcher, props: isUltimate ? (resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null) : null }
       : null
 
     return {

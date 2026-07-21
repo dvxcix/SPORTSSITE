@@ -5,6 +5,7 @@ import { PlayerLink } from '@/components/players/PlayerPageClient'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
 import { BookLogo } from '@/components/BookLogo'
+import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
@@ -131,7 +132,11 @@ function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null): Gr
 }
 
 type GameOption = { gameKey: string; awayAbbr: string; homeAbbr: string; gameDate: string | null }
-type PublicRow = { mlb_id: number; name: string; team: string; gameKey: string; picks: number; prices: any; gameStatus: string; outcome: any | null; hitLines: HitLine[] }
+type PublicRow = {
+  mlb_id: number; name: string; team: string; position: string | null; bats: string | null
+  gameKey: string; gamePk: string | null; gameDate: string | null
+  picks: number; prices: any; gameStatus: string; outcome: any | null; hitLines: HitLine[]
+}
 
 // One cleared threshold's real odds — "2+ +150", "4+ +500", etc. Multiple
 // of these render side by side when a player cleared more than one offered
@@ -283,7 +288,7 @@ export function ThePublicClient({ date }: { date: string }) {
       hr: [], hits: [], singles: [], doubles: [], triples: [], stolen_bases: [], tb: [], rbi: [], hrr: [],
     }
     if (!data?.games) return out
-    const addSide = (lineup: any[], gameKey: string, gameStatus: string, outcomes: Record<string, any>) => {
+    const addSide = (lineup: any[], gameKey: string, gamePk: string | null, gameDate: string | null, gameStatus: string, outcomes: Record<string, any>) => {
       for (const p of lineup ?? []) {
         const nn = p.name_norm || normName(p.name || '')
         const entry = resolveNameEntry(pikkitMap, nn)
@@ -297,13 +302,17 @@ export function ThePublicClient({ date }: { date: string }) {
           if (picks == null || picks <= 0) continue
           const graded = gameStatus === 'Live' || gameStatus === 'Final'
           const hitLines = graded ? computeHitLines(cat, p.props, outcome) : []
-          out[cat.key].push({ mlb_id: p.mlb_id, name: p.name, team: p.team, gameKey, picks, prices: p.props?.[cat.propsKey], gameStatus, outcome, hitLines })
+          out[cat.key].push({
+            mlb_id: p.mlb_id, name: p.name, team: p.team, position: p.position ?? null, bats: p.bats ?? null,
+            gameKey, gamePk, gameDate, picks, prices: p.props?.[cat.propsKey], gameStatus, outcome, hitLines,
+          })
         }
       }
     }
     for (const g of data.games) {
-      addSide(g.homeLineup, g.gameKey, g.status, g.outcomes ?? {})
-      addSide(g.awayLineup, g.gameKey, g.status, g.outcomes ?? {})
+      const gamePk = g.gamePk != null ? String(g.gamePk) : null
+      addSide(g.homeLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, g.outcomes ?? {})
+      addSide(g.awayLineup, g.gameKey, gamePk, g.gameDate ?? null, g.status, g.outcomes ?? {})
     }
     for (const cat of CATEGORIES) out[cat.key].sort((a, b) => b.picks - a.picks)
     return out
@@ -341,6 +350,11 @@ export function ThePublicClient({ date }: { date: string }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {rows.map((r, i) => {
           const grade = gradeRow(activeCat, r.gameStatus, r.outcome)
+          // Same book-preference order the star already assumes elsewhere
+          // (Dugout/Batter Cost) — FanDuel if it's priced, else whichever
+          // book actually has this exact line.
+          const starBook = r.prices?.fanduel != null ? 'fanduel' : Object.keys(r.prices ?? {})[0]
+          const starOdds = starBook ? r.prices?.[starBook] ?? null : null
           return (
           <div
             key={`${r.mlb_id}_${r.gameKey}`}
@@ -369,6 +383,17 @@ export function ThePublicClient({ date }: { date: string }) {
               )}
               <div style={{ flexShrink: 0 }}>
                 <PickBadge picks={r.picks} label={activeCat.short} />
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                <WatchlistStarButton
+                  mlbId={r.mlb_id} name={r.name} team={r.team} position={r.position} bats={r.bats}
+                  gameInfo={{ sport: 'MLB', game_pk: r.gamePk, game_date: r.gameDate }}
+                  odds={starOdds}
+                  oddsByBook={r.prices}
+                  propKey={activeCat.propsKey}
+                  book={starBook ?? 'fanduel'}
+                  size={16}
+                />
               </div>
             </div>
             {/* Every book's real price for the base line, plus every
