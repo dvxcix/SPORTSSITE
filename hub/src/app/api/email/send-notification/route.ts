@@ -28,8 +28,13 @@ export async function POST(request: Request) {
   const authError = requireWebhookAuth(request)
   if (authError) return authError
 
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) return NextResponse.json({ ok: false, skipped: 'RESEND_API_KEY not configured' })
+  // Reported live: this has been silently failing for every user since at
+  // least 2026-07-13 — the actual Vercel env vars are EMAIL_RESEND_API_KEY /
+  // EMAIL_RESEND_EMAIL_DOMAIN, not the plain RESEND_API_KEY this (and the
+  // other two Resend-based email routes) read, so the key was never found.
+  const apiKey = process.env.EMAIL_RESEND_API_KEY
+  if (!apiKey) return NextResponse.json({ ok: false, skipped: 'EMAIL_RESEND_API_KEY not configured' })
+  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
 
   const body = await request.json().catch(() => null)
   const notificationId = body?.notification_id as string | undefined
@@ -73,7 +78,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'SlipSurge <team@slipsurge.com>',
+        from: `SlipSurge <team@${fromDomain}>`,
         to: [recipient.email],
         subject: text,
         text: `${text}\n\n${url}\n\nManage which notifications email you: https://www.slipsurge.com/settings/notifications`,

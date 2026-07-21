@@ -36,11 +36,17 @@ async function isPikkitSignedIn(contextId: string): Promise<boolean> {
 }
 
 async function sendAuthAlertEmail(): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
+  // Same env var naming mismatch as the other three Resend-based email
+  // routes (notify-welcome, notify-password-changed, email/send-notification)
+  // — the real Vercel vars are EMAIL_RESEND_API_KEY / EMAIL_RESEND_EMAIL_DOMAIN,
+  // not the plain RESEND_API_KEY this read, so this alert has never actually
+  // been able to send.
+  const apiKey = process.env.EMAIL_RESEND_API_KEY
   if (!apiKey) {
-    console.error('[pikkitAuth] RESEND_API_KEY not configured — cannot send auth-failure alert')
+    console.error('[pikkitAuth] EMAIL_RESEND_API_KEY not configured — cannot send auth-failure alert')
     return
   }
+  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
 
   const admin = createAdminClient()
   const { data: admins } = await admin.from('users').select('email').eq('account_type', 'admin')
@@ -57,7 +63,7 @@ async function sendAuthAlertEmail(): Promise<void> {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'SlipSurge <team@slipsurge.com>',
+      from: `SlipSurge <team@${fromDomain}>`,
       to: recipients,
       subject: 'Pikkit scraper signed out — action needed',
       text: `${text}\n\n${instructions}`,

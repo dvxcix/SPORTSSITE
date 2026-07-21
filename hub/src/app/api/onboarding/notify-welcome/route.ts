@@ -13,18 +13,23 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const apiKey = process.env.RESEND_API_KEY
+  // Reported live: this has been silently failing for every user since at
+  // least 2026-07-13 — the actual Vercel env vars are EMAIL_RESEND_API_KEY /
+  // EMAIL_RESEND_EMAIL_DOMAIN, not the plain RESEND_API_KEY this (and the
+  // other two Resend-based email routes) read, so the key was never found.
+  const apiKey = process.env.EMAIL_RESEND_API_KEY
   if (!apiKey) {
-    console.error('[notify-welcome] RESEND_API_KEY not configured')
+    console.error('[notify-welcome] EMAIL_RESEND_API_KEY not configured')
     return NextResponse.json({ ok: false })
   }
+  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'SlipSurge <team@slipsurge.com>',
+        from: `SlipSurge <team@${fromDomain}>`,
         to: [user.email],
         subject: "You're in — welcome to SlipSurge",
         text: "You're in! Follow real graded cappers, post your own picks, and check live scores and stats — all in one place. Head back to slipsurge.com to get started.",
