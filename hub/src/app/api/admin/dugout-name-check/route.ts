@@ -127,6 +127,25 @@ async function mpSubstringSearch(term: string): Promise<any[]> {
   } catch { return [] }
 }
 
+// Checks the RAW feed props_history is rolled up from — if a player has
+// real rows here (under any market_key, including batter_home_runs_alternate,
+// which never shows up in player_price_season_avg at all) but zero rows in
+// the rollup, the aggregation step is dropping real data, not a genuine
+// "TheOddsAPI never carried them" gap. name_norm exact match (same spelling
+// the rollup itself uses, so this is comparable apples-to-apples), most
+// recent 50 rows, every market_key so an alternate-only player still shows up.
+async function mpPropsHistoryLookup(nameNorm: string): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `${MP_URL}/rest/v1/props_history?select=player_name,name_norm,bookmaker,market_key,over_price,over_point,captured_at,game_time&name_norm=eq.${encodeURIComponent(nameNorm)}&order=captured_at.desc&limit=50`,
+      { headers: mpH, cache: 'no-store' }
+    )
+    if (!res.ok) return []
+    const d = await res.json()
+    return Array.isArray(d) ? d : []
+  } catch { return [] }
+}
+
 // Exactly mirrors the fhrAvgMap/saAvgMap useMemo blocks in DugoutClient.tsx
 // (lines ~2774-2796) — same dedup-by-name_norm, same fanduel/williamhill_us
 // bucketing — so this shows precisely what buildBatterRow itself would see.
@@ -191,6 +210,7 @@ export async function GET(req: Request) {
     const rawWords = name.split(/[^A-Za-zÀ-ÿ]+/).filter(Boolean).sort((a, b) => b.length - a.length)
     const substringTerm = rawWords[0] || nn
     const substringMatches = substringTerm.length >= 4 ? await mpSubstringSearch(substringTerm) : []
+    const propsHistoryRows = await mpPropsHistoryLookup(nn)
     return {
       name,
       name_norm: nn,
@@ -207,6 +227,12 @@ export async function GET(req: Request) {
       // spelling; if it finds something, our normalizer disagrees with
       // mlb-party's own spelling for this name.
       substringSearch: { term: substringTerm, matchingNameNormsInTable: substringMatches },
+      // Raw feed rows for this exact name_norm, any market_key/bookmaker/date
+      // — non-empty here + empty directTableRows above means real odds data
+      // exists but the nightly rollup isn't picking it up (a real, separate
+      // aggregation bug); empty here too means TheOddsAPI genuinely never
+      // carried this player at all this season.
+      propsHistoryRows,
     }
   }))
 
