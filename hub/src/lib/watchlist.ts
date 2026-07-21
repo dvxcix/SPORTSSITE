@@ -155,8 +155,6 @@ export async function postBetToFeed(
   if (oddsList.some(o => o == null)) throw new Error('Every leg needs odds to post')
   const combined = isParlay ? combineOdds(oddsList as number[]) : (oddsList[0] as number)
 
-  const supabase = createClient()
-
   // Sportsbook name is deliberately left out of this auto-generated caption
   // — it's already shown as a real BookLogo on the structured pick card
   // rendered right below the content text (PostCardClient), so spelling it
@@ -184,19 +182,10 @@ export async function postBetToFeed(
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data?.error || 'Failed to post')
 
-  // The post + picks rows are already live at this point — a failure here
-  // only means a watchlist item lingers instead of being cleared out, not
-  // that the actual post silently didn't happen. Logged rather than thrown
-  // so one bad delete doesn't roll back an already-successful post. Once
-  // posted, a leg becomes a tracked pick (visible in My Picks) — it no
-  // longer belongs in the watchlist at all, so it's removed outright rather
-  // than just marked 'posted'.
-  const deleteResults = await Promise.all(legs.map(l =>
-    supabase.from('watchlist_items').delete().eq('id', l.id)
-  ))
-  for (const { error: deleteErr } of deleteResults) {
-    if (deleteErr) console.error('[postBetToFeed] failed to remove posted watchlist item', deleteErr)
-  }
+  // Posting sends the leg to My Picks via /api/posts/pick above, but
+  // deliberately leaves the watchlist item alone — someone tracking a
+  // player for multiple plays throughout the day shouldn't lose them from
+  // the watchlist just because one line got posted.
 
   // /api/posts/pick doesn't return individual pick row ids (only whether
   // picks tracking succeeded overall) — nothing currently reads this

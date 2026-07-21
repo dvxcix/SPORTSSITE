@@ -85,17 +85,15 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
 
   const postToFeed = useCallback(async (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean }) => {
     if (!user) throw new Error('Sign in to post')
-    const result = await postWatchlistItemToFeed(user.id, item, opts)
-    setItems(prev => prev.filter(i => i.id !== item.id))
-    return result
+    // Posting sends it to My Picks but deliberately leaves the watchlist
+    // item itself untouched, so it keeps showing here for further plays.
+    return await postWatchlistItemToFeed(user.id, item, opts)
   }, [user])
 
   const postBet = useCallback(async (legs: WatchlistItem[], opts?: { content?: string; isPremium?: boolean; wagerAmount?: number | null }) => {
     if (!user) throw new Error('Sign in to post')
-    const result = await postBetToFeed(user.id, legs, opts)
-    const legIds = new Set(legs.map(l => l.id))
-    setItems(prev => prev.filter(i => !legIds.has(i.id)))
-    return result
+    // Same as postToFeed — posting doesn't remove the legs from the watchlist.
+    return await postBetToFeed(user.id, legs, opts)
   }, [user])
 
   const isSaved = useCallback((mlbId: number | null, propKey: string, book: string | null) => {
