@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useId, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2 } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2, Heart } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -25,6 +26,70 @@ import { UserBadges } from './UserBadges'
 interface PostCardClientProps {
   post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
   index?: number
+  // Set only by the dedicated /posts/[id] page — that's the one place the
+  // card shouldn't navigate to itself on click, and where comments should
+  // load/expand immediately with sorting instead of waiting for the
+  // comment-icon click every other rendering of this same card still uses.
+  detail?: boolean
+}
+
+type CommentNode = {
+  id: string
+  content: string
+  author_id: string
+  parent_id: string | null
+  author: { username: string; display_name?: string; avatar_url?: string } | null
+  created_at: string
+  updated_at: string
+  reaction_count: number
+  liked_by_me: boolean
+  replies: CommentNode[]
+}
+
+// Comments come back flat (one row per comment, self-referencing via
+// parent_id) — this turns that into the actual reply tree, so a reply-to-a-
+// reply nests under the comment it replied to instead of everything being
+// one flat list.
+function buildCommentTree(rows: any[], likedIds: Set<string>): CommentNode[] {
+  const nodes = new Map<string, CommentNode>()
+  for (const r of rows) {
+    nodes.set(r.id, {
+      id: r.id, content: r.content, author_id: r.author_id, parent_id: r.parent_id ?? null,
+      author: r.author, created_at: r.created_at, updated_at: r.updated_at,
+      reaction_count: r.reaction_count ?? 0, liked_by_me: likedIds.has(r.id), replies: [],
+    })
+  }
+  const roots: CommentNode[] = []
+  for (const r of rows) {
+    const node = nodes.get(r.id)!
+    const parent = r.parent_id ? nodes.get(r.parent_id) : null
+    if (parent) parent.replies.push(node)
+    else roots.push(node)
+  }
+  return roots
+}
+
+function sortCommentNodes(nodes: CommentNode[], sort: 'top' | 'new'): CommentNode[] {
+  const sorted = [...nodes].sort((a, b) => sort === 'top'
+    ? (b.reaction_count - a.reaction_count) || (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  // Replies within a thread stay chronological regardless of the top-level
+  // sort — "top comment" ranks threads, it doesn't reorder a conversation.
+  return sorted.map(n => ({ ...n, replies: [...n.replies].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) }))
+}
+
+function mapCommentTree(nodes: CommentNode[], id: string, fn: (n: CommentNode) => CommentNode): CommentNode[] {
+  return nodes.map(n => n.id === id ? fn(n) : { ...n, replies: mapCommentTree(n.replies, id, fn) })
+}
+
+function removeFromCommentTree(nodes: CommentNode[], id: string): CommentNode[] {
+  return nodes.filter(n => n.id !== id).map(n => ({ ...n, replies: removeFromCommentTree(n.replies, id) }))
+}
+
+function insertReplyIntoTree(nodes: CommentNode[], parentId: string, reply: CommentNode): CommentNode[] {
+  return nodes.map(n => n.id === parentId
+    ? { ...n, replies: [...n.replies, reply] }
+    : { ...n, replies: insertReplyIntoTree(n.replies, parentId, reply) })
 }
 
 function timeAgo(date: string) {
@@ -37,8 +102,9 @@ function timeAgo(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientProps) {
+export function PostCardClient({ post: initialPost, index = 0, detail = false }: PostCardClientProps) {
   const { user, profile } = useAuth()
+  const router = useRouter()
   const [reactionSummary, setReactionSummary] = useState<Record<string, number>>(initialPost.reaction_summary ?? {})
   const [myReactions, setMyReactions] = useState<Set<string>>(new Set(initialPost.user_reacted_emojis ?? []))
   const customEmojis = useCustomEmojis()
@@ -48,7 +114,11 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
   const [repostCount, setRepostCount] = useState(initialPost.repost_count)
   const [commentCount, setCommentCount] = useState(initialPost.comment_count)
   const [showComments, setShowComments] = useState(false)
-  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; author: { username: string; display_name?: string; avatar_url?: string } | null; created_at: string; updated_at: string }[]>([])
+  const [commentTree, setCommentTree] = useState<CommentNode[]>([])
+  const [commentSort, setCommentSort] = useState<'top' | 'new'>('top')
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set())
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
   const [commentText, setCommentText] = useState('')
   const commentInputRef = useRef<HTMLInputElement>(null)
   const [loadedComments, setLoadedComments] = useState(false)
@@ -121,6 +191,21 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     const rect = e.currentTarget.getBoundingClientRect()
     mouseX.set(e.clientX - rect.left)
     mouseY.set(e.clientY - rect.top)
+  }
+
+  // Clicking anywhere on the card (the content, the pick/parlay card, the
+  // poll, blank padding) opens the post's own page — same pattern as
+  // X/Twitter: any link/button/input inside the card keeps its own behavior
+  // (profile links, the "···" menu, reactions, poll voting, comment edit
+  // fields, etc.) since those are excluded via closest() below rather than
+  // needing stopPropagation sprinkled on every one of them individually.
+  // Disabled entirely on the post's own dedicated page (detail=true), where
+  // navigating to itself would be pointless.
+  function handleCardClick(e: React.MouseEvent<HTMLElement>) {
+    if (detail) return
+    const target = e.target as HTMLElement
+    if (target.closest('a, button, input, textarea, select, [data-no-navigate]')) return
+    router.push(`/posts/${post.id}`)
   }
 
   const pickResult = post.pick_data?.result
@@ -242,18 +327,77 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     setShareModalOpen(true)
   }
 
-  async function loadComments() {
-    if (loadedComments) { setShowComments(v => !v); return }
-    const { data } = await supabase
-      .from('comments')
-      .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
-      .eq('post_id', post.id)
-      .is('parent_id', null)
-      .order('created_at', { ascending: true })
-      .limit(20)
-    setComments((data as unknown as typeof comments) ?? [])
+// Fetches every comment on the post (not just top-level) and the current
+  // user's own comment likes, then builds the reply tree — see
+  // buildCommentTree. Threaded replies need every level in one query since
+  // there's no separate "load replies" affordance; comment volume per post
+  // is small enough that this is cheap.
+  async function loadCommentTree() {
+    const [{ data: rows }, { data: myLikes }] = await Promise.all([
+      supabase
+        .from('comments')
+        .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
+        .eq('post_id', post.id)
+        .order('created_at', { ascending: true }),
+      user
+        ? supabase.from('reactions').select('target_id').eq('target_type', 'comment').eq('user_id', user.id)
+        : Promise.resolve({ data: [] as any[] }),
+    ])
+    const likedIds = new Set((myLikes ?? []).map((r: any) => r.target_id))
+    setCommentTree(buildCommentTree(rows ?? [], likedIds))
     setLoadedComments(true)
     setShowComments(true)
+  }
+
+  function toggleComments() {
+    if (loadedComments) { setShowComments(v => !v); return }
+    loadCommentTree()
+  }
+
+  // The dedicated post page wants comments visible immediately, not gated
+  // behind clicking the comment icon like every feed rendering of this
+  // same card.
+  useEffect(() => {
+    if (detail) loadCommentTree()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function toggleThreadCollapsed(id: string) {
+    setCollapsedThreads(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  async function toggleCommentLike(id: string, alreadyLiked: boolean) {
+    if (!user) return
+    setCommentTree(t => mapCommentTree(t, id, n => ({ ...n, liked_by_me: !alreadyLiked, reaction_count: n.reaction_count + (alreadyLiked ? -1 : 1) })))
+    const { error } = alreadyLiked
+      ? await supabase.from('reactions').delete().match({ user_id: user.id, target_id: id, target_type: 'comment', emoji: '❤️' })
+      : await supabase.from('reactions').insert({ user_id: user.id, target_id: id, target_type: 'comment', emoji: '❤️' })
+    if (error && error.code !== '23505') {
+      setCommentTree(t => mapCommentTree(t, id, n => ({ ...n, liked_by_me: alreadyLiked, reaction_count: n.reaction_count + (alreadyLiked ? 1 : -1) })))
+    }
+  }
+
+  async function submitReply(parentId: string, parentAuthorId: string) {
+    if (!user || !replyText.trim()) return
+    const text = replyText.trim()
+    const { data, error } = await supabase.from('comments')
+      .insert({ post_id: post.id, author_id: user.id, parent_id: parentId, content: text })
+      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
+      .single()
+    if (error || !data) return
+    setCommentTree(t => insertReplyIntoTree(t, parentId, { ...(data as any), reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }))
+    setCommentCount(c => c + 1)
+    setReplyText('')
+    setReplyingTo(null)
+    await notify(supabase, {
+      userId: parentAuthorId, actorId: user.id, type: 'comment',
+      message: 'replied to your comment', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
+    })
+    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a reply')
   }
 
   function insertCommentEmoji(insertion: string) {
@@ -273,13 +417,13 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     const text = commentText.trim()
     const { data, error } = await supabase.from('comments')
       .insert({ post_id: post.id, author_id: user.id, content: text })
-      .select('id, content, author_id, created_at, updated_at, author:users(username, display_name, avatar_url)')
+      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
       .single()
     // Only clear the input / fire notifications once the comment actually
     // saved — clearing it unconditionally meant a failed submit silently
     // ate whatever the user had typed.
     if (error || !data) return
-    setComments(c => [...c, data as unknown as typeof comments[0]])
+    setCommentTree(t => [...t, { ...(data as any), parent_id: null, reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }])
     setCommentCount(c => c + 1)
     setCommentText('')
     await notify(supabase, {
@@ -289,7 +433,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a comment')
   }
 
-  function startEditComment(c: typeof comments[0]) {
+  function startEditComment(c: CommentNode) {
     setEditingCommentId(c.id)
     setEditText(c.content)
   }
@@ -300,15 +444,20 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
     const nowIso = new Date().toISOString()
     const { error } = await supabase.from('comments').update({ content: text, updated_at: nowIso }).eq('id', id)
     if (error) return
-    setComments(cs => cs.map(c => c.id === id ? { ...c, content: text, updated_at: nowIso } : c))
+    setCommentTree(t => mapCommentTree(t, id, n => ({ ...n, content: text, updated_at: nowIso })))
     setEditingCommentId(null)
   }
 
+  // parent_id is ON DELETE CASCADE (see migration) — deleting a comment with
+  // replies deletes the whole subtree in the database, so removing it (and
+  // everything nested under it) from local state in one shot matches what
+  // actually happens server-side rather than leaving orphaned replies
+  // visible until the next reload.
   async function deleteComment(id: string) {
-    if (!confirm('Delete this comment?')) return
+    if (!confirm('Delete this comment? Any replies to it will be deleted too.')) return
     const { error } = await supabase.from('comments').delete().eq('id', id)
     if (error) return
-    setComments(cs => cs.filter(c => c.id !== id))
+    setCommentTree(t => removeFromCommentTree(t, id))
     setCommentCount(c => Math.max(0, c - 1))
   }
 
@@ -380,7 +529,9 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
           borderRadius: 'var(--radius)',
           transition: 'border-color 150ms',
           position: 'relative',
+          cursor: detail ? 'default' : 'pointer',
         }}
+        onClick={handleCardClick}
         onMouseMove={handleCardMouseMove}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-2)'; setIsHovering(true) }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; setIsHovering(false) }}>
@@ -735,7 +886,7 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
                   label={commentCount > 0 ? String(commentCount) : ''}
                   hoverBg="rgba(77,158,255,0.08)"
                   hoverColor="var(--blue)"
-                  onClick={loadComments}
+                  onClick={toggleComments}
                 />
                 <ActionBtn
                   icon={<Repeat2 size={15} />}
@@ -767,62 +918,57 @@ export function PostCardClient({ post: initialPost, index = 0 }: PostCardClientP
           </div>
         </div>
 
-        {/* Comments section */}
+        {/* Comments section — clicks anywhere inside (including blank
+            padding between comments) never bubble up to the card's own
+            navigate-to-post handler; every actual link/button inside is
+            already excluded there too via closest(), this just also covers
+            the non-interactive space around them. */}
         {showComments && (
-          <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {comments.map(c => {
-              const isEdited = new Date(c.updated_at).getTime() !== new Date(c.created_at).getTime()
-              const isOwn = user?.id === c.author_id
-              return (
-                <div key={c.id} style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--text-3)' }}>
-                    {c.author?.avatar_url
-                      ? <img src={c.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : (c.author?.display_name || c.author?.username || '?')[0].toUpperCase()
-                    }
-                  </div>
-                  <div style={{
-                    flex: 1, borderRadius: 10, padding: '8px 12px',
-                    background: isOwn ? 'rgba(77,158,255,0.10)' : 'var(--surface-2)',
-                    border: isOwn ? '1px solid rgba(77,158,255,0.25)' : '1px solid transparent',
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}
+          >
+            {detail && commentTree.length > 0 && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['top', 'new'] as const).map(s => (
+                  <button key={s} onClick={() => setCommentSort(s)} style={{
+                    padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                    border: `1px solid ${commentSort === s ? 'var(--accent)' : 'var(--border)'}`,
+                    background: commentSort === s ? 'var(--accent-dim)' : 'transparent',
+                    color: commentSort === s ? 'var(--accent)' : 'var(--text-3)',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{c.author?.display_name || c.author?.username}</span>
-                      <UserBadges userId={c.author_id} size={12} />
-                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                        {timeAgo(c.created_at)}{isEdited && ` · edited ${timeAgo(c.updated_at)}`}
-                      </span>
-                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                        {isOwn ? (
-                          <>
-                            <button onClick={() => startEditComment(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Edit</button>
-                            <button onClick={() => deleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
-                          </>
-                        ) : user && (
-                          <button onClick={() => setReportingCommentId(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
-                        )}
-                      </div>
-                    </div>
-                    {editingCommentId === c.id ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <input
-                          value={editText}
-                          onChange={e => setEditText(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEditComment(c.id))}
-                          className="ss-input"
-                          style={{ flex: 1, fontSize: 13, padding: '5px 10px' }}
-                          autoFocus
-                        />
-                        <button onClick={() => saveEditComment(c.id)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Save</button>
-                        <button onClick={() => setEditingCommentId(null)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}><LinkifiedText text={c.content} /></p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+                    {s === 'top' ? 'Top comments' : 'Newest'}
+                  </button>
+                ))}
+              </div>
+            )}
+            {sortCommentNodes(commentTree, commentSort).map(node => (
+              <CommentItem
+                key={node.id}
+                node={node}
+                depth={0}
+                currentUserId={user?.id}
+                currentUserAvatar={profile?.avatar_url}
+                currentUserDisplay={profile?.display_name || profile?.username}
+                editingCommentId={editingCommentId}
+                editText={editText}
+                setEditText={setEditText}
+                onStartEdit={startEditComment}
+                onSaveEdit={saveEditComment}
+                onCancelEdit={() => setEditingCommentId(null)}
+                onDelete={deleteComment}
+                onReport={setReportingCommentId}
+                onToggleLike={toggleCommentLike}
+                replyingTo={replyingTo}
+                replyText={replyText}
+                setReplyText={setReplyText}
+                onStartReply={id => { setReplyingTo(id); setReplyText('') }}
+                onCancelReply={() => { setReplyingTo(null); setReplyText('') }}
+                onSubmitReply={submitReply}
+                collapsedThreads={collapsedThreads}
+                onToggleCollapsed={toggleThreadCollapsed}
+              />
+            ))}
             {user && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--accent)' }}>
@@ -898,6 +1044,168 @@ function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
   const shown = names.slice(0, 8)
   const extra = names.length - shown.length
   return <span>{shown.join(', ')}{extra > 0 ? ` and ${extra} more` : ''} reacted with {emoji}</span>
+}
+
+// One comment/reply, recursing into its own replies — depth controls the
+// left indent so a reply-to-a-reply visibly nests under the comment it
+// replied to instead of reading as another top-level comment. Only one
+// reply box is open at a time across the whole tree (replyingTo/replyText
+// live on the parent card), matching the single edit-in-place behavior
+// comments already had.
+function CommentItem({
+  node, depth, currentUserId, currentUserAvatar, currentUserDisplay,
+  editingCommentId, editText, setEditText, onStartEdit, onSaveEdit, onCancelEdit,
+  onDelete, onReport, onToggleLike,
+  replyingTo, replyText, setReplyText, onStartReply, onCancelReply, onSubmitReply,
+  collapsedThreads, onToggleCollapsed,
+}: {
+  node: CommentNode; depth: number
+  currentUserId?: string; currentUserAvatar?: string | null; currentUserDisplay?: string
+  editingCommentId: string | null; editText: string; setEditText: (v: string) => void
+  onStartEdit: (n: CommentNode) => void; onSaveEdit: (id: string) => void; onCancelEdit: () => void
+  onDelete: (id: string) => void; onReport: (id: string) => void
+  onToggleLike: (id: string, alreadyLiked: boolean) => void
+  replyingTo: string | null; replyText: string; setReplyText: (v: string) => void
+  onStartReply: (id: string) => void; onCancelReply: () => void
+  onSubmitReply: (parentId: string, parentAuthorId: string) => void
+  collapsedThreads: Set<string>; onToggleCollapsed: (id: string) => void
+}) {
+  const isEdited = new Date(node.updated_at).getTime() !== new Date(node.created_at).getTime()
+  const isOwn = currentUserId === node.author_id
+  const indent = Math.min(depth, 4) * 20
+  const collapsed = collapsedThreads.has(node.id)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginLeft: indent }}>
+        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--text-3)' }}>
+          {node.author?.avatar_url
+            ? <img src={node.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : (node.author?.display_name || node.author?.username || '?')[0].toUpperCase()
+          }
+        </div>
+        <div style={{
+          flex: 1, borderRadius: 10, padding: '8px 12px',
+          background: isOwn ? 'rgba(77,158,255,0.10)' : 'var(--surface-2)',
+          border: isOwn ? '1px solid rgba(77,158,255,0.25)' : '1px solid transparent',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{node.author?.display_name || node.author?.username}</span>
+            <UserBadges userId={node.author_id} size={12} />
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              {timeAgo(node.created_at)}{isEdited && ` · edited ${timeAgo(node.updated_at)}`}
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              {isOwn ? (
+                <>
+                  <button onClick={() => onStartEdit(node)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Edit</button>
+                  <button onClick={() => onDelete(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
+                </>
+              ) : currentUserId && (
+                <button onClick={() => onReport(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
+              )}
+            </div>
+          </div>
+          {editingCommentId === node.id ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onSaveEdit(node.id))}
+                className="ss-input"
+                style={{ flex: 1, fontSize: 13, padding: '5px 10px' }}
+                autoFocus
+              />
+              <button onClick={() => onSaveEdit(node.id)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Save</button>
+              <button onClick={onCancelEdit} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+            </div>
+          ) : (
+            <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}><LinkifiedText text={node.content} /></p>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
+            <button
+              onClick={() => onToggleLike(node.id, node.liked_by_me)}
+              disabled={!currentUserId}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: currentUserId ? 'pointer' : 'default', fontSize: 11, fontWeight: 700, color: node.liked_by_me ? 'var(--red)' : 'var(--text-3)' }}>
+              <Heart size={12} fill={node.liked_by_me ? 'currentColor' : 'none'} />
+              {node.reaction_count > 0 ? node.reaction_count : ''}
+            </button>
+            {currentUserId && (
+              <button onClick={() => onStartReply(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>
+                Reply
+              </button>
+            )}
+            {node.replies.length > 0 && (
+              <button onClick={() => onToggleCollapsed(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>
+                {collapsed ? `Show ${node.replies.length} repl${node.replies.length === 1 ? 'y' : 'ies'}` : `Hide repl${node.replies.length === 1 ? 'y' : 'ies'}`}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {replyingTo === node.id && (
+        <div style={{ display: 'flex', gap: 8, marginLeft: indent + 36 }}>
+          <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'var(--accent)' }}>
+            {currentUserAvatar
+              ? <img src={currentUserAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (currentUserDisplay || '?')[0].toUpperCase()
+            }
+          </div>
+          <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
+            <input
+              autoFocus
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), onSubmitReply(node.id, node.author_id))}
+              placeholder={`Reply to ${node.author?.display_name || node.author?.username}…`}
+              className="ss-input"
+              style={{ flex: 1, fontSize: 13, padding: '6px 12px' }}
+            />
+            <button onClick={() => onSubmitReply(node.id, node.author_id)} disabled={!replyText.trim()} style={{
+              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+              background: replyText.trim() ? 'var(--accent)' : 'var(--surface-3)',
+              color: replyText.trim() ? 'var(--accent-fg)' : 'var(--text-3)',
+              border: 'none', cursor: replyText.trim() ? 'pointer' : 'not-allowed',
+            }}>
+              Reply
+            </button>
+            <button onClick={onCancelReply} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!collapsed && node.replies.map(reply => (
+        <CommentItem
+          key={reply.id}
+          node={reply}
+          depth={depth + 1}
+          currentUserId={currentUserId}
+          currentUserAvatar={currentUserAvatar}
+          currentUserDisplay={currentUserDisplay}
+          editingCommentId={editingCommentId}
+          editText={editText}
+          setEditText={setEditText}
+          onStartEdit={onStartEdit}
+          onSaveEdit={onSaveEdit}
+          onCancelEdit={onCancelEdit}
+          onDelete={onDelete}
+          onReport={onReport}
+          onToggleLike={onToggleLike}
+          replyingTo={replyingTo}
+          replyText={replyText}
+          setReplyText={setReplyText}
+          onStartReply={onStartReply}
+          onCancelReply={onCancelReply}
+          onSubmitReply={onSubmitReply}
+          collapsedThreads={collapsedThreads}
+          onToggleCollapsed={onToggleCollapsed}
+        />
+      ))}
+    </div>
+  )
 }
 
 function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onClick }: {

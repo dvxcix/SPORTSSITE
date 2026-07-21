@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Search, TrendingUp, Users, Zap, Hash, Activity } from 'lucide-react'
@@ -24,6 +24,7 @@ export function SearchClient() {
   // typed. Still just an initial value, not a live sync back to the URL
   // (no need — this page owns the query from here on).
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [q, setQ] = useState(() => searchParams.get('q') ?? '')
   const [tab, setTab] = useState<SearchTab>('all')
   const [users, setUsers] = useState<any[]>([])
@@ -258,7 +259,15 @@ export function SearchClient() {
               </h3>
               <div className="space-y-2">
                 {(showPicks ? picks : posts).map((p: any) => (
-                  <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                  <div
+                    key={p.id}
+                    onClick={e => {
+                      const target = e.target as HTMLElement
+                      if (target.closest('a, button, input, textarea, select')) return
+                      router.push(`/posts/${p.id}`)
+                    }}
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all cursor-pointer"
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 overflow-hidden">
                         {p.author?.avatar_url ? <img src={p.author.avatar_url} alt="" className="w-full h-full object-cover" /> : null}
@@ -273,9 +282,7 @@ export function SearchClient() {
                       )}
                       {p.post_type === 'parlay' && <span className="text-[10px] font-bold bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full">PARLAY</span>}
                     </div>
-                    <Link href={`/posts/${p.id}`}>
-                      <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2">{p.content}</p>
-                    </Link>
+                    <p className="text-sm text-zinc-200 leading-relaxed line-clamp-2">{p.content}</p>
                     {p.pick_data?.team && (
                       <div className="mt-2 flex items-center gap-2 text-xs">
                         <TrendingUp size={11} className="text-yellow-400" />
