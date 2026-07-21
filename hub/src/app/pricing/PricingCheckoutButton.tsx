@@ -16,6 +16,13 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Decided in JS, not a CSS @media breakpoint — reported live twice now that
+  // the modal still rendered as the centered/rounded desktop popup on a real
+  // phone (rounded corners, a visible gap above showing the page behind it),
+  // meaning the @media (max-width: 640px) override wasn't reliably taking
+  // effect. matchMedia gives one unambiguous answer instead of trusting the
+  // cascade to apply three separate !important overrides correctly.
+  const [isMobile, setIsMobile] = useState(false)
 
   // Reported live: on mobile, the embedded checkout form can run taller than
   // the viewport, and the global Watchlist/My Picks FABs (mounted site-wide,
@@ -26,7 +33,14 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
   useEffect(() => {
     if (!sessionId) return
     document.body.classList.add('ss-modal-open')
-    return () => { document.body.classList.remove('ss-modal-open') }
+    const mq = window.matchMedia('(max-width: 640px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => {
+      document.body.classList.remove('ss-modal-open')
+      mq.removeEventListener('change', update)
+    }
   }, [sessionId])
 
   async function startCheckout() {
@@ -65,55 +79,60 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
       </Button>
       {error && <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>{error}</p>}
       {sessionId && (
-        <>
-          {/* On mobile, the embedded form can run taller than a centered
-              90vh card leaves room for — reported live as a field that
-              couldn't be scrolled up to. Below the breakpoint this goes
-              edge-to-edge and full-height instead, so the browser's own
-              scroll (not a squeezed inner box) is what reaches every field. */}
-          <style>{`
-            @media (max-width: 640px) {
-              .ss-checkout-overlay { padding: 0 !important; align-items: stretch !important; }
-              .ss-checkout-card { max-width: none !important; max-height: none !important; height: 100dvh !important; border-radius: 0 !important; padding-top: max(24px, env(safe-area-inset-top)) !important; }
-            }
-          `}</style>
-          <div className="ss-checkout-overlay" style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        // The overlay itself is the ONE scrollable element (not a flex-
+        // centered overlay wrapping a separately-scrollable card) — on
+        // mobile the card is just tall in-flow content the overlay scrolls
+        // to reveal, the same shape as scrolling a normal page. A card with
+        // its own nested overflow, inside a flex-centered parent, still
+        // scrolled fine by every DOM measurement (scrollHeight > clientHeight,
+        // overflow: auto) but real touch drags starting on the embedded
+        // cross-origin Whop iframe weren't reliably reaching it on a real
+        // phone — fewer nested scroll containers is the standard fix for
+        // that class of bug.
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+          display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center',
+          padding: isMobile ? 0 : 16,
+          overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        }}>
+          <div style={{
+            background: '#06070A',
+            borderRadius: isMobile ? 0 : 16,
+            maxWidth: isMobile ? 'none' : 480,
+            width: '100%',
+            minHeight: isMobile ? '100dvh' : undefined,
+            position: 'relative',
+            padding: 24,
+            paddingTop: isMobile ? 'max(24px, env(safe-area-inset-top))' : 24,
+            border: '1px solid var(--border)',
           }}>
-            <div className="ss-checkout-card" style={{
-              background: '#06070A', borderRadius: 16, maxWidth: 480, width: '100%',
-              maxHeight: '90vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative', padding: 24,
-              border: '1px solid var(--border)',
-            }}>
-              <button
-                onClick={() => setSessionId(null)}
-                aria-label="Close checkout"
-                style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, zIndex: 1 }}
-              >
-                <X size={20} color="var(--text-3)" />
-              </button>
-              <WhopCheckoutEmbed
-                sessionId={sessionId}
-                // No ?status= of our own here — Whop appends the real
-                // "success" or "error" outcome to this URL itself for the
-                // redirect-based payment flows (3DS, etc). Hardcoding
-                // "success" ourselves would make a failed payment redirect
-                // to a URL that still claims success once Whop's own value
-                // gets appended alongside/after ours.
-                returnUrl={`${window.location.origin}/pricing`}
-                theme="dark"
-                themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
-                onComplete={() => {
-                  setSessionId(null)
-                  router.push('/pricing?status=success')
-                  router.refresh()
-                }}
-                fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
-              />
-            </div>
+            <button
+              onClick={() => setSessionId(null)}
+              aria-label="Close checkout"
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, zIndex: 1 }}
+            >
+              <X size={20} color="var(--text-3)" />
+            </button>
+            <WhopCheckoutEmbed
+              sessionId={sessionId}
+              // No ?status= of our own here — Whop appends the real
+              // "success" or "error" outcome to this URL itself for the
+              // redirect-based payment flows (3DS, etc). Hardcoding
+              // "success" ourselves would make a failed payment redirect
+              // to a URL that still claims success once Whop's own value
+              // gets appended alongside/after ours.
+              returnUrl={`${window.location.origin}/pricing`}
+              theme="dark"
+              themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
+              onComplete={() => {
+                setSessionId(null)
+                router.push('/pricing?status=success')
+                router.refresh()
+              }}
+              fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
+            />
           </div>
-        </>
+        </div>
       )}
     </>
   )
