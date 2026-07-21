@@ -58,6 +58,18 @@ export async function POST(req: Request) {
     // pulled, or a bad game_pk) is treated the same as "already started" —
     // fail closed, not open, when we can't positively confirm it's pregame.
     if (!game || !isPregame(game.status)) {
+      // Temporary diagnostic (2026-07-21 incident) — pins down whether this
+      // is "schedule fetch came back empty" (games.length === 0, upstream
+      // issue) vs "found the date's games but this exact game_pk isn't in
+      // them" (client/server game_pk or game_date mismatch) vs "found the
+      // game and its real status genuinely isn't pregame" (working as
+      // intended). Remove once the false-positive root cause is confirmed.
+      console.error('[posts/pick] blocked as already-started', {
+        player: l.player_name, game_pk: l.game_pk, game_date: l.game_date,
+        gamesForDateCount: games.length,
+        foundGame: !!game, gameStatus: game?.status ?? null,
+        availableGamePks: games.map(g => g.gamePk),
+      })
       return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
     }
   }
