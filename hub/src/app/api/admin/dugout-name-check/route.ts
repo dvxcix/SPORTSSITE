@@ -107,6 +107,26 @@ async function mpDirectNameLookup(nameNorm: string): Promise<any[]> {
   } catch { return [] }
 }
 
+// A hyphenated exact-name lookup can produce a false "doesn't exist" —
+// normName() deletes the hyphen ("Encarnacion-Strand" -> "encarnacionstrand"
+// as one joined word), but if mlb-party's own pipeline normalizes the same
+// name with a SPACE instead ("encarnacion strand"), an exact match against
+// OUR spelling would never find their row even though it exists. This does
+// a raw ILIKE substring search against the table itself, independent of our
+// normalizer entirely, using the single longest raw word-chunk from the
+// name (splitting on hyphens/spaces/periods) as the least-ambiguous term.
+async function mpSubstringSearch(term: string): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `${MP_URL}/rest/v1/player_price_season_avg?select=name_norm&name_norm=ilike.*${encodeURIComponent(term.toLowerCase())}*&limit=20`,
+      { headers: mpH, cache: 'no-store' }
+    )
+    if (!res.ok) return []
+    const d = await res.json()
+    return Array.isArray(d) ? Array.from(new Set(d.map((r: any) => r.name_norm))) : []
+  } catch { return [] }
+}
+
 // Exactly mirrors the fhrAvgMap/saAvgMap useMemo blocks in DugoutClient.tsx
 // (lines ~2774-2796) — same dedup-by-name_norm, same fanduel/williamhill_us
 // bucketing — so this shows precisely what buildBatterRow itself would see.
@@ -157,6 +177,13 @@ export async function GET(req: Request) {
     const similarFhrKeys = lastWord.length >= 4 ? Object.keys(fhrAvgMap).filter(k => k.includes(lastWord) && k !== nn) : []
     const similarSaKeys = lastWord.length >= 4 ? Object.keys(saAvgMap).filter(k => k.includes(lastWord) && k !== nn) : []
     const directTableRows = await mpDirectNameLookup(nn)
+    // Longest raw word-chunk (splitting on anything that isn't a letter —
+    // hyphens, spaces, periods, accents included), independent of normName's
+    // own hyphen-handling, so a hyphenated name can't produce a false
+    // "doesn't exist" just because our normalizer spells it differently.
+    const rawWords = name.split(/[^A-Za-zÀ-ÿ]+/).filter(Boolean).sort((a, b) => b.length - a.length)
+    const substringTerm = rawWords[0] || nn
+    const substringMatches = substringTerm.length >= 4 ? await mpSubstringSearch(substringTerm) : []
     return {
       name,
       name_norm: nn,
@@ -167,6 +194,12 @@ export async function GET(req: Request) {
       // dropped real data; empty here means it never existed for this
       // player in the first place (an upstream pipeline gap, not a query bug).
       directTableRows,
+      // Independent of our own normalizer entirely — a raw substring search
+      // against the table for this name's most distinctive word-chunk. If
+      // this is ALSO empty, the data really isn't in the table under any
+      // spelling; if it finds something, our normalizer disagrees with
+      // mlb-party's own spelling for this name.
+      substringSearch: { term: substringTerm, matchingNameNormsInTable: substringMatches },
     }
   }))
 
