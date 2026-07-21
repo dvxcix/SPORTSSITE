@@ -167,12 +167,18 @@ async function fetchBatterPitchEvents(mlbIds: number[]) {
 // approach as mlb-party's builder, but enriched with hitData (exit velo,
 // launch angle, distance) and the pitcher who allowed it — mlb-party's own
 // feed only carries batter/inning/description, no hit or pitcher detail.
-async function fetchHrFeed(mlbGames: any[]): Promise<any[]> {
+async function fetchHrFeed(mlbGames: any[]): Promise<{ hrFeed: any[]; pitcherIdByName: Record<string, number> }> {
   const livePks = mlbGames
     .filter((g: any) => { const s = g.status?.abstractGameState; return s === 'Live' || s === 'Final' })
     .map((g: any) => g.gamePk)
     .filter(Boolean)
-  if (!livePks.length) return []
+  if (!livePks.length) return { hrFeed: [], pitcherIdByName: {} }
+
+  // pitcherIdByName is built from EVERY play in the same playByPlay response
+  // (not just home runs) — near_hrs (the "almost a HR" feed queried below)
+  // only ever carries pitcher_name, no id, so there's no headshot for it
+  // otherwise. Reusing this already-fetched data costs zero extra requests.
+  const pitcherIdByName: Record<string, number> = {}
 
   const results = await Promise.all(livePks.map(async (pk: number) => {
     try {
@@ -180,6 +186,11 @@ async function fetchHrFeed(mlbGames: any[]): Promise<any[]> {
       if (!r.ok) return []
       const d = await r.json()
       const plays: any[] = d.allPlays || []
+      for (const p of plays) {
+        const pid = p.matchup?.pitcher?.id
+        const pname = p.matchup?.pitcher?.fullName
+        if (pid && pname) pitcherIdByName[normName(pname)] = pid
+      }
       return plays
         .filter(p => p.result?.eventType === 'home_run')
         .map(p => {
@@ -217,7 +228,7 @@ async function fetchHrFeed(mlbGames: any[]): Promise<any[]> {
     const arr = byGame[Number(pk)].sort((a, b) => a.ab_index - b.ab_index)
     if (arr[0]) arr[0].is_first_hr_of_game = true
   }
-  return hrFeed
+  return { hrFeed, pitcherIdByName }
 }
 
 // Position priority for projected lineup ordering
@@ -340,7 +351,7 @@ export async function GET(req: Request) {
   // 2. Parallel: mlb-party tables (BDL odds no longer fetched live here —
   // see /api/cron/bdl-odds, which polls BDL on a fixed schedule and writes
   // to pregame_odds_snapshots; this route just reads that table below).
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents] = await Promise.all([
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -356,13 +367,24 @@ export async function GET(req: Request) {
     mpRpc('get_sa_history_avg', { p_date: date }),
     mpRpc('get_opening_sa_rbi', { p_date: date }),
     fetchHrFeed(mlbGames),
-    mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team&order=parks_hr_count.desc&limit=200`, 30),
+    mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30),
     fetchBatterPitchTypeRecent(),
     fetchPitcherPitchTypeRecent(),
     fetchBatterGameLogs(lineupBatterIdList),
     fetchBatterPlatoonSplits(lineupBatterIdList),
     fetchBatterPitchEvents(lineupBatterIdList),
   ])
+
+  const { hrFeed, pitcherIdByName } = hrFeedResult
+  // near_hrs only ever carries the pitcher's NAME (no id column) — matched
+  // against pitcherIdByName (built above from the same live games' full
+  // playByPlay, not just home runs) so "Today's Near Home Runs" can show a
+  // real pitcher headshot/link instead of plain text, same as the batter
+  // side already gets via batter_id.
+  const nearHr = (nearHrRaw ?? []).map((n: any) => ({
+    ...n,
+    pitcher_mlb_id: pitcherIdByName[normName(n.pitcher_name || '')] ?? null,
+  }))
 
   // Manually-imported FanDuel markets BDL doesn't carry at all (FHR, Laser
   // 105+/110+, Moonshot, 1st PA HR, HR/ML Parlay) — see /admin/fanduel-import.

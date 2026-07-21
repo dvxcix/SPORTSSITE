@@ -2163,8 +2163,19 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
                     {isLaser105 && <span style={{ fontSize: 9, fontWeight: 800, color: '#fb923c' }}>⚡105+</span>}
                     {isMoonshot && <span style={{ fontSize: 9, fontWeight: 800, color: '#a78bfa' }}>🌙</span>}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
-                    {h._team ?? ''} · off {h.pitcher_name || '—'} · {h.half === 'top' ? '▲' : '▼'}{h.inning}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
+                    <span>{h._team ?? ''} · off</span>
+                    {/* Small enough (14px) that it doesn't grow the row height
+                        beyond this text line's own — same ask as the batter
+                        avatar, just scaled down since this is secondary info. */}
+                    {h.pitcher_mlb_id ? (
+                      <Link href={`/players/${h.pitcher_mlb_id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', flexShrink: 0 }}>
+                        <PlayerAvatar mlbId={h.pitcher_mlb_id} size={14} name={h.pitcher_name} />
+                      </Link>
+                    ) : (
+                      <PlayerAvatar mlbId={null} size={14} name={h.pitcher_name} />
+                    )}
+                    <span>{h.pitcher_name || '—'} · {h.half === 'top' ? '▲' : '▼'}{h.inning}</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -2181,6 +2192,126 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
                   ) : sortBy === 'time' ? (
                     <>
                       <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{h.hr_time ? new Date(h.hr_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── today's near-miss HR leaderboard ───────────────────────────────────────
+// Same shape as HrLeaderboard above (EV/Distance/Time tabs, jump-to-game),
+// but for near_hrs — real batted balls that would've left the park in at
+// least one of the 30 real MLB parks but didn't leave THIS one (a warning-
+// track flyout, a double off the wall, etc). near_hrs only ever stores the
+// pitcher's NAME, not an id (unlike hrFeed) — pitcher_mlb_id here is a
+// best-effort match against every pitcher who threw a pitch in a live game
+// today (see pitcherIdByName in dugout/data/route.ts), so it's null for any
+// near-miss whose pitcher that lookup didn't catch.
+function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
+  nearHrs: any[]
+  teamByMlbId: Record<number, { team: string; gameKey: string }>
+  onJumpToGame: (gameKey: string) => void
+  onClose: () => void
+}) {
+  const [sortBy, setSortBy] = useState<'ev' | 'dist' | 'time'>('dist')
+
+  const sorted = useMemo(() => {
+    const withMeta = nearHrs.map(n => ({ ...n, _team: teamByMlbId[n.batter_id]?.team ?? null, _gameKey: teamByMlbId[n.batter_id]?.gameKey ?? null }))
+    return [...withMeta].sort((a, b) => {
+      if (sortBy === 'ev') return (b.exit_velocity ?? -1) - (a.exit_velocity ?? -1)
+      if (sortBy === 'dist') return (b.hit_distance ?? -1) - (a.hit_distance ?? -1)
+      // near_hrs has no per-play MLB timestamp (statcast doesn't carry one
+      // the way playByPlay's about.endTime does) — captured_at (when our own
+      // scrape picked the row up, seconds after the real play) is the
+      // closest real-world-order proxy available, same idea as hr_time above.
+      return new Date(a.captured_at ?? 0).getTime() - new Date(b.captured_at ?? 0).getTime()
+    })
+  }, [nearHrs, teamByMlbId, sortBy])
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(251,146,60,0.1)', backdropFilter: 'blur(8px)' }}>
+          <span style={{ fontSize: 18 }}>😮</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Near Home Runs</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{nearHrs.length} ball{nearHrs.length === 1 ? '' : 's'} that would've left at least one real park</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+          {([['ev', 'Exit Velo'], ['dist', 'Distance'], ['time', 'Time']] as const).map(([key, label]) => (
+            <button key={key} onClick={() => setSortBy(key)} style={{
+              padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              border: sortBy === key ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: sortBy === key ? 'var(--accent-dim)' : 'transparent',
+              color: sortBy === key ? 'var(--accent)' : 'var(--text-3)',
+            }}>{label}</button>
+          ))}
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: 12 }}>
+          {sorted.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)', fontSize: 12 }}>No near-misses yet today.</div>
+          ) : sorted.map((n, i) => {
+            const ev = n.exit_velocity, dist = n.hit_distance
+            const parks = n.parks_hr_count
+            // Would've left MOST parks — the closer this got to a real HR
+            // across the league, the more it deserves the same red "almost
+            // gone" emphasis HrLeaderboard gives an actual 105+ laser.
+            const closeCall = parks != null && parks >= 20
+            return (
+              <div key={`${n.batter_id}-${n.inning}-${n.half_inning}-${i}`}
+                onClick={() => n._gameKey && onJumpToGame(n._gameKey)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: n._gameKey ? 'pointer' : 'default', marginBottom: 4 }}
+                onMouseEnter={e => n._gameKey && ((e.currentTarget as HTMLElement).style.background = 'var(--surface-2)')}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+              >
+                <Link href={`/players/${n.batter_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'flex' }}>
+                  <PlayerAvatar mlbId={n.batter_id} size={32} teamAbbr={n._team} name={n.batter_name} />
+                </Link>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{n.batter_name}</span>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-2)' }}>{n.result || '—'}</span>
+                    {parks != null && (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: closeCall ? '#f87171' : 'var(--text-3)' }}>{parks}/30 parks</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
+                    <span>{n._team ?? ''} · off</span>
+                    {n.pitcher_mlb_id ? (
+                      <Link href={`/players/${n.pitcher_mlb_id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', flexShrink: 0 }}>
+                        <PlayerAvatar mlbId={n.pitcher_mlb_id} size={14} name={n.pitcher_name} />
+                      </Link>
+                    ) : (
+                      <PlayerAvatar mlbId={null} size={14} name={n.pitcher_name} />
+                    )}
+                    <span>{n.pitcher_name || '—'} · {n.half_inning === 'top' ? '▲' : '▼'}{n.inning}</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  {sortBy === 'dist' ? (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{dist != null ? `${dist} ft` : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
+                    </>
+                  ) : sortBy === 'time' ? (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{n.captured_at ? new Date(n.captured_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ev != null ? `${ev} mph` : '—'}</div>
                     </>
                   ) : (
@@ -2598,6 +2729,7 @@ export function DugoutClient({ date }: { date: string }) {
   const [err, setErr]           = useState<string | null>(null)
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
+  const [showNearHrBoard, setShowNearHrBoard] = useState(false)
 
   // Deep link from elsewhere (e.g. Weather Lab's park-HR modal) — jump
   // straight to this player's row, expanded, on whichever game he's in
@@ -2755,6 +2887,7 @@ export function DugoutClient({ date }: { date: string }) {
     }
   }
   const hrCount = data.hrFeed?.length ?? 0
+  const nearHrCount = data.nearHr?.length ?? 0
 
   return (
     <div>
@@ -2764,16 +2897,29 @@ export function DugoutClient({ date }: { date: string }) {
         </div>
       )}
 
-      {hrCount > 0 && (
-        <button onClick={() => setShowHrBoard(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
-          border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80',
-          fontSize: 12, fontWeight: 800, cursor: 'pointer',
-        }}>
-          🔥 Today's Home Runs
-          <span style={{ background: 'rgba(74,222,128,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{hrCount}</span>
-        </button>
-      )}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {hrCount > 0 && (
+          <button onClick={() => setShowHrBoard(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
+            border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80',
+            fontSize: 12, fontWeight: 800, cursor: 'pointer',
+          }}>
+            🔥 Today's Home Runs
+            <span style={{ background: 'rgba(74,222,128,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{hrCount}</span>
+          </button>
+        )}
+
+        {nearHrCount > 0 && (
+          <button onClick={() => setShowNearHrBoard(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
+            border: '1px solid rgba(251,146,60,0.35)', background: 'rgba(251,146,60,0.1)', color: '#fb923c',
+            fontSize: 12, fontWeight: 800, cursor: 'pointer',
+          }}>
+            😮 Today's Near Home Runs
+            <span style={{ background: 'rgba(251,146,60,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{nearHrCount}</span>
+          </button>
+        )}
+      </div>
 
       {/* Game tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -2839,6 +2985,15 @@ export function DugoutClient({ date }: { date: string }) {
           teamByMlbId={teamByMlbId}
           onJumpToGame={gk => { setActive(gk); setShowHrBoard(false) }}
           onClose={() => setShowHrBoard(false)}
+        />
+      )}
+
+      {showNearHrBoard && (
+        <NearHrLeaderboard
+          nearHrs={data.nearHr ?? []}
+          teamByMlbId={teamByMlbId}
+          onJumpToGame={gk => { setActive(gk); setShowNearHrBoard(false) }}
+          onClose={() => setShowNearHrBoard(false)}
         />
       )}
 
