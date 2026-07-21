@@ -89,16 +89,45 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
   } catch { return [] }
 }
 
+// Real incident (2026-07-21, ~game time): every /api/posts/pick call started
+// 409ing — "already started" — a full hour before that day's first pitch,
+// for every user, every game. Root cause: this schedule call ran with
+// cache: 'no-store' from every page that needs today's slate (Dugout,
+// Pitcher Report, Slate Breakdown, Batter Cost, The Public, the composer,
+// AND the posting gate below) — at real traffic near game time, that's
+// enough uncached hits to statsapi.mlb.com from Vercel's shared egress IPs
+// to get rate-limited. A non-ok/failed response here was silently treated
+// as "found no games", which the posting gate then fails-closed on (treats
+// "can't confirm this game is pregame" the same as "already started") —
+// correct instinct for a genuinely bad/postponed game_pk, but not for a
+// transient upstream hiccup, which then blocks every real user's real pick.
+// One retry plus a short shared cache (dedupes concurrent requests within
+// the window across every one of those callers) fixes the actual failure
+// mode without loosening the real "already started" check at all.
+export async function fetchScheduleWithRetry(
+  date: string,
+  hydrate = 'lineups,probablePitcher,team',
+  attempts = 2
+): Promise<any[]> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(
+        `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=${hydrate}`,
+        { next: { revalidate: 15 }, headers: { 'User-Agent': 'SlipSurge/1.0' } }
+      )
+      if (res.ok) return (await res.json()).dates?.[0]?.games ?? []
+    } catch { /* fall through to retry */ }
+    if (i < attempts - 1) await new Promise(r => setTimeout(r, 300))
+  }
+  return []
+}
+
 export async function getTodaysMatchups(date?: string): Promise<TodayGame[]> {
   const d = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
   let mlbGames: any[] = []
   try {
-    const res = await fetch(
-      `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${d}&hydrate=lineups,probablePitcher,team`,
-      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
-    )
-    if (res.ok) mlbGames = (await res.json()).dates?.[0]?.games ?? []
+    mlbGames = await fetchScheduleWithRetry(d)
   } catch { return [] }
   if (!mlbGames.length) return []
 

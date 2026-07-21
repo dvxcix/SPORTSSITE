@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { getEffectiveTier } from '@/lib/requireTier'
 import { hasTierAccess } from '@/lib/tiers'
+import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -414,11 +415,7 @@ export async function GET(req: Request) {
   // 1. MLB schedule
   let mlbGames: any[] = []
   try {
-    const res = await fetch(
-      `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=lineups,probablePitcher,team,linescore,venue`,
-      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
-    )
-    if (res.ok) mlbGames = (await res.json()).dates?.[0]?.games ?? []
+    mlbGames = await fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue')
   } catch {}
 
   const lineupBatterIds = new Set<number>()
