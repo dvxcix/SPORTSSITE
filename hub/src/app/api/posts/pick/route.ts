@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysMatchups, isPregame } from '@/lib/mlbSchedule'
+import { getTodaysMatchups, isPregame, type TodayGame } from '@/lib/mlbSchedule'
 import { combineOdds, calcPayout } from '@/lib/parlayCalc'
 import { PROP_META } from '@/lib/watchlist'
 import { notifyMentions } from '@/lib/mentions'
@@ -45,30 +45,44 @@ export async function POST(req: Request) {
     }
   }
 
-  // Re-fetch live game state per distinct date represented — almost always
-  // just today, but a leg's game_date is whatever date it was actually
-  // composed against, so don't assume "today" server-side.
-  const dates = Array.from(new Set(legs.map(l => l.game_date).filter(Boolean))) as string[]
+  // A leg's stored game_date is only ever a hint, not authoritative — pre-fix
+  // watchlist rows (and any future source of the same mistake) can carry a
+  // game_date that's off by one calendar day from whichever day MLB's own
+  // schedule actually files that gamePk under (confirmed live, 2026-07-21:
+  // a West Coast night game's UTC-sliced date landed one day ahead of its
+  // real ET schedule day). A gamePk is a stable MLB identifier regardless of
+  // which day it's nominally filed under, so search the stated date plus
+  // its immediate neighbors instead of trusting game_date outright — this
+  // fixes both already-poisoned rows and any future date-derivation bug
+  // elsewhere, without weakening the real "already started" check at all.
+  const shiftDate = (d: string, deltaDays: number) => {
+    const dt = new Date(`${d}T12:00:00Z`)
+    dt.setUTCDate(dt.getUTCDate() + deltaDays)
+    return dt.toISOString().slice(0, 10)
+  }
+  const candidateDatesFor = (gameDate: string | null) =>
+    gameDate ? [gameDate, shiftDate(gameDate, -1), shiftDate(gameDate, 1)] : []
+
+  const dates = Array.from(new Set(legs.flatMap(l => candidateDatesFor(l.game_date))))
   const gamesByDate = new Map(await Promise.all(dates.map(async d => [d, await getTodaysMatchups(d)] as const)))
 
   for (const l of legs) {
-    const games = gamesByDate.get(l.game_date ?? '') ?? []
-    const game = games.find(g => String(g.gamePk) === String(l.game_pk))
-    // A game that's vanished from today's live schedule (postponed and
+    const candidateDates = candidateDatesFor(l.game_date)
+    let game: TodayGame | undefined
+    let gamesSearched = 0
+    for (const d of candidateDates) {
+      const games = gamesByDate.get(d) ?? []
+      gamesSearched += games.length
+      game = games.find(g => String(g.gamePk) === String(l.game_pk))
+      if (game) break
+    }
+    // A game that's vanished from the schedule entirely (postponed and
     // pulled, or a bad game_pk) is treated the same as "already started" —
     // fail closed, not open, when we can't positively confirm it's pregame.
     if (!game || !isPregame(game.status)) {
-      // Temporary diagnostic (2026-07-21 incident) — pins down whether this
-      // is "schedule fetch came back empty" (games.length === 0, upstream
-      // issue) vs "found the date's games but this exact game_pk isn't in
-      // them" (client/server game_pk or game_date mismatch) vs "found the
-      // game and its real status genuinely isn't pregame" (working as
-      // intended). Remove once the false-positive root cause is confirmed.
       console.error('[posts/pick] blocked as already-started', {
         player: l.player_name, game_pk: l.game_pk, game_date: l.game_date,
-        gamesForDateCount: games.length,
-        foundGame: !!game, gameStatus: game?.status ?? null,
-        availableGamePks: games.map(g => g.gamePk),
+        candidateDates, gamesSearched, foundGame: !!game, gameStatus: game?.status ?? null,
       })
       return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
     }
