@@ -54,6 +54,30 @@ function fetchBullpenCached(teamAbbr: string) {
 const TIER_LABEL: Record<string, string> = { elite: 'Elite', good: 'Good', avg: 'Average', leaky: 'Leaky', disaster: 'Disaster' }
 const TIER_COLOR: Record<string, string> = { elite: '#4ade80', good: '#86efac', avg: '#facc15', leaky: '#fb923c', disaster: '#f87171' }
 
+// Savant's own "Affinity" tool — real batted-ball quality-of-contact
+// similarity between two players (barrel/solid-contact/weak-topped-under/
+// flare-burner rates), NOT pitch mix or velocity. "Similar pitchers" means
+// hitters tend to make contact against them in a similar quality
+// distribution, a legitimate proxy for widening a too-small real sample
+// against one specific arm. See affinitySync.ts for the ingestion pipeline.
+type AffinitySimilar = { key: string; mlbId: number; hand: string; name: string; matchScore: number }
+type AffinityResult = { profile: Record<string, number> | null; similar: AffinitySimilar[] }
+const EMPTY_AFFINITY: AffinityResult = { profile: null, similar: [] }
+const affinityCache = new Map<string, Promise<AffinityResult>>()
+function fetchAffinityCached(key: string, role: 'pitcher' | 'hitter') {
+  const cacheKey = `${role}:${key}`
+  let p = affinityCache.get(cacheKey)
+  if (!p) {
+    p = fetch(`/api/dugout/affinity?key=${encodeURIComponent(key)}&role=${role}`).then(r => r.json()).catch(() => EMPTY_AFFINITY)
+    affinityCache.set(cacheKey, p)
+  }
+  return p
+}
+// "Season" toggle only — not exposed on the pitcher's own recency/hand
+// filters, since affinity is a season-long profile, not something that
+// varies by his last-3-starts window.
+const EXTRA_BATTER_SCOPES = [{ key: 'vsSimilarArsenal', label: 'Vs. Similar Arsenal' }] as const
+
 const HAND_FILTERS_BATTER_SIDE = [
   { key: 'all', label: 'All' }, { key: 'R', label: 'vs RHB' }, { key: 'L', label: 'vs LHB' },
 ] as const
@@ -129,8 +153,10 @@ export function MatchupPitchBreakdown({
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
   const [bullpen, setBullpen] = useState<TeamBullpen>(EMPTY_BULLPEN)
+  const [pitcherAffinity, setPitcherAffinity] = useState<AffinityResult>(EMPTY_AFFINITY)
+  const [batterAffinity, setBatterAffinity] = useState<AffinityResult>(EMPTY_AFFINITY)
   const [pitcherRecency, setPitcherRecency] = useState<typeof PITCHER_RECENCY[number]['key']>('season')
-  const [batterScope, setBatterScope] = useState<typeof BATTER_SCOPES[number]['key']>('season')
+  const [batterScope, setBatterScope] = useState<typeof BATTER_SCOPES[number]['key'] | typeof EXTRA_BATTER_SCOPES[number]['key']>('season')
   const [pitcherHandFilter, setPitcherHandFilter] = useState<'all' | 'R' | 'L'>('all')
   const [batterHandFilter, setBatterHandFilter] = useState<'all' | 'R' | 'L'>('all')
   const [zoneMetric, setZoneMetric] = useState<ZoneMetricKey>('run_value')
@@ -159,6 +185,31 @@ export function MatchupPitchBreakdown({
     fetchBullpenCached(pitcherTeamAbbr).then(d => { if (!cancelled) setBullpen(d ?? EMPTY_BULLPEN) })
     return () => { cancelled = true }
   }, [pitcherTeamAbbr])
+
+  useEffect(() => {
+    let cancelled = false
+    setPitcherAffinity(EMPTY_AFFINITY)
+    fetchAffinityCached(`${pitcherId}-${pitcherHand}`, 'pitcher').then(d => { if (!cancelled) setPitcherAffinity(d ?? EMPTY_AFFINITY) })
+    return () => { cancelled = true }
+  }, [pitcherId, pitcherHand])
+
+  // The batter's own key needs his REAL dominant batting side this season
+  // (not just the `bats` prop, which reads "S" for switch hitters — Savant's
+  // affinity keys are per-side, e.g. a switch hitter has a separate "-L" and
+  // "-R" profile) — waits for his pitch log so this can read real `stand`
+  // values off it instead of guessing.
+  useEffect(() => {
+    if (!batterRows || batterRows.length === 0) return
+    let cancelled = false
+    const standCounts = new Map<string, number>()
+    for (const r of batterRows) { if (r.stand) standCounts.set(r.stand, (standCounts.get(r.stand) ?? 0) + 1) }
+    let dominantStand = batterBats === 'L' ? 'L' : 'R'
+    let max = -1
+    for (const [s, c] of standCounts) { if (c > max) { max = c; dominantStand = s } }
+    setBatterAffinity(EMPTY_AFFINITY)
+    fetchAffinityCached(`${batterId}-${dominantStand}`, 'hitter').then(d => { if (!cancelled) setBatterAffinity(d ?? EMPTY_AFFINITY) })
+    return () => { cancelled = true }
+  }, [batterId, batterRows, batterBats])
 
   if (pitcherRows === null || batterRows === null) {
     return <div style={{ fontSize: 11, color: 'var(--text-3)', padding: '8px 0' }}>Loading real pitch-log matchup data…</div>
@@ -191,11 +242,15 @@ export function MatchupPitchBreakdown({
   // reliever_ratings) instead of this one starter's own arsenal — a
   // genuinely different set of pitchers and pitch types. ─────────────────
   const relieverIds = new Set(bullpen.relievers.map(r => r.mlbId))
+  const similarPitcherIds = new Set(pitcherAffinity.similar.map(s => s.mlbId))
+  const similarHitterIds = new Set(batterAffinity.similar.map(s => s.mlbId))
   const batterHandRows = batterHandFilter === 'all' ? batterRows : batterRows.filter(r => r.p_throws === batterHandFilter)
 
   let batterVsMixRows: PitchLogRow[]
   if (batterScope === 'vsTeam') {
     batterVsMixRows = batterHandRows.filter(r => relieverIds.has(r.pitcher_id))
+  } else if (batterScope === 'vsSimilarArsenal') {
+    batterVsMixRows = batterHandRows.filter(r => similarPitcherIds.has(r.pitcher_id))
   } else {
     const batterWindowDates = batterScope === 'season' || batterScope === 'vsPitcher' ? null : lastNGameDates(batterHandRows, Number(batterScope))
     batterVsMixRows = batterHandRows.filter(r => {
@@ -209,10 +264,11 @@ export function MatchupPitchBreakdown({
   const batterMixRows: BatterMixRow[] = groupByPitchType(batterVsMixRows).map(g => ({
     pitchType: g.pitchType,
     batterRowsForPitch: g.rows,
-    // No single arm to compare against once "Vs. This Team" pools several
-    // different relievers together — the per-pitch expand below only shows
-    // a pitcher-side zone when there's actually one real pitcher it means.
-    pitcherRowsForPitch: batterScope === 'vsTeam' ? [] : pitcherHandRows.filter(r => r.pitch_type === g.pitchType),
+    // No single arm to compare against once "Vs. This Team"/"Vs. Similar
+    // Arsenal" pool several different pitchers together — the per-pitch
+    // expand below only shows a pitcher-side zone when there's actually one
+    // real pitcher it means.
+    pitcherRowsForPitch: (batterScope === 'vsTeam' || batterScope === 'vsSimilarArsenal') ? [] : pitcherHandRows.filter(r => r.pitch_type === g.pitchType),
     batterStats: { ...computeStatLine(g.rows), usage: batterVsMixRows.length > 0 ? (g.rows.length / batterVsMixRows.length) * 100 : null },
   }))
 
@@ -223,6 +279,13 @@ export function MatchupPitchBreakdown({
     return cmpNullsLast((a.stats as any)[activePitSort.col], (b.stats as any)[activePitSort.col], activePitSort.dir)
   })
   const pitPoolByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, pitcherMixRows.map(r => (r.stats as any)[c.key])]))
+
+  // How has this pitcher (in his currently selected recency/hand window)
+  // actually done against real hitters whose contact-quality profile is
+  // similar to the batter in this matchup — a wider, real sample when the
+  // batter himself has little or no history against this exact arm.
+  const similarHitterRows = pitcherHandRows.filter(r => similarHitterIds.has(r.batter_id))
+  const similarHitterStats = computeStatLine(similarHitterRows)
 
   const onSortBatPitch = (col: string) => setBatPitchSort(prev => toggleSortState(prev, col))
   const activeBatPitchSort = batPitchSort ?? { col: 'pa', dir: 'desc' as const }
@@ -324,6 +387,43 @@ export function MatchupPitchBreakdown({
         </table>
       </div>
 
+      {/* Real Savant Affinity data: how this pitcher (current recency/hand
+          window) has actually performed against hitters whose batted-ball
+          quality-of-contact profile is similar to the batter below — a
+          wider real sample when he has little or no history against this
+          exact arm. Plain value tiles, no heat (a single aggregate has no
+          real pool to heat-map against). */}
+      {batterAffinity.similar.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <Tooltip
+            content={
+              <div style={{ fontSize: 11, lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 800, marginBottom: 2 }}>Most similar to {batterName}</div>
+                {batterAffinity.similar.slice(0, 8).map(s => (
+                  <div key={s.key}>{s.name} — {(s.matchScore * 100).toFixed(0)}%</div>
+                ))}
+              </div>
+            }
+          >
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 6, cursor: 'default' }}>
+              VS HITTERS SIMILAR TO {batterName.toUpperCase()} ({batterAffinity.similar.length})
+            </div>
+          </Tooltip>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {([
+              ['PA', i0(similarHitterStats.pa)], ['AVG', r3(similarHitterStats.avg)], ['OBP', r3(similarHitterStats.obp)], ['SLG', r3(similarHitterStats.slg)],
+              ['WHIFF%', p1(similarHitterStats.whiffPct)], ['HH%', p1(similarHitterStats.hardHitPct)], ['xwOBA(Ct)', r3(similarHitterStats.xwobaContact)],
+              ['HR', i0(similarHitterStats.hr)], ['K', i0(similarHitterStats.k)], ['BB', i0(similarHitterStats.bb)],
+            ] as [string, string][]).map(([label, value]) => (
+              <div key={label} style={{ padding: '5px 9px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 56 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{value}</div>
+                <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
         <Link
           href={`/players/${batterId}`}
@@ -336,7 +436,7 @@ export function MatchupPitchBreakdown({
           </div>
         </Link>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' }}>
-          {BATTER_SCOPES.map(o => <ToggleBtn key={o.key} active={batterScope === o.key} onClick={() => setBatterScope(o.key)}>{o.label}</ToggleBtn>)}
+          {[...BATTER_SCOPES, ...EXTRA_BATTER_SCOPES].map(o => <ToggleBtn key={o.key} active={batterScope === o.key} onClick={() => setBatterScope(o.key)}>{o.label}</ToggleBtn>)}
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -346,6 +446,11 @@ export function MatchupPitchBreakdown({
       {batterScope === 'vsTeam' && (
         <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 10 }}>
           {bullpen.relievers.length === 0 ? `No current reliever ratings on file for ${pitcherTeamAbbr}.` : `Every tracked pitch vs. ${pitcherTeamAbbr}'s ${bullpen.relievers.length} rated reliever${bullpen.relievers.length === 1 ? '' : 's'}.`}
+        </div>
+      )}
+      {batterScope === 'vsSimilarArsenal' && (
+        <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 10 }}>
+          {pitcherAffinity.similar.length === 0 ? `No similar-arsenal data on file for ${pitcherName}.` : `Every tracked pitch vs. ${pitcherAffinity.similar.length} pitcher${pitcherAffinity.similar.length === 1 ? '' : 's'} with a real Statcast contact-quality profile similar to ${pitcherName}'s.`}
         </div>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
