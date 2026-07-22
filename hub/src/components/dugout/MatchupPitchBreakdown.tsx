@@ -170,29 +170,26 @@ export function MatchupPitchBreakdown({
   const pitcherWindowRows = pitcherWindowDates ? pitcherRows.filter(r => pitcherWindowDates.has(r.game_date)) : pitcherRows
   const pitcherHandRows = pitcherHandFilter === 'all' ? pitcherWindowRows : pitcherWindowRows.filter(r => r.stand === pitcherHandFilter)
   const mix = pitchMix(pitcherHandRows)
-  const mixSet = new Set(mix.map(m => m.pitchType))
   const pitcherMixRows: PitcherMixRow[] = mix.map(m => {
     const rows = pitcherHandRows.filter(r => r.pitch_type === m.pitchType)
     return { pitchType: m.pitchType, rows, stats: { ...computeStatLine(rows), usage: m.usage } }
   })
 
-  // Stable "does this pitcher throw this pitch type at all" set, off his
-  // FULL season log — deliberately not pitcherHandRows/mixSet above. Those
-  // are scoped to whichever recency+hand filter is active on his own card,
-  // so a batter's real at-bats (even under "Vs. This Pitcher", where every
-  // one of them is against this exact arsenal by definition) were getting
-  // silently dropped whenever they fell outside that unrelated window —
-  // confirmed live: a real, on-file home run disappeared from a batter's
-  // season total the moment the pitcher's card was flipped to a narrower
-  // recency/hand filter, though the pitch itself was never missing data.
-  const pitcherArsenalSet = new Set(pitcherRows.filter(r => r.pitch_type).map(r => r.pitch_type as string))
-
   // ── Batter's own results — hand-filtered by the throwing pitcher's hand
   // first (so "his last 5 games" means his last 5 games against that hand
-  // when a hand filter is active), then scoped. "Vs. This Team" pulls the
-  // real current bullpen roster (mlb-party's reliever_ratings) instead of
-  // this one starter's own arsenal — a genuinely different set of pitchers
-  // and pitch types, not a subset of pitcherMixRows above. ────────────────
+  // when a hand filter is active), then scoped. Every scope here reflects
+  // the batter's REAL activity in that window — season/L-N are his true
+  // recent form against whoever he actually faced, not narrowed to pitch
+  // types this specific pitcher happens to throw. Confirmed live: a real,
+  // on-file home run (Nick Gonzales off Gavin Williams, a real curveball,
+  // 4 days back) was invisible under "Last 5 Games" purely because the
+  // opposing pitcher in this panel doesn't throw a true curveball — that
+  // arsenal-matching only makes sense for "Vs. This Pitcher"/"Vs. This
+  // Team" below, where the pitch source is genuinely restricted to begin
+  // with, not for the batter's own unrelated recent-form window. "Vs. This
+  // Team" pulls the real current bullpen roster (mlb-party's
+  // reliever_ratings) instead of this one starter's own arsenal — a
+  // genuinely different set of pitchers and pitch types. ─────────────────
   const relieverIds = new Set(bullpen.relievers.map(r => r.mlbId))
   const batterHandRows = batterHandFilter === 'all' ? batterRows : batterRows.filter(r => r.p_throws === batterHandFilter)
 
@@ -201,12 +198,11 @@ export function MatchupPitchBreakdown({
     batterVsMixRows = batterHandRows.filter(r => relieverIds.has(r.pitcher_id))
   } else {
     const batterWindowDates = batterScope === 'season' || batterScope === 'vsPitcher' ? null : lastNGameDates(batterHandRows, Number(batterScope))
-    const batterScopedRows = batterHandRows.filter(r => {
+    batterVsMixRows = batterHandRows.filter(r => {
       if (batterScope === 'vsPitcher' && r.pitcher_id !== pitcherId) return false
       if (batterWindowDates && !batterWindowDates.has(r.game_date)) return false
       return true
     })
-    batterVsMixRows = batterScopedRows.filter(r => r.pitch_type && pitcherArsenalSet.has(r.pitch_type))
   }
   const batterOverall = computeStatLine(batterVsMixRows)
 
