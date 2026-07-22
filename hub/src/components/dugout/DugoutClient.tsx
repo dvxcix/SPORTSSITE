@@ -987,15 +987,19 @@ function PlayerDrillDown({
               <StatTile label="HR" value={row.s_hr != null ? String(Math.round(row.s_hr)) : '—'} title="Season HR total" heatStyle={heat(row.s_hr, g('s_hr'), 'hi')} />
             </div>
             {row.mlb_id != null && <RecentFormSplits batterId={row.mlb_id} pitcherHand={pitcherHand} />}
+            {/* Ballpark conditions — same park-shape/wind visual as Weather
+                Lab, scoped to just this game. Stacked under Bat Tracking/
+                Recent Form & Splits (not a separate flex item) so it stays
+                right beside the matchup arsenal column on smaller screens
+                instead of wrapping below both columns and needing a scroll. */}
+            {gameInfo.game_pk && gameInfo.game_date && (
+              <div style={{ marginTop: 14 }}>
+                <GameWeatherCard gamePk={gameInfo.game_pk} date={gameInfo.game_date} />
+              </div>
+            )}
           </div>
           )
         })()}
-
-        {/* Ballpark conditions — same park-shape/wind visual as Weather Lab,
-            scoped to just this game. */}
-        {gameInfo.game_pk && gameInfo.game_date && (
-          <GameWeatherCard gamePk={gameInfo.game_pk} date={gameInfo.game_date} />
-        )}
       </div>
     </td>
   )
