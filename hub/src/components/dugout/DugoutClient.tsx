@@ -14,6 +14,7 @@ import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown'
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
+import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -985,6 +986,7 @@ function PlayerDrillDown({
               <StatTile label="XHR" value={f1(row.s_xhr)} title="Expected HR (season)" heatStyle={heat(row.s_xhr, g('s_xhr'), 'hi')} />
               <StatTile label="HR" value={row.s_hr != null ? String(Math.round(row.s_hr)) : '—'} title="Season HR total" heatStyle={heat(row.s_hr, g('s_hr'), 'hi')} />
             </div>
+            {row.mlb_id != null && <RecentFormSplits batterId={row.mlb_id} pitcherHand={pitcherHand} />}
           </div>
           )
         })()}

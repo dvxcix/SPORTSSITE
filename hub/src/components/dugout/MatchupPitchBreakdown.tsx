@@ -26,7 +26,7 @@ const HAND_COLOR: Record<'R' | 'L', string> = { R: '#fb923c', L: '#60a5fa' }
 // it just needs to outlive individual component instances for the page
 // session, not survive a reload.
 const pitchLogCache = new Map<number, Promise<{ pitcherRows: PitchLogRow[]; batterRows: PitchLogRow[] }>>()
-function fetchPitchLogCached(mlbId: number) {
+export function fetchPitchLogCached(mlbId: number) {
   let p = pitchLogCache.get(mlbId)
   if (!p) {
     p = fetch(`/api/players/${mlbId}/pitch-log`).then(r => r.json()).catch(() => ({ pitcherRows: [], batterRows: [] }))
