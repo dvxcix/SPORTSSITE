@@ -1,47 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
+import { fetchPlayerPitchRows, enrichPitchRows } from '@/lib/pitchLogFetch'
 
 export const revalidate = 0
-
-type AdminClient = ReturnType<typeof createAdminClient>
-
-const SELECT_COLS = [
-  'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'zone', 'plate_x', 'plate_z',
-  'balls', 'strikes', 'inning', 'events', 'description', 'is_in_play', 'is_swing', 'is_whiff', 'is_home_run',
-  'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed', 'velocity', 'spin_rate',
-  // swing_length/attack_angle/bb_type aren't their own typed columns (see
-  // statcastPitchLogSync.ts) — they're real Savant CSV fields all the same,
-  // just still living in `raw` until something needs to filter/index on
-  // them rather than only display them. Pulled out below, then `raw`
-  // itself is dropped before the response goes to the client.
-  'raw',
-].join(', ')
-
-// player_pitch_log easily exceeds PostgREST's 1000-row default cap for a
-// full-time player (a workhorse starter throws 2,500-3,500+ pitches a
-// season) — paginated the same way the pitch-arsenal-details seed query
-// had to be fixed to do (see commit e519162b). Ordered by the table's own
-// composite PK (not game_date, which has huge ties within a day) so page
-// boundaries are fully deterministic — same lesson as commit d4a3ef44.
-async function fetchPlayerPitches(admin: AdminClient, mlbId: number, role: 'pitcher' | 'batter') {
-  const col = role === 'pitcher' ? 'pitcher_id' : 'batter_id'
-  const PAGE_SIZE = 1000
-  const rows: Record<string, any>[] = []
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await admin
-      .from('player_pitch_log')
-      .select(SELECT_COLS)
-      .eq(col, mlbId)
-      .order('game_pk', { ascending: true }).order('at_bat_index', { ascending: true }).order('pitch_number', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1)
-    if (error) throw error
-    if (!data?.length) break
-    rows.push(...data)
-    if (data.length < PAGE_SIZE) break
-  }
-  return rows
-}
 
 // Every pitch a player has thrown (as pitcher) and/or seen (as batter) this
 // season, trimmed to the fields the zone-heatmap and matchup-explorer cards
@@ -64,8 +26,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const admin = createAdminClient()
 
   const [pitcherRows, batterRows] = await Promise.all([
-    fetchPlayerPitches(admin, mlbId, 'pitcher'),
-    fetchPlayerPitches(admin, mlbId, 'batter'),
+    fetchPlayerPitchRows(admin, mlbId, 'pitcher'),
+    fetchPlayerPitchRows(admin, mlbId, 'batter'),
   ])
 
   if (!pitcherRows.length && !batterRows.length) {
@@ -86,29 +48,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const opponents = Object.fromEntries((oppRes.data ?? []).map(p => [p.mlb_id, p]))
   const gameInfo = Object.fromEntries((gamesRes.data ?? []).map(g => [g.game_pk, g]))
 
-  const enrich = (rows: Record<string, any>[], opponentKey: 'batter_id' | 'pitcher_id') => rows.map(r => {
-    const opp = opponents[r[opponentKey]]
-    const raw = r.raw ?? {}
-    return {
-      ...r,
-      opponent_id: r[opponentKey],
-      opponent_name: opp?.full_name ?? `Player ${r[opponentKey]}`,
-      opponent_team: opp?.current_team_abbr ?? null,
-      day_night: gameInfo[r.game_pk]?.day_night ?? null,
-      venue_name: gameInfo[r.game_pk]?.venue_name ?? null,
-      swing_length: raw.swing_length !== undefined && raw.swing_length !== '' ? Number(raw.swing_length) : null,
-      attack_angle: raw.attack_angle !== undefined && raw.attack_angle !== '' ? Number(raw.attack_angle) : null,
-      // Savant's own in-play hit distance (feet) — real CSV field
-      // (hit_distance_sc), just still living in `raw` like swing_length/
-      // attack_angle above rather than its own typed column.
-      hit_distance: raw.hit_distance_sc !== undefined && raw.hit_distance_sc !== '' ? Number(raw.hit_distance_sc) : null,
-      bb_type: raw.bb_type || null,
-      raw: undefined,
-    }
-  })
-
   return NextResponse.json({
-    pitcherRows: enrich(pitcherRows, 'batter_id'),
-    batterRows: enrich(batterRows, 'pitcher_id'),
+    pitcherRows: enrichPitchRows(pitcherRows, 'batter_id', opponents, gameInfo),
+    batterRows: enrichPitchRows(batterRows, 'pitcher_id', opponents, gameInfo),
   })
 }

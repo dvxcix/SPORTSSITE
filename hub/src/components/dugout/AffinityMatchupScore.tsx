@@ -8,6 +8,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { PitchList } from '@/components/players/PitchList'
 import { lastNGameDates, computeStatLine, type PitchLogRow } from '@/lib/batterStatsEngine'
 import { fetchPitchLogCached } from '@/components/dugout/MatchupPitchBreakdown'
+import { scoreFrom } from '@/lib/affinityScore'
 
 // Same fixed hand-color convention used on the row header in DugoutClient —
 // right orange, left blue, switch purple.
@@ -40,25 +41,7 @@ const SCORE_COLOR = (score: number) => {
   return '#f87171'
 }
 
-const daysAgo = (dateStr: string) => (Date.now() - new Date(`${dateStr}T00:00:00Z`).getTime()) / 86400000
-const recencyWeight = (dateStr: string) => {
-  const d = daysAgo(dateStr)
-  if (d <= 14) return 1
-  if (d <= 30) return 0.6
-  return 0.3
-}
-
-// formHr: real HR count in the player's own last-10-real-games window (for
-// a pitcher this naturally reads as his last 3-4 real starts, since
-// lastNGameDates only counts dates he actually appears in). evidence: the
-// real cross-referenced HRs attributed to THIS player specifically.
-function scoreFrom(formHr: number, evidence: { matchScore: number; game_date: string }[]): number {
-  const formPoints = formHr >= 2 ? 4 : formHr === 1 ? 2 : 0
-  const evidencePoints = Math.min(6, evidence.reduce((sum, r) => sum + r.matchScore * recencyWeight(r.game_date), 0) * 3)
-  return Math.round(Math.max(0, Math.min(10, formPoints + evidencePoints)))
-}
-
-type Evidence = PitchLogRow & { matchScore: number }
+export type Evidence = PitchLogRow & { matchScore: number }
 
 function EvidenceCard({
   mlbId, name, teamAbbr, hand, isPitcherCard, headline, evidence, score, expanded, onToggle,
@@ -134,9 +117,7 @@ function EvidenceCard({
 // Expanding either count reuses PitchList — the same real per-pitch table
 // (real opponent avatar, velo/spin/EV/LA/dist/xwOBA/RV) already used
 // everywhere else in this dropdown, not a second, thinner view.
-export function AffinityMatchupScore({
-  batterId, batterName, batterTeamAbbr, batterBats, pitcherId, pitcherName, pitcherTeamAbbr, pitcherHand,
-}: {
+type MatchupIdentity = {
   batterId: number
   batterName: string
   batterTeamAbbr: string
@@ -145,13 +126,62 @@ export function AffinityMatchupScore({
   pitcherName: string
   pitcherTeamAbbr: string
   pitcherHand: 'R' | 'L'
-}) {
+}
+type MatchupComputed = {
+  batterScore: number
+  pitcherScore: number
+  evidencePitchers: Evidence[]
+  evidenceHitters: Evidence[]
+}
+
+// Purely presentational — both AffinityMatchupScore (fetches + computes
+// client-side for one Dugout matchup below) and the Synergy page (which
+// gets every matchup on today's slate pre-computed server-side in one bulk
+// request, see /api/synergy/today) render through this exact same component
+// so the two surfaces never visually drift apart.
+export function AffinityMatchupCards({
+  batterId, batterName, batterTeamAbbr, batterBats, pitcherId, pitcherName, pitcherTeamAbbr, pitcherHand,
+  batterScore, pitcherScore, evidencePitchers, evidenceHitters,
+}: MatchupIdentity & MatchupComputed) {
+  const [batterExpanded, setBatterExpanded] = useState(false)
+  const [pitcherExpanded, setPitcherExpanded] = useState(false)
+  const batterHand: 'R' | 'L' | 'S' = batterBats === 'L' ? 'L' : batterBats === 'S' ? 'S' : 'R'
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <EvidenceCard
+          mlbId={batterId} name={batterName} teamAbbr={batterTeamAbbr} hand={batterHand} isPitcherCard={false}
+          headline="HR VS. SIMILAR PITCHER(S)" evidence={evidencePitchers} score={batterScore}
+          expanded={batterExpanded} onToggle={() => setBatterExpanded(v => !v)}
+        />
+        <EvidenceCard
+          mlbId={pitcherId} name={pitcherName} teamAbbr={pitcherTeamAbbr} hand={pitcherHand} isPitcherCard={true}
+          headline="HR TO SIMILAR BATTER(S)" evidence={evidenceHitters} score={pitcherScore}
+          expanded={pitcherExpanded} onToggle={() => setPitcherExpanded(v => !v)}
+        />
+      </div>
+      {batterExpanded && evidencePitchers.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <PitchList rows={evidencePitchers} maxHeight={240} />
+        </div>
+      )}
+      {pitcherExpanded && evidenceHitters.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <PitchList rows={evidenceHitters} maxHeight={240} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function AffinityMatchupScore({
+  batterId, batterName, batterTeamAbbr, batterBats, pitcherId, pitcherName, pitcherTeamAbbr, pitcherHand,
+}: MatchupIdentity) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
   const [similarPitchers, setSimilarPitchers] = useState<AffinityResult>(EMPTY_AFFINITY)
   const [similarHitters, setSimilarHitters] = useState<AffinityResult>(EMPTY_AFFINITY)
-  const [batterExpanded, setBatterExpanded] = useState(false)
-  const [pitcherExpanded, setPitcherExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -208,32 +238,11 @@ export function AffinityMatchupScore({
   const pitcherFormHr = computeStatLine(pitcherRows.filter(r => lastNGameDates(pitcherRows, 3).has(r.game_date))).hr
   const pitcherScore = scoreFrom(pitcherFormHr, evidenceHitters)
 
-  const batterHand: 'R' | 'L' | 'S' = batterBats === 'L' ? 'L' : batterBats === 'S' ? 'S' : 'R'
-
   return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <EvidenceCard
-          mlbId={batterId} name={batterName} teamAbbr={batterTeamAbbr} hand={batterHand} isPitcherCard={false}
-          headline="HR VS. SIMILAR PITCHER(S)" evidence={evidencePitchers} score={batterScore}
-          expanded={batterExpanded} onToggle={() => setBatterExpanded(v => !v)}
-        />
-        <EvidenceCard
-          mlbId={pitcherId} name={pitcherName} teamAbbr={pitcherTeamAbbr} hand={pitcherHand} isPitcherCard={true}
-          headline="HR TO SIMILAR BATTER(S)" evidence={evidenceHitters} score={pitcherScore}
-          expanded={pitcherExpanded} onToggle={() => setPitcherExpanded(v => !v)}
-        />
-      </div>
-      {batterExpanded && evidencePitchers.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          <PitchList rows={evidencePitchers} maxHeight={240} />
-        </div>
-      )}
-      {pitcherExpanded && evidenceHitters.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          <PitchList rows={evidenceHitters} maxHeight={240} />
-        </div>
-      )}
-    </div>
+    <AffinityMatchupCards
+      batterId={batterId} batterName={batterName} batterTeamAbbr={batterTeamAbbr} batterBats={batterBats}
+      pitcherId={pitcherId} pitcherName={pitcherName} pitcherTeamAbbr={pitcherTeamAbbr} pitcherHand={pitcherHand}
+      batterScore={batterScore} pitcherScore={pitcherScore} evidencePitchers={evidencePitchers} evidenceHitters={evidenceHitters}
+    />
   )
 }
