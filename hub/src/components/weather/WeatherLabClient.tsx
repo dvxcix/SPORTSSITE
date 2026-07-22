@@ -13,7 +13,7 @@ import { Tooltip } from '@/components/ui/tooltip-card'
 // drop-shadow doesn't take a separate alpha param, so hex needs converting
 // to rgba to control the glow's strength; anything already non-hex (the
 // 'var(--surface-3)' fallback for an unmapped team) is used as-is.
-function hexToRgba(hex: string, alpha: number): string {
+export function hexToRgba(hex: string, alpha: number): string {
   const m = /^#([0-9a-f]{6})$/i.exec(hex)
   if (!m) return hex
   const n = parseInt(m[1], 16)
@@ -135,7 +135,7 @@ export function ParkShape({ primary, secondary, teamAbbr }: { primary: string; s
 // each particle be a genuine short line trail rather than a rotating glyph,
 // and speed scales directly off real wind mph so a 2mph breeze crawls while
 // a 15mph gust visibly streaks.
-const WIND_CANVAS_SIZE = 220
+export const WIND_CANVAS_SIZE = 220
 
 export function WindCanvas({ deg, mph, color }: { deg: number | null; mph: number | null; color: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)

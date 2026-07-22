@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getTeamColor, getTeamSecondaryColor } from '@/lib/mlbTeamColors'
+import { getTeamColor, getTeamSecondaryColor, getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore } from '@/lib/mlbParks'
-import { ParkShape, WindCanvas, type WeatherGame } from '@/components/weather/WeatherLabClient'
+import { ParkShape, WindCanvas, WIND_CANVAS_SIZE, hexToRgba, type WeatherGame } from '@/components/weather/WeatherLabClient'
 import { Tooltip } from '@/components/ui/tooltip-card'
 
 // Same park-shape/wind-canvas rendering Weather Lab already ships, reused
@@ -40,6 +40,7 @@ export function GameWeatherCard({ gamePk, date }: { gamePk: string; date: string
   const h = game.hours[0]
   const teamPrimary = getTeamColor(game.homeAbbr)
   const teamSecondary = getTeamSecondaryColor(game.homeAbbr)
+  const logoUrl = getTeamLogoUrl(game.homeAbbr)
   const isSheltered = game.park.roof !== 'open'
   const dirs = h?.windDirDeg != null ? compassFromTo(h.windDirDeg) : null
   const hrWeather = hrWeatherScore({
@@ -60,9 +61,20 @@ export function GameWeatherCard({ gamePk, date }: { gamePk: string; date: string
         BALLPARK
       </div>
 
-      <div style={{ position: 'relative', width: 150, aspectRatio: '1/1', margin: '0 auto' }}>
+      {/* WindCanvas always draws at a fixed WIND_CANVAS_SIZE px regardless of
+          its container — sizing this wrapper to that same constant (not an
+          arbitrary smaller box) is what keeps the wind streaks inside the
+          park outline instead of overflowing it. */}
+      <div style={{ position: 'relative', width: WIND_CANVAS_SIZE, height: WIND_CANVAS_SIZE, margin: '0 auto' }}>
         <div style={isSheltered ? { position: 'absolute', inset: 0, filter: 'grayscale(1) brightness(0.55)' } : { position: 'absolute', inset: 0 }}>
           <ParkShape primary={teamPrimary} secondary={teamSecondary} teamAbbr={game.homeAbbr} />
+          {logoUrl && (
+            <img src={logoUrl} alt="" style={{
+              position: 'absolute', top: '34%', left: '50%', transform: 'translate(-50%,-50%)',
+              width: '18%', opacity: 0.95, pointerEvents: 'none',
+              filter: `drop-shadow(0 0 2.5px ${hexToRgba(teamSecondary, 0.75)}) drop-shadow(0 0 2.5px ${hexToRgba(teamSecondary, 0.75)})`,
+            }} />
+          )}
         </div>
         {!isSheltered && (
           <WindCanvas
