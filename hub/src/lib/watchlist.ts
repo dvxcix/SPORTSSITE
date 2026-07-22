@@ -121,6 +121,14 @@ export async function removeWatchlistItem(id: string): Promise<void> {
   if (error) throw error
 }
 
+// Bulk remove — one request instead of N, for "Clear All" on a long watchlist.
+export async function removeWatchlistItems(ids: string[]): Promise<void> {
+  if (!ids.length) return
+  const supabase = createClient()
+  const { error } = await supabase.from('watchlist_items').delete().in('id', ids)
+  if (error) throw error
+}
+
 // Post one or more watchlist items into the picks table + a single feed
 // post, then mark them posted. legs.length === 1 -> a straight bet.
 // legs.length > 1 -> a parlay, which requires every leg to share a book —

@@ -98,6 +98,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       venue_name: gameInfo[r.game_pk]?.venue_name ?? null,
       swing_length: raw.swing_length !== undefined && raw.swing_length !== '' ? Number(raw.swing_length) : null,
       attack_angle: raw.attack_angle !== undefined && raw.attack_angle !== '' ? Number(raw.attack_angle) : null,
+      // Savant's own in-play hit distance (feet) — real CSV field
+      // (hit_distance_sc), just still living in `raw` like swing_length/
+      // attack_angle above rather than its own typed column.
+      hit_distance: raw.hit_distance_sc !== undefined && raw.hit_distance_sc !== '' ? Number(raw.hit_distance_sc) : null,
       bb_type: raw.bb_type || null,
       raw: undefined,
     }

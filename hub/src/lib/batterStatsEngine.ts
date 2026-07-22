@@ -14,7 +14,7 @@ export type PitchLogRow = {
   balls: number | null; strikes: number | null
   events: string | null; description: string | null
   is_in_play: boolean; is_swing: boolean; is_whiff: boolean; is_home_run: boolean
-  launch_speed: number | null; launch_angle: number | null; xwoba: number | null
+  launch_speed: number | null; launch_angle: number | null; xwoba: number | null; hit_distance: number | null
   bat_speed: number | null; run_value: number | null; velocity: number | null; spin_rate: number | null
   stand: string | null; p_throws: string | null
   opponent_id: number; opponent_name: string; opponent_team: string | null; day_night: string | null

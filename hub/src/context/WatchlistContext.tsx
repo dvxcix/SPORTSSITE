@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import {
-  fetchWatchlist, addWatchlistItem, removeWatchlistItem, postWatchlistItemToFeed, postBetToFeed,
+  fetchWatchlist, addWatchlistItem, removeWatchlistItem, removeWatchlistItems, postWatchlistItemToFeed, postBetToFeed,
   type WatchlistItem, type NewWatchlistItem,
 } from '@/lib/watchlist'
 import { createClient } from '@/lib/supabase/client'
@@ -14,6 +14,7 @@ type WatchlistCtx = {
   refresh: () => Promise<void>
   add: (item: NewWatchlistItem) => Promise<WatchlistItem>
   remove: (id: string) => Promise<void>
+  removeMany: (ids: string[]) => Promise<void>
   postToFeed: (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean }) => Promise<{ postId: string; pickId: string }>
   postBet: (legs: WatchlistItem[], opts?: { content?: string; isPremium?: boolean; wagerAmount?: number | null }) => Promise<{ postId: string; pickIds: string[] }>
   isSaved: (mlbId: number | null, propKey: string, book: string | null) => boolean
@@ -83,6 +84,18 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refresh])
 
+  const removeMany = useCallback(async (ids: string[]) => {
+    if (!ids.length) return
+    const idSet = new Set(ids)
+    setItems(prev => prev.filter(i => !idSet.has(i.id)))
+    try {
+      await removeWatchlistItems(ids)
+    } catch (e) {
+      refresh()
+      throw e
+    }
+  }, [refresh])
+
   const postToFeed = useCallback(async (item: WatchlistItem, opts?: { content?: string; isPremium?: boolean }) => {
     if (!user) throw new Error('Sign in to post')
     // Posting sends it to My Picks but deliberately leaves the watchlist
@@ -103,7 +116,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   const pendingCount = items.filter(i => i.status === 'pending').length
 
   return (
-    <Ctx.Provider value={{ items, loading, error, refresh, add, remove, postToFeed, postBet, isSaved, pendingCount, signedIn: !!user }}>
+    <Ctx.Provider value={{ items, loading, error, refresh, add, remove, removeMany, postToFeed, postBet, isSaved, pendingCount, signedIn: !!user }}>
       {children}
     </Ctx.Provider>
   )

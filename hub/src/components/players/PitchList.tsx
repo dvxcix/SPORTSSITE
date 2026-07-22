@@ -127,6 +127,7 @@ export function PitchList({ rows, maxHeight = 280 }: { rows: PitchLogRow[]; maxH
               <SortableTH label="Result" colKey="result" sort={sort} onSort={onSort} align="left" />
               <SortableTH label="EV" colKey="launch_speed" sort={sort} onSort={onSort} />
               <SortableTH label="LA" colKey="launch_angle" sort={sort} onSort={onSort} />
+              <SortableTH label="Dist" colKey="hit_distance" sort={sort} onSort={onSort} />
               <SortableTH label="xwOBA" colKey="xwoba" sort={sort} onSort={onSort} />
               <SortableTH label="Bat Speed" colKey="bat_speed" sort={sort} onSort={onSort} />
               <SortableTH label="RV" colKey="run_value" sort={sort} onSort={onSort} />
@@ -153,13 +154,14 @@ export function PitchList({ rows, maxHeight = 280 }: { rows: PitchLogRow[]; maxH
                 <td style={{ padding: '4px 8px', textTransform: 'capitalize', color: resultColor(r), fontWeight: 600, whiteSpace: 'nowrap' }}>{describeRow(r)}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-1)' }}>{r.launch_speed != null ? r.launch_speed.toFixed(1) : '—'}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{r.launch_angle != null ? Math.round(r.launch_angle) : '—'}</td>
+                <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{r.hit_distance != null ? Math.round(r.hit_distance) : '—'}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{n2(r.xwoba, 3)}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{r.bat_speed != null ? r.bat_speed.toFixed(1) : '—'}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: (r.run_value ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{r.run_value != null ? r.run_value.toFixed(2) : '—'}</td>
               </tr>
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={13} style={{ padding: '12px 8px', color: 'var(--text-3)', textAlign: 'center' }}>No pitches match the selected filters.</td></tr>
+              <tr><td colSpan={14} style={{ padding: '12px 8px', color: 'var(--text-3)', textAlign: 'center' }}>No pitches match the selected filters.</td></tr>
             )}
           </tbody>
         </table>

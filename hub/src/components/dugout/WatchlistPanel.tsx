@@ -113,6 +113,8 @@ export function WatchlistButton() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [modalLegs, setModalLegs] = useState<WatchlistItem[] | null>(null)
+  const [confirmingClearAll, setConfirmingClearAll] = useState(false)
+  const [clearingAll, setClearingAll] = useState(false)
 
   if (!wl.signedIn) return null
 
@@ -120,6 +122,7 @@ export function WatchlistButton() {
   const selectedItems = pendingItems.filter(i => selectedIds.has(i.id))
   const selectedBooks = new Set(selectedItems.map(i => i.book).filter(Boolean))
   const booksMismatch = selectedItems.length > 1 && selectedBooks.size > 1
+  const allSelected = pendingItems.length > 0 && selectedItems.length === pendingItems.length
 
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
@@ -129,9 +132,24 @@ export function WatchlistButton() {
     })
   }
 
+  function toggleSelectAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(pendingItems.map(i => i.id)))
+  }
+
   function exitSelectMode() {
     setSelectMode(false)
     setSelectedIds(new Set())
+  }
+
+  async function clearAll() {
+    setClearingAll(true)
+    try {
+      await wl.removeMany(pendingItems.map(i => i.id))
+      setConfirmingClearAll(false)
+      exitSelectMode()
+    } finally {
+      setClearingAll(false)
+    }
   }
 
   return (
@@ -178,24 +196,70 @@ export function WatchlistButton() {
             }}
           >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
               <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>★ My Watchlist</span>
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{wl.pendingCount} pending</span>
-              {pendingItems.length >= 2 && (
-                <button
-                  onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-                  style={{
-                    marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
-                    background: selectMode ? 'var(--surface-2)' : 'var(--accent-dim)',
-                    color: selectMode ? 'var(--text-2)' : 'var(--accent)',
-                    border: '1px solid var(--border-2)', cursor: 'pointer',
-                  }}
-                >
-                  {selectMode ? 'Cancel' : 'Build Parlay'}
-                </button>
-              )}
-              <button onClick={() => setOpen(false)} style={{ marginLeft: selectMode || pendingItems.length < 2 ? 'auto' : 0, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
+            {pendingItems.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                {pendingItems.length >= 2 && (
+                  <button
+                    onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
+                    style={{
+                      fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                      background: selectMode ? 'var(--surface-2)' : 'var(--accent-dim)',
+                      color: selectMode ? 'var(--text-2)' : 'var(--accent)',
+                      border: '1px solid var(--border-2)', cursor: 'pointer',
+                    }}
+                  >
+                    {selectMode ? 'Cancel' : 'Build Parlay'}
+                  </button>
+                )}
+                {selectMode && (
+                  <button
+                    onClick={toggleSelectAll}
+                    style={{
+                      fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                      background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer',
+                    }}
+                  >
+                    {allSelected ? 'Deselect All' : 'Select All'}
+                  </button>
+                )}
+                {!selectMode && (
+                  confirmingClearAll ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                      <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Remove all {pendingItems.length}?</span>
+                      <button
+                        disabled={clearingAll}
+                        onClick={clearAll}
+                        style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'var(--red)', color: '#fff', border: 'none', cursor: clearingAll ? 'default' : 'pointer', opacity: clearingAll ? 0.6 : 1 }}
+                      >
+                        {clearingAll ? 'Clearing…' : 'Yes, clear all'}
+                      </button>
+                      <button
+                        disabled={clearingAll}
+                        onClick={() => setConfirmingClearAll(false)}
+                        style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingClearAll(true)}
+                      style={{
+                        marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                        background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border-2)', cursor: 'pointer',
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  )
+                )}
+              </div>
+            )}
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {wl.loading ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>

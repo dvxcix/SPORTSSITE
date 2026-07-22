@@ -84,6 +84,7 @@ export function MatchupPitchBreakdown({
   const [pitSort, setPitSort] = useState<SortState>({ col: 'pitches', dir: 'desc' })
   const [batPitchSort, setBatPitchSort] = useState<SortState>({ col: 'pa', dir: 'desc' })
   const [expandedPitch, setExpandedPitch] = useState<string | null>(null)
+  const [expandedPitcherPitch, setExpandedPitcherPitch] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -184,22 +185,56 @@ export function MatchupPitchBreakdown({
           <tbody>
             {sortedPitRows.length === 0 ? (
               <tr><td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 11 }}>No tracked pitches in this window.</td></tr>
-            ) : sortedPitRows.map(r => (
-              <tr key={r.pitchType} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
-                  <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitchType), marginRight: 6, verticalAlign: 'middle' }} />
-                  {pitchLabel(r.pitchType)}
-                </td>
-                {PITCHER_STAT_COLS.map(c => {
-                  const v = (r.pitcherStats as any)[c.key]
-                  return (
-                    <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v, pitPoolByCol[c.key], c.dir)) }}>
-                      {c.fmt(v)}
+            ) : sortedPitRows.map(r => {
+              const isOpen = expandedPitcherPitch === r.pitchType
+              return (
+                <Fragment key={r.pitchType}>
+                  <tr
+                    onClick={() => setExpandedPitcherPitch(isOpen ? null : r.pitchType)}
+                    style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: isOpen ? 'var(--accent-dim)' : undefined }}
+                  >
+                    <td style={{ padding: '6px 8px', fontWeight: 700, color: isOpen ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitchType), marginRight: 6, verticalAlign: 'middle' }} />
+                      {pitchLabel(r.pitchType)}
+                      <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
                     </td>
-                  )
-                })}
-              </tr>
-            ))}
+                    {PITCHER_STAT_COLS.map(c => {
+                      const v = (r.pitcherStats as any)[c.key]
+                      return (
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v, pitPoolByCol[c.key], c.dir)) }}>
+                          {c.fmt(v)}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                  {isOpen && (
+                    <tr>
+                      <td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
+                        {r.pitcherRowsForPitch.length === 0 ? (
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{pitcherName} has no tracked pitches of this type in the current window.</div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
+                                {ZONE_METRICS.map(m => <ToggleBtn key={m.key} active={zoneMetric === m.key} onClick={() => setZoneMetric(m.key)}>{m.label}</ToggleBtn>)}
+                              </div>
+                              <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE</div>
+                              <ZoneGrid rows={r.pitcherRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 320 }}>
+                              <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>
+                                {r.pitcherRowsForPitch.length} INDIVIDUAL PITCH{r.pitcherRowsForPitch.length === 1 ? '' : 'ES'} · ALL BATTERS FACED
+                              </div>
+                              <PitchList rows={r.pitcherRowsForPitch} maxHeight={220} />
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -214,15 +249,19 @@ export function MatchupPitchBreakdown({
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
         {([
-          ['PA', i0(batterOverall.pa)], ['AVG', r3(batterOverall.avg)], ['OBP', r3(batterOverall.obp)], ['SLG', r3(batterOverall.slg)],
-          ['WHIFF%', p1(batterOverall.whiffPct)], ['HH%', p1(batterOverall.hardHitPct)], ['xwOBA(Ct)', r3(batterOverall.xwobaContact)],
-          ['HR', i0(batterOverall.hr)], ['K', i0(batterOverall.k)], ['BB', i0(batterOverall.bb)],
-        ] as [string, string][]).map(([label, value]) => (
-          <div key={label} style={{ padding: '5px 9px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 56 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{value}</div>
-            <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
-          </div>
-        ))}
+          ['pa', 'PA', i0(batterOverall.pa)], ['avg', 'AVG', r3(batterOverall.avg)], ['obp', 'OBP', r3(batterOverall.obp)], ['slg', 'SLG', r3(batterOverall.slg)],
+          ['whiffPct', 'WHIFF%', p1(batterOverall.whiffPct)], ['hardHitPct', 'HH%', p1(batterOverall.hardHitPct)], ['xwobaContact', 'xwOBA(Ct)', r3(batterOverall.xwobaContact)],
+          ['hr', 'HR', i0(batterOverall.hr)], ['k', 'K', i0(batterOverall.k)], ['bb', 'BB', i0(batterOverall.bb)],
+        ] as [keyof BatterStats, string, string][]).map(([key, label, value]) => {
+          const col = BATTER_STAT_COLS.find(c => c.key === key)
+          const heatStyle = col && !col.noHeat ? heat((batterOverall as any)[key], batPoolByCol[key], col.dir) : {}
+          return (
+            <div key={label} style={{ padding: '5px 9px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 56, ...heatStyle }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{value}</div>
+              <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>{label}</div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Batter's real results against each pitch type — full stat-column
