@@ -936,6 +936,7 @@ function PlayerDrillDown({
               batterId={row.mlb_id}
               batterName={row.name}
               batterBats={row.bats}
+              batterTeamAbbr={row.team}
               pitcherId={oppPitcher.id}
               pitcherName={oppPitcher.name}
               pitcherHand={pitcherHand}

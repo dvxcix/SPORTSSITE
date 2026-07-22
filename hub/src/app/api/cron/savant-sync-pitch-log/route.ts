@@ -25,17 +25,27 @@ export async function GET(req: Request) {
 
   const admin = createAdminClient()
   const season = currentSeason()
+  const end = daysAgoET(1)
 
+  // Confirmed live (2026-07-22): `games` already carries rows for
+  // postponed-game makeups MLB schedules far in advance (single-game dates
+  // like 2026-09-22, weeks past anything actually played), because
+  // syncGamesForDate writes whatever officialDate the schedule API reports
+  // for a queried day. An unbounded `order by game_date desc limit 1` picks
+  // one of those future rows as "latest", pushing `start` past `end` — the
+  // date loop below then produces zero dates and the cron silently no-ops
+  // every single day. Bounding this lookup to real, already-happened dates
+  // (<= end) keeps it anchored to what's actually been processed.
   const { data: latest, error: latestError } = await admin
     .from('games')
     .select('game_date')
     .eq('season', season)
+    .lte('game_date', end)
     .order('game_date', { ascending: false })
     .limit(1)
   if (latestError) return NextResponse.json({ error: latestError.message }, { status: 500 })
 
   const start = latest?.[0]?.game_date ? format(addDays(parseISO(latest[0].game_date), 1), 'yyyy-MM-dd') : seasonStartDate(season)
-  const end = daysAgoET(1)
 
   const dates: string[] = []
   for (let d = start; d <= end && dates.length < MAX_DAYS_PER_RUN; d = format(addDays(parseISO(d), 1), 'yyyy-MM-dd')) {

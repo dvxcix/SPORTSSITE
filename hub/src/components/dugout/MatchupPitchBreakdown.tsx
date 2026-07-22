@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { pitchColor, pitchLabel, mlbHeadshot } from '@/lib/mlb-api'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { Tooltip } from '@/components/ui/tooltip-card'
 import { heat, SortableTH, type SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { ZoneGrid, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
 import { PitchList } from '@/components/players/PitchList'
@@ -35,42 +36,91 @@ export function fetchPitchLogCached(mlbId: number) {
   return p
 }
 
-// "Vs This Team" needs a team's full pitcher roster (see Slate Breakdown's
-// /api/slate/team-pitchers), which Dugout's own data pipeline doesn't carry
-// a team_id for today — every other scope needs nothing beyond the two
-// players' own pitch logs, so it's left out here rather than plumbing a new
-// id through the whole Dugout fetch chain for one scope option.
-const BATTER_MATCHUP_SCOPES = BATTER_SCOPES.filter(o => o.key !== 'vsTeam')
+type TeamBullpen = {
+  bullpen: { era: number | null; opsVsLhb: number | null; opsVsRhb: number | null; hrPer9: number | null; whip: number | null; k9: number | null; tier: string | null; updatedAt: string | null } | null
+  relievers: { mlbId: number; name: string | null; role: string | null; era: number | null; ip: number | null; hrPer9: number | null; vsLhbOps: number | null; vsRhbOps: number | null; appearances: number | null; saves: number | null; holds: number | null }[]
+}
+const EMPTY_BULLPEN: TeamBullpen = { bullpen: null, relievers: [] }
+const bullpenCache = new Map<string, Promise<TeamBullpen>>()
+function fetchBullpenCached(teamAbbr: string) {
+  let p = bullpenCache.get(teamAbbr)
+  if (!p) {
+    p = fetch(`/api/dugout/team-bullpen?teamAbbr=${teamAbbr}`).then(r => r.json()).catch(() => EMPTY_BULLPEN)
+    bullpenCache.set(teamAbbr, p)
+  }
+  return p
+}
+
+const TIER_LABEL: Record<string, string> = { elite: 'Elite', good: 'Good', avg: 'Average', leaky: 'Leaky', disaster: 'Disaster' }
+const TIER_COLOR: Record<string, string> = { elite: '#4ade80', good: '#86efac', avg: '#facc15', leaky: '#fb923c', disaster: '#f87171' }
+
+const HAND_FILTERS_BATTER_SIDE = [
+  { key: 'all', label: 'All' }, { key: 'R', label: 'vs RHB' }, { key: 'L', label: 'vs LHB' },
+] as const
+const HAND_FILTERS_PITCHER_SIDE = [
+  { key: 'all', label: 'All' }, { key: 'R', label: 'vs RHP' }, { key: 'L', label: 'vs LHP' },
+] as const
 
 const r3 = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/^0\./, '.').replace(/^-0\./, '-.'))
 const p1 = (v: number | null) => (v == null ? '—' : `${v.toFixed(1)}%`)
 const i0 = (v: number | null) => (v == null ? '—' : String(v))
 
-type MixRow = {
-  pitchType: string
-  pitcherRowsForPitch: PitchLogRow[]
-  batterRowsForPitch: PitchLogRow[]
-  pitcherStats: BatterStats
-  batterStats: BatterStats
+function groupByPitchType(rows: PitchLogRow[]): { pitchType: string; rows: PitchLogRow[] }[] {
+  const map = new Map<string, PitchLogRow[]>()
+  for (const r of rows) {
+    if (!r.pitch_type) continue
+    if (!map.has(r.pitch_type)) map.set(r.pitch_type, [])
+    map.get(r.pitch_type)!.push(r)
+  }
+  return Array.from(map, ([pitchType, rows]) => ({ pitchType, rows })).sort((a, b) => b.rows.length - a.rows.length)
+}
+
+type PitcherMixRow = { pitchType: string; rows: PitchLogRow[]; stats: BatterStats }
+type BatterMixRow = { pitchType: string; batterRowsForPitch: PitchLogRow[]; pitcherRowsForPitch: PitchLogRow[]; batterStats: BatterStats }
+
+function BullpenBadge({ teamAbbr, bullpen }: { teamAbbr: string; bullpen: TeamBullpen['bullpen'] }) {
+  if (!bullpen || !bullpen.tier) return null
+  const color = TIER_COLOR[bullpen.tier] ?? 'var(--text-3)'
+  return (
+    <Tooltip
+      content={
+        <div style={{ fontSize: 11, lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 800, marginBottom: 2 }}>{teamAbbr} Bullpen — {TIER_LABEL[bullpen.tier] ?? bullpen.tier}</div>
+          <div>ERA: {bullpen.era ?? '—'}</div>
+          <div>vs LHB OPS: {bullpen.opsVsLhb ?? '—'} · vs RHB OPS: {bullpen.opsVsRhb ?? '—'}</div>
+          <div>HR/9: {bullpen.hrPer9 ?? '—'}</div>
+        </div>
+      }
+    >
+      <span
+        style={{
+          fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, cursor: 'default',
+          border: `1px solid ${color}`, color, background: `${color}1a`,
+        }}
+      >
+        BULLPEN · {TIER_LABEL[bullpen.tier] ?? bullpen.tier.toUpperCase()}{bullpen.era != null ? ` · ${bullpen.era.toFixed(2)} ERA` : ''}
+      </span>
+    </Tooltip>
+  )
 }
 
 // The real matchup panel: this pitcher's actual pitch-by-pitch log (real
-// arsenal, recency-selectable, full stat-column set) next to this batter's
-// actual pitch-by-pitch results against that same arsenal (recency-
-// selectable independently, same full column set) — the same engine,
-// column definitions, and recency-window concept Slate Breakdown's
-// PitcherVsLineup uses (batterStatsEngine.ts), just condensed to the one
-// matchup a Dugout row-expand actually needs instead of a whole lineup
-// table. Replaces the old mlb-party 14-day/live-window pipeline, which only
-// ever offered a fixed 14-day rolling window (or a capped ~20-pitch event
-// popup) instead of a real, unbounded recency choice over genuine Statcast
-// rows going back the full season.
+// arsenal, recency-selectable, full stat-column set, filterable by the
+// batter hand he actually faced) next to this batter's actual pitch-by-
+// pitch results against that same arsenal (recency-selectable
+// independently, filterable by pitcher hand, plus a real "Vs. This Team"
+// scope against the opposing bullpen's actual current relievers) — the
+// same engine, column definitions, and recency-window concept Slate
+// Breakdown's PitcherVsLineup uses (batterStatsEngine.ts), just condensed
+// to the one matchup a Dugout row-expand actually needs instead of a whole
+// lineup table.
 export function MatchupPitchBreakdown({
-  batterId, batterName, batterBats, pitcherId, pitcherName, pitcherHand, pitcherTeamAbbr,
+  batterId, batterName, batterBats, batterTeamAbbr, pitcherId, pitcherName, pitcherHand, pitcherTeamAbbr,
 }: {
   batterId: number
   batterName: string
   batterBats: string | null
+  batterTeamAbbr: string
   pitcherId: number
   pitcherName: string
   pitcherHand: 'R' | 'L'
@@ -78,8 +128,11 @@ export function MatchupPitchBreakdown({
 }) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
+  const [bullpen, setBullpen] = useState<TeamBullpen>(EMPTY_BULLPEN)
   const [pitcherRecency, setPitcherRecency] = useState<typeof PITCHER_RECENCY[number]['key']>('season')
-  const [batterScope, setBatterScope] = useState<typeof BATTER_MATCHUP_SCOPES[number]['key']>('season')
+  const [batterScope, setBatterScope] = useState<typeof BATTER_SCOPES[number]['key']>('season')
+  const [pitcherHandFilter, setPitcherHandFilter] = useState<'all' | 'R' | 'L'>('all')
+  const [batterHandFilter, setBatterHandFilter] = useState<'all' | 'R' | 'L'>('all')
   const [zoneMetric, setZoneMetric] = useState<ZoneMetricKey>('run_value')
   const [pitSort, setPitSort] = useState<SortState>({ col: 'pitches', dir: 'desc' })
   const [batPitchSort, setBatPitchSort] = useState<SortState>({ col: 'pa', dir: 'desc' })
@@ -100,57 +153,77 @@ export function MatchupPitchBreakdown({
     return () => { cancelled = true }
   }, [batterId])
 
+  useEffect(() => {
+    let cancelled = false
+    setBullpen(EMPTY_BULLPEN)
+    fetchBullpenCached(pitcherTeamAbbr).then(d => { if (!cancelled) setBullpen(d ?? EMPTY_BULLPEN) })
+    return () => { cancelled = true }
+  }, [pitcherTeamAbbr])
+
   if (pitcherRows === null || batterRows === null) {
     return <div style={{ fontSize: 11, color: 'var(--text-3)', padding: '8px 0' }}>Loading real pitch-log matchup data…</div>
   }
 
+  // ── Pitcher's own arsenal — recency window, then optionally narrowed to
+  // only the pitches he threw against right- or left-handed batters. ──────
   const pitcherWindowDates = pitcherRecency === 'season' ? null : lastNGameDates(pitcherRows, Number(pitcherRecency))
   const pitcherWindowRows = pitcherWindowDates ? pitcherRows.filter(r => pitcherWindowDates.has(r.game_date)) : pitcherRows
-  const mix = pitchMix(pitcherWindowRows)
+  const pitcherHandRows = pitcherHandFilter === 'all' ? pitcherWindowRows : pitcherWindowRows.filter(r => r.stand === pitcherHandFilter)
+  const mix = pitchMix(pitcherHandRows)
   const mixSet = new Set(mix.map(m => m.pitchType))
-
-  // Recency is resolved against the batter's REAL games-played calendar
-  // (all his rows), same lesson as Slate Breakdown — "his last 5 games"
-  // means 5 real games, not 5 games that happened to include this arsenal.
-  const batterWindowDates = batterScope === 'season' || batterScope === 'vsPitcher' ? null : lastNGameDates(batterRows, Number(batterScope))
-  const batterScopedRows = batterRows.filter(r => {
-    if (batterScope === 'vsPitcher' && r.pitcher_id !== pitcherId) return false
-    if (batterWindowDates && !batterWindowDates.has(r.game_date)) return false
-    return true
+  const pitcherMixRows: PitcherMixRow[] = mix.map(m => {
+    const rows = pitcherHandRows.filter(r => r.pitch_type === m.pitchType)
+    return { pitchType: m.pitchType, rows, stats: { ...computeStatLine(rows), usage: m.usage } }
   })
-  const batterVsMixRows = batterScopedRows.filter(r => r.pitch_type && mixSet.has(r.pitch_type))
+
+  // ── Batter's own results — hand-filtered by the throwing pitcher's hand
+  // first (so "his last 5 games" means his last 5 games against that hand
+  // when a hand filter is active), then scoped. "Vs. This Team" pulls the
+  // real current bullpen roster (mlb-party's reliever_ratings) instead of
+  // this one starter's own arsenal — a genuinely different set of pitchers
+  // and pitch types, not a subset of pitcherMixRows above. ────────────────
+  const relieverIds = new Set(bullpen.relievers.map(r => r.mlbId))
+  const batterHandRows = batterHandFilter === 'all' ? batterRows : batterRows.filter(r => r.p_throws === batterHandFilter)
+
+  let batterVsMixRows: PitchLogRow[]
+  if (batterScope === 'vsTeam') {
+    batterVsMixRows = batterHandRows.filter(r => relieverIds.has(r.pitcher_id))
+  } else {
+    const batterWindowDates = batterScope === 'season' || batterScope === 'vsPitcher' ? null : lastNGameDates(batterHandRows, Number(batterScope))
+    const batterScopedRows = batterHandRows.filter(r => {
+      if (batterScope === 'vsPitcher' && r.pitcher_id !== pitcherId) return false
+      if (batterWindowDates && !batterWindowDates.has(r.game_date)) return false
+      return true
+    })
+    batterVsMixRows = batterScopedRows.filter(r => r.pitch_type && mixSet.has(r.pitch_type))
+  }
   const batterOverall = computeStatLine(batterVsMixRows)
 
-  const mixRows: MixRow[] = mix.map(m => {
-    const pitcherRowsForPitch = pitcherWindowRows.filter(r => r.pitch_type === m.pitchType)
-    const batterRowsForPitch = batterScopedRows.filter(r => r.pitch_type === m.pitchType)
-    return {
-      pitchType: m.pitchType,
-      pitcherRowsForPitch,
-      batterRowsForPitch,
-      pitcherStats: { ...computeStatLine(pitcherRowsForPitch), usage: m.usage },
-      // Real share of this batter's own tracked pitches (against this
-      // arsenal, in the current scope) that were this specific pitch type —
-      // the batter-side analogue of the pitcher's own Usage %, not a stand-in.
-      batterStats: { ...computeStatLine(batterRowsForPitch), usage: batterVsMixRows.length > 0 ? (batterRowsForPitch.length / batterVsMixRows.length) * 100 : null },
-    }
-  })
+  const batterMixRows: BatterMixRow[] = groupByPitchType(batterVsMixRows).map(g => ({
+    pitchType: g.pitchType,
+    batterRowsForPitch: g.rows,
+    // No single arm to compare against once "Vs. This Team" pools several
+    // different relievers together — the per-pitch expand below only shows
+    // a pitcher-side zone when there's actually one real pitcher it means.
+    pitcherRowsForPitch: batterScope === 'vsTeam' ? [] : pitcherHandRows.filter(r => r.pitch_type === g.pitchType),
+    batterStats: { ...computeStatLine(g.rows), usage: batterVsMixRows.length > 0 ? (g.rows.length / batterVsMixRows.length) * 100 : null },
+  }))
 
   const onSortPit = (col: string) => setPitSort(prev => toggleSortState(prev, col))
   const activePitSort = pitSort ?? { col: 'pitches', dir: 'desc' as const }
-  const sortedPitRows = [...mixRows].sort((a, b) => {
+  const sortedPitRows = [...pitcherMixRows].sort((a, b) => {
     if (activePitSort.col === 'pitch') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), activePitSort.dir)
-    return cmpNullsLast((a.pitcherStats as any)[activePitSort.col], (b.pitcherStats as any)[activePitSort.col], activePitSort.dir)
+    return cmpNullsLast((a.stats as any)[activePitSort.col], (b.stats as any)[activePitSort.col], activePitSort.dir)
   })
-  const pitPoolByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, mixRows.map(r => (r.pitcherStats as any)[c.key])]))
+  const pitPoolByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, pitcherMixRows.map(r => (r.stats as any)[c.key])]))
 
   const onSortBatPitch = (col: string) => setBatPitchSort(prev => toggleSortState(prev, col))
   const activeBatPitchSort = batPitchSort ?? { col: 'pa', dir: 'desc' as const }
-  const sortedBatPitchRows = [...mixRows].sort((a, b) => {
+  const sortedBatPitchRows = [...batterMixRows].sort((a, b) => {
     if (activeBatPitchSort.col === 'pitch') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), activeBatPitchSort.dir)
     return cmpNullsLast((a.batterStats as any)[activeBatPitchSort.col], (b.batterStats as any)[activeBatPitchSort.col], activeBatPitchSort.dir)
   })
-  const batPoolByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, mixRows.map(r => (r.batterStats as any)[c.key])]))
+  const batPoolByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, batterMixRows.map(r => (r.batterStats as any)[c.key])]))
 
   const zoneMetricConfig = ZONE_METRICS.find(m => m.key === zoneMetric)!
 
@@ -167,9 +240,14 @@ export function MatchupPitchBreakdown({
             <div style={{ fontSize: 10, fontWeight: 700, color: HAND_COLOR[pitcherHand] }}>{pitcherHand}HP</div>
           </div>
         </Link>
+        <BullpenBadge teamAbbr={pitcherTeamAbbr} bullpen={bullpen.bullpen} />
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' }}>
           {PITCHER_RECENCY.map(o => <ToggleBtn key={o.key} active={pitcherRecency === o.key} onClick={() => setPitcherRecency(o.key)}>{o.label}</ToggleBtn>)}
         </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>ARSENAL FILTER</span>
+        {HAND_FILTERS_BATTER_SIDE.map(o => <ToggleBtn key={o.key} active={pitcherHandFilter === o.key} onClick={() => setPitcherHandFilter(o.key)}>{o.label}</ToggleBtn>)}
       </div>
 
       {/* Pitcher's real arsenal — full stat-column set, same as Slate
@@ -199,7 +277,7 @@ export function MatchupPitchBreakdown({
                       <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
                     </td>
                     {PITCHER_STAT_COLS.map(c => {
-                      const v = (r.pitcherStats as any)[c.key]
+                      const v = (r.stats as any)[c.key]
                       return (
                         <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v, pitPoolByCol[c.key], c.dir)) }}>
                           {c.fmt(v)}
@@ -210,7 +288,7 @@ export function MatchupPitchBreakdown({
                   {isOpen && (
                     <tr>
                       <td colSpan={PITCHER_STAT_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
-                        {r.pitcherRowsForPitch.length === 0 ? (
+                        {r.rows.length === 0 ? (
                           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{pitcherName} has no tracked pitches of this type in the current window.</div>
                         ) : (
                           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -219,13 +297,13 @@ export function MatchupPitchBreakdown({
                                 {ZONE_METRICS.map(m => <ToggleBtn key={m.key} active={zoneMetric === m.key} onClick={() => setZoneMetric(m.key)}>{m.label}</ToggleBtn>)}
                               </div>
                               <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE</div>
-                              <ZoneGrid rows={r.pitcherRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
+                              <ZoneGrid rows={r.rows} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
                             </div>
                             <div style={{ flex: 1, minWidth: 320 }}>
                               <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>
-                                {r.pitcherRowsForPitch.length} INDIVIDUAL PITCH{r.pitcherRowsForPitch.length === 1 ? '' : 'ES'} · ALL BATTERS FACED
+                                {r.rows.length} INDIVIDUAL PITCH{r.rows.length === 1 ? '' : 'ES'} · ALL BATTERS FACED
                               </div>
-                              <PitchList rows={r.pitcherRowsForPitch} maxHeight={220} />
+                              <PitchList rows={r.rows} maxHeight={220} />
                             </div>
                           </div>
                         )}
@@ -240,13 +318,29 @@ export function MatchupPitchBreakdown({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>
-          {batterName.toUpperCase()} VS THIS ARSENAL
-        </div>
+        <Link
+          href={`/players/${batterId}`}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}
+        >
+          <PlayerAvatar headshot={mlbHeadshot(batterId)} teamLogo={getTeamLogoUrl(batterTeamAbbr)} teamAbbr={batterTeamAbbr} name={batterName} size={28} />
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{batterName}</div>
+            {batterBats && <div style={{ fontSize: 10, fontWeight: 700, color: HAND_COLOR[batterBats === 'L' ? 'L' : 'R'] }}>{batterBats}HB</div>}
+          </div>
+        </Link>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' }}>
-          {BATTER_MATCHUP_SCOPES.map(o => <ToggleBtn key={o.key} active={batterScope === o.key} onClick={() => setBatterScope(o.key)}>{o.label}</ToggleBtn>)}
+          {BATTER_SCOPES.map(o => <ToggleBtn key={o.key} active={batterScope === o.key} onClick={() => setBatterScope(o.key)}>{o.label}</ToggleBtn>)}
         </div>
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>OPPOSING HAND</span>
+        {HAND_FILTERS_PITCHER_SIDE.map(o => <ToggleBtn key={o.key} active={batterHandFilter === o.key} onClick={() => setBatterHandFilter(o.key)}>{o.label}</ToggleBtn>)}
+      </div>
+      {batterScope === 'vsTeam' && (
+        <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 10 }}>
+          {bullpen.relievers.length === 0 ? `No current reliever ratings on file for ${pitcherTeamAbbr}.` : `Every tracked pitch vs. ${pitcherTeamAbbr}'s ${bullpen.relievers.length} rated reliever${bullpen.relievers.length === 1 ? '' : 's'}.`}
+        </div>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
         {([
           ['pa', 'PA', i0(batterOverall.pa)], ['avg', 'AVG', r3(batterOverall.avg)], ['obp', 'OBP', r3(batterOverall.obp)], ['slg', 'SLG', r3(batterOverall.slg)],
@@ -266,8 +360,11 @@ export function MatchupPitchBreakdown({
 
       {/* Batter's real results against each pitch type — full stat-column
           set, same as Slate Breakdown's own batter table. Click a row to
-          drill into both players' real zone breakdown on that exact pitch
-          (same metric toggle) plus the batter's individual pitch log. */}
+          drill into the batter's real zone breakdown on that exact pitch
+          (same metric toggle) plus the batter's individual pitch log —
+          plus the pitcher's own zone on that pitch too, when the current
+          scope is actually about one specific arm rather than a pooled
+          bullpen. */}
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
           <thead>
@@ -304,7 +401,7 @@ export function MatchupPitchBreakdown({
                   {isOpen && (
                     <tr>
                       <td colSpan={BATTER_STAT_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
-                        {r.batterRowsForPitch.length === 0 && r.pitcherRowsForPitch.length === 0 ? (
+                        {r.batterRowsForPitch.length === 0 ? (
                           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>No tracked pitches of this type in the current window.</div>
                         ) : (
                           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -317,10 +414,12 @@ export function MatchupPitchBreakdown({
                                   <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{batterName}&apos;S ZONE</div>
                                   <ZoneGrid rows={r.batterRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'} cellSize={44} />
                                 </div>
-                                <div>
-                                  <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE — THIS PITCH</div>
-                                  <ZoneGrid rows={r.pitcherRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
-                                </div>
+                                {r.pitcherRowsForPitch.length > 0 && (
+                                  <div>
+                                    <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.04em', marginBottom: 4 }}>{pitcherName}&apos;S ZONE — THIS PITCH</div>
+                                    <ZoneGrid rows={r.pitcherRowsForPitch} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={44} />
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div style={{ flex: 1, minWidth: 320 }}>
