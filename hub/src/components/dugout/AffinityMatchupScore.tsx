@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { pitchLabel } from '@/lib/mlb-api'
+import { pitchColor, pitchLabel, mlbHeadshot } from '@/lib/mlb-api'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { lastNGameDates, computeStatLine, type PitchLogRow } from '@/lib/batterStatsEngine'
 import { fetchPitchLogCached } from '@/components/dugout/MatchupPitchBreakdown'
 
@@ -41,23 +43,109 @@ const recencyWeight = (dateStr: string) => {
   return 0.3
 }
 
-type Evidence = PitchLogRow & { name: string; matchScore: number }
+// formHr: real HR count in the player's own last-10-real-games window (for
+// a pitcher this naturally reads as his last 3-4 real starts, since
+// lastNGameDates only counts dates he actually appears in). evidence: the
+// real cross-referenced HRs attributed to THIS player specifically.
+function scoreFrom(formHr: number, evidence: { matchScore: number; game_date: string }[]): number {
+  const formPoints = formHr >= 2 ? 4 : formHr === 1 ? 2 : 0
+  const evidencePoints = Math.min(6, evidence.reduce((sum, r) => sum + r.matchScore * recencyWeight(r.game_date), 0) * 3)
+  return Math.round(Math.max(0, Math.min(10, formPoints + evidencePoints)))
+}
 
-// Real, deterministic evidence search: does this batter's recent form, plus
-// real Statcast affinity between players (Savant's own quality-of-contact
-// similarity, ≥0.75 here — a stricter cutoff than the "Vs. Similar Arsenal"
-// scope's 0.6), turn up any actual home runs that bear on this exact
-// matchup — either a hitter similar to him going deep against this exact
-// pitcher, or him going deep against a pitcher similar to this one. Both
-// searches run entirely over pitch logs already loaded elsewhere on this
-// page (shared fetchPitchLogCached), just filtered by the affinity id sets.
+type Evidence = PitchLogRow & { matchScore: number }
+
+function EvidenceCard({
+  mlbId, name, teamAbbr, headline, evidence, score,
+}: {
+  mlbId: number
+  name: string
+  teamAbbr: string
+  headline: string
+  evidence: Evidence[]
+  score: number
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const distinctPitchTypes = Array.from(new Set(evidence.map(e => e.pitch_type).filter((p): p is string => !!p)))
+
+  return (
+    <div style={{ flex: 1, minWidth: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 8 }}>
+      <Link href={`/players/${mlbId}`} style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit', marginBottom: 6 }}>
+        <PlayerAvatar headshot={mlbHeadshot(mlbId)} teamLogo={getTeamLogoUrl(teamAbbr)} teamAbbr={teamAbbr} name={name} size={26} />
+        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+      </Link>
+
+      {distinctPitchTypes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
+          {distinctPitchTypes.map(pt => (
+            <span key={pt} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 8, color: 'var(--text-3)' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pitchColor(pt), flexShrink: 0 }} />
+              {pitchLabel(pt)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div
+        onClick={() => evidence.length > 0 && setExpanded(v => !v)}
+        style={{ cursor: evidence.length > 0 ? 'pointer' : 'default' }}
+      >
+        <div style={{ fontSize: 20, fontWeight: 800, color: evidence.length > 0 ? '#4ade80' : 'var(--text-1)', lineHeight: 1 }}>{evidence.length}</div>
+        <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>
+          {headline}{evidence.length > 0 ? (expanded ? ' ▲' : ' ▾') : ''}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 6 }}>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>AFFINITY MATCHUP </span>
+        <span
+          style={{
+            fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 5,
+            border: `1px solid ${SCORE_COLOR(score)}`, color: SCORE_COLOR(score), background: `${SCORE_COLOR(score)}1a`,
+          }}
+        >
+          {score}/10
+        </span>
+      </div>
+
+      {expanded && evidence.length > 0 && (
+        <div style={{ marginTop: 6, borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {evidence.map((r, i) => (
+            <div key={i} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 9, color: 'var(--text-2)' }}>
+              <span style={{ color: 'var(--text-3)', minWidth: 56, flexShrink: 0 }}>{r.game_date}</span>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pitchColor(r.pitch_type ?? ''), flexShrink: 0 }} />
+              <Link href={`/players/${r.opponent_id}`} style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 700, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r.opponent_name}
+              </Link>
+              <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{(r.matchScore * 100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Real, deterministic evidence search: does either player's recent form,
+// plus real Statcast affinity between players (Savant's own quality-of-
+// contact similarity, ≥0.75 here — a stricter cutoff than the "Vs. Similar
+// Arsenal" scope's 0.6), turn up any actual home runs that bear on this
+// exact matchup? Two independent directions, each attributed to whichever
+// player it's actually evidence about: the batter's own real HRs against
+// pitchers similar to this one (his card), or hitters similar to him going
+// deep against this exact pitcher (the pitcher's card, since that's
+// evidence about HIS vulnerability, not the batter's own track record).
+// Both searches run entirely over pitch logs already loaded elsewhere on
+// this page (shared fetchPitchLogCached), filtered by the affinity id sets.
 export function AffinityMatchupScore({
-  batterId, batterName, pitcherId, pitcherName, pitcherHand,
+  batterId, batterName, batterTeamAbbr, pitcherId, pitcherName, pitcherTeamAbbr, pitcherHand,
 }: {
   batterId: number
   batterName: string
+  batterTeamAbbr: string
   pitcherId: number
   pitcherName: string
+  pitcherTeamAbbr: string
   pitcherHand: 'R' | 'L'
 }) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
@@ -100,69 +188,36 @@ export function AffinityMatchupScore({
   const similarPitcherIds = new Map(similarPitchers.similar.map(s => [s.mlbId, s]))
   const similarHitterIds = new Map(similarHitters.similar.map(s => [s.mlbId, s]))
 
-  // Hitters similar to the batter going deep against this EXACT pitcher.
+  // Hitters similar to the batter going deep against this EXACT pitcher —
+  // evidence about the PITCHER's own vulnerability, shown on his card.
   const evidenceHitters: Evidence[] = pitcherRows
     .filter(r => r.events === 'home_run' && similarHitterIds.has(r.batter_id))
-    .map(r => ({ ...r, name: similarHitterIds.get(r.batter_id)!.name, matchScore: similarHitterIds.get(r.batter_id)!.matchScore }))
+    .map(r => ({ ...r, matchScore: similarHitterIds.get(r.batter_id)!.matchScore }))
     .sort((a, b) => b.game_date.localeCompare(a.game_date))
 
-  // This batter going deep against a pitcher similar to the one he's facing.
+  // The batter's own real HRs against a pitcher similar to this one —
+  // evidence about the BATTER's own recent capability, shown on his card.
   const evidencePitchers: Evidence[] = batterRows
     .filter(r => r.events === 'home_run' && similarPitcherIds.has(r.pitcher_id))
-    .map(r => ({ ...r, name: similarPitcherIds.get(r.pitcher_id)!.name, matchScore: similarPitcherIds.get(r.pitcher_id)!.matchScore }))
+    .map(r => ({ ...r, matchScore: similarPitcherIds.get(r.pitcher_id)!.matchScore }))
     .sort((a, b) => b.game_date.localeCompare(a.game_date))
 
-  const last10Dates = lastNGameDates(batterRows, 10)
-  const last10Stats = computeStatLine(batterRows.filter(r => last10Dates.has(r.game_date)))
-  const formPoints = last10Stats.hr >= 2 ? 4 : last10Stats.hr === 1 ? 2 : 0
-  const evidencePoints = Math.min(6, [...evidenceHitters, ...evidencePitchers].reduce((sum, r) => sum + r.matchScore * recencyWeight(r.game_date), 0) * 3)
-  const score = Math.round(Math.max(0, Math.min(10, formPoints + evidencePoints)))
+  const batterFormHr = computeStatLine(batterRows.filter(r => lastNGameDates(batterRows, 10).has(r.game_date))).hr
+  const batterScore = scoreFrom(batterFormHr, evidencePitchers)
+
+  const pitcherFormHr = computeStatLine(pitcherRows.filter(r => lastNGameDates(pitcherRows, 3).has(r.game_date))).hr
+  const pitcherScore = scoreFrom(pitcherFormHr, evidenceHitters)
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>AFFINITY MATCHUP</div>
-        <div
-          style={{
-            fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 6,
-            border: `1px solid ${SCORE_COLOR(score)}`, color: SCORE_COLOR(score), background: `${SCORE_COLOR(score)}1a`,
-          }}
-        >
-          {score}/10
-        </div>
-      </div>
-
-      {evidenceHitters.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 8, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 4 }}>
-            SIMILAR BATTERS VS. {pitcherName.toUpperCase()} ({evidenceHitters.length})
-          </div>
-          {evidenceHitters.slice(0, 5).map((r, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, fontSize: 10, color: 'var(--text-2)', padding: '2px 0' }}>
-              <span style={{ color: 'var(--text-3)', minWidth: 66 }}>{r.game_date}</span>
-              <Link href={`/players/${r.batter_id}`} style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 700, flex: 1 }}>{r.name}</Link>
-              <span style={{ color: 'var(--text-3)' }}>{pitchLabel(r.pitch_type ?? '')}</span>
-              <span style={{ color: 'var(--accent)' }}>{(r.matchScore * 100).toFixed(0)}%</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {evidencePitchers.length > 0 && (
-        <div>
-          <div style={{ fontSize: 8, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 4 }}>
-            {batterName.toUpperCase()} VS. SIMILAR PITCHERS ({evidencePitchers.length})
-          </div>
-          {evidencePitchers.slice(0, 5).map((r, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, fontSize: 10, color: 'var(--text-2)', padding: '2px 0' }}>
-              <span style={{ color: 'var(--text-3)', minWidth: 66 }}>{r.game_date}</span>
-              <Link href={`/players/${r.pitcher_id}`} style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 700, flex: 1 }}>{r.name}</Link>
-              <span style={{ color: 'var(--text-3)' }}>{pitchLabel(r.pitch_type ?? '')}</span>
-              <span style={{ color: 'var(--accent)' }}>{(r.matchScore * 100).toFixed(0)}%</span>
-            </div>
-          ))}
-        </div>
-      )}
+    <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+      <EvidenceCard
+        mlbId={batterId} name={batterName} teamAbbr={batterTeamAbbr}
+        headline="HR VS. SIMILAR PITCHER(S)" evidence={evidencePitchers} score={batterScore}
+      />
+      <EvidenceCard
+        mlbId={pitcherId} name={pitcherName} teamAbbr={pitcherTeamAbbr}
+        headline="HR TO SIMILAR BATTER(S)" evidence={evidenceHitters} score={pitcherScore}
+      />
     </div>
   )
 }

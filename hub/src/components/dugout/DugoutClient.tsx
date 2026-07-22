@@ -1003,8 +1003,10 @@ function PlayerDrillDown({
               <AffinityMatchupScore
                 batterId={row.mlb_id}
                 batterName={row.name}
+                batterTeamAbbr={row.team}
                 pitcherId={oppPitcher.id}
                 pitcherName={oppPitcher.name}
+                pitcherTeamAbbr={pitcherTeamAbbr}
                 pitcherHand={pitcherHand}
               />
             )}
