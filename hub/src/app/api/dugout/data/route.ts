@@ -164,40 +164,15 @@ async function fetchPitcherPitchTypeRecent() {
   return mpGetAll(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent`, 900)
 }
 
-// Per-game batting logs (lets the client compute a real "last N games
-// played" window, not a calendar-day one) + season platoon splits — scoped
-// to just today's lineups since that's the only relevant set, not the whole
-// league. See ingest-batter-game-logs.
-//
-// No date bound here — a full slate's lineups can easily carry a combined
-// season's worth of per-game rows (confirmed live: ~67 rows/batter average),
-// so this hit the exact same silent per-request truncation as
-// fanduel_gap_odds and pikkit_public_picks did (mpGet caps at 1000 rows
-// regardless of how many actually match). mpGetAll pages until a short
-// page proves the end, same fix already applied to those two.
-async function fetchBatterGameLogs(mlbIds: number[]) {
-  if (!mlbIds.length) return []
-  return mpGetAll(`/rest/v1/batter_game_logs?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,name_norm,game_date,pa,ab,h,hr,rbi,bb,so,avg,obp,slg,ops&order=game_date.desc`, 900)
-}
-
+// Season platoon splits — scoped to just today's lineups since that's the
+// only relevant set, not the whole league. Batter game logs and the raw
+// pitch-event log that used to live alongside this (see ingest-batter-game-
+// logs / ingest-pitch-type-recency) were removed once the Dugout drilldown
+// migrated to real player_pitch_log data (batterStatsEngine.ts) for that —
+// nothing client-side reads them anymore.
 async function fetchBatterPlatoonSplits(mlbIds: number[]) {
   if (!mlbIds.length) return []
   return mpGet(`/rest/v1/batter_platoon_splits?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,name_norm,split_code,games_played,pa,ab,h,hr,rbi,bb,so,avg,obp,slg,ops`, 900)
-}
-
-// The individual pitches behind batter_pitch_type_recent's aggregate
-// numbers — a real batted-ball/pitch log per pitch type, not just a summary
-// percentage. See ingest-pitch-type-recency (persists these instead of
-// discarding them after aggregating).
-async function fetchBatterPitchEvents(mlbIds: number[]) {
-  if (!mlbIds.length) return []
-  // A full slate's lineups can easily carry 4000-6000+ rows here (up to ~20
-  // per pitch-type/hand bucket per player) — past the real per-request row
-  // cap (see mpGetAll — a single big Range header does NOT bypass it,
-  // confirmed against production logs; this call's old single-request
-  // '0-19999' Range only ever looked safe because typical lineup sizes
-  // happened to land under 1000 rows, not because it actually worked).
-  return mpGetAll(`/rest/v1/batter_recent_pitch_events?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,pitch_type,pitcher_hand,seq,game_date,description,event_label,bb_type,exit_velocity,launch_angle,is_home_run&order=mlb_id.asc,seq.asc`, 900)
 }
 
 // Live HR feed — pulled fresh from MLB's playByPlay per live/final game, same
@@ -464,7 +439,7 @@ export async function GET(req: Request) {
   // The Public's advanced-tier outcome heatmap — short-circuited to an
   // empty default rather than computed and then discarded, so a lower-tier
   // request doesn't pay for work whose result it's not entitled to anyway.
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents, outcomesByGamePk] = await Promise.all([
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -483,9 +458,7 @@ export async function GET(req: Request) {
     isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([]),
     fetchBatterPitchTypeRecent(),
     fetchPitcherPitchTypeRecent(),
-    isUltimate ? fetchBatterGameLogs(lineupBatterIdList) : Promise.resolve([]),
     isUltimate ? fetchBatterPlatoonSplits(lineupBatterIdList) : Promise.resolve([]),
-    isUltimate ? fetchBatterPitchEvents(lineupBatterIdList) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
   ])
 
@@ -828,7 +801,7 @@ export async function GET(req: Request) {
   // never actually reach the page even after a manual refresh. Explicit
   // no-store headers close that gap.
   return NextResponse.json(
-    { date, games, statSplits, timingSplits, pitcherSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr, batterPitchRecent, pitcherPitchRecent, batterGameLogs, batterPlatoonSplits, batterPitchEvents },
+    { date, games, statSplits, timingSplits, pitcherSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
   )
 }

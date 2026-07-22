@@ -9,14 +9,17 @@ import { PitchList } from '@/components/players/PitchList'
 import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, type PitchLogRow } from '@/lib/batterStatsEngine'
 import type { LineupPlayer, ProbablePitcher, TeamPitcher } from '@/lib/mlbSchedule'
 
-const PITCHER_RECENCY = [
+// Exported so other real-pitch-log matchup UIs (Dugout's per-batter
+// drilldown) reuse the exact same recency-window vocabulary instead of a
+// second, potentially-drifting copy of these labels/keys.
+export const PITCHER_RECENCY = [
   { key: 'season', label: 'Season' },
   { key: '10', label: 'Last 10 Starts' },
   { key: '5', label: 'Last 5 Starts' },
   { key: '3', label: 'Last 3 Starts' },
 ] as const
 
-const BATTER_SCOPES = [
+export const BATTER_SCOPES = [
   { key: 'season', label: 'Season' },
   { key: '1', label: 'Last Game' },
   { key: '3', label: 'Last 3 Games' },

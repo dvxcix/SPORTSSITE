@@ -9,14 +9,10 @@ import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
-import {
-  PitchMixTable, BatterVsPitchTable, StatTile, SortableTH,
-  toggleSortState as toggleMatchupSort, cmpNullsLast as cmpMatchupNullsLast,
-  pct as matchupPct,
-} from '@/components/pitcher-report/MatchupTables'
-import type { SortState as MatchupSortState } from '@/components/pitcher-report/MatchupTables'
+import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
+import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,37 +149,6 @@ function buildBatterPitchMap(rows: any[]) {
   return map
 }
 
-// One row per game already sorted desc by game_date (see the API query) —
-// grouping by mlb_id gives a true "last N games PLAYED" window, unlike the
-// calendar-day window above, which over/under-counts games for anyone with
-// an off day, injury, or recent call-up.
-function buildGameLogMap(rows: any[]) {
-  const map: Record<string, any[]> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    if (!id) continue
-    ;(map[id] ??= []).push(r)
-  }
-  return map
-}
-
-// The individual pitches behind a batter_pitch_type_recent row — a real
-// batted-ball/pitch log, not just the aggregate. Already sorted seq asc
-// (most recent first) via the API query.
-function buildPitchEventsMap(rows: any[]) {
-  const map: Record<string, Record<string, Record<string, any[]>>> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    const pt = r.pitch_type || ''
-    const hand = r.pitcher_hand || 'R'
-    if (!id || !pt) continue
-    if (!map[id]) map[id] = {}
-    if (!map[id][pt]) map[id][pt] = {}
-    ;(map[id][pt][hand] ??= []).push(r)
-  }
-  return map
-}
-
 function buildPlatoonMap(rows: any[]) {
   const map: Record<string, { vl?: any; vr?: any }> = {}
   for (const r of rows) {
@@ -192,24 +157,6 @@ function buildPlatoonMap(rows: any[]) {
     ;(map[id] ??= {})[r.split_code as 'vl' | 'vr'] = r
   }
   return map
-}
-
-// Sums the last N game logs (already sorted newest-first) into a rolling
-// line. AVG/SLG are exact (computed from real totals); OBP/OPS are close
-// approximations since MLB's gameLog rows don't carry HBP/SF per game.
-function rollupGames(logs: any[], n: number) {
-  const slice = logs.slice(0, n)
-  if (!slice.length) return null
-  let pa = 0, ab = 0, h = 0, d2 = 0, d3 = 0, hr = 0, bb = 0, so = 0, rbi = 0
-  for (const g of slice) {
-    pa += g.pa || 0; ab += g.ab || 0; h += g.h || 0; d2 += g.doubles || 0; d3 += g.triples || 0
-    hr += g.hr || 0; bb += g.bb || 0; so += g.so || 0; rbi += g.rbi || 0
-  }
-  const tb = (h - d2 - d3 - hr) + d2 * 2 + d3 * 3 + hr * 4
-  const avg = ab > 0 ? h / ab : null
-  const slg = ab > 0 ? tb / ab : null
-  const obp = (ab + bb) > 0 ? (h + bb) / (ab + bb) : null
-  return { games: slice.length, pa, ab, h, hr, rbi, bb, so, avg, slg, obp, ops: obp != null && slg != null ? obp + slg : null }
 }
 
 function buildPitcherPitchMap(rows: any[]) {
@@ -276,9 +223,7 @@ type SplitMap   = ReturnType<typeof buildSplitMap>
 type PitcherMap = ReturnType<typeof buildPitcherMap>
 type BatterPitchMap  = ReturnType<typeof buildBatterPitchMap>
 type PitcherPitchMap = ReturnType<typeof buildPitcherPitchMap>
-type GameLogMap = ReturnType<typeof buildGameLogMap>
 type PlatoonMap = ReturnType<typeof buildPlatoonMap>
-type PitchEventsMap = ReturnType<typeof buildPitchEventsMap>
 
 // The actual "will this guy go deep TONIGHT" signal — usage-weighted across
 // every pitch this specific pitcher throws: is the batter recently hitting
@@ -959,413 +904,53 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 }
 
 function PlayerDrillDown({
-  row, pitcherRow, timingMap, oppPitcher, gameInfo, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap,
-  windowMode, liveN, onSetWindowMode, onSetLiveN, liveEntry,
-  lineupPlayer, pitcherTeamAbbr, pitcherTeamName, lineupConfirmed, splitMap, pitcherMap, pikkitMap, pool,
+  row, oppPitcher, gameInfo, lineupPlayer, lineupConfirmed, pool,
 }: {
   row: BatterRow
-  pitcherRow: any
-  timingMap: TimingMap
   oppPitcher?: any
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
-  batterPitchMap: BatterPitchMap
-  pitcherPitchMap: PitcherPitchMap
-  gameLogMap: GameLogMap
-  platoonMap: PlatoonMap
-  pitchEventsMap: PitchEventsMap
-  windowMode: '14day' | 'live'
-  liveN: number
-  onSetWindowMode: (m: '14day' | 'live') => void
-  onSetLiveN: (n: number) => void
-  liveEntry?: { status: 'loading' | 'ready' | 'error'; data?: any; error?: string }
-  // Matchup card — reuses Pitcher Report's actual PitchMixTable/
-  // BatterVsPitchTable components, scoped to this one batter vs this one
-  // pitcher, instead of the condensed columns above.
+  // Real pitch-log matchup card — MatchupPitchBreakdown does its own
+  // fetching (batterStatsEngine.ts + /api/players/[id]/pitch-log), so this
+  // component only needs to hand it who's involved.
   lineupPlayer: any
-  pitcherTeamAbbr: string
-  pitcherTeamName: string
   lineupConfirmed: boolean
-  splitMap: SplitMap
-  pitcherMap: PitcherMap
-  pikkitMap: Record<string, any>
   // Heat-maps the Bat Tracking tiles against the rest of tonight's lineups —
   // same "heat-mapped vs the rest of this lineup" convention as Pitcher
   // Report's PlayerStatcastDetail.
   pool: BatterRow[]
 }) {
-  const [expandedPitch, setExpandedPitch] = useState<string | null>(null)
-  const [mixSort, setMixSort] = useState<MatchupSortState>(null)
-  const onSortMix = (col: string) => setMixSort(prev => toggleMatchupSort(prev, col))
-  const pitcherHand = pitcherRow?.pitch_hand || 'R'
-  // pct_* columns come out of mlb-party already scaled as percentages
-  // (44.2 meaning 44.2%), not fractions — same quirk as barrel_batted_rate/
-  // hard_hit_pct elsewhere in this file. No *100 here.
-  // Note: there's no pct_sweeper column in pitcher_statcast_splits at all —
-  // an earlier version of this fell back to pct_slider for it, which just
-  // silently duplicated the Slider row under a fake "Sweeper" label.
-  const mix14day = ([
-    ['FF', pitcherRow?.pct_fastball  || 0],
-    ['SI', pitcherRow?.pct_sinker    || 0],
-    ['FC', pitcherRow?.pct_cutter    || 0],
-    ['SL', pitcherRow?.pct_slider    || 0],
-    ['CU', pitcherRow?.pct_curveball || 0],
-    ['CH', pitcherRow?.pct_changeup  || 0],
-    ['FS', pitcherRow?.pct_splitter  || 0],
-  ] as [string, number][]).filter(([, p]) => p > 4) // >4% usage — negligible/scratch pitches otherwise
-
-  const idKey = String(row.mlb_id || '')
-  const pitcherIdKey = String(pitcherRow?.mlb_id || '')
-  // Switch hitters bat opposite the pitcher's throwing hand — 'S' isn't a
-  // real key in any hand-keyed lookup table, so use the actual side they're
-  // standing on against this specific pitcher for every lookup below.
-  const effectiveBats = row.bats === 'S' ? (pitcherHand === 'L' ? 'R' : 'L') : (row.bats || 'R')
-
-  // Live mode: same "this batter's own last N games, this pitcher's own
-  // last N starts, computed live from MLB play-by-play" the Pitcher Report
-  // page offers, surfaced here per-matchup instead of needing to go look the
-  // pitcher up separately. pitchLog.ts's aggregate rows use the same field
-  // names (pitches/hard_hit_pct/whiff_pct/...) as the mlb-party 14-day
-  // tables below, so batEdge/pitEdge/risk all work unmodified regardless of
-  // which source fed them.
-  const useLive = windowMode === 'live' && liveEntry?.status === 'ready' && !!liveEntry.data
-  const liveMixRows: any[] = useLive ? (liveEntry!.data.pitcherRows?.[effectiveBats] ?? []) : []
-  const liveMixByType: Record<string, any> = Object.fromEntries(liveMixRows.map((r: any) => [r.pitch_type, r]))
-  const liveBatterRows: Record<string, { R?: any; L?: any }> = useLive ? (liveEntry!.data.batters?.[idKey] ?? {}) : {}
-
-  const mix = useLive
-    ? liveMixRows.map((r: any): [string, number] => [r.pitch_type, r.usage_pct ?? 0]).filter(([, p]: [string, number]) => p > 4)
-    : mix14day
-
-  const gameLogs = gameLogMap[idKey] ?? []
-  const l5 = rollupGames(gameLogs, 5)
-  const l10 = rollupGames(gameLogs, 10)
-  const platoon = platoonMap[idKey]
-  // pitcherHand is the pitcher THIS batter is actually facing today — the
-  // relevant platoon split is "how has this batter hit lefties/righties all
-  // season," which side depends on who's on the mound tonight.
-  const platoonRow = pitcherHand === 'L' ? platoon?.vl : platoon?.vr
-
-  const timingByNameEntry = timingMap.byName[row.name_norm] ?? resolveNameEntry(timingMap.byName, row.name_norm)
-  const rows = mix.map(([pt, pct]) => {
-    const tRows = timingMap.byId[idKey]?.[pitcherHand]?.[pt]
-              || timingByNameEntry?.[pitcherHand]?.[pt]
-    const se = (tRows as any)?.season
-    const re = (tRows as any)?.recent
-
-    // The real matchup edge: this batter's own recent results against THIS
-    // exact pitch type from THIS exact pitcher-hand, next to this pitcher's
-    // own recent results throwing THIS exact pitch type to THIS exact
-    // batter-hand. In live mode both sides are the pitcher's actual last N
-    // starts / this batter's actual last N games, computed from raw MLB
-    // play-by-play; in 14-day mode (default) both come from mlb-party's
-    // pre-aggregated tables — see ingest-pitch-type-recency.
-    const batEdge = useLive
-      ? ((liveBatterRows[pt] as any)?.[pitcherHand] ?? null)
-      : (batterPitchMap[row.name_norm]?.[pt]?.[pitcherHand] ?? null)
-    const pitEdge = useLive
-      ? (liveMixByType[pt] ?? null)
-      : (pitcherPitchMap[pitcherIdKey]?.[pt]?.[effectiveBats] ?? null)
-
-    // Danger zone: batter is squaring this pitch up recently (hard-hit% high,
-    // whiff% low) AND this pitcher has been getting hit hard on it recently
-    // too — both signals agreeing, not just one side's noise. Falls back to
-    // the older on-time-percent proxy when there isn't enough recent-sample
-    // data yet (batter_pitch_type_recent/pitcher_pitch_type_recent both
-    // require actual pitches thrown in the last 14 days to have a row).
-    let risk: 'batter' | 'pitcher' | null = null
-    if (batEdge && pitEdge && batEdge.pitches >= 8 && pitEdge.pitches >= 8) {
-      const batHot = (batEdge.hard_hit_pct ?? 0) >= 40 && (batEdge.whiff_pct ?? 100) <= 30
-      const pitWeak = (pitEdge.hard_hit_pct ?? 0) >= 40 && (pitEdge.whiff_pct ?? 100) <= 20
-      const batCold = (batEdge.whiff_pct ?? 0) >= 40
-      const pitStrong = (pitEdge.whiff_pct ?? 0) >= 30
-      if (pct >= 12 && batHot && pitWeak) risk = 'batter'
-      else if (pct >= 12 && batCold && pitStrong) risk = 'pitcher'
-    } else {
-      // "Does the batter actually do damage against THIS specific pitch" — the
-      // thing the raw numbers don't make obvious on their own. Prefer recent
-      // form over season if we have it; a pitch thrown often (≥15% mix) that
-      // the batter is on-time against is where their pop is most likely to
-      // come from tonight. Low on-time on a heavily-used pitch = the pitcher's
-      // best weapon against this batter specifically.
-      const recognition = re?.on_time_percent ?? se?.on_time_percent ?? null
-      risk = pct >= 15 && recognition != null
-        ? (recognition >= 0.55 ? 'batter' : recognition <= 0.35 ? 'pitcher' : null)
-        : null
-    }
-    return { pt, pct, se, re, risk, batEdge, pitEdge }
-  })
-
-  const mixActiveSort = mixSort ?? { col: 'pct', dir: 'desc' as const }
-  const sortedRows = [...rows].sort((a, b) => {
-    switch (mixActiveSort.col) {
-      case 'pct': return cmpMatchupNullsLast(a.pct, b.pct, mixActiveSort.dir)
-      case 'bat_hh': return cmpMatchupNullsLast(a.batEdge?.hard_hit_pct ?? null, b.batEdge?.hard_hit_pct ?? null, mixActiveSort.dir)
-      case 'pit_hh': return cmpMatchupNullsLast(a.pitEdge?.hard_hit_pct ?? null, b.pitEdge?.hard_hit_pct ?? null, mixActiveSort.dir)
-      case 'on_time': return cmpMatchupNullsLast(a.se?.on_time_percent ?? null, b.se?.on_time_percent ?? null, mixActiveSort.dir)
-      case 'r_on_time': return cmpMatchupNullsLast(a.re?.on_time_percent ?? null, b.re?.on_time_percent ?? null, mixActiveSort.dir)
-      case 'miss': return cmpMatchupNullsLast(a.se?.miss_distance ?? null, b.se?.miss_distance ?? null, mixActiveSort.dir)
-      case 'r_miss': return cmpMatchupNullsLast(a.re?.miss_distance ?? null, b.re?.miss_distance ?? null, mixActiveSort.dir)
-      default: return cmpMatchupNullsLast(a.pct, b.pct, mixActiveSort.dir)
-    }
-  })
-  // Heat-map pools for the pitch-mix table — green = favors the batter/bettor
-  // (harder contact, better recognition, closer misses), red = favors the
-  // pitcher, same convention PitchMixTable itself uses.
-  const batHhPool = rows.map(r => r.batEdge?.hard_hit_pct ?? null)
-  const pitHhPool = rows.map(r => r.pitEdge?.hard_hit_pct ?? null)
-  const onTimePool = rows.map(r => r.se?.on_time_percent ?? null)
-  const rOnTimePool = rows.map(r => r.re?.on_time_percent ?? null)
-  const missPool = rows.map(r => r.se?.miss_distance ?? null)
-  const rMissPool = rows.map(r => r.re?.miss_distance ?? null)
-
+  const pitcherHand: 'R' | 'L' = oppPitcher?.hand === 'L' ? 'L' : 'R'
   const noBatSplits = !row.s_spd && !row.s_brl
-
-  // Full pitch-mix rows for just the hand this batter is actually facing —
-  // same two sources (live-computed vs 14-day mlb-party) as the condensed
-  // table above, just unfiltered by the >4%-usage cutoff since PitchMixTable
-  // does its own display/sort, not a top-N summary.
-  const matchupMixRows: any[] = useLive
-    ? liveMixRows
-    : Object.values(pitcherPitchMap[pitcherIdKey] ?? {}).map((byHand: any) => byHand?.[effectiveBats]).filter(Boolean)
-
-  // Same auto-pick as Pitcher Report: ranked by barrel%+hard-hit% among
-  // pitches with a real sample, top 2 — "what's actually live against him
-  // right now," not just what he throws most.
-  const matchupHotPitches = useMemo(() => {
-    const eligible = matchupMixRows.filter((r: any) => (r.pitches ?? 0) >= 10)
-    return [...eligible].sort((a: any, b: any) =>
-      ((b.barrel_pct ?? 0) * 1.5 + (b.hard_hit_pct ?? 0)) - ((a.barrel_pct ?? 0) * 1.5 + (a.hard_hit_pct ?? 0))
-    ).slice(0, 2).map((r: any) => r.pitch_type as string)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchupMixRows.map((r: any) => `${r.pitch_type}:${r.pitches}:${r.barrel_pct}:${r.hard_hit_pct}`).join('|')])
-
-  const [matchupPinned, setMatchupPinned] = useState<Set<string>>(new Set())
-  const onToggleMatchupPin = (_hand: 'R' | 'L', pt: string) => setMatchupPinned(prev => {
-    const next = new Set(prev)
-    if (next.has(pt)) next.delete(pt); else next.add(pt)
-    return next
-  })
-  const matchupShownTypes = matchupPinned.size > 0 ? Array.from(matchupPinned) : matchupHotPitches
-  const matchupGetRow = (pitchType: string) => (_b: any) => useLive
-    ? ((liveBatterRows[pitchType] as any)?.[pitcherHand] ?? null)
-    : (batterPitchMap[row.name_norm]?.[pitchType]?.[pitcherHand] ?? null)
 
   return (
     <td colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
 
-        {/* Pitch mix + timing */}
-        {pitcherRow ? (
-          <div style={{ minWidth: 420 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>
-                PITCH MIX &amp; TIMING · vs {pitcherHand}HP
-              </div>
-              {/* Same Last-N-Starts/Games live window as Pitcher Report, just
-                  surfaced per-matchup here instead of needing a separate trip
-                  to that page — shared per game (not per row) via GameTable's
-                  liveCache, so switching between two batters facing the same
-                  pitcher doesn't refetch. */}
-              <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', marginLeft: 'auto' }}>
-                <button onClick={() => onSetWindowMode('14day')} style={{ padding: '2px 7px', fontSize: 8, fontWeight: 700, border: 'none', cursor: 'pointer', background: windowMode === '14day' ? 'var(--accent-dim)' : 'var(--surface)', color: windowMode === '14day' ? 'var(--accent)' : 'var(--text-3)' }}>14-Day</button>
-                <button onClick={() => onSetWindowMode('live')} style={{ padding: '2px 7px', fontSize: 8, fontWeight: 700, border: 'none', borderLeft: '1px solid var(--border)', cursor: 'pointer', background: windowMode === 'live' ? 'var(--accent-dim)' : 'var(--surface)', color: windowMode === 'live' ? 'var(--accent)' : 'var(--text-3)' }}>Live N</button>
-              </div>
-              {windowMode === 'live' && (
-                <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
-                  {[3, 5, 10].map(n => (
-                    <button key={n} onClick={() => onSetLiveN(n)} style={{ padding: '2px 6px', fontSize: 8, fontWeight: 700, border: 'none', borderLeft: n !== 3 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: liveN === n ? 'var(--accent-dim)' : 'var(--surface)', color: liveN === n ? 'var(--accent)' : 'var(--text-3)' }}>N={n}</button>
-                  ))}
-                </div>
-              )}
+        {/* Real pitch-by-pitch matchup — genuine Statcast rows off
+            player_pitch_log via batterStatsEngine.ts, the same engine and
+            recency-window model Slate Breakdown's PitcherVsLineup uses.
+            Replaces the old mlb-party 14-day/live-window pipeline, which
+            only ever offered a fixed 14-day rolling window or a capped
+            ~20-pitch event popup. */}
+        {oppPitcher && row.mlb_id != null ? (
+          <div style={{ minWidth: 460 }}>
+            <MatchupPitchBreakdown
+              batterId={row.mlb_id}
+              batterName={row.name}
+              batterBats={row.bats}
+              pitcherId={oppPitcher.id}
+              pitcherName={oppPitcher.name}
+              pitcherHand={pitcherHand}
+              opposingTeamName={lineupPlayer?.team_name || row.team}
+              lineupConfirmed={lineupConfirmed}
+            />
+            <div style={{ marginTop: 8 }}>
+              <PitcherStrikeoutsChip oppPitcher={oppPitcher} gameInfo={gameInfo} />
             </div>
-            {windowMode === 'live' ? (
-              <div style={{ fontSize: 8, color: liveEntry?.status === 'error' ? '#f87171' : 'var(--text-4)', marginBottom: 4 }}>
-                {liveEntry?.status === 'loading' || !liveEntry
-                  ? 'Computing from MLB play-by-play…'
-                  : liveEntry.status === 'error'
-                  ? liveEntry.error
-                  : `Sample: pitcher's last ${liveEntry.data.window.games} starts (${liveEntry.data.window.dateFrom} – ${liveEntry.data.window.dateTo}) · Mix%/Bat·HH%/Pit·HH% below are live-computed · batter side uses ${row.bats === 'S' ? row.bats : row.bats + 'HB'}'s own last ${liveN} games vs ${pitcherHand}HP (any opponent)`}
-              </div>
-            ) : (
-              /* Mix% is this pitcher's overall usage — Baseball Savant's arsenal-stats
-                 leaderboard doesn't offer a split by opposing batter side, so this
-                 number is the same regardless of who's up. OnTime%/Miss ARE real:
-                 this batter's own recognition numbers against {pitcherHand}HP pitchers
-                 specifically, via batter_timing_splits. */
-              <div style={{ fontSize: 8, color: 'var(--text-4)', marginBottom: 4 }}>
-                Mix% = season-wide usage (not split by batter side) · OnTime%/Miss = {row.bats}HB's own recognition vs {pitcherHand}HP
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 5, fontSize: 8, color: 'var(--text-3)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
-                batter sees it well — damage risk
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171', display: 'inline-block' }} />
-                pitcher's weapon vs this batter
-              </span>
-            </div>
-            <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>PITCH</th>
-                  <SortableTH label="MIX%" colKey="pct" sort={mixActiveSort} onSort={onSortMix} />
-                  <th onClick={() => onSortMix('bat_hh')} style={{ textAlign: 'right', padding: '6px 8px', color: mixActiveSort.col === 'bat_hh' ? 'var(--accent)' : 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}>
-                    <Tooltip content="Batter's own hard-hit% on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>BAT·HH%{mixActiveSort.col === 'bat_hh' ? (mixActiveSort.dir === 'desc' ? ' ▼' : ' ▲') : ''}</span></Tooltip>
-                  </th>
-                  <th onClick={() => onSortMix('pit_hh')} style={{ textAlign: 'right', padding: '6px 8px', color: mixActiveSort.col === 'pit_hh' ? 'var(--accent)' : 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}>
-                    <Tooltip content="This pitcher's hard-hit% allowed on this exact pitch type, last 14 days"><span style={{ cursor: 'help' }}>PIT·HH%{mixActiveSort.col === 'pit_hh' ? (mixActiveSort.dir === 'desc' ? ' ▼' : ' ▲') : ''}</span></Tooltip>
-                  </th>
-                  <SortableTH label="ONTIME%" colKey="on_time" sort={mixActiveSort} onSort={onSortMix} />
-                  <SortableTH label="R·OT%" colKey="r_on_time" sort={mixActiveSort} onSort={onSortMix} />
-                  <SortableTH label="MISS" colKey="miss" sort={mixActiveSort} onSort={onSortMix} />
-                  <SortableTH label="R·MISS" colKey="r_miss" sort={mixActiveSort} onSort={onSortMix} />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.length === 0 ? (
-                  <tr><td colSpan={8} style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--text-3)', fontSize: 11 }}>No pitch mix data</td></tr>
-                ) : sortedRows.map(({ pt, pct, se, re, risk, batEdge, pitEdge }) => {
-                  const events = pitchEventsMap[idKey]?.[pt]?.[pitcherHand] ?? []
-                  const isOpen = expandedPitch === pt
-                  return (
-                  <React.Fragment key={pt}>
-                  <tr
-                    onClick={() => events.length && setExpandedPitch(isOpen ? null : pt)}
-                    style={{
-                      borderBottom: '1px solid var(--border)',
-                      background: risk === 'batter' ? 'rgba(74,222,128,0.08)' : risk === 'pitcher' ? 'rgba(248,113,113,0.08)' : undefined,
-                      cursor: events.length ? 'pointer' : 'default',
-                    }}
-                  >
-                    <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
-                      {risk && (
-                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: risk === 'batter' ? '#4ade80' : '#f87171', marginRight: 5, verticalAlign: 'middle' }} />
-                      )}
-                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(pt), marginRight: 6, verticalAlign: 'middle' }} />
-                      {pitchLabel(pt)}
-                      {events.length > 0 && <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>}
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', fontWeight: 700 }}>{pct.toFixed(0)}%</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(batEdge?.hard_hit_pct ?? null, batHhPool, 'hi') }}>
-                      <Tooltip content={batEdge ? `${batEdge.pitches} pitches seen · ${f1(batEdge.whiff_pct)}% whiff · ${batEdge.home_runs ?? 0} HR — click row for the pitch-by-pitch log` : 'No pitches seen off this pitch type recently'} containerClassName="w-full h-full flex items-center justify-center">
-                        <span style={{ cursor: 'help' }}>{batEdge?.hard_hit_pct != null ? `${f1(batEdge.hard_hit_pct)}` : '—'}</span>
-                      </Tooltip>
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(pitEdge?.hard_hit_pct ?? null, pitHhPool, 'hi') }}>
-                      <Tooltip content={pitEdge ? `${pitEdge.pitches} pitches thrown · ${f1(pitEdge.whiff_pct)}% whiff induced · ${pitEdge.home_runs_allowed ?? 0} HR allowed` : 'No pitches thrown of this type recently'} containerClassName="w-full h-full flex items-center justify-center">
-                        <span style={{ cursor: 'help' }}>{pitEdge?.hard_hit_pct != null ? `${f1(pitEdge.hard_hit_pct)}` : '—'}</span>
-                      </Tooltip>
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(se?.on_time_percent ?? null, onTimePool, 'hi') }}>
-                      {se?.on_time_percent != null ? `${(se.on_time_percent * 100).toFixed(1)}` : '—'}
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(re?.on_time_percent ?? null, rOnTimePool, 'hi') }}>
-                      {re?.on_time_percent != null ? `${(re.on_time_percent * 100).toFixed(1)}` : '—'}
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(se?.miss_distance ?? null, missPool, 'lo') }}>
-                      {f1(se?.miss_distance ?? null)}
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(re?.miss_distance ?? null, rMissPool, 'lo') }}>
-                      {f1(re?.miss_distance ?? null)}
-                    </td>
-                  </tr>
-                  {isOpen && events.length > 0 && (
-                    <tr>
-                      <td colSpan={8} style={{ padding: '4px 4px 8px 18px', background: 'rgba(255,255,255,0.015)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 160, overflowY: 'auto' }}>
-                          {events.map((e: any, i: number) => {
-                            const isSwing = ['swinging_strike', 'swinging_strike_blocked', 'foul', 'foul_tip', 'hit_into_play', 'foul_bunt', 'missed_bunt'].includes(e.description)
-                            const label = e.event_label
-                              ? e.event_label.replace(/_/g, ' ')
-                              : (e.description || '').replace(/_/g, ' ')
-                            return (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 8.5, padding: '2px 0', borderBottom: i < events.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
-                                <span style={{ color: 'var(--text-3)', width: 62, flexShrink: 0 }}>{e.game_date}</span>
-                                <span style={{
-                                  color: e.is_home_run ? '#fde047' : isSwing ? 'var(--text-2)' : 'var(--text-3)',
-                                  fontWeight: e.is_home_run ? 800 : 400, textTransform: 'capitalize', flex: 1, minWidth: 0,
-                                }}>
-                                  {e.is_home_run && '🔥 '}{label || '—'}
-                                </span>
-                                {e.exit_velocity != null && (
-                                  <span style={{ color: 'var(--text-2)', flexShrink: 0 }}>{e.exit_velocity}mph{e.launch_angle != null ? ` / ${e.launch_angle}°` : ''}</span>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  </React.Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-            </div>
-            <p style={{ fontSize: 8, color: 'var(--text-4)', marginTop: 3 }}>
-              Bat·HH%/Pit·HH% = hard-hit rate on/allowing this exact pitch type, last ~20 pitches seen (raw Statcast) · row highlight = both sides agree this pitch is live right now · click a pitch row for the batted-ball log
-            </p>
-            <PitcherStrikeoutsChip oppPitcher={oppPitcher} gameInfo={gameInfo} />
           </div>
         ) : (
           <div style={{ fontSize: 9, color: 'var(--text-3)' }}>No pitcher data</div>
         )}
-
-        {/* Last N games played (real game-count window, not calendar days)
-            + season platoon split vs whichever hand this pitcher throws —
-            see ingest-batter-game-logs. */}
-        {(l5 || l10 || platoonRow) && (() => {
-          const formRows = [
-            l5 && { label: `L5 (${l5.games}g)`, avg: l5.avg, ops: l5.ops, hr: l5.hr, bb: l5.bb, so: l5.so },
-            l10 && { label: `L10 (${l10.games}g)`, avg: l10.avg, ops: l10.ops, hr: l10.hr, bb: l10.bb, so: l10.so },
-            platoonRow && { label: `vs ${pitcherHand}HP (szn)`, avg: platoonRow.avg != null ? Number(platoonRow.avg) : null, ops: platoonRow.ops != null ? Number(platoonRow.ops) : null, hr: platoonRow.hr ?? null, bb: platoonRow.bb ?? null, so: platoonRow.so ?? null },
-          ].filter(Boolean) as { label: string; avg: number | null; ops: number | null; hr: number | null; bb: number | null; so: number | null }[]
-          const avgPool = formRows.map(r => r.avg)
-          const opsPool = formRows.map(r => r.ops)
-          const hrPool = formRows.map(r => r.hr)
-          const bbPool = formRows.map(r => r.bb)
-          const soPool = formRows.map(r => r.so)
-          return (
-          <div style={{ minWidth: 260 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
-              RECENT FORM &amp; SPLITS
-            </div>
-            <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700, whiteSpace: 'nowrap' }}>WINDOW</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>AVG</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>OPS</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>HR</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>BB</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 700 }}>SO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {formRows.map(r => (
-                  <tr key={r.label} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{r.label}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.avg, avgPool, 'hi') }}>{r.avg != null ? r.avg.toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.ops, opsPool, 'hi') }}>{r.ops != null ? r.ops.toFixed(3).replace(/^0/, '') : '—'}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.hr, hrPool, 'hi') }}>{r.hr ?? '—'}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.bb, bbPool, 'hi') }}>{r.bb ?? '—'}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(r.so, soPool, 'lo') }}>{r.so ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-            <p style={{ fontSize: 8, color: 'var(--text-4)', marginTop: 3 }}>
-              L5/L10 = last N games actually played this season (MLB gameLog) · vs {pitcherHand}HP = season-to-date vs this pitcher's throwing hand
-            </p>
-          </div>
-          )
-        })()}
 
         {/* Bat tracking — same StatTile grid as Pitcher Report's own
             PlayerStatcastDetail, heat-mapped against tonight's full pool
@@ -1408,84 +993,6 @@ function PlayerDrillDown({
           )
         })()}
       </div>
-
-      {/* Full pitcher matchup card — literally Pitcher Report's own
-          PitchMixTable/BatterVsPitchTable, scoped to just this one batter
-          vs the pitcher he's actually facing tonight, not a condensed
-          rebuild. Reuses the same windowMode/liveN toggle above. */}
-      {pitcherRow && lineupPlayer && oppPitcher && (
-        <div style={{ width: '100%', marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border)' }}>
-          <Link
-            href={`/players/${oppPitcher.id}`}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, textDecoration: 'none', color: 'inherit', width: 'fit-content' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none' }}
-          >
-            <PlayerAvatar mlbId={oppPitcher.id ?? null} size={40} teamAbbr={pitcherTeamAbbr} name={oppPitcher.name} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>
-                {oppPitcher.name} <span style={{ color: 'var(--accent)' }}>{pitcherHand}HP</span>
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
-                {pitcherTeamName} · facing {lineupPlayer.team_name || row.team} · {lineupConfirmed ? 'Confirmed lineup' : 'Projected lineup (roster, not confirmed batting order)'}
-              </div>
-            </div>
-          </Link>
-
-          <PitchMixTable
-            title={`${oppPitcher.name}'s mix vs ${effectiveBats === 'L' ? 'LHB' : 'RHB'} (${row.name})`}
-            rows={matchupMixRows}
-            hand={effectiveBats as 'R' | 'L'}
-            pinned={matchupPinned}
-            onTogglePin={onToggleMatchupPin}
-          />
-
-          {matchupMixRows.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)', marginBottom: 4 }}>
-                {matchupPinned.size > 0 ? '📌 Pinned pitches' : `${row.name}'s recent form vs these pitches`}
-              </div>
-              {matchupShownTypes.length === 0 ? (
-                <div style={{ padding: 12, color: 'var(--text-3)', fontSize: 11, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-                  No pitch cleared the 10-pitch auto-pick threshold yet — click any row in the table above to pin it.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {matchupShownTypes.map(pitchType => {
-                    const mixRow = matchupMixRows.find((r: any) => r.pitch_type === pitchType)
-                    return (
-                      <div key={pitchType}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: pitchColor(pitchType) }} />
-                          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-1)' }}>{pitchLabel(pitchType)}</span>
-                          {mixRow && (
-                            <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
-                              ({matchupPct(mixRow.hard_hit_pct)} hard-hit · {matchupPct(mixRow.barrel_pct)} barrel · {mixRow.pitches} pitches)
-                            </span>
-                          )}
-                        </div>
-                        <BatterVsPitchTable
-                          pitchType={pitchType}
-                          batters={[lineupPlayer]}
-                          date={gameInfo.game_date ?? ''}
-                          pitcherId={oppPitcher.id}
-                          pitcherHand={pitcherHand}
-                          splitMap={splitMap}
-                          timingMap={timingMap}
-                          pitcherMap={pitcherMap}
-                          pikkitMap={pikkitMap}
-                          getRow={matchupGetRow(pitchType)}
-                          gameInfo={gameInfo}
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
     </td>
   )
 }
@@ -2420,7 +1927,7 @@ function PitcherLinkChip({ pitcher, teamAbbr }: { pitcher: { id: number; name: s
 }
 
 // ─── game table ───────────────────────────────────────────────────────────────
-function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, gameLogMap, platoonMap, pitchEventsMap, highlightMlbId, date }: {
+function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, highlightMlbId, date }: {
   game: any
   splitMap: SplitMap; timingMap: TimingMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -2431,9 +1938,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   nearMap: Record<string, any>
   batterPitchMap: BatterPitchMap
   pitcherPitchMap: PitcherPitchMap
-  gameLogMap: GameLogMap
   platoonMap: PlatoonMap
-  pitchEventsMap: PitchEventsMap
   highlightMlbId?: number | null
   date: string
 }) {
@@ -2453,44 +1958,6 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   const [expanded, setExpanded] = useState<string | null>(highlightKey)
   const [hrPopupRow, setHrPopupRow] = useState<BatterRow | null>(null)
   const toggleExpand = (key: string) => setExpanded(prev => prev === key ? null : key)
-
-  // Pitcher Report's "Last N Starts/Games" live-computed window, surfaced
-  // here too — same /api/pitcher-report/live-window endpoint, same response
-  // shape (pitchLog.ts's aggregate rows use the same field names as the
-  // mlb-party pitch_type_recent tables PlayerDrillDown already reads, so no
-  // data-shape conversion is needed, just swapping which source the pitch-mix
-  // table below pulls from). Lives at the GameTable level, not per-row, so
-  // switching between two batters facing the same pitcher reuses one fetch
-  // instead of refetching per row — and only one row can be expanded at a
-  // time in this table anyway (single `expanded` key for both teams).
-  const [windowMode, setWindowMode] = useState<'14day' | 'live'>('14day')
-  const [liveN, setLiveN] = useState(3)
-  const [liveCache, setLiveCache] = useState<Record<string, { status: 'loading' | 'ready' | 'error'; data?: any; error?: string }>>({})
-
-  useEffect(() => {
-    if (windowMode !== 'live' || !expanded) return
-    const isHome = expanded.startsWith('h-')
-    const pitcher = isHome ? game.awayPitcher : game.homePitcher
-    const lineup = isHome ? game.homeLineup : game.awayLineup
-    const pitcherId = pitcher?.id
-    if (!pitcherId) return
-    const key = `${pitcherId}-${liveN}`
-    if (liveCache[key]) return
-    const batterIds = (lineup ?? []).map((p: any) => p.mlb_id).filter(Boolean)
-    setLiveCache(prev => ({ ...prev, [key]: { status: 'loading' } }))
-    fetch(`/api/pitcher-report/live-window?pitcherId=${pitcherId}&batterIds=${batterIds.join(',')}&games=${liveN}`)
-      .then(async r => {
-        const json = await r.json()
-        if (!r.ok) throw new Error(json.error || 'Failed to compute live window')
-        setLiveCache(prev => ({ ...prev, [key]: { status: 'ready', data: json } }))
-      })
-      .catch((e: any) => {
-        setLiveCache(prev => ({ ...prev, [key]: { status: 'error', error: e.message || 'Failed to load live window' } }))
-      })
-    // liveCache deliberately omitted — it's read for a cache-hit check, not a
-    // dependency; including it would refetch every time any entry is set.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [windowMode, liveN, expanded, game])
 
   useEffect(() => {
     if (!highlightKey) return
@@ -2711,13 +2178,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           </tr>
           {displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
-            const pitRow = pickPitcherRow(pitcherMap, game.awayPitcher?.id, row.bats === 'S' ? (game.awayPitcher?.hand === 'L' ? 'R' : 'L') : row.bats)
             const lineupPlayer = game.homeLineup?.find((p: any) => p.mlb_id === row.mlb_id) ?? null
             return (
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.awayPitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.awayPitcher?.id ? liveCache[`${game.awayPitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.awayAbbr} pitcherTeamName={game.awayTeam} lineupConfirmed={!!game.homeLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} gameInfo={gameInfo} lineupPlayer={lineupPlayer} lineupConfirmed={!!game.homeLineupConfirmed} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
@@ -2748,13 +2214,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           <tr>{headerCells}</tr>
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
-            const pitRow = pickPitcherRow(pitcherMap, game.homePitcher?.id, row.bats === 'S' ? (game.homePitcher?.hand === 'L' ? 'R' : 'L') : row.bats)
             const lineupPlayer = game.awayLineup?.find((p: any) => p.mlb_id === row.mlb_id) ?? null
             return (
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} pitcherRow={pitRow} timingMap={timingMap} oppPitcher={game.homePitcher} gameInfo={gameInfo} batterPitchMap={batterPitchMap} pitcherPitchMap={pitcherPitchMap} gameLogMap={gameLogMap} platoonMap={platoonMap} pitchEventsMap={pitchEventsMap} windowMode={windowMode} liveN={liveN} onSetWindowMode={setWindowMode} onSetLiveN={setLiveN} liveEntry={windowMode === 'live' && game.homePitcher?.id ? liveCache[`${game.homePitcher.id}-${liveN}`] : undefined} lineupPlayer={lineupPlayer} pitcherTeamAbbr={game.homeAbbr} pitcherTeamName={game.homeTeam} lineupConfirmed={!!game.awayLineupConfirmed} splitMap={splitMap} pitcherMap={pitcherMap} pikkitMap={pikkitMap} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} gameInfo={gameInfo} lineupPlayer={lineupPlayer} lineupConfirmed={!!game.awayLineupConfirmed} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
@@ -2807,9 +2272,7 @@ export function DugoutClient({ date }: { date: string }) {
   const pitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
   const batterPitchMap  = useMemo(() => buildBatterPitchMap(data?.batterPitchRecent   ?? []), [data?.batterPitchRecent])
   const pitcherPitchMap = useMemo(() => buildPitcherPitchMap(data?.pitcherPitchRecent ?? []), [data?.pitcherPitchRecent])
-  const gameLogMap = useMemo(() => buildGameLogMap(data?.batterGameLogs ?? []), [data?.batterGameLogs])
   const platoonMap = useMemo(() => buildPlatoonMap(data?.batterPlatoonSplits ?? []), [data?.batterPlatoonSplits])
-  const pitchEventsMap = useMemo(() => buildPitchEventsMap(data?.batterPitchEvents ?? []), [data?.batterPitchEvents])
 
   // get_fhr_history_avg/get_sa_history_avg return one row per (name_norm,
   // bookmaker) with the season-average AMERICAN ODDS PRICE in `avg_price` —
@@ -3010,9 +2473,7 @@ export function DugoutClient({ date }: { date: string }) {
           openingMap={openingMap}
           batterPitchMap={batterPitchMap}
           pitcherPitchMap={pitcherPitchMap}
-          gameLogMap={gameLogMap}
           platoonMap={platoonMap}
-          pitchEventsMap={pitchEventsMap}
           hrMap={hrMap}
           nearMap={nearMap}
           highlightMlbId={highlightId}
