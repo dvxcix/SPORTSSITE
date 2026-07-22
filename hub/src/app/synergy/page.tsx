@@ -5,12 +5,11 @@ import { SynergyClient } from '@/components/synergy/SynergyClient'
 
 export const revalidate = 0
 
-// Deliberately not linked from the sidebar nav yet — same convention as
-// Batter Cost. Every real batter-vs-actual-starting-pitcher matchup on
-// today's slate (see /api/synergy/today for the real pairing + bulk
-// scoring), rendered through the exact same AffinityMatchupCards component
-// Dugout's own matchup dropdown uses, just sortable across the whole day
-// instead of scoped to one matchup at a time.
+// Every real batter-vs-actual-starting-pitcher matchup on today's slate
+// (see /api/synergy/today for the real pairing + bulk scoring), rendered
+// through the exact same AffinityMatchupCards component Dugout's own
+// matchup dropdown uses, just sortable across the whole day instead of
+// scoped to one matchup at a time.
 
 export default function SynergyPage() {
   return (

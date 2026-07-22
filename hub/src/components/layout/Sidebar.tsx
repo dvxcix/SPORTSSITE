@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
-  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, X,
+  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X,
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
@@ -41,6 +41,7 @@ const nav: NavItem[] = [
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
   { href: '/slate-breakdown', icon: Table2,    label: 'Slate Breakdown' },
   { href: '/batter-cost', icon: Coins,         label: 'Batter Cost' },
+  { href: '/synergy',     icon: Link2,         label: 'Synergy' },
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
   null,
   { href: '/groups',      icon: Users,         label: 'Groups' },
