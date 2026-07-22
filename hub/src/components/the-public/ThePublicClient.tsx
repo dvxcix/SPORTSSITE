@@ -115,21 +115,35 @@ function computeHitLines(cat: CategoryDef, props: any, outcome: any | null): Hit
 // with no distinction from a real completed game (confirmed live) — void
 // takes priority over everything else so those players show a neutral
 // "did not play" marker instead of red/0 against a game that never happened.
-type Grade = { bg: string; border: string; text: string; checkmark: boolean; value: number; isVoid?: boolean }
+type Grade = { bg: string; border: string; text: string; checkmark: boolean; value: number; isVoid?: boolean; pending?: boolean }
+// A live game's real outcome only ever grows — "0 so far" while it's still
+// in progress means "hasn't happened YET", not "didn't happen", since the
+// player can still come up again. Reported live: cards were showing solid
+// red the moment a game went Live for anyone who simply hadn't had their
+// at-bat yet, indistinguishable from a real, final 0 — misleadingly making
+// it look like the miss was already locked in mid-game. Red now only
+// applies once the game is actually Final; a live game with no result yet
+// gets a neutral "still live" tone instead. A real positive result (green,
+// or the count heatmap's yellow/green) still applies immediately and stays
+// as soon as it happens, live or final — only the negative/zero case needed
+// to wait for the final verdict.
 function gradeRow(cat: CategoryDef, gameStatus: string, outcome: any | null, isVoid?: boolean): Grade | null {
   if (isVoid) return { bg: 'rgba(120,130,140,0.10)', border: 'rgba(120,130,140,0.35)', text: 'var(--text-3)', checkmark: false, value: 0, isVoid: true }
   if (gameStatus !== 'Live' && gameStatus !== 'Final') return null
   if (!outcome) return null
   const value: number = outcome[cat.outcomeKey] ?? 0
+  const pendingGrade: Grade = { bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.3)', text: 'var(--text-3)', checkmark: false, value, pending: true }
 
   if (cat.gradeType === 'binary') {
-    return value >= 1
-      ? { bg: 'rgba(180,255,77,0.16)', border: 'rgba(180,255,77,0.55)', text: 'var(--accent)', checkmark: true, value }
-      : { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#ef4444', checkmark: false, value }
+    if (value >= 1) return { bg: 'rgba(180,255,77,0.16)', border: 'rgba(180,255,77,0.55)', text: 'var(--accent)', checkmark: true, value }
+    if (gameStatus !== 'Final') return pendingGrade
+    return { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#ef4444', checkmark: false, value }
   }
   // Count heatmap: 0 red, 1 yellow, 2+ green — brighter/greener the higher
   // it goes, brightest at 4+.
-  if (value <= 0) return { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#ef4444', checkmark: false, value }
+  if (value <= 0) return gameStatus === 'Final'
+    ? { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#ef4444', checkmark: false, value }
+    : pendingGrade
   if (value === 1) return { bg: 'rgba(234,179,8,0.14)', border: 'rgba(234,179,8,0.45)', text: '#eab308', checkmark: false, value }
   if (value === 2) return { bg: 'rgba(163,230,53,0.14)', border: 'rgba(163,230,53,0.4)', text: '#a3e635', checkmark: false, value }
   if (value === 3) return { bg: 'rgba(180,255,77,0.20)', border: 'rgba(180,255,77,0.5)', text: 'var(--accent)', checkmark: false, value }
@@ -386,7 +400,7 @@ export function ThePublicClient({ date }: { date: string }) {
                   color: grade.text, background: 'rgba(0,0,0,0.2)', border: `1px solid ${grade.border}`,
                   whiteSpace: 'nowrap',
                 }}>
-                  {grade.isVoid ? '⚠️ VOID' : grade.checkmark ? '✅' : grade.value}
+                  {grade.isVoid ? '⚠️ VOID' : grade.checkmark ? '✅' : grade.pending ? '·' : grade.value}
                 </div>
               )}
               <div style={{ flexShrink: 0 }}>
