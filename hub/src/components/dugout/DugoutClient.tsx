@@ -1496,11 +1496,11 @@ function OddsCell({
     // odds side of the cell has nothing to show.
     if (pickCount == null) return <td style={style}>—</td>
     return (
-      <td style={{ ...style, position: 'relative' }}>
+      <td style={style}>
         —
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
-          <div style={{ position: 'absolute', bottom: 1, left: 1, fontSize: 6.5, fontWeight: 900, color: 'var(--gold)', cursor: 'help', lineHeight: 1 }}>
-            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}📊
+          <div style={{ fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1, marginTop: 1 }}>
+            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
           </div>
         </Tooltip>
       </td>
@@ -1551,30 +1551,37 @@ function OddsCell({
     deltaTitle,
   ].filter(Boolean).join(' · ') || undefined
 
+  // Wrapped in its own column flex — when this renders inside the
+  // title-tooltip's row-flex container below, an unwrapped fragment would
+  // lay the pick-count line out BESIDE the odds instead of under it. This
+  // div is the single flex child of that outer container either way, so it
+  // controls its own internal stacking regardless of which branch renders it.
   const cellContent = (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
       {badge && (
         <Tooltip content={badge.title}>
-          <div style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, marginBottom: 1, cursor: 'help' }}>
+          <div style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, cursor: 'help' }}>
             {badge.label}
           </div>
         </Tooltip>
       )}
-      {display ?? oStr(odds)}
-      {hasDelta && (
-        <span style={{ marginLeft: 2, fontSize: 8, color: odds! < openOdds! ? '#4ade80' : '#f87171' }}>
-          {odds! < openOdds! ? '▼' : '▲'}
-        </span>
-      )}
+      <span>
+        {display ?? oStr(odds)}
+        {hasDelta && (
+          <span style={{ marginLeft: 2, fontSize: 8, color: odds! < openOdds! ? '#4ade80' : '#f87171' }}>
+            {odds! < openOdds! ? '▼' : '▲'}
+          </span>
+        )}
+      </span>
       {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
       {pickCount != null && (
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
-          <div style={{ position: 'absolute', bottom: 1, left: 1, fontSize: 6.5, fontWeight: 900, color: 'var(--gold)', cursor: 'help', lineHeight: 1 }}>
-            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}📊
+          <div style={{ fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
+            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
           </div>
         </Tooltip>
       )}
-    </>
+    </div>
   )
 
   return (
