@@ -411,7 +411,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       </div>
 
       <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Players <span className="text-zinc-600 font-normal">(up to 8 — shows as a card linking to their Dugout page)</span></label>
+        <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Players</label>
         {form.favorite_players.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {form.favorite_players.map(p => (
@@ -506,8 +506,6 @@ export function ProfileForm({ profile }: { profile: any }) {
               )
             })}
           </div>
-          <p className="text-[11px] text-zinc-600 mt-1.5">Click Verify to connect your real {' '}
-            {platforms.filter(p => PROVIDER_BY_PLATFORM_KEY[p.key]).map(p => p.name).join('/')} account — shows a checkmark and links to your actual profile instead of a manually typed handle.</p>
         </div>
       )}
 
