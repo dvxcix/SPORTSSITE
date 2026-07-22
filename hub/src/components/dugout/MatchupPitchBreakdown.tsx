@@ -176,6 +176,17 @@ export function MatchupPitchBreakdown({
     return { pitchType: m.pitchType, rows, stats: { ...computeStatLine(rows), usage: m.usage } }
   })
 
+  // Stable "does this pitcher throw this pitch type at all" set, off his
+  // FULL season log — deliberately not pitcherHandRows/mixSet above. Those
+  // are scoped to whichever recency+hand filter is active on his own card,
+  // so a batter's real at-bats (even under "Vs. This Pitcher", where every
+  // one of them is against this exact arsenal by definition) were getting
+  // silently dropped whenever they fell outside that unrelated window —
+  // confirmed live: a real, on-file home run disappeared from a batter's
+  // season total the moment the pitcher's card was flipped to a narrower
+  // recency/hand filter, though the pitch itself was never missing data.
+  const pitcherArsenalSet = new Set(pitcherRows.filter(r => r.pitch_type).map(r => r.pitch_type as string))
+
   // ── Batter's own results — hand-filtered by the throwing pitcher's hand
   // first (so "his last 5 games" means his last 5 games against that hand
   // when a hand filter is active), then scoped. "Vs. This Team" pulls the
@@ -195,7 +206,7 @@ export function MatchupPitchBreakdown({
       if (batterWindowDates && !batterWindowDates.has(r.game_date)) return false
       return true
     })
-    batterVsMixRows = batterScopedRows.filter(r => r.pitch_type && mixSet.has(r.pitch_type))
+    batterVsMixRows = batterScopedRows.filter(r => r.pitch_type && pitcherArsenalSet.has(r.pitch_type))
   }
   const batterOverall = computeStatLine(batterVsMixRows)
 
