@@ -851,19 +851,26 @@ function TH({
   // columns fit on screen — inline width has to move to a className for that
   // one column since inline styles always win over responsive Tailwind classes.
   const responsiveSticky = sticky && w === 190
+  // STH's overflow:hidden/whiteSpace:nowrap/textOverflow:ellipsis are meant
+  // to single-line-truncate a long label — reported live, applied to the
+  // whole <th> they clipped the PICKS line right out of view entirely
+  // instead of just truncating overlong label text. Moved onto the label
+  // span alone so the cell itself sizes to fit both lines (row genuinely
+  // grows taller, which is the whole point) while long labels still ellipsis.
+  const { overflow: _thOverflow, textOverflow: _thTextOverflow, whiteSpace: _thWhiteSpace, ...sthRest } = STH
   return (
     <th
       onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}
       className={responsiveSticky ? 'w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]' : undefined}
       style={{
-        ...STH,
+        ...sthRest,
         ...(responsiveSticky ? {} : { width: w, minWidth: w, maxWidth: w }),
         ...(sticky ? { position: 'sticky', left: 0, zIndex: 4 } : {}),
         color: active ? 'var(--accent)' : 'var(--text-2)',
       }}
     >
       <Tooltip content={title ?? ''}>
-        <span>
+        <span style={{ display: 'block', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {label}{active ? (dir === 'desc' ? '▼' : '▲') : ''}
           {active && rank != null && <sup style={{ fontSize: 7, marginLeft: 1 }}>{rank}</sup>}
         </span>
