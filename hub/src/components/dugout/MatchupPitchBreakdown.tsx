@@ -1,13 +1,21 @@
 'use client'
 
 import { Fragment, useEffect, useState } from 'react'
-import { pitchColor, pitchLabel } from '@/lib/mlb-api'
+import Link from 'next/link'
+import { pitchColor, pitchLabel, mlbHeadshot } from '@/lib/mlb-api'
+import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { heat, SortableTH, type SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { ZoneGrid, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
 import { PitchList } from '@/components/players/PitchList'
 import { ToggleBtn } from '@/components/players/PlayerPageClient'
 import { computeStatLine, lastNGameDates, pitchMix, type PitchLogRow } from '@/lib/batterStatsEngine'
 import { PITCHER_RECENCY, BATTER_SCOPES } from '@/components/slate/PitcherVsLineup'
+
+// Same fixed hand-color convention as the batter rows above this drilldown
+// (see DugoutClient.tsx's handColor) — right orange, left blue — so a
+// pitcher's hand reads consistently with every batter's own hand badge.
+const HAND_COLOR: Record<'R' | 'L', string> = { R: '#fb923c', L: '#60a5fa' }
 
 // Real per-pitch data is player-scoped (thousands of rows for a full-time
 // player), not per-matchup — the same starter's log is needed by every
@@ -49,7 +57,7 @@ const i0 = (v: number | null) => (v == null ? '—' : String(v))
 // popup) instead of a real, unbounded recency choice over genuine Statcast
 // rows going back the full season.
 export function MatchupPitchBreakdown({
-  batterId, batterName, batterBats, pitcherId, pitcherName, pitcherHand, opposingTeamName, lineupConfirmed,
+  batterId, batterName, batterBats, pitcherId, pitcherName, pitcherHand, pitcherTeamAbbr,
 }: {
   batterId: number
   batterName: string
@@ -57,8 +65,7 @@ export function MatchupPitchBreakdown({
   pitcherId: number
   pitcherName: string
   pitcherHand: 'R' | 'L'
-  opposingTeamName: string
-  lineupConfirmed: boolean
+  pitcherTeamAbbr: string
 }) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
@@ -136,20 +143,23 @@ export function MatchupPitchBreakdown({
   const batHhPool = mixRows.map(r => r.batterStats.hardHitPct)
 
   const zoneMetricConfig = ZONE_METRICS.find(m => m.key === zoneMetric)!
-  const totalPitches = mixRows.reduce((a, r) => a + r.pitcherStats.pitches, 0)
 
   return (
     <div style={{ minWidth: 460, flex: '1 1 520px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>
-          REAL PITCH-LOG MATCHUP · vs {pitcherHand}HP
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+        <Link
+          href={`/players/${pitcherId}`}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}
+        >
+          <PlayerAvatar headshot={mlbHeadshot(pitcherId)} teamLogo={getTeamLogoUrl(pitcherTeamAbbr)} teamAbbr={pitcherTeamAbbr} name={pitcherName} size={32} />
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{pitcherName}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: HAND_COLOR[pitcherHand] }}>{pitcherHand}HP</div>
+          </div>
+        </Link>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' }}>
           {PITCHER_RECENCY.map(o => <ToggleBtn key={o.key} active={pitcherRecency === o.key} onClick={() => setPitcherRecency(o.key)}>{o.label}</ToggleBtn>)}
         </div>
-      </div>
-      <div style={{ fontSize: 8, color: 'var(--text-4)', marginBottom: 6 }}>
-        Real Statcast pitch-by-pitch data, not a pre-aggregated window — {pitcherName}&apos;s actual arsenal ({totalPitches} pitches tracked) next to {batterName}&apos;s own results against each pitch. Click a row for the individual pitches.
       </div>
 
       <div style={{ overflowX: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 12 }}>
@@ -242,14 +252,6 @@ export function MatchupPitchBreakdown({
           </div>
         ))}
       </div>
-      <p style={{ fontSize: 8, color: 'var(--text-4)', marginTop: 6 }}>
-        {batterScope === 'vsPitcher'
-          ? `Every real plate appearance ${batterName} has had against ${pitcherName} specifically.`
-          : batterScope === 'season'
-          ? `${batterName}'s full season against ${pitcherName}'s current arsenal.`
-          : `${batterName}'s real last ${batterScope} game${batterScope === '1' ? '' : 's'} against ${pitcherName}'s current arsenal.`}
-        {' · '}{lineupConfirmed ? 'Confirmed lineup' : `Projected lineup vs ${opposingTeamName}`}
-      </p>
     </div>
   )
 }

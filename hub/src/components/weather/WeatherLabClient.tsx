@@ -20,7 +20,7 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
 }
 
-interface HourEntry {
+export interface HourEntry {
   label: string
   hour: number
   tempF: number | null
@@ -30,7 +30,7 @@ interface HourEntry {
   weatherCode: number | null
 }
 
-interface WeatherGame {
+export interface WeatherGame {
   gamePk: number
   gameDate: string
   homeAbbr: string
@@ -99,7 +99,7 @@ function InfieldDetail({ secondary }: { secondary: string }) {
 // we haven't traced yet. Two-tone: outfield in the home team's primary
 // color, sand diamond in their secondary — a lot more distinctive per-card
 // than every park sharing one site-wide accent color.
-function ParkShape({ primary, secondary, teamAbbr }: { primary: string; secondary: string; teamAbbr: string }) {
+export function ParkShape({ primary, secondary, teamAbbr }: { primary: string; secondary: string; teamAbbr: string }) {
   const real = MLB_PARK_SHAPES[teamAbbr.toUpperCase()]
 
   if (real) {
@@ -137,7 +137,7 @@ function ParkShape({ primary, secondary, teamAbbr }: { primary: string; secondar
 // a 15mph gust visibly streaks.
 const WIND_CANVAS_SIZE = 220
 
-function WindCanvas({ deg, mph, color }: { deg: number | null; mph: number | null; color: string }) {
+export function WindCanvas({ deg, mph, color }: { deg: number | null; mph: number | null; color: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {

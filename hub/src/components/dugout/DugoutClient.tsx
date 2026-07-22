@@ -13,6 +13,7 @@ import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown'
+import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -904,16 +905,12 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 }
 
 function PlayerDrillDown({
-  row, oppPitcher, gameInfo, lineupPlayer, lineupConfirmed, pool,
+  row, oppPitcher, pitcherTeamAbbr, gameInfo, pool,
 }: {
   row: BatterRow
   oppPitcher?: any
+  pitcherTeamAbbr: string
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
-  // Real pitch-log matchup card — MatchupPitchBreakdown does its own
-  // fetching (batterStatsEngine.ts + /api/players/[id]/pitch-log), so this
-  // component only needs to hand it who's involved.
-  lineupPlayer: any
-  lineupConfirmed: boolean
   // Heat-maps the Bat Tracking tiles against the rest of tonight's lineups —
   // same "heat-mapped vs the rest of this lineup" convention as Pitcher
   // Report's PlayerStatcastDetail.
@@ -941,8 +938,7 @@ function PlayerDrillDown({
               pitcherId={oppPitcher.id}
               pitcherName={oppPitcher.name}
               pitcherHand={pitcherHand}
-              opposingTeamName={lineupPlayer?.team_name || row.team}
-              lineupConfirmed={lineupConfirmed}
+              pitcherTeamAbbr={pitcherTeamAbbr}
             />
             <div style={{ marginTop: 8 }}>
               <PitcherStrikeoutsChip oppPitcher={oppPitcher} gameInfo={gameInfo} />
@@ -960,7 +956,7 @@ function PlayerDrillDown({
           return (
           <div style={{ minWidth: 320 }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
-              BAT TRACKING <span style={{ fontWeight: 400, textTransform: 'none' }}>· heat-mapped vs tonight's lineups</span>
+              BAT TRACKING
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
               <StatTile label="BSPD" value={f1(row.s_spd)} title="Season bat speed" heatStyle={heat(row.s_spd, g('s_spd'), 'hi')} />
@@ -992,6 +988,12 @@ function PlayerDrillDown({
           </div>
           )
         })()}
+
+        {/* Ballpark conditions — same park-shape/wind visual as Weather Lab,
+            scoped to just this game. */}
+        {gameInfo.game_pk && gameInfo.game_date && (
+          <GameWeatherCard gamePk={gameInfo.game_pk} date={gameInfo.game_date} />
+        )}
       </div>
     </td>
   )
@@ -2178,12 +2180,11 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           </tr>
           {displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
-            const lineupPlayer = game.homeLineup?.find((p: any) => p.mlb_id === row.mlb_id) ?? null
             return (
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} gameInfo={gameInfo} lineupPlayer={lineupPlayer} lineupConfirmed={!!game.homeLineupConfirmed} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
@@ -2214,12 +2215,11 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           <tr>{headerCells}</tr>
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
-            const lineupPlayer = game.awayLineup?.find((p: any) => p.mlb_id === row.mlb_id) ?? null
             return (
               <React.Fragment key={key}>
                 <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} gameInfo={gameInfo} lineupPlayer={lineupPlayer} lineupConfirmed={!!game.awayLineupConfirmed} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
