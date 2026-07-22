@@ -43,6 +43,13 @@ export type TodayGame = {
   // lineup-confirmed cron to also catch postponements/delays, not just
   // lineup posts.
   status: string
+  // The simpler Live/Final/Preview bucket Dugout's own game tabs key off
+  // of — kept separate from `status` above so existing detailedState
+  // consumers (the postponement/delay regex) don't shift under them.
+  abstractStatus: string
+  gameDate: string
+  awayScore: number | null
+  homeScore: number | null
 }
 
 // Pregame = hasn't started and isn't cancelled — used by the Browserbase
@@ -210,6 +217,10 @@ export async function getTodaysMatchups(date?: string): Promise<TodayGame[]> {
       homeLineupConfirmed: (g.lineups?.homePlayers?.length ?? 0) > 0,
       awayLineupConfirmed: (g.lineups?.awayPlayers?.length ?? 0) > 0,
       status: g.status?.detailedState || g.status?.abstractGameState || 'Scheduled',
+      abstractStatus: g.status?.abstractGameState || 'Preview',
+      gameDate: g.gameDate,
+      awayScore: g.teams?.away?.score ?? null,
+      homeScore: g.teams?.home?.score ?? null,
     }
   }))
 }

@@ -67,7 +67,11 @@ export async function GET() {
 
   const games = await getTodaysMatchups()
   const matchups = buildMatchups(games)
-  if (!matchups.length) return NextResponse.json({ matchups: [] })
+  const gamesOut = games.map(g => ({
+    gameKey: g.gameKey, awayAbbr: g.awayAbbr, homeAbbr: g.homeAbbr, gameDate: g.gameDate,
+    abstractStatus: g.abstractStatus, awayScore: g.awayScore, homeScore: g.homeScore,
+  }))
+  if (!matchups.length) return NextResponse.json({ matchups: [], games: gamesOut })
 
   const admin = createAdminClient()
   const season = currentSeason()
@@ -184,5 +188,5 @@ export async function GET() {
     }
   })
 
-  return NextResponse.json({ matchups: result })
+  return NextResponse.json({ matchups: result, games: gamesOut })
 }
