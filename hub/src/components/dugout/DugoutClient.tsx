@@ -15,6 +15,7 @@ import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown'
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
+import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -997,6 +998,15 @@ function PlayerDrillDown({
               <div style={{ marginTop: 14 }}>
                 <GameWeatherCard gamePk={gameInfo.game_pk} date={gameInfo.game_date} />
               </div>
+            )}
+            {oppPitcher && row.mlb_id != null && (
+              <AffinityMatchupScore
+                batterId={row.mlb_id}
+                batterName={row.name}
+                pitcherId={oppPitcher.id}
+                pitcherName={oppPitcher.name}
+                pitcherHand={pitcherHand}
+              />
             )}
           </div>
           )
