@@ -833,9 +833,18 @@ type SortState = { col: string; dir: 'desc' | 'asc' } | null
 // it's clear which column is breaking ties for which.
 type MultiSortEntry = { col: string; dir: 'desc' | 'asc' }
 
-function TH({ label, title, w = 40, sticky = false, sortKey, active = false, dir, rank, onSort }: {
+function TH({
+  label, title, w = 40, sticky = false, sortKey, active = false, dir, rank, onSort,
+  pickSortKey, pickActive = false, pickDir, pickRank, onPickSort,
+}: {
   label: React.ReactNode; title?: string; w?: number; sticky?: boolean
   sortKey?: string; active?: boolean; dir?: 'desc' | 'asc'; rank?: number; onSort?: (key: string) => void
+  // Independent second sort control for whichever column this stat's real
+  // community pick count lives on — same sticky multi-sort chain as the
+  // main column, just keyed to a different field (buildBatterRow's own
+  // pk*.picks), so "most picked" and "best odds" can each drive the sort
+  // without one replacing the other's column.
+  pickSortKey?: string; pickActive?: boolean; pickDir?: 'desc' | 'asc'; pickRank?: number; onPickSort?: (key: string) => void
 }) {
   // The sticky Player column (only sticky=true caller) gets a narrower fixed
   // width on mobile to match its <td>, so more of the ~60 scrollable stat
@@ -859,6 +868,17 @@ function TH({ label, title, w = 40, sticky = false, sortKey, active = false, dir
           {active && rank != null && <sup style={{ fontSize: 7, marginLeft: 1 }}>{rank}</sup>}
         </span>
       </Tooltip>
+      {pickSortKey && (
+        <Tooltip content="Sort by community pick count on this line">
+          <div
+            onClick={e => { e.stopPropagation(); onPickSort?.(pickSortKey) }}
+            style={{ fontSize: 7, fontWeight: 900, lineHeight: 1, marginTop: 1, cursor: 'pointer', color: pickActive ? 'var(--accent)' : 'var(--text-3)' }}
+          >
+            PICKS{pickActive ? (pickDir === 'desc' ? '▼' : '▲') : ''}
+            {pickActive && pickRank != null && <sup style={{ fontSize: 6, marginLeft: 1 }}>{pickRank}</sup>}
+          </div>
+        </Tooltip>
+      )}
     </th>
   )
 }
@@ -2337,11 +2357,13 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
   )
 }
 
-// 'pk' isn't a plain number on the row — it's the whole pikkit object
-// ({picks, prop_type, ...}), so the generic a[col] extraction below would
-// diff two objects (always NaN) and silently never reorder anything.
+// Every pk*-prefixed field (pk, pkRbi, pkHrr, pkTb, pkSingles, pkDoubles,
+// pkTriples, pkStolenBases, pkHits, pkRuns — see buildBatterRow) is the
+// whole pikkit object ({picks, prop_type, ...}), not a plain number, so the
+// generic a[col] extraction below would diff two objects (always NaN) and
+// silently never reorder anything.
 function sortValue(r: BatterRow, col: string): number | null {
-  if (col === 'pk') return (r.pk as any)?.picks ?? null
+  if (col.startsWith('pk')) return (r[col as keyof BatterRow] as any)?.picks ?? null
   return r[col as keyof BatterRow] as unknown as number | null
 }
 
@@ -2525,17 +2547,25 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
 
   const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
 
-  const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string) => {
+  const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string, pickSortKey?: string) => {
     const info = sortInfo(sortKey)
-    return <TH label={label} title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort} />
+    const pickInfo = sortInfo(pickSortKey)
+    return (
+      <TH
+        label={label} title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
+        pickSortKey={pickSortKey} pickActive={pickInfo.active} pickDir={pickInfo.dir} pickRank={pickInfo.rank} onPickSort={toggleSort}
+      />
+    )
   }
 
-  const BL = (vendor: string, prop: string, title?: string, w = 50, sortKey?: string) => {
+  const BL = (vendor: string, prop: string, title?: string, w = 50, sortKey?: string, pickSortKey?: string) => {
     const info = sortInfo(sortKey)
+    const pickInfo = sortInfo(pickSortKey)
     return (
       <TH
         label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><BookLogo vendor={vendor} size={13} />{prop}</span>}
         title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
+        pickSortKey={pickSortKey} pickActive={pickInfo.active} pickDir={pickInfo.dir} pickRank={pickInfo.rank} onPickSort={toggleSort}
       />
     )
   }
@@ -2568,24 +2598,24 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {H('Moon', 'Moonshot market price', 50, 'moonshot_fd')}
       {H('1stPA', '1st Plate Appearance HR price', 50, 'pa1_fd')}
       {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-      {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi')}
+      {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi', 'pkRbi')}
       {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
       {H('HR÷RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
-      {H('HR÷HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr')}
-      {H('HR÷TB', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb')}
+      {H('HR÷HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr', 'pkHrr')}
+      {H('HR÷TB', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb', 'pkTb')}
       {H('HR÷TB3', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
       {H('HR÷TB4', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
       {H('HR÷TB5', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
       {H('HR÷2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
       <th style={SDIV_H} />
-      {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd')}
-      {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd')}
-      {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd')}
-      {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd')}
+      {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd', 'pkSingles')}
+      {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd', 'pkDoubles')}
+      {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd', 'pkTriples')}
+      {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd', 'pkStolenBases')}
       {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
-      {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd')}
+      {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd', 'pkHits')}
       {BL('fanduel', 'HIT2', '2+ Hits (FD)', 44, 'hits2_fd')}
-      {BL('fanduel', 'RUN', '1+ Run Scored (FD)', 44, 'runs_fd')}
+      {BL('fanduel', 'RUN', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
       {BL('fanduel', 'RUN2', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
       <th style={SDIV_H} />
       {H('paper', 'Composite Statcast score', 46, 'paper')}
