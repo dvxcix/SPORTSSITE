@@ -5,8 +5,13 @@ import Link from 'next/link'
 import { pitchColor, pitchLabel, mlbHeadshot } from '@/lib/mlb-api'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { PitchList } from '@/components/players/PitchList'
 import { lastNGameDates, computeStatLine, type PitchLogRow } from '@/lib/batterStatsEngine'
 import { fetchPitchLogCached } from '@/components/dugout/MatchupPitchBreakdown'
+
+// Same fixed hand-color convention used on the row header in DugoutClient —
+// right orange, left blue, switch purple.
+const HAND_COLOR: Record<'R' | 'L' | 'S', string> = { R: '#fb923c', L: '#60a5fa', S: '#c084fc' }
 
 type AffinitySimilar = { key: string; mlbId: number; hand: string; name: string; matchScore: number }
 type AffinityResult = { profile: Record<string, number> | null; similar: AffinitySimilar[] }
@@ -56,23 +61,30 @@ function scoreFrom(formHr: number, evidence: { matchScore: number; game_date: st
 type Evidence = PitchLogRow & { matchScore: number }
 
 function EvidenceCard({
-  mlbId, name, teamAbbr, headline, evidence, score,
+  mlbId, name, teamAbbr, hand, isPitcherCard, headline, evidence, score, expanded, onToggle,
 }: {
   mlbId: number
   name: string
   teamAbbr: string
+  hand: 'R' | 'L' | 'S'
+  isPitcherCard: boolean
   headline: string
   evidence: Evidence[]
   score: number
+  expanded: boolean
+  onToggle: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
   const distinctPitchTypes = Array.from(new Set(evidence.map(e => e.pitch_type).filter((p): p is string => !!p)))
+  const handLabel = hand === 'S' ? (isPitcherCard ? 'SHP' : 'SHB') : `${hand}H${isPitcherCard ? 'P' : 'B'}`
 
   return (
-    <div style={{ flex: 1, minWidth: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 8 }}>
-      <Link href={`/players/${mlbId}`} style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'inherit', marginBottom: 6 }}>
-        <PlayerAvatar headshot={mlbHeadshot(mlbId)} teamLogo={getTeamLogoUrl(teamAbbr)} teamAbbr={teamAbbr} name={name} size={26} />
-        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+    <div style={{ flex: 1, minWidth: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+      <Link href={`/players/${mlbId}`} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', marginBottom: 8 }}>
+        <PlayerAvatar headshot={mlbHeadshot(mlbId)} teamLogo={getTeamLogoUrl(teamAbbr)} teamAbbr={teamAbbr} name={name} size={40} />
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ fontSize: 9, fontWeight: 700, color: HAND_COLOR[hand] }}>{handLabel}</div>
+        </div>
       </Link>
 
       {distinctPitchTypes.length > 0 && (
@@ -86,10 +98,7 @@ function EvidenceCard({
         </div>
       )}
 
-      <div
-        onClick={() => evidence.length > 0 && setExpanded(v => !v)}
-        style={{ cursor: evidence.length > 0 ? 'pointer' : 'default' }}
-      >
+      <div onClick={() => evidence.length > 0 && onToggle()} style={{ cursor: evidence.length > 0 ? 'pointer' : 'default' }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: evidence.length > 0 ? '#4ade80' : 'var(--text-1)', lineHeight: 1 }}>{evidence.length}</div>
         <div style={{ fontSize: 8, color: 'var(--text-3)', marginTop: 2 }}>
           {headline}{evidence.length > 0 ? (expanded ? ' ▲' : ' ▾') : ''}
@@ -107,21 +116,6 @@ function EvidenceCard({
           {score}/10
         </span>
       </div>
-
-      {expanded && evidence.length > 0 && (
-        <div style={{ marginTop: 6, borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {evidence.map((r, i) => (
-            <div key={i} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 9, color: 'var(--text-2)' }}>
-              <span style={{ color: 'var(--text-3)', minWidth: 56, flexShrink: 0 }}>{r.game_date}</span>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pitchColor(r.pitch_type ?? ''), flexShrink: 0 }} />
-              <Link href={`/players/${r.opponent_id}`} style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 700, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {r.opponent_name}
-              </Link>
-              <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{(r.matchScore * 100).toFixed(0)}%</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -137,12 +131,16 @@ function EvidenceCard({
 // evidence about HIS vulnerability, not the batter's own track record).
 // Both searches run entirely over pitch logs already loaded elsewhere on
 // this page (shared fetchPitchLogCached), filtered by the affinity id sets.
+// Expanding either count reuses PitchList — the same real per-pitch table
+// (real opponent avatar, velo/spin/EV/LA/dist/xwOBA/RV) already used
+// everywhere else in this dropdown, not a second, thinner view.
 export function AffinityMatchupScore({
-  batterId, batterName, batterTeamAbbr, pitcherId, pitcherName, pitcherTeamAbbr, pitcherHand,
+  batterId, batterName, batterTeamAbbr, batterBats, pitcherId, pitcherName, pitcherTeamAbbr, pitcherHand,
 }: {
   batterId: number
   batterName: string
   batterTeamAbbr: string
+  batterBats: string | null
   pitcherId: number
   pitcherName: string
   pitcherTeamAbbr: string
@@ -152,6 +150,8 @@ export function AffinityMatchupScore({
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
   const [similarPitchers, setSimilarPitchers] = useState<AffinityResult>(EMPTY_AFFINITY)
   const [similarHitters, setSimilarHitters] = useState<AffinityResult>(EMPTY_AFFINITY)
+  const [batterExpanded, setBatterExpanded] = useState(false)
+  const [pitcherExpanded, setPitcherExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -208,16 +208,32 @@ export function AffinityMatchupScore({
   const pitcherFormHr = computeStatLine(pitcherRows.filter(r => lastNGameDates(pitcherRows, 3).has(r.game_date))).hr
   const pitcherScore = scoreFrom(pitcherFormHr, evidenceHitters)
 
+  const batterHand: 'R' | 'L' | 'S' = batterBats === 'L' ? 'L' : batterBats === 'S' ? 'S' : 'R'
+
   return (
-    <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-      <EvidenceCard
-        mlbId={batterId} name={batterName} teamAbbr={batterTeamAbbr}
-        headline="HR VS. SIMILAR PITCHER(S)" evidence={evidencePitchers} score={batterScore}
-      />
-      <EvidenceCard
-        mlbId={pitcherId} name={pitcherName} teamAbbr={pitcherTeamAbbr}
-        headline="HR TO SIMILAR BATTER(S)" evidence={evidenceHitters} score={pitcherScore}
-      />
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <EvidenceCard
+          mlbId={batterId} name={batterName} teamAbbr={batterTeamAbbr} hand={batterHand} isPitcherCard={false}
+          headline="HR VS. SIMILAR PITCHER(S)" evidence={evidencePitchers} score={batterScore}
+          expanded={batterExpanded} onToggle={() => setBatterExpanded(v => !v)}
+        />
+        <EvidenceCard
+          mlbId={pitcherId} name={pitcherName} teamAbbr={pitcherTeamAbbr} hand={pitcherHand} isPitcherCard={true}
+          headline="HR TO SIMILAR BATTER(S)" evidence={evidenceHitters} score={pitcherScore}
+          expanded={pitcherExpanded} onToggle={() => setPitcherExpanded(v => !v)}
+        />
+      </div>
+      {batterExpanded && evidencePitchers.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <PitchList rows={evidencePitchers} maxHeight={240} />
+        </div>
+      )}
+      {pitcherExpanded && evidenceHitters.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <PitchList rows={evidenceHitters} maxHeight={240} />
+        </div>
+      )}
     </div>
   )
 }
