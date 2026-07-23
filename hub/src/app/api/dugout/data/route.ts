@@ -88,9 +88,15 @@ const getCachedGapOddsOpening = unstable_cache(
 // had ZERO opening/delta tracking anywhere before this table. sa:betmgm/
 // hr2:betmgm revive the saMgm/hr2Mgm fields DugoutClient's OddsCell already
 // reads, now sourced from BDL's own live betmgm price instead of the old
-// paused mgm-import scrape. Every other book (caesars/fanatics/betrivers/
-// etc.) is still captured into the table for future use, just not yet
-// surfaced to a client field.
+// paused mgm-import scrape. fhr:caesars/sa:caesars back the two Caesars
+// OddsCells Dugout already renders (fhr_cz/sa_cz current price) — real
+// Caesars opener data was already flowing into market_opening_prices but
+// silently dropped here since nothing mapped it to a client field, so
+// those two cells never showed a delta despite the book's price moving
+// same as every other one (confirmed live, reported 2026-07-23). Every
+// other still-unmapped book (fanatics/betrivers on markets with no
+// current-price cell to attach a delta to) stays captured in the table
+// for future use, just not yet surfaced to a client field.
 const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
   'fhr:fanduel': 'fhr', 'sa:fanduel': 'saFd', 'hr2:fanduel': 'hr2Fd',
   'singles:fanduel': 'sngFd', 'doubles:fanduel': 'dblFd', 'triples:fanduel': 'triFd',
@@ -102,6 +108,7 @@ const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
   'hits:fanduel': 'hits', 'hits2:fanduel': 'hits2', 'runs:fanduel': 'runs', 'runs2:fanduel': 'runs2',
   'stolen_bases:fanduel': 'stolenBases', 'stolen_bases2:fanduel': 'stolenBases2',
   'sa:betmgm': 'saMgm', 'hr2:betmgm': 'hr2Mgm',
+  'fhr:caesars': 'fhrCz', 'sa:caesars': 'saCz',
 }
 
 // ── mlb-party Supabase ────────────────────────────────────────────────────────

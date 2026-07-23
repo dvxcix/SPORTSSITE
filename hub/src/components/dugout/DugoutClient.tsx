@@ -441,6 +441,20 @@ function buildBatterRow(
   const hrMl_open      = open.hrMl     ?? null
   const saMgm_open     = open.saMgm    ?? null
   const hr2Mgm_open    = open.hr2Mgm   ?? null
+  // BetMGM's own opener now flows straight through the same unified
+  // market_opening_prices table as everything else (see /api/cron/bdl-odds)
+  // — sourced from BDL's live betmgm vendor price, not a separate scrape.
+  const fhrCz_open     = open.fhrCz    ?? null
+  const saCz_open      = open.saCz     ?? null
+  // hits/hits2/runs/runs2/stolen_bases/stolen_bases2 had zero opening/delta
+  // tracking anywhere before market_opening_prices — real data now exists
+  // (confirmed live), just needed threading through to these cells.
+  const hits_open      = open.hits         ?? null
+  const hits2_open     = open.hits2        ?? null
+  const runs_open      = open.runs         ?? null
+  const runs2_open     = open.runs2        ?? null
+  const sb_open        = open.stolenBases  ?? null
+  const sb2_open       = open.stolenBases2 ?? null
 
   const div        = fdczDiv(fhr_fd, fhr_cz)
   const fhr_div_sa = implRatio(fhr_fd, sa_fd)
@@ -560,6 +574,7 @@ function buildBatterRow(
     laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hrMl_fd, pa1_div_sa, sa_div_ml,
     fhr_open, saFd_open, hr2Fd_open, sngFd_open, dblFd_open, triFd_open, rbiFd_open, rbi2Fd_open, rbi3Fd_open, tbFd_open, tb3Fd_open, tb4Fd_open, tb5Fd_open, hrrFd_open,
     laser105_open, laser110_open, moonshot_open, pa1_open, hrMl_open, saMgm_open, hr2Mgm_open,
+    fhrCz_open, saCz_open, hits_open, hits2_open, runs_open, runs2_open, sb_open, sb2_open,
     combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners, sa_div_c1, sa_div_c2,
     is_pwr, is_money_sa_rbi,
     rawProps: props ?? null,
@@ -1376,7 +1391,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           BookLogo.tsx) instead of one blue for every column regardless of
           book. */}
       <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanduel" odds={row.fhr_fd} openOdds={row.fhr_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fd, g('fhr_fd'), '20,147,255') }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="caesars" odds={row.fhr_cz} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_cz, g('fhr_fd'), '11,64,50') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="caesars" odds={row.fhr_cz} openOdds={row.fhrCz_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_cz, g('fhr_fd'), '11,64,50') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanatics" odds={row.fhr_fan} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fan, g('fhr_fd'), '218,25,55') }} />
       <td style={{ ...STD, width: 36, minWidth: 36, color: row.div != null ? (row.div > 0.008 ? '#4ade80' : row.div < -0.008 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
         {row.div != null ? (row.div >= 0 ? '+' : '') + (row.div * 100).toFixed(1) : '—'}
@@ -1389,7 +1404,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
 
       {/* SA (anytime HR) */}
       <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="fanduel" odds={row.sa_fd} openOdds={row.saFd_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_fd, g('sa_fd'), '20,147,255') }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="caesars" odds={row.sa_cz} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_cz, g('sa_fd'), '11,64,50') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="caesars" odds={row.sa_cz} openOdds={row.saCz_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_cz, g('sa_fd'), '11,64,50') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betmgm" odds={row.sa_mgm} openOdds={row.saMgm_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_mgm, g('sa_fd'), '184,150,12') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betrivers" odds={row.sa_br} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_br, g('sa_fd'), '0,48,135') }} />
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.m_div_f, g('m_div_f')) }}>{f2(row.m_div_f)}</td>
@@ -1451,12 +1466,12 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       {/* Replaced HR÷C1/HR÷C2 (thin, manual-paste-only combine-for-HR
           ratios) with real BDL-sourced markets that were already flowing
           through buildPropMap but never shown. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} pickCount={row.pkStolenBases?.picks ?? null} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases2" book="fanduel" odds={row.sb2_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb2_fd, g('sb2_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="runs2" book="fanduel" odds={row.runs2_fd} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs2_fd, g('runs2_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases" book="fanduel" odds={row.sb_fd} openOdds={row.sb_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb_fd, g('sb_fd')) }} pickCount={row.pkStolenBases?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases2" book="fanduel" odds={row.sb2_fd} openOdds={row.sb2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb2_fd, g('sb2_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} openOdds={row.hits_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} openOdds={row.hits2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} openOdds={row.runs_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="runs2" book="fanduel" odds={row.runs2_fd} openOdds={row.runs2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs2_fd, g('runs2_fd')) }} />
 
       <td style={SDIV_D} />
 
