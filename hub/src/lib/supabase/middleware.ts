@@ -35,6 +35,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Apple/Whop's domain-verification crawler fetches this well-known file
+  // with no session cookie at all — same bug class as every other
+  // exemption here: without it, the check got a 307 redirect to
+  // /auth/login (HTML) instead of the actual file, and Apple Pay domain
+  // verification for the embedded Whop checkout would silently never
+  // succeed. startsWith (not an exact match) in case Whop/other future
+  // verifications land other files under the same /.well-known/ path.
+  if (request.nextUrl.pathname.startsWith('/.well-known/')) {
+    return NextResponse.next({ request })
+  }
+
   // Once registered, a service worker's script gets auto-refetched by the
   // browser on navigations within its scope (the whole origin here) to
   // check for updates — including from a logged-out tab. A redirect
