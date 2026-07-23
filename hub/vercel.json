@@ -17,6 +17,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/prune-notifications",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/mlb-sync-bio",
       "schedule": "*/15 * * * *"
     },
