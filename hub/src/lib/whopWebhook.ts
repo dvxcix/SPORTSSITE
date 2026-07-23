@@ -127,6 +127,20 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           console.error('[whop-webhook] no metadata.internal_user_id on', type, JSON.stringify(event))
           break
         }
+        // A failed/deactivated event about a DIFFERENT membership than the
+        // one currently on file must never clobber an already-active
+        // subscription — confirmed live: a customer with a real succeeded
+        // Basic payment got silently reset to Free because a payment.failed
+        // event for an unrelated abandoned Ultimate-trial attempt (same
+        // person, different membership — nothing here stops someone holding
+        // concurrent memberships on more than one plan) fired after the
+        // success event and this handler reset tier unconditionally. Only
+        // downgrade when the event is actually about the membership that's
+        // driving the user's current tier.
+        const { data: current } = await supabase.from('users').select('whop_membership_id').eq('id', internalUserId).maybeSingle()
+        if (!membershipId || current?.whop_membership_id !== membershipId) {
+          break
+        }
         const { data: updated } = await supabase.from('users').update({
           tier: 'free',
           tier_status: type,
