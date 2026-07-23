@@ -50,38 +50,42 @@ function detectGameFromTitle(title: string | undefined | null): { awayAbbr: stri
 
 // Section-name -> column mapping for the markets BDL/our automated feeds
 // don't carry for FanDuel. Matched case-insensitively against each scrape's
-// `sections` keys; first match wins.
-const SECTION_MAP: Array<{ re: RegExp; col: string }> = [
-  { re: /^to hit first home run$/i, col: 'fhr_fd' },
+// `sections` keys; first match wins. `market` is the bare cross-pipeline key
+// shared with bdl-odds' own BDL_OPENING_MARKETS list — whichever pipeline
+// (this one or BDL) sees a real price for a given (game, player, market)
+// FIRST wins the permanent opening baseline, see the market_opening_prices
+// write below.
+const SECTION_MAP: Array<{ re: RegExp; col: string; market: string }> = [
+  { re: /^to hit first home run$/i, col: 'fhr_fd', market: 'fhr' },
   // Anytime HR / 2+ HR — BDL usually carries these live for FanDuel too, so
   // the dugout merge treats these as opening-baseline-only unless BDL has no
   // value at all (see route.ts's fanduel gap merge). Matched narrowly
   // (exact, not "laser"/"moneyline parlay" etc. which also contain "home run").
-  { re: /^to hit a home run$/i, col: 'sa_fd' },
-  { re: /^to hit 2\+ home runs$/i, col: 'hr2_fd' },
-  { re: /laser.*\(?\s*110/i, col: 'laser110_fd' },
-  { re: /laser.*\(?\s*105/i, col: 'laser105_fd' },
-  { re: /moonshot/i, col: 'moonshot_fd' },
-  { re: /first plate appearance/i, col: 'pa1_fd' },
-  { re: /home run.*moneyline parlay/i, col: 'hr_ml_fd' },
+  { re: /^to hit a home run$/i, col: 'sa_fd', market: 'sa' },
+  { re: /^to hit 2\+ home runs$/i, col: 'hr2_fd', market: 'hr2' },
+  { re: /laser.*\(?\s*110/i, col: 'laser110_fd', market: 'laser110' },
+  { re: /laser.*\(?\s*105/i, col: 'laser105_fd', market: 'laser105' },
+  { re: /moonshot/i, col: 'moonshot_fd', market: 'moonshot' },
+  { re: /first plate appearance/i, col: 'pa1_fd', market: 'pa1' },
+  { re: /home run.*moneyline parlay/i, col: 'hr_ml_fd', market: 'hrMl' },
   // Everything below is ALSO already live from BDL — same "opening baseline
   // only, never clobber a live BDL value" rule applies to these as the
   // sa_fd/hr2_fd ones above. Captured anyway so opening-vs-current deltas
   // show for every market we display, not just the true BDL gaps.
-  { re: /^to hit a single$/i, col: 'sng_fd' },
-  { re: /^to hit a double$/i, col: 'dbl_fd' },
-  { re: /^to hit a triple$/i, col: 'tri_fd' },
-  { re: /^to record an rbi$/i, col: 'rbi_fd' },
-  { re: /^to record 2\+\s*rbis?$/i, col: 'rbi2_fd' },
-  { re: /^to record 3\+\s*rbis?$/i, col: 'rbi3_fd' },
+  { re: /^to hit a single$/i, col: 'sng_fd', market: 'singles' },
+  { re: /^to hit a double$/i, col: 'dbl_fd', market: 'doubles' },
+  { re: /^to hit a triple$/i, col: 'tri_fd', market: 'triples' },
+  { re: /^to record an rbi$/i, col: 'rbi_fd', market: 'rbi' },
+  { re: /^to record 2\+\s*rbis?$/i, col: 'rbi2_fd', market: 'rbi2' },
+  { re: /^to record 3\+\s*rbis?$/i, col: 'rbi3_fd', market: 'rbi3' },
   // 2+/3+ total bases — same "to record N+ total bases" phrasing as 4+/5+
   // below, just never captured before now (BDL's own tb/tb3 lines just got
   // their own bucket too — see balldontlie.ts's total_bases bucketing fix).
-  { re: /^to record 2\+\s*total bases$/i, col: 'tb_fd' },
-  { re: /^to record 3\+\s*total bases$/i, col: 'tb3_fd' },
-  { re: /^to record 4\+\s*total bases$/i, col: 'tb4_fd' },
-  { re: /^to record 5\+\s*total bases$/i, col: 'tb5_fd' },
-  { re: /^player to record 1\+\s*hits\s*\+\s*runs\s*\+\s*rbis$/i, col: 'hrr_fd' },
+  { re: /^to record 2\+\s*total bases$/i, col: 'tb_fd', market: 'tb' },
+  { re: /^to record 3\+\s*total bases$/i, col: 'tb3_fd', market: 'tb3' },
+  { re: /^to record 4\+\s*total bases$/i, col: 'tb4_fd', market: 'tb4' },
+  { re: /^to record 5\+\s*total bases$/i, col: 'tb5_fd', market: 'tb5' },
+  { re: /^player to record 1\+\s*hits\s*\+\s*runs\s*\+\s*rbis$/i, col: 'hrr_fd', market: 'hrr' },
 ]
 
 // Combo markets are a different shape from everything else — each outcome
@@ -89,10 +93,18 @@ const SECTION_MAP: Array<{ re: RegExp; col: string }> = [
 // so a player can appear in many rows. Store the cheapest price + partner
 // list per player, matching mlb-party's own reasoning: MIN combo price =
 // strongest book conviction that this specific player is the one to homer.
-const COMBO_SECTION_MAP: Array<{ re: RegExp; minCol: string; countCol: string; partnersCol: string }> = [
-  { re: /^players to combine for a home run$/i, minCol: 'combo1_min', countCol: 'combo1_count', partnersCol: 'combo1_partners' },
-  { re: /^players to combine for 2\+ home runs$/i, minCol: 'combo2_min', countCol: 'combo2_count', partnersCol: 'combo2_partners' },
+const COMBO_SECTION_MAP: Array<{ re: RegExp; minCol: string; countCol: string; partnersCol: string; market: string }> = [
+  { re: /^players to combine for a home run$/i, minCol: 'combo1_min', countCol: 'combo1_count', partnersCol: 'combo1_partners', market: 'combo1Min' },
+  { re: /^players to combine for 2\+ home runs$/i, minCol: 'combo2_min', countCol: 'combo2_count', partnersCol: 'combo2_partners', market: 'combo2Min' },
 ]
+
+// Reverse lookup used only when building market_opening_prices rows below —
+// maps each fanduel_gap_odds column name back to the bare cross-pipeline
+// market key that owns it.
+const COL_TO_MARKET: Record<string, string> = Object.fromEntries([
+  ...SECTION_MAP.map(m => [m.col, m.market]),
+  ...COMBO_SECTION_MAP.map(m => [m.minCol, m.market]),
+])
 
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token
 // the /api/cron/* jobs already use — the latter lets the scrape-books
@@ -264,22 +276,35 @@ export async function POST(req: Request) {
       .upsert(rows, { onConflict: 'game_date,game_key,name_norm' })
     if (error) return NextResponse.json({ error: `Upsert failed for ${thisGameKey}: ${error.message}` }, { status: 500 })
 
-    // Preserve the FIRST "Opening/Early" paste of the day for this game as a
-    // permanent baseline — never overwritten by later pastes — so we can
-    // compute opening-vs-current deltas. Mirrors mlb-party's manual_odds_opening.
+    // Preserve the FIRST real price seen for each (game, player, MARKET) as
+    // a permanent opening baseline, so we can compute opening-vs-current
+    // deltas. Previously this checked for ANY existing row scoped to just
+    // (game_date, game_key) before writing anything — since FanDuel doesn't
+    // post every market at once (FHR/PA1/HR-ML/combos often land hours after
+    // the first "Opening/Early" pass), the first successful pass permanently
+    // locked the whole game out of ever capturing those later markets' real
+    // openers. market_opening_prices' own PK (game_date, game_key, name_norm,
+    // market) + ignoreDuplicates now enforces "first wins" per market
+    // instead, so every pass can safely attempt every market it captured —
+    // only genuinely-new (game, player, market) combos actually insert. Also
+    // the unification point with bdl-odds' own opening writes: whichever
+    // pipeline sees a real price for a given key first keeps it permanently.
     if (isOpening) {
-      const { data: existing } = await admin
-        .from('fanduel_gap_odds_opening')
-        .select('name_norm')
-        .eq('game_date', gameDate)
-        .eq('game_key', thisGameKey)
-        .limit(1)
-      if (!existing || existing.length === 0) {
-        const openingRows = rows.map(({ updated_at, ...r }) => ({ ...r, captured_at: new Date().toISOString() }))
+      const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; opening_price: number; opening_source: 'fanduel' }[] = []
+      for (const [name_norm, v] of byPlayer.entries()) {
+        for (const [col, market] of Object.entries(COL_TO_MARKET)) {
+          const price = v.cols[col]
+          if (typeof price === 'number') {
+            openingRows.push({ game_date: gameDate, game_key: thisGameKey, name_norm, market, opening_price: price, opening_source: 'fanduel' })
+          }
+        }
+      }
+      if (openingRows.length) {
         const { error: openErr } = await admin
-          .from('fanduel_gap_odds_opening')
-          .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm' })
+          .from('market_opening_prices')
+          .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market', ignoreDuplicates: true })
         if (!openErr) openingSaved = true
+        else console.error(`[fanduel-import] opening-price upsert failed for ${thisGameKey}`, openErr)
       }
     }
   }

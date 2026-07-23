@@ -30,6 +30,15 @@ const MARKETS: { key: string; label: string; current: (p: any) => number | null;
   { key: 'tb4',      label: 'TB 4+',  current: p => p?.tb4?.fanduel ?? null,     open: p => p?.open?.tb4Fd ?? null },
   { key: 'tb5',      label: 'TB 5+',  current: p => p?.tb5?.fanduel ?? null,     open: p => p?.open?.tb5Fd ?? null },
   { key: 'hrr',      label: 'HRR',    current: p => p?.hrr?.fanduel ?? null,     open: p => p?.open?.hrrFd ?? null },
+  // Previously untracked anywhere (no opening baseline, no delta) — now
+  // captured directly off BDL's own per-minute poll into
+  // market_opening_prices, same as every other BDL-priced market above.
+  { key: 'hits',          label: '1+ H',  current: p => p?.hits?.fanduel ?? null,          open: p => p?.open?.hits ?? null },
+  { key: 'hits2',         label: '2+ H',  current: p => p?.hits2?.fanduel ?? null,         open: p => p?.open?.hits2 ?? null },
+  { key: 'runs',          label: '1+ R',  current: p => p?.runs?.fanduel ?? null,          open: p => p?.open?.runs ?? null },
+  { key: 'runs2',         label: '2+ R',  current: p => p?.runs2?.fanduel ?? null,         open: p => p?.open?.runs2 ?? null },
+  { key: 'stolen_bases',  label: '1+ SB', current: p => p?.stolen_bases?.fanduel ?? null,  open: p => p?.open?.stolenBases ?? null },
+  { key: 'stolen_bases2', label: '2+ SB', current: p => p?.stolen_bases2?.fanduel ?? null, open: p => p?.open?.stolenBases2 ?? null },
 ]
 
 // Which books actually carry a current price for a given market — fhr/sa

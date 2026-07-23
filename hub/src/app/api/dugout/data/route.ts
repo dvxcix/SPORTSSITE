@@ -6,6 +6,7 @@ import { normName, resolveNameEntry } from '@/lib/nameNorm'
 import { getEffectiveTier } from '@/lib/requireTier'
 import { hasTierAccess } from '@/lib/tiers'
 import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
+import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -21,21 +22,9 @@ export const maxDuration = 60
 // Canonicalizing both sides (the live gameKey AND the stored game_key read
 // back from the gap tables) to the same form fixes it regardless of which
 // variant either side happened to use, without touching any stored rows.
-const TEAM_ABBR_ALIASES: Record<string, string> = {
-  ARI: 'AZ', AZ: 'AZ',
-  TBR: 'TB', TB: 'TB',
-  SDP: 'SD', SD: 'SD',
-  SFG: 'SF', SF: 'SF',
-  KCR: 'KC', KC: 'KC',
-  CHW: 'CWS', CWS: 'CWS',
-  WSN: 'WSH', WSH: 'WSH',
-}
-const canonAbbr = (a: string) => TEAM_ABBR_ALIASES[(a || '').toUpperCase()] ?? (a || '').toUpperCase()
-const canonGameKey = (key: string) => {
-  const m = key.match(/^([A-Za-z]+)@([A-Za-z]+)(-G\d+)?$/)
-  if (!m) return key
-  return `${canonAbbr(m[1])}@${canonAbbr(m[2])}${m[3] ?? ''}`
-}
+// canonAbbr/canonGameKey now live in @/lib/teamAbbr — shared with the
+// bdl-odds cron and fanduel-import so every producer of a game_key agrees
+// on the same canonical form (see that file for the drift this fixes).
 
 // Manually-imported gap-odds reads — the only genuinely uncached Supabase
 // queries in this route (everything else here either already goes through
@@ -65,12 +54,22 @@ const getCachedGapOdds = unstable_cache(
   { revalidate: 60 }
 )
 
+// Opening baselines now come from the unified market_opening_prices table
+// (see /api/cron/bdl-odds and /api/admin/fanduel-import) instead of the old
+// fanduel_gap_odds_opening — that table's own capture logic had a real bug
+// (existence-checked per GAME instead of per MARKET, so the first pass of
+// the day permanently locked out every market FanDuel doesn't post until
+// later) and had no concept of a BDL-sourced opener at all. Whichever
+// pipeline observed a real price for a given (game, player, market) FIRST is
+// what's stored here — this route no longer cares which one it was.
+// BetMGM stays on its own separate opening table (mgm_gap_odds_opening) —
+// that automation is on hold with no live writer to unify against.
 const getCachedGapOddsOpening = unstable_cache(
   async (date: string) => {
     const admin = createAdminClient()
-    const [{ data: fdOpenRows }, { data: mgmOpenRows }] = await Promise.all([
-      admin.from('fanduel_gap_odds_opening')
-        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo2_min')
+    const [{ data: openRows }, { data: mgmOpenRows }] = await Promise.all([
+      admin.from('market_opening_prices')
+        .select('game_key, name_norm, market, opening_price')
         .eq('game_date', date)
         .range(0, 19999),
       admin.from('mgm_gap_odds_opening')
@@ -78,11 +77,27 @@ const getCachedGapOddsOpening = unstable_cache(
         .eq('game_date', date)
         .range(0, 19999),
     ])
-    return { fdOpenRows: fdOpenRows ?? [], mgmOpenRows: mgmOpenRows ?? [] }
+    return { openRows: openRows ?? [], mgmOpenRows: mgmOpenRows ?? [] }
   },
-  ['dugout-gap-odds-opening'],
+  ['dugout-gap-odds-opening-v2'],
   { revalidate: 60 }
 )
+
+// Bare market key (shared across BDL/FanDuel-gap, see bdl-odds'
+// BDL_OPENING_MARKETS + fanduel-import's COL_TO_MARKET) -> the camelCase
+// field name already used on entry.open.* throughout this route and
+// consumed by BatterCostClient/DugoutClient. Existing *Fd-suffixed names are
+// kept as-is so no client change was needed for the markets that already
+// had opening tracking; hits/hits2/runs/runs2/stolenBases/stolenBases2 are
+// new — these had ZERO opening/delta tracking anywhere before this table.
+const MARKET_TO_OPEN_FIELD: Record<string, string> = {
+  fhr: 'fhr', sa: 'saFd', hr2: 'hr2Fd', singles: 'sngFd', doubles: 'dblFd', triples: 'triFd',
+  rbi: 'rbiFd', rbi2: 'rbi2Fd', rbi3: 'rbi3Fd', tb: 'tbFd', tb3: 'tb3Fd', tb4: 'tb4Fd', tb5: 'tb5Fd',
+  hrr: 'hrrFd', laser105: 'laser105', laser110: 'laser110', moonshot: 'moonshot', pa1: 'pa1', hrMl: 'hrMl',
+  combo1Min: 'combo1Min', combo2Min: 'combo2Min',
+  hits: 'hits', hits2: 'hits2', runs: 'runs', runs2: 'runs2',
+  stolen_bases: 'stolenBases', stolen_bases2: 'stolenBases2',
+}
 
 // ── mlb-party Supabase ────────────────────────────────────────────────────────
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
@@ -555,11 +570,16 @@ export async function GET(req: Request) {
   // Ultimate-only (not just advanced+) — BatterCostClient's open-vs-current
   // delta view is a Dugout/Batter Cost-exclusive analysis, not something
   // The Public's advanced-tier access should also carry in its response.
-  const fanduelGapOpeningByGameKey: Record<string, Record<string, any>> = {}
+  // gameKey -> name_norm -> bare market key -> opening price (unified across
+  // whichever pipeline captured it first; see market_opening_prices).
+  const fanduelGapOpeningByGameKey: Record<string, Record<string, Record<string, number>>> = {}
   const mgmGapOpeningByGameKey: Record<string, Record<string, any>> = {}
   if (admin && isUltimate) {
-    const { fdOpenRows, mgmOpenRows } = await getCachedGapOddsOpening(date)
-    for (const r of fdOpenRows) (fanduelGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+    const { openRows, mgmOpenRows } = await getCachedGapOddsOpening(date)
+    for (const r of openRows) {
+      const byName = (fanduelGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})
+      ;(byName[r.name_norm] ??= {})[r.market] = Number(r.opening_price)
+    }
     for (const r of mgmOpenRows) (mgmGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
@@ -733,32 +753,19 @@ export async function GET(req: Request) {
     }
     // Opening/early baselines — attached as `.open` per market so the client
     // can show "opened X → now Y" deltas, mirroring mlb-party's b.open.fd_sa.
-    for (const [nn, open] of Object.entries(fanduelGapOpeningByName)) {
+    // Unified across BDL + FanDuel-gap (whichever saw a real price first);
+    // marketPrices is bare-market-key -> price, reshaped through
+    // MARKET_TO_OPEN_FIELD into the same client-facing field names the app
+    // already expects (plus the new hits/hits2/runs/runs2/stolenBases/
+    // stolenBases2 fields, which had no opening tracking before this).
+    for (const [nn, marketPrices] of Object.entries(fanduelGapOpeningByName)) {
       const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
-      entry.open = {
-        ...entry.open,
-        fhr: open.fhr_fd ?? entry.open?.fhr,
-        saFd: open.sa_fd ?? entry.open?.saFd,
-        hr2Fd: open.hr2_fd ?? entry.open?.hr2Fd,
-        sngFd: open.sng_fd ?? entry.open?.sngFd,
-        dblFd: open.dbl_fd ?? entry.open?.dblFd,
-        triFd: open.tri_fd ?? entry.open?.triFd,
-        rbiFd: open.rbi_fd ?? entry.open?.rbiFd,
-        rbi2Fd: open.rbi2_fd ?? entry.open?.rbi2Fd,
-        rbi3Fd: open.rbi3_fd ?? entry.open?.rbi3Fd,
-        tbFd: open.tb_fd ?? entry.open?.tbFd,
-        tb3Fd: open.tb3_fd ?? entry.open?.tb3Fd,
-        tb4Fd: open.tb4_fd ?? entry.open?.tb4Fd,
-        tb5Fd: open.tb5_fd ?? entry.open?.tb5Fd,
-        hrrFd: open.hrr_fd ?? entry.open?.hrrFd,
-        laser105: open.laser105_fd ?? entry.open?.laser105,
-        laser110: open.laser110_fd ?? entry.open?.laser110,
-        moonshot: open.moonshot_fd ?? entry.open?.moonshot,
-        pa1: open.pa1_fd ?? entry.open?.pa1,
-        hrMl: open.hr_ml_fd ?? entry.open?.hrMl,
-        combo1Min: open.combo1_min ?? entry.open?.combo1Min,
-        combo2Min: open.combo2_min ?? entry.open?.combo2Min,
+      const open = { ...entry.open }
+      for (const [market, price] of Object.entries(marketPrices)) {
+        const field = MARKET_TO_OPEN_FIELD[market]
+        if (field) open[field] = price
       }
+      entry.open = open
     }
     for (const [nn, open] of Object.entries(mgmGapOpeningByName)) {
       const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })

@@ -6,6 +6,22 @@ import {
   matchBDLGame, addDaysToDateStr, toETDate,
   type BDLGame, type BDLPropMap,
 } from '@/lib/balldontlie'
+import { canonGameKey } from '@/lib/teamAbbr'
+import { normName } from '@/lib/nameNorm'
+
+// Bare market keys shared with fanduel-import's own OPENING_MARKET list —
+// whichever pipeline sees a real price for a given (game, player, market)
+// FIRST wins the permanent opening baseline (market_opening_prices' PK
+// enforces that, not this list). Only markets BDL actually prices via
+// `.fanduel` are worth attempting here; laser/moonshot/pa1/hrMl/combo* are
+// FanDuel-gap-only and never appear in a BDL propMap entry.
+const BDL_OPENING_MARKETS = [
+  'fhr', 'sa', 'hr2', 'hr3', 'hits', 'hits2', 'hits3', 'rbi', 'rbi2', 'rbi3',
+  'tb', 'tb3', 'tb4', 'tb5', 'strikeouts', 'strikeouts2', 'strikeouts3',
+  'singles', 'singles2', 'singles3', 'doubles', 'doubles2', 'doubles3',
+  'triples', 'triples2', 'triples3', 'stolen_bases', 'stolen_bases2', 'stolen_bases3',
+  'runs', 'runs2', 'runs3', 'hrr',
+] as const
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -77,17 +93,19 @@ export async function GET(req: Request) {
   // avoids a doubleheader race against the shared claimedBdlIds set. Budget
   // headroom is no longer the concern (GOAT tier, ~15 calls/min vs 600/min).
   const claimedBdlIds = new Set<number>()
-  const matched: { gamePk: string; homeAbbr: string; awayAbbr: string; bdlGameId: number; props: any[] }[] = []
+  const matched: { gamePk: string; homeAbbr: string; awayAbbr: string; gameKey: string; bdlGameId: number; props: any[] }[] = []
   for (const g of pendingGames) {
     const homeTeam = g.teams?.home?.team?.name || ''
     const awayTeam = g.teams?.away?.team?.name || ''
     const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
     const awayAbbr = g.teams?.away?.team?.abbreviation || awayTeam.split(' ').pop() || ''
+    const gameNum = g.gameNumber ?? 1
+    const gameKey = canonGameKey(gameNum > 1 ? `${awayAbbr}@${homeAbbr}-G${gameNum}` : `${awayAbbr}@${homeAbbr}`)
     const bdlGame = matchBDLGame(bdlGames.filter(bg => !claimedBdlIds.has(bg.id)), homeTeam, awayTeam, g.gameDate)
     if (!bdlGame) continue
     claimedBdlIds.add(bdlGame.id)
     const props = await getBDLPlayerProps(bdlGame.id)
-    matched.push({ gamePk: String(g.gamePk), homeAbbr, awayAbbr, bdlGameId: bdlGame.id, props })
+    matched.push({ gamePk: String(g.gamePk), homeAbbr, awayAbbr, gameKey, bdlGameId: bdlGame.id, props })
   }
 
   const allPlayerIds = matched.flatMap(x => x.props.map((p: any) => p.player_id))
@@ -107,6 +125,30 @@ export async function GET(req: Request) {
     }
   })
 
+  // Unified opening-price capture — whichever pipeline (this cron, or the
+  // Browserbase-driven fanduel-import route) observes a real .fanduel price
+  // for a given (game, player, market) FIRST becomes the permanent baseline;
+  // market_opening_prices' own PK + ignoreDuplicates below is what actually
+  // enforces that, so this can safely fire on every single one-minute poll —
+  // every later attempt for an already-captured key is just a harmless no-op.
+  // Zips against `matched` (not `upserts`, which has no gameKey field of its
+  // own — that's not a real pregame_odds_snapshots column) by shared index,
+  // since upserts was built via a straight 1:1 .map over matched above.
+  const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; opening_price: number; opening_source: 'bdl' }[] = []
+  upserts.forEach((u, i) => {
+    const gameKey = matched[i].gameKey
+    for (const entry of Object.values(u.prop_map)) {
+      const nn = normName((entry as any).name || '')
+      if (!nn) continue
+      for (const market of BDL_OPENING_MARKETS) {
+        const price = (entry as any)[market]?.fanduel
+        if (typeof price === 'number') {
+          openingRows.push({ game_date: date, game_key: gameKey, name_norm: nn, market, opening_price: price, opening_source: 'bdl' })
+        }
+      }
+    }
+  })
+
   if (upserts.length) {
     const { error } = await admin.from('pregame_odds_snapshots').upsert(upserts, { onConflict: 'game_pk' })
     if (error) console.error('[bdl-odds cron] snapshot upsert failed', error)
@@ -122,5 +164,12 @@ export async function GET(req: Request) {
     if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', historyError)
   }
 
-  return NextResponse.json({ date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length })
+  if (openingRows.length) {
+    const { error: openingError } = await admin
+      .from('market_opening_prices')
+      .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market', ignoreDuplicates: true })
+    if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', openingError)
+  }
+
+  return NextResponse.json({ date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, openingRowAttempts: openingRows.length })
 }
