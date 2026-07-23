@@ -82,6 +82,17 @@ export async function GET(req: Request) {
   const lineupUpserts: { game_pk: number; side: 'home' | 'away'; team_abbr: string; confirmed: boolean; lineup_signature: string | null }[] = []
   const statusUpserts: { game_pk: number; status: string }[] = []
   const scrapeQueueInserts: { game_pk: number; ready_at: string }[] = []
+  // A scratch/swap on an ALREADY-confirmed lineup (e.g. Ketel Marte out,
+  // Tyler Locklear in) never re-triggered a scrape before — confirmed live:
+  // the incoming player had zero FanDuel odds captured hours later, with the
+  // next fixed-schedule sweep over an hour away. Unlike scrapeQueueInserts
+  // (fires once per game per day, deliberately a no-op on conflict so the
+  // routine 5-min poll never resets an already-dispatched row), this is a
+  // real UPDATE-on-conflict upsert — it must actually reset dispatched_at
+  // back to null so dispatch-scrapes' `is('dispatched_at', null)` claim
+  // query picks the game up again, since scrape_dispatch_queue is one row
+  // per game_pk and the initial confirm already claimed it.
+  const scrapeRequeues: { game_pk: number; ready_at: string; dispatched_at: null; retry_count: number }[] = []
 
   for (const g of games) {
     const sides: { side: 'home' | 'away'; abbr: string; confirmed: boolean; lineup: LineupPlayer[] }[] = [
@@ -94,8 +105,9 @@ export async function GET(req: Request) {
     // queue a scrape for dispatch-scrapes to pick up then, rather than
     // relying only on the coarse fixed-schedule sweep. Only fires once per
     // game per day (checked against PREVIOUS run's state, and the queue
-    // insert itself is a no-op on conflict) — a later lineup change
-    // (scratch/swap) doesn't re-trigger it.
+    // insert itself is a no-op on conflict). A LATER scratch/swap gets its
+    // own re-trigger further down (see scrapeRequeues) — the incoming
+    // player's own props need a fresh scrape too, not just the notification.
     const wasFullyConfirmed = (lineupStateByKey.get(`${g.gamePk}-home`)?.confirmed ?? false) && (lineupStateByKey.get(`${g.gamePk}-away`)?.confirmed ?? false)
     const isFullyConfirmedNow = g.homeLineupConfirmed && g.awayLineupConfirmed
     if (!wasFullyConfirmed && isFullyConfirmedNow && isPregame(g.status)) {
@@ -116,6 +128,9 @@ export async function GET(req: Request) {
         lineupEvents++
         const change = describeLineupChange(prev.lineup_signature, signature, s.lineup)
         notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Lineup Change${change ? `: ${change}` : ''}`, `/dugout?date=${date}`, getTeamLogoUrl(s.abbr))
+        if (isPregame(g.status)) {
+          scrapeRequeues.push({ game_pk: g.gamePk, ready_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), dispatched_at: null, retry_count: 0 })
+        }
       }
     }
 
@@ -130,8 +145,9 @@ export async function GET(req: Request) {
   if (lineupUpserts.length) await admin.from('lineup_confirmation_state').upsert(lineupUpserts, { onConflict: 'game_pk,side' })
   if (statusUpserts.length) await admin.from('game_status_state').upsert(statusUpserts, { onConflict: 'game_pk' })
   if (scrapeQueueInserts.length) await admin.from('scrape_dispatch_queue').upsert(scrapeQueueInserts, { onConflict: 'game_pk', ignoreDuplicates: true })
+  if (scrapeRequeues.length) await admin.from('scrape_dispatch_queue').upsert(scrapeRequeues, { onConflict: 'game_pk' })
 
-  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length })
+  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length, scrapesRequeued: scrapeRequeues.length })
 }
 
 const lineupSignature = (lineup: LineupPlayer[]) => lineup.map(p => p.mlb_id).sort((a, b) => a - b).join(',')
