@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { X } from 'lucide-react'
@@ -78,7 +79,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
         {loading ? 'Loading…' : label}
       </Button>
       {error && <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>{error}</p>}
-      {sessionId && (
+      {sessionId && createPortal(
         // The overlay itself is the ONE scrollable element (not a flex-
         // centered overlay wrapping a separately-scrollable card) — on
         // mobile the card is just tall in-flow content the overlay scrolls
@@ -89,6 +90,21 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
         // cross-origin Whop iframe weren't reliably reaching it on a real
         // phone — fewer nested scroll containers is the standard fix for
         // that class of bug.
+        //
+        // Portaled to document.body — reported live on desktop: every
+        // pricing card is wrapped in CometCard, whose tilt effect sets a
+        // real inline `transform` on the card div (present at rest too,
+        // post-hover: mouseleave resets it to an identity `rotateX(0deg)…`
+        // string, not removes it) plus `overflow: hidden`. A `transform`
+        // on an ancestor — any value, including an identity one — makes
+        // that ancestor the containing block for a `position: fixed`
+        // descendant per spec, so this modal was rendering "fixed" to the
+        // CARD, then getting clipped by the card's own overflow:hidden,
+        // instead of covering the real viewport. Never showed up on mobile
+        // since CometCard's tilt only ever fires on mousemove, which touch
+        // interaction never triggers. Rendering outside the card's DOM
+        // subtree entirely is the only fix that holds regardless of what
+        // any ancestor's CSS does.
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
           display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center',
@@ -132,7 +148,8 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
               fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
