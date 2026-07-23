@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { useCustomEmojis } from '@/lib/emoji'
+import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@/lib/tiers'
 import { Badge } from '@/components/ui/badge'
 
@@ -176,10 +177,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  async function deleteNotif(id: string) {
+  async function deleteNotif(ids: string | string[]) {
+    const idList = Array.isArray(ids) ? ids : [ids]
     const prev = notifications
-    setNotifications(p => p.filter(n => n.id !== id))
-    const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', user!.id)
+    setNotifications(p => p.filter(n => !idList.includes(n.id)))
+    const { error } = await supabase.from('notifications').delete().in('id', idList).eq('user_id', user!.id)
     if (error) setNotifications(prev) // restore — it's still in the DB
   }
 
@@ -346,10 +348,21 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       You're all caught up
                     </div>
                   ) : (
-                    notifications.map(n => {
+                    collapseConsecutiveFollows(notifications).map(entry => {
+                      // A back-to-back run of follow notifications collapses
+                      // into one compact row here too, same as the full
+                      // /notifications page — otherwise picking up several
+                      // followers in a short span buries everything else in
+                      // this small dropdown under one row per follower.
+                      const isGroup = Array.isArray(entry)
+                      const n = isGroup ? entry[0] : entry
+                      const groupIds = isGroup ? entry.map(x => x.id) : [n.id]
+                      const othersCount = isGroup ? entry.length - 1 : 0
                       const Icon = NOTIF_ICONS[n.type] ?? Bell
                       const actorName = n.actor?.display_name || n.actor?.username
-                      const text = (actorName ? `${actorName} ` : '') + (n.message || n.body || 'interacted with you')
+                      const text = isGroup
+                        ? `${actorName ? `${actorName} ` : ''}and ${othersCount} other${othersCount === 1 ? '' : 's'} followed you`
+                        : (actorName ? `${actorName} ` : '') + (n.message || n.body || 'interacted with you')
                       // Same badge logic as the full /notifications page —
                       // actual emoji (or custom emoji image) for reactions,
                       // team logo for pick results, generic type icon
@@ -406,7 +419,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                             </Link>
                           ) : inner}
                           <button
-                            onClick={e => { e.preventDefault(); e.stopPropagation(); deleteNotif(n.id) }}
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); deleteNotif(groupIds) }}
                             aria-label="Dismiss notification"
                             style={{
                               position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%',

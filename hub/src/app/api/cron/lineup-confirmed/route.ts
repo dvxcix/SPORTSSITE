@@ -9,6 +9,18 @@ export const maxDuration = 60
 
 type Admin = ReturnType<typeof createAdminClient>
 
+async function fetchAllUsers(admin: Admin): Promise<{ id: string; notification_settings: unknown }[]> {
+  const users: { id: string; notification_settings: unknown }[] = []
+  const PAGE = 1000
+  for (let offset = 0; ; offset += PAGE) {
+    const { data } = await admin.from('users').select('id, notification_settings').range(offset, offset + PAGE - 1)
+    if (!data?.length) break
+    users.push(...data)
+    if (data.length < PAGE) break
+  }
+  return users
+}
+
 // Runs every 5 minutes (see vercel.json) all day — lineups can post anywhere
 // from early morning (day games) to a couple hours before a late start, so
 // there's no single "pregame window" worth special-casing; the underlying
@@ -36,7 +48,7 @@ export async function GET(req: Request) {
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ ok: true, games: 0, lineupEvents: 0, statusEvents: 0, notified: 0 })
 
-  const [{ data: lineupStateRows }, { data: statusStateRows }, { data: allUsers }] = await Promise.all([
+  const [{ data: lineupStateRows }, { data: statusStateRows }, allUsers] = await Promise.all([
     admin.from('lineup_confirmation_state').select('game_pk, side, confirmed, lineup_signature').in('game_pk', games.map(g => g.gamePk)),
     admin.from('game_status_state').select('game_pk, status').in('game_pk', games.map(g => g.gamePk)),
     // Fetched once per run (not once per event) — anyone who hasn't
@@ -45,7 +57,16 @@ export async function GET(req: Request) {
     // NotificationSettingsForm). This is a broadcast, not personal
     // activity, so — unlike follow/comment/etc, which always insert — an
     // explicit opt-out means no row at all, not just no push.
-    admin.from('users').select('id, notification_settings'),
+    //
+    // Paginated in fixed-size pages rather than one unbounded select —
+    // confirmed live this silently capped at 1,000 rows (Supabase's
+    // project-level PostgREST max-rows setting) against a real 1,800-user
+    // table with no ORDER BY, so which ~1,000 users made it into
+    // recipientIds could shift between runs. A real admin account with
+    // lineup_confirmed explicitly enabled had ZERO of these notifications
+    // in six days despite 109,856 being sent — same bug class already
+    // found and fixed in the dugout opening-price query.
+    fetchAllUsers(admin),
   ])
   const recipientIds = (allUsers ?? [])
     .filter(u => ((u.notification_settings as Record<string, boolean> | null) ?? {}).lineup_confirmed !== false)

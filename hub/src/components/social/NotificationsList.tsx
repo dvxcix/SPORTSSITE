@@ -42,10 +42,10 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
   const [notifications, setNotifications] = useState(initialNotifications)
   const [clearing, setClearing] = useState(false)
 
-  async function deleteOne(id: string) {
+  async function deleteMany(ids: string[]) {
     const prev = notifications
-    setNotifications(p => p.filter(n => n.id !== id))
-    const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', userId)
+    setNotifications(p => p.filter(n => !ids.includes(n.id)))
+    const { error } = await supabase.from('notifications').delete().in('id', ids).eq('user_id', userId)
     if (error) setNotifications(prev) // still in the DB — restore instead of pretending it's gone
   }
 
@@ -65,6 +65,8 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
     const key = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff < 7 ? 'This Week' : 'Earlier'
     groups[key] = [...(groups[key] ?? []), n]
   }
+  const groupedGroups: Record<string, (NotifRow | NotifRow[])[]> = {}
+  for (const [label, items] of Object.entries(groups)) groupedGroups[label] = collapseConsecutiveFollows(items)
 
   if (notifications.length === 0) {
     return (
@@ -92,21 +94,50 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {Object.entries(groups).map(([label, items]) => (
+        {Object.entries(groupedGroups).map(([label, entries]) => (
           <div key={label}>
             <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
               {label}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {items.map(n => (
-                <NotificationRow key={n.id} n={n} onDelete={() => deleteOne(n.id)} />
-              ))}
+              {entries.map(entry => Array.isArray(entry)
+                ? <GroupedFollowRow key={entry[0].id} items={entry} onDelete={() => deleteMany(entry.map(n => n.id))} />
+                : <NotificationRow key={entry.id} n={entry} onDelete={() => deleteMany([entry.id])} />
+              )}
             </div>
           </div>
         ))}
       </div>
     </div>
   )
+}
+
+// Back-to-back follow notifications (the common case — someone posts
+// something popular and picks up several new followers within minutes of
+// each other) read as noisy clutter one row per follower. Collapses any
+// consecutive run of type==='follow' within a day-bucket into a single
+// grouped entry ("X followed you + N others"); a follow interrupted by a
+// different notification type starts a new run rather than merging across
+// it, so the list still reads in real chronological order. Non-follow
+// notifications, and lone follows, pass through unchanged.
+export function collapseConsecutiveFollows(items: NotifRow[]): (NotifRow | NotifRow[])[] {
+  const out: (NotifRow | NotifRow[])[] = []
+  let run: NotifRow[] = []
+  const flushRun = () => {
+    if (run.length === 1) out.push(run[0])
+    else if (run.length > 1) out.push(run)
+    run = []
+  }
+  for (const n of items) {
+    if (n.type === 'follow') {
+      run.push(n)
+    } else {
+      flushRun()
+      out.push(n)
+    }
+  }
+  flushRun()
+  return out
 }
 
 function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void }) {
@@ -191,6 +222,80 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
         <button
           onClick={onDelete}
           aria-label="Dismiss notification"
+          style={{
+            position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: '50%',
+            background: 'var(--surface-3)', border: 'none', color: 'var(--text-3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--red)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}>
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// A collapsed run of consecutive follow notifications — same visual
+// language as a single NotificationRow (avatar + badge + text row), but the
+// avatar is the most recent follower's and the message names them plus how
+// many others. Clicking still goes to that most-recent follower's profile;
+// dismissing removes every underlying notification in the group at once.
+function GroupedFollowRow({ items, onDelete }: { items: NotifRow[]; onDelete: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  const latest = items[0]
+  const actorName = latest.actor?.display_name || latest.actor?.username
+  const othersCount = items.length - 1
+  const anyUnread = items.some(n => !n.read)
+  const Icon = NOTIF_ICONS.follow ?? Bell
+
+  const inner = (
+    <>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
+          {(latest.actor?.avatar_url || latest.data?.avatar_url) && (
+            <img src={latest.actor?.avatar_url || latest.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          )}
+        </div>
+        <div style={{
+          position: 'absolute', bottom: -3, right: -3, width: 18, height: 18, borderRadius: '50%',
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon size={10} style={{ color: 'var(--accent)' }} />
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13.5, color: 'var(--text-1)', lineHeight: 1.45 }}>
+          {actorName && <span style={{ fontWeight: 800 }}>{actorName} </span>}
+          and {othersCount} other{othersCount === 1 ? '' : 's'} followed you
+        </p>
+        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(latest.created_at)}</p>
+      </div>
+      {anyUnread && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', marginTop: 6, flexShrink: 0 }} />}
+    </>
+  )
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
+        borderRadius: 'var(--radius)', border: anyUnread ? '1px solid var(--border)' : '1px solid transparent',
+        background: anyUnread ? 'var(--surface-2)' : 'transparent', transition: 'background 130ms',
+      }}>
+      {latest.link ? (
+        <Link href={latest.link} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
+          {inner}
+        </Link>
+      ) : (
+        <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>{inner}</div>
+      )}
+      {hovered && (
+        <button
+          onClick={onDelete}
+          aria-label="Dismiss notifications"
           style={{
             position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: '50%',
             background: 'var(--surface-3)', border: 'none', color: 'var(--text-3)',
