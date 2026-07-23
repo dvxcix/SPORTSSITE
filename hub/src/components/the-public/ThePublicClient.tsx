@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { PlayerLink } from '@/components/players/PlayerPageClient'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
@@ -254,8 +255,36 @@ function GameSelector({ games, value, onChange }: { games: GameOption[]; value: 
 export function ThePublicClient({ date }: { date: string }) {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState<CategoryKey>('hr')
-  const [activeGame, setActiveGame] = useState<string>('all')
+
+  // Reported live (same fix as Dugout/Slate Breakdown/Synergy): refreshing
+  // always lost whichever category/game tab you'd picked, landing back on
+  // HR/All Games. Restored from the URL on mount, kept in sync on every
+  // change so a refresh (or a copied link) lands back exactly here.
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [activeCategory, setActiveCategoryState] = useState<CategoryKey>(() => {
+    const v = searchParams.get('cat')
+    return (CATEGORIES.some(c => c.key === v) ? v : 'hr') as CategoryKey
+  })
+  const [activeGame, setActiveGameState] = useState<string>(() => searchParams.get('game') ?? 'all')
+
+  const updateParams = useCallback((next: { cat?: CategoryKey; game?: string }) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (next.cat !== undefined) { if (next.cat === 'hr') params.delete('cat'); else params.set('cat', next.cat) }
+    if (next.game !== undefined) { if (next.game === 'all') params.delete('game'); else params.set('game', next.game) }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [pathname, router, searchParams])
+
+  const setActiveCategory = useCallback((cat: CategoryKey) => {
+    setActiveCategoryState(cat)
+    updateParams({ cat })
+  }, [updateParams])
+
+  const setActiveGame = useCallback((gameKey: string) => {
+    setActiveGameState(gameKey)
+    updateParams({ game: gameKey })
+  }, [updateParams])
 
   useEffect(() => {
     let cancelled = false
@@ -301,6 +330,15 @@ export function ThePublicClient({ date }: { date: string }) {
   const games: GameOption[] = useMemo(() => (data?.games ?? []).map((g: any) => ({
     gameKey: g.gameKey, awayAbbr: g.awayAbbr, homeAbbr: g.homeAbbr, gameDate: g.gameDate ?? null,
   })), [data?.games])
+
+  // A game restored from a stale URL (yesterday's slate, or a date-strip
+  // switch away from the day it was picked on) that no longer exists today
+  // would otherwise silently filter every row out with no visible games
+  // selected in the dropdown either.
+  useEffect(() => {
+    if (!data?.games) return
+    setActiveGameState(prev => prev === 'all' || games.some(g => g.gameKey === prev) ? prev : 'all')
+  }, [data?.games, games])
 
   const rowsByCategory = useMemo(() => {
     const out: Record<CategoryKey, PublicRow[]> = {

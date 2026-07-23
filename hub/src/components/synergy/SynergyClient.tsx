@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { AffinityMatchupCards, type Evidence } from '@/components/dugout/AffinityMatchupScore'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
@@ -118,14 +119,50 @@ export function SynergyClient() {
   const [matchups, setMatchups] = useState<SynergyMatchup[] | null>(null)
   const [games, setGames] = useState<SynergyGame[]>([])
   const [error, setError] = useState(false)
-  const [sortMode, setSortMode] = useState<SortMode>('best')
-  const [activeGame, setActiveGame] = useState('all')
+
+  // Reported live (same fix as Dugout/Slate Breakdown): refreshing lost
+  // whichever game/sort you'd picked, always landing back on "All Games" /
+  // "Best of Either". Restored from the URL on mount, kept in sync on every
+  // change so a refresh (or a copied link) lands back exactly here.
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [sortMode, setSortModeState] = useState<SortMode>(() => {
+    const v = searchParams.get('sort')
+    return v === 'batter' || v === 'pitcher' ? v : 'best'
+  })
+  const [activeGame, setActiveGameState] = useState(() => searchParams.get('game') ?? 'all')
+
+  const updateParams = useCallback((next: { game?: string; sort?: SortMode }) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (next.game !== undefined) { if (next.game === 'all') params.delete('game'); else params.set('game', next.game) }
+    if (next.sort !== undefined) { if (next.sort === 'best') params.delete('sort'); else params.set('sort', next.sort) }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [pathname, router, searchParams])
+
+  const setActiveGame = useCallback((gameKey: string) => {
+    setActiveGameState(gameKey)
+    updateParams({ game: gameKey })
+  }, [updateParams])
+
+  const setSortMode = useCallback((mode: SortMode) => {
+    setSortModeState(mode)
+    updateParams({ sort: mode })
+  }, [updateParams])
 
   useEffect(() => {
     let cancelled = false
     fetch('/api/synergy/today')
       .then(r => r.json())
-      .then(d => { if (!cancelled) { setMatchups(d.matchups ?? []); setGames(d.games ?? []) } })
+      .then(d => {
+        if (cancelled) return
+        const loadedGames: SynergyGame[] = d.games ?? []
+        setMatchups(d.matchups ?? [])
+        setGames(loadedGames)
+        // A game restored from a stale URL (e.g. yesterday's slate) that no
+        // longer exists today would otherwise silently filter every row out.
+        setActiveGameState(prev => prev === 'all' || loadedGames.some(g => g.gameKey === prev) ? prev : 'all')
+      })
       .catch(() => { if (!cancelled) setError(true) })
     return () => { cancelled = true }
   }, [])

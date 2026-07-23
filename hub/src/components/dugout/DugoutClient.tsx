@@ -1,6 +1,6 @@
 'use client'
-import React, { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip } from '@/components/ui/tooltip-card'
@@ -2265,8 +2265,21 @@ export function DugoutClient({ date }: { date: string }) {
   // today. Read once per navigation, not on every render, since the value
   // only matters right after the data load below picks the right game.
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const highlightMlbId = searchParams.get('highlight')
   const highlightId = highlightMlbId ? parseInt(highlightMlbId, 10) : null
+
+  // Reported live: hitting refresh always landed back on the first game of
+  // the day, even after picking a specific one — every other click here
+  // only ever touched React state, never the URL, so there was nothing for
+  // a fresh page load to recover. Captured once via a ref (not read
+  // reactively off searchParams) so restoring it on initial load doesn't
+  // fight with setActiveGame's own router.replace calls below — including
+  // searchParams as a useEffect dependency here would re-trigger this
+  // fetch effect on every tab click, since replace() gives it a new object
+  // identity each time.
+  const initialGameParamRef = useRef(searchParams.get('game'))
 
   useEffect(() => {
     setLoading(true); setErr(null); setData(null); setActive(null)
@@ -2274,18 +2287,34 @@ export function DugoutClient({ date }: { date: string }) {
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
       .then(d => {
         setData(d)
-        // If a specific player was linked to, land on whichever game he's
-        // actually in tonight instead of always the first game of the day.
-        const targetGame = highlightId != null
+        // Restoring the exact game the user was on beats a highlight deep
+        // link beats just defaulting to the first game of the day.
+        const restoredGame = initialGameParamRef.current
+          ? d.games?.find((g: any) => g.gameKey === initialGameParamRef.current)
+          : null
+        const targetGame = restoredGame ?? (highlightId != null
           ? d.games?.find((g: any) =>
               g.homeLineup?.some((p: any) => p.mlb_id === highlightId) ||
               g.awayLineup?.some((p: any) => p.mlb_id === highlightId))
-          : null
+          : null)
         setActive((targetGame ?? d.games?.[0])?.gameKey ?? null)
         setLoading(false)
       })
       .catch(e => { setErr(String(e)); setLoading(false) })
   }, [date, highlightId])
+
+  // The one place that actually changes which game is active — keeps the
+  // URL's ?game= in lockstep so a refresh (or a copy-pasted link) lands
+  // back on the exact same game instead of always the first one. `replace`
+  // (not push) so flipping between games all day doesn't fill up back-
+  // button history with dozens of entries.
+  const setActiveGame = useCallback((gameKey: string | null) => {
+    setActive(gameKey)
+    const params = new URLSearchParams(searchParams.toString())
+    if (gameKey) params.set('game', gameKey)
+    else params.delete('game')
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [pathname, router, searchParams])
 
   const splitMap   = useMemo(() => buildSplitMap(data?.statSplits    ?? []), [data?.statSplits])
   const timingMap  = useMemo(() => buildTimingMap(data?.timingSplits  ?? []), [data?.timingSplits])
@@ -2455,7 +2484,7 @@ export function DugoutClient({ date }: { date: string }) {
           const isLive = g.status === 'Live'
           const isFin  = g.status === 'Final'
           return (
-            <button key={g.gameKey} onClick={() => setActive(g.gameKey)} style={{
+            <button key={g.gameKey} onClick={() => setActiveGame(g.gameKey)} style={{
               display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
               border: isAct ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: isAct ? 'var(--accent-dim)' : 'var(--surface)',
@@ -2508,7 +2537,7 @@ export function DugoutClient({ date }: { date: string }) {
         <HrLeaderboard
           hits={data.hrFeed ?? []}
           teamByMlbId={teamByMlbId}
-          onJumpToGame={gk => { setActive(gk); setShowHrBoard(false) }}
+          onJumpToGame={gk => { setActiveGame(gk); setShowHrBoard(false) }}
           onClose={() => setShowHrBoard(false)}
         />
       )}
@@ -2517,7 +2546,7 @@ export function DugoutClient({ date }: { date: string }) {
         <NearHrLeaderboard
           nearHrs={data.nearHr ?? []}
           teamByMlbId={teamByMlbId}
-          onJumpToGame={gk => { setActive(gk); setShowNearHrBoard(false) }}
+          onJumpToGame={gk => { setActiveGame(gk); setShowNearHrBoard(false) }}
           onClose={() => setShowNearHrBoard(false)}
         />
       )}
