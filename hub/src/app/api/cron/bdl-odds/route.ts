@@ -126,24 +126,32 @@ export async function GET(req: Request) {
   })
 
   // Unified opening-price capture — whichever pipeline (this cron, or the
-  // Browserbase-driven fanduel-import route) observes a real .fanduel price
-  // for a given (game, player, market) FIRST becomes the permanent baseline;
+  // Browserbase-driven fanduel-import route) observes a real price for a
+  // given (game, player, market, BOOK) FIRST becomes the permanent baseline;
   // market_opening_prices' own PK + ignoreDuplicates below is what actually
   // enforces that, so this can safely fire on every single one-minute poll —
   // every later attempt for an already-captured key is just a harmless no-op.
+  // Every vendor BDL reports for a market gets its own opener, not just
+  // fanduel — BetMGM's own live price now comes straight through BDL same as
+  // every other book (confirmed live: DugoutClient's sa_mgm/hr2_mgm current
+  // price already reads props.sa.betmgm/props.hr2.betmgm, not a separate
+  // scrape), so it gets the exact same first-observation-wins treatment.
   // Zips against `matched` (not `upserts`, which has no gameKey field of its
   // own — that's not a real pregame_odds_snapshots column) by shared index,
   // since upserts was built via a straight 1:1 .map over matched above.
-  const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; opening_price: number; opening_source: 'bdl' }[] = []
+  const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; book: string; opening_price: number; opening_source: 'bdl' }[] = []
   upserts.forEach((u, i) => {
     const gameKey = matched[i].gameKey
     for (const entry of Object.values(u.prop_map)) {
       const nn = normName((entry as any).name || '')
       if (!nn) continue
       for (const market of BDL_OPENING_MARKETS) {
-        const price = (entry as any)[market]?.fanduel
-        if (typeof price === 'number') {
-          openingRows.push({ game_date: date, game_key: gameKey, name_norm: nn, market, opening_price: price, opening_source: 'bdl' })
+        const vendorMap = (entry as any)[market]
+        if (!vendorMap) continue
+        for (const [book, price] of Object.entries(vendorMap)) {
+          if (typeof price === 'number') {
+            openingRows.push({ game_date: date, game_key: gameKey, name_norm: nn, market, book, opening_price: price, opening_source: 'bdl' })
+          }
         }
       }
     }
@@ -167,7 +175,7 @@ export async function GET(req: Request) {
   if (openingRows.length) {
     const { error: openingError } = await admin
       .from('market_opening_prices')
-      .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market', ignoreDuplicates: true })
+      .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market,book', ignoreDuplicates: true })
     if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', openingError)
   }
 

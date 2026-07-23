@@ -56,47 +56,52 @@ const getCachedGapOdds = unstable_cache(
 
 // Opening baselines now come from the unified market_opening_prices table
 // (see /api/cron/bdl-odds and /api/admin/fanduel-import) instead of the old
-// fanduel_gap_odds_opening — that table's own capture logic had a real bug
-// (existence-checked per GAME instead of per MARKET, so the first pass of
-// the day permanently locked out every market FanDuel doesn't post until
-// later) and had no concept of a BDL-sourced opener at all. Whichever
-// pipeline observed a real price for a given (game, player, market) FIRST is
-// what's stored here — this route no longer cares which one it was.
-// BetMGM stays on its own separate opening table (mgm_gap_odds_opening) —
-// that automation is on hold with no live writer to unify against.
+// fanduel_gap_odds_opening/mgm_gap_odds_opening — those tables' own capture
+// logic had a real bug (existence-checked per GAME instead of per MARKET, so
+// the first pass of the day permanently locked out every market FanDuel
+// doesn't post until later) and had no concept of a BDL-sourced opener at
+// all. Whichever pipeline observed a real price for a given (game, player,
+// market, BOOK) FIRST is what's stored here. BetMGM is included on equal
+// footing, not carved out — its current price already comes straight
+// through BDL (props.sa.betmgm/props.hr2.betmgm, see DugoutClient's
+// sa_mgm/hr2_mgm), not a separate scrape, so its opener gets the exact same
+// first-observation-wins treatment as every other book.
 const getCachedGapOddsOpening = unstable_cache(
   async (date: string) => {
     const admin = createAdminClient()
-    const [{ data: openRows }, { data: mgmOpenRows }] = await Promise.all([
-      admin.from('market_opening_prices')
-        .select('game_key, name_norm, market, opening_price')
-        .eq('game_date', date)
-        .range(0, 19999),
-      admin.from('mgm_gap_odds_opening')
-        .select('game_key, name_norm, sa_mgm, hr2_mgm')
-        .eq('game_date', date)
-        .range(0, 19999),
-    ])
-    return { openRows: openRows ?? [], mgmOpenRows: mgmOpenRows ?? [] }
+    const { data: openRows } = await admin
+      .from('market_opening_prices')
+      .select('game_key, name_norm, market, book, opening_price')
+      .eq('game_date', date)
+      .range(0, 19999)
+    return { openRows: openRows ?? [] }
   },
-  ['dugout-gap-odds-opening-v2'],
+  ['dugout-gap-odds-opening-v3'],
   { revalidate: 60 }
 )
 
-// Bare market key (shared across BDL/FanDuel-gap, see bdl-odds'
-// BDL_OPENING_MARKETS + fanduel-import's COL_TO_MARKET) -> the camelCase
-// field name already used on entry.open.* throughout this route and
-// consumed by BatterCostClient/DugoutClient. Existing *Fd-suffixed names are
-// kept as-is so no client change was needed for the markets that already
-// had opening tracking; hits/hits2/runs/runs2/stolenBases/stolenBases2 are
-// new — these had ZERO opening/delta tracking anywhere before this table.
-const MARKET_TO_OPEN_FIELD: Record<string, string> = {
-  fhr: 'fhr', sa: 'saFd', hr2: 'hr2Fd', singles: 'sngFd', doubles: 'dblFd', triples: 'triFd',
-  rbi: 'rbiFd', rbi2: 'rbi2Fd', rbi3: 'rbi3Fd', tb: 'tbFd', tb3: 'tb3Fd', tb4: 'tb4Fd', tb5: 'tb5Fd',
-  hrr: 'hrrFd', laser105: 'laser105', laser110: 'laser110', moonshot: 'moonshot', pa1: 'pa1', hrMl: 'hrMl',
-  combo1Min: 'combo1Min', combo2Min: 'combo2Min',
-  hits: 'hits', hits2: 'hits2', runs: 'runs', runs2: 'runs2',
-  stolen_bases: 'stolenBases', stolen_bases2: 'stolenBases2',
+// `${market}:${book}` -> the camelCase field name already used on
+// entry.open.* throughout this route and consumed by BatterCostClient/
+// DugoutClient. Existing *Fd-suffixed fanduel names are kept as-is so no
+// client change was needed for the markets that already had opening
+// tracking; hits/hits2/runs/runs2/stolenBases/stolenBases2 are new — these
+// had ZERO opening/delta tracking anywhere before this table. sa:betmgm/
+// hr2:betmgm revive the saMgm/hr2Mgm fields DugoutClient's OddsCell already
+// reads, now sourced from BDL's own live betmgm price instead of the old
+// paused mgm-import scrape. Every other book (caesars/fanatics/betrivers/
+// etc.) is still captured into the table for future use, just not yet
+// surfaced to a client field.
+const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
+  'fhr:fanduel': 'fhr', 'sa:fanduel': 'saFd', 'hr2:fanduel': 'hr2Fd',
+  'singles:fanduel': 'sngFd', 'doubles:fanduel': 'dblFd', 'triples:fanduel': 'triFd',
+  'rbi:fanduel': 'rbiFd', 'rbi2:fanduel': 'rbi2Fd', 'rbi3:fanduel': 'rbi3Fd',
+  'tb:fanduel': 'tbFd', 'tb3:fanduel': 'tb3Fd', 'tb4:fanduel': 'tb4Fd', 'tb5:fanduel': 'tb5Fd',
+  'hrr:fanduel': 'hrrFd', 'laser105:fanduel': 'laser105', 'laser110:fanduel': 'laser110',
+  'moonshot:fanduel': 'moonshot', 'pa1:fanduel': 'pa1', 'hrMl:fanduel': 'hrMl',
+  'combo1Min:fanduel': 'combo1Min', 'combo2Min:fanduel': 'combo2Min',
+  'hits:fanduel': 'hits', 'hits2:fanduel': 'hits2', 'runs:fanduel': 'runs', 'runs2:fanduel': 'runs2',
+  'stolen_bases:fanduel': 'stolenBases', 'stolen_bases2:fanduel': 'stolenBases2',
+  'sa:betmgm': 'saMgm', 'hr2:betmgm': 'hr2Mgm',
 }
 
 // ── mlb-party Supabase ────────────────────────────────────────────────────────
@@ -570,17 +575,16 @@ export async function GET(req: Request) {
   // Ultimate-only (not just advanced+) — BatterCostClient's open-vs-current
   // delta view is a Dugout/Batter Cost-exclusive analysis, not something
   // The Public's advanced-tier access should also carry in its response.
-  // gameKey -> name_norm -> bare market key -> opening price (unified across
-  // whichever pipeline captured it first; see market_opening_prices).
-  const fanduelGapOpeningByGameKey: Record<string, Record<string, Record<string, number>>> = {}
-  const mgmGapOpeningByGameKey: Record<string, Record<string, any>> = {}
+  // gameKey -> name_norm -> `${market}:${book}` -> opening price (unified
+  // across whichever pipeline/book captured it first; see
+  // market_opening_prices).
+  const openingByGameKey: Record<string, Record<string, Record<string, number>>> = {}
   if (admin && isUltimate) {
-    const { openRows, mgmOpenRows } = await getCachedGapOddsOpening(date)
+    const { openRows } = await getCachedGapOddsOpening(date)
     for (const r of openRows) {
-      const byName = (fanduelGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})
-      ;(byName[r.name_norm] ??= {})[r.market] = Number(r.opening_price)
+      const byName = (openingByGameKey[canonGameKey(r.game_key)] ??= {})
+      ;(byName[r.name_norm] ??= {})[`${r.market}:${r.book}`] = Number(r.opening_price)
     }
-    for (const r of mgmOpenRows) (mgmGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
   // 3. Pitcher splits (needs pitcher IDs from schedule)
@@ -666,8 +670,7 @@ export async function GET(req: Request) {
     const gameKey = canonGameKey(gameNum > 1 ? `${awayAbbr}@${homeAbbr}-G${gameNum}` : `${awayAbbr}@${homeAbbr}`)
     const fanduelGapByName = fanduelGapByGameKey[gameKey] ?? {}
     const mgmGapByName = mgmGapByGameKey[gameKey] ?? {}
-    const fanduelGapOpeningByName = fanduelGapOpeningByGameKey[gameKey] ?? {}
-    const mgmGapOpeningByName = mgmGapOpeningByGameKey[gameKey] ?? {}
+    const openingByName = openingByGameKey[gameKey] ?? {}
 
     const homePitcher = g.teams?.home?.probablePitcher
       ? { id: g.teams.home.probablePitcher.id, name: g.teams.home.probablePitcher.fullName, hand: pitcherHandById.get(g.teams.home.probablePitcher.id) ?? g.teams.home.probablePitcher.pitchHand?.code ?? 'R' }
@@ -753,23 +756,19 @@ export async function GET(req: Request) {
     }
     // Opening/early baselines — attached as `.open` per market so the client
     // can show "opened X → now Y" deltas, mirroring mlb-party's b.open.fd_sa.
-    // Unified across BDL + FanDuel-gap (whichever saw a real price first);
-    // marketPrices is bare-market-key -> price, reshaped through
-    // MARKET_TO_OPEN_FIELD into the same client-facing field names the app
-    // already expects (plus the new hits/hits2/runs/runs2/stolenBases/
-    // stolenBases2 fields, which had no opening tracking before this).
-    for (const [nn, marketPrices] of Object.entries(fanduelGapOpeningByName)) {
+    // Unified across BDL + FanDuel-gap + every book each reports (whichever
+    // saw a real price first); marketBookPrices is `${market}:${book}` ->
+    // price, reshaped through MARKET_BOOK_TO_OPEN_FIELD into the same
+    // client-facing field names the app already expects (plus the new
+    // hits/hits2/runs/runs2/stolenBases/stolenBases2/saMgm/hr2Mgm fields).
+    for (const [nn, marketBookPrices] of Object.entries(openingByName)) {
       const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
       const open = { ...entry.open }
-      for (const [market, price] of Object.entries(marketPrices)) {
-        const field = MARKET_TO_OPEN_FIELD[market]
+      for (const [marketBook, price] of Object.entries(marketBookPrices)) {
+        const field = MARKET_BOOK_TO_OPEN_FIELD[marketBook]
         if (field) open[field] = price
       }
       entry.open = open
-    }
-    for (const [nn, open] of Object.entries(mgmGapOpeningByName)) {
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
-      entry.open = { ...entry.open, saMgm: open.sa_mgm ?? entry.open?.saMgm, hr2Mgm: open.hr2_mgm ?? entry.open?.hr2Mgm }
     }
 
     // Pitcher odds are a Dugout-only feature (PlayerDrillDown's oppPitcher

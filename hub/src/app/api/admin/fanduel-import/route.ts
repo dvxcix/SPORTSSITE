@@ -290,19 +290,19 @@ export async function POST(req: Request) {
     // the unification point with bdl-odds' own opening writes: whichever
     // pipeline sees a real price for a given key first keeps it permanently.
     if (isOpening) {
-      const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; opening_price: number; opening_source: 'fanduel' }[] = []
+      const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; book: string; opening_price: number; opening_source: 'fanduel' }[] = []
       for (const [name_norm, v] of byPlayer.entries()) {
         for (const [col, market] of Object.entries(COL_TO_MARKET)) {
           const price = v.cols[col]
           if (typeof price === 'number') {
-            openingRows.push({ game_date: gameDate, game_key: thisGameKey, name_norm, market, opening_price: price, opening_source: 'fanduel' })
+            openingRows.push({ game_date: gameDate, game_key: thisGameKey, name_norm, market, book: 'fanduel', opening_price: price, opening_source: 'fanduel' })
           }
         }
       }
       if (openingRows.length) {
         const { error: openErr } = await admin
           .from('market_opening_prices')
-          .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market', ignoreDuplicates: true })
+          .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market,book', ignoreDuplicates: true })
         if (!openErr) openingSaved = true
         else console.error(`[fanduel-import] opening-price upsert failed for ${thisGameKey}`, openErr)
       }
