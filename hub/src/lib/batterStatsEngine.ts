@@ -88,22 +88,27 @@ export function computeStatLine(rows: PitchLogRow[]) {
 export const computeBatterStats = computeStatLine
 export type BatterStats = ReturnType<typeof computeStatLine>
 
-// noHeat: pure sample-size columns (Pitches/Usage%/PA) don't have a "good or
-// bad" direction — heat-coloring a count implies a value judgment that
-// doesn't apply, unlike every other column here which is a real performance
-// rate (green = good for whoever's page/row this is — flip `dir` when
-// reading a pitcher's own allowed-contact numbers instead of a batter's).
+// noHeat: raw counts (Pitches/Usage%/PA, and H/1B/2B/3B/HR/BB/K right below
+// them) scale with how many pitches of that type were even thrown, not with
+// how well the batter/pitcher actually performed — a pitch type seen 3x more
+// often naturally racks up more hits/walks/strikeouts regardless of quality,
+// so heat-coloring them (confirmed live: looked "horrible", swinging to
+// fully-saturated colors off tiny, volume-driven samples) is a false signal.
+// Every other column here is a real, sample-size-normalized performance rate
+// (green = good for whoever's page/row this is — flip `dir` when reading a
+// pitcher's own allowed-contact numbers instead of a batter's), which is the
+// only kind of column this heat-map is meant to represent.
 export const BATTER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'hi' | 'lo'; fmt: (v: any) => string; noHeat?: boolean }[] = [
   { key: 'pitches', label: 'Pitches', dir: 'hi', fmt: i0, noHeat: true },
   { key: 'usage', label: 'Usage %', dir: 'hi', fmt: p1, noHeat: true },
   { key: 'pa', label: 'PA', dir: 'hi', fmt: i0, noHeat: true },
-  { key: 'hits', label: 'H', dir: 'hi', fmt: i0 },
-  { key: 'singles', label: '1B', dir: 'hi', fmt: i0 },
-  { key: 'doubles', label: '2B', dir: 'hi', fmt: i0 },
-  { key: 'triples', label: '3B', dir: 'hi', fmt: i0 },
-  { key: 'hr', label: 'HR', dir: 'hi', fmt: i0 },
-  { key: 'bb', label: 'BB', dir: 'hi', fmt: i0 },
-  { key: 'k', label: 'K', dir: 'lo', fmt: i0 },
+  { key: 'hits', label: 'H', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'singles', label: '1B', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'doubles', label: '2B', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'triples', label: '3B', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'hr', label: 'HR', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'bb', label: 'BB', dir: 'hi', fmt: i0, noHeat: true },
+  { key: 'k', label: 'K', dir: 'lo', fmt: i0, noHeat: true },
   { key: 'avg', label: 'AVG', dir: 'hi', fmt: r3 },
   { key: 'obp', label: 'OBP', dir: 'hi', fmt: r3 },
   { key: 'slg', label: 'SLG', dir: 'hi', fmt: r3 },
@@ -123,13 +128,13 @@ export const PITCHER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'h
   { key: 'pitches', label: 'Pitches', dir: 'lo', fmt: i0, noHeat: true },
   { key: 'usage', label: 'Usage %', dir: 'lo', fmt: p1, noHeat: true },
   { key: 'pa', label: 'PA', dir: 'lo', fmt: i0, noHeat: true },
-  { key: 'hits', label: 'H', dir: 'lo', fmt: i0 },
-  { key: 'singles', label: '1B', dir: 'lo', fmt: i0 },
-  { key: 'doubles', label: '2B', dir: 'lo', fmt: i0 },
-  { key: 'triples', label: '3B', dir: 'lo', fmt: i0 },
-  { key: 'hr', label: 'HR', dir: 'lo', fmt: i0 },
-  { key: 'bb', label: 'BB', dir: 'lo', fmt: i0 },
-  { key: 'k', label: 'K', dir: 'hi', fmt: i0 },
+  { key: 'hits', label: 'H', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'singles', label: '1B', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'doubles', label: '2B', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'triples', label: '3B', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'hr', label: 'HR', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'bb', label: 'BB', dir: 'lo', fmt: i0, noHeat: true },
+  { key: 'k', label: 'K', dir: 'hi', fmt: i0, noHeat: true },
   { key: 'avg', label: 'AVG', dir: 'lo', fmt: r3 },
   { key: 'obp', label: 'OBP', dir: 'lo', fmt: r3 },
   { key: 'slg', label: 'SLG', dir: 'lo', fmt: r3 },
