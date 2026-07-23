@@ -25,7 +25,7 @@ export function AdminUserSupportActions({ userId, emailVerified }: { userId: str
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setStatus({ ok: false, message: data?.error || 'Action failed' }); return }
-      setStatus({ ok: true, message: 'Sent.' })
+      setStatus({ ok: true, message: data?.message ?? 'Sent.' })
       if (action === 'changeEmail') setNewEmail('')
     } finally {
       setLoading(null)
@@ -52,6 +52,14 @@ export function AdminUserSupportActions({ userId, emailVerified }: { userId: str
             {loading === 'resendVerification' ? 'Sending…' : 'Resend Verification'}
           </button>
         )}
+        <button
+          onClick={() => call('reconcileMembership')}
+          disabled={loading !== null}
+          title="Re-checks this user's real Whop membership state and corrects their tier if it's out of sync — e.g. a purchase that never reflected, or a tier wrongly reset by an unrelated failed/abandoned signup on the same Whop account."
+          className="text-[10px] font-bold px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+        >
+          {loading === 'reconcileMembership' ? 'Reconciling…' : 'Reconcile Membership'}
+        </button>
         <div className="flex items-center gap-1.5">
           <input
             type="email"

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, brandedEmailHtml } from '@/lib/email'
+import { reconcileWhopMain } from '@/lib/whopMainReconcile'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -129,6 +130,31 @@ export async function POST(req: Request) {
 
     if (!sentNew) return NextResponse.json({ error: 'Link generated but the email failed to send' }, { status: 502 })
     return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'reconcileMembership') {
+    // Whop's memberships API has no per-user filter (confirmed against the
+    // real endpoint — see whopMembershipsFetch.ts), so there's no cheaper
+    // way to check one person's real state than the same full pass the
+    // 15-min cron already runs; this just runs it on demand for a support
+    // rep and reports back only the one user they're looking at. Exists
+    // because of a real live case: a customer's succeeded Basic payment got
+    // reset to Free by an unrelated failed/abandoned trial attempt on the
+    // same Whop account (now fixed at the source in whopWebhook.ts), and
+    // support needed a way to force a fix immediately instead of waiting on
+    // the next cron tick.
+    const result = await reconcileWhopMain()
+    if ('error' in result) return NextResponse.json({ error: result.error }, { status: 502 })
+    const mine = result.results.filter((r: any) => r.internalUserId === userId)
+    const granted = mine.find((r: any) => r.granted)
+    if (granted) {
+      const label = String(granted.granted)
+      return NextResponse.json({ ok: true, message: `Reconciled — now ${label.charAt(0).toUpperCase()}${label.slice(1)}.` })
+    }
+    const withError = mine.find((r: any) => r.error)
+    if (withError) return NextResponse.json({ error: `Reconcile ran but hit an error: ${withError.error}` }, { status: 502 })
+    if (!mine.length) return NextResponse.json({ error: 'No Whop membership on file for this user across any plan — nothing to reconcile.' }, { status: 404 })
+    return NextResponse.json({ ok: true, message: 'Checked — no active membership found, tier unchanged.' })
   }
 
   return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
