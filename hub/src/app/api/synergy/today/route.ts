@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { currentSeason } from '@/lib/playerSync'
@@ -48,30 +49,34 @@ function buildMatchups(games: Awaited<ReturnType<typeof getTodaysMatchups>>): Ma
 }
 
 // Real Statcast HR-affinity evidence + recent-form scoring for every real
-// batter-vs-starter matchup on today's slate, computed once here instead of
-// letting ~150 individually-mounted AffinityMatchupScore cards each redo
-// the same fetch/compute (see that component for the single-matchup version
-// of this exact logic — kept in lockstep via the shared scoreFrom() in
-// affinityScore.ts). Deliberately only ever fetches (a) each player's real
-// home runs (fetchPlayerHomeRuns, hits player_pitch_log's own partial
-// `WHERE is_home_run` index) and (b) his skinny games-played calendar
+// batter-vs-starter matchup on today's slate — same response for every
+// Ultimate caller (no per-user shaping), so the whole computation is cached
+// as a flat function of today's date. The fastest real-world input feeding
+// it is lineup-confirmed (posts/updates every 5 min); a 3-min window stays
+// safely inside that with margin while collapsing what would otherwise be
+// this ~150-player fan-out re-running for every single Ultimate viewer who
+// loads the page — computed once every 3 minutes instead, not once per
+// pageview. Deliberately only ever fetches (a) each player's real home runs
+// (fetchPlayerHomeRuns, hits player_pitch_log's own partial `WHERE
+// is_home_run` index) and (b) his skinny games-played calendar
 // (fetchPlayerGameDates) — never the full per-pitch log across ~150
 // players, which is exactly what this feature ever needs (evidence is
 // HR-only by definition) but which blew a real Postgres statement timeout
-// when tried at this concurrency. Ultimate-gated: this is a standalone
-// synthesis product surface, not a shared partial-data route like
-// /api/dugout/data.
-export async function GET() {
-  const gate = await requireTier('ultimate')
-  if (gate.error) return gate.error
+// when tried at this concurrency.
+const getCachedSynergyToday = unstable_cache(
+  async (today: string) => fetchSynergyToday(today),
+  ['synergy-today'],
+  { revalidate: 180 }
+)
 
-  const games = await getTodaysMatchups()
+async function fetchSynergyToday(today: string) {
+  const games = await getTodaysMatchups(today)
   const matchups = buildMatchups(games)
   const gamesOut = games.map(g => ({
     gameKey: g.gameKey, awayAbbr: g.awayAbbr, homeAbbr: g.homeAbbr, gameDate: g.gameDate,
     abstractStatus: g.abstractStatus, awayScore: g.awayScore, homeScore: g.homeScore,
   }))
-  if (!matchups.length) return NextResponse.json({ matchups: [], games: gamesOut })
+  if (!matchups.length) return { matchups: [], games: gamesOut }
 
   const admin = createAdminClient()
   const season = currentSeason()
@@ -188,5 +193,14 @@ export async function GET() {
     }
   })
 
-  return NextResponse.json({ matchups: result, games: gamesOut })
+  return { matchups: result, games: gamesOut }
+}
+
+export async function GET() {
+  const gate = await requireTier('ultimate')
+  if (gate.error) return gate.error
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const data = await getCachedSynergyToday(today)
+  return NextResponse.json(data)
 }

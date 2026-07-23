@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName, resolveNameEntry } from '@/lib/nameNorm'
@@ -35,6 +36,53 @@ const canonGameKey = (key: string) => {
   if (!m) return key
   return `${canonAbbr(m[1])}@${canonAbbr(m[2])}${m[3] ?? ''}`
 }
+
+// Manually-imported gap-odds reads — the only genuinely uncached Supabase
+// queries in this route (everything else here either already goes through
+// mpGet's own next:{revalidate} fetch caching, or is a deliberately-live
+// in-game feed). Pure reads, zero write side effects (unlike the
+// pregame_odds_snapshots freeze logic below, which stays fully live since
+// its correctness depends on seeing the real current is_frozen value on
+// every request) — safe to share across every caller regardless of tier.
+// A real admin paste can land any time, so this stays a short window
+// rather than matching a cron cadence.
+const getCachedGapOdds = unstable_cache(
+  async (date: string) => {
+    const admin = createAdminClient()
+    const [{ data: fdRows }, { data: mgmRows }] = await Promise.all([
+      admin.from('fanduel_gap_odds')
+        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
+        .eq('game_date', date)
+        .range(0, 19999),
+      admin.from('mgm_gap_odds')
+        .select('game_key, name_norm, sa_mgm, hr2_mgm')
+        .eq('game_date', date)
+        .range(0, 19999),
+    ])
+    return { fdRows: fdRows ?? [], mgmRows: mgmRows ?? [] }
+  },
+  ['dugout-gap-odds'],
+  { revalidate: 60 }
+)
+
+const getCachedGapOddsOpening = unstable_cache(
+  async (date: string) => {
+    const admin = createAdminClient()
+    const [{ data: fdOpenRows }, { data: mgmOpenRows }] = await Promise.all([
+      admin.from('fanduel_gap_odds_opening')
+        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo2_min')
+        .eq('game_date', date)
+        .range(0, 19999),
+      admin.from('mgm_gap_odds_opening')
+        .select('game_key, name_norm, sa_mgm, hr2_mgm')
+        .eq('game_date', date)
+        .range(0, 19999),
+    ])
+    return { fdOpenRows: fdOpenRows ?? [], mgmOpenRows: mgmOpenRows ?? [] }
+  },
+  ['dugout-gap-odds-opening'],
+  { revalidate: 60 }
+)
 
 // ── mlb-party Supabase ────────────────────────────────────────────────────────
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
@@ -484,6 +532,7 @@ export async function GET(req: Request) {
   // players. Keeping game_key as the outer key means a wrong-game row can
   // never be looked up when rendering the right game.
   const fanduelGapByGameKey: Record<string, Record<string, any>> = {}
+  const mgmGapByGameKey: Record<string, Record<string, any>> = {}
   if (admin && isAdvancedPlus) {
     // Explicit .range() — PostgREST silently caps unpaginated selects at
     // 1000 rows by default. A full slate's worth of gap-market pastes across
@@ -493,24 +542,11 @@ export async function GET(req: Request) {
     // showing blank FHR/Laser/Moonshot/PA1/HR-ML while other games were fine.
     // Same root cause already worked around for mlb-party's batter pitch
     // events fetch above (see fetchBatterPitchEvents).
-    const { data: gapRows } = await admin
-      .from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
-      .eq('game_date', date)
-      .range(0, 19999)
-    for (const r of gapRows ?? []) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
-  }
-
-  // Manually-imported BetMGM anytime-HR odds — backs up/fills sa.betmgm and
-  // hr2.betmgm when BDL's own BetMGM coverage is sparse. See /admin/mgm-import.
-  const mgmGapByGameKey: Record<string, Record<string, any>> = {}
-  if (admin && isAdvancedPlus) {
-    const { data: mgmRows } = await admin
-      .from('mgm_gap_odds')
-      .select('game_key, name_norm, sa_mgm, hr2_mgm')
-      .eq('game_date', date)
-      .range(0, 19999)
-    for (const r of mgmRows ?? []) (mgmGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+    const { fdRows, mgmRows } = await getCachedGapOdds(date)
+    for (const r of fdRows) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+    // Manually-imported BetMGM anytime-HR odds — backs up/fills sa.betmgm and
+    // hr2.betmgm when BDL's own BetMGM coverage is sparse. See /admin/mgm-import.
+    for (const r of mgmRows) (mgmGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
   // Opening/early baselines for the gap markets — permanent first-of-the-day
@@ -522,18 +558,9 @@ export async function GET(req: Request) {
   const fanduelGapOpeningByGameKey: Record<string, Record<string, any>> = {}
   const mgmGapOpeningByGameKey: Record<string, Record<string, any>> = {}
   if (admin && isUltimate) {
-    const [{ data: fdOpenRows }, { data: mgmOpenRows }] = await Promise.all([
-      admin.from('fanduel_gap_odds_opening')
-        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo2_min')
-        .eq('game_date', date)
-        .range(0, 19999),
-      admin.from('mgm_gap_odds_opening')
-        .select('game_key, name_norm, sa_mgm, hr2_mgm')
-        .eq('game_date', date)
-        .range(0, 19999),
-    ])
-    for (const r of fdOpenRows ?? []) (fanduelGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
-    for (const r of mgmOpenRows ?? []) (mgmGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+    const { fdOpenRows, mgmOpenRows } = await getCachedGapOddsOpening(date)
+    for (const r of fdOpenRows) (fanduelGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+    for (const r of mgmOpenRows) (mgmGapOpeningByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
   }
 
   // 3. Pitcher splits (needs pitcher IDs from schedule)

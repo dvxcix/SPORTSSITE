@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { currentSeason } from '@/lib/playerSync'
 import { requireTier } from '@/lib/requireTier'
@@ -55,6 +56,27 @@ async function fetchLeaguePool(admin: AdminClient, table: 'player_statcast_hitti
   return pools
 }
 
+// The exact same league-wide pool for EVERY player page — it only depends
+// on `season`, not on which player is being viewed — so this was being
+// rescanned (2 full-table category scans) on every single player pageview.
+// Cached once per season instead: one real computation serves every player
+// page on the site until the next cache window, not one per pageview.
+// Source tables (player_statcast_*_season) are only ever written by the
+// once-daily savant-sync-tier-a cron (10:00 UTC), so an hour-long window
+// loses zero real freshness.
+const getCachedLeaguePools = unstable_cache(
+  async (season: number) => {
+    const admin = createAdminClient()
+    const [hitting, pitching] = await Promise.all([
+      fetchLeaguePool(admin, 'player_statcast_hitting_season', season),
+      fetchLeaguePool(admin, 'player_statcast_pitching_season', season),
+    ])
+    return { hitting, pitching }
+  },
+  ['player-league-pools'],
+  { revalidate: 3600 }
+)
+
 async function fetchSplitCategory(admin: AdminClient, mlbId: number, role: 'batter' | 'pitcher', category: string, windowType: 'season' | 'recency') {
   const { data } = await admin
     .from('player_statcast_splits')
@@ -75,26 +97,17 @@ const DIM_SPLIT_CATEGORIES: { key: string; category: string; roles: ('batter' | 
   { key: 'swing_path_attack_angle', category: 'swing_path_attack_angle', roles: ['batter'], hasRecency: true },
 ]
 
-// Test/v1 read for the site-owned player data system built up across the
-// player-data project — bio, season/career stats, the Savant Tier A season
-// snapshot, the pitch-arsenal-stats table (both roles for a two-way
-// player), the recency-vs-season bat-tracking headline ("is this player
-// hot right now"), every split-based category as raw customizable rows
-// (bat tracking, batted ball, swing timing, swing path, swing/take,
-// batting stance), and a recent home-run log (as batter, and separately
-// allowed as pitcher).
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const gate = await requireTier('basic')
-  if (gate.error) return gate.error
-
-  const { id } = await params
-  const mlbId = Number(id)
-  if (!Number.isFinite(mlbId)) {
-    return NextResponse.json({ error: 'Invalid player id' }, { status: 400 })
-  }
-
+// Everything below is the same response for every caller who passes the
+// tier gate — no per-user/per-tier field shaping — so it's safe to cache
+// as a flat function of (mlbId, season). The fastest-changing real inputs
+// here are the bio/season/career-stats crons (mlb-sync-bio/season-stats/
+// career-stats, all every 15 min); everything else (Statcast splits, HR
+// log, arsenal) is the once-daily 10:00 UTC savant-sync-* batch. A 10-min
+// window stays safely inside the 15-min floor with margin, while cutting
+// out this entire fan-out (18 parallel queries) being repeated for every
+// single pageview of a popular player.
+async function fetchPlayerData(mlbId: number, season: number) {
   const admin = createAdminClient()
-  const season = currentSeason()
 
   const [
     playerRes,
@@ -106,7 +119,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     hrHitRes, hrAllowedRes,
     swingTakeBatRes, swingTakePitRes,
     stanceSeasonRes, stanceRecencyRes,
-    hittingPool, pitchingPool,
   ] = await Promise.all([
     admin.from('players').select('*').eq('mlb_id', mlbId).maybeSingle(),
     // A player traded mid-season gets one row per team PLUS an aggregate
@@ -133,13 +145,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'pitcher').eq('category', 'swing_take').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'batting_stance').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'batting_stance').eq('window_type', 'recency'),
-    fetchLeaguePool(admin, 'player_statcast_hitting_season', season),
-    fetchLeaguePool(admin, 'player_statcast_pitching_season', season),
   ])
 
-  if (!playerRes.data) {
-    return NextResponse.json({ error: 'Player not found' }, { status: 404 })
-  }
+  if (!playerRes.data) return null
 
   const isBatter = !!seasonBatRes.data || (arsenalBatRes.data && arsenalBatRes.data.length > 0)
   const isPitcher = !!seasonPitRes.data || (arsenalPitRes.data && arsenalPitRes.data.length > 0)
@@ -210,7 +218,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .map(r => ({ pitchType: (r.dims as any)?.pitch_type as string, ...(r.metrics as any) }))
       .sort((a, b) => (b.pitches ?? 0) - (a.pitches ?? 0))
 
-  return NextResponse.json({
+  return {
     season,
     player: playerRes.data,
     isBatter, isPitcher,
@@ -234,6 +242,42 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       hit: hrHit.map(r => ({ ...r, opponent_team: opponentTeams[r.pitcher_id] ?? null })),
       allowed: hrAllowed.map(r => ({ ...r, opponent_team: opponentTeams[r.batter_id] ?? null })),
     },
-    leaguePools: { hitting: hittingPool, pitching: pitchingPool },
+  }
+}
+
+const getCachedPlayerData = unstable_cache(fetchPlayerData, ['player-data'], { revalidate: 600 })
+
+// Test/v1 read for the site-owned player data system built up across the
+// player-data project — bio, season/career stats, the Savant Tier A season
+// snapshot, the pitch-arsenal-stats table (both roles for a two-way
+// player), the recency-vs-season bat-tracking headline ("is this player
+// hot right now"), every split-based category as raw customizable rows
+// (bat tracking, batted ball, swing timing, swing path, swing/take,
+// batting stance), and a recent home-run log (as batter, and separately
+// allowed as pitcher).
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const gate = await requireTier('basic')
+  if (gate.error) return gate.error
+
+  const { id } = await params
+  const mlbId = Number(id)
+  if (!Number.isFinite(mlbId)) {
+    return NextResponse.json({ error: 'Invalid player id' }, { status: 400 })
+  }
+
+  const season = currentSeason()
+
+  const [playerData, leaguePools] = await Promise.all([
+    getCachedPlayerData(mlbId, season),
+    getCachedLeaguePools(season),
+  ])
+
+  if (!playerData) {
+    return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+  }
+
+  return NextResponse.json({
+    ...playerData,
+    leaguePools,
   })
 }
