@@ -69,12 +69,29 @@ const getCachedGapOdds = unstable_cache(
 const getCachedGapOddsOpening = unstable_cache(
   async (date: string) => {
     const admin = createAdminClient()
-    const { data: openRows } = await admin
-      .from('market_opening_prices')
-      .select('game_key, name_norm, market, book, opening_price')
-      .eq('game_date', date)
-      .range(0, 19999)
-    return { openRows: openRows ?? [] }
+    // A single `.range(0, 19999)` call silently came back capped at 1000
+    // rows (confirmed live: 6,400 real opening-price rows for one day's
+    // slate, only 1,000 ever returned) — Supabase's project-level PostgREST
+    // max-rows setting overrides whatever range a client asks for, and with
+    // no ORDER BY the surviving 1,000 rows are effectively arbitrary. That
+    // silently starved out whichever markets/books/players didn't happen to
+    // land in that slice — confirmed live as the root cause of "no delta
+    // arrows" reports that were inconsistent across markets and players
+    // with no code-level explanation. Paging through in fixed-size batches
+    // guarantees every row is actually read regardless of that server cap.
+    const openRows: { game_key: string; name_norm: string; market: string; book: string; opening_price: number }[] = []
+    const PAGE = 1000
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await admin
+        .from('market_opening_prices')
+        .select('game_key, name_norm, market, book, opening_price')
+        .eq('game_date', date)
+        .range(offset, offset + PAGE - 1)
+      if (!data?.length) break
+      openRows.push(...data)
+      if (data.length < PAGE) break
+    }
+    return { openRows }
   },
   ['dugout-gap-odds-opening-v3'],
   { revalidate: 60 }
