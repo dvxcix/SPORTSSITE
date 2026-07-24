@@ -27,6 +27,20 @@ export type MatrixFactor = {
   // Only meaningful for operator 'tied' — 'team' (the default, incl. null)
   // compares only this player's own side; 'game' pools both teams.
   tie_scope: 'team' | 'game' | null
+  // Only meaningful for operator 'tied' — an ordered fallback chain that
+  // narrows a raw tie group down to whoever ranks best on some OTHER field
+  // (any category — e.g. "of everyone tied on HR÷Parlay, keep the highest
+  // recent Attack Angle"). Empty = every member of the raw tie group counts,
+  // the original plain-tie behavior. See matrixEngine.ts's resolveTiebreakers.
+  tiebreakers: MatrixTiebreaker[]
+}
+
+export type MatrixTiebreaker = {
+  category: MatrixFactor['category']
+  field_key: string
+  recency: MatrixFactor['recency']
+  book: string | null
+  direction: 'highest' | 'lowest'
 }
 
 export type MatrixDef = {
@@ -149,7 +163,10 @@ function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
 }
 function newFactor(): MatrixFactor {
-  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null }
+  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null, tiebreakers: [] }
+}
+function newTiebreaker(): MatrixTiebreaker {
+  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest' }
 }
 const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED573', '#FF8FA3', '#5EEAD4']
 
@@ -362,10 +379,111 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
           )}
         </div>
       )}
+
+      {/* A tiebreaker chain narrows a raw tie group down to whoever ranks
+          best on some other field — e.g. "of everyone tied on HR÷Parlay,
+          keep only the highest recent Attack Angle." Each step only
+          matters if the one before it still leaves more than one player
+          tied (see resolveTiebreakers, matrixEngine.ts); if the whole
+          chain runs out, everyone still tied stays highlighted. */}
+      {factor.operator === 'tied' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>
+            TIEBREAKER{factor.tiebreakers.length !== 1 ? 'S' : ''} — RANK TIED PLAYERS BY
+          </span>
+          {factor.tiebreakers.map((tb, i) => (
+            <TiebreakerRow
+              key={i} tb={tb}
+              onChange={next => onChange({ ...factor, tiebreakers: factor.tiebreakers.map((t, j) => (j === i ? next : t)) })}
+              onRemove={() => onChange({ ...factor, tiebreakers: factor.tiebreakers.filter((_, j) => j !== i) })}
+            />
+          ))}
+          <button
+            onClick={() => onChange({ ...factor, tiebreakers: [...factor.tiebreakers, newTiebreaker()] })}
+            style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '2px 0', alignSelf: 'flex-start' }}
+          >
+            + Add {factor.tiebreakers.length ? 'fallback tiebreaker' : 'tiebreaker'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 function isBooksFieldKey(k: string) { return k === 'booksfhr' || k === 'bookshr' }
+
+// One step of a 'tied' Factor's fallback chain — "of everyone still tied,
+// keep only whoever ranks best on THIS field." Reuses the exact same
+// category/field catalogs (and recency/book pickers) a plain Factor uses,
+// so a member never has to learn a second vocabulary for ranking vs.
+// thresholding — boolean fields (Is PWR ⚡?) are excluded since "highest
+// Yes/No" is meaningless.
+function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onChange: (t: MatrixTiebreaker) => void; onRemove: () => void }) {
+  const fields = fieldsForCategory(tb.category).filter(f => !f.boolean)
+  const needsRecency = tb.category === 'pitchlog_stat' || tb.category === 'savant_stat'
+  const multiBook = tb.category === 'odds' ? MULTI_BOOK_FIELDS[tb.field_key] : null
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      <select
+        className="ss-input" value={tb.category}
+        onChange={e => {
+          const category = e.target.value as MatrixTiebreaker['category']
+          const firstField = fieldsForCategory(category).filter(f => !f.boolean)[0] ?? fieldsForCategory(category)[0]
+          onChange({
+            ...tb, category, field_key: firstField.key, book: null,
+            recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null,
+          })
+        }}
+        style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
+      >
+        {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+      </select>
+
+      <select
+        className="ss-input" value={tb.field_key}
+        onChange={e => onChange({ ...tb, field_key: e.target.value, book: null })}
+        style={{ fontSize: 10, padding: '4px 5px', minWidth: 130, flex: '1 1 130px' }}
+      >
+        {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+      </select>
+
+      {needsRecency && (
+        <select
+          className="ss-input" value={tb.recency ?? 'season'}
+          onChange={e => onChange({ ...tb, recency: e.target.value as MatrixTiebreaker['recency'] })}
+          style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
+        >
+          {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
+            <option key={r} value={r}>{RECENCY_LABEL[r]}</option>
+          ))}
+        </select>
+      )}
+
+      {multiBook && (
+        <select
+          className="ss-input" value={tb.book ?? 'fanduel'}
+          onChange={e => onChange({ ...tb, book: e.target.value })}
+          style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
+        >
+          {multiBook.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
+        </select>
+      )}
+
+      <select
+        className="ss-input" value={tb.direction}
+        onChange={e => onChange({ ...tb, direction: e.target.value as MatrixTiebreaker['direction'] })}
+        style={{ fontSize: 10, padding: '4px 5px', width: 80 }}
+      >
+        <option value="highest">Highest</option>
+        <option value="lowest">Lowest</option>
+      </select>
+
+      <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+        <X size={12} />
+      </button>
+    </div>
+  )
+}
 
 function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(initial?.name ?? '')

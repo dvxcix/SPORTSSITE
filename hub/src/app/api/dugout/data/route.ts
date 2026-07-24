@@ -15,8 +15,11 @@ import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
-import type { PitchlogStatWindow } from '@/lib/matrixEngine'
-import { computeOddsRawPrice, computeDugoutSpecsValue, MULTI_BOOK_MARKET } from '@/lib/matrixEngine'
+import type { PitchlogStatWindow, MatrixTiebreaker } from '@/lib/matrixEngine'
+import {
+  computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
+  groupTiedCandidates, resolveTiebreakers, MULTI_BOOK_MARKET,
+} from '@/lib/matrixEngine'
 import type { BatterStats } from '@/lib/batterStatsEngine'
 
 export const revalidate = 0
@@ -1157,87 +1160,109 @@ export async function GET(req: Request) {
     // player's value for this exact field(+book) exactly matches at least
     // one other player's" — e.g. two guys both at FHR +900, or three guys
     // all at HR÷Parlay 1.18. Per-Factor scoped via tie_scope: 'team' (the
-    // default) only counts the player's own side; 'game' pools both teams,
-    // e.g. for a member who genuinely wants "anyone in tonight's game, not
-    // just this lineup." Only ever computed for the exact (field, book,
-    // scope) combos a currently-enabled Matrix actually asks for (same
-    // "don't pay for what nobody uses" gating as gameTotalPicksByMarket
-    // above), and rounded to 2 decimals for dugout_specs to match the same
-    // precision DugoutClient's f2() displays, so "looks tied on the board"
-    // and "flagged tied by a Factor" can never disagree over float noise.
-    // Odds prices are whole American-odds integers already, no rounding
-    // needed there.
-    const oddsTieCombos = new Set<string>() // `${field_key}|${book}`
-    const specsTieFields = new Set<string>()
-    let needsGameScopeTie = false
-    for (const m of userMatrices) {
-      for (const f of m.factors) {
-        if (f.operator !== 'tied') continue
-        if (f.tie_scope === 'game') needsGameScopeTie = true
+    // default) only counts the player's own side; 'game' pools both teams.
+    // A Factor can also carry an ordered tiebreaker chain (any category —
+    // odds/dugout_specs/pitchlog_stat/savant_stat/picks) that narrows a raw
+    // tie group down to whoever ranks best on some OTHER field, e.g. "of
+    // everyone tied on HR÷Parlay, keep only the highest recent Attack
+    // Angle." See groupTiedCandidates/resolveTiebreakers (matrixEngine.ts)
+    // for the pure grouping/reduction logic — this block is just the data
+    // plumbing: building per-player "bundles" (props + averages + the same
+    // precomputed pitchlog/Savant windows the live per-player loop below
+    // already reads) so any field in any category can be resolved for
+    // anyone in the relevant pool, then running that logic once per 'tied'
+    // Factor and caching the final winner set by factor.id (two different
+    // 'tied' Factors can define different tiebreaker chains even off the
+    // exact same raw field, so results can't be shared by field/book alone
+    // the way the pre-tiebreaker version of this block did).
+    // Each side's opposing-pitcher hand is constant across that whole
+    // lineup (every home batter faces the same away pitcher, and vice
+    // versa) — hoisted here so the tie/tiebreaker precompute below and both
+    // per-player .map() calls further down all share one computation
+    // instead of three separate inline copies.
+    const homePHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
+    const awayPHand = (homePitcher?.hand as 'L' | 'R') || 'R'
+    const tiedFactors = userMatrices.flatMap(m => m.factors.filter(f => f.operator === 'tied'))
+    const factorTiedWinners = new Map<string, Set<string>>() // factor.id -> winning name_norms (whole game, scope already applied)
+    if (tiedFactors.length) {
+      type Bundle = {
+        props: any
+        fhrAvg: any
+        saAvg: any
+        pitchlogWindows: Record<PitchlogStatWindow, BatterStats> | null
+        statcastWindows: Record<StatcastWindow, StatcastLine> | null
+        pikkitEntry: any
+      }
+      const resolveBundle = (p: typeof homeLineup[number], pHand: 'L' | 'R'): Bundle => ({
+        props: resolveNameEntry(bdlByName, p.name_norm) || null,
+        fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm),
+        saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+        pitchlogWindows: isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null,
+        statcastWindows: isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null,
+        pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm),
+      })
+      const homeBundle = new Map(homeLineup.map(p => [p.name_norm, resolveBundle(p, homePHand)]))
+      const awayBundle = new Map(awayLineup.map(p => [p.name_norm, resolveBundle(p, awayPHand)]))
+      const allBundle = new Map([...homeBundle, ...awayBundle])
+
+      function resolveTiebreakerValue(name: string, tb: MatrixTiebreaker, pool: Map<string, Bundle>): number | null {
+        const b = pool.get(name)
+        if (!b) return null
+        if (tb.category === 'odds') return computeOddsRawPrice(tb.field_key, tb.book ?? 'fanduel', b.props)
+        if (tb.category === 'dugout_specs') return computeDugoutSpecsValue(tb.field_key, b.props, b.fhrAvg, b.saAvg)
+        if (tb.category === 'pitchlog_stat') return computePitchlogStatValue(tb.field_key, tb.recency, b.pitchlogWindows)
+        if (tb.category === 'savant_stat') return computeSavantStatValue(tb.field_key, tb.recency, b.statcastWindows)
+        return computePicksValue(tb.field_key, b.pikkitEntry, gameTotalPicksByMarket)
+      }
+      function rootValue(f: (typeof tiedFactors)[number], book: string | null, b: Bundle): number | null {
+        return f.category === 'odds' ? computeOddsRawPrice(f.field_key, book ?? 'fanduel', b.props) : computeDugoutSpecsValue(f.field_key, b.props, b.fhrAvg, b.saAvg)
+      }
+      // One raw field(+book), one pool (home-only/away-only/whole-game) ->
+      // the final surviving winner set, after any tiebreaker chain runs.
+      function winnersForPool(f: (typeof tiedFactors)[number], book: string | null, pool: Map<string, Bundle>): Set<string> {
+        const values = new Map<string, number>()
+        for (const [name, b] of pool) {
+          const v = rootValue(f, book, b)
+          if (v != null) values.set(name, v)
+        }
+        const groups = groupTiedCandidates(values)
+        const winners = new Set<string>()
+        for (const group of groups.values()) {
+          const survivors = f.tiebreakers?.length
+            ? resolveTiebreakers(group, f.tiebreakers, (name, tb) => resolveTiebreakerValue(name, tb, pool))
+            : new Set(group)
+          for (const n of survivors) winners.add(n)
+        }
+        return winners
+      }
+
+      for (const f of tiedFactors) {
+        const pools = f.tie_scope === 'game' ? [allBundle] : [homeBundle, awayBundle]
         if (f.category === 'odds') {
           const multi = MULTI_BOOK_MARKET[f.field_key]
           const books = multi && f.books?.length ? f.books : ['fanduel']
-          for (const book of books) oddsTieCombos.add(`${f.field_key}|${book}`)
+          // Per book, per pool -> combine per-player across books via the
+          // same every/N+ semantics every other multi-book odds operator
+          // already uses (see evaluateOddsFactor).
+          const perBookWinners = books.map(book => {
+            const combined = new Set<string>()
+            for (const pool of pools) for (const n of winnersForPool(f, book, pool)) combined.add(n)
+            return combined
+          })
+          const universe = new Set<string>()
+          for (const pool of pools) for (const name of pool.keys()) universe.add(name)
+          const finalWinners = new Set<string>()
+          for (const name of universe) {
+            const hits = perBookWinners.filter(s => s.has(name)).length
+            const passes = multi && f.books_min_count != null ? hits >= f.books_min_count : hits === books.length
+            if (passes) finalWinners.add(name)
+          }
+          factorTiedWinners.set(f.id, finalWinners)
         } else if (f.category === 'dugout_specs') {
-          specsTieFields.add(f.field_key)
+          const combined = new Set<string>()
+          for (const pool of pools) for (const n of winnersForPool(f, null, pool)) combined.add(n)
+          factorTiedWinners.set(f.id, combined)
         }
-      }
-    }
-    function tiedNamesFromValues(valueByName: Map<string, number>): Set<string> {
-      const counts = new Map<number, number>()
-      for (const v of valueByName.values()) counts.set(v, (counts.get(v) ?? 0) + 1)
-      const tied = new Set<string>()
-      for (const [nn, v] of valueByName) if ((counts.get(v) ?? 0) > 1) tied.add(nn)
-      return tied
-    }
-    // Collects raw values (not yet reduced to tied/not-tied) so the same
-    // per-player numbers can feed BOTH a team-only pool and, when needed, a
-    // merged both-sides game pool — computed once, never twice.
-    function collectTieValues(lineup: typeof homeLineup, oddsValues: Map<string, Map<string, number>>, specsValues: Map<string, Map<string, number>>) {
-      for (const p of lineup) {
-        const props = resolveNameEntry(bdlByName, p.name_norm) || null
-        for (const combo of oddsTieCombos) {
-          const [fieldKey, book] = combo.split('|')
-          const v = computeOddsRawPrice(fieldKey, book, props)
-          if (v != null) (oddsValues.get(combo) ?? oddsValues.set(combo, new Map()).get(combo)!).set(p.name_norm, v)
-        }
-        if (specsTieFields.size) {
-          const fhrAvg = resolveNameEntry(fhrAvgMap, p.name_norm)
-          const saAvg = resolveNameEntry(saAvgMap, p.name_norm)
-          for (const fieldKey of specsTieFields) {
-            const v = computeDugoutSpecsValue(fieldKey, props, fhrAvg, saAvg)
-            if (v != null) (specsValues.get(fieldKey) ?? specsValues.set(fieldKey, new Map()).get(fieldKey)!).set(p.name_norm, Math.round(v * 100) / 100)
-          }
-        }
-      }
-    }
-    function tiedSetsFromValues(oddsValues: Map<string, Map<string, number>>, specsValues: Map<string, Map<string, number>>): { odds: Map<string, Set<string>>; specs: Map<string, Set<string>> } {
-      const odds = new Map<string, Set<string>>()
-      for (const [combo, valueByName] of oddsValues) odds.set(combo, tiedNamesFromValues(valueByName))
-      const specs = new Map<string, Set<string>>()
-      for (const [fieldKey, valueByName] of specsValues) specs.set(fieldKey, tiedNamesFromValues(valueByName))
-      return { odds, specs }
-    }
-    const EMPTY_TIED = { odds: new Map<string, Set<string>>(), specs: new Map<string, Set<string>>() }
-    let homeTied = EMPTY_TIED, awayTied = EMPTY_TIED, gameTied = EMPTY_TIED
-    if (oddsTieCombos.size || specsTieFields.size) {
-      const homeOddsValues = new Map<string, Map<string, number>>(), homeSpecsValues = new Map<string, Map<string, number>>()
-      const awayOddsValues = new Map<string, Map<string, number>>(), awaySpecsValues = new Map<string, Map<string, number>>()
-      collectTieValues(homeLineup, homeOddsValues, homeSpecsValues)
-      collectTieValues(awayLineup, awayOddsValues, awaySpecsValues)
-      homeTied = tiedSetsFromValues(homeOddsValues, homeSpecsValues)
-      awayTied = tiedSetsFromValues(awayOddsValues, awaySpecsValues)
-      if (needsGameScopeTie) {
-        const mergeInto = (dst: Map<string, Map<string, number>>, src: Map<string, Map<string, number>>) => {
-          for (const [key, valueByName] of src) {
-            const target = dst.get(key) ?? dst.set(key, new Map()).get(key)!
-            for (const [nn, v] of valueByName) target.set(nn, v)
-          }
-        }
-        const gameOddsValues = new Map<string, Map<string, number>>(), gameSpecsValues = new Map<string, Map<string, number>>()
-        mergeInto(gameOddsValues, homeOddsValues); mergeInto(gameOddsValues, awayOddsValues)
-        mergeInto(gameSpecsValues, homeSpecsValues); mergeInto(gameSpecsValues, awaySpecsValues)
-        gameTied = tiedSetsFromValues(gameOddsValues, gameSpecsValues)
       }
     }
 
@@ -1288,7 +1313,7 @@ export async function GET(req: Request) {
       // nothing saved."
       homeLineup: homeLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
-        const pHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
+        const pHand = homePHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
@@ -1296,15 +1321,14 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-              isOddsTied: (fieldKey, book, scope) => (scope === 'game' ? gameTied : homeTied).odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
-              isDugoutSpecsTied: (fieldKey, scope) => (scope === 'game' ? gameTied : homeTied).specs.get(fieldKey)?.has(p.name_norm) ?? false,
+              isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
-        const pHand = (homePitcher?.hand as 'L' | 'R') || 'R'
+        const pHand = awayPHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
@@ -1312,8 +1336,7 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-              isOddsTied: (fieldKey, book, scope) => (scope === 'game' ? gameTied : awayTied).odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
-              isDugoutSpecsTied: (fieldKey, scope) => (scope === 'game' ? gameTied : awayTied).specs.get(fieldKey)?.has(p.name_norm) ?? false,
+              isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }

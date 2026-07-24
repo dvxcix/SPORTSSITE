@@ -5,6 +5,27 @@ import { requireTier } from '@/lib/requireTier'
 export const revalidate = 0
 
 const MAX_FACTORS_PER_MATRIX = 40
+const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks']
+const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
+const MAX_TIEBREAKERS = 5
+
+function cleanTiebreakers(raw: unknown) {
+  if (!Array.isArray(raw)) return []
+  const clean: { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest' }[] = []
+  for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
+    if (!t || typeof t !== 'object') continue
+    const { category, field_key, recency, book, direction } = t as Record<string, unknown>
+    if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
+    if (typeof field_key !== 'string' || !field_key) continue
+    clean.push({
+      category: category as string, field_key,
+      recency: typeof recency === 'string' ? recency : null,
+      book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
+      direction: direction === 'lowest' ? 'lowest' : 'highest',
+    })
+  }
+  return clean
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireTier('ultimate')
@@ -49,6 +70,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         books: Array.isArray(f.books) && f.books.length ? f.books.filter(b => typeof b === 'string') : null,
         books_min_count: typeof f.books_min_count === 'number' ? Math.max(1, Math.round(f.books_min_count)) : null,
         tie_scope: f.tie_scope === 'game' ? 'game' : f.tie_scope === 'team' ? 'team' : null,
+        tiebreakers: cleanTiebreakers(f.tiebreakers),
       }))
     )
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })

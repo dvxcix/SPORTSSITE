@@ -79,6 +79,29 @@ export type MatrixFactor = {
   // in the game on either side ('game'). null/'team' preserves the original
   // per-team-only behavior 'tied' shipped with.
   tie_scope: 'team' | 'game' | null
+  // Only meaningful for operator 'tied' — an ordered fallback chain that
+  // narrows a raw tie group down to whoever ranks best on some OTHER field
+  // (any category, e.g. "of everyone tied on HR÷Parlay, keep only the
+  // highest recent Attack Angle"). Applied in order: if step 1 still leaves
+  // more than one player tied, step 2 runs on just that remaining pool, and
+  // so on. If the whole chain runs out and players still tie, ALL of them
+  // stay highlighted — there's no more information to pick a "winner," so
+  // nothing is silently dropped. null/empty = the original plain-tie
+  // behavior (every member of the raw tie group counts).
+  tiebreakers: MatrixTiebreaker[] | null
+}
+
+export type MatrixTiebreaker = {
+  category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
+  field_key: string
+  // Only meaningful for pitchlog_stat/savant_stat fields (a recency window
+  // is part of what "R ATK" even means) — null defaults to 'season' the
+  // same way a plain Factor without a chosen recency does.
+  recency: MatrixRecency | null
+  // Only meaningful for the two real multi-book odds fields (fhr, hr) —
+  // which single book to rank by. null defaults to 'fanduel'.
+  book: string | null
+  direction: 'highest' | 'lowest'
 }
 
 export type Matrix = {
@@ -200,24 +223,34 @@ export function evaluatePitchlogFactor(
 export const PITCHLOG_STAT_WINDOWS = ['game', 'l3', 'l5', 'l10', 'season'] as const
 export type PitchlogStatWindow = typeof PITCHLOG_STAT_WINDOWS[number]
 
+// The raw current value for a pitchlog_stat field at a given recency —
+// extracted so route.ts's tiebreaker resolver reuses the exact same window
+// selection a plain Factor uses (e.g. "R ATK" ranking by the same recent
+// Attack Angle a member could otherwise build a threshold Factor from).
+export function computePitchlogStatValue(
+  fieldKey: string,
+  recency: MatrixRecency | null,
+  windows: Record<PitchlogStatWindow, BatterStats> | null | undefined,
+): number | null {
+  const statKey = PITCHLOG_FIELD[fieldKey]
+  if (!statKey || !windows) return null
+  if (isDeltaRecency(recency)) {
+    const recentLine = windows[baseWindowOfDelta(recency)]
+    const seasonLine = windows.season
+    const recentVal = recentLine ? (recentLine[statKey] as number | null) : null
+    const seasonVal = seasonLine ? (seasonLine[statKey] as number | null) : null
+    return recentVal != null && seasonVal != null ? recentVal - seasonVal : null
+  }
+  const bucket = (recency && recency !== 'custom' ? recency : 'season') as PitchlogStatWindow
+  const line = windows[bucket]
+  return line ? (line[statKey] as number | null) : null
+}
+
 export function evaluatePitchlogFactorPrecomputed(
   factor: MatrixFactor,
   windows: Record<PitchlogStatWindow, BatterStats> | null | undefined,
 ): boolean {
-  const statKey = PITCHLOG_FIELD[factor.field_key]
-  if (!statKey || !windows) return false
-  if (isDeltaRecency(factor.recency)) {
-    const recentLine = windows[baseWindowOfDelta(factor.recency)]
-    const seasonLine = windows.season
-    const recentVal = recentLine ? (recentLine[statKey] as number | null) : null
-    const seasonVal = seasonLine ? (seasonLine[statKey] as number | null) : null
-    const current = recentVal != null && seasonVal != null ? recentVal - seasonVal : null
-    return compareThreshold(current, factor.operator, factor.value)
-  }
-  const bucket = (factor.recency && factor.recency !== 'custom' ? factor.recency : 'season') as PitchlogStatWindow
-  const line = windows[bucket]
-  const current = line ? (line[statKey] as number | null) : null
-  return compareThreshold(current, factor.operator, factor.value)
+  return compareThreshold(computePitchlogStatValue(factor.field_key, factor.recency, windows), factor.operator, factor.value)
 }
 
 // All 5 fixed windows at once, from one batter's raw pitch rows — mirrors
@@ -331,12 +364,16 @@ export function weightedSavantMetric(
 // TODAY's splits, not the genuinely-as-of-that-date values, which is wrong
 // for backtesting. The precomputed table is snapshotted per game_date, so
 // this reads the correct historical value for any already-backfilled date.
-export function evaluateSavantFactor(
-  factor: MatrixFactor,
+// The raw current value for a savant_stat field at a given recency —
+// extracted so route.ts's tiebreaker resolver reuses the exact same
+// window/scale resolution a plain Factor uses.
+export function computeSavantStatValue(
+  fieldKey: string,
+  recency: MatrixRecency | null,
   statcastWindows: Record<StatcastWindow, StatcastLine> | null | undefined,
-): boolean {
-  const key = SAVANT_FIELD_TO_STATCAST_KEY[factor.field_key]
-  if (!key || !statcastWindows) return false
+): number | null {
+  const key = SAVANT_FIELD_TO_STATCAST_KEY[fieldKey]
+  if (!key || !statcastWindows) return null
   // Savant's own CSV export returns every one of the rate fields here as a
   // 0-1 fraction (confirmed live: squared_up_per_swing/ideal_attack_angle_
   // rate/pull_air_rate/fb_rate/on_time_percent all sampled at values like
@@ -347,18 +384,23 @@ export function evaluateSavantFactor(
   // feature. Scaling here keeps that one consistent convention instead of
   // silently never matching. miss_distance is a real physical distance,
   // not a rate — see SAVANT_FIELD_NO_SCALE.
-  const scale = SAVANT_FIELD_NO_SCALE.has(factor.field_key) ? 1 : 100
-  if (isDeltaRecency(factor.recency)) {
-    const recentWindow = RECENCY_TO_SAVANT_WINDOW[baseWindowOfDelta(factor.recency)]
+  const scale = SAVANT_FIELD_NO_SCALE.has(fieldKey) ? 1 : 100
+  if (isDeltaRecency(recency)) {
+    const recentWindow = RECENCY_TO_SAVANT_WINDOW[baseWindowOfDelta(recency)]
     const recentRaw = statcastWindows[recentWindow]?.[key] ?? null
     const seasonRaw = statcastWindows.season?.[key] ?? null
-    const current = recentRaw != null && seasonRaw != null ? (recentRaw - seasonRaw) * scale : null
-    return compareThreshold(current, factor.operator, factor.value)
+    return recentRaw != null && seasonRaw != null ? (recentRaw - seasonRaw) * scale : null
   }
-  const windowType: StatcastWindow = factor.recency && factor.recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[factor.recency] : 'season'
+  const windowType: StatcastWindow = recency && recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[recency] : 'season'
   const raw = statcastWindows[windowType]?.[key] ?? null
-  const current = raw != null ? raw * scale : null
-  return compareThreshold(current, factor.operator, factor.value)
+  return raw != null ? raw * scale : null
+}
+
+export function evaluateSavantFactor(
+  factor: MatrixFactor,
+  statcastWindows: Record<StatcastWindow, StatcastLine> | null | undefined,
+): boolean {
+  return compareThreshold(computeSavantStatValue(factor.field_key, factor.recency, statcastWindows), factor.operator, factor.value)
 }
 
 // Odds Factors read the exact same raw per-player props entry dugout/data
@@ -462,8 +504,11 @@ function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, op
 export function evaluateOddsFactor(
   factor: MatrixFactor,
   props: OddsProps | null | undefined,
-  // Resolved by the caller per (field_key, book, scope) — see MatrixMatchContext.
-  isTied?: (fieldKey: string, book: string, scope: 'team' | 'game') => boolean,
+  // Whether THIS player is one of the final surviving winners of THIS exact
+  // Factor's tie group — book selection, scope, and any tiebreaker chain
+  // are already fully resolved by the caller, keyed by factor.id. See
+  // evaluateDugoutSpecsFactor's matching param for the full rationale.
+  isFactorTied?: (factorId: string) => boolean,
 ): boolean {
   if (factor.field_key === 'booksfhr' || factor.field_key === 'bookshr') {
     const spec = BOOKS_MISSING_FIELD[factor.field_key]
@@ -472,18 +517,7 @@ export function evaluateOddsFactor(
     return compareThreshold(missing, factor.operator, factor.value)
   }
 
-  if (factor.operator === 'tied') {
-    // Same book-selection rule as every other odds operator: multi-book
-    // fields use whichever book(s) the member picked (default FanDuel);
-    // every other field is FanDuel-only regardless of `books`.
-    const multi = MULTI_BOOK_MARKET[factor.field_key]
-    const books = multi && factor.books?.length ? factor.books : ['fanduel']
-    const scope = factor.tie_scope === 'game' ? 'game' : 'team'
-    const results = books.map(book => isTied?.(factor.field_key, book, scope) ?? false)
-    return multi && factor.books_min_count != null
-      ? results.filter(Boolean).length >= factor.books_min_count
-      : results.every(Boolean)
-  }
+  if (factor.operator === 'tied') return isFactorTied?.(factor.id) ?? false
 
   const multi = MULTI_BOOK_MARKET[factor.field_key]
   if (multi) {
@@ -604,15 +638,15 @@ export function evaluateDugoutSpecsFactor(
   props: OddsProps | null | undefined,
   fhrAvg: DugoutSpecsAverages | null | undefined,
   saAvg: DugoutSpecsAverages | null | undefined,
-  // Whether THIS player's value for this exact field exactly matches (to
-  // the same 2 decimals the board displays) at least one other player's,
-  // within factor.tie_scope's pool ('team' — the default — or 'game', both
-  // sides) — resolved by the caller (dugout/data/route.ts), the only place
-  // with visibility into every batter in the game at once; this function
-  // stays a pure per-player evaluator like every other dugout_specs Factor.
-  isTied?: (fieldKey: string, scope: 'team' | 'game') => boolean,
+  // Whether THIS player is one of the final surviving winners of THIS exact
+  // Factor's tie group (scope + tiebreaker chain already fully resolved by
+  // the caller, keyed by factor.id — see dugout/data/route.ts, the only
+  // place with visibility into every batter in the game at once). This
+  // function stays a pure per-player evaluator like every other
+  // dugout_specs Factor.
+  isFactorTied?: (factorId: string) => boolean,
 ): boolean {
-  if (factor.operator === 'tied') return isTied?.(factor.field_key, factor.tie_scope === 'game' ? 'game' : 'team') ?? false
+  if (factor.operator === 'tied') return isFactorTied?.(factor.id) ?? false
   const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg)
   return compareThreshold(current, factor.operator, factor.value)
 }
@@ -637,20 +671,30 @@ const PICKS_MARKET: Record<string, string> = {
   tb: 'bases', tbPct: 'bases',
 }
 
+// The raw current value for a picks field — extracted so route.ts's
+// tiebreaker resolver reuses the exact same count/percentage resolution a
+// plain Factor uses.
+export function computePicksValue(
+  fieldKey: string,
+  pikkitEntry: Record<string, { picks?: number | null } | undefined> | null | undefined,
+  gameTotalPicksByMarket: Record<string, number>,
+): number | null {
+  const market = PICKS_MARKET[fieldKey]
+  if (!market) return null
+  const picks = pikkitEntry?.[market]?.picks ?? null
+  if (fieldKey.endsWith('Pct')) {
+    const total = gameTotalPicksByMarket[market] ?? 0
+    return picks != null && total > 0 ? (picks / total) * 100 : null
+  }
+  return picks
+}
+
 export function evaluatePicksFactor(
   factor: MatrixFactor,
   pikkitEntry: Record<string, { picks?: number | null } | undefined> | null | undefined,
   gameTotalPicksByMarket: Record<string, number>,
 ): boolean {
-  const market = PICKS_MARKET[factor.field_key]
-  if (!market) return false
-  const picks = pikkitEntry?.[market]?.picks ?? null
-  if (factor.field_key.endsWith('Pct')) {
-    const total = gameTotalPicksByMarket[market] ?? 0
-    const current = picks != null && total > 0 ? (picks / total) * 100 : null
-    return compareThreshold(current, factor.operator, factor.value)
-  }
-  return compareThreshold(picks, factor.operator, factor.value)
+  return compareThreshold(computePicksValue(factor.field_key, pikkitEntry, gameTotalPicksByMarket), factor.operator, factor.value)
 }
 
 export function evaluateMatrix(matrix: Matrix, evaluateFactor: (f: MatrixFactor) => boolean): boolean {
@@ -659,4 +703,57 @@ export function evaluateMatrix(matrix: Matrix, evaluateFactor: (f: MatrixFactor)
   if (matrix.match_mode === 'all') return results.every(Boolean)
   const need = matrix.match_any_count ?? 1
   return results.filter(Boolean).length >= need
+}
+
+// ─── Tie-group + tiebreaker reduction (pure logic, no data-fetching) ──────
+// dugout/data/route.ts is the only place with visibility into every batter
+// in a game at once, so IT builds the raw per-player value maps and calls
+// these two functions to turn them into a final "winners" set per Factor.
+
+// Groups candidates by identical value, rounded to the same 2 decimals
+// every fractional value in this app displays at (matches compareThreshold's
+// 'eq' fix) — singleton "groups" (nobody else shares that value) are
+// dropped, since a lone value never counts as a tie.
+export function groupTiedCandidates(values: Map<string, number>): Map<number, string[]> {
+  const groups = new Map<number, string[]>()
+  for (const [name, raw] of values) {
+    const v = Math.round(raw * 100) / 100
+    const arr = groups.get(v) ?? []
+    arr.push(name)
+    groups.set(v, arr)
+  }
+  for (const [v, arr] of groups) if (arr.length < 2) groups.delete(v)
+  return groups
+}
+
+// Narrows one raw tie group down via an ordered tiebreaker chain: at each
+// step, keep only the candidate(s) with the best value (per that step's
+// direction) for that step's field; once only one candidate remains, later
+// steps are skipped. If a step's field has no value for ANY remaining
+// candidate, that step is a no-op (falls through to the next one) rather
+// than wiping the pool. If the whole chain runs out and multiple candidates
+// still share the best value, ALL of them survive — there's no more
+// information to pick a single "winner," so nothing is silently dropped.
+// `resolveValue` defers to whichever per-category computeXxxValue helper
+// applies for that tiebreaker's own category, so this function stays
+// category-agnostic.
+export function resolveTiebreakers(
+  group: string[],
+  tiebreakers: MatrixTiebreaker[],
+  resolveValue: (name: string, tb: MatrixTiebreaker) => number | null,
+): Set<string> {
+  let pool = group
+  for (const tb of tiebreakers) {
+    if (pool.length <= 1) break
+    const withValues = pool
+      .map(name => ({ name, value: resolveValue(name, tb) }))
+      .filter((c): c is { name: string; value: number } => c.value != null)
+    if (!withValues.length) continue
+    const best = tb.direction === 'lowest'
+      ? Math.min(...withValues.map(c => c.value))
+      : Math.max(...withValues.map(c => c.value))
+    const bestRounded = Math.round(best * 100) / 100
+    pool = withValues.filter(c => Math.round(c.value * 100) / 100 === bestRounded).map(c => c.name)
+  }
+  return new Set(pool)
 }

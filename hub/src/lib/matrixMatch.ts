@@ -54,7 +54,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
 
   const { data: factors } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope')
+    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tiebreakers')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
@@ -211,16 +211,16 @@ export type MatrixMatchContext = {
   saAvg?: DugoutSpecsAverages | null
   pikkitEntry?: Record<string, { picks?: number | null } | undefined> | null
   gameTotalPicksByMarket?: Record<string, number>
-  // Backs the 'tied' operator — "this player's value for this exact
-  // field(+book) exactly matches at least one other player's within
-  // factor.tie_scope's pool ('team', the default, or 'game', both sides)."
-  // Closures over this one player's name_norm + the caller's precomputed
-  // team- and game-scoped value maps (needs every relevant batter's value
-  // at once — see dugout/data/route.ts), resolved once per player rather
-  // than threading whole team-keyed maps down through
+  // Backs the 'tied' operator — "is THIS player one of the final surviving
+  // winners of THIS exact Factor's tie group?" (scope, book selection, and
+  // any tiebreaker chain already fully resolved by the caller — see
+  // dugout/data/route.ts, the only place with visibility into every batter
+  // in a game at once — keyed by factor.id since two different 'tied'
+  // Factors can define different tiebreaker chains even off the same raw
+  // field). Closures over this one player's name_norm, resolved once per
+  // player rather than threading whole per-game winner maps down through
   // evaluateOddsFactor/evaluateDugoutSpecsFactor.
-  isOddsTied?: (fieldKey: string, book: string, scope: 'team' | 'game') => boolean
-  isDugoutSpecsTied?: (fieldKey: string, scope: 'team' | 'game') => boolean
+  isFactorTied?: (factorId: string) => boolean
 }
 
 // Evaluates every one of a member's Matrices against ONE batter for ONE
@@ -247,8 +247,8 @@ export function evaluateBatterMatrices(
   const matches: MatrixMatch[] = []
   for (const matrix of matrices) {
     const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
-      if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isOddsTied)
-      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isDugoutSpecsTied)
+      if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isFactorTied)
+      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied)
       // 'custom' recency (an arbitrary exact date range) is the only
       // pitchlog_stat case that can't be precomputed as a fixed bucket —
       // see evaluatePitchlogFactorPrecomputed's own comment. Everything

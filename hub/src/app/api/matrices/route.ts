@@ -22,9 +22,42 @@ type FactorInput = {
   books_min_count: number | null
   // Only meaningful for operator 'tied' — see matrixEngine.ts's MatrixFactor.
   tie_scope: 'team' | 'game' | null
+  tiebreakers: TiebreakerInput[]
+}
+
+type TiebreakerInput = {
+  category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
+  field_key: string
+  recency: string | null
+  book: string | null
+  direction: 'highest' | 'lowest'
 }
 
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
+const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks']
+// A tiebreaker chain longer than this has no real practical purpose — by
+// the time 5 fields haven't disambiguated a tie, the rule is "keep them
+// all" anyway (see resolveTiebreakers in matrixEngine.ts).
+const MAX_TIEBREAKERS = 5
+
+function validateTiebreakers(raw: unknown): TiebreakerInput[] {
+  if (!Array.isArray(raw)) return []
+  const clean: TiebreakerInput[] = []
+  for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
+    if (!t || typeof t !== 'object') continue
+    const { category, field_key, recency, book, direction } = t as Record<string, unknown>
+    if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
+    if (typeof field_key !== 'string' || !field_key) continue
+    clean.push({
+      category: category as TiebreakerInput['category'],
+      field_key,
+      recency: typeof recency === 'string' ? recency : null,
+      book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
+      direction: direction === 'lowest' ? 'lowest' : 'highest',
+    })
+  }
+  return clean
+}
 
 function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] } | { ok: false; error: string } {
   if (!Array.isArray(factors) || !factors.length) return { ok: false, error: 'A Matrix needs at least one Factor.' }
@@ -32,7 +65,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
   const clean: FactorInput[] = []
   for (const f of factors) {
     if (!f || typeof f !== 'object') return { ok: false, error: 'Malformed Factor.' }
-    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope } = f as Record<string, unknown>
+    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tiebreakers } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
     if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
@@ -48,6 +81,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
       books: cleanBooks?.length ? cleanBooks : null,
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
       tie_scope: tie_scope === 'game' ? 'game' : tie_scope === 'team' ? 'team' : null,
+      tiebreakers: validateTiebreakers(tiebreakers),
     })
   }
   return { ok: true, factors: clean }
@@ -68,7 +102,7 @@ export async function GET() {
 
   const { data: factors, error: factorsError } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope')
+    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tiebreakers')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })
