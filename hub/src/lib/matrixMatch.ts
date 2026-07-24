@@ -211,11 +211,14 @@ export type MatrixMatchContext = {
   saAvg?: DugoutSpecsAverages | null
   pikkitEntry?: Record<string, { picks?: number | null } | undefined> | null
   gameTotalPicksByMarket?: Record<string, number>
-  // Resolved once per player by the caller (needs every teammate's
-  // sa_div_ml at once — see dugout/data/route.ts) rather than as a whole
-  // team-keyed map here, matching how fhrAvg/saAvg are already
-  // pre-resolved-per-player instead of passed as maps.
-  saDivMlTied?: boolean
+  // Backs the 'tied' operator — "this player's value for this exact
+  // field(+book) exactly matches at least one teammate's." Closures over
+  // this one player's name_norm + the caller's per-team precomputed value
+  // maps (needs every teammate's value at once — see dugout/data/route.ts),
+  // resolved once per player rather than threading a whole team-keyed map
+  // down through evaluateOddsFactor/evaluateDugoutSpecsFactor.
+  isOddsTied?: (fieldKey: string, book: string) => boolean
+  isDugoutSpecsTied?: (fieldKey: string) => boolean
 }
 
 // Evaluates every one of a member's Matrices against ONE batter for ONE
@@ -242,8 +245,8 @@ export function evaluateBatterMatrices(
   const matches: MatrixMatch[] = []
   for (const matrix of matrices) {
     const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
-      if (factor.category === 'odds') return evaluateOddsFactor(factor, props)
-      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.saDivMlTied)
+      if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isOddsTied)
+      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isDugoutSpecsTied)
       // 'custom' recency (an arbitrary exact date range) is the only
       // pitchlog_stat case that can't be precomputed as a fixed bucket —
       // see evaluatePitchlogFactorPrecomputed's own comment. Everything

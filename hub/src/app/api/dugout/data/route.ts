@@ -16,7 +16,7 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import type { PitchlogStatWindow } from '@/lib/matrixEngine'
-import { computeSaDivMl } from '@/lib/matrixEngine'
+import { computeOddsRawPrice, computeDugoutSpecsValue, MULTI_BOOK_MARKET } from '@/lib/matrixEngine'
 import type { BatterStats } from '@/lib/batterStatsEngine'
 
 export const revalidate = 0
@@ -1153,27 +1153,67 @@ export async function GET(req: Request) {
       }
     }
 
-    // "HR ÷ Parlay — Tied w/ Teammate?" Factor: whether a batter's sa_div_ml
-    // ratio exactly matches at least one teammate's — a genuinely per-TEAM
-    // (not per-game) comparison, so home and away are computed separately;
-    // a home batter and an away batter sharing a ratio isn't "a teammate."
-    // Rounded to the same 2 decimals DugoutClient's f2() displays in the 🏆
-    // column, so "looks tied on the board" and "flagged tied by a Factor"
-    // can never disagree over float noise.
-    function tiedSetForTeam(lineup: typeof homeLineup): Set<string> {
-      const valueByName = new Map<string, number>()
-      for (const p of lineup) {
-        const v = computeSaDivMl(resolveNameEntry(bdlByName, p.name_norm) || null)
-        if (v != null) valueByName.set(p.name_norm, Math.round(v * 100) / 100)
+    // The 'tied' operator (any odds field, any dugout_specs ratio): "this
+    // player's value for this exact field(+book) exactly matches at least
+    // one teammate's" — e.g. two guys both at FHR +900, or three guys all
+    // at HR÷Parlay 1.18. Genuinely per-TEAM (not per-game), so home and
+    // away are computed separately — a home batter and an away batter
+    // sharing a price isn't "a teammate." Only ever computed for the exact
+    // (field, book) combos a currently-enabled Matrix actually asks for
+    // (same "don't pay for what nobody uses" gating as gameTotalPicksByMarket
+    // above), and rounded to 2 decimals for dugout_specs to match the same
+    // precision DugoutClient's f2() displays, so "looks tied on the board"
+    // and "flagged tied by a Factor" can never disagree over float noise.
+    // Odds prices are whole American-odds integers already, no rounding
+    // needed there.
+    const oddsTieCombos = new Set<string>() // `${field_key}|${book}`
+    const specsTieFields = new Set<string>()
+    for (const m of userMatrices) {
+      for (const f of m.factors) {
+        if (f.operator !== 'tied') continue
+        if (f.category === 'odds') {
+          const multi = MULTI_BOOK_MARKET[f.field_key]
+          const books = multi && f.books?.length ? f.books : ['fanduel']
+          for (const book of books) oddsTieCombos.add(`${f.field_key}|${book}`)
+        } else if (f.category === 'dugout_specs') {
+          specsTieFields.add(f.field_key)
+        }
       }
+    }
+    function tiedNamesFromValues(valueByName: Map<string, number>): Set<string> {
       const counts = new Map<number, number>()
       for (const v of valueByName.values()) counts.set(v, (counts.get(v) ?? 0) + 1)
       const tied = new Set<string>()
       for (const [nn, v] of valueByName) if ((counts.get(v) ?? 0) > 1) tied.add(nn)
       return tied
     }
-    const homeSaDivMlTied = userMatrices.length ? tiedSetForTeam(homeLineup) : new Set<string>()
-    const awaySaDivMlTied = userMatrices.length ? tiedSetForTeam(awayLineup) : new Set<string>()
+    function tiedSetsForTeam(lineup: typeof homeLineup): { odds: Map<string, Set<string>>; specs: Map<string, Set<string>> } {
+      const oddsValues = new Map<string, Map<string, number>>()
+      const specsValues = new Map<string, Map<string, number>>()
+      for (const p of lineup) {
+        const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        for (const combo of oddsTieCombos) {
+          const [fieldKey, book] = combo.split('|')
+          const v = computeOddsRawPrice(fieldKey, book, props)
+          if (v != null) (oddsValues.get(combo) ?? oddsValues.set(combo, new Map()).get(combo)!).set(p.name_norm, v)
+        }
+        if (specsTieFields.size) {
+          const fhrAvg = resolveNameEntry(fhrAvgMap, p.name_norm)
+          const saAvg = resolveNameEntry(saAvgMap, p.name_norm)
+          for (const fieldKey of specsTieFields) {
+            const v = computeDugoutSpecsValue(fieldKey, props, fhrAvg, saAvg)
+            if (v != null) (specsValues.get(fieldKey) ?? specsValues.set(fieldKey, new Map()).get(fieldKey)!).set(p.name_norm, Math.round(v * 100) / 100)
+          }
+        }
+      }
+      const odds = new Map<string, Set<string>>()
+      for (const [combo, valueByName] of oddsValues) odds.set(combo, tiedNamesFromValues(valueByName))
+      const specs = new Map<string, Set<string>>()
+      for (const [fieldKey, valueByName] of specsValues) specs.set(fieldKey, tiedNamesFromValues(valueByName))
+      return { odds, specs }
+    }
+    const homeTied = (oddsTieCombos.size || specsTieFields.size) ? tiedSetsForTeam(homeLineup) : { odds: new Map<string, Set<string>>(), specs: new Map<string, Set<string>>() }
+    const awayTied = (oddsTieCombos.size || specsTieFields.size) ? tiedSetsForTeam(awayLineup) : { odds: new Map<string, Set<string>>(), specs: new Map<string, Set<string>>() }
 
     return {
       gamePk: g.gamePk,
@@ -1230,7 +1270,8 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-              saDivMlTied: homeSaDivMlTied.has(p.name_norm),
+              isOddsTied: (fieldKey, book) => homeTied.odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
+              isDugoutSpecsTied: fieldKey => homeTied.specs.get(fieldKey)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
@@ -1245,7 +1286,8 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-              saDivMlTied: awaySaDivMlTied.has(p.name_norm),
+              isOddsTied: (fieldKey, book) => awayTied.odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
+              isDugoutSpecsTied: fieldKey => awayTied.specs.get(fieldKey)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }

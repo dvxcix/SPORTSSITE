@@ -28,7 +28,13 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 //                      (fieldKey ending "Pct") this player's share of his
 //                      own game's total picks for that market (18 batters).
 
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
+// 'tied' (odds/dugout_specs only) — "this player's value for this exact
+// field(+book) exactly matches at least one teammate's," e.g. three guys
+// all showing HR ÷ Parlay 1.18, or two guys both at FHR +900. Resolved by
+// the caller (dugout/data/route.ts, the only place with visibility into
+// every batter on the same team at once) via the isTied callbacks threaded
+// through MatrixMatchContext — see evaluateOddsFactor/evaluateDugoutSpecsFactor.
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied'
 // Real gap (2026-07-24): the grid's own Statcast section shows every
 // pitchlog_stat/savant_stat field at both a recent window AND a season
 // value, with a Δ (recent − season) alongside some of them — a Matrix
@@ -397,9 +403,29 @@ const BOOKS_MISSING_FIELD: Record<string, { market: string; books: string[] }> =
 // books," rather than always meaning FanDuel implicitly. Each book's own
 // opening-price field name (confirmed against MARKET_BOOK_TO_OPEN_FIELD in
 // api/dugout/data/route.ts, the one place these are written).
-const MULTI_BOOK_MARKET: Record<string, { market: string; openByBook: Record<string, string> }> = {
+// Exported so dugout/data/route.ts's generic per-team tie precompute (see
+// evaluateOddsFactor's 'tied' branch below) knows which odds field_keys are
+// genuinely multi-book without duplicating this table.
+export const MULTI_BOOK_MARKET: Record<string, { market: string; openByBook: Record<string, string> }> = {
   fhr: { market: 'fhr', openByBook: { fanduel: 'fhr', caesars: 'fhrCz', fanatics: 'fhrFan' } },
   hr: { market: 'sa', openByBook: { fanduel: 'saFd', caesars: 'saCz', betmgm: 'saMgm', betrivers: 'saBr', fanatics: 'saFan' } },
+}
+
+// The raw current price for a given odds field_key(+book) — no opener, no
+// operator, just the number. Exported so route.ts's tie precompute reuses
+// the exact same market/book resolution evaluateOddsFactor uses below,
+// rather than re-deriving it (and risking drift). `booksfhr`/`bookshr`
+// (a missing-books COUNT, not a price) return null — "tied" is meaningless
+// for them, and the UI never offers the operator for those two fields.
+export function computeOddsRawPrice(fieldKey: string, book: string, props: OddsProps | null | undefined): number | null {
+  const multi = MULTI_BOOK_MARKET[fieldKey]
+  if (multi) {
+    const marketRow = props?.[multi.market] as Record<string, number | null | undefined> | undefined
+    return marketRow?.[book] ?? null
+  }
+  const spec = ODDS_BOOK_FIELD[fieldKey]
+  if (!spec) return null
+  return props?.[spec.market]?.fanduel ?? null
 }
 
 function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, opener: number | null): boolean {
@@ -418,12 +444,29 @@ function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, op
   return compareThreshold(current, factor.operator, factor.value)
 }
 
-export function evaluateOddsFactor(factor: MatrixFactor, props: OddsProps | null | undefined): boolean {
+export function evaluateOddsFactor(
+  factor: MatrixFactor,
+  props: OddsProps | null | undefined,
+  // Resolved by the caller per (field_key, book) — see MatrixMatchContext.
+  isTied?: (fieldKey: string, book: string) => boolean,
+): boolean {
   if (factor.field_key === 'booksfhr' || factor.field_key === 'bookshr') {
     const spec = BOOKS_MISSING_FIELD[factor.field_key]
     const marketRow = props?.[spec.market]
     const missing = spec.books.filter(b => (marketRow as Record<string, number | null | undefined> | undefined)?.[b] == null).length
     return compareThreshold(missing, factor.operator, factor.value)
+  }
+
+  if (factor.operator === 'tied') {
+    // Same book-selection rule as every other odds operator: multi-book
+    // fields use whichever book(s) the member picked (default FanDuel);
+    // every other field is FanDuel-only regardless of `books`.
+    const multi = MULTI_BOOK_MARKET[factor.field_key]
+    const books = multi && factor.books?.length ? factor.books : ['fanduel']
+    const results = books.map(book => isTied?.(factor.field_key, book) ?? false)
+    return multi && factor.books_min_count != null
+      ? results.filter(Boolean).length >= factor.books_min_count
+      : results.every(Boolean)
   }
 
   const multi = MULTI_BOOK_MARKET[factor.field_key]
@@ -520,12 +563,24 @@ const DUGOUT_SPECS_FIELD: Record<string, (props: OddsProps | null | undefined) =
   sa_div_hr2: props => implRatio(props?.sa?.fanduel ?? null, props?.hr2?.fanduel ?? null),
 }
 
-// Exported so dugout/data/route.ts's per-team tie precompute (see
-// evaluateDugoutSpecsFactor's 'sa_div_ml_tied' branch below) reuses this
-// exact formula instead of re-deriving it — the display column and the
-// tie check can never drift apart this way.
-export function computeSaDivMl(props: OddsProps | null | undefined): number | null {
-  return DUGOUT_SPECS_FIELD.sa_div_ml(props)
+// The raw current value for a dugout_specs field — every ratio in
+// DUGOUT_SPECS_FIELD, plus fhr_pct/sa_pct's season-average-relative delta
+// (which needs the extra averages args those two don't get from `props`
+// alone). Exported so route.ts's tie precompute reuses this exact
+// resolution instead of re-deriving it — the display column and the tie
+// check can never drift apart this way.
+export function computeDugoutSpecsValue(
+  fieldKey: string,
+  props: OddsProps | null | undefined,
+  fhrAvg: DugoutSpecsAverages | null | undefined,
+  saAvg: DugoutSpecsAverages | null | undefined,
+): number | null {
+  if (fieldKey === 'fhr_pct' || fieldKey === 'sa_pct') {
+    const fd = props?.[fieldKey === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
+    const avg = fieldKey === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
+    return fd != null && avg ? ((fd - avg) / avg) * 100 : null
+  }
+  return DUGOUT_SPECS_FIELD[fieldKey]?.(props) ?? null
 }
 
 export function evaluateDugoutSpecsFactor(
@@ -533,25 +588,16 @@ export function evaluateDugoutSpecsFactor(
   props: OddsProps | null | undefined,
   fhrAvg: DugoutSpecsAverages | null | undefined,
   saAvg: DugoutSpecsAverages | null | undefined,
-  // Whether THIS player's HR÷Parlay ratio exactly matches (to the same 2
-  // decimals the 🏆 column displays) at least one teammate's — resolved by
-  // the caller (dugout/data/route.ts), which is the only place with
+  // Whether THIS player's value for this exact field exactly matches (to
+  // the same 2 decimals the board displays) at least one teammate's —
+  // resolved by the caller (dugout/data/route.ts), the only place with
   // visibility into every batter on the same team at once; this function
   // stays a pure per-player evaluator like every other dugout_specs Factor.
-  saDivMlTied?: boolean,
+  isTied?: (fieldKey: string) => boolean,
 ): boolean {
-  if (factor.field_key === 'fhr_pct' || factor.field_key === 'sa_pct') {
-    const fd = props?.[factor.field_key === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
-    const avg = factor.field_key === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
-    const current = fd != null && avg ? ((fd - avg) / avg) * 100 : null
-    return compareThreshold(current, factor.operator, factor.value)
-  }
-  if (factor.field_key === 'sa_div_ml_tied') {
-    return compareThreshold(saDivMlTied ? 1 : 0, factor.operator, factor.value)
-  }
-  const compute = DUGOUT_SPECS_FIELD[factor.field_key]
-  if (!compute) return false
-  return compareThreshold(compute(props), factor.operator, factor.value)
+  if (factor.operator === 'tied') return isTied?.(factor.field_key) ?? false
+  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg)
+  return compareThreshold(current, factor.operator, factor.value)
 }
 
 // Community HR-pick counts (from Pikkit's public board) — either a plain

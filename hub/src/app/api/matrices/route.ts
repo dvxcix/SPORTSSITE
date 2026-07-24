@@ -10,7 +10,7 @@ const MAX_FACTORS_PER_MATRIX = 40
 type FactorInput = {
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied'
   value: number | null
   recency: string | null
   recency_start: string | null
@@ -33,7 +33,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
     const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
-    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
+    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
     const cleanBooks = Array.isArray(books) ? books.filter((b): b is string => typeof b === 'string' && VALID_BOOKS.includes(b)) : null
     clean.push({
       category: category as FactorInput['category'],

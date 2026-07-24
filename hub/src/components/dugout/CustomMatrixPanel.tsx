@@ -14,7 +14,7 @@ export type MatrixFactor = {
   id?: string
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied'
   value: number | null
   recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | 'game_delta' | 'l3_delta' | 'l5_delta' | 'l10_delta' | null
   // Only meaningful for the two real multi-book odds fields (fhr, hr) —
@@ -93,7 +93,6 @@ const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boole
   { key: 'fhr_div_sa', label: 'FHR ÷ HR' },
   { key: 'm_div_f', label: 'M ÷ F (BetMGM ÷ FanDuel)' },
   { key: 'sa_div_ml', label: 'HR ÷ Parlay' },
-  { key: 'sa_div_ml_tied', label: 'HR ÷ Parlay — Tied w/ Teammate?', boolean: true },
   { key: 'pa1_div_sa', label: 'PA ÷ HR' },
   { key: 'sa_div_rbi', label: 'HR ÷ RBI' },
   { key: 'sa_div_rbi2', label: 'HR ÷ RBI2' },
@@ -133,6 +132,7 @@ const OPERATOR_LABEL: Record<string, string> = {
   gte: 'At least', lte: 'At most', eq: 'Exactly',
   up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
   positive: 'Is positive (+)', negative: 'Is negative (−)',
+  tied: 'Tied w/ a teammate',
 }
 
 type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
@@ -181,10 +181,12 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
   const fields = fieldsForCategory(factor.category)
   const isBooksField = factor.field_key === 'booksfhr' || factor.field_key === 'bookshr'
   // No threshold VALUE needed for any of these — odds' delta-vs-open trio,
-  // or dugout_specs' plain sign check (a Factor like "FHR% is positive"
-  // doesn't want a number typed in, same shape as "moved up since open").
+  // dugout_specs' plain sign check (a Factor like "FHR% is positive"
+  // doesn't want a number typed in, same shape as "moved up since open"),
+  // or 'tied' (a real-time comparison against teammates, not a number a
+  // member picks — see evaluateOddsFactor/evaluateDugoutSpecsFactor).
   const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
-    || factor.operator === 'positive' || factor.operator === 'negative'
+    || factor.operator === 'positive' || factor.operator === 'negative' || factor.operator === 'tied'
   const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat'
   // "Is PWR ⚡?" — a real Yes/No gate (buildBatterRow's is_pwr), not a ratio
   // to type a number for. Represented under the hood as an ordinary eq-1/
@@ -251,12 +253,14 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
                 <option value="up">{OPERATOR_LABEL.up}</option>
                 <option value="down">{OPERATOR_LABEL.down}</option>
                 <option value="flat">{OPERATOR_LABEL.flat}</option>
+                <option value="tied">{OPERATOR_LABEL.tied}</option>
               </>
             )}
             {factor.category === 'dugout_specs' && (
               <>
                 <option value="positive">{OPERATOR_LABEL.positive}</option>
                 <option value="negative">{OPERATOR_LABEL.negative}</option>
+                <option value="tied">{OPERATOR_LABEL.tied}</option>
               </>
             )}
           </select>
