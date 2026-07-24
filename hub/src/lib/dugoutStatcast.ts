@@ -68,17 +68,23 @@ export function computeStatcastLine(
 
   const savant: Record<string, number | null> = {}
   for (const f of SAVANT_RATE_FIELD) {
-    const raw = weightedSavantMetric(savantRows, f.category, window, batSide, pitcherHand, f.metric)
     // Every one of these 6 is a 0-1 fraction in Savant's own export
-    // (confirmed live) — scaled to 0-100 to match every other percentage
-    // this app displays (barrelPct/hardHitPct off computeStatLine are
-    // already 0-100).
-    savant[f.key] = raw != null ? raw * 100 : null
+    // (confirmed live). Left UNSCALED here — the client renders every one
+    // of these via pp() (DugoutClient.tsx), which already does its own
+    // ×100 for display, same as the odds/matchup tables' every other 0-1
+    // rate field. Scaling here too double-multiplied every value by 100
+    // AGAIN on render (confirmed live: a real onTimePct of 0.767 was
+    // rendering as 7668.7 — 0.767 × 100 × 100), reported live as "the
+    // numbers are WAY whacky." barrelPct/hardHitPct are a different case:
+    // computeStatLine() (batterStatsEngine.ts) already returns those as
+    // real 0-100 values, and the client renders them via ppRaw() (no
+    // further scaling) — that pairing was already correct.
+    savant[f.key] = weightedSavantMetric(savantRows, f.category, window, batSide, pitcherHand, f.metric)
   }
-  // on_time_percent is the same 0-1-fraction convention as the 6 above.
-  // miss_distance is a real physical distance (confirmed live, ~0.9-1.4 —
-  // feet), not a rate — left unscaled.
-  const onTimePctRaw = weightedSavantMetric(savantRows, 'swing_timing_miss_distance', window, batSide, pitcherHand, 'on_time_percent')
+  // on_time_percent is the same 0-1-fraction convention as the 6 above —
+  // same reasoning, left unscaled. miss_distance is a real physical
+  // distance (confirmed live, ~0.9-1.4 feet), not a rate — always unscaled.
+  const onTimePct = weightedSavantMetric(savantRows, 'swing_timing_miss_distance', window, batSide, pitcherHand, 'on_time_percent')
   const missDistance = weightedSavantMetric(savantRows, 'swing_timing_miss_distance', window, batSide, pitcherHand, 'miss_distance')
 
   return {
@@ -87,7 +93,7 @@ export function computeStatcastLine(
     avgEv: line.avgEv, avgLa: line.avgLa, hr: line.hr,
     hardSwingRate: savant.hardSwingRate, squaredUpPct: savant.squaredUpPct, blastPct: savant.blastPct,
     idealAttackAngleRate: savant.idealAttackAngleRate, pullAirRate: savant.pullAirRate, fbRate: savant.fbRate,
-    onTimePct: onTimePctRaw != null ? onTimePctRaw * 100 : null,
+    onTimePct,
     missDistance,
   }
 }
