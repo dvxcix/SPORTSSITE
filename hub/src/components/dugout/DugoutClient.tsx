@@ -16,7 +16,6 @@ import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
-import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -2514,7 +2513,6 @@ export function DugoutClient({ date }: { date: string }) {
 
   return (
     <div>
-      <MatrixButton />
       {!hasStats && (
         <div style={{ padding: '6px 12px', marginBottom: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 11, color: '#f87171' }}>
           ⚠ Statcast unavailable — mlb-party Supabase anon key may not have read access (RLS). Odds from BDL still load normally.

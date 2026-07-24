@@ -7,6 +7,7 @@ import { TopBar } from './TopBar'
 import { WatchlistProvider } from '@/context/WatchlistContext'
 import { WatchlistButton } from '@/components/dugout/WatchlistPanel'
 import { MyPicksButton } from '@/components/dugout/MyPicksPanel'
+import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -33,6 +34,17 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // while actually on the Dugout. WatchlistButton/MyPicksButton both
   // self-hide (`if (!wl.signedIn) return null`) so nothing renders for a
   // signed-out visitor.
+  //
+  // MatrixButton was first mounted deep inside DugoutClient's own render
+  // tree and never actually appeared — some ancestor in that ~2,600-line
+  // component almost certainly establishes a CSS containing block (a
+  // transform/filter) that traps a `position: fixed` descendant inside its
+  // own box instead of the real viewport, the exact trap this top-level
+  // spot (proven by the two buttons above, which sit outside <main>
+  // entirely) sidesteps. Custom Matrix is Dugout-only, so it's gated on
+  // path rather than self-hiding — RootLayoutShell already computes `path`.
+  const isDugout = path === '/dugout'
+
   return (
     <WatchlistProvider>
       <div className="flex min-h-screen">
@@ -46,6 +58,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
       </div>
       <WatchlistButton />
       <MyPicksButton />
+      {isDugout && <MatrixButton />}
     </WatchlistProvider>
   )
 }
