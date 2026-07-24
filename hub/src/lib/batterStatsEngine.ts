@@ -19,6 +19,17 @@ export type PitchLogRow = {
   stand: string | null; p_throws: string | null
   opponent_id: number; opponent_name: string; opponent_team: string | null; day_night: string | null
   bb_type?: string | null
+  // Swing-path biomechanics + Savant's own contact-quality bucket — same raw
+  // Statcast payload as launch_speed/bat_speed above, surfaced by
+  // enrichPitchRows() alongside swing_length/attack_angle (declared above
+  // this comment's addition date but already being set at runtime; adding
+  // them to the type here rather than leaving them implicit).
+  swing_length?: number | null; attack_angle?: number | null
+  swing_path_tilt?: number | null; attack_direction?: number | null
+  // Savant's own official 1-6 contact-quality bucket, 6 = Barrel — using
+  // this directly for Barrel% means not reimplementing Savant's EV/LA
+  // barrel formula ourselves.
+  launch_speed_angle?: number | null
 }
 // Role-flavored aliases — same shape, just a clearer name at each call site.
 export type BatterPitchRow = PitchLogRow
@@ -44,10 +55,21 @@ export function computeStatLine(rows: PitchLogRow[]) {
   const withEv = inPlay.filter((r): r is PitchLogRow & { launch_speed: number } => r.launch_speed != null)
   const withLa = inPlay.filter((r): r is PitchLogRow & { launch_angle: number } => r.launch_angle != null)
   const hardHit = withEv.filter(r => r.launch_speed >= 95)
+  // Savant's own bucket 6 = Barrel, straight off the raw payload — not a
+  // reimplementation of their EV/LA formula, just reading the classification
+  // they already computed on every in-play event.
+  const barrels = inPlay.filter(r => r.launch_speed_angle === 6)
   const withXwoba = inPlay.filter((r): r is PitchLogRow & { xwoba: number } => r.xwoba != null)
   const outOfZone = rows.filter(r => r.zone != null && (r.zone as number) >= 11)
   const withBatSpeed = swings.filter((r): r is PitchLogRow & { bat_speed: number } => r.bat_speed != null)
   const withRv = rows.filter((r): r is PitchLogRow & { run_value: number } => r.run_value != null)
+  // Swing-path biomechanics are per-SWING, not per-in-play-contact — a
+  // whiffed or fouled-off swing still has a real attack angle/swing length,
+  // same reasoning as avgBatSpeed above using `swings` rather than `inPlay`.
+  const withAttackAngle = swings.filter((r): r is PitchLogRow & { attack_angle: number } => r.attack_angle != null)
+  const withSwingLength = swings.filter((r): r is PitchLogRow & { swing_length: number } => r.swing_length != null)
+  const withTilt = swings.filter((r): r is PitchLogRow & { swing_path_tilt: number } => r.swing_path_tilt != null)
+  const withAttackDir = swings.filter((r): r is PitchLogRow & { attack_direction: number } => r.attack_direction != null)
 
   const events = rows.map(r => r.events).filter((e): e is string => !!e)
   const cnt = (name: string) => events.filter(e => e === name).length
@@ -79,8 +101,13 @@ export function computeStatLine(rows: PitchLogRow[]) {
     maxEv: withEv.length ? Math.max(...withEv.map(r => r.launch_speed)) : null,
     avgLa: withLa.length ? avg(withLa.map(r => r.launch_angle)) : null,
     hardHitPct: withEv.length ? (hardHit.length / withEv.length) * 100 : null,
+    barrelPct: inPlay.length ? (barrels.length / inPlay.length) * 100 : null,
     xwobaContact: withXwoba.length ? avg(withXwoba.map(r => r.xwoba)) : null,
     avgBatSpeed: withBatSpeed.length ? avg(withBatSpeed.map(r => r.bat_speed)) : null,
+    avgAttackAngle: withAttackAngle.length ? avg(withAttackAngle.map(r => r.attack_angle)) : null,
+    avgSwingLength: withSwingLength.length ? avg(withSwingLength.map(r => r.swing_length)) : null,
+    avgTilt: withTilt.length ? avg(withTilt.map(r => r.swing_path_tilt)) : null,
+    avgAttackDirection: withAttackDir.length ? avg(withAttackDir.map(r => r.attack_direction)) : null,
     runValuePer100: withRv.length ? avg(withRv.map(r => r.run_value))! * 100 : null,
   }
 }

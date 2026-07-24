@@ -106,6 +106,16 @@ export function enrichPitchRows(
       attack_angle: raw.attack_angle !== undefined && raw.attack_angle !== '' ? Number(raw.attack_angle) : null,
       hit_distance: raw.hit_distance_sc !== undefined && raw.hit_distance_sc !== '' ? Number(raw.hit_distance_sc) : null,
       bb_type: raw.bb_type || null,
+      // Swing "tilt" and horizontal attack direction — same raw Statcast
+      // bat-tracking payload as swing_length/attack_angle above, just never
+      // pulled out before now. launch_speed_angle is Savant's OWN official
+      // 1-6 contact-quality bucket (6 = Barrel) baked into every batted-ball
+      // event — using it directly means Barrel% doesn't need us to
+      // reimplement Savant's EV/LA barrel formula ourselves, just count
+      // bucket 6.
+      swing_path_tilt: raw.swing_path_tilt !== undefined && raw.swing_path_tilt !== '' ? Number(raw.swing_path_tilt) : null,
+      attack_direction: raw.attack_direction !== undefined && raw.attack_direction !== '' ? Number(raw.attack_direction) : null,
+      launch_speed_angle: raw.launch_speed_angle !== undefined && raw.launch_speed_angle !== '' ? Number(raw.launch_speed_angle) : null,
       raw: undefined,
     }
   })
