@@ -169,7 +169,15 @@ export function evaluateSavantFactor(
     weightedSum += metricVal * weightVal
     totalWeight += weightVal
   }
-  const current = totalWeight > 0 ? weightedSum / totalWeight : null
+  // Savant's own CSV export returns every one of these 6 rate metrics as a
+  // 0-1 fraction (confirmed live: squared_up_per_swing/ideal_attack_angle_
+  // rate/pull_air_rate/fb_rate all sampled at values like 0.5, 0.333...),
+  // but every OTHER percentage Factor in this engine (pitchlog_stat's
+  // whiffPct/chasePct/hardHitPct/barrelPct, straight off computeStatLine)
+  // is already 0-100 — the value a member types into "Hard-Swing % ≥ 50"
+  // means 50, not 0.5, everywhere else in this feature. Scaling here keeps
+  // that one consistent convention instead of silently never matching.
+  const current = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : null
   return compareThreshold(current, factor.operator, factor.value)
 }
 

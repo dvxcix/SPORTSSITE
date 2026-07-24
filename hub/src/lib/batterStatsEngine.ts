@@ -145,6 +145,9 @@ export const BATTER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'hi
   { key: 'hardHitPct', label: 'Hard-Hit %', dir: 'hi', fmt: p1 },
   { key: 'xwobaContact', label: 'xwOBA (Ct)', dir: 'hi', fmt: r3 },
   { key: 'avgBatSpeed', label: 'Bat Speed', dir: 'hi', fmt: d1 },
+  { key: 'barrelPct', label: 'Barrel %', dir: 'hi', fmt: p1 },
+  { key: 'avgAttackAngle', label: 'Attack Angle', dir: 'hi', fmt: d1 },
+  { key: 'avgSwingLength', label: 'Swing Length', dir: 'hi', fmt: d1 },
 ]
 
 // Pitcher-perspective column set — same underlying stat line, direction
@@ -171,6 +174,9 @@ export const PITCHER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'h
   { key: 'hardHitPct', label: 'Hard-Hit %', dir: 'lo', fmt: p1 },
   { key: 'xwobaContact', label: 'xwOBA (Ct)', dir: 'lo', fmt: r3 },
   { key: 'runValuePer100', label: 'RV/100', dir: 'lo', fmt: d1 },
+  { key: 'barrelPct', label: 'Barrel % Allowed', dir: 'lo', fmt: p1 },
+  { key: 'avgAttackAngle', label: 'Attack Angle Induced', dir: 'lo', fmt: d1 },
+  { key: 'avgSwingLength', label: 'Swing Length Induced', dir: 'lo', fmt: d1 },
 ]
 
 // Last-N-distinct-games-played slice — the same "recency" concept used

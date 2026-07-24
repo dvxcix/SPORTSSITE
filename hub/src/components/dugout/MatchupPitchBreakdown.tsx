@@ -12,6 +12,7 @@ import { PitchList } from '@/components/players/PitchList'
 import { ToggleBtn } from '@/components/players/PlayerPageClient'
 import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, type PitchLogRow, type BatterStats } from '@/lib/batterStatsEngine'
 import { PITCHER_RECENCY, BATTER_SCOPES } from '@/components/slate/PitcherVsLineup'
+import { lookupSavantMetricBlended, batterScopeToSavantWindow, type SavantSplitRow } from '@/lib/savantSplitLookup'
 
 // Same fixed hand-color convention as the batter rows above this drilldown
 // (see DugoutClient.tsx's handColor) — right orange, left blue — so a
@@ -73,6 +74,26 @@ function fetchAffinityCached(key: string, role: 'pitcher' | 'hitter') {
   }
   return p
 }
+
+// A batter's own synced Savant bat-tracking splits — the 4 metrics that are
+// genuinely Savant-model-only (Hard-Swing%/Squared-Up%/Blast%/Ideal-Attack-
+// Angle%) and can't be recomputed from raw pitch-log rows the way bat speed/
+// attack angle/swing length/barrel% already are (see BATTER_STAT_COLS).
+const batTrackingSplitsCache = new Map<number, Promise<SavantSplitRow[]>>()
+function fetchBatTrackingSplitsCached(mlbId: number) {
+  let p = batTrackingSplitsCache.get(mlbId)
+  if (!p) {
+    p = fetch(`/api/players/${mlbId}/bat-tracking-splits`).then(r => r.json()).then(d => d.rows ?? []).catch(() => [])
+    batTrackingSplitsCache.set(mlbId, p)
+  }
+  return p
+}
+const SAVANT_ONLY_COLS: { metric: string; category: 'bat_tracking' | 'swing_path_attack_angle'; label: string; dir: 'hi' | 'lo' }[] = [
+  { metric: 'hard_swing_rate', category: 'bat_tracking', label: 'Hard-Swing %', dir: 'hi' },
+  { metric: 'squared_up_per_swing', category: 'bat_tracking', label: 'Squared-Up %', dir: 'hi' },
+  { metric: 'blast_per_swing', category: 'bat_tracking', label: 'Blast %', dir: 'hi' },
+  { metric: 'ideal_attack_angle_rate', category: 'swing_path_attack_angle', label: 'Ideal Attack-Angle %', dir: 'hi' },
+]
 // "Season" toggle only — not exposed on the pitcher's own recency/hand
 // filters, since affinity is a season-long profile, not something that
 // varies by his last-3-starts window.
@@ -88,6 +109,11 @@ const HAND_FILTERS_PITCHER_SIDE = [
 const r3 = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/^0\./, '.').replace(/^-0\./, '-.'))
 const p1 = (v: number | null) => (v == null ? '—' : `${v.toFixed(1)}%`)
 const i0 = (v: number | null) => (v == null ? '—' : String(v))
+// Savant's own bat-tracking CSV returns these 4 rate metrics as a 0-1
+// fraction (confirmed live sampling player_statcast_splits), unlike
+// computeStatLine's own percentages (whiffPct/hardHitPct/...), which are
+// already 0-100 — p1 alone would silently show "0.5%" for a real 50% rate.
+const pFrac = (v: number | null) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`)
 
 function groupByPitchType(rows: PitchLogRow[]): { pitchType: string; rows: PitchLogRow[] }[] {
   const map = new Map<string, PitchLogRow[]>()
@@ -152,6 +178,7 @@ export function MatchupPitchBreakdown({
 }) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
+  const [batTrackingSplits, setBatTrackingSplits] = useState<SavantSplitRow[]>([])
   const [bullpen, setBullpen] = useState<TeamBullpen>(EMPTY_BULLPEN)
   const [pitcherAffinity, setPitcherAffinity] = useState<AffinityResult>(EMPTY_AFFINITY)
   const [batterAffinity, setBatterAffinity] = useState<AffinityResult>(EMPTY_AFFINITY)
@@ -176,6 +203,13 @@ export function MatchupPitchBreakdown({
     let cancelled = false
     setBatterRows(null)
     fetchPitchLogCached(batterId).then(d => { if (!cancelled) setBatterRows(d.batterRows ?? []) })
+    return () => { cancelled = true }
+  }, [batterId])
+
+  useEffect(() => {
+    let cancelled = false
+    setBatTrackingSplits([])
+    fetchBatTrackingSplitsCached(batterId).then(rows => { if (!cancelled) setBatTrackingSplits(rows) })
     return () => { cancelled = true }
   }, [batterId])
 
@@ -294,6 +328,24 @@ export function MatchupPitchBreakdown({
     return cmpNullsLast((a.batterStats as any)[activeBatPitchSort.col], (b.batterStats as any)[activeBatPitchSort.col], activeBatPitchSort.dir)
   })
   const batPoolByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, batterMixRows.map(r => (r.batterStats as any)[c.key])]))
+
+  // Savant-model-only metrics per pitch type — can't come off computeStatLine
+  // (no in-house formula for Hard-Swing%/Squared-Up%/Blast%/Ideal-Attack-
+  // Angle%, see savantSplitLookup.ts), so looked up from this batter's own
+  // synced splits instead, blended across whichever pitcher hand(s) actually
+  // make up each pitch-type row and matched to the SAME recency scope
+  // currently selected above (falls back to season for vsPitcher/vsTeam/
+  // vsSimilarArsenal, which have no Savant-side per-opponent analog).
+  const savantWindow = batterScopeToSavantWindow(batterScope)
+  const savantByPitch: Record<string, Record<string, number | null>> = {}
+  for (const r of batterMixRows) {
+    savantByPitch[r.pitchType] = Object.fromEntries(
+      SAVANT_ONLY_COLS.map(c => [c.metric, lookupSavantMetricBlended(batTrackingSplits, c.category, savantWindow, r.pitchType, batterBats, r.batterRowsForPitch, c.metric)])
+    )
+  }
+  const savantPoolByMetric = Object.fromEntries(
+    SAVANT_ONLY_COLS.map(c => [c.metric, batterMixRows.map(r => savantByPitch[r.pitchType]?.[c.metric] ?? null)])
+  )
 
   const zoneMetricConfig = ZONE_METRICS.find(m => m.key === zoneMetric)!
 
@@ -483,11 +535,16 @@ export function MatchupPitchBreakdown({
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <SortableTH label="Pitch" colKey="pitch" sort={batPitchSort} onSort={onSortBatPitch} align="left" />
               {BATTER_STAT_COLS.map(c => <SortableTH key={c.key} label={c.label} colKey={c.key} sort={batPitchSort} onSort={onSortBatPitch} />)}
+              {SAVANT_ONLY_COLS.map(c => (
+                <th key={c.metric} style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                  {c.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {sortedBatPitchRows.length === 0 ? (
-              <tr><td colSpan={BATTER_STAT_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 11 }}>No tracked pitches in this window.</td></tr>
+              <tr><td colSpan={BATTER_STAT_COLS.length + SAVANT_ONLY_COLS.length + 1} style={{ padding: '8px', color: 'var(--text-3)', fontSize: 11 }}>No tracked pitches in this window.</td></tr>
             ) : sortedBatPitchRows.map(r => {
               const isOpen = expandedPitch === r.pitchType
               return (
@@ -509,10 +566,18 @@ export function MatchupPitchBreakdown({
                         </td>
                       )
                     })}
+                    {SAVANT_ONLY_COLS.map(c => {
+                      const v = savantByPitch[r.pitchType]?.[c.metric] ?? null
+                      return (
+                        <td key={c.metric} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(v, savantPoolByMetric[c.metric], c.dir) }}>
+                          {pFrac(v)}
+                        </td>
+                      )
+                    })}
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={BATTER_STAT_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
+                      <td colSpan={BATTER_STAT_COLS.length + SAVANT_ONLY_COLS.length + 1} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)' }}>
                         {r.batterRowsForPitch.length === 0 ? (
                           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>No tracked pitches of this type in the current window.</div>
                         ) : (
