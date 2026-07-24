@@ -15,23 +15,35 @@ async function requireAdmin() {
 
 // One-off manual backfill for the pitchlog_stat precompute (see
 // dugoutPitchlogStatPrecompute.ts / the daily dugout-pitchlog-stat-
-// precompute cron) for a SPECIFIC past date — same shape as the existing
-// dugout-statcast-backfill route, gated by a real signed-in admin session
-// instead of CRON_SECRET.
+// precompute cron) — same shape as the existing dugout-statcast-backfill
+// route, gated by a real signed-in admin session instead of CRON_SECRET.
+// Accepts either ?date=YYYY-MM-DD (a single date, original behavior) or
+// ?dates=YYYY-MM-DD,YYYY-MM-DD,... (a specific list, not necessarily
+// contiguous — e.g. skipping All-Star break days with no real slate) so a
+// one-off catch-up across several real past dates doesn't need one manual
+// request per date. Each date is isolated in its own try/catch, same as
+// the cron's own trailing-window loop — one bad date doesn't abort the rest.
 export async function GET(req: Request) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
 
   const { searchParams } = new URL(req.url)
-  const date = searchParams.get('date')
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: 'Pass a ?date=YYYY-MM-DD query param' }, { status: 400 })
+  const single = searchParams.get('date')
+  const list = searchParams.get('dates')
+  const dates = list ? list.split(',').map(d => d.trim()).filter(Boolean) : single ? [single] : []
+
+  if (!dates.length || dates.some(d => !/^\d{4}-\d{2}-\d{2}$/.test(d))) {
+    return NextResponse.json({ error: 'Pass a ?date=YYYY-MM-DD or ?dates=YYYY-MM-DD,YYYY-MM-DD,... query param' }, { status: 400 })
   }
 
-  try {
-    const result = await precomputeDugoutPitchlogStatForDate(date)
-    return NextResponse.json(result)
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+  const results: Record<string, unknown> = {}
+  for (const date of dates) {
+    try {
+      results[date] = await precomputeDugoutPitchlogStatForDate(date)
+    } catch (e: any) {
+      console.error('[dugout-pitchlog-stat-backfill] date failed', date, e)
+      results[date] = { error: e?.message || String(e) }
+    }
   }
+  return NextResponse.json({ dates, results })
 }
