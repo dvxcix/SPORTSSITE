@@ -9,19 +9,13 @@ import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows, fetchBulkSavantSplits,
-  evaluateBatterMatrices,
+  evaluateBatterMatrices, pitchlogNeeded, savantCategoriesUsed,
 } from '@/lib/matrixMatch'
-import { computeAllStatcastWindows } from '@/lib/dugoutStatcast'
+import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
+import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 
 export const revalidate = 0
 export const maxDuration = 60
-
-// Every category the Dugout grid's own Statcast section needs (see
-// dugoutStatcast.ts) — a strict superset of anything a member's Matrices
-// could reference (savantCategoriesUsed's own 3), and Custom Matrix is
-// itself Ultimate-gated, so fetching this whole set on every Ultimate
-// request already covers both purposes with one bulk read.
-const ALL_STATCAST_SAVANT_CATEGORIES = ['bat_tracking', 'batted_ball_splits', 'swing_path_attack_angle', 'swing_timing_miss_distance']
 
 // MLB's own schedule API isn't stable about which abbreviation it returns
 // for a handful of teams — confirmed directly: Arizona came back as "ARI"
@@ -628,7 +622,17 @@ export async function GET(req: Request) {
   // The Public's advanced-tier outcome heatmap — short-circuited to an
   // empty default rather than computed and then discarded, so a lower-tier
   // request doesn't pay for work whose result it's not entitled to anyway.
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk, matrixPitchRowsByBatter, matrixSavantSplitsByBatter] = await Promise.all([
+  // Custom Matrix's own bulk pitch-log/Savant-split reads — gated to only
+  // the (category, need) a signed-in member's OWN saved Factors actually
+  // reference, same as before the Statcast section existed. The Statcast
+  // section itself no longer needs this fetch at all (see below — it reads
+  // a cron-precomputed table instead), so there's no reason left to run
+  // this unconditionally for every Ultimate viewer regardless of whether
+  // they even have a Matrix saved.
+  const neededSavantCategories = savantCategoriesUsed(userMatrices)
+  const needsPitchlog = pitchlogNeeded(userMatrices)
+
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk, matrixPitchRowsByBatter, matrixSavantSplitsByBatter, precomputedStatcastRows] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -649,30 +653,32 @@ export async function GET(req: Request) {
     fetchPitcherPitchTypeRecent(),
     isUltimate ? fetchBatterPlatoonSplits(allDisplayedBatterIdList) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
-    // Bulk pitch-log + Savant-split reads — power BOTH the Dugout grid's own
-    // Statcast section (see dugoutStatcast.ts) and Custom Matrix's
-    // pitchlog_stat/savant_stat Factors off the exact same fetch, so
-    // fetching this unconditionally for every Ultimate request (rather than
-    // only when a member happens to have matching Factors saved) doesn't
-    // cost anything extra a Matrix-less Ultimate viewer wasn't already
-    // paying for once the grid itself needs this data too.
-    //
-    // .catch()-guarded (unlike every other entry in this Promise.all): this
-    // is by far the heaviest read here (a full slate's season-to-date pitch
-    // log), and a transient DB hiccup on it — confirmed live, a Postgres
-    // statement-timeout — must degrade to "Statcast section blank for this
-    // request" rather than take the ENTIRE page down. Promise.all rejects
-    // the instant any one entry rejects, and this route has no top-level
-    // try/catch, so an uncaught failure here previously meant the whole
-    // response 500'd and the client showed "No games for {date}" — a date
-    // that really did have games.
-    isUltimate && allDisplayedBatterIdList.length
+    isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? getCachedMatrixPitchRows(date, allDisplayedBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
       : Promise.resolve({} as Record<number, any[]>),
-    isUltimate && allDisplayedBatterIdList.length
-      ? getCachedMatrixSavantSplits(date, allDisplayedBatterIdList, ALL_STATCAST_SAVANT_CATEGORIES).catch(e => { console.error('[dugout/data] matrix savant splits failed', e); return {} as Record<number, any[]> })
+    isUltimate && neededSavantCategories.length && allDisplayedBatterIdList.length
+      ? getCachedMatrixSavantSplits(date, allDisplayedBatterIdList, neededSavantCategories).catch(e => { console.error('[dugout/data] matrix savant splits failed', e); return {} as Record<number, any[]> })
       : Promise.resolve({} as Record<number, any[]>),
+    // Dugout grid's own Statcast section — precomputed daily by
+    // /api/cron/dugout-statcast-precompute (see dugoutStatcastPrecompute.ts
+    // for why: aggregating this live, per request, is what caused a real
+    // production incident under concurrent load). Just a plain indexed
+    // SELECT now, no live aggregation, no per-request MLB calls.
+    (isUltimate && admin ? (async () => {
+      try {
+        const { data } = await admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
+        return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
+      } catch (e) {
+        console.error('[dugout/data] precomputed statcast fetch failed', e)
+        return [] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
+      }
+    })() : Promise.resolve([] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[])),
   ])
+
+  const precomputedStatcastByBatter: Record<number, Partial<Record<'L' | 'R', Record<StatcastWindow, StatcastLine>>>> = {}
+  for (const row of precomputedStatcastRows) {
+    (precomputedStatcastByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
+  }
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
   // near_hrs only ever carries the pitcher's NAME (no id column) — matched
@@ -1036,7 +1042,7 @@ export async function GET(req: Request) {
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        const statcast = isUltimate ? computeAllStatcastWindows(pitchRows, savantRows, p.bats, pHand, date) : null
+        const statcast = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         return { ...p, props, matrixMatches, statcast }
       }),
       awayLineup: awayLineup.map(p => {
@@ -1050,7 +1056,7 @@ export async function GET(req: Request) {
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        const statcast = isUltimate ? computeAllStatcastWindows(pitchRows, savantRows, p.bats, pHand, date) : null
+        const statcast = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         return { ...p, props, matrixMatches, statcast }
       }),
     }
