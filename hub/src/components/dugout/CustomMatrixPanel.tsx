@@ -77,7 +77,8 @@ const SAVANT_FIELDS: { key: string; label: string }[] = [
 // this player's own today-vs-his-season-average price deltas. Field keys
 // match the exact same ones evaluateDugoutSpecsFactor computes server-side
 // off the real props object — see matrixEngine.ts.
-const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean }[] = [
+const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boolean?: boolean }[] = [
+  { key: 'is_pwr', label: 'Is PWR ⚡?', boolean: true },
   { key: 'div', label: 'DIV (FD − Caesars FHR)', signed: true },
   { key: 'fhr_div_sa', label: 'FHR ÷ HR' },
   { key: 'm_div_f', label: 'M ÷ F (BetMGM ÷ FanDuel)' },
@@ -120,10 +121,11 @@ const OPERATOR_LABEL: Record<string, string> = {
   positive: 'Is positive (+)', negative: 'Is negative (−)',
 }
 
-const FIELDS_BY_CATEGORY: Record<MatrixFactor['category'], { key: string; label: string }[]> = {
+type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
+const FIELDS_BY_CATEGORY: Record<MatrixFactor['category'], FactorField[]> = {
   odds: ODDS_FIELDS, dugout_specs: DUGOUT_SPECS_FIELDS, pitchlog_stat: STAT_FIELDS, savant_stat: SAVANT_FIELDS, picks: PICKS_FIELDS,
 }
-function fieldsForCategory(cat: MatrixFactor['category']) {
+function fieldsForCategory(cat: MatrixFactor['category']): FactorField[] {
   return FIELDS_BY_CATEGORY[cat]
 }
 function fieldLabel(cat: MatrixFactor['category'], key: string) {
@@ -156,6 +158,12 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
   const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
     || factor.operator === 'positive' || factor.operator === 'negative'
   const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat'
+  // "Is PWR ⚡?" — a real Yes/No gate (buildBatterRow's is_pwr), not a ratio
+  // to type a number for. Represented under the hood as an ordinary eq-1/
+  // eq-0 Factor (see matrixEngine.ts) so it reuses the same evaluation path
+  // as every other Dugout Specs field, just with its own picker in place of
+  // the usual operator+value inputs.
+  const isBoolean = fields.find(f => f.key === factor.field_key)?.boolean === true
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8 }}>
@@ -163,8 +171,12 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
         className="ss-input" value={factor.category}
         onChange={e => {
           const category = e.target.value as MatrixFactor['category']
-          const field_key = fieldsForCategory(category)[0].key
-          onChange({ ...factor, category, field_key, operator: 'gte', recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null })
+          const firstField = fieldsForCategory(category)[0]
+          onChange({
+            ...factor, category, field_key: firstField.key,
+            operator: firstField.boolean ? 'eq' : 'gte', value: firstField.boolean ? 1 : null,
+            recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null,
+          })
         }}
         style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
       >
@@ -173,42 +185,63 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
 
       <select
         className="ss-input" value={factor.field_key}
-        onChange={e => onChange({ ...factor, field_key: e.target.value, ...(isBooksFieldKey(e.target.value) ? { operator: 'gte' } : {}) })}
+        onChange={e => {
+          const field_key = e.target.value
+          const nowBoolean = fields.find(f => f.key === field_key)?.boolean === true
+          onChange({
+            ...factor, field_key,
+            ...(isBooksFieldKey(field_key) ? { operator: 'gte' } : {}),
+            ...(nowBoolean ? { operator: 'eq', value: 1 } : isBoolean ? { operator: 'gte', value: null } : {}),
+          })
+        }}
         style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
       >
         {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
       </select>
 
-      <select
-        className="ss-input" value={factor.operator}
-        onChange={e => onChange({ ...factor, operator: e.target.value as MatrixFactor['operator'] })}
-        style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
-      >
-        <option value="gte">{OPERATOR_LABEL.gte}</option>
-        <option value="lte">{OPERATOR_LABEL.lte}</option>
-        <option value="eq">{OPERATOR_LABEL.eq}</option>
-        {factor.category === 'odds' && !isBooksField && (
-          <>
-            <option value="up">{OPERATOR_LABEL.up}</option>
-            <option value="down">{OPERATOR_LABEL.down}</option>
-            <option value="flat">{OPERATOR_LABEL.flat}</option>
-          </>
-        )}
-        {factor.category === 'dugout_specs' && (
-          <>
-            <option value="positive">{OPERATOR_LABEL.positive}</option>
-            <option value="negative">{OPERATOR_LABEL.negative}</option>
-          </>
-        )}
-      </select>
+      {isBoolean ? (
+        <select
+          className="ss-input" value={factor.value === 0 ? '0' : '1'}
+          onChange={e => onChange({ ...factor, operator: 'eq', value: Number(e.target.value) })}
+          style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+        >
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      ) : (
+        <>
+          <select
+            className="ss-input" value={factor.operator}
+            onChange={e => onChange({ ...factor, operator: e.target.value as MatrixFactor['operator'] })}
+            style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+          >
+            <option value="gte">{OPERATOR_LABEL.gte}</option>
+            <option value="lte">{OPERATOR_LABEL.lte}</option>
+            <option value="eq">{OPERATOR_LABEL.eq}</option>
+            {factor.category === 'odds' && !isBooksField && (
+              <>
+                <option value="up">{OPERATOR_LABEL.up}</option>
+                <option value="down">{OPERATOR_LABEL.down}</option>
+                <option value="flat">{OPERATOR_LABEL.flat}</option>
+              </>
+            )}
+            {factor.category === 'dugout_specs' && (
+              <>
+                <option value="positive">{OPERATOR_LABEL.positive}</option>
+                <option value="negative">{OPERATOR_LABEL.negative}</option>
+              </>
+            )}
+          </select>
 
-      {!hidesValue && (
-        <input
-          className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
-          value={factor.value ?? ''}
-          onChange={e => onChange({ ...factor, value: e.target.value === '' ? null : Number(e.target.value) })}
-          style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
-        />
+          {!hidesValue && (
+            <input
+              className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
+              value={factor.value ?? ''}
+              onChange={e => onChange({ ...factor, value: e.target.value === '' ? null : Number(e.target.value) })}
+              style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
+            />
+          )}
+        </>
       )}
 
       {needsRecency && (

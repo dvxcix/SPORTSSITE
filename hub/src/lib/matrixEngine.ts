@@ -296,10 +296,30 @@ function implRatio(a: number | null, b: number | null): number | null {
   return ia / ib
 }
 
+// "PWR ⚡" — the Dugout table's own power-vehicle gate, ported exactly from
+// buildBatterRow: uses the builder's own simplified (odds+100)÷(odds+100)
+// ratio (rawRatio), NOT implRatio's implied-probability version — matching
+// its exact real thresholds rather than approximating them.
+function rawRatio(a: number | null, b: number | null): number | null {
+  return a != null && b != null ? Math.round(((a + 100) / (b + 100)) * 10) / 10 : null
+}
+function isPwr(props: OddsProps | null | undefined): boolean {
+  const saFd = props?.sa?.fanduel ?? null
+  const pvRatio = rawRatio(saFd, props?.doubles?.fanduel ?? null)
+  const tb4Gate = rawRatio(saFd, props?.tb4?.fanduel ?? null)
+  return pvRatio != null && pvRatio >= 1.35 && pvRatio <= 1.60 && tb4Gate != null && tb4Gate <= 3.8
+}
+
 export type DugoutSpecsAverages = { fd?: number; cz?: number }
 
+// Every field here returns a real ratio EXCEPT is_pwr, a boolean gate —
+// represented as 1/0 so it flows through the exact same compareThreshold
+// path as every ratio field below (operator 'eq', value 1 or 0); the UI
+// presents it as a plain Yes/No choice rather than a ratio to type a
+// number for, but under the hood it's an ordinary eq Factor.
 const DUGOUT_SPECS_FIELD: Record<string, (props: OddsProps | null | undefined) => number | null> = {
   div: props => fdczDiv(props?.fhr?.fanduel ?? null, props?.fhr?.caesars ?? null),
+  is_pwr: props => (isPwr(props) ? 1 : 0),
   fhr_div_sa: props => implRatio(props?.fhr?.fanduel ?? null, props?.sa?.fanduel ?? null),
   m_div_f: props => implRatio(props?.sa?.betmgm ?? null, props?.sa?.fanduel ?? null),
   pa1_div_sa: props => implRatio(props?.pa1?.fanduel ?? null, props?.sa?.fanduel ?? null),
