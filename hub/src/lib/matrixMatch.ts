@@ -50,41 +50,69 @@ function numOrNull(v: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+function mapPitchLogRow(r: any) {
+  return {
+    game_date: r.game_date, batter_id: r.batter_id, events: r.events, description: r.description,
+    is_in_play: r.is_in_play, is_swing: r.is_swing, is_whiff: r.is_whiff,
+    launch_speed: numOrNull(r.launch_speed), launch_angle: numOrNull(r.launch_angle),
+    xwoba: numOrNull(r.xwoba), run_value: numOrNull(r.run_value), bat_speed: numOrNull(r.bat_speed),
+    p_throws: r.p_throws,
+    attack_angle: numOrNull(r.attack_angle), swing_length: numOrNull(r.swing_length),
+    swing_path_tilt: numOrNull(r.swing_path_tilt), attack_direction: numOrNull(r.attack_direction),
+    launch_speed_angle: numOrNull(r.launch_speed_angle),
+  }
+}
+
 // Bulk-fetch every pitch this SPECIFIC set of batters has seen all season,
-// grouped by batter_id — one paginated query total instead of one query per
-// batter (which is what fetchPlayerPitchRows in pitchLogFetch.ts does, and
-// is fine for a single player's own page but would be a real N+1 across an
-// entire slate here). Caller is expected to wrap this in unstable_cache
-// keyed by date, since the result is identical for every member viewing the
-// same date — only the per-member Matrix evaluation below differs.
+// grouped by batter_id — one query total instead of one query per batter
+// (which is what fetchPlayerPitchRows in pitchLogFetch.ts does, and is fine
+// for a single player's own page but would be a real N+1 across an entire
+// slate here). Caller is expected to wrap this in unstable_cache keyed by
+// date, since the result is identical for every member viewing the same
+// date — only the per-member Matrix evaluation below differs.
+//
+// Confirmed live (2026-07-24): a full slate's lineups run ~250-300 batters,
+// and by late July each has ~1,000-1,500 pitches season-to-date — a few
+// hundred thousand rows total. Fetching that AWAITED one page at a time (the
+// original approach) serialized every round-trip and blew well past this
+// route's 60s maxDuration once the Statcast section made this fetch run on
+// every Ultimate page load instead of only when a member's Matrix happened
+// to need it. Fired concurrently instead: one cheap exact-count HEAD request
+// up front, then every page requested in parallel — wall-clock now bound by
+// the slowest single page, not the sum of all of them.
 export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: number[]): Promise<Record<number, any[]>> {
   const byBatter: Record<number, any[]> = {}
   if (!batterIds.length) return byBatter
   const PAGE = 1000
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await admin
-      .from('player_pitch_log')
-      .select(BULK_PITCHLOG_SELECT)
-      .in('batter_id', batterIds)
-      .order('batter_id', { ascending: true })
-      .order('game_date', { ascending: true })
-      .range(from, from + PAGE - 1)
-    if (error) throw error
-    if (!data?.length) break
-    for (const r of data as any[]) {
-      const row = {
-        game_date: r.game_date, batter_id: r.batter_id, events: r.events, description: r.description,
-        is_in_play: r.is_in_play, is_swing: r.is_swing, is_whiff: r.is_whiff,
-        launch_speed: numOrNull(r.launch_speed), launch_angle: numOrNull(r.launch_angle),
-        xwoba: numOrNull(r.xwoba), run_value: numOrNull(r.run_value), bat_speed: numOrNull(r.bat_speed),
-        p_throws: r.p_throws,
-        attack_angle: numOrNull(r.attack_angle), swing_length: numOrNull(r.swing_length),
-        swing_path_tilt: numOrNull(r.swing_path_tilt), attack_direction: numOrNull(r.attack_direction),
-        launch_speed_angle: numOrNull(r.launch_speed_angle),
+
+  const { count, error: countError } = await admin
+    .from('player_pitch_log')
+    .select('*', { count: 'exact', head: true })
+    .in('batter_id', batterIds)
+  if (countError) throw countError
+  if (!count) return byBatter
+
+  const pageStarts: number[] = []
+  for (let from = 0; from < count; from += PAGE) pageStarts.push(from)
+
+  const CONCURRENCY = 12
+  for (let i = 0; i < pageStarts.length; i += CONCURRENCY) {
+    const batch = pageStarts.slice(i, i + CONCURRENCY)
+    const pages = await Promise.all(batch.map(from =>
+      admin
+        .from('player_pitch_log')
+        .select(BULK_PITCHLOG_SELECT)
+        .in('batter_id', batterIds)
+        .order('batter_id', { ascending: true })
+        .order('game_date', { ascending: true })
+        .range(from, from + PAGE - 1)
+    ))
+    for (const { data, error } of pages) {
+      if (error) throw error
+      for (const r of (data ?? []) as any[]) {
+        (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
       }
-      ;(byBatter[r.batter_id] ??= []).push(row)
     }
-    if (data.length < PAGE) break
   }
   return byBatter
 }
