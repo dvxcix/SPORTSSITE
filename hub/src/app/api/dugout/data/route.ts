@@ -128,17 +128,52 @@ const getCachedMatrixSavantSplits = unstable_cache(
   { revalidate: 300 }
 )
 
-// Wraps fetchProjectedLineup (defined below — function declarations hoist,
-// so this reference is safe despite appearing first textually) so the SAME
-// roster/people lookups this route already needs twice per team on any
-// date before lineups post — once here to know the real batter list for
-// the bulk Statcast/Matrix reads, once more in "Build games" to actually
-// render the projected lineup — share one cache entry instead of hitting
-// MLB's API twice per request, and across every concurrent viewer of the
-// same date.
-const getCachedProjectedLineup = unstable_cache(
-  (teamId: number, teamAbbr: string, teamName: string) => fetchProjectedLineup(teamId, teamAbbr, teamName),
-  ['dugout-projected-lineup'],
+// Confirmed live (2026-07-24): before lineups post for a date (including
+// "today" ahead of first pitch), the grid falls back to each team's
+// projected/active-roster lineup (fetchProjectedLineup below — function
+// declarations hoist, so referencing it here is safe despite appearing
+// first textually) — 2 live MLB fetches per team needing it. The first
+// version of this fix resolved that per-team, per-REQUEST: correct, but it
+// reran that whole concurrent fetch burst for every single viewer, which
+// reintroduced the exact "endless load" this session already fixed once.
+// This data (schedule + whichever lineups are confirmed vs. need the
+// projected-roster fallback) is a pure function of the DATE, never of
+// which member is asking — cached as ONE bundle per date instead, so the
+// first request of a ~5-minute window pays this cost and every other
+// concurrent viewer of that same date gets a plain cache read. Refetches
+// the schedule inside here rather than accepting it as an argument: MLB's
+// raw schedule payload isn't a stable cache key (irrelevant per-request
+// fields would bust the cache every time), where the date string is.
+const getCachedDateLineupResolution = unstable_cache(
+  async (dateKey: string) => {
+    const games = await fetchScheduleWithRetry(dateKey, 'lineups,probablePitcher,team,linescore,venue')
+    const allDisplayedBatterIds = new Set<number>()
+    for (const g of games) {
+      for (const p of [...(g.lineups?.homePlayers || []), ...(g.lineups?.awayPlayers || [])]) {
+        if (p?.id) allDisplayedBatterIds.add(p.id)
+      }
+    }
+    const projectedByTeamId: Record<number, any[]> = {}
+    await Promise.all(games.map(async (g: any) => {
+      const needsHome = !(g.lineups?.homePlayers?.length)
+      const needsAway = !(g.lineups?.awayPlayers?.length)
+      if (!needsHome && !needsAway) return
+      const homeTeam = g.teams?.home?.team?.name || ''
+      const awayTeam = g.teams?.away?.team?.name || ''
+      const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
+      const awayAbbr = g.teams?.away?.team?.abbreviation || awayTeam.split(' ').pop() || ''
+      const homeTeamId = g.teams?.home?.team?.id
+      const awayTeamId = g.teams?.away?.team?.id
+      const [homeProj, awayProj] = await Promise.all([
+        needsHome && homeTeamId ? fetchProjectedLineup(homeTeamId, homeAbbr, homeTeam) : Promise.resolve(null),
+        needsAway && awayTeamId ? fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam) : Promise.resolve(null),
+      ])
+      if (homeProj) { projectedByTeamId[homeTeamId] = homeProj; for (const p of homeProj) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id) }
+      if (awayProj) { projectedByTeamId[awayTeamId] = awayProj; for (const p of awayProj) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id) }
+    }))
+    return { allDisplayedBatterIds: Array.from(allDisplayedBatterIds), projectedByTeamId }
+  },
+  ['dugout-date-lineup-resolution'],
   { revalidate: 300 }
 )
 
@@ -539,38 +574,15 @@ export async function GET(req: Request) {
   }
   const lineupBatterIdList = Array.from(lineupBatterIds)
 
-  // Confirmed live (2026-07-24): on any date before lineups actually post —
-  // including looking at "today" ahead of first pitch — lineupBatterIdList
-  // above is EMPTY, because it only ever reads confirmed-lineup players.
-  // The grid itself falls back to each team's projected/active-roster
-  // lineup for display (see fetchProjectedLineup + "Build games" below),
-  // but this route's Statcast/Matrix/platoon bulk reads were still scoped
-  // to lineupBatterIdList — a completely different (empty) set of ids from
-  // the ones actually rendered — so every Statcast field for every shown
-  // player went blank. Resolves the same projected roster here too (via
-  // the shared 5-minute cache above, so this costs nothing extra beyond
-  // the first request of that window) and folds those ids in for the bulk
-  // reads specifically, leaving lineupBatterIdList itself untouched since
-  // batSideById right below genuinely only needs confirmed-lineup ids
-  // (projected players resolve their own bats inside fetchProjectedLineup).
-  const allDisplayedBatterIds = new Set(lineupBatterIdList)
-  await Promise.all(mlbGames.map(async (g: any) => {
-    const needsHome = !(g.lineups?.homePlayers?.length)
-    const needsAway = !(g.lineups?.awayPlayers?.length)
-    if (!needsHome && !needsAway) return
-    const homeTeam = g.teams?.home?.team?.name || ''
-    const awayTeam = g.teams?.away?.team?.name || ''
-    const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
-    const awayAbbr = g.teams?.away?.team?.abbreviation || awayTeam.split(' ').pop() || ''
-    const homeTeamId = g.teams?.home?.team?.id
-    const awayTeamId = g.teams?.away?.team?.id
-    const [homeProj, awayProj] = await Promise.all([
-      needsHome && homeTeamId ? getCachedProjectedLineup(homeTeamId, homeAbbr, homeTeam) : Promise.resolve([]),
-      needsAway && awayTeamId ? getCachedProjectedLineup(awayTeamId, awayAbbr, awayTeam) : Promise.resolve([]),
-    ])
-    for (const p of [...homeProj, ...awayProj]) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id)
-  }))
-  const allDisplayedBatterIdList = Array.from(allDisplayedBatterIds)
+  // Real batter list for the bulk Statcast/Matrix/platoon reads below —
+  // confirmed ∪ projected, cached as one per-date bundle (see
+  // getCachedDateLineupResolution above) so resolving projected rosters on
+  // any date before lineups post costs nothing beyond the first request of
+  // each ~5-minute window, shared across every concurrent viewer of that
+  // date. lineupBatterIdList just above stays confirmed-only, which is all
+  // batSideById right below actually needs (projected players resolve
+  // their own bats inside fetchProjectedLineup already).
+  const { allDisplayedBatterIds: allDisplayedBatterIdList, projectedByTeamId } = await getCachedDateLineupResolution(date)
 
   // Custom Matrix — a signed-in Ultimate member's own saved highlight rules.
   // Fetched once, up front: small (≤10 Matrices/≤40 Factors each, capped at
@@ -849,17 +861,16 @@ export async function GET(req: Request) {
     let homeLineup = mkLineup(g.lineups?.homePlayers || [], homeAbbr, homeTeam)
     let awayLineup = mkLineup(g.lineups?.awayPlayers || [], awayAbbr, awayTeam)
 
-    // Projected lineup fallback when no confirmed lineup — same cached
-    // wrapper the pre-pass above already called for this exact (teamId,
-    // teamAbbr, teamName) triple, so this is a cache hit, not a second live
-    // fetch to MLB's roster/people endpoints.
+    // Projected lineup fallback when no confirmed lineup — plain lookup
+    // into the resolution getCachedDateLineupResolution already computed
+    // (and cached) up top; no live fetch happens here at all.
     const homeTeamId = g.teams?.home?.team?.id
     const awayTeamId = g.teams?.away?.team?.id
     if (!homeLineup.length && homeTeamId) {
-      homeLineup = await getCachedProjectedLineup(homeTeamId, homeAbbr, homeTeam)
+      homeLineup = projectedByTeamId[homeTeamId] ?? []
     }
     if (!awayLineup.length && awayTeamId) {
-      awayLineup = await getCachedProjectedLineup(awayTeamId, awayAbbr, awayTeam)
+      awayLineup = projectedByTeamId[awayTeamId] ?? []
     }
 
     // BDL props — read straight from the snapshot the cron last wrote (see
