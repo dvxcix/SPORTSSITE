@@ -735,6 +735,7 @@ export async function GET(req: Request) {
     timed(reqId, 'matrixPitchRows', isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? (async () => {
           const combined: Record<number, any[]> = {}
+          // 15 chosen to match the existing bounded fan-out pattern below.
           const CONCURRENCY = 15
           for (let i = 0; i < allDisplayedBatterIdList.length; i += CONCURRENCY) {
             const chunk = allDisplayedBatterIdList.slice(i, i + CONCURRENCY)
