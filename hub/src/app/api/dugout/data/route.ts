@@ -9,11 +9,19 @@ import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows, fetchBulkSavantSplits,
-  savantCategoriesUsed, pitchlogNeeded, evaluateBatterMatrices,
+  evaluateBatterMatrices,
 } from '@/lib/matrixMatch'
+import { computeAllStatcastWindows } from '@/lib/dugoutStatcast'
 
 export const revalidate = 0
 export const maxDuration = 60
+
+// Every category the Dugout grid's own Statcast section needs (see
+// dugoutStatcast.ts) — a strict superset of anything a member's Matrices
+// could reference (savantCategoriesUsed's own 3), and Custom Matrix is
+// itself Ultimate-gated, so fetching this whole set on every Ultimate
+// request already covers both purposes with one bulk read.
+const ALL_STATCAST_SAVANT_CATEGORIES = ['bat_tracking', 'batted_ball_splits', 'swing_path_attack_angle', 'swing_timing_miss_distance']
 
 // MLB's own schedule API isn't stable about which abbreviation it returns
 // for a handful of teams — confirmed directly: Arizona came back as "ARI"
@@ -520,11 +528,8 @@ export async function GET(req: Request) {
   // Custom Matrix — a signed-in Ultimate member's own saved highlight rules.
   // Fetched once, up front: small (≤10 Matrices/≤40 Factors each, capped at
   // both the app and DB level), so always fetching it for an eligible caller
-  // is cheap. What's NOT cheap (bulk pitch-log/Savant-split reads below) only
-  // runs at all when this member's own Factors actually reference that data.
+  // is cheap.
   const userMatrices = isUltimate && admin && gate.userId ? await fetchUserMatrices(admin, gate.userId) : []
-  const needsMatrixPitchlog = pitchlogNeeded(userMatrices)
-  const neededMatrixSavantCats = savantCategoriesUsed(userMatrices)
 
   // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry only
   // id/name/position — no batSide at all. Every batter was silently falling
@@ -585,8 +590,15 @@ export async function GET(req: Request) {
     fetchPitcherPitchTypeRecent(),
     isUltimate ? fetchBatterPlatoonSplits(lineupBatterIdList) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
-    needsMatrixPitchlog && lineupBatterIdList.length ? getCachedMatrixPitchRows(date, lineupBatterIdList) : Promise.resolve({} as Record<number, any[]>),
-    neededMatrixSavantCats.length && lineupBatterIdList.length ? getCachedMatrixSavantSplits(date, lineupBatterIdList, neededMatrixSavantCats) : Promise.resolve({} as Record<number, any[]>),
+    // Bulk pitch-log + Savant-split reads — power BOTH the Dugout grid's own
+    // Statcast section (see dugoutStatcast.ts) and Custom Matrix's
+    // pitchlog_stat/savant_stat Factors off the exact same fetch, so
+    // fetching this unconditionally for every Ultimate request (rather than
+    // only when a member happens to have matching Factors saved) doesn't
+    // cost anything extra a Matrix-less Ultimate viewer wasn't already
+    // paying for once the grid itself needs this data too.
+    isUltimate && lineupBatterIdList.length ? getCachedMatrixPitchRows(date, lineupBatterIdList) : Promise.resolve({} as Record<number, any[]>),
+    isUltimate && lineupBatterIdList.length ? getCachedMatrixSavantSplits(date, lineupBatterIdList, ALL_STATCAST_SAVANT_CATEGORIES) : Promise.resolve({} as Record<number, any[]>),
   ])
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
@@ -940,23 +952,31 @@ export async function GET(req: Request) {
       // "not Ultimate" from "Ultimate with nothing saved."
       homeLineup: homeLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        const pHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
+        const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
+        const savantRows = matrixSavantSplitsByBatter[p.mlb_id] ?? []
         const matrixMatches = userMatrices.length
-          ? evaluateBatterMatrices(userMatrices, p.bats, (awayPitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date, {
+          ? evaluateBatterMatrices(userMatrices, p.bats, pHand, pitchRows, savantRows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        return { ...p, props, matrixMatches }
+        const statcast = isUltimate ? computeAllStatcastWindows(pitchRows, savantRows, p.bats, pHand, date) : null
+        return { ...p, props, matrixMatches, statcast }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        const pHand = (homePitcher?.hand as 'L' | 'R') || 'R'
+        const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
+        const savantRows = matrixSavantSplitsByBatter[p.mlb_id] ?? []
         const matrixMatches = userMatrices.length
-          ? evaluateBatterMatrices(userMatrices, p.bats, (homePitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date, {
+          ? evaluateBatterMatrices(userMatrices, p.bats, pHand, pitchRows, savantRows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        return { ...p, props, matrixMatches }
+        const statcast = isUltimate ? computeAllStatcastWindows(pitchRows, savantRows, p.bats, pHand, date) : null
+        return { ...p, props, matrixMatches, statcast }
       }),
     }
   }))

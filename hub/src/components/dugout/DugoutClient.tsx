@@ -89,31 +89,6 @@ function buildSplitMap(rows: any[]) {
   return { byId, byName }
 }
 
-function buildTimingMap(rows: any[]) {
-  const byId: Record<string, Record<string, Record<string, { season?: any; recent?: any }>>> = {}
-  const byName: Record<string, Record<string, Record<string, { season?: any; recent?: any }>>> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    const hand = r.pitch_hand || 'R'
-    const pt = r.pitch_type || ''
-    const win = r.win || 'season'
-    if (id && pt) {
-      if (!byId[id]) byId[id] = {}
-      if (!byId[id][hand]) byId[id][hand] = {}
-      if (!byId[id][hand][pt]) byId[id][hand][pt] = {}
-      ;(byId[id][hand][pt] as any)[win] = r
-    }
-    const nn = r.name_norm || ''
-    if (nn && pt) {
-      if (!byName[nn]) byName[nn] = {}
-      if (!byName[nn][hand]) byName[nn][hand] = {}
-      if (!byName[nn][hand][pt]) byName[nn][hand][pt] = {}
-      ;(byName[nn][hand][pt] as any)[win] = r
-    }
-  }
-  return { byId, byName }
-}
-
 // Ingestion (mlb-party's ingest-pitcher-statcast edge function) writes one
 // row per (mlb_id, bat_hand, win) — batted-ball-against, bat-tracking-against,
 // and arm-angle are genuinely computed separately for facing lefties vs
@@ -191,51 +166,6 @@ function buildPitcherPitchMap(rows: any[]) {
   return map
 }
 
-// ─── pitch-mix weighted timing ────────────────────────────────────────────────
-type TimingMap = ReturnType<typeof buildTimingMap>
-
-function computeTiming(
-  batterId: string, batterName: string, pitcherHand: string,
-  pitcherRow: any, timingMap: TimingMap
-) {
-  if (!pitcherRow) return { s_timing: null, r_timing: null, s_miss: null, r_miss: null }
-  const mix = ([
-    ['FF', pitcherRow.pct_fastball || 0],
-    ['SI', pitcherRow.pct_sinker || 0],
-    ['FC', pitcherRow.pct_cutter || 0],
-    ['SL', pitcherRow.pct_slider || 0],
-    ['ST', pitcherRow.pct_slider || 0],
-    ['CU', pitcherRow.pct_curveball || 0],
-    ['CH', pitcherRow.pct_changeup || 0],
-    ['FS', pitcherRow.pct_splitter || 0],
-  ] as [string, number][]).filter(([, p]) => p > 0.08)
-  if (!mix.length) return { s_timing: null, r_timing: null, s_miss: null, r_miss: null }
-  // Same fuzzy fallback as everywhere else — only actually needed on the
-  // by-name path (by-id is exact regardless of spelling), so resolved once
-  // here rather than per pitch-type in the loop below.
-  const byNameEntry = timingMap.byName[batterName] ?? resolveNameEntry(timingMap.byName, batterName)
-
-  let st = 0, rt = 0, sm = 0, rm = 0
-  let sw = 0, rw = 0, smw = 0, rmw = 0
-  for (const [pt, w] of mix) {
-    const tRows =
-      timingMap.byId[batterId]?.[pitcherHand]?.[pt] ||
-      byNameEntry?.[pitcherHand]?.[pt]
-    if (!tRows) continue
-    const { season: tse, recent: tre } = tRows as { season?: any; recent?: any }
-    if (tse?.on_time_percent != null) { st += w * tse.on_time_percent; sw += w }
-    if (tre?.on_time_percent != null) { rt += w * tre.on_time_percent; rw += w }
-    if (tse?.miss_distance != null) { sm += w * tse.miss_distance; smw += w }
-    if (tre?.miss_distance != null) { rm += w * tre.miss_distance; rmw += w }
-  }
-  return {
-    s_timing: sw > 0 ? st / sw : null,
-    r_timing: rw > 0 ? rt / rw : null,
-    s_miss:   smw > 0 ? sm / smw : null,
-    r_miss:   rmw > 0 ? rm / rmw : null,
-  }
-}
-
 // ─── build batter row ─────────────────────────────────────────────────────────
 type SplitMap   = ReturnType<typeof buildSplitMap>
 type PitcherMap = ReturnType<typeof buildPitcherMap>
@@ -292,7 +222,6 @@ function buildBatterRow(
   pitcherHand: string,
   pitcherId: number | null,
   splitMap: SplitMap,
-  timingMap: TimingMap,
   pitcherMap: PitcherMap,
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>,
   saAvgMap:  Record<string, { fd?: number; cz?: number }>,
@@ -303,6 +232,10 @@ function buildBatterRow(
   batterPitchMap: BatterPitchMap,
   pitcherPitchMap: PitcherPitchMap,
   platoonMap: PlatoonMap,
+  // Which real recency window the Statcast section's "R"/Δ columns read —
+  // 'season' is always the fixed baseline (server precomputes all 5, see
+  // dugoutStatcast.ts); this just picks which precomputed window renders.
+  statcastWindow: 'l1' | 'l3' | 'l5' | 'l10',
   // Only meaningful once the real lineup posts — the away team bats first
   // every inning, so the away 9-hole hitter still gets his first PA before
   // ANY home batter does; a home 9-hole hitter is realistically the very
@@ -331,37 +264,50 @@ function buildBatterRow(
   const fhrAvgEntry   = resolveNameEntry(fhrAvgMap, nn)
   const saAvgEntry    = resolveNameEntry(saAvgMap, nn)
 
+  // xHR is a genuine Statcast probability MODEL (not derivable from raw
+  // pitch data ourselves) — still sourced from mlb-party's season split
+  // for the drilldown's own StatTile, the one field this section didn't
+  // cut over (see dugoutStatcast.ts's own header comment for the full
+  // in-house/model-only split this Statcast section now follows).
   const playerSplits = splitMap.byId[idKey] ?? splitMap.byName[nn] ?? resolveNameEntry(splitMap.byName, nn)
   const handSplits = playerSplits?.[pitcherHand]
     ?? playerSplits?.['R']
     ?? (playerSplits ? Object.values(playerSplits)[0] : null)
-  const se = (handSplits as any)?.season ?? null
-  const re = (handSplits as any)?.recent ?? null
+  const s_xhr = nv((handSplits as any)?.season?.xhr)
 
-  const s_spd = nv(se?.avg_bat_speed)
-  const s_hrd = nv(se?.hard_swing_rate)
-  const s_sq  = nv(se?.squared_up_per_swing)
-  const s_bla = nv(se?.blast_per_swing)
-  const s_len = nv(se?.swing_length)
-  const s_atk = nv(se?.attack_angle)
-  const s_iaa = nv(se?.ideal_attack_angle_rate)
-  const s_tlt = nv(se?.swing_tilt)
-  const s_ev  = nv(se?.exit_velocity_avg)
-  const s_la  = nv(se?.launch_angle_avg)
-  const s_brl = nv(se?.barrel_batted_rate)
-  const s_hh  = nv(se?.hard_hit_pct)
-  const s_pa  = nv(se?.pull_air_rate)
-  const s_fb  = nv(se?.fb_rate)
-  const s_xhr = nv(se?.xhr)
-  const s_hr  = nv(se?.hr_total)
-
-  const r_spd = nv(re?.avg_bat_speed)
-  const r_sq  = nv(re?.squared_up_per_swing)
-  const r_bla = nv(re?.blast_per_swing)
-  const r_atk = nv(re?.attack_angle)
-
+  // Everything else in the Statcast section (BSpd through HR, Timing/Miss)
+  // is computed server-side from our own player_pitch_log + synced Savant
+  // splits (see dugoutStatcast.ts) — "S" is always the fixed season window;
+  // "R"/Δ read whichever real games-played window the member picked via
+  // the Last 1/3/5/10 toggle, computed exactly (not mlb-party's calendar-
+  // day approximation).
+  const statSeason = player.statcast?.season ?? null
+  const statRecent = player.statcast?.[statcastWindow] ?? null
+  const s_spd = statSeason?.avgBatSpeed ?? null
+  const r_spd = statRecent?.avgBatSpeed ?? null
   const d_spd = r_spd != null && s_spd != null ? r_spd - s_spd : null
-  const d_sq  = r_sq  != null && s_sq  != null ? r_sq  - s_sq  : null
+  const s_hrd = statSeason?.hardSwingRate ?? null
+  const s_sq  = statSeason?.squaredUpPct ?? null
+  const r_sq  = statRecent?.squaredUpPct ?? null
+  const d_sq  = r_sq != null && s_sq != null ? r_sq - s_sq : null
+  const s_bla = statSeason?.blastPct ?? null
+  const r_bla = statRecent?.blastPct ?? null
+  const s_len = statSeason?.avgSwingLength ?? null
+  const s_atk = statSeason?.avgAttackAngle ?? null
+  const r_atk = statRecent?.avgAttackAngle ?? null
+  const s_iaa = statSeason?.idealAttackAngleRate ?? null
+  const s_tlt = statSeason?.avgTilt ?? null
+  const s_ev  = statSeason?.avgEv ?? null
+  const s_la  = statSeason?.avgLa ?? null
+  const s_brl = statSeason?.barrelPct ?? null
+  const s_hh  = statSeason?.hardHitPct ?? null
+  const s_pa  = statSeason?.pullAirRate ?? null
+  const s_fb  = statSeason?.fbRate ?? null
+  const s_hr  = statSeason?.hr ?? null
+  const s_timing = statSeason?.onTimePct ?? null
+  const r_timing = statRecent?.onTimePct ?? null
+  const s_miss = statSeason?.missDistance ?? null
+  const r_miss = statRecent?.missDistance ?? null
 
   // Switch hitters always bat opposite the pitcher's throwing hand (that's
   // the entire point of switching) — 'S' isn't itself a real hand key in
@@ -372,8 +318,6 @@ function buildBatterRow(
   const effectiveBats = player.bats === 'S' ? (pitcherHand === 'L' ? 'R' : 'L') : (player.bats || 'R')
 
   const pitRow = pickPitcherRow(pitcherMap, pitcherId, effectiveBats)
-  const { s_timing, r_timing, s_miss, r_miss } =
-    computeTiming(idKey, nn, pitcherHand, pitRow, timingMap)
 
   const matchup_edge = computeMatchupEdge(nn, pitcherHand, effectiveBats, pitRow, batterPitchMap, pitcherPitchMap)
   const platoonSplit = pitcherHand === 'L' ? platoonMap[idKey]?.vl : platoonMap[idKey]?.vr
@@ -2000,9 +1944,37 @@ function PitcherLinkChip({ pitcher, teamAbbr }: { pitcher: { id: number; name: s
 }
 
 // ─── game table ───────────────────────────────────────────────────────────────
-function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, highlightMlbId, date }: {
+const STATCAST_WINDOW_LABEL: Record<'l1' | 'l3' | 'l5' | 'l10', string> = { l1: 'Last 1', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10' }
+
+// Centered in each team's header bar (grid: left team/pitcher info, center
+// this toggle, right sticky-columns controls) so it visually sits above the
+// Statcast section's "R"/Δ columns it drives — one shared statcastWindow
+// state (lifted to DugoutClient) behind both team sections' copies of it.
+function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' | 'l10'; onChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void }) {
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: 0.4, textTransform: 'uppercase', padding: '0 6px 0 4px' }}>Statcast</span>
+      {(['l1', 'l3', 'l5', 'l10'] as const).map(w => (
+        <button
+          key={w}
+          onClick={() => onChange(w)}
+          style={{
+            padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, cursor: 'pointer',
+            border: `1px solid ${value === w ? 'var(--accent)' : 'transparent'}`,
+            background: value === w ? 'rgba(180,255,77,0.14)' : 'transparent',
+            color: value === w ? 'var(--accent)' : 'var(--text-2)',
+          }}
+        >
+          {STATCAST_WINDOW_LABEL[w]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange }: {
   game: any
-  splitMap: SplitMap; timingMap: TimingMap; pitcherMap: PitcherMap
+  splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
   saAvgMap:  Record<string, { fd?: number; cz?: number }>
   pikkitMap: Record<string, any>
@@ -2014,6 +1986,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   platoonMap: PlatoonMap
   highlightMlbId?: number | null
   date: string
+  statcastWindow: 'l1' | 'l3' | 'l5' | 'l10'
+  onStatcastWindowChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void
 }) {
   const [sort, setSort] = useState<SortState>(null)
   // Sticky multi-column sort — when on, each header click ADDS that column
@@ -2078,16 +2052,16 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
     const ap = game.awayPitcher
     const hp = game.homePitcher
     const homeRows = game.homeLineup.map((p: any) =>
-      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, true, !!game.homeLineupConfirmed)
+      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, statcastWindow, true, !!game.homeLineupConfirmed)
     )
     const awayRows = game.awayLineup.map((p: any) =>
-      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, false, !!game.awayLineupConfirmed)
+      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, statcastWindow, false, !!game.awayLineupConfirmed)
     )
     const pool = [...homeRows, ...awayRows]
     computePaper(pool)
     computeRanks(pool)
     return { homeRows, awayRows, pool }
-  }, [game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap])
+  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, statcastWindow])
 
   const displayHome = sortRowsMulti(homeRows, activeSortKeys)
   const displayAway = sortRowsMulti(awayRows, activeSortKeys)
@@ -2211,42 +2185,47 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           {/* Home */}
           <tr>
             <td colSpan={99} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TeamLogo abbr={game.homeAbbr} size={22} />
-                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
-                {!game.homeLineupConfirmed && (
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                    {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
-                  </span>
-                )}
-                {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
-                <Tooltip content={stickyMode
-                  ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
-                  : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
-                >
-                  <button
-                    onClick={() => setStickyMode(v => !v)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 4,
-                      padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                      border: `1px solid ${stickyMode ? 'var(--accent)' : 'var(--border)'}`,
-                      background: stickyMode ? 'rgba(180,255,77,0.12)' : 'var(--surface)',
-                      color: stickyMode ? 'var(--accent)' : 'var(--text-2)',
-                    }}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <TeamLogo abbr={game.homeAbbr} size={22} />
+                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
+                  {!game.homeLineupConfirmed && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+                      {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
+                    </span>
+                  )}
+                  {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
+                </div>
+                <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                  <Tooltip content={stickyMode
+                    ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
+                    : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
                   >
-                    📌 Sticky Columns{stickyMode && stickyCols.length > 0 ? ` (${stickyCols.length})` : ''}
-                  </button>
-                </Tooltip>
-                {stickyMode && stickyCols.length > 0 && (
-                  <Tooltip content="Clear the sticky sort chain">
                     <button
-                      onClick={() => setStickyCols([])}
-                      style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+                      onClick={() => setStickyMode(v => !v)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                        border: `1px solid ${stickyMode ? 'var(--accent)' : 'var(--border)'}`,
+                        background: stickyMode ? 'rgba(180,255,77,0.12)' : 'var(--surface)',
+                        color: stickyMode ? 'var(--accent)' : 'var(--text-2)',
+                      }}
                     >
-                      ✕ Clear
+                      📌 Sticky Columns{stickyMode && stickyCols.length > 0 ? ` (${stickyCols.length})` : ''}
                     </button>
                   </Tooltip>
-                )}
+                  {stickyMode && stickyCols.length > 0 && (
+                    <Tooltip content="Clear the sticky sort chain">
+                      <button
+                        onClick={() => setStickyCols([])}
+                        style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+                      >
+                        ✕ Clear
+                      </button>
+                    </Tooltip>
+                  )}
+                </div>
               </div>
             </td>
           </tr>
@@ -2269,15 +2248,19 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
             <td colSpan={99} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TeamLogo abbr={game.awayAbbr} size={22} />
-                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
-                {!game.awayLineupConfirmed && (
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                    {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
-                  </span>
-                )}
-                {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <TeamLogo abbr={game.awayAbbr} size={22} />
+                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
+                  {!game.awayLineupConfirmed && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+                      {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
+                    </span>
+                  )}
+                  {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
+                </div>
+                <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
+                <div />
               </div>
             </td>
           </tr>
@@ -2311,6 +2294,11 @@ export function DugoutClient({ date }: { date: string }) {
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
+  // Which real recency window the Statcast section's "R"/Δ columns read —
+  // server precomputes all 5 (season + l1/l3/l5/l10) per batter, so this is
+  // just picking which one to render, not a re-fetch. Lives here (not in
+  // GameTable) so it survives switching between today's games.
+  const [statcastWindow, setStatcastWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>('l10')
 
   // Deep link from elsewhere (e.g. Weather Lab's park-HR modal) — jump
   // straight to this player's row, expanded, on whichever game he's in
@@ -2369,7 +2357,6 @@ export function DugoutClient({ date }: { date: string }) {
   }, [pathname, router, searchParams])
 
   const splitMap   = useMemo(() => buildSplitMap(data?.statSplits    ?? []), [data?.statSplits])
-  const timingMap  = useMemo(() => buildTimingMap(data?.timingSplits  ?? []), [data?.timingSplits])
   const pitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
   const batterPitchMap  = useMemo(() => buildBatterPitchMap(data?.batterPitchRecent   ?? []), [data?.batterPitchRecent])
   const pitcherPitchMap = useMemo(() => buildPitcherPitchMap(data?.pitcherPitchRecent ?? []), [data?.pitcherPitchRecent])
@@ -2566,7 +2553,6 @@ export function DugoutClient({ date }: { date: string }) {
           game={active}
           date={date}
           splitMap={splitMap}
-          timingMap={timingMap}
           pitcherMap={pitcherMap}
           fhrAvgMap={fhrAvgMap}
           saAvgMap={saAvgMap}
@@ -2578,6 +2564,8 @@ export function DugoutClient({ date }: { date: string }) {
           hrMap={hrMap}
           nearMap={nearMap}
           highlightMlbId={highlightId}
+          statcastWindow={statcastWindow}
+          onStatcastWindowChange={setStatcastWindow}
         />
       )}
 

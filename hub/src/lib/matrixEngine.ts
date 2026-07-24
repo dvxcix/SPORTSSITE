@@ -173,6 +173,39 @@ const RECENCY_TO_SAVANT_WINDOW: Record<Exclude<MatrixRecency, 'custom'>, string>
   game: 'l1', l3: 'l3', l5: 'l5', l10: 'l10', season: 'season',
 }
 
+// Weighted average of one metric across whatever pitch-type/contact-type
+// splits match this exact (category, window, bat side, pitch hand) — a
+// 1-swing outlier split shouldn't count the same as a 40-swing one.
+// Returns the RAW value (whatever scale that metric's own CSV export
+// uses — most of these 6 are 0-1 fractions, see evaluateSavantFactor's own
+// scaling comment); shared by both Matrix Factor evaluation and the
+// Dugout grid's own Statcast section so both read the exact same real
+// aggregation instead of two implementations that could quietly drift.
+export function weightedSavantMetric(
+  splitRows: SavantSplitRow[],
+  category: string,
+  windowType: string,
+  batSide: 'L' | 'R',
+  pitcherHand: 'L' | 'R',
+  metric: string,
+): number | null {
+  const weightKey = SAVANT_WEIGHT_FIELD[category]
+  const matching = splitRows.filter(r =>
+    r.category === category && r.window_type === windowType &&
+    r.dims.bat_side === batSide && r.dims.pitch_hand === pitcherHand
+  )
+  let weightedSum = 0
+  let totalWeight = 0
+  for (const row of matching) {
+    const metricVal = row.metrics[metric]
+    const weightVal = row.metrics[weightKey]
+    if (typeof metricVal !== 'number' || typeof weightVal !== 'number' || weightVal <= 0) continue
+    weightedSum += metricVal * weightVal
+    totalWeight += weightVal
+  }
+  return totalWeight > 0 ? weightedSum / totalWeight : null
+}
+
 export function evaluateSavantFactor(
   factor: MatrixFactor,
   splitRows: SavantSplitRow[],
@@ -182,20 +215,7 @@ export function evaluateSavantFactor(
   const field = SAVANT_FIELD[factor.field_key]
   if (!field) return false
   const windowType = factor.recency && factor.recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[factor.recency] : 'season'
-  const weightKey = SAVANT_WEIGHT_FIELD[field.category]
-  const matching = splitRows.filter(r =>
-    r.category === field.category && r.window_type === windowType &&
-    r.dims.bat_side === batSide && r.dims.pitch_hand === pitcherHand
-  )
-  let weightedSum = 0
-  let totalWeight = 0
-  for (const row of matching) {
-    const metricVal = row.metrics[field.metric]
-    const weightVal = row.metrics[weightKey]
-    if (typeof metricVal !== 'number' || typeof weightVal !== 'number' || weightVal <= 0) continue
-    weightedSum += metricVal * weightVal
-    totalWeight += weightVal
-  }
+  const raw = weightedSavantMetric(splitRows, field.category, windowType, batSide, pitcherHand, field.metric)
   // Savant's own CSV export returns every one of these 6 rate metrics as a
   // 0-1 fraction (confirmed live: squared_up_per_swing/ideal_attack_angle_
   // rate/pull_air_rate/fb_rate all sampled at values like 0.5, 0.333...),
@@ -204,7 +224,7 @@ export function evaluateSavantFactor(
   // is already 0-100 — the value a member types into "Hard-Swing % ≥ 50"
   // means 50, not 0.5, everywhere else in this feature. Scaling here keeps
   // that one consistent convention instead of silently never matching.
-  const current = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : null
+  const current = raw != null ? raw * 100 : null
   return compareThreshold(current, factor.operator, factor.value)
 }
 
