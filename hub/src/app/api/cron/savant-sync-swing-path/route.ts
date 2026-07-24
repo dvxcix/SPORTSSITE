@@ -5,7 +5,7 @@ import { currentSeason } from '@/lib/playerSync'
 import { SWING_PATH_ATTACK_ANGLE, syncBothWindows } from '@/lib/savantSplitsSync'
 
 export const revalidate = 0
-export const maxDuration = 60
+export const maxDuration = 150
 
 // Runs once daily, ~6am ET (see vercel.json — a fixed UTC hour, so it'll
 // drift an hour off 6am ET across the DST changeover until adjusted).

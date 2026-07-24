@@ -5,7 +5,7 @@ import { currentSeason } from '@/lib/playerSync'
 import { BATTED_BALL_PROFILE, syncBothWindows } from '@/lib/savantSplitsSync'
 
 export const revalidate = 0
-export const maxDuration = 60
+export const maxDuration = 150
 
 // Runs once daily, ~6am ET (see vercel.json — a fixed UTC hour, so it'll
 // drift an hour off 6am ET across the DST changeover until adjusted).

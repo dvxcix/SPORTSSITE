@@ -94,9 +94,11 @@ export const SWING_TIMING_MISS_DISTANCE: SplitLeaderboard = {
     `&sortColumn=bat_contact_code&sortDirection=asc&csv=true`,
 }
 
+export type SplitWindowType = 'season' | 'recency' | 'l1' | 'l3' | 'l5' | 'l10'
+
 export async function syncSplitLeaderboard(
   admin: AdminClient, board: SplitLeaderboard, season: number,
-  role: 'batter' | 'pitcher', windowType: 'season' | 'recency', dateStart: string, dateEnd: string
+  role: 'batter' | 'pitcher', windowType: SplitWindowType, dateStart: string, dateEnd: string
 ) {
   const rows = await fetchSavantCsv(board.url({ role, dateStart, dateEnd, season }))
   const withId = rows.filter(r => r.id)
@@ -321,22 +323,44 @@ export async function syncBattingStance(admin: AdminClient, season: number) {
   return { season, seasonStart, today, recencyStart, results }
 }
 
+// Savant's own leaderboard endpoints only accept a calendar date range —
+// there's no "last N games played" parameter, and a single bulk request
+// returns every qualifying player at once, so per-player custom ranges
+// aren't practical without one request per player. These are calendar-day
+// lookbacks calibrated to reliably COVER at least that many games for a
+// team on a normal ~6-games-a-week schedule (deliberately generous, not
+// exact — an off day or two inside the window means "Last 5 Games" may
+// include a 6th game's worth of pitches for some players some days, which
+// is the safe direction to be imprecise in; the alternative, a window too
+// tight, would silently drop a real recent game instead).
+export const MATRIX_RECENCY_WINDOWS: Record<'l1' | 'l3' | 'l5' | 'l10', number> = {
+  l1: 2, l3: 5, l5: 8, l10: 16,
+}
+
 // The shared cron body for every split-and-recency category: pulls both
-// batter and pitcher roles for both a season-to-date window and a rolling
-// recency window (4 requests total). Each new category's cron route is
-// just this one call plus its own SplitLeaderboard config.
+// batter and pitcher roles across season-to-date, the original rolling
+// "recency" window (still read by the Player Page's Recent tiles — left
+// untouched), and the four Matrix-specific windows (l1/l3/l5/l10) added for
+// Custom Matrix Factors. One extra request per new window per role — still
+// a handful of bulk, whole-league requests, not per-player.
 export async function syncBothWindows(admin: AdminClient, board: SplitLeaderboard, season: number) {
   const seasonStart = seasonStartDate(season)
   const today = todayET()
   const recencyStart = daysAgoET(RECENCY_DAYS)
 
+  const matrixWindows: [SplitWindowType, string, string][] = (Object.keys(MATRIX_RECENCY_WINDOWS) as (keyof typeof MATRIX_RECENCY_WINDOWS)[])
+    .map(w => [w, daysAgoET(MATRIX_RECENCY_WINDOWS[w]), today])
+
+  const windows: [SplitWindowType, string, string][] = [
+    ['season', seasonStart, today],
+    ['recency', recencyStart, today],
+    ...matrixWindows,
+  ]
+
   const results: Record<string, { rows: number } | { error: string }> = {}
 
   for (const role of board.roles ?? (['batter', 'pitcher'] as const)) {
-    for (const [windowType, dateStart, dateEnd] of [
-      ['season', seasonStart, today],
-      ['recency', recencyStart, today],
-    ] as const) {
+    for (const [windowType, dateStart, dateEnd] of windows) {
       const key = `${role}_${windowType}`
       try {
         results[key] = await syncSplitLeaderboard(admin, board, season, role, windowType, dateStart, dateEnd)
