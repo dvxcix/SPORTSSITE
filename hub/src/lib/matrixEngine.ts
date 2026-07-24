@@ -139,6 +139,51 @@ export function evaluatePitchlogFactor(
   return compareThreshold(current, factor.operator, factor.value)
 }
 
+// Real incident (2026-07-24): pitchlog_stat Factors were the ONE Matrix
+// category still doing a live per-batter raw-pitch fetch on every single
+// Dugout request (see getCachedBatterPitchRows/matrixPitchRows in
+// dugout/data/route.ts) — confirmed live to recur as 28-56s request spikes
+// for the specific real members whose saved Matrix happens to use this
+// category (e.g. whiff%/hard-hit%/barrel% over a real "last N games"
+// window), while members using only savant_stat/dugout_specs/odds never
+// touch that path at all. Every recency EXCEPT 'custom' (an arbitrary exact
+// date range, which genuinely can't be precomputed as a fixed bucket) is
+// one of a small fixed set — exactly like savant_stat's own l1/l3/l5/l10/
+// season windows already are, just phrased with pitchlog_stat's older
+// 'game'/'l3'/'l5'/'l10'/'season' names. Precomputing all 5 once daily
+// (see dugoutPitchlogStatPrecompute.ts) means these Factors read a plain
+// indexed SELECT the same way savant_stat already does, instead of ever
+// re-fetching a batter's full season of raw pitches per request.
+export const PITCHLOG_STAT_WINDOWS = ['game', 'l3', 'l5', 'l10', 'season'] as const
+export type PitchlogStatWindow = typeof PITCHLOG_STAT_WINDOWS[number]
+
+export function evaluatePitchlogFactorPrecomputed(
+  factor: MatrixFactor,
+  windows: Record<PitchlogStatWindow, BatterStats> | null | undefined,
+): boolean {
+  const statKey = PITCHLOG_FIELD[factor.field_key]
+  if (!statKey || !windows) return false
+  const bucket = (factor.recency && factor.recency !== 'custom' ? factor.recency : 'season') as PitchlogStatWindow
+  const line = windows[bucket]
+  const current = line ? (line[statKey] as number | null) : null
+  return compareThreshold(current, factor.operator, factor.value)
+}
+
+// All 5 fixed windows at once, from one batter's raw pitch rows — mirrors
+// computeAllStatcastWindows (dugoutStatcast.ts) exactly. Only ever called
+// from the daily precompute cron now, never from the request path.
+export function computeAllPitchlogStatWindows(
+  allRows: PitchLogRow[],
+  pitcherHand: 'L' | 'R',
+  asOfDate: string,
+): Record<PitchlogStatWindow, BatterStats> {
+  const out = {} as Record<PitchlogStatWindow, BatterStats>
+  for (const w of PITCHLOG_STAT_WINDOWS) {
+    out[w] = computeStatLine(sliceRecencyWindow(allRows, pitcherHand, w, null, null, asOfDate))
+  }
+  return out
+}
+
 // player_statcast_splits weight (sample-size) field per category — a plain
 // unweighted average across pitch-type/contact-type splits would let a
 // 1-swing outlier split count the same as a 40-swing one; confirmed live

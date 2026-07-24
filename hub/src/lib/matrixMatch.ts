@@ -1,9 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  evaluateMatrix, evaluatePitchlogFactor, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor,
-  type Matrix, type MatrixFactor, type DugoutSpecsAverages,
+  evaluateMatrix, evaluatePitchlogFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor,
+  type Matrix, type MatrixFactor, type DugoutSpecsAverages, type PitchlogStatWindow,
 } from '@/lib/matrixEngine'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
+import type { BatterStats } from '@/lib/batterStatsEngine'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -171,6 +172,18 @@ export function pitchlogNeeded(matrices: Matrix[]): boolean {
   return matrices.some(m => m.factors.some(f => f.category === 'pitchlog_stat'))
 }
 
+// A pitchlog_stat Factor with recency 'custom' (an arbitrary exact date
+// range) is the ONE case that genuinely can't be precomputed as a fixed
+// bucket — see evaluatePitchlogFactorPrecomputed's own comment. Every
+// other recency reads the daily cron-precomputed table instead, the same
+// way savant_stat already does. This should be true for almost no one in
+// practice (confirmed live: the real members hitting the old 28-56s spike
+// all used fixed windows like 'l10', not 'custom') — used to gate whether
+// the expensive live per-batter raw-pitch fetch still needs to run at all.
+export function pitchlogCustomNeeded(matrices: Matrix[]): boolean {
+  return matrices.some(m => m.factors.some(f => f.category === 'pitchlog_stat' && f.recency === 'custom'))
+}
+
 export type MatrixMatchContext = {
   fhrAvg?: DugoutSpecsAverages | null
   saAvg?: DugoutSpecsAverages | null
@@ -196,6 +209,7 @@ export function evaluateBatterMatrices(
   props: any,
   asOfDate: string,
   context: MatrixMatchContext = {},
+  pitchlogStatWindows?: Record<PitchlogStatWindow, BatterStats> | null,
 ): MatrixMatch[] {
   if (!matrices.length) return []
   const matches: MatrixMatch[] = []
@@ -203,7 +217,15 @@ export function evaluateBatterMatrices(
     const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
       if (factor.category === 'odds') return evaluateOddsFactor(factor, props)
       if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg)
-      if (factor.category === 'pitchlog_stat') return evaluatePitchlogFactor(factor, batterPitchRows, pitcherHand, asOfDate)
+      // 'custom' recency (an arbitrary exact date range) is the only
+      // pitchlog_stat case that can't be precomputed as a fixed bucket —
+      // see evaluatePitchlogFactorPrecomputed's own comment. Everything
+      // else reads the daily cron-precomputed table, same as savant_stat.
+      if (factor.category === 'pitchlog_stat') {
+        return factor.recency === 'custom'
+          ? evaluatePitchlogFactor(factor, batterPitchRows, pitcherHand, asOfDate)
+          : evaluatePitchlogFactorPrecomputed(factor, pitchlogStatWindows)
+      }
       if (factor.category === 'savant_stat') return evaluateSavantFactor(factor, statcastWindows)
       if (factor.category === 'picks') return evaluatePicksFactor(factor, context.pikkitEntry, context.gameTotalPicksByMarket ?? {})
       return false

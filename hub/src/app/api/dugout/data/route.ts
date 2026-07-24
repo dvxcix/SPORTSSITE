@@ -9,11 +9,14 @@ import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows,
-  evaluateBatterMatrices, pitchlogNeeded,
+  evaluateBatterMatrices, pitchlogNeeded, pitchlogCustomNeeded,
 } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
+import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
+import type { PitchlogStatWindow } from '@/lib/matrixEngine'
+import type { BatterStats } from '@/lib/batterStatsEngine'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -700,6 +703,13 @@ export async function GET(req: Request) {
   // Statcast section), so there's nothing left to conditionally fetch here
   // for that category.
   const needsPitchlog = pitchlogNeeded(userMatrices)
+  // 'custom' recency (an arbitrary exact date range) is the only
+  // pitchlog_stat case the daily precompute below can't cover — see
+  // evaluatePitchlogFactorPrecomputed's own comment. Confirmed live
+  // (2026-07-24): none of the real members who hit the old 28-56s
+  // matrixPitchRows spike actually used 'custom' — this should gate the
+  // expensive live per-batter raw fetch to near-nobody in practice.
+  const needsPitchlogCustom = pitchlogCustomNeeded(userMatrices)
 
   // Pitcher IDs only need the schedule (already have it) — computed here,
   // ahead of the big parallel batch below, so pitcherHandById/pitcherSplits
@@ -735,7 +745,7 @@ export async function GET(req: Request) {
   // one (if any) is still the dominant cost.
   const [
     statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, outcomesByGamePk,
-    matrixPitchRowsByBatter, precomputedStatcastRows, precomputedMatchupEdgeRows,
+    matrixPitchRowsByBatter, precomputedStatcastRows, precomputedPitchlogRows, precomputedMatchupEdgeRows,
     batSideEntries, gapOddsResult, gapOddsOpeningResult, pitcherHandEntries, pitcherSplits, freezeResult,
   ] = await Promise.all([
     timed(reqId, 'statSplits', fetchStatSplits()),
@@ -777,7 +787,11 @@ export async function GET(req: Request) {
     // chunk. Paired with getCachedBatterPitchRows' widened 24h+tag cache
     // above, this fetch should now only ever be slow the first time (or
     // shortly after a fresh deploy), not repeatedly throughout the day.
-    timed(reqId, 'matrixPitchRows', isUltimate && needsPitchlog && allDisplayedBatterIdList.length
+    // Real fix (2026-07-24): pitchlog_stat now has its own daily precompute
+    // (see precomputedPitchlog below) for every recency EXCEPT 'custom' —
+    // gated on needsPitchlogCustom instead of needsPitchlog, this live
+    // per-batter fan-out should now almost never fire at all.
+    timed(reqId, 'matrixPitchRows', isUltimate && needsPitchlogCustom && allDisplayedBatterIdList.length
       ? (async () => {
           const combined: Record<number, any[]> = {}
           const results = await asyncPool(15, allDisplayedBatterIdList, id =>
@@ -801,6 +815,22 @@ export async function GET(req: Request) {
         return [] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[])),
+    // Custom Matrix's pitchlog_stat category — precomputed daily by
+    // /api/cron/dugout-pitchlog-stat-precompute (see
+    // dugoutPitchlogStatPrecompute.ts for the incident this fixes: this
+    // used to be the one Matrix category still doing a live per-batter
+    // raw-pitch fetch on every request). Same shape as precomputedStatcast
+    // above — plain indexed SELECT, gated the same way (only fetched when
+    // some Matrix actually references this category at all).
+    timed(reqId, 'precomputedPitchlog', isUltimate && admin && needsPitchlog ? (async () => {
+      try {
+        const { data } = await admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
+        return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[]
+      } catch (e) {
+        console.error('[dugout/data] precomputed pitchlog stat fetch failed', e)
+        return [] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[]
+      }
+    })() : Promise.resolve([] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[])),
     // Paper's matchup_edge/platoon_ops inputs — precomputed daily by
     // /api/cron/dugout-matchup-edge-precompute (see
     // dugoutMatchupEdgePrecompute.ts). One row per (batter|pitcher) mlb_id
@@ -895,6 +925,11 @@ export async function GET(req: Request) {
   const precomputedStatcastByBatter: Record<number, Partial<Record<'L' | 'R', Record<StatcastWindow, StatcastLine>>>> = {}
   for (const row of precomputedStatcastRows) {
     (precomputedStatcastByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
+  }
+
+  const precomputedPitchlogByBatter: Record<number, Partial<Record<'L' | 'R', Record<PitchlogStatWindow, BatterStats>>>> = {}
+  for (const row of precomputedPitchlogRows) {
+    (precomputedPitchlogByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
   }
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
@@ -1179,11 +1214,12 @@ export async function GET(req: Request) {
         const pHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
+        const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-            })
+            }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
@@ -1192,11 +1228,12 @@ export async function GET(req: Request) {
         const pHand = (homePitcher?.hand as 'L' | 'R') || 'R'
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
+        const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-            })
+            }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
