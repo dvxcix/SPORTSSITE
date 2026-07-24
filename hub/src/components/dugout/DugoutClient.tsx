@@ -2124,12 +2124,12 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
   const headerCells = (
     <>
       <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
-      {H('pk', 'Community HR pick count', 34, 'pk')}
+      {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
       {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
       {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
       {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
-      {H('div', 'FD−CZ implied diff ×100', 36, 'div')}
+      {H(<span style={{ filter: 'invert(1)' }}>➗</span>, 'FD−CZ implied diff ×100', 36, 'div')}
       {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
       {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
       {H('HR%', 'Anytime HR historical rate', 36, 'sa_pct')}
@@ -2141,21 +2141,21 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {BL('fanatics', 'HR', 'Fanatics Anytime HR', 50, 'sa_fan')}
       {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
       {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
-      {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
-      {H('Laser 105+', 'Laser (105+ MPH Home Run) market price', 50, 'laser105_fd')}
-      {H('Laser 110+', 'Laser (110+ MPH Home Run) market price', 50, 'laser110_fd')}
-      {H('Moon', 'Moonshot market price', 50, 'moonshot_fd')}
-      {H('1stPA', '1st Plate Appearance HR price', 50, 'pa1_fd')}
-      {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-      {H('HR÷RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi', 'pkRbi')}
-      {H('HR÷RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
-      {H('HR÷RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
-      {H('HR÷HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr', 'pkHrr')}
-      {H('HR÷TB', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb', 'pkTb')}
-      {H('HR÷TB3', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
-      {H('HR÷TB4', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
-      {H('HR÷TB5', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
-      {H('HR÷2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
+      {H('🏆', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
+      {H('⚡105+', 'Laser (105+ MPH Home Run) market price', 50, 'laser105_fd')}
+      {H('⚡110+', 'Laser (110+ MPH Home Run) market price', 50, 'laser110_fd')}
+      {H('🌙', 'Moonshot market price', 50, 'moonshot_fd')}
+      {H('🥇', '1st Plate Appearance HR price', 50, 'pa1_fd')}
+      {H('⏰', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
+      {H('RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi', 'pkRbi')}
+      {H('RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
+      {H('RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
+      {H('3HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr', 'pkHrr')}
+      {H('2️⃣', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb', 'pkTb')}
+      {H('3️⃣', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
+      {H('4️⃣', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
+      {H('5️⃣', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
+      {H('2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
       <th style={SDIV_H} />
       {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd', 'pkSingles')}
       {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd', 'pkDoubles')}
@@ -2163,14 +2163,14 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd', 'pkStolenBases')}
       {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
       {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd', 'pkHits')}
-      {BL('fanduel', 'HIT2', '2+ Hits (FD)', 44, 'hits2_fd')}
-      {BL('fanduel', 'RUN', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
-      {BL('fanduel', 'RUN2', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
+      {BL('fanduel', '2HIT', '2+ Hits (FD)', 44, 'hits2_fd')}
+      {BL('fanduel', '🏃', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
+      {BL('fanduel', '2️⃣🏃', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
       <th style={SDIV_H} />
-      {H('paper', 'Composite Statcast score', 46, 'paper')}
-      {H('bk·rk', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
-      {H('pp·rk', 'Statcast rank', 30, 'pp_rk')}
-      {H('mm', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
+      {H('📊', 'Composite Statcast score', 46, 'paper')}
+      {H('📚', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
+      {H('⚾', 'Statcast rank', 30, 'pp_rk')}
+      {H('❓', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
       <th style={SDIV_H} />
       {H('BSpd', 'Season bat speed', 38, 's_spd')}
       {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
@@ -2183,8 +2183,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {H('Sq', 'Squared-up per swing', 36, 's_sq')}
       {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
       {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
-      {H('Blast', 'Blast per swing', 34, 's_bla')}
-      {H('R·Bla', 'Recent blast per swing', 34, 'r_bla')}
+      {H('💥', 'Blast per swing', 34, 's_bla')}
+      {H('R 💥', 'Recent blast per swing', 34, 'r_bla')}
       {H('SwLen', 'Swing length', 36, 's_len')}
       {H('Atk°', 'Attack angle', 34, 's_atk')}
       {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
@@ -2193,7 +2193,7 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       <th style={SDIV_H} />
       {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
       {H('HH%', 'Hard hit rate', 34, 's_hh')}
-      {H('PullAir', 'Pull air rate', 36, 's_pa')}
+      {H('PULL%', 'Pull air rate', 36, 's_pa')}
       {H('FB%', 'Flyball rate', 34, 's_fb')}
       {H('EV', 'Exit velocity', 34, 's_ev')}
       {H('LA', 'Launch angle', 32, 's_la')}

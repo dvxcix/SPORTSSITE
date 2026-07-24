@@ -60,12 +60,20 @@ export function BookLogo({ vendor, size = 16 }: { vendor: string; size?: number 
     )
   }
 
-  // Fallback: colored pill with initials
+  // Fallback: colored pill with initials — no real logo file for this book
+  // yet (Fanatics, confirmed: /public/sportsbooks/fanatics.ico doesn't
+  // exist), so this text pill is what actually renders next to FD/CZ/MGM's
+  // real image logos. Reported live: it sat visibly lower than the others
+  // despite being the same size box, flex-centered the same way — a
+  // monospace font's default line-height adds asymmetric leading above/
+  // below the glyphs, which flexbox centers along with the text, not the
+  // glyphs' own visual center. lineHeight: 1 removes that leading so the
+  // text itself, not an invisible line box around it, is what gets centered.
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       width: size, height: size, borderRadius: 3,
-      background: book.bg, fontSize: size * 0.38,
+      background: book.bg, fontSize: size * 0.38, lineHeight: 1,
       fontWeight: 900, color: book.color, fontFamily: 'monospace',
       flexShrink: 0, verticalAlign: 'middle', letterSpacing: '-0.02em',
     }}>
