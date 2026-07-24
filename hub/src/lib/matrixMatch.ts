@@ -64,57 +64,58 @@ function mapPitchLogRow(r: any) {
 }
 
 // Bulk-fetch every pitch this SPECIFIC set of batters has seen all season,
-// grouped by batter_id — one query total instead of one query per batter
-// (which is what fetchPlayerPitchRows in pitchLogFetch.ts does, and is fine
-// for a single player's own page but would be a real N+1 across an entire
-// slate here). Caller is expected to wrap this in unstable_cache keyed by
-// date, since the result is identical for every member viewing the same
-// date — only the per-member Matrix evaluation below differs.
+// grouped by batter_id.
 //
-// Confirmed live (2026-07-24): a full slate's lineups run ~250-300 batters,
-// and by late July each has ~1,000-1,500 pitches season-to-date — a few
-// hundred thousand rows total. Fetching that AWAITED one page at a time (the
-// original approach) serialized every round-trip and blew well past this
-// route's 60s maxDuration once the Statcast section made this fetch run on
-// every Ultimate page load instead of only when a member's Matrix happened
-// to need it. An exact-count HEAD request up front (tried first) turned out
-// to have the same problem one level down: COUNT(*) over an IN-list this
-// large made Postgres itself cancel the query with a statement timeout
-// (confirmed live via a `57014 canceling statement due to statement
-// timeout` error) — counting is exactly as expensive as scanning, so it
-// bought nothing. Speculative pagination instead: fire a batch of pages
-// concurrently, and stop once any page in a batch comes back short (the
-// real end of the data) — no COUNT query, no per-page total, and every
-// individual page stays a small indexed range scan that's fast on its own.
+// Confirmed live (2026-07-24), across three failed approaches before this
+// one, exactly why a combined-IN-list-with-pagination design can't work
+// here at all: the daily lineup batter set is ~250-300 players, each with
+// ~1,000-1,500 pitches season-to-date (a few hundred thousand rows total).
+// (1) Sequential one-page-at-a-time fetching (the original design) blew
+// past this route's 60s maxDuration once Statcast made this run on every
+// Ultimate load instead of rarely. (2) An exact-count HEAD query, added to
+// enable concurrent pagination, was itself cancelled by Postgres — a real
+// `57014 statement timeout` — since COUNT(*) over this large a match set is
+// exactly as expensive as scanning it. (3) Dropping the count AND the
+// now-provably-unneeded ORDER BY (lastNGameDates in batterStatsEngine.ts
+// sorts its own distinct dates internally regardless of input order) still
+// hit the SAME statement timeout — confirmed via EXPLAIN ANALYZE the actual
+// cost driver was OFFSET itself: Postgres can't skip N already-matched rows
+// without first finding and discarding all of them, so a page at OFFSET
+// 150000 took 5+ seconds all on its own, cost scaling with how deep the
+// page is. There is no page-based fix for that; the fetch shape had to
+// change entirely.
+//
+// Fetching per-batter instead sidesteps it: EXPLAIN ANALYZE on a single
+// real batter_id (no OFFSET at all, one Index Scan on the existing
+// (batter_id, game_date) index) returned a full season — 2,068 rows for one
+// of this year's highest-volume hitters — in 333ms cold. Multiplied across
+// ~280 batters at real concurrency, that's the same total work this always
+// needed, just shaped as N fast independent lookups instead of one query
+// whose own OFFSET cost grows the deeper it pages. A generous per-batter
+// range (5000) guards against PostgREST's own default response-row cap
+// silently truncating a real player's season — no real hitter approaches
+// that pitch count.
 export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: number[]): Promise<Record<number, any[]>> {
   const byBatter: Record<number, any[]> = {}
   if (!batterIds.length) return byBatter
-  const PAGE = 1000
-  const CONCURRENCY = 12
-  const MAX_ROWS = 2_000_000 // safety backstop against a runaway loop, never expected to bind
+  const CONCURRENCY = 15
+  const MAX_PITCHES_PER_BATTER = 5000
 
-  let batchStart = 0
-  let reachedEnd = false
-  while (!reachedEnd && batchStart < MAX_ROWS) {
-    const starts: number[] = []
-    for (let i = 0; i < CONCURRENCY; i++) starts.push(batchStart + i * PAGE)
-    const pages = await Promise.all(starts.map(from =>
+  for (let i = 0; i < batterIds.length; i += CONCURRENCY) {
+    const chunk = batterIds.slice(i, i + CONCURRENCY)
+    const results = await Promise.all(chunk.map(id =>
       admin
         .from('player_pitch_log')
         .select(BULK_PITCHLOG_SELECT)
-        .in('batter_id', batterIds)
-        .order('batter_id', { ascending: true })
-        .order('game_date', { ascending: true })
-        .range(from, from + PAGE - 1)
+        .eq('batter_id', id)
+        .range(0, MAX_PITCHES_PER_BATTER - 1)
     ))
-    for (const { data, error } of pages) {
+    for (const { data, error } of results) {
       if (error) throw error
       for (const r of (data ?? []) as any[]) {
         (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
       }
-      if (!data || data.length < PAGE) reachedEnd = true
     }
-    batchStart += CONCURRENCY * PAGE
   }
   return byBatter
 }
