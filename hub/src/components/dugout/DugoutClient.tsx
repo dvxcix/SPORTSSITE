@@ -2052,6 +2052,25 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     )
   }
 
+  // The Statcast toggle bar's colSpan split below MUST stay in sync with
+  // these two counts. Confirmed live (2026-07-24): centering the toggle in
+  // a single colSpan-spans-everything cell (grid '1fr auto 1fr' across ALL
+  // ~75 columns) put it at the table's overall horizontal midpoint, not
+  // over the Statcast columns specifically — Statcast is column 50 of 75,
+  // well past center, so on any real slate width the toggle landed to the
+  // LEFT of the columns it's supposed to sit above, and scrolled out of
+  // view entirely on mobile before the Statcast section ever came into
+  // frame. Giving the toggle its OWN colSpan matching exactly the Statcast
+  // columns' width (BSpd through the final HR column) makes it scroll
+  // together with — and stay visually centered over — that exact section
+  // regardless of the total table width. COLS_BEFORE_STATCAST = every
+  // header cell from "Player" through the divider right before "BSpd"
+  // (49); STATCAST_COL_COUNT = "BSpd" through the last column, "HR" (26).
+  // If a column is ever added/removed anywhere in headerCells below, these
+  // two numbers need the same edit or this breaks silently again.
+  const COLS_BEFORE_STATCAST = 49
+  const STATCAST_COL_COUNT = 26
+
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
   // of view above the home lineup was otherwise unreadable by the time you
@@ -2145,8 +2164,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
         <tbody>
           {/* Home */}
           <tr>
-            <td colSpan={99} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 }}>
+            <td colSpan={COLS_BEFORE_STATCAST} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.homeAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
@@ -2157,7 +2176,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                   )}
                   {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
                 </div>
-                <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                   <Tooltip content={stickyMode
                     ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
@@ -2189,6 +2207,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 </div>
               </div>
             </td>
+            <td colSpan={STATCAST_COL_COUNT} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
+              </div>
+            </td>
           </tr>
           {displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
@@ -2208,20 +2231,21 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               of the home team's block above it. */}
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
-            <td colSpan={99} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <TeamLogo abbr={game.awayAbbr} size={22} />
-                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
-                  {!game.awayLineupConfirmed && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                      {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
-                    </span>
-                  )}
-                  {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
-                </div>
+            <td colSpan={COLS_BEFORE_STATCAST} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <TeamLogo abbr={game.awayAbbr} size={22} />
+                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
+                {!game.awayLineupConfirmed && (
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+                    {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
+                  </span>
+                )}
+                {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
+              </div>
+            </td>
+            <td colSpan={STATCAST_COL_COUNT} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
-                <div />
               </div>
             </td>
           </tr>
