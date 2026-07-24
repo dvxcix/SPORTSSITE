@@ -63,6 +63,31 @@ function timed<T>(reqId: string, label: string, p: Promise<T>): Promise<T> {
   return p.finally(() => { console.log(`[dugout/data:${reqId}] ${label} ${Date.now() - start}ms`) })
 }
 
+// Real incident (2026-07-24): a "chunk of N, await the whole chunk, then
+// start the next chunk" loop (as used for the per-batter Matrix pitch-log
+// fan-out below) stalls the ENTIRE next chunk on whichever single item in
+// the current chunk is slowest — one straggler batter blocks 14 already-
+// finished slots from picking up new work. Under a fully cold cache (right
+// after a deploy, since Next's data cache is wiped on every new deployment)
+// this compounds across ~18-20 sequential chunks for a full slate. A
+// sliding-window pool keeps the same hard concurrency ceiling (never more
+// than `concurrency` requests in flight at once, so this doesn't reopen the
+// connection-pool-exhaustion incident this exact fetch already caused) but
+// starts the next item the instant ANY slot frees up, instead of waiting
+// for the whole batch.
+async function asyncPool<T, R>(concurrency: number, items: T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
+  return results
+}
+
 // Manually-imported gap-odds reads — the only genuinely uncached Supabase
 // queries in this route (everything else here either already goes through
 // mpGet's own next:{revalidate} fetch caching, or is a deliberately-live
@@ -177,10 +202,22 @@ const getCachedGapOddsOpening = (date: string) => (isPastDateET(date) ? getCache
 // now reusable across ANY date within the revalidate window, not just the
 // one exact date + exact batterIds-array combination that happened to
 // match before.
+// Real incident (2026-07-24): this used a 300s (5-minute) revalidate window,
+// but player_pitch_log only ever changes once daily via the savant-sync-
+// pitch-log cron — same real freshness cadence already established for the
+// per-player /api/players/[id]/pitch-log cache (see that route's own
+// comment). A 5-minute window meant every batter's cache went cold and had
+// to be fully re-fetched every 5 minutes, all day, regardless of whether
+// the cron had run — confirmed live via runtime logs: repeated 28-56s
+// request totals, every one dominated by this exact fetch, recurring every
+// few minutes rather than a one-time cost. Reusing the SAME 'player-pitch-
+// log' tag that savant-sync-pitch-log already calls revalidateTag() on
+// means this now invalidates in lockstep with real data changes instead of
+// an arbitrary short timer — once warm, a batter's rows stay warm all day.
 const getCachedBatterPitchRows = unstable_cache(
   async (batterId: number) => fetchBulkBatterPitchRows(createAdminClient(), [batterId]),
   ['dugout-matrix-pitchlog-batter'],
-  { revalidate: 300 }
+  { revalidate: 86400, tags: ['player-pitch-log'] }
 )
 
 // Confirmed live (2026-07-24): before lineups post for a date (including
@@ -728,22 +765,25 @@ export async function GET(req: Request) {
     // from connection pool`, dozens of them, on that same request), which
     // in turn starved every OTHER concurrent DB read in that same request
     // (gapOdds/gapOddsOpening on the same request went from their usual
-    // <300ms to 15267ms/9893ms). Chunking to the same CONCURRENCY=15 already
-    // used for this exact shape of fan-out elsewhere (see fetchBulkBatterPitchRows/
-    // fetchPlayerHomeRuns-style bulk reads in matrixMatch.ts) keeps this
-    // fetch bounded regardless of slate size.
+    // <300ms to 15267ms/9893ms). CONCURRENCY=15 matches the same bounded
+    // fan-out pattern used elsewhere (see fetchBulkBatterPitchRows in
+    // matrixMatch.ts) — keeps this safe regardless of slate size. Uses
+    // asyncPool (see its own comment above) instead of a batch-wait loop:
+    // same hard ceiling of 15 in flight, but a straggler in one "batch"
+    // no longer stalls the next 15 from starting — this mattered live:
+    // even after bounding concurrency, a fully cold cache (every request
+    // right after a deploy, since Next's data cache resets on deploy) still
+    // produced repeated 28-56s totals dominated by this step, chunk-by-
+    // chunk. Paired with getCachedBatterPitchRows' widened 24h+tag cache
+    // above, this fetch should now only ever be slow the first time (or
+    // shortly after a fresh deploy), not repeatedly throughout the day.
     timed(reqId, 'matrixPitchRows', isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? (async () => {
           const combined: Record<number, any[]> = {}
-          // 15 chosen to match the existing bounded fan-out pattern below.
-          const CONCURRENCY = 15
-          for (let i = 0; i < allDisplayedBatterIdList.length; i += CONCURRENCY) {
-            const chunk = allDisplayedBatterIdList.slice(i, i + CONCURRENCY)
-            const results = await Promise.all(chunk.map(id =>
-              getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', id, e); return {} as Record<number, any[]> })
-            ))
-            for (const r of results) Object.assign(combined, r)
-          }
+          const results = await asyncPool(15, allDisplayedBatterIdList, id =>
+            getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', id, e); return {} as Record<number, any[]> })
+          )
+          for (const r of results) Object.assign(combined, r)
           return combined
         })()
       : Promise.resolve({} as Record<number, any[]>)),
