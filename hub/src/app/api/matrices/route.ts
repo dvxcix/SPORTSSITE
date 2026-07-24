@@ -15,7 +15,14 @@ type FactorInput = {
   recency: string | null
   recency_start: string | null
   recency_end: string | null
+  // Only meaningful for the two real multi-book odds fields (fhr, hr) — see
+  // matrixEngine.ts's MULTI_BOOK_MARKET. Harmless (just ignored) on every
+  // other Factor.
+  books: string[] | null
+  books_min_count: number | null
 }
+
+const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
 
 function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] } | { ok: false; error: string } {
   if (!Array.isArray(factors) || !factors.length) return { ok: false, error: 'A Matrix needs at least one Factor.' }
@@ -23,10 +30,11 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
   const clean: FactorInput[] = []
   for (const f of factors) {
     if (!f || typeof f !== 'object') return { ok: false, error: 'Malformed Factor.' }
-    const { category, field_key, operator, value, recency, recency_start, recency_end } = f as Record<string, unknown>
+    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
     if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
+    const cleanBooks = Array.isArray(books) ? books.filter((b): b is string => typeof b === 'string' && VALID_BOOKS.includes(b)) : null
     clean.push({
       category: category as FactorInput['category'],
       field_key,
@@ -35,6 +43,8 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
       recency: typeof recency === 'string' ? recency : null,
       recency_start: typeof recency_start === 'string' ? recency_start : null,
       recency_end: typeof recency_end === 'string' ? recency_end : null,
+      books: cleanBooks?.length ? cleanBooks : null,
+      books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
     })
   }
   return { ok: true, factors: clean }
@@ -55,7 +65,7 @@ export async function GET() {
 
   const { data: factors, error: factorsError } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end')
+    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })

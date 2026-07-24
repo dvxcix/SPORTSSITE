@@ -17,6 +17,13 @@ export type MatrixFactor = {
   operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
   value: number | null
   recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | null
+  // Only meaningful for the two real multi-book odds fields (fhr, hr) —
+  // which book(s) to check. null/empty defaults to FanDuel only, same as
+  // every other odds Factor.
+  books: string[] | null
+  // null = every book in `books` must satisfy the Factor. A number = "at
+  // least N of `books`" — e.g. "3+ of FHR's books moved up since open."
+  books_min_count: number | null
 }
 
 export type MatrixDef = {
@@ -133,9 +140,23 @@ function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
 }
 function newFactor(): MatrixFactor {
-  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null }
+  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null }
 }
 const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED573', '#FF8FA3', '#5EEAD4']
+
+// The two odds fields this app actually carries real prices from more than
+// one book for — every other odds Factor is FanDuel-only in our data (see
+// matrixEngine.ts's own ODDS_BOOK_FIELD/MULTI_BOOK_MARKET). Labels match
+// the exact book names DugoutClient already shows columns for.
+const MULTI_BOOK_FIELDS: Record<string, { key: string; label: string }[]> = {
+  fhr: [
+    { key: 'fanduel', label: 'FanDuel' }, { key: 'caesars', label: 'Caesars' }, { key: 'fanatics', label: 'Fanatics' },
+  ],
+  hr: [
+    { key: 'fanduel', label: 'FanDuel' }, { key: 'caesars', label: 'Caesars' }, { key: 'betmgm', label: 'BetMGM' },
+    { key: 'betrivers', label: 'BetRivers' }, { key: 'fanatics', label: 'Fanatics' },
+  ],
+}
 
 async function api<T>(url: string, opts?: RequestInit): Promise<{ data: T | null; error: string | null }> {
   try {
@@ -260,6 +281,52 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
       <button onClick={onRemove} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
         <X size={14} />
       </button>
+
+      {/* FHR/Anytime HR are the only two Factor fields with real prices from
+          more than one book — everything else in this app is FanDuel-only.
+          Defaults to FanDuel alone (identical to before this existed) until
+          a member picks otherwise. */}
+      {factor.category === 'odds' && MULTI_BOOK_FIELDS[factor.field_key] && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>BOOKS</span>
+          {MULTI_BOOK_FIELDS[factor.field_key].map(b => {
+            const selected = factor.books?.length ? factor.books : ['fanduel']
+            const on = selected.includes(b.key)
+            return (
+              <button
+                key={b.key}
+                onClick={() => {
+                  const next = on ? selected.filter(k => k !== b.key) : [...selected, b.key]
+                  onChange({ ...factor, books: next.length ? next : ['fanduel'] })
+                }}
+                style={{
+                  fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, cursor: 'pointer',
+                  color: on ? 'var(--accent-fg)' : 'var(--text-3)', background: on ? 'var(--accent)' : 'var(--surface-3)',
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
+                }}
+              >
+                {b.label}
+              </button>
+            )
+          })}
+          <select
+            className="ss-input" value={factor.books_min_count == null ? 'all' : 'atLeast'}
+            onChange={e => onChange({ ...factor, books_min_count: e.target.value === 'atLeast' ? (factor.books?.length ?? 1) : null })}
+            style={{ fontSize: 10, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
+          >
+            <option value="all">True for every book picked</option>
+            <option value="atLeast">True for at least N picked</option>
+          </select>
+          {factor.books_min_count != null && (
+            <input
+              className="ss-input" type="number" min={1} max={(factor.books?.length ?? 1) || 1}
+              value={factor.books_min_count}
+              onChange={e => onChange({ ...factor, books_min_count: Math.max(1, Number(e.target.value) || 1) })}
+              style={{ fontSize: 10, padding: '4px 5px', width: 44 }}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

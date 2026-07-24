@@ -39,6 +39,16 @@ export type MatrixFactor = {
   recency: MatrixRecency | null
   recency_start: string | null
   recency_end: string | null
+  // Only meaningful for the two real multi-book odds markets (FHR, Anytime
+  // HR) — which book(s) this Factor actually checks. null/empty defaults to
+  // ['fanduel'] (the same single-book behavior every other odds Factor has
+  // always had). See MULTI_BOOK_MARKET below.
+  books: string[] | null
+  // null → every book in `books` must satisfy the Factor (a single book
+  // selected is just that one book, same as before this existed). A number
+  // → "at least N of `books` satisfy it" — e.g. "3+ of FHR's books moved up
+  // since open," not "FanDuel specifically."
+  books_min_count: number | null
 }
 
 export type Matrix = {
@@ -248,18 +258,19 @@ const BOOKS_MISSING_FIELD: Record<string, { market: string; books: string[] }> =
   bookshr: { market: 'sa', books: ['fanduel', 'betmgm', 'caesars', 'betrivers', 'fanatics'] },
 }
 
-export function evaluateOddsFactor(factor: MatrixFactor, props: OddsProps | null | undefined): boolean {
-  if (factor.field_key === 'booksfhr' || factor.field_key === 'bookshr') {
-    const spec = BOOKS_MISSING_FIELD[factor.field_key]
-    const marketRow = props?.[spec.market]
-    const missing = spec.books.filter(b => (marketRow as Record<string, number | null | undefined> | undefined)?.[b] == null).length
-    return compareThreshold(missing, factor.operator, factor.value)
-  }
-  const spec = ODDS_BOOK_FIELD[factor.field_key]
-  if (!spec) return false
-  const current = props?.[spec.market]?.fanduel ?? null
-  const opener = props?.open?.[spec.open] ?? null
+// FHR and Anytime HR are the two markets this app actually carries real
+// prices from more than one book for (every other odds Factor field is
+// FanDuel-only in our data — see ODDS_BOOK_FIELD above) — so these are the
+// two a member can genuinely scope to specific book(s), or "N+ of these
+// books," rather than always meaning FanDuel implicitly. Each book's own
+// opening-price field name (confirmed against MARKET_BOOK_TO_OPEN_FIELD in
+// api/dugout/data/route.ts, the one place these are written).
+const MULTI_BOOK_MARKET: Record<string, { market: string; openByBook: Record<string, string> }> = {
+  fhr: { market: 'fhr', openByBook: { fanduel: 'fhr', caesars: 'fhrCz', fanatics: 'fhrFan' } },
+  hr: { market: 'sa', openByBook: { fanduel: 'saFd', caesars: 'saCz', betmgm: 'saMgm', betrivers: 'saBr', fanatics: 'saFan' } },
+}
 
+function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, opener: number | null): boolean {
   if (factor.operator === 'up' || factor.operator === 'down' || factor.operator === 'flat') {
     if (current == null || opener == null) return false
     if (factor.operator === 'flat') return current === opener
@@ -269,6 +280,38 @@ export function evaluateOddsFactor(factor: MatrixFactor, props: OddsProps | null
     return factor.operator === 'up' ? current < opener : current > opener
   }
   return compareThreshold(current, factor.operator, factor.value)
+}
+
+export function evaluateOddsFactor(factor: MatrixFactor, props: OddsProps | null | undefined): boolean {
+  if (factor.field_key === 'booksfhr' || factor.field_key === 'bookshr') {
+    const spec = BOOKS_MISSING_FIELD[factor.field_key]
+    const marketRow = props?.[spec.market]
+    const missing = spec.books.filter(b => (marketRow as Record<string, number | null | undefined> | undefined)?.[b] == null).length
+    return compareThreshold(missing, factor.operator, factor.value)
+  }
+
+  const multi = MULTI_BOOK_MARKET[factor.field_key]
+  if (multi) {
+    // Empty/unset books = the same single-FanDuel behavior this Factor
+    // always had before book scoping existed — an existing saved Matrix
+    // with no `books` set keeps matching exactly as before.
+    const books = factor.books?.length ? factor.books : ['fanduel']
+    const results = books.map(book => {
+      const marketRow = props?.[multi.market] as Record<string, number | null | undefined> | undefined
+      const current = marketRow?.[book] ?? null
+      const opener = props?.open?.[multi.openByBook[book]] ?? null
+      return oddsFactorTrueForPrice(factor, current, opener)
+    })
+    return factor.books_min_count != null
+      ? results.filter(Boolean).length >= factor.books_min_count
+      : results.every(Boolean)
+  }
+
+  const spec = ODDS_BOOK_FIELD[factor.field_key]
+  if (!spec) return false
+  const current = props?.[spec.market]?.fanduel ?? null
+  const opener = props?.open?.[spec.open] ?? null
+  return oddsFactorTrueForPrice(factor, current, opener)
 }
 
 // "Dugout Specs" — the Dugout table's own computed columns, not raw
