@@ -1077,7 +1077,10 @@ function OddsCell({
   odds: number | null
   style: React.CSSProperties
   display?: React.ReactNode
-  badge?: { label: string; color: string; title: string }
+  // onClick lets a badge (e.g. an FHR/HR achievement flag) open something
+  // of its own (the HR detail popup) instead of falling through to this
+  // cell's own click-to-watchlist handler below.
+  badge?: { label: string; color: string; title: string; onClick?: (e: React.MouseEvent) => void }
   // Opening/early price for this same market — when present and different
   // from the current price, shows a small delta arrow + tooltip. Sourced
   // from the admin gap importers' "opening" checkbox (manual paste, since
@@ -1163,7 +1166,10 @@ function OddsCell({
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
       {badge && (
         <Tooltip content={badge.title}>
-          <div style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, cursor: 'help' }}>
+          <div
+            onClick={badge.onClick ? (e) => { e.stopPropagation(); badge.onClick!(e) } : undefined}
+            style={{ fontSize: 6.5, fontWeight: 900, color: badge.color, letterSpacing: '0.03em', lineHeight: 1, cursor: badge.onClick ? 'pointer' : 'help' }}
+          >
             {badge.label}
           </div>
         </Tooltip>
@@ -1238,9 +1244,15 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   const hasHr = hits.length > 0
   // Custom Matrix highlight — already sorted highest-priority-first by the
   // server (see matrixMatch.ts), so the top match's color drives the row
-  // tint; every match still listed in the tooltip. An explicit member-
-  // defined signal, so it wins over the passive hasHr tint rather than
-  // fighting it for the same background.
+  // tint; every match still listed in the tooltip. This is now the ONLY
+  // thing that tints the row background — reported live: an HR-happened
+  // row used to get the same passive green tint a genuine green-colored
+  // Matrix match would, making it impossible to tell "this row is
+  // highlighted because they homered" from "this row is highlighted
+  // because of MY Matrix" at a glance while backtesting. HR/FHR now show
+  // as their own badges under the actual FD odds cell they're about
+  // instead (see the fhr/sa OddsCell calls below) — a row's background is
+  // reserved entirely for an explicit member-defined Matrix match.
   const topMatrix = row.matrix_matches?.[0] ?? null
 
   // Hand badge — always visible at a glance, not buried a click away in the
@@ -1255,41 +1267,26 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   const edgeAvg = edgePool.length ? edgePool.reduce((a, b) => a + b, 0) / edgePool.length : 0
   const hasLiveMatchup = row.matchup_edge != null && row.matchup_edge > edgeAvg + 8
 
-  // Collapsed into a single chip (see below) so an arbitrary number of active
-  // signals never grows wider than one badge — ordered most-concrete-first
-  // (an HR that already happened beats a predictive matchup edge).
-  const badgeSignals: { icon: string; label: string; detail: string; color: string; bg: string; border: string; clickable: boolean }[] = []
-  if (hasFirst) {
-    badgeSignals.push({
-      icon: '🥇', label: 'FHR', clickable: true,
-      color: '#fde047', bg: 'rgba(253,224,71,0.15)', border: 'rgba(253,224,71,0.3)',
-      detail: `First HR of the game${hits.length > 1 ? ` (${hits.length} HRs today)` : ''} — click for details`,
-    })
-  }
-  if (hasHr && (hits.length > 1 || !hasFirst)) {
-    badgeSignals.push({
-      icon: '🔥', label: hits.length > 1 ? `${hits.length}HR` : 'HR', clickable: true,
-      color: '#fb923c', bg: 'rgba(251,146,60,0.12)', border: 'rgba(251,146,60,0.3)',
-      detail: `${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`,
-    })
-  }
-  // ⚡EDGE and 💰HR÷RBI live as their own bare-icon badges next to the name
-  // (not folded into the collapsed chip below) — icon-only so both fit
-  // side by side without eating into the name's guaranteed width.
-  if (!hasHr && row.near_hr) {
-    badgeSignals.push({
-      icon: '🎯', label: String(row.near_hr.parks_hr_count), clickable: true,
-      color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.3)',
-      detail: `Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`,
-    })
-  }
+  // Achievement badges now sit under the actual FD odds cell they're each
+  // about, not clustered on the name rail — a "did they homer, or is this
+  // MY Matrix" mixup while backtesting was the whole reason for this move
+  // (see topMatrix above), so each badge lives next to the market it's
+  // reporting on instead of next to every other signal.
+  const fhrBadge = hasFirst
+    ? { label: '🥇', color: '#fde047', title: `First HR of the game${hits.length > 1 ? ` (${hits.length} HRs today)` : ''} — click for details`, onClick: () => onShowHr?.() }
+    : undefined
+  const saBadge = hasHr
+    ? { label: hits.length > 1 ? `🔥×${hits.length}` : '🔥', color: '#fb923c', title: `${hits.length} home run${hits.length > 1 ? 's' : ''} today — click for details`, onClick: () => onShowHr?.() }
+    : row.near_hr
+      ? { label: '🎯', color: '#fbbf24', title: `Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`, onClick: () => onShowHr?.() }
+      : undefined
 
   return (
     <tr
       id={id}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={topMatrix ? { background: blendOnBg(topMatrix.color, 0.09) } : hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}
+      style={topMatrix ? { background: blendOnBg(topMatrix.color, 0.09) } : undefined}
     >
       {/* sticky player cell — narrower on mobile (140px vs 190px) so more of
           the ~60 scrollable stat columns are visible without scrolling past
@@ -1313,55 +1310,28 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           // the non-sticky cells in the same row keep the real rgba() tint
           // (they don't have anything to occlude, so translucency there is
           // fine, same reasoning `expanded` already followed here).
-          backgroundColor: expanded ? '#10160e' : topMatrix ? blendOnBg(topMatrix.color, 0.09) : hasHr ? '#0b1813' : 'var(--bg)',
+          backgroundColor: expanded ? '#10160e' : topMatrix ? blendOnBg(topMatrix.color, 0.09) : 'var(--bg)',
           backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
-          {/* Order#/hand-circle "rail" — achievement-style flags (an FHR/HR
-              that already happened, or a near-miss dart count) now stack
-              underneath it instead of sharing the name line. Icon-only
-              here since this column is narrow; full detail is still in the
-              tooltip, and a "+N" marks additional active signals. */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
-              <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right' }}>{row.batting_order}</span>
-              <Tooltip content={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}>
-                <span
-                  style={{
-                    flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
-                    color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
-                  }}
-                >{row.bats || '?'}</span>
-              </Tooltip>
-            </div>
-            {badgeSignals.length > 0 && (
-              <Tooltip content={badgeSignals.map(s => s.detail).join(' · ')}>
-                <span
-                  onClick={badgeSignals[0].clickable ? (e) => { e.stopPropagation(); onShowHr?.() } : undefined}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, lineHeight: 1,
-                    color: badgeSignals[0].color, background: badgeSignals[0].bg, border: `1px solid ${badgeSignals[0].border}`,
-                    borderRadius: 4, padding: '1px 3px', cursor: badgeSignals[0].clickable ? 'pointer' : 'help',
-                  }}
-                >
-                  {badgeSignals[0].icon}
-                  {badgeSignals.length > 1 && <span style={{ fontSize: 6, marginLeft: 1 }}>+{badgeSignals.length - 1}</span>}
-                </span>
-              </Tooltip>
-            )}
-            {row.matrix_matches.length > 0 && (
-              <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: 'help',
-                }}>
-                  {row.matrix_matches.slice(0, 3).map(m => (
-                    <span key={m.id} style={{ width: 6, height: 6, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
-                  ))}
-                </span>
-              </Tooltip>
-            )}
+          {/* Order#/hand-circle rail — achievement badges (FHR/HR/near-miss)
+              moved off this rail entirely, onto the actual FD FHR/SA odds
+              cells they're each about (see the OddsCell `badge` prop calls
+              below) — reported live: stacked here, they were easy to
+              confuse with a genuine Matrix highlight at a glance while
+              backtesting. This rail is just the batting order + hand now. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2, flexShrink: 0 }}>
+            <span style={{ fontSize: 9, color: 'var(--text-3)', width: 10, textAlign: 'right' }}>{row.batting_order}</span>
+            <Tooltip content={row.bats === 'S' ? 'Switch hitter' : row.bats === 'L' ? 'Bats left' : 'Bats right'}>
+              <span
+                style={{
+                  flexShrink: 0, width: 14, height: 14, borderRadius: '50%', fontSize: 8, fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
+                  color: handColor, border: `1px solid ${handColor}`, background: `${handColor}18`,
+                }}
+              >{row.bats || '?'}</span>
+            </Tooltip>
           </div>
           {row.mlb_id ? (
             <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'flex' }}>
@@ -1380,10 +1350,26 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
               <span style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
                 {row.name}
               </span>
-              <WatchlistStarButton
-                mlbId={row.mlb_id} name={row.name} team={row.team} position={row.position} bats={row.bats}
-                gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                <WatchlistStarButton
+                  mlbId={row.mlb_id} name={row.name} team={row.team} position={row.position} bats={row.bats}
+                  gameInfo={gameInfo} odds={row.sa_fd} oddsByBook={row.rawProps?.sa as Record<string, number> | undefined}
+                />
+                {/* Which of this member's own Matrices lit this row up —
+                    moved here (under the star, not the achievement rail
+                    above) specifically so it never sits next to an HR/FHR
+                    badge and reads as "did they homer or is this my
+                    Matrix?" at a glance. */}
+                {row.matrix_matches.length > 0 && (
+                  <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: 'help' }}>
+                      {row.matrix_matches.slice(0, 3).map(m => (
+                        <span key={m.id} style={{ width: 6, height: 6, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
+                      ))}
+                    </span>
+                  </Tooltip>
+                )}
+              </div>
             </div>
             {/* flexWrap here (not nowrap) is the fix for a real bug: on the
                 narrow 140px mobile sticky column there often isn't room for
@@ -1439,7 +1425,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       {/* FHR — each book's heat background uses its own brand color (see
           BookLogo.tsx) instead of one blue for every column regardless of
           book. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanduel" odds={row.fhr_fd} openOdds={row.fhr_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fd, g('fhr_fd'), '20,147,255') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanduel" odds={row.fhr_fd} openOdds={row.fhr_open} badge={fhrBadge} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fd, g('fhr_fd'), '20,147,255') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="caesars" odds={row.fhr_cz} openOdds={row.fhrCz_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_cz, g('fhr_fd'), '11,64,50') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="fhr" book="fanatics" odds={row.fhr_fan} openOdds={row.fhrFan_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.fhr_fan, g('fhr_fd'), '218,25,55') }} />
       <td style={{ ...STD, width: 36, minWidth: 36, color: row.div != null ? (row.div > 0.008 ? '#4ade80' : row.div < -0.008 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
@@ -1452,7 +1438,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       <td style={SDIV_D} />
 
       {/* SA (anytime HR) */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="fanduel" odds={row.sa_fd} openOdds={row.saFd_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_fd, g('sa_fd'), '20,147,255') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="fanduel" odds={row.sa_fd} openOdds={row.saFd_open} badge={saBadge} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_fd, g('sa_fd'), '20,147,255') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="caesars" odds={row.sa_cz} openOdds={row.saCz_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_cz, g('sa_fd'), '11,64,50') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betmgm" odds={row.sa_mgm} openOdds={row.saMgm_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_mgm, g('sa_fd'), '184,150,12') }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="sa" book="betrivers" odds={row.sa_br} openOdds={row.saBr_open} style={{ ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sa_br, g('sa_fd'), '0,48,135') }} />
