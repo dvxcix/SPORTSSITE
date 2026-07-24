@@ -8,6 +8,31 @@ import type { BatterStats } from '@/lib/batterStatsEngine'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
+// Real incident (2026-07-24): a "chunk of N, await the whole chunk, then
+// start the next chunk" loop stalls the ENTIRE next chunk on whichever
+// single item in the current chunk is slowest — one straggler batter
+// blocks N-1 already-finished slots from picking up new work. Confirmed
+// live twice: once in dugout/data/route.ts's own per-request Matrix
+// pitch-log fan-out, and again in a multi-date admin backfill that hit
+// Vercel's maxDuration (300s) partway through — this exact fetch is the
+// one both paths share. A sliding-window pool keeps the same hard
+// concurrency ceiling (never more than `concurrency` requests in flight at
+// once, so this doesn't reopen the connection-pool-exhaustion incident
+// this fetch shape already caused once) but starts the next item the
+// instant ANY slot frees up, instead of waiting for the whole batch.
+export async function asyncPool<T, R>(concurrency: number, items: T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
+  return results
+}
+
 // A member's saved Matrices + Factors, once per request (not per-batter) —
 // small (≤10 Matrices, ≤40 Factors each per the app-level + DB-trigger cap),
 // safe to always fetch for a signed-in Ultimate caller regardless of
@@ -103,22 +128,17 @@ export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: nu
   const CONCURRENCY = 15
   const MAX_PITCHES_PER_BATTER = 5000
 
-  for (let i = 0; i < batterIds.length; i += CONCURRENCY) {
-    const chunk = batterIds.slice(i, i + CONCURRENCY)
-    const results = await Promise.all(chunk.map(id =>
-      admin
-        .from('player_pitch_log')
-        .select(BULK_PITCHLOG_SELECT)
-        .eq('batter_id', id)
-        .range(0, MAX_PITCHES_PER_BATTER - 1)
-    ))
-    for (const { data, error } of results) {
-      if (error) throw error
-      for (const r of (data ?? []) as any[]) {
-        (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
-      }
+  await asyncPool(CONCURRENCY, batterIds, async id => {
+    const { data, error } = await admin
+      .from('player_pitch_log')
+      .select(BULK_PITCHLOG_SELECT)
+      .eq('batter_id', id)
+      .range(0, MAX_PITCHES_PER_BATTER - 1)
+    if (error) throw error
+    for (const r of (data ?? []) as any[]) {
+      (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
     }
-  }
+  })
   return byBatter
 }
 
@@ -145,24 +165,19 @@ export async function fetchBulkSavantSplits(admin: AdminClient, mlbIds: number[]
   const CONCURRENCY = 15
   const MAX_ROWS_PER_BATTER = 2000
 
-  for (let i = 0; i < mlbIds.length; i += CONCURRENCY) {
-    const chunk = mlbIds.slice(i, i + CONCURRENCY)
-    const results = await Promise.all(chunk.map(id =>
-      admin
-        .from('player_statcast_splits')
-        .select('mlb_id, category, window_type, dims, metrics')
-        .eq('role', 'batter')
-        .eq('mlb_id', id)
-        .in('category', categories)
-        .range(0, MAX_ROWS_PER_BATTER - 1)
-    ))
-    for (const { data, error } of results) {
-      if (error) throw error
-      for (const r of data ?? []) {
-        (byId[r.mlb_id as number] ??= []).push(r)
-      }
+  await asyncPool(CONCURRENCY, mlbIds, async id => {
+    const { data, error } = await admin
+      .from('player_statcast_splits')
+      .select('mlb_id, category, window_type, dims, metrics')
+      .eq('role', 'batter')
+      .eq('mlb_id', id)
+      .in('category', categories)
+      .range(0, MAX_ROWS_PER_BATTER - 1)
+    if (error) throw error
+    for (const r of data ?? []) {
+      (byId[r.mlb_id as number] ??= []).push(r)
     }
-  }
+  })
   return byId
 }
 

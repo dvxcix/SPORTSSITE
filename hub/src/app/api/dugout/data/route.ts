@@ -9,7 +9,7 @@ import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows,
-  evaluateBatterMatrices, pitchlogNeeded, pitchlogCustomNeeded,
+  evaluateBatterMatrices, pitchlogNeeded, pitchlogCustomNeeded, asyncPool,
 } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
@@ -66,30 +66,11 @@ function timed<T>(reqId: string, label: string, p: Promise<T>): Promise<T> {
   return p.finally(() => { console.log(`[dugout/data:${reqId}] ${label} ${Date.now() - start}ms`) })
 }
 
-// Real incident (2026-07-24): a "chunk of N, await the whole chunk, then
-// start the next chunk" loop (as used for the per-batter Matrix pitch-log
-// fan-out below) stalls the ENTIRE next chunk on whichever single item in
-// the current chunk is slowest — one straggler batter blocks 14 already-
-// finished slots from picking up new work. Under a fully cold cache (right
-// after a deploy, since Next's data cache is wiped on every new deployment)
-// this compounds across ~18-20 sequential chunks for a full slate. A
-// sliding-window pool keeps the same hard concurrency ceiling (never more
-// than `concurrency` requests in flight at once, so this doesn't reopen the
-// connection-pool-exhaustion incident this exact fetch already caused) but
-// starts the next item the instant ANY slot frees up, instead of waiting
-// for the whole batch.
-async function asyncPool<T, R>(concurrency: number, items: T[], fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let next = 0
-  async function worker() {
-    while (next < items.length) {
-      const i = next++
-      results[i] = await fn(items[i])
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
-  return results
-}
+// asyncPool (sliding-window concurrency pool) now lives in matrixMatch.ts,
+// shared with fetchBulkBatterPitchRows/fetchBulkSavantSplits — the same
+// per-batter chunk-and-wait straggler problem this fixed here also hit
+// the precompute crons using those functions (confirmed live: a multi-
+// date admin backfill hit Vercel's 300s maxDuration partway through).
 
 // Manually-imported gap-odds reads — the only genuinely uncached Supabase
 // queries in this route (everything else here either already goes through
