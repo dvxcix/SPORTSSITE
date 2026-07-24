@@ -128,6 +128,20 @@ const getCachedMatrixSavantSplits = unstable_cache(
   { revalidate: 300 }
 )
 
+// Wraps fetchProjectedLineup (defined below — function declarations hoist,
+// so this reference is safe despite appearing first textually) so the SAME
+// roster/people lookups this route already needs twice per team on any
+// date before lineups post — once here to know the real batter list for
+// the bulk Statcast/Matrix reads, once more in "Build games" to actually
+// render the projected lineup — share one cache entry instead of hitting
+// MLB's API twice per request, and across every concurrent viewer of the
+// same date.
+const getCachedProjectedLineup = unstable_cache(
+  (teamId: number, teamAbbr: string, teamName: string) => fetchProjectedLineup(teamId, teamAbbr, teamName),
+  ['dugout-projected-lineup'],
+  { revalidate: 300 }
+)
+
 // `${market}:${book}` -> the camelCase field name already used on
 // entry.open.* throughout this route and consumed by BatterCostClient/
 // DugoutClient. Existing *Fd-suffixed fanduel names are kept as-is so no
@@ -525,6 +539,39 @@ export async function GET(req: Request) {
   }
   const lineupBatterIdList = Array.from(lineupBatterIds)
 
+  // Confirmed live (2026-07-24): on any date before lineups actually post —
+  // including looking at "today" ahead of first pitch — lineupBatterIdList
+  // above is EMPTY, because it only ever reads confirmed-lineup players.
+  // The grid itself falls back to each team's projected/active-roster
+  // lineup for display (see fetchProjectedLineup + "Build games" below),
+  // but this route's Statcast/Matrix/platoon bulk reads were still scoped
+  // to lineupBatterIdList — a completely different (empty) set of ids from
+  // the ones actually rendered — so every Statcast field for every shown
+  // player went blank. Resolves the same projected roster here too (via
+  // the shared 5-minute cache above, so this costs nothing extra beyond
+  // the first request of that window) and folds those ids in for the bulk
+  // reads specifically, leaving lineupBatterIdList itself untouched since
+  // batSideById right below genuinely only needs confirmed-lineup ids
+  // (projected players resolve their own bats inside fetchProjectedLineup).
+  const allDisplayedBatterIds = new Set(lineupBatterIdList)
+  await Promise.all(mlbGames.map(async (g: any) => {
+    const needsHome = !(g.lineups?.homePlayers?.length)
+    const needsAway = !(g.lineups?.awayPlayers?.length)
+    if (!needsHome && !needsAway) return
+    const homeTeam = g.teams?.home?.team?.name || ''
+    const awayTeam = g.teams?.away?.team?.name || ''
+    const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
+    const awayAbbr = g.teams?.away?.team?.abbreviation || awayTeam.split(' ').pop() || ''
+    const homeTeamId = g.teams?.home?.team?.id
+    const awayTeamId = g.teams?.away?.team?.id
+    const [homeProj, awayProj] = await Promise.all([
+      needsHome && homeTeamId ? getCachedProjectedLineup(homeTeamId, homeAbbr, homeTeam) : Promise.resolve([]),
+      needsAway && awayTeamId ? getCachedProjectedLineup(awayTeamId, awayAbbr, awayTeam) : Promise.resolve([]),
+    ])
+    for (const p of [...homeProj, ...awayProj]) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id)
+  }))
+  const allDisplayedBatterIdList = Array.from(allDisplayedBatterIds)
+
   // Custom Matrix — a signed-in Ultimate member's own saved highlight rules.
   // Fetched once, up front: small (≤10 Matrices/≤40 Factors each, capped at
   // both the app and DB level), so always fetching it for an eligible caller
@@ -588,7 +635,7 @@ export async function GET(req: Request) {
     isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([]),
     fetchBatterPitchTypeRecent(),
     fetchPitcherPitchTypeRecent(),
-    isUltimate ? fetchBatterPlatoonSplits(lineupBatterIdList) : Promise.resolve([]),
+    isUltimate ? fetchBatterPlatoonSplits(allDisplayedBatterIdList) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
     // Bulk pitch-log + Savant-split reads — power BOTH the Dugout grid's own
     // Statcast section (see dugoutStatcast.ts) and Custom Matrix's
@@ -607,11 +654,11 @@ export async function GET(req: Request) {
     // try/catch, so an uncaught failure here previously meant the whole
     // response 500'd and the client showed "No games for {date}" — a date
     // that really did have games.
-    isUltimate && lineupBatterIdList.length
-      ? getCachedMatrixPitchRows(date, lineupBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
+    isUltimate && allDisplayedBatterIdList.length
+      ? getCachedMatrixPitchRows(date, allDisplayedBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
       : Promise.resolve({} as Record<number, any[]>),
-    isUltimate && lineupBatterIdList.length
-      ? getCachedMatrixSavantSplits(date, lineupBatterIdList, ALL_STATCAST_SAVANT_CATEGORIES).catch(e => { console.error('[dugout/data] matrix savant splits failed', e); return {} as Record<number, any[]> })
+    isUltimate && allDisplayedBatterIdList.length
+      ? getCachedMatrixSavantSplits(date, allDisplayedBatterIdList, ALL_STATCAST_SAVANT_CATEGORIES).catch(e => { console.error('[dugout/data] matrix savant splits failed', e); return {} as Record<number, any[]> })
       : Promise.resolve({} as Record<number, any[]>),
   ])
 
@@ -802,14 +849,17 @@ export async function GET(req: Request) {
     let homeLineup = mkLineup(g.lineups?.homePlayers || [], homeAbbr, homeTeam)
     let awayLineup = mkLineup(g.lineups?.awayPlayers || [], awayAbbr, awayTeam)
 
-    // Projected lineup fallback when no confirmed lineup
+    // Projected lineup fallback when no confirmed lineup — same cached
+    // wrapper the pre-pass above already called for this exact (teamId,
+    // teamAbbr, teamName) triple, so this is a cache hit, not a second live
+    // fetch to MLB's roster/people endpoints.
     const homeTeamId = g.teams?.home?.team?.id
     const awayTeamId = g.teams?.away?.team?.id
     if (!homeLineup.length && homeTeamId) {
-      homeLineup = await fetchProjectedLineup(homeTeamId, homeAbbr, homeTeam)
+      homeLineup = await getCachedProjectedLineup(homeTeamId, homeAbbr, homeTeam)
     }
     if (!awayLineup.length && awayTeamId) {
-      awayLineup = await fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam)
+      awayLineup = await getCachedProjectedLineup(awayTeamId, awayAbbr, awayTeam)
     }
 
     // BDL props — read straight from the snapshot the cron last wrote (see
