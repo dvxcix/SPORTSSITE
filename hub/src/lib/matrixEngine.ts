@@ -29,7 +29,25 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 //                      own game's total picks for that market (18 batters).
 
 export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
-export type MatrixRecency = 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom'
+// Real gap (2026-07-24): the grid's own Statcast section shows every
+// pitchlog_stat/savant_stat field at both a recent window AND a season
+// value, with a Δ (recent − season) alongside some of them — a Matrix
+// Factor could only ever check the raw recent-window value, never that
+// same delta a member can see plainly on the board (e.g. "his recent bat
+// speed is UP 2.5 from his season number" was visible but not buildable).
+// The '*_delta' variants below reuse the exact same precomputed windows —
+// no new fetch or precompute, just recentWindow − season at evaluation
+// time (see evaluatePitchlogFactorPrecomputed/evaluateSavantFactor).
+export type MatrixRecency = 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | 'game_delta' | 'l3_delta' | 'l5_delta' | 'l10_delta'
+
+const DELTA_RECENCIES = ['game_delta', 'l3_delta', 'l5_delta', 'l10_delta'] as const
+type DeltaRecency = typeof DELTA_RECENCIES[number]
+function isDeltaRecency(r: MatrixRecency | null): r is DeltaRecency {
+  return !!r && (DELTA_RECENCIES as readonly string[]).includes(r)
+}
+function baseWindowOfDelta(r: DeltaRecency): 'game' | 'l3' | 'l5' | 'l10' {
+  return r.slice(0, -'_delta'.length) as 'game' | 'l3' | 'l5' | 'l10'
+}
 
 export type MatrixFactor = {
   id: string
@@ -72,7 +90,10 @@ export function effectiveBatSide(bats: string | null | undefined, pitcherHand: '
   return (bats === 'L' ? 'L' : 'R')
 }
 
-const RECENCY_GAME_COUNT: Record<Exclude<MatrixRecency, 'season' | 'custom'>, number> = {
+// Delta recencies never reach this table — they're only meaningful against
+// the precomputed windows (evaluatePitchlogFactorPrecomputed/evaluateSavantFactor),
+// never through this live "custom range" fallback path.
+const RECENCY_GAME_COUNT: Record<Exclude<MatrixRecency, 'season' | 'custom' | DeltaRecency>, number> = {
   game: 1, l3: 3, l5: 5, l10: 10,
 }
 
@@ -95,7 +116,8 @@ export function sliceRecencyWindow(
     return vsHand.filter(r => r.game_date >= recencyStart && r.game_date <= recencyEnd)
   }
   if (recency === 'season' || recency == null) return vsHand
-  const dates = lastNGameDates(vsHand, RECENCY_GAME_COUNT[recency])
+  const baseRecency = isDeltaRecency(recency) ? baseWindowOfDelta(recency) : recency
+  const dates = lastNGameDates(vsHand, RECENCY_GAME_COUNT[baseRecency])
   return vsHand.filter(r => dates.has(r.game_date))
 }
 
@@ -163,6 +185,14 @@ export function evaluatePitchlogFactorPrecomputed(
 ): boolean {
   const statKey = PITCHLOG_FIELD[factor.field_key]
   if (!statKey || !windows) return false
+  if (isDeltaRecency(factor.recency)) {
+    const recentLine = windows[baseWindowOfDelta(factor.recency)]
+    const seasonLine = windows.season
+    const recentVal = recentLine ? (recentLine[statKey] as number | null) : null
+    const seasonVal = seasonLine ? (seasonLine[statKey] as number | null) : null
+    const current = recentVal != null && seasonVal != null ? recentVal - seasonVal : null
+    return compareThreshold(current, factor.operator, factor.value)
+  }
   const bucket = (factor.recency && factor.recency !== 'custom' ? factor.recency : 'season') as PitchlogStatWindow
   const line = windows[bucket]
   const current = line ? (line[statKey] as number | null) : null
@@ -209,7 +239,17 @@ const SAVANT_FIELD_TO_STATCAST_KEY: Record<string, keyof StatcastLine> = {
   idlaa: 'idealAttackAngleRate',
   pullair: 'pullAirRate',
   fb: 'fbRate',
+  // Real gap (2026-07-24): Timing %/Miss Distance are shown right on the
+  // grid's own Statcast section (same computeAllStatcastWindows output as
+  // every other savant_stat field here) but were never wired into the
+  // Matrix field list at all — not missing data, just never exposed.
+  timing: 'onTimePct',
+  miss: 'missDistance',
 }
+// missDistance is a real physical distance (~0.9-1.4 feet), not a 0-1 rate
+// — the ×100 scaling evaluateSavantFactor applies to every other field
+// here would turn a real 1.2ft into a nonsensical 120.
+const SAVANT_FIELD_NO_SCALE = new Set(['miss'])
 
 export type SavantSplitRow = { category: string; window_type: string; dims: Record<string, string | number>; metrics: Record<string, number | string | null> }
 
@@ -219,7 +259,7 @@ export type SavantSplitRow = { category: string; window_type: string; dims: Reco
 // has no Savant-side analog (only exact date-range slicing over raw pitch
 // rows makes sense there), so it falls back to 'season' rather than
 // matching nothing.
-const RECENCY_TO_SAVANT_WINDOW: Record<Exclude<MatrixRecency, 'custom'>, StatcastWindow> = {
+const RECENCY_TO_SAVANT_WINDOW: Record<'game' | 'l3' | 'l5' | 'l10' | 'season', StatcastWindow> = {
   game: 'l1', l3: 'l3', l5: 'l5', l10: 'l10', season: 'season',
 }
 
@@ -276,17 +316,27 @@ export function evaluateSavantFactor(
 ): boolean {
   const key = SAVANT_FIELD_TO_STATCAST_KEY[factor.field_key]
   if (!key || !statcastWindows) return false
+  // Savant's own CSV export returns every one of the rate fields here as a
+  // 0-1 fraction (confirmed live: squared_up_per_swing/ideal_attack_angle_
+  // rate/pull_air_rate/fb_rate/on_time_percent all sampled at values like
+  // 0.5, 0.333...), but every OTHER percentage Factor in this engine
+  // (pitchlog_stat's whiffPct/chasePct/hardHitPct/barrelPct, straight off
+  // computeStatLine) is already 0-100 — the value a member types into
+  // "Hard-Swing % ≥ 50" means 50, not 0.5, everywhere else in this
+  // feature. Scaling here keeps that one consistent convention instead of
+  // silently never matching. miss_distance is a real physical distance,
+  // not a rate — see SAVANT_FIELD_NO_SCALE.
+  const scale = SAVANT_FIELD_NO_SCALE.has(factor.field_key) ? 1 : 100
+  if (isDeltaRecency(factor.recency)) {
+    const recentWindow = RECENCY_TO_SAVANT_WINDOW[baseWindowOfDelta(factor.recency)]
+    const recentRaw = statcastWindows[recentWindow]?.[key] ?? null
+    const seasonRaw = statcastWindows.season?.[key] ?? null
+    const current = recentRaw != null && seasonRaw != null ? (recentRaw - seasonRaw) * scale : null
+    return compareThreshold(current, factor.operator, factor.value)
+  }
   const windowType: StatcastWindow = factor.recency && factor.recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[factor.recency] : 'season'
   const raw = statcastWindows[windowType]?.[key] ?? null
-  // Savant's own CSV export returns every one of these 6 rate metrics as a
-  // 0-1 fraction (confirmed live: squared_up_per_swing/ideal_attack_angle_
-  // rate/pull_air_rate/fb_rate all sampled at values like 0.5, 0.333...),
-  // but every OTHER percentage Factor in this engine (pitchlog_stat's
-  // whiffPct/chasePct/hardHitPct/barrelPct, straight off computeStatLine)
-  // is already 0-100 — the value a member types into "Hard-Swing % ≥ 50"
-  // means 50, not 0.5, everywhere else in this feature. Scaling here keeps
-  // that one consistent convention instead of silently never matching.
-  const current = raw != null ? raw * 100 : null
+  const current = raw != null ? raw * scale : null
   return compareThreshold(current, factor.operator, factor.value)
 }
 

@@ -16,7 +16,7 @@ export type MatrixFactor = {
   field_key: string
   operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
   value: number | null
-  recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | null
+  recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | 'game_delta' | 'l3_delta' | 'l5_delta' | 'l10_delta' | null
   // Only meaningful for the two real multi-book odds fields (fhr, hr) —
   // which book(s) to check. null/empty defaults to FanDuel only, same as
   // every other odds Factor.
@@ -79,6 +79,7 @@ const STAT_FIELDS: { key: string; label: string }[] = [
 const SAVANT_FIELDS: { key: string; label: string }[] = [
   { key: 'hardsw', label: 'Hard-Swing %' }, { key: 'sq', label: 'Squared-Up %' }, { key: 'blast', label: 'Blast %' },
   { key: 'idlaa', label: 'Ideal Attack-Angle %' }, { key: 'pullair', label: 'Pull Air Rate' }, { key: 'fb', label: 'Fly-Ball Rate' },
+  { key: 'timing', label: 'Timing %' }, { key: 'miss', label: 'Miss Distance' },
 ]
 // "Dugout Specs" — the Dugout table's own computed columns (not raw
 // sportsbook prices): implied-probability ratios between two markets, plus
@@ -122,7 +123,10 @@ const PICKS_FIELDS: { key: string; label: string }[] = [
 const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = {
   odds: 'Odds', dugout_specs: 'Dugout Specs', pitchlog_stat: 'Stat Line', savant_stat: 'Bat Tracking', picks: 'Picks',
 }
-const RECENCY_LABEL: Record<string, string> = { game: 'Last Game', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10', season: 'Season', custom: 'Custom Range' }
+const RECENCY_LABEL: Record<string, string> = {
+  game: 'Last Game', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10', season: 'Season', custom: 'Custom Range',
+  game_delta: 'Last Game (Δ vs. Season)', l3_delta: 'Last 3 (Δ vs. Season)', l5_delta: 'Last 5 (Δ vs. Season)', l10_delta: 'Last 10 (Δ vs. Season)',
+}
 const OPERATOR_LABEL: Record<string, string> = {
   gte: 'At least', lte: 'At most', eq: 'Exactly',
   up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
@@ -278,8 +282,14 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
               on every request for whichever member picked it (confirmed live:
               the exact cause of the 28-56s Dugout load spikes). Every fixed
               window is precomputed for every category now, same as
-              savant_stat already was. */}
-          {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
+              savant_stat already was.
+
+              The '_delta' options compare a recent window against this same
+              player's season line (recent minus season) — the same Δ math
+              the Dugout Statcast board itself shows, so a Factor can match
+              on "diverging from season norm" instead of only an absolute
+              level. Also precomputed, no live fetch. */}
+          {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
             <option key={r} value={r}>{RECENCY_LABEL[r]}</option>
           ))}
         </select>
