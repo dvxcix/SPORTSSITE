@@ -10,10 +10,19 @@ export const revalidate = 0
 // per-tier field shaping here, unlike /api/dugout/data) — safe to cache
 // as a flat function of mlbId alone. player_pitch_log is only ever written
 // by the once-daily savant-sync-pitch-log cron (10:10 UTC), so a real
-// player's full season log genuinely cannot change in between — this
-// window trades zero real freshness for cutting out the exact same heavy
-// query + opponent/game enrichment being repeated for every single
-// pageview of a popular player, all day, by every viewer.
+// player's full season log genuinely cannot change in between.
+//
+// Tagged (not just time-revalidated): a plain rolling `revalidate` window
+// is the wrong tool here — if a player's entry gets cached shortly BEFORE
+// that day's sync cron runs, a rolling window measured from cache-creation
+// time would keep serving yesterday's log for up to a full extra day after
+// fresh data already landed, since the window's clock has nothing to do
+// with when the cron actually writes. savant-sync-pitch-log calls
+// revalidateTag('player-pitch-log') once it finishes each run, so this
+// invalidates the instant new data is confirmed written — not on some
+// timer that may or may not line up with the cron. The 24h `revalidate` is
+// just a defensive fallback (self-heals even if a revalidateTag call is
+// ever missed), not the real freshness mechanism.
 const getCachedPitchLog = unstable_cache(
   async (mlbId: number) => {
     const admin = createAdminClient()
@@ -47,7 +56,7 @@ const getCachedPitchLog = unstable_cache(
     }
   },
   ['player-pitch-log'],
-  { revalidate: 1800 }
+  { revalidate: 86400, tags: ['player-pitch-log'] }
 )
 
 // Every pitch a player has thrown (as pitcher) and/or seen (as batter) this

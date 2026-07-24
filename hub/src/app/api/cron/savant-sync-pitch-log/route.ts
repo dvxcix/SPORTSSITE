@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { addDays, format, parseISO } from 'date-fns'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
@@ -84,6 +85,15 @@ export async function GET(req: Request) {
       results[date] = { error: e?.message || String(e) }
     }
   }
+
+  // Invalidates every cached /api/players/[id]/pitch-log entry the instant
+  // this run actually writes new rows — see that route's own comment for
+  // why a rolling time-based revalidate alone can't correctly track "did
+  // today's cron already run," regardless of when each player was cached.
+  // Safe to call even when dates=[] (nothing to sync yet) or every date
+  // errored — an unnecessary revalidation just costs one extra recompute
+  // on next read, not a correctness issue.
+  if (dates.length) revalidateTag('player-pitch-log', 'max')
 
   return NextResponse.json({ season, table: PITCH_LOG_TABLE, start, end, processed: dates, results })
 }
