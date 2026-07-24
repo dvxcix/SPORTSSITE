@@ -211,6 +211,11 @@ export type MatrixMatchContext = {
   saAvg?: DugoutSpecsAverages | null
   pikkitEntry?: Record<string, { picks?: number | null } | undefined> | null
   gameTotalPicksByMarket?: Record<string, number>
+  // Resolved once per player by the caller (needs every teammate's
+  // sa_div_ml at once — see dugout/data/route.ts) rather than as a whole
+  // team-keyed map here, matching how fhrAvg/saAvg are already
+  // pre-resolved-per-player instead of passed as maps.
+  saDivMlTied?: boolean
 }
 
 // Evaluates every one of a member's Matrices against ONE batter for ONE
@@ -238,7 +243,7 @@ export function evaluateBatterMatrices(
   for (const matrix of matrices) {
     const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
       if (factor.category === 'odds') return evaluateOddsFactor(factor, props)
-      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg)
+      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.saDivMlTied)
       // 'custom' recency (an arbitrary exact date range) is the only
       // pitchlog_stat case that can't be precomputed as a fixed bucket —
       // see evaluatePitchlogFactorPrecomputed's own comment. Everything

@@ -16,6 +16,7 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import type { PitchlogStatWindow } from '@/lib/matrixEngine'
+import { computeSaDivMl } from '@/lib/matrixEngine'
 import type { BatterStats } from '@/lib/batterStatsEngine'
 
 export const revalidate = 0
@@ -1152,6 +1153,28 @@ export async function GET(req: Request) {
       }
     }
 
+    // "HR ÷ Parlay — Tied w/ Teammate?" Factor: whether a batter's sa_div_ml
+    // ratio exactly matches at least one teammate's — a genuinely per-TEAM
+    // (not per-game) comparison, so home and away are computed separately;
+    // a home batter and an away batter sharing a ratio isn't "a teammate."
+    // Rounded to the same 2 decimals DugoutClient's f2() displays in the 🏆
+    // column, so "looks tied on the board" and "flagged tied by a Factor"
+    // can never disagree over float noise.
+    function tiedSetForTeam(lineup: typeof homeLineup): Set<string> {
+      const valueByName = new Map<string, number>()
+      for (const p of lineup) {
+        const v = computeSaDivMl(resolveNameEntry(bdlByName, p.name_norm) || null)
+        if (v != null) valueByName.set(p.name_norm, Math.round(v * 100) / 100)
+      }
+      const counts = new Map<number, number>()
+      for (const v of valueByName.values()) counts.set(v, (counts.get(v) ?? 0) + 1)
+      const tied = new Set<string>()
+      for (const [nn, v] of valueByName) if ((counts.get(v) ?? 0) > 1) tied.add(nn)
+      return tied
+    }
+    const homeSaDivMlTied = userMatrices.length ? tiedSetForTeam(homeLineup) : new Set<string>()
+    const awaySaDivMlTied = userMatrices.length ? tiedSetForTeam(awayLineup) : new Set<string>()
+
     return {
       gamePk: g.gamePk,
       gameKey,
@@ -1207,6 +1230,7 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
+              saDivMlTied: homeSaDivMlTied.has(p.name_norm),
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
@@ -1221,6 +1245,7 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
+              saDivMlTied: awaySaDivMlTied.has(p.name_norm),
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }

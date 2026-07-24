@@ -520,17 +520,34 @@ const DUGOUT_SPECS_FIELD: Record<string, (props: OddsProps | null | undefined) =
   sa_div_hr2: props => implRatio(props?.sa?.fanduel ?? null, props?.hr2?.fanduel ?? null),
 }
 
+// Exported so dugout/data/route.ts's per-team tie precompute (see
+// evaluateDugoutSpecsFactor's 'sa_div_ml_tied' branch below) reuses this
+// exact formula instead of re-deriving it — the display column and the
+// tie check can never drift apart this way.
+export function computeSaDivMl(props: OddsProps | null | undefined): number | null {
+  return DUGOUT_SPECS_FIELD.sa_div_ml(props)
+}
+
 export function evaluateDugoutSpecsFactor(
   factor: MatrixFactor,
   props: OddsProps | null | undefined,
   fhrAvg: DugoutSpecsAverages | null | undefined,
   saAvg: DugoutSpecsAverages | null | undefined,
+  // Whether THIS player's HR÷Parlay ratio exactly matches (to the same 2
+  // decimals the 🏆 column displays) at least one teammate's — resolved by
+  // the caller (dugout/data/route.ts), which is the only place with
+  // visibility into every batter on the same team at once; this function
+  // stays a pure per-player evaluator like every other dugout_specs Factor.
+  saDivMlTied?: boolean,
 ): boolean {
   if (factor.field_key === 'fhr_pct' || factor.field_key === 'sa_pct') {
     const fd = props?.[factor.field_key === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
     const avg = factor.field_key === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
     const current = fd != null && avg ? ((fd - avg) / avg) * 100 : null
     return compareThreshold(current, factor.operator, factor.value)
+  }
+  if (factor.field_key === 'sa_div_ml_tied') {
+    return compareThreshold(saDivMlTied ? 1 : 0, factor.operator, factor.value)
   }
   const compute = DUGOUT_SPECS_FIELD[factor.field_key]
   if (!compute) return false

@@ -93,6 +93,7 @@ const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boole
   { key: 'fhr_div_sa', label: 'FHR ÷ HR' },
   { key: 'm_div_f', label: 'M ÷ F (BetMGM ÷ FanDuel)' },
   { key: 'sa_div_ml', label: 'HR ÷ Parlay' },
+  { key: 'sa_div_ml_tied', label: 'HR ÷ Parlay — Tied w/ Teammate?', boolean: true },
   { key: 'pa1_div_sa', label: 'PA ÷ HR' },
   { key: 'sa_div_rbi', label: 'HR ÷ RBI' },
   { key: 'sa_div_rbi2', label: 'HR ÷ RBI2' },
