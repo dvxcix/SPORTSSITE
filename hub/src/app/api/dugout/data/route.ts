@@ -33,6 +33,23 @@ export const maxDuration = 60
 // bdl-odds cron and fanduel-import so every producer of a game_key agrees
 // on the same canonical form (see that file for the drift this fixes).
 
+// A date strictly before today (ET) is DONE — the game(s) are over and
+// nothing about that day's captured odds will ever change again. Real
+// incident (2026-07-24): every date-scoped cache in this file used the
+// SAME short revalidate window regardless of whether the date was today or
+// three weeks ago, so fully-immutable historical data was being needlessly
+// re-fetched from the DB every 60-300 seconds under load, all day, forever
+// — reported live as past dates taking 1-2 minutes to load, which a purely
+// historical read has no real reason to ever do. Anything keyed by a PAST
+// date gets a week-long revalidate below (it will never actually need to
+// refresh); TODAY still gets a short window since its data keeps changing
+// through the day.
+function isPastDateET(date: string): boolean {
+  const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  return date < todayEt
+}
+const WEEK_SECONDS = 60 * 60 * 24 * 7
+
 // Manually-imported gap-odds reads — the only genuinely uncached Supabase
 // queries in this route (everything else here either already goes through
 // mpGet's own next:{revalidate} fetch caching, or is a deliberately-live
@@ -40,26 +57,25 @@ export const maxDuration = 60
 // pregame_odds_snapshots freeze logic below, which stays fully live since
 // its correctness depends on seeing the real current is_frozen value on
 // every request) — safe to share across every caller regardless of tier.
-// A real admin paste can land any time, so this stays a short window
-// rather than matching a cron cadence.
-const getCachedGapOdds = unstable_cache(
-  async (date: string) => {
-    const admin = createAdminClient()
-    const [{ data: fdRows }, { data: mgmRows }] = await Promise.all([
-      admin.from('fanduel_gap_odds')
-        .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
-        .eq('game_date', date)
-        .range(0, 19999),
-      admin.from('mgm_gap_odds')
-        .select('game_key, name_norm, sa_mgm, hr2_mgm')
-        .eq('game_date', date)
-        .range(0, 19999),
-    ])
-    return { fdRows: fdRows ?? [], mgmRows: mgmRows ?? [] }
-  },
-  ['dugout-gap-odds'],
-  { revalidate: 60 }
-)
+// A real admin paste can land any time TODAY, so that window stays short;
+// a past date is finalized (see isPastDateET above).
+async function fetchGapOdds(date: string) {
+  const admin = createAdminClient()
+  const [{ data: fdRows }, { data: mgmRows }] = await Promise.all([
+    admin.from('fanduel_gap_odds')
+      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
+      .eq('game_date', date)
+      .range(0, 19999),
+    admin.from('mgm_gap_odds')
+      .select('game_key, name_norm, sa_mgm, hr2_mgm')
+      .eq('game_date', date)
+      .range(0, 19999),
+  ])
+  return { fdRows: fdRows ?? [], mgmRows: mgmRows ?? [] }
+}
+const getCachedGapOddsRecent = unstable_cache(fetchGapOdds, ['dugout-gap-odds-recent'], { revalidate: 60 })
+const getCachedGapOddsHistorical = unstable_cache(fetchGapOdds, ['dugout-gap-odds-historical'], { revalidate: WEEK_SECONDS })
+const getCachedGapOdds = (date: string) => (isPastDateET(date) ? getCachedGapOddsHistorical(date) : getCachedGapOddsRecent(date))
 
 // Opening baselines now come from the unified market_opening_prices table
 // (see /api/cron/bdl-odds and /api/admin/fanduel-import) instead of the old
@@ -86,39 +102,44 @@ const getCachedGapOdds = unstable_cache(
 // "market:book" -> price) map the caller always reduced it to anyway — a
 // real slate's worth of actual players/markets, not every raw row — keeps
 // this comfortably under the cache size limit so it actually caches again.
-const getCachedGapOddsOpening = unstable_cache(
-  async (date: string) => {
-    const admin = createAdminClient()
-    // A single `.range(0, 19999)` call silently came back capped at 1000
-    // rows (confirmed live: 6,400 real opening-price rows for one day's
-    // slate, only 1,000 ever returned) — Supabase's project-level PostgREST
-    // max-rows setting overrides whatever range a client asks for, and with
-    // no ORDER BY the surviving 1,000 rows are effectively arbitrary. That
-    // silently starved out whichever markets/books/players didn't happen to
-    // land in that slice — confirmed live as the root cause of "no delta
-    // arrows" reports that were inconsistent across markets and players
-    // with no code-level explanation. Paging through in fixed-size batches
-    // guarantees every row is actually read regardless of that server cap.
-    const openingByGameKey: Record<string, Record<string, Record<string, number>>> = {}
-    const PAGE = 1000
-    for (let offset = 0; ; offset += PAGE) {
-      const { data } = await admin
-        .from('market_opening_prices')
-        .select('game_key, name_norm, market, book, opening_price')
-        .eq('game_date', date)
-        .range(offset, offset + PAGE - 1)
-      if (!data?.length) break
-      for (const r of data) {
-        const byName = (openingByGameKey[canonGameKey(r.game_key)] ??= {})
-        ;(byName[r.name_norm] ??= {})[`${r.market}:${r.book}`] = Number(r.opening_price)
-      }
-      if (data.length < PAGE) break
+async function fetchGapOddsOpening(date: string) {
+  const admin = createAdminClient()
+  // A single `.range(0, 19999)` call silently came back capped at 1000
+  // rows (confirmed live: 6,400 real opening-price rows for one day's
+  // slate, only 1,000 ever returned) — Supabase's project-level PostgREST
+  // max-rows setting overrides whatever range a client asks for, and with
+  // no ORDER BY the surviving 1,000 rows are effectively arbitrary. That
+  // silently starved out whichever markets/books/players didn't happen to
+  // land in that slice — confirmed live as the root cause of "no delta
+  // arrows" reports that were inconsistent across markets and players
+  // with no code-level explanation. Paging through in fixed-size batches
+  // guarantees every row is actually read regardless of that server cap.
+  const openingByGameKey: Record<string, Record<string, Record<string, number>>> = {}
+  const PAGE = 1000
+  for (let offset = 0; ; offset += PAGE) {
+    const { data } = await admin
+      .from('market_opening_prices')
+      .select('game_key, name_norm, market, book, opening_price')
+      .eq('game_date', date)
+      .range(offset, offset + PAGE - 1)
+    if (!data?.length) break
+    for (const r of data) {
+      const byName = (openingByGameKey[canonGameKey(r.game_key)] ??= {})
+      ;(byName[r.name_norm] ??= {})[`${r.market}:${r.book}`] = Number(r.opening_price)
     }
-    return { openingByGameKey }
-  },
-  ['dugout-gap-odds-opening-v4'],
-  { revalidate: 60 }
-)
+    if (data.length < PAGE) break
+  }
+  return { openingByGameKey }
+}
+// An "opening" price is, by definition, the FIRST quote ever captured for
+// that (game, player, market, book) — write-once. New rows can still
+// APPEND throughout TODAY as markets that haven't posted yet finally do,
+// so today keeps a short window; a PAST date's openers are all fully
+// captured already and will never gain or change a row again (see
+// isPastDateET above) — no real reason to ever re-fetch that from the DB.
+const getCachedGapOddsOpeningRecent = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-recent'], { revalidate: 60 })
+const getCachedGapOddsOpeningHistorical = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-historical'], { revalidate: WEEK_SECONDS })
+const getCachedGapOddsOpening = (date: string) => (isPastDateET(date) ? getCachedGapOddsOpeningHistorical(date) : getCachedGapOddsOpeningRecent(date))
 
 // Custom Matrix's own bulk read — full-season pitch-by-pitch rows for every
 // batter in today's lineups, needed only by pitchlog_stat Factors (arbitrary
@@ -165,38 +186,40 @@ const getCachedBatterPitchRows = unstable_cache(
 // the schedule inside here rather than accepting it as an argument: MLB's
 // raw schedule payload isn't a stable cache key (irrelevant per-request
 // fields would bust the cache every time), where the date string is.
-const getCachedDateLineupResolution = unstable_cache(
-  async (dateKey: string) => {
-    const games = await fetchScheduleWithRetry(dateKey, 'lineups,probablePitcher,team,linescore,venue')
-    const allDisplayedBatterIds = new Set<number>()
-    for (const g of games) {
-      for (const p of [...(g.lineups?.homePlayers || []), ...(g.lineups?.awayPlayers || [])]) {
-        if (p?.id) allDisplayedBatterIds.add(p.id)
-      }
+async function fetchDateLineupResolution(dateKey: string) {
+  const games = await fetchScheduleWithRetry(dateKey, 'lineups,probablePitcher,team,linescore,venue')
+  const allDisplayedBatterIds = new Set<number>()
+  for (const g of games) {
+    for (const p of [...(g.lineups?.homePlayers || []), ...(g.lineups?.awayPlayers || [])]) {
+      if (p?.id) allDisplayedBatterIds.add(p.id)
     }
-    const projectedByTeamId: Record<number, any[]> = {}
-    await Promise.all(games.map(async (g: any) => {
-      const needsHome = !(g.lineups?.homePlayers?.length)
-      const needsAway = !(g.lineups?.awayPlayers?.length)
-      if (!needsHome && !needsAway) return
-      const homeTeam = g.teams?.home?.team?.name || ''
-      const awayTeam = g.teams?.away?.team?.name || ''
-      const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
-      const awayAbbr = g.teams?.away?.team?.abbreviation || awayTeam.split(' ').pop() || ''
-      const homeTeamId = g.teams?.home?.team?.id
-      const awayTeamId = g.teams?.away?.team?.id
-      const [homeProj, awayProj] = await Promise.all([
-        needsHome && homeTeamId ? fetchProjectedLineup(homeTeamId, homeAbbr, homeTeam) : Promise.resolve(null),
-        needsAway && awayTeamId ? fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam) : Promise.resolve(null),
-      ])
-      if (homeProj) { projectedByTeamId[homeTeamId] = homeProj; for (const p of homeProj) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id) }
-      if (awayProj) { projectedByTeamId[awayTeamId] = awayProj; for (const p of awayProj) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id) }
-    }))
-    return { allDisplayedBatterIds: Array.from(allDisplayedBatterIds), projectedByTeamId }
-  },
-  ['dugout-date-lineup-resolution'],
-  { revalidate: 300 }
-)
+  }
+  const projectedByTeamId: Record<number, any[]> = {}
+  await Promise.all(games.map(async (g: any) => {
+    const needsHome = !(g.lineups?.homePlayers?.length)
+    const needsAway = !(g.lineups?.awayPlayers?.length)
+    if (!needsHome && !needsAway) return
+    const homeTeam = g.teams?.home?.team?.name || ''
+    const awayTeam = g.teams?.away?.team?.name || ''
+    const homeAbbr = g.teams?.home?.team?.abbreviation || homeTeam.split(' ').pop() || ''
+    const awayAbbr = g.teams?.away?.team?.abbreviation || awayTeam.split(' ').pop() || ''
+    const homeTeamId = g.teams?.home?.team?.id
+    const awayTeamId = g.teams?.away?.team?.id
+    const [homeProj, awayProj] = await Promise.all([
+      needsHome && homeTeamId ? fetchProjectedLineup(homeTeamId, homeAbbr, homeTeam) : Promise.resolve(null),
+      needsAway && awayTeamId ? fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam) : Promise.resolve(null),
+    ])
+    if (homeProj) { projectedByTeamId[homeTeamId] = homeProj; for (const p of homeProj) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id) }
+    if (awayProj) { projectedByTeamId[awayTeamId] = awayProj; for (const p of awayProj) if (p.mlb_id) allDisplayedBatterIds.add(p.mlb_id) }
+  }))
+  return { allDisplayedBatterIds: Array.from(allDisplayedBatterIds), projectedByTeamId }
+}
+// A past date's real lineups are 100% final — the games already happened.
+// Only TODAY still needs the shorter window (lineups moving from
+// unconfirmed/projected to confirmed as the day goes on); see isPastDateET.
+const getCachedDateLineupResolutionRecent = unstable_cache(fetchDateLineupResolution, ['dugout-date-lineup-resolution-recent'], { revalidate: 300 })
+const getCachedDateLineupResolutionHistorical = unstable_cache(fetchDateLineupResolution, ['dugout-date-lineup-resolution-historical'], { revalidate: WEEK_SECONDS })
+const getCachedDateLineupResolution = (date: string) => (isPastDateET(date) ? getCachedDateLineupResolutionHistorical(date) : getCachedDateLineupResolutionRecent(date))
 
 // `${market}:${book}` -> the camelCase field name already used on
 // entry.open.* throughout this route and consumed by BatterCostClient/
