@@ -9,28 +9,33 @@ export const PITCH_LOG_SELECT_COLS = [
   'raw',
 ].join(', ')
 
-// Same pagination /api/players/[id]/pitch-log/route.ts already proved
-// correct — player_pitch_log easily exceeds PostgREST's 1000-row default
-// cap for a full-time player. Extracted so the bulk Synergy route can also
-// call it (one role at a time — a batter never needs his near-empty
-// pitcher_id rows fetched, and vice versa) without duplicating this query.
+// Real incident (2026-07-24, 57014 statement-timeout alert on this exact
+// route): this used to page via repeated .range(from, from+999) calls,
+// growing `from` each loop — the same OFFSET-pagination shape already
+// confirmed elsewhere in this codebase to blow Postgres's statement_timeout
+// under concurrent load (Postgres can't skip N already-matched rows
+// without first finding and discarding all of them; cost scales with page
+// depth, not row count). This route was believed safe because it only
+// fetches ONE player at a time, but under real concurrent traffic — many
+// different viewers loading many different players' pages at once, each a
+// cache miss — enough of those OFFSET-paginated queries overlap to
+// contend the same way a single bulk multi-player fetch already proved it
+// would. A real player's full-season pitch count (as batter or pitcher)
+// never approaches even half of MAX_ROWS — one ranged fetch with no
+// looping returns the complete season in a single Index Scan, same fix
+// already applied to the bulk per-batter/per-pitcher fetches.
+const MAX_ROWS = 6000
+
 export async function fetchPlayerPitchRows(admin: AdminClient, mlbId: number, role: 'pitcher' | 'batter'): Promise<Record<string, any>[]> {
   const col = role === 'pitcher' ? 'pitcher_id' : 'batter_id'
-  const PAGE_SIZE = 1000
-  const rows: Record<string, any>[] = []
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await admin
-      .from('player_pitch_log')
-      .select(PITCH_LOG_SELECT_COLS)
-      .eq(col, mlbId)
-      .order('game_pk', { ascending: true }).order('at_bat_index', { ascending: true }).order('pitch_number', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1)
-    if (error) throw error
-    if (!data?.length) break
-    rows.push(...data)
-    if (data.length < PAGE_SIZE) break
-  }
-  return rows
+  const { data, error } = await admin
+    .from('player_pitch_log')
+    .select(PITCH_LOG_SELECT_COLS)
+    .eq(col, mlbId)
+    .order('game_pk', { ascending: true }).order('at_bat_index', { ascending: true }).order('pitch_number', { ascending: true })
+    .range(0, MAX_ROWS - 1)
+  if (error) throw error
+  return data ?? []
 }
 
 // Every home run a player has hit/allowed this season — a small subset by
