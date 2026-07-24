@@ -77,28 +77,28 @@ function mapPitchLogRow(r: any) {
 // original approach) serialized every round-trip and blew well past this
 // route's 60s maxDuration once the Statcast section made this fetch run on
 // every Ultimate page load instead of only when a member's Matrix happened
-// to need it. Fired concurrently instead: one cheap exact-count HEAD request
-// up front, then every page requested in parallel — wall-clock now bound by
-// the slowest single page, not the sum of all of them.
+// to need it. An exact-count HEAD request up front (tried first) turned out
+// to have the same problem one level down: COUNT(*) over an IN-list this
+// large made Postgres itself cancel the query with a statement timeout
+// (confirmed live via a `57014 canceling statement due to statement
+// timeout` error) — counting is exactly as expensive as scanning, so it
+// bought nothing. Speculative pagination instead: fire a batch of pages
+// concurrently, and stop once any page in a batch comes back short (the
+// real end of the data) — no COUNT query, no per-page total, and every
+// individual page stays a small indexed range scan that's fast on its own.
 export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: number[]): Promise<Record<number, any[]>> {
   const byBatter: Record<number, any[]> = {}
   if (!batterIds.length) return byBatter
   const PAGE = 1000
-
-  const { count, error: countError } = await admin
-    .from('player_pitch_log')
-    .select('*', { count: 'exact', head: true })
-    .in('batter_id', batterIds)
-  if (countError) throw countError
-  if (!count) return byBatter
-
-  const pageStarts: number[] = []
-  for (let from = 0; from < count; from += PAGE) pageStarts.push(from)
-
   const CONCURRENCY = 12
-  for (let i = 0; i < pageStarts.length; i += CONCURRENCY) {
-    const batch = pageStarts.slice(i, i + CONCURRENCY)
-    const pages = await Promise.all(batch.map(from =>
+  const MAX_ROWS = 2_000_000 // safety backstop against a runaway loop, never expected to bind
+
+  let batchStart = 0
+  let reachedEnd = false
+  while (!reachedEnd && batchStart < MAX_ROWS) {
+    const starts: number[] = []
+    for (let i = 0; i < CONCURRENCY; i++) starts.push(batchStart + i * PAGE)
+    const pages = await Promise.all(starts.map(from =>
       admin
         .from('player_pitch_log')
         .select(BULK_PITCHLOG_SELECT)
@@ -112,7 +112,9 @@ export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: nu
       for (const r of (data ?? []) as any[]) {
         (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
       }
+      if (!data || data.length < PAGE) reachedEnd = true
     }
+    batchStart += CONCURRENCY * PAGE
   }
   return byBatter
 }

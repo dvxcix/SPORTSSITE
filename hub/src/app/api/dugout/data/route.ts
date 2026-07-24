@@ -597,8 +597,22 @@ export async function GET(req: Request) {
     // only when a member happens to have matching Factors saved) doesn't
     // cost anything extra a Matrix-less Ultimate viewer wasn't already
     // paying for once the grid itself needs this data too.
-    isUltimate && lineupBatterIdList.length ? getCachedMatrixPitchRows(date, lineupBatterIdList) : Promise.resolve({} as Record<number, any[]>),
-    isUltimate && lineupBatterIdList.length ? getCachedMatrixSavantSplits(date, lineupBatterIdList, ALL_STATCAST_SAVANT_CATEGORIES) : Promise.resolve({} as Record<number, any[]>),
+    //
+    // .catch()-guarded (unlike every other entry in this Promise.all): this
+    // is by far the heaviest read here (a full slate's season-to-date pitch
+    // log), and a transient DB hiccup on it — confirmed live, a Postgres
+    // statement-timeout — must degrade to "Statcast section blank for this
+    // request" rather than take the ENTIRE page down. Promise.all rejects
+    // the instant any one entry rejects, and this route has no top-level
+    // try/catch, so an uncaught failure here previously meant the whole
+    // response 500'd and the client showed "No games for {date}" — a date
+    // that really did have games.
+    isUltimate && lineupBatterIdList.length
+      ? getCachedMatrixPitchRows(date, lineupBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
+      : Promise.resolve({} as Record<number, any[]>),
+    isUltimate && lineupBatterIdList.length
+      ? getCachedMatrixSavantSplits(date, lineupBatterIdList, ALL_STATCAST_SAVANT_CATEGORIES).catch(e => { console.error('[dugout/data] matrix savant splits failed', e); return {} as Record<number, any[]> })
+      : Promise.resolve({} as Record<number, any[]>),
   ])
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
