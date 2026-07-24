@@ -154,7 +154,17 @@ function compareThreshold(current: number | null, operator: MatrixOperator, valu
   if (value == null) return false
   if (operator === 'gte') return current >= value
   if (operator === 'lte') return current <= value
-  if (operator === 'eq') return current === value
+  // Real bug, reported live (2026-07-24): 'eq' did strict float equality
+  // (current === value) against fields like dugout_specs ratios that are
+  // raw division results (implRatio's ia/ib) — never a clean number like
+  // the 1.12 a member sees on the board and types in, since the board
+  // itself only ever displays these rounded to 2 decimals. A saved "HR ÷
+  // Parlay exactly 1.12" Factor was therefore never true for anyone, no
+  // matter how the board visibly showed 1.12. Rounding both sides to the
+  // same 2 decimals every fractional value in this app is displayed at
+  // fixes it; harmless for whole-number fields (odds prices, counts) since
+  // rounding an integer is a no-op.
+  if (operator === 'eq') return Math.round(current * 100) / 100 === Math.round(value * 100) / 100
   return false
 }
 
