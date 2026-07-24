@@ -12,9 +12,9 @@ import { useDraggableFab } from '@/lib/useDraggableFab'
 
 export type MatrixFactor = {
   id?: string
-  category: 'odds' | 'pitchlog_stat' | 'savant_stat'
+  category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
   value: number | null
   recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | null
 }
@@ -72,12 +72,59 @@ const SAVANT_FIELDS: { key: string; label: string }[] = [
   { key: 'hardsw', label: 'Hard-Swing %' }, { key: 'sq', label: 'Squared-Up %' }, { key: 'blast', label: 'Blast %' },
   { key: 'idlaa', label: 'Ideal Attack-Angle %' }, { key: 'pullair', label: 'Pull Air Rate' }, { key: 'fb', label: 'Fly-Ball Rate' },
 ]
-const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = { odds: 'Odds', pitchlog_stat: 'Stat Line', savant_stat: 'Bat Tracking' }
+// "Dugout Specs" — the Dugout table's own computed columns (not raw
+// sportsbook prices): implied-probability ratios between two markets, plus
+// this player's own today-vs-his-season-average price deltas. Field keys
+// match the exact same ones evaluateDugoutSpecsFactor computes server-side
+// off the real props object — see matrixEngine.ts.
+const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean }[] = [
+  { key: 'div', label: 'DIV (FD − Caesars FHR)', signed: true },
+  { key: 'fhr_div_sa', label: 'FHR ÷ HR' },
+  { key: 'm_div_f', label: 'M ÷ F (BetMGM ÷ FanDuel)' },
+  { key: 'sa_div_ml', label: 'HR ÷ Parlay' },
+  { key: 'pa1_div_sa', label: 'PA ÷ HR' },
+  { key: 'sa_div_rbi', label: 'HR ÷ RBI' },
+  { key: 'sa_div_rbi2', label: 'HR ÷ RBI2' },
+  { key: 'sa_div_rbi3', label: 'HR ÷ RBI3' },
+  { key: 'sa_div_hrr', label: 'HR ÷ HRR' },
+  { key: 'sa_div_tb', label: 'HR ÷ TB' },
+  { key: 'sa_div_tb3', label: 'HR ÷ TB3' },
+  { key: 'sa_div_tb4', label: 'HR ÷ TB4' },
+  { key: 'sa_div_tb5', label: 'HR ÷ TB5' },
+  { key: 'sa_div_hr2', label: 'HR ÷ 2HR' },
+  { key: 'fhr_pct', label: 'FHR % (vs. season avg)', signed: true },
+  { key: 'sa_pct', label: 'HR % (vs. season avg)', signed: true },
+]
+// Community pick counts — a plain threshold, or (the "% of Game" variant)
+// this player's share of his own game's total picks for that market across
+// all 18 real batters, not just a raw count (see evaluatePicksFactor).
+const PICKS_FIELDS: { key: string; label: string }[] = [
+  { key: 'hr', label: 'HR Picks' }, { key: 'hrPct', label: 'HR Picks — % of Game' },
+  { key: 'hits', label: 'Hits Picks' }, { key: 'hitsPct', label: 'Hits Picks — % of Game' },
+  { key: 'runs', label: 'Runs Picks' }, { key: 'runsPct', label: 'Runs Picks — % of Game' },
+  { key: 'stolenBases', label: 'Stolen Base Picks' }, { key: 'stolenBasesPct', label: 'Stolen Base Picks — % of Game' },
+  { key: 'singles', label: 'Singles Picks' }, { key: 'singlesPct', label: 'Singles Picks — % of Game' },
+  { key: 'doubles', label: 'Doubles Picks' }, { key: 'doublesPct', label: 'Doubles Picks — % of Game' },
+  { key: 'triples', label: 'Triples Picks' }, { key: 'triplesPct', label: 'Triples Picks — % of Game' },
+  { key: 'rbi', label: 'RBI Picks' }, { key: 'rbiPct', label: 'RBI Picks — % of Game' },
+  { key: 'hrr', label: 'HRR Picks' }, { key: 'hrrPct', label: 'HRR Picks — % of Game' },
+  { key: 'tb', label: 'TB Picks' }, { key: 'tbPct', label: 'TB Picks — % of Game' },
+]
+const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = {
+  odds: 'Odds', dugout_specs: 'Dugout Specs', pitchlog_stat: 'Stat Line', savant_stat: 'Bat Tracking', picks: 'Picks',
+}
 const RECENCY_LABEL: Record<string, string> = { game: 'Last Game', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10', season: 'Season', custom: 'Custom Range' }
-const OPERATOR_LABEL: Record<string, string> = { gte: 'At least', lte: 'At most', eq: 'Exactly', up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open' }
+const OPERATOR_LABEL: Record<string, string> = {
+  gte: 'At least', lte: 'At most', eq: 'Exactly',
+  up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
+  positive: 'Is positive (+)', negative: 'Is negative (−)',
+}
 
+const FIELDS_BY_CATEGORY: Record<MatrixFactor['category'], { key: string; label: string }[]> = {
+  odds: ODDS_FIELDS, dugout_specs: DUGOUT_SPECS_FIELDS, pitchlog_stat: STAT_FIELDS, savant_stat: SAVANT_FIELDS, picks: PICKS_FIELDS,
+}
 function fieldsForCategory(cat: MatrixFactor['category']) {
-  return cat === 'odds' ? ODDS_FIELDS : cat === 'pitchlog_stat' ? STAT_FIELDS : SAVANT_FIELDS
+  return FIELDS_BY_CATEGORY[cat]
 }
 function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
@@ -98,10 +145,16 @@ async function api<T>(url: string, opts?: RequestInit): Promise<{ data: T | null
   }
 }
 
+const ALL_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'] as const
+
 function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onChange: (f: MatrixFactor) => void; onRemove: () => void }) {
   const fields = fieldsForCategory(factor.category)
-  const isOddsDelta = factor.category === 'odds' && (factor.operator === 'up' || factor.operator === 'down' || factor.operator === 'flat')
   const isBooksField = factor.field_key === 'booksfhr' || factor.field_key === 'bookshr'
+  // No threshold VALUE needed for any of these — odds' delta-vs-open trio,
+  // or dugout_specs' plain sign check (a Factor like "FHR% is positive"
+  // doesn't want a number typed in, same shape as "moved up since open").
+  const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
+    || factor.operator === 'positive' || factor.operator === 'negative'
   const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat'
 
   return (
@@ -111,17 +164,17 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
         onChange={e => {
           const category = e.target.value as MatrixFactor['category']
           const field_key = fieldsForCategory(category)[0].key
-          onChange({ ...factor, category, field_key, operator: 'gte', recency: category === 'odds' ? null : 'season' })
+          onChange({ ...factor, category, field_key, operator: 'gte', recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null })
         }}
-        style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+        style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
       >
-        {(['odds', 'pitchlog_stat', 'savant_stat'] as const).map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+        {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
       </select>
 
       <select
         className="ss-input" value={factor.field_key}
         onChange={e => onChange({ ...factor, field_key: e.target.value, ...(isBooksFieldKey(e.target.value) ? { operator: 'gte' } : {}) })}
-        style={{ fontSize: 11, padding: '5px 6px', minWidth: 130, flex: '1 1 130px' }}
+        style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
       >
         {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
       </select>
@@ -129,7 +182,7 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
       <select
         className="ss-input" value={factor.operator}
         onChange={e => onChange({ ...factor, operator: e.target.value as MatrixFactor['operator'] })}
-        style={{ fontSize: 11, padding: '5px 6px', width: 150 }}
+        style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
       >
         <option value="gte">{OPERATOR_LABEL.gte}</option>
         <option value="lte">{OPERATOR_LABEL.lte}</option>
@@ -141,9 +194,15 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
             <option value="flat">{OPERATOR_LABEL.flat}</option>
           </>
         )}
+        {factor.category === 'dugout_specs' && (
+          <>
+            <option value="positive">{OPERATOR_LABEL.positive}</option>
+            <option value="negative">{OPERATOR_LABEL.negative}</option>
+          </>
+        )}
       </select>
 
-      {!isOddsDelta && (
+      {!hidesValue && (
         <input
           className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
           value={factor.value ?? ''}

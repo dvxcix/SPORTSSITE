@@ -8,9 +8,9 @@ export const revalidate = 0
 const MAX_FACTORS_PER_MATRIX = 40
 
 type FactorInput = {
-  category: 'odds' | 'pitchlog_stat' | 'savant_stat' | 'picks'
+  category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
   value: number | null
   recency: string | null
   recency_start: string | null
@@ -24,9 +24,9 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
   for (const f of factors) {
     if (!f || typeof f !== 'object') return { ok: false, error: 'Malformed Factor.' }
     const { category, field_key, operator, value, recency, recency_start, recency_end } = f as Record<string, unknown>
-    if (!['odds', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
+    if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
-    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
+    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
     clean.push({
       category: category as FactorInput['category'],
       field_key,

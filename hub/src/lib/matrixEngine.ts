@@ -2,11 +2,18 @@ import { computeStatLine, lastNGameDates, type PitchLogRow, type BatterStats } f
 
 // The evaluation core for Custom Matrix — given a member's saved Matrix
 // (Elements/Factors) and one batter's real data for today's game, decides
-// whether that batter lights up. Three real data sources, each handled on
+// whether that batter lights up. Five real data sources, each handled on
 // its own terms rather than forced through one interface:
 //
 //   odds            — reads the SAME per-player `props`/`open` object
 //                      dugout/data/route.ts already builds (no extra query).
+//   dugout_specs    — the Dugout table's own computed ratio/delta columns
+//                      (DIV, FHR÷HR, HR÷Parlay, PA÷HR, HR÷RBI[2/3], HR÷HRR,
+//                      HR÷TB[3/4/5], HR÷2HR, M÷F, FHR%, HR%) — the exact
+//                      same fdczDiv/implRatio formulas DugoutClient.tsx's
+//                      buildBatterRow uses, recomputed here from the same
+//                      raw props + season-average maps so this stays a pure
+//                      function of already-fetched data, no new query.
 //   pitchlog_stat   — computed from OUR OWN player_pitch_log via
 //                      computeStatLine(), with a REAL "last N games played"
 //                      window (not a calendar-day approximation) and the
@@ -16,13 +23,16 @@ import { computeStatLine, lastNGameDates, type PitchLogRow, type BatterStats } f
 //                      Ideal-Attack-Angle%) — read from our
 //                      player_statcast_splits sync, weighted-aggregated
 //                      across that table's pitch-type/contact-type splits.
+//   picks           — community pick counts, either a raw threshold or
+//                      (fieldKey ending "Pct") this player's share of his
+//                      own game's total picks for that market (18 batters).
 
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat'
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative'
 export type MatrixRecency = 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom'
 
 export type MatrixFactor = {
   id: string
-  category: 'odds' | 'pitchlog_stat' | 'savant_stat' | 'picks'
+  category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
   operator: MatrixOperator
   value: number | null
@@ -90,7 +100,14 @@ const PITCHLOG_FIELD: Record<string, keyof BatterStats> = {
 }
 
 function compareThreshold(current: number | null, operator: MatrixOperator, value: number | null): boolean {
-  if (current == null || value == null) return false
+  if (current == null) return false
+  // Sign-only check — no threshold value needed, same "no value input" shape
+  // as odds' up/down/flat. Meant for genuinely signed metrics (a delta vs.
+  // this player's own season average, or FD-vs-Caesars divergence) where a
+  // member just wants "trending the right way," not a specific number.
+  if (operator === 'positive') return current > 0
+  if (operator === 'negative') return current < 0
+  if (value == null) return false
   if (operator === 'gte') return current >= value
   if (operator === 'lte') return current <= value
   if (operator === 'eq') return current === value
@@ -246,6 +263,109 @@ export function evaluateOddsFactor(factor: MatrixFactor, props: OddsProps | null
     return factor.operator === 'up' ? current < opener : current > opener
   }
   return compareThreshold(current, factor.operator, factor.value)
+}
+
+// "Dugout Specs" — the Dugout table's own computed columns, not raw
+// sportsbook prices: implied-probability ratios between two markets
+// (DIV, FHR÷HR, HR÷Parlay, PA÷HR, HR÷RBI[2/3], HR÷HRR, HR÷TB[3/4/5],
+// HR÷2HR, M÷F) and today's-price-vs-this-player's-own-season-average
+// deltas (FHR%, HR%). Every formula here is copy-exact from
+// DugoutClient.tsx's buildBatterRow (toImpl/decOdds/fdczDiv/implRatio) —
+// recomputed server-side off the SAME raw props object evaluateOddsFactor
+// already reads, so a Matrix stays a pure function of data already fetched
+// this request, no new query. Only the two season-average Factors
+// (fhr_pct/sa_pct) need an extra per-player lookup, passed in by the
+// caller (dugout/data/route.ts already fetches fhrAvg/saAvg for every
+// Ultimate request; matrixMatch.ts just needs it keyed by name_norm).
+function toImpl(o: number | null): number | null {
+  if (o == null) return null
+  return o > 0 ? 100 / (o + 100) : Math.abs(o) / (Math.abs(o) + 100)
+}
+function decOdds(p: number | null): number | null {
+  if (p == null) return null
+  return p > 0 ? p / 100 + 1 : 100 / (-p) + 1
+}
+function fdczDiv(fd: number | null, cz: number | null): number | null {
+  const a = decOdds(fd), b = decOdds(cz)
+  if (a == null || b == null) return null
+  return 1 / a - 1 / b
+}
+function implRatio(a: number | null, b: number | null): number | null {
+  const ia = toImpl(a), ib = toImpl(b)
+  if (ia == null || ib == null || ib === 0) return null
+  return ia / ib
+}
+
+export type DugoutSpecsAverages = { fd?: number; cz?: number }
+
+const DUGOUT_SPECS_FIELD: Record<string, (props: OddsProps | null | undefined) => number | null> = {
+  div: props => fdczDiv(props?.fhr?.fanduel ?? null, props?.fhr?.caesars ?? null),
+  fhr_div_sa: props => implRatio(props?.fhr?.fanduel ?? null, props?.sa?.fanduel ?? null),
+  m_div_f: props => implRatio(props?.sa?.betmgm ?? null, props?.sa?.fanduel ?? null),
+  pa1_div_sa: props => implRatio(props?.pa1?.fanduel ?? null, props?.sa?.fanduel ?? null),
+  sa_div_ml: props => implRatio(props?.sa?.fanduel ?? null, props?.hrMl?.fanduel ?? null),
+  sa_div_rbi: props => implRatio(props?.sa?.fanduel ?? null, props?.rbi?.fanduel ?? null),
+  sa_div_rbi2: props => implRatio(props?.sa?.fanduel ?? null, props?.rbi2?.fanduel ?? null),
+  sa_div_rbi3: props => implRatio(props?.sa?.fanduel ?? null, props?.rbi3?.fanduel ?? null),
+  sa_div_hrr: props => implRatio(props?.sa?.fanduel ?? null, props?.hrr?.fanduel ?? null),
+  sa_div_tb: props => implRatio(props?.sa?.fanduel ?? null, props?.tb?.fanduel ?? null),
+  sa_div_tb3: props => implRatio(props?.sa?.fanduel ?? null, props?.tb3?.fanduel ?? null),
+  sa_div_tb4: props => implRatio(props?.sa?.fanduel ?? null, props?.tb4?.fanduel ?? null),
+  sa_div_tb5: props => implRatio(props?.sa?.fanduel ?? null, props?.tb5?.fanduel ?? null),
+  sa_div_hr2: props => implRatio(props?.sa?.fanduel ?? null, props?.hr2?.fanduel ?? null),
+}
+
+export function evaluateDugoutSpecsFactor(
+  factor: MatrixFactor,
+  props: OddsProps | null | undefined,
+  fhrAvg: DugoutSpecsAverages | null | undefined,
+  saAvg: DugoutSpecsAverages | null | undefined,
+): boolean {
+  if (factor.field_key === 'fhr_pct' || factor.field_key === 'sa_pct') {
+    const fd = props?.[factor.field_key === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
+    const avg = factor.field_key === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
+    const current = fd != null && avg ? ((fd - avg) / avg) * 100 : null
+    return compareThreshold(current, factor.operator, factor.value)
+  }
+  const compute = DUGOUT_SPECS_FIELD[factor.field_key]
+  if (!compute) return false
+  return compareThreshold(compute(props), factor.operator, factor.value)
+}
+
+// Community HR-pick counts (from Pikkit's public board) — either a plain
+// count threshold, or (field_key ending "Pct") this player's own share of
+// HIS OWN GAME's total picks for that market — summed across all 18
+// batters in that one game, not the whole day's slate — "who's getting
+// disproportionate public action relative to tonight's other 17 hitters,"
+// which a raw count alone can't answer (100 picks means something
+// different in a 2-run pitchers' duel than a projected slugfest).
+const PICKS_MARKET: Record<string, string> = {
+  hr: 'home_runs', hrPct: 'home_runs',
+  hits: 'hits', hitsPct: 'hits',
+  runs: 'runs', runsPct: 'runs',
+  stolenBases: 'stolen_bases', stolenBasesPct: 'stolen_bases',
+  singles: 'singles', singlesPct: 'singles',
+  doubles: 'doubles', doublesPct: 'doubles',
+  triples: 'triples', triplesPct: 'triples',
+  rbi: 'rbi', rbiPct: 'rbi',
+  hrr: 'hits_runs_rbi', hrrPct: 'hits_runs_rbi',
+  tb: 'bases', tbPct: 'bases',
+}
+
+export function evaluatePicksFactor(
+  factor: MatrixFactor,
+  pikkitEntry: Record<string, { picks?: number | null } | undefined> | null | undefined,
+  gameTotalPicksByMarket: Record<string, number>,
+): boolean {
+  const market = PICKS_MARKET[factor.field_key]
+  if (!market) return false
+  const picks = pikkitEntry?.[market]?.picks ?? null
+  if (factor.field_key.endsWith('Pct')) {
+    const total = gameTotalPicksByMarket[market] ?? 0
+    const current = picks != null && total > 0 ? (picks / total) * 100 : null
+    return compareThreshold(current, factor.operator, factor.value)
+  }
+  return compareThreshold(picks, factor.operator, factor.value)
 }
 
 export function evaluateMatrix(matrix: Matrix, evaluateFactor: (f: MatrixFactor) => boolean): boolean {

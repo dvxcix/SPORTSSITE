@@ -600,6 +600,28 @@ export async function GET(req: Request) {
     pitcher_mlb_id: pitcherIdByName[normName(n.pitcher_name || '')] ?? null,
   }))
 
+  // Same shape DugoutClient.tsx's own fhrAvgMap/saAvgMap build client-side
+  // (see the useMemo there) — duplicated here so Custom Matrix's "Dugout
+  // Specs" Factors (FHR%/HR% vs. this player's own season-average price)
+  // can be evaluated server-side off data already fetched this request,
+  // rather than needing the client's own derived map.
+  const fhrAvgMap: Record<string, { fd?: number; cz?: number }> = {}
+  for (const r of fhrAvg ?? []) {
+    const nn = normName(r.name_norm || r.player_name || '')
+    if (!nn) continue
+    if (!fhrAvgMap[nn]) fhrAvgMap[nn] = {}
+    if (r.bookmaker === 'fanduel') fhrAvgMap[nn].fd = Number(r.avg_price)
+    if (r.bookmaker === 'williamhill_us') fhrAvgMap[nn].cz = Number(r.avg_price)
+  }
+  const saAvgMap: Record<string, { fd?: number; cz?: number }> = {}
+  for (const r of saAvg ?? []) {
+    const nn = normName(r.name_norm || r.player_name || '')
+    if (!nn) continue
+    if (!saAvgMap[nn]) saAvgMap[nn] = {}
+    if (r.bookmaker === 'fanduel') saAvgMap[nn].fd = Number(r.avg_price)
+    if (r.bookmaker === 'williamhill_us') saAvgMap[nn].cz = Number(r.avg_price)
+  }
+
   // Manually-imported FanDuel markets BDL doesn't carry at all (FHR, Laser
   // 105+/110+, Moonshot, 1st PA HR, HR/ML Parlay) — see /admin/fanduel-import.
   // Scoped by game_key, NOT just name_norm: a player whose name got tagged
@@ -843,6 +865,37 @@ export async function GET(req: Request) {
       ? { ...awayPitcher, props: isUltimate ? (resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null) : null }
       : null
 
+    // Custom Matrix's "picks % of game" Factors need each player's own
+    // community pick count PLUS this exact game's total for that same
+    // market, summed across all 18 real batters — built the same
+    // game_key-scoped way DugoutClient.tsx's own pikkitMap is (see that
+    // useMemo), not just name_norm, since an untagged legacy row could
+    // otherwise bleed in from a different game. Only worth building at all
+    // when this caller actually has Matrices to evaluate.
+    let gameTotalPicksByMarket: Record<string, number> = {}
+    const pikkitByName: Record<string, Record<string, any>> = {}
+    if (userMatrices.length) {
+      for (const r of pikkit ?? []) {
+        if (r.game_key && r.game_key !== gameKey) continue
+        const nn = normName(r.player_name || '')
+        const market = r.prop_type || r.market
+        if (!nn || !market) continue
+        if (!pikkitByName[nn]) pikkitByName[nn] = {}
+        const existing = pikkitByName[nn][market]
+        if (!existing || (r.game_key && r.game_key === gameKey && !existing.game_key)) {
+          pikkitByName[nn][market] = r
+        }
+      }
+      for (const p of [...homeLineup, ...awayLineup]) {
+        const entry = resolveNameEntry(pikkitByName, p.name_norm)
+        if (!entry) continue
+        for (const [market, row] of Object.entries(entry)) {
+          const picks = (row as any)?.picks
+          if (typeof picks === 'number') gameTotalPicksByMarket[market] = (gameTotalPicksByMarket[market] ?? 0) + picks
+        }
+      }
+    }
+
     return {
       gamePk: g.gamePk,
       gameKey,
@@ -888,14 +941,20 @@ export async function GET(req: Request) {
       homeLineup: homeLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const matrixMatches = userMatrices.length
-          ? evaluateBatterMatrices(userMatrices, p.bats, (awayPitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date)
+          ? evaluateBatterMatrices(userMatrices, p.bats, (awayPitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date, {
+              fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+              pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
+            })
           : []
         return { ...p, props, matrixMatches }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const matrixMatches = userMatrices.length
-          ? evaluateBatterMatrices(userMatrices, p.bats, (homePitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date)
+          ? evaluateBatterMatrices(userMatrices, p.bats, (homePitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date, {
+              fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+              pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
+            })
           : []
         return { ...p, props, matrixMatches }
       }),

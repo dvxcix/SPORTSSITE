@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  evaluateMatrix, evaluatePitchlogFactor, evaluateSavantFactor, evaluateOddsFactor, effectiveBatSide,
-  type Matrix, type MatrixFactor,
+  evaluateMatrix, evaluatePitchlogFactor, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor, effectiveBatSide,
+  type Matrix, type MatrixFactor, type DugoutSpecsAverages,
 } from '@/lib/matrixEngine'
 
 type AdminClient = ReturnType<typeof createAdminClient>
@@ -132,6 +132,13 @@ export function pitchlogNeeded(matrices: Matrix[]): boolean {
   return matrices.some(m => m.factors.some(f => f.category === 'pitchlog_stat'))
 }
 
+export type MatrixMatchContext = {
+  fhrAvg?: DugoutSpecsAverages | null
+  saAvg?: DugoutSpecsAverages | null
+  pikkitEntry?: Record<string, { picks?: number | null } | undefined> | null
+  gameTotalPicksByMarket?: Record<string, number>
+}
+
 // Evaluates every one of a member's Matrices against ONE batter for ONE
 // specific game (handedness is matchup-specific — a switch hitter's
 // effective side, and which pitcher hand every Factor checks against,
@@ -146,6 +153,7 @@ export function evaluateBatterMatrices(
   savantSplitRows: any[],
   props: any,
   asOfDate: string,
+  context: MatrixMatchContext = {},
 ): MatrixMatch[] {
   if (!matrices.length) return []
   const batSide = effectiveBatSide(bats, pitcherHand)
@@ -153,9 +161,11 @@ export function evaluateBatterMatrices(
   for (const matrix of matrices) {
     const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
       if (factor.category === 'odds') return evaluateOddsFactor(factor, props)
+      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg)
       if (factor.category === 'pitchlog_stat') return evaluatePitchlogFactor(factor, batterPitchRows, pitcherHand, asOfDate)
       if (factor.category === 'savant_stat') return evaluateSavantFactor(factor, savantSplitRows, batSide, pitcherHand)
-      return false // 'picks' Factors aren't wired to a real data source yet
+      if (factor.category === 'picks') return evaluatePicksFactor(factor, context.pikkitEntry, context.gameTotalPicksByMarket ?? {})
+      return false
     })
     if (ok) matches.push({ id: matrix.id, name: matrix.name, color: matrix.color, priority: matrix.priority })
   }
