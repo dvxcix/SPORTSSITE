@@ -2328,6 +2328,29 @@ export function DugoutClient({ date }: { date: string }) {
       .catch(e => { setErr(String(e)); setLoading(false) })
   }, [date, highlightId])
 
+  // Real gap (2026-07-24): saving/importing/deleting a Matrix elsewhere in
+  // the app (the Matrix panel is mounted globally — see CustomMatrixPanel.tsx
+  // — with no direct parent/child link to this page) had no way to reach
+  // this component at all. matrixMatches are only ever computed server-side
+  // in /api/dugout/data, and the effect above only refetches on date
+  // change, so a member had to manually reload the page to see a new/edited
+  // Matrix's highlights reflected — confirmed live as the exact "have to
+  // refresh instead of instant" report. This does a soft background
+  // refetch on that same broadcast instead — updates matrixMatches in
+  // place without resetting `active`/`loading` (so it doesn't yank the
+  // member back to a different game/tab mid-browse the way the effect
+  // above would).
+  useEffect(() => {
+    const onMatricesUpdated = () => {
+      fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+        .then(d => setData(d))
+        .catch(() => {})
+    }
+    window.addEventListener('ss:matrices-updated', onMatricesUpdated)
+    return () => window.removeEventListener('ss:matrices-updated', onMatricesUpdated)
+  }, [date])
+
   // The one place that actually changes which game is active — keeps the
   // URL's ?game= in lockstep so a refresh (or a copy-pasted link) lands
   // back on the exact same game instead of always the first one. `replace`

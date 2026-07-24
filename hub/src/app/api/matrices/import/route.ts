@@ -27,9 +27,15 @@ export async function POST(req: Request) {
     .maybeSingle()
   if (!source) return NextResponse.json({ error: 'No Matrix found for that Element Code.' }, { status: 404 })
 
+  // books/books_min_count included — real bug, confirmed live: this select
+  // used to omit both, so importing a Matrix with a book-scoped odds Factor
+  // (e.g. "3+ of FHR's books moved up") silently cloned it as a plain
+  // single-book Factor (null/empty defaults to ['fanduel'] — see
+  // matrixEngine.ts), matching different players than the original for
+  // anyone who imported it.
   const { data: sourceFactors, error: factorsError } = await admin
     .from('matrix_factors')
-    .select('position, category, field_key, operator, value, recency, recency_start, recency_end')
+    .select('position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count')
     .eq('matrix_id', source.id)
     .order('position', { ascending: true })
   if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })

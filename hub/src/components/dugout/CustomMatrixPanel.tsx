@@ -498,6 +498,20 @@ export function MatrixButton() {
     setLoading(false)
   }, [])
 
+  // Real gap (2026-07-24): this panel is mounted globally (RootLayoutShell),
+  // fully decoupled from whatever page happens to be open — a page like
+  // Dugout that renders Matrix-highlighted data has no direct parent/child
+  // link through which to hear "the member's Matrix set just changed."
+  // Confirmed live: saving/importing/deleting a Matrix never updated an
+  // already-open Dugout tab at all — the member had to manually reload to
+  // see it reflected, since /api/dugout/data (where matrixMatches are
+  // actually computed) only ever re-fetches on date change. Broadcasting a
+  // plain window event here lets any listening page (see DugoutClient.tsx)
+  // refetch immediately instead.
+  const notifyMatricesChanged = useCallback(() => {
+    window.dispatchEvent(new Event('ss:matrices-updated'))
+  }, [])
+
   useEffect(() => { if (user) refresh() }, [user, refresh])
 
   const doImport = useCallback(async () => {
@@ -508,7 +522,8 @@ export function MatrixButton() {
     if (error) { setImportError(error); return }
     setImportCode('')
     refresh()
-  }, [importCode, refresh])
+    notifyMatricesChanged()
+  }, [importCode, refresh, notifyMatricesChanged])
 
   if (!user) return null
 
@@ -568,7 +583,7 @@ export function MatrixButton() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {matrices.map(m => (
-                    <MatrixCard key={m.id} matrix={m} onEdit={() => setEditing(m)} onDeleted={refresh} />
+                    <MatrixCard key={m.id} matrix={m} onEdit={() => setEditing(m)} onDeleted={() => { refresh(); notifyMatricesChanged() }} />
                   ))}
                 </div>
               )}
@@ -596,7 +611,7 @@ export function MatrixButton() {
         <MatrixEditor
           initial={editing}
           onClose={() => setEditing(undefined)}
-          onSaved={() => { setEditing(undefined); refresh() }}
+          onSaved={() => { setEditing(undefined); refresh(); notifyMatricesChanged() }}
         />
       )}
     </>
