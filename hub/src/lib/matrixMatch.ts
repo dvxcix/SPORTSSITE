@@ -54,7 +54,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
 
   const { data: factors } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count')
+    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
@@ -212,13 +212,15 @@ export type MatrixMatchContext = {
   pikkitEntry?: Record<string, { picks?: number | null } | undefined> | null
   gameTotalPicksByMarket?: Record<string, number>
   // Backs the 'tied' operator — "this player's value for this exact
-  // field(+book) exactly matches at least one teammate's." Closures over
-  // this one player's name_norm + the caller's per-team precomputed value
-  // maps (needs every teammate's value at once — see dugout/data/route.ts),
-  // resolved once per player rather than threading a whole team-keyed map
-  // down through evaluateOddsFactor/evaluateDugoutSpecsFactor.
-  isOddsTied?: (fieldKey: string, book: string) => boolean
-  isDugoutSpecsTied?: (fieldKey: string) => boolean
+  // field(+book) exactly matches at least one other player's within
+  // factor.tie_scope's pool ('team', the default, or 'game', both sides)."
+  // Closures over this one player's name_norm + the caller's precomputed
+  // team- and game-scoped value maps (needs every relevant batter's value
+  // at once — see dugout/data/route.ts), resolved once per player rather
+  // than threading whole team-keyed maps down through
+  // evaluateOddsFactor/evaluateDugoutSpecsFactor.
+  isOddsTied?: (fieldKey: string, book: string, scope: 'team' | 'game') => boolean
+  isDugoutSpecsTied?: (fieldKey: string, scope: 'team' | 'game') => boolean
 }
 
 // Evaluates every one of a member's Matrices against ONE batter for ONE

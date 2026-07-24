@@ -74,6 +74,11 @@ export type MatrixFactor = {
   // → "at least N of `books` satisfy it" — e.g. "3+ of FHR's books moved up
   // since open," not "FanDuel specifically."
   books_min_count: number | null
+  // Only meaningful for operator 'tied' — whether the comparison pool is
+  // this player's own team ('team', the default/null case) or every batter
+  // in the game on either side ('game'). null/'team' preserves the original
+  // per-team-only behavior 'tied' shipped with.
+  tie_scope: 'team' | 'game' | null
 }
 
 export type Matrix = {
@@ -447,8 +452,8 @@ function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, op
 export function evaluateOddsFactor(
   factor: MatrixFactor,
   props: OddsProps | null | undefined,
-  // Resolved by the caller per (field_key, book) — see MatrixMatchContext.
-  isTied?: (fieldKey: string, book: string) => boolean,
+  // Resolved by the caller per (field_key, book, scope) — see MatrixMatchContext.
+  isTied?: (fieldKey: string, book: string, scope: 'team' | 'game') => boolean,
 ): boolean {
   if (factor.field_key === 'booksfhr' || factor.field_key === 'bookshr') {
     const spec = BOOKS_MISSING_FIELD[factor.field_key]
@@ -463,7 +468,8 @@ export function evaluateOddsFactor(
     // every other field is FanDuel-only regardless of `books`.
     const multi = MULTI_BOOK_MARKET[factor.field_key]
     const books = multi && factor.books?.length ? factor.books : ['fanduel']
-    const results = books.map(book => isTied?.(factor.field_key, book) ?? false)
+    const scope = factor.tie_scope === 'game' ? 'game' : 'team'
+    const results = books.map(book => isTied?.(factor.field_key, book, scope) ?? false)
     return multi && factor.books_min_count != null
       ? results.filter(Boolean).length >= factor.books_min_count
       : results.every(Boolean)
@@ -589,13 +595,14 @@ export function evaluateDugoutSpecsFactor(
   fhrAvg: DugoutSpecsAverages | null | undefined,
   saAvg: DugoutSpecsAverages | null | undefined,
   // Whether THIS player's value for this exact field exactly matches (to
-  // the same 2 decimals the board displays) at least one teammate's —
-  // resolved by the caller (dugout/data/route.ts), the only place with
-  // visibility into every batter on the same team at once; this function
+  // the same 2 decimals the board displays) at least one other player's,
+  // within factor.tie_scope's pool ('team' — the default — or 'game', both
+  // sides) — resolved by the caller (dugout/data/route.ts), the only place
+  // with visibility into every batter in the game at once; this function
   // stays a pure per-player evaluator like every other dugout_specs Factor.
-  isTied?: (fieldKey: string) => boolean,
+  isTied?: (fieldKey: string, scope: 'team' | 'game') => boolean,
 ): boolean {
-  if (factor.operator === 'tied') return isTied?.(factor.field_key) ?? false
+  if (factor.operator === 'tied') return isTied?.(factor.field_key, factor.tie_scope === 'game' ? 'game' : 'team') ?? false
   const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg)
   return compareThreshold(current, factor.operator, factor.value)
 }

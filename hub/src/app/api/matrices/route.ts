@@ -20,6 +20,8 @@ type FactorInput = {
   // other Factor.
   books: string[] | null
   books_min_count: number | null
+  // Only meaningful for operator 'tied' — see matrixEngine.ts's MatrixFactor.
+  tie_scope: 'team' | 'game' | null
 }
 
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
@@ -30,7 +32,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
   const clean: FactorInput[] = []
   for (const f of factors) {
     if (!f || typeof f !== 'object') return { ok: false, error: 'Malformed Factor.' }
-    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count } = f as Record<string, unknown>
+    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
     if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
@@ -45,6 +47,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
       recency_end: typeof recency_end === 'string' ? recency_end : null,
       books: cleanBooks?.length ? cleanBooks : null,
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
+      tie_scope: tie_scope === 'game' ? 'game' : tie_scope === 'team' ? 'team' : null,
     })
   }
   return { ok: true, factors: clean }
@@ -65,7 +68,7 @@ export async function GET() {
 
   const { data: factors, error: factorsError } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count')
+    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })

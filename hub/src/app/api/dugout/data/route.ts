@@ -1155,12 +1155,13 @@ export async function GET(req: Request) {
 
     // The 'tied' operator (any odds field, any dugout_specs ratio): "this
     // player's value for this exact field(+book) exactly matches at least
-    // one teammate's" — e.g. two guys both at FHR +900, or three guys all
-    // at HR÷Parlay 1.18. Genuinely per-TEAM (not per-game), so home and
-    // away are computed separately — a home batter and an away batter
-    // sharing a price isn't "a teammate." Only ever computed for the exact
-    // (field, book) combos a currently-enabled Matrix actually asks for
-    // (same "don't pay for what nobody uses" gating as gameTotalPicksByMarket
+    // one other player's" — e.g. two guys both at FHR +900, or three guys
+    // all at HR÷Parlay 1.18. Per-Factor scoped via tie_scope: 'team' (the
+    // default) only counts the player's own side; 'game' pools both teams,
+    // e.g. for a member who genuinely wants "anyone in tonight's game, not
+    // just this lineup." Only ever computed for the exact (field, book,
+    // scope) combos a currently-enabled Matrix actually asks for (same
+    // "don't pay for what nobody uses" gating as gameTotalPicksByMarket
     // above), and rounded to 2 decimals for dugout_specs to match the same
     // precision DugoutClient's f2() displays, so "looks tied on the board"
     // and "flagged tied by a Factor" can never disagree over float noise.
@@ -1168,9 +1169,11 @@ export async function GET(req: Request) {
     // needed there.
     const oddsTieCombos = new Set<string>() // `${field_key}|${book}`
     const specsTieFields = new Set<string>()
+    let needsGameScopeTie = false
     for (const m of userMatrices) {
       for (const f of m.factors) {
         if (f.operator !== 'tied') continue
+        if (f.tie_scope === 'game') needsGameScopeTie = true
         if (f.category === 'odds') {
           const multi = MULTI_BOOK_MARKET[f.field_key]
           const books = multi && f.books?.length ? f.books : ['fanduel']
@@ -1187,9 +1190,10 @@ export async function GET(req: Request) {
       for (const [nn, v] of valueByName) if ((counts.get(v) ?? 0) > 1) tied.add(nn)
       return tied
     }
-    function tiedSetsForTeam(lineup: typeof homeLineup): { odds: Map<string, Set<string>>; specs: Map<string, Set<string>> } {
-      const oddsValues = new Map<string, Map<string, number>>()
-      const specsValues = new Map<string, Map<string, number>>()
+    // Collects raw values (not yet reduced to tied/not-tied) so the same
+    // per-player numbers can feed BOTH a team-only pool and, when needed, a
+    // merged both-sides game pool — computed once, never twice.
+    function collectTieValues(lineup: typeof homeLineup, oddsValues: Map<string, Map<string, number>>, specsValues: Map<string, Map<string, number>>) {
       for (const p of lineup) {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         for (const combo of oddsTieCombos) {
@@ -1206,14 +1210,36 @@ export async function GET(req: Request) {
           }
         }
       }
+    }
+    function tiedSetsFromValues(oddsValues: Map<string, Map<string, number>>, specsValues: Map<string, Map<string, number>>): { odds: Map<string, Set<string>>; specs: Map<string, Set<string>> } {
       const odds = new Map<string, Set<string>>()
       for (const [combo, valueByName] of oddsValues) odds.set(combo, tiedNamesFromValues(valueByName))
       const specs = new Map<string, Set<string>>()
       for (const [fieldKey, valueByName] of specsValues) specs.set(fieldKey, tiedNamesFromValues(valueByName))
       return { odds, specs }
     }
-    const homeTied = (oddsTieCombos.size || specsTieFields.size) ? tiedSetsForTeam(homeLineup) : { odds: new Map<string, Set<string>>(), specs: new Map<string, Set<string>>() }
-    const awayTied = (oddsTieCombos.size || specsTieFields.size) ? tiedSetsForTeam(awayLineup) : { odds: new Map<string, Set<string>>(), specs: new Map<string, Set<string>>() }
+    const EMPTY_TIED = { odds: new Map<string, Set<string>>(), specs: new Map<string, Set<string>>() }
+    let homeTied = EMPTY_TIED, awayTied = EMPTY_TIED, gameTied = EMPTY_TIED
+    if (oddsTieCombos.size || specsTieFields.size) {
+      const homeOddsValues = new Map<string, Map<string, number>>(), homeSpecsValues = new Map<string, Map<string, number>>()
+      const awayOddsValues = new Map<string, Map<string, number>>(), awaySpecsValues = new Map<string, Map<string, number>>()
+      collectTieValues(homeLineup, homeOddsValues, homeSpecsValues)
+      collectTieValues(awayLineup, awayOddsValues, awaySpecsValues)
+      homeTied = tiedSetsFromValues(homeOddsValues, homeSpecsValues)
+      awayTied = tiedSetsFromValues(awayOddsValues, awaySpecsValues)
+      if (needsGameScopeTie) {
+        const mergeInto = (dst: Map<string, Map<string, number>>, src: Map<string, Map<string, number>>) => {
+          for (const [key, valueByName] of src) {
+            const target = dst.get(key) ?? dst.set(key, new Map()).get(key)!
+            for (const [nn, v] of valueByName) target.set(nn, v)
+          }
+        }
+        const gameOddsValues = new Map<string, Map<string, number>>(), gameSpecsValues = new Map<string, Map<string, number>>()
+        mergeInto(gameOddsValues, homeOddsValues); mergeInto(gameOddsValues, awayOddsValues)
+        mergeInto(gameSpecsValues, homeSpecsValues); mergeInto(gameSpecsValues, awaySpecsValues)
+        gameTied = tiedSetsFromValues(gameOddsValues, gameSpecsValues)
+      }
+    }
 
     return {
       gamePk: g.gamePk,
@@ -1270,8 +1296,8 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-              isOddsTied: (fieldKey, book) => homeTied.odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
-              isDugoutSpecsTied: fieldKey => homeTied.specs.get(fieldKey)?.has(p.name_norm) ?? false,
+              isOddsTied: (fieldKey, book, scope) => (scope === 'game' ? gameTied : homeTied).odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
+              isDugoutSpecsTied: (fieldKey, scope) => (scope === 'game' ? gameTied : homeTied).specs.get(fieldKey)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
@@ -1286,8 +1312,8 @@ export async function GET(req: Request) {
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
-              isOddsTied: (fieldKey, book) => awayTied.odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
-              isDugoutSpecsTied: fieldKey => awayTied.specs.get(fieldKey)?.has(p.name_norm) ?? false,
+              isOddsTied: (fieldKey, book, scope) => (scope === 'game' ? gameTied : awayTied).odds.get(`${fieldKey}|${book}`)?.has(p.name_norm) ?? false,
+              isDugoutSpecsTied: (fieldKey, scope) => (scope === 'game' ? gameTied : awayTied).specs.get(fieldKey)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }

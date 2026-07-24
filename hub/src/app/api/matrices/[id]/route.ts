@@ -48,6 +48,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         recency_end: typeof f.recency_end === 'string' ? f.recency_end : null,
         books: Array.isArray(f.books) && f.books.length ? f.books.filter(b => typeof b === 'string') : null,
         books_min_count: typeof f.books_min_count === 'number' ? Math.max(1, Math.round(f.books_min_count)) : null,
+        tie_scope: f.tie_scope === 'game' ? 'game' : f.tie_scope === 'team' ? 'team' : null,
       }))
     )
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })

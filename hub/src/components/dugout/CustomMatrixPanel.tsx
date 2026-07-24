@@ -24,6 +24,9 @@ export type MatrixFactor = {
   // null = every book in `books` must satisfy the Factor. A number = "at
   // least N of `books`" — e.g. "3+ of FHR's books moved up since open."
   books_min_count: number | null
+  // Only meaningful for operator 'tied' — 'team' (the default, incl. null)
+  // compares only this player's own side; 'game' pools both teams.
+  tie_scope: 'team' | 'game' | null
 }
 
 export type MatrixDef = {
@@ -146,7 +149,7 @@ function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
 }
 function newFactor(): MatrixFactor {
-  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null }
+  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null }
 }
 const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED573', '#FF8FA3', '#5EEAD4']
 
@@ -265,7 +268,16 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
             )}
           </select>
 
-          {!hidesValue && (
+          {factor.operator === 'tied' ? (
+            <select
+              className="ss-input" value={factor.tie_scope ?? 'team'}
+              onChange={e => onChange({ ...factor, tie_scope: e.target.value as MatrixFactor['tie_scope'] })}
+              style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
+            >
+              <option value="team">Same team</option>
+              <option value="game">Either team</option>
+            </select>
+          ) : !hidesValue && (
             <input
               className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
               value={factor.value ?? ''}
