@@ -73,6 +73,19 @@ const getCachedGapOdds = unstable_cache(
 // through BDL (props.sa.betmgm/props.hr2.betmgm, see DugoutClient's
 // sa_mgm/hr2_mgm), not a separate scrape, so its opener gets the exact same
 // first-observation-wins treatment as every other book.
+// Real incident (2026-07-24): this used to cache the RAW flat row array
+// (17,376 rows for one day's slate — confirmed live) and let the caller
+// reduce it to the actual compact lookup shape afterward. Next's
+// unstable_cache silently refuses to write any single cached value over
+// 2MB — no error thrown, just a console warning and a cache MISS forever —
+// and a full slate's worth of verbose {game_key, name_norm, market, book,
+// opening_price} rows serializes well past that ceiling. Every request was
+// therefore repaying this entire paginated fetch live, which is exactly
+// what was timing out at Vercel's 60s function limit under concurrent
+// traffic. Aggregating into the same nested (game_key -> name_norm ->
+// "market:book" -> price) map the caller always reduced it to anyway — a
+// real slate's worth of actual players/markets, not every raw row — keeps
+// this comfortably under the cache size limit so it actually caches again.
 const getCachedGapOddsOpening = unstable_cache(
   async (date: string) => {
     const admin = createAdminClient()
@@ -86,7 +99,7 @@ const getCachedGapOddsOpening = unstable_cache(
     // arrows" reports that were inconsistent across markets and players
     // with no code-level explanation. Paging through in fixed-size batches
     // guarantees every row is actually read regardless of that server cap.
-    const openRows: { game_key: string; name_norm: string; market: string; book: string; opening_price: number }[] = []
+    const openingByGameKey: Record<string, Record<string, Record<string, number>>> = {}
     const PAGE = 1000
     for (let offset = 0; ; offset += PAGE) {
       const { data } = await admin
@@ -95,12 +108,15 @@ const getCachedGapOddsOpening = unstable_cache(
         .eq('game_date', date)
         .range(offset, offset + PAGE - 1)
       if (!data?.length) break
-      openRows.push(...data)
+      for (const r of data) {
+        const byName = (openingByGameKey[canonGameKey(r.game_key)] ??= {})
+        ;(byName[r.name_norm] ??= {})[`${r.market}:${r.book}`] = Number(r.opening_price)
+      }
       if (data.length < PAGE) break
     }
-    return { openRows }
+    return { openingByGameKey }
   },
-  ['dugout-gap-odds-opening-v3'],
+  ['dugout-gap-odds-opening-v4'],
   { revalidate: 60 }
 )
 
@@ -737,14 +753,8 @@ export async function GET(req: Request) {
   // gameKey -> name_norm -> `${market}:${book}` -> opening price (unified
   // across whichever pipeline/book captured it first; see
   // market_opening_prices).
-  const openingByGameKey: Record<string, Record<string, Record<string, number>>> = {}
-  if (admin && isUltimate) {
-    const { openRows } = await getCachedGapOddsOpening(date)
-    for (const r of openRows) {
-      const byName = (openingByGameKey[canonGameKey(r.game_key)] ??= {})
-      ;(byName[r.name_norm] ??= {})[`${r.market}:${r.book}`] = Number(r.opening_price)
-    }
-  }
+  const openingByGameKey: Record<string, Record<string, Record<string, number>>> =
+    (admin && isUltimate) ? (await getCachedGapOddsOpening(date)).openingByGameKey : {}
 
   // 3. Pitcher splits (needs pitcher IDs from schedule)
   const pitcherIds = new Set<number>()
