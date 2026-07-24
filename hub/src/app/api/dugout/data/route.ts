@@ -123,19 +123,29 @@ const getCachedGapOddsOpening = unstable_cache(
 // Custom Matrix's own bulk read — full-season pitch-by-pitch rows for every
 // batter in today's lineups, needed only by pitchlog_stat Factors (arbitrary
 // recency windows over raw per-pitch data, something the cron-precomputed
-// Statcast table doesn't cover). Identical for every Ultimate member
-// requesting the same date (only the per-member Matrix EVALUATION differs,
-// which happens after this and is cheap in-memory work), so this is the one
-// place the real egress cost lives and the one place it needs to be shared
-// rather than re-paid per request. Skipped entirely server-side (see call
+// Statcast table doesn't cover). Skipped entirely server-side (see call
 // site) when no signed-in member's Matrices actually reference pitchlog_stat.
 // savant_stat Factors need no equivalent live fetch at all anymore — they
 // read the same precomputedStatcastByBatter this route already builds below
 // for the Dugout grid's own Statcast section (see evaluateSavantFactor in
 // matrixEngine.ts for why that's correct, not just faster).
-const getCachedMatrixPitchRows = unstable_cache(
-  async (_date: string, batterIds: number[]) => fetchBulkBatterPitchRows(createAdminClient(), batterIds),
-  ['dugout-matrix-pitchlog'],
+//
+// Real incident (2026-07-24): this used to be ONE unstable_cache entry
+// keyed by (date, the whole batterIds array), bundling every lineup
+// batter's full season of pitches into a single cached value — confirmed
+// live at 30.9MB for one date, wildly past Next's hard (non-configurable)
+// 2MB-per-entry cache limit. That failure is silent (a console warning,
+// not an error), so every request was repaying this entire bulk fetch
+// live, every time, with zero caching benefit — real concurrent load on
+// top of an already-heavy query. Caching PER BATTER instead (~2,000
+// pitches worst-case per player, comfortably under the limit) fixes the
+// size problem AND is strictly better sharing: a batter's cached rows are
+// now reusable across ANY date within the revalidate window, not just the
+// one exact date + exact batterIds-array combination that happened to
+// match before.
+const getCachedBatterPitchRows = unstable_cache(
+  async (batterId: number) => fetchBulkBatterPitchRows(createAdminClient(), [batterId]),
+  ['dugout-matrix-pitchlog-batter'],
   { revalidate: 300 }
 )
 
@@ -639,7 +649,14 @@ export async function GET(req: Request) {
     isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
     isUltimate && needsPitchlog && allDisplayedBatterIdList.length
-      ? getCachedMatrixPitchRows(date, allDisplayedBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
+      ? (async () => {
+          const combined: Record<number, any[]> = {}
+          const perBatter = await Promise.all(allDisplayedBatterIdList.map(id =>
+            getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', id, e); return {} as Record<number, any[]> })
+          ))
+          for (const r of perBatter) Object.assign(combined, r)
+          return combined
+        })()
       : Promise.resolve({} as Record<number, any[]>),
     // Dugout grid's own Statcast section — precomputed daily by
     // /api/cron/dugout-statcast-precompute (see dugoutStatcastPrecompute.ts
