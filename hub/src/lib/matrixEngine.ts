@@ -1,4 +1,5 @@
 import { computeStatLine, lastNGameDates, type PitchLogRow, type BatterStats } from '@/lib/batterStatsEngine'
+import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 
 // The evaluation core for Custom Matrix — given a member's saved Matrix
 // (Elements/Factors) and one batter's real data for today's game, decides
@@ -152,13 +153,17 @@ const SAVANT_WEIGHT_FIELD: Record<string, string> = {
 // Only the metrics Savant's own bat-tracking model produces that aren't
 // present in our raw pitch-by-pitch data at all — everything else moved to
 // pitchlog_stat above once real per-pitch fields were confirmed to cover it.
-const SAVANT_FIELD: Record<string, { category: string; metric: string }> = {
-  hardsw: { category: 'bat_tracking', metric: 'hard_swing_rate' },
-  sq: { category: 'bat_tracking', metric: 'squared_up_per_swing' },
-  blast: { category: 'bat_tracking', metric: 'blast_per_swing' },
-  idlaa: { category: 'swing_path_attack_angle', metric: 'ideal_attack_angle_rate' },
-  pullair: { category: 'batted_ball_splits', metric: 'pull_air_rate' },
-  fb: { category: 'batted_ball_splits', metric: 'fb_rate' },
+// Each maps straight onto a field of the Dugout grid's own precomputed
+// StatcastLine (dugoutStatcast.ts) — see evaluateSavantFactor below for why
+// Matrix reads that cron-precomputed table instead of aggregating raw
+// player_statcast_splits rows itself.
+const SAVANT_FIELD_TO_STATCAST_KEY: Record<string, keyof StatcastLine> = {
+  hardsw: 'hardSwingRate',
+  sq: 'squaredUpPct',
+  blast: 'blastPct',
+  idlaa: 'idealAttackAngleRate',
+  pullair: 'pullAirRate',
+  fb: 'fbRate',
 }
 
 export type SavantSplitRow = { category: string; window_type: string; dims: Record<string, string | number>; metrics: Record<string, number | string | null> }
@@ -169,7 +174,7 @@ export type SavantSplitRow = { category: string; window_type: string; dims: Reco
 // has no Savant-side analog (only exact date-range slicing over raw pitch
 // rows makes sense there), so it falls back to 'season' rather than
 // matching nothing.
-const RECENCY_TO_SAVANT_WINDOW: Record<Exclude<MatrixRecency, 'custom'>, string> = {
+const RECENCY_TO_SAVANT_WINDOW: Record<Exclude<MatrixRecency, 'custom'>, StatcastWindow> = {
   game: 'l1', l3: 'l3', l5: 'l5', l10: 'l10', season: 'season',
 }
 
@@ -178,9 +183,10 @@ const RECENCY_TO_SAVANT_WINDOW: Record<Exclude<MatrixRecency, 'custom'>, string>
 // 1-swing outlier split shouldn't count the same as a 40-swing one.
 // Returns the RAW value (whatever scale that metric's own CSV export
 // uses — most of these 6 are 0-1 fractions, see evaluateSavantFactor's own
-// scaling comment); shared by both Matrix Factor evaluation and the
-// Dugout grid's own Statcast section so both read the exact same real
-// aggregation instead of two implementations that could quietly drift.
+// scaling comment). Used only by dugoutStatcastPrecompute.ts's cron/backfill
+// (via computeStatcastLine) now — Custom Matrix's own savant_stat Factors
+// read that precomputed output directly (see evaluateSavantFactor below)
+// instead of aggregating raw player_statcast_splits rows a second time.
 export function weightedSavantMetric(
   splitRows: SavantSplitRow[],
   category: string,
@@ -206,16 +212,27 @@ export function weightedSavantMetric(
   return totalWeight > 0 ? weightedSum / totalWeight : null
 }
 
+// savant_stat Factors (Hard-Swing%/Squared-Up%/Blast%/Ideal-Attack-Angle%/
+// Pull-Air%/FB%) read straight off the Dugout grid's own cron-precomputed
+// Statcast table (dugout_statcast_precomputed, one row per date/batter/
+// opposing-pitcher-hand — see dugoutStatcastPrecompute.ts) instead of
+// aggregating raw player_statcast_splits rows live. Two real reasons, not
+// just perf: (1) this data doesn't change intraday, so there's no reason a
+// Matrix evaluation should ever pay a live-fetch cost real production
+// contention already proved unsafe under concurrent load; (2)
+// player_statcast_splits is a rolling CURRENT-snapshot table with no
+// history — aggregating it live for a PAST date would silently return
+// TODAY's splits, not the genuinely-as-of-that-date values, which is wrong
+// for backtesting. The precomputed table is snapshotted per game_date, so
+// this reads the correct historical value for any already-backfilled date.
 export function evaluateSavantFactor(
   factor: MatrixFactor,
-  splitRows: SavantSplitRow[],
-  batSide: 'L' | 'R',
-  pitcherHand: 'L' | 'R',
+  statcastWindows: Record<StatcastWindow, StatcastLine> | null | undefined,
 ): boolean {
-  const field = SAVANT_FIELD[factor.field_key]
-  if (!field) return false
-  const windowType = factor.recency && factor.recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[factor.recency] : 'season'
-  const raw = weightedSavantMetric(splitRows, field.category, windowType, batSide, pitcherHand, field.metric)
+  const key = SAVANT_FIELD_TO_STATCAST_KEY[factor.field_key]
+  if (!key || !statcastWindows) return false
+  const windowType: StatcastWindow = factor.recency && factor.recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[factor.recency] : 'season'
+  const raw = statcastWindows[windowType]?.[key] ?? null
   // Savant's own CSV export returns every one of these 6 rate metrics as a
   // 0-1 fraction (confirmed live: squared_up_per_swing/ideal_attack_angle_
   // rate/pull_air_rate/fb_rate all sampled at values like 0.5, 0.333...),

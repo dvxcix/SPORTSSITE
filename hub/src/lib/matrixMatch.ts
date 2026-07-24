@@ -1,8 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  evaluateMatrix, evaluatePitchlogFactor, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor, effectiveBatSide,
+  evaluateMatrix, evaluatePitchlogFactor, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor,
   type Matrix, type MatrixFactor, type DugoutSpecsAverages,
 } from '@/lib/matrixEngine'
+import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -166,22 +167,6 @@ export async function fetchBulkSavantSplits(admin: AdminClient, mlbIds: number[]
 
 export type MatrixMatch = { id: string; name: string; color: string; priority: number }
 
-const SAVANT_CATEGORY_BY_FIELD_KEY: Record<string, string> = {
-  hardsw: 'bat_tracking', sq: 'bat_tracking', blast: 'bat_tracking',
-  idlaa: 'swing_path_attack_angle', pullair: 'batted_ball_splits', fb: 'batted_ball_splits',
-}
-
-export function savantCategoriesUsed(matrices: Matrix[]): string[] {
-  const cats = new Set<string>()
-  for (const m of matrices) for (const f of m.factors) {
-    if (f.category === 'savant_stat') {
-      const cat = SAVANT_CATEGORY_BY_FIELD_KEY[f.field_key]
-      if (cat) cats.add(cat)
-    }
-  }
-  return Array.from(cats)
-}
-
 export function pitchlogNeeded(matrices: Matrix[]): boolean {
   return matrices.some(m => m.factors.some(f => f.category === 'pitchlog_stat'))
 }
@@ -194,30 +179,32 @@ export type MatrixMatchContext = {
 }
 
 // Evaluates every one of a member's Matrices against ONE batter for ONE
-// specific game (handedness is matchup-specific — a switch hitter's
-// effective side, and which pitcher hand every Factor checks against,
-// depends on who they're actually facing tonight). Returns every Matrix
-// that lit up, highest-priority first, so the UI can show the top color as
-// the row's primary highlight while still surfacing every match.
+// specific game (handedness is matchup-specific — which pitcher hand every
+// Factor checks against depends on who they're actually facing tonight).
+// Returns every Matrix that lit up, highest-priority first, so the UI can
+// show the top color as the row's primary highlight while still surfacing
+// every match. savant_stat Factors read `statcastWindows` — the same
+// cron-precomputed dugout_statcast_precomputed row (see
+// dugoutStatcastPrecompute.ts) the Dugout grid's own Statcast section
+// displays, already resolved to this batter's correct effective bat side
+// internally — not a live per-request aggregation.
 export function evaluateBatterMatrices(
   matrices: Matrix[],
-  bats: string | null | undefined,
   pitcherHand: 'L' | 'R',
   batterPitchRows: any[],
-  savantSplitRows: any[],
+  statcastWindows: Record<StatcastWindow, StatcastLine> | null | undefined,
   props: any,
   asOfDate: string,
   context: MatrixMatchContext = {},
 ): MatrixMatch[] {
   if (!matrices.length) return []
-  const batSide = effectiveBatSide(bats, pitcherHand)
   const matches: MatrixMatch[] = []
   for (const matrix of matrices) {
     const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
       if (factor.category === 'odds') return evaluateOddsFactor(factor, props)
       if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg)
       if (factor.category === 'pitchlog_stat') return evaluatePitchlogFactor(factor, batterPitchRows, pitcherHand, asOfDate)
-      if (factor.category === 'savant_stat') return evaluateSavantFactor(factor, savantSplitRows, batSide, pitcherHand)
+      if (factor.category === 'savant_stat') return evaluateSavantFactor(factor, statcastWindows)
       if (factor.category === 'picks') return evaluatePicksFactor(factor, context.pikkitEntry, context.gameTotalPicksByMarket ?? {})
       return false
     })

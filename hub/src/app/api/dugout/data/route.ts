@@ -8,8 +8,8 @@ import { hasTierAccess } from '@/lib/tiers'
 import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
 import {
-  fetchUserMatrices, fetchBulkBatterPitchRows, fetchBulkSavantSplits,
-  evaluateBatterMatrices, pitchlogNeeded, savantCategoriesUsed,
+  fetchUserMatrices, fetchBulkBatterPitchRows,
+  evaluateBatterMatrices, pitchlogNeeded,
 } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
@@ -103,22 +103,22 @@ const getCachedGapOddsOpening = unstable_cache(
   { revalidate: 60 }
 )
 
-// Custom Matrix's own bulk reads — full-season pitch-by-pitch rows and
-// Savant-model splits for every batter in today's lineups. Identical for
-// every Ultimate member requesting the same date (only the per-member
-// Matrix EVALUATION differs, which happens after this and is cheap in-memory
-// work), so this is the one place the real egress cost lives and the one
-// place it needs to be shared rather than re-paid per request. Skipped
-// entirely server-side (see call sites) when no signed-in member's Matrices
-// actually reference that data source.
+// Custom Matrix's own bulk read — full-season pitch-by-pitch rows for every
+// batter in today's lineups, needed only by pitchlog_stat Factors (arbitrary
+// recency windows over raw per-pitch data, something the cron-precomputed
+// Statcast table doesn't cover). Identical for every Ultimate member
+// requesting the same date (only the per-member Matrix EVALUATION differs,
+// which happens after this and is cheap in-memory work), so this is the one
+// place the real egress cost lives and the one place it needs to be shared
+// rather than re-paid per request. Skipped entirely server-side (see call
+// site) when no signed-in member's Matrices actually reference pitchlog_stat.
+// savant_stat Factors need no equivalent live fetch at all anymore — they
+// read the same precomputedStatcastByBatter this route already builds below
+// for the Dugout grid's own Statcast section (see evaluateSavantFactor in
+// matrixEngine.ts for why that's correct, not just faster).
 const getCachedMatrixPitchRows = unstable_cache(
   async (_date: string, batterIds: number[]) => fetchBulkBatterPitchRows(createAdminClient(), batterIds),
   ['dugout-matrix-pitchlog'],
-  { revalidate: 300 }
-)
-const getCachedMatrixSavantSplits = unstable_cache(
-  async (_date: string, mlbIds: number[], categories: string[]) => fetchBulkSavantSplits(createAdminClient(), mlbIds, categories),
-  ['dugout-matrix-savant'],
   { revalidate: 300 }
 )
 
@@ -622,17 +622,16 @@ export async function GET(req: Request) {
   // The Public's advanced-tier outcome heatmap — short-circuited to an
   // empty default rather than computed and then discarded, so a lower-tier
   // request doesn't pay for work whose result it's not entitled to anyway.
-  // Custom Matrix's own bulk pitch-log/Savant-split reads — gated to only
-  // the (category, need) a signed-in member's OWN saved Factors actually
-  // reference, same as before the Statcast section existed. The Statcast
-  // section itself no longer needs this fetch at all (see below — it reads
-  // a cron-precomputed table instead), so there's no reason left to run
-  // this unconditionally for every Ultimate viewer regardless of whether
-  // they even have a Matrix saved.
-  const neededSavantCategories = savantCategoriesUsed(userMatrices)
+  // Custom Matrix's own bulk pitch-log read — gated to only whether a
+  // signed-in member's OWN saved Factors reference pitchlog_stat at all,
+  // same as before the Statcast section existed. savant_stat Factors need
+  // no equivalent gate/fetch anymore — they read the precomputed Statcast
+  // rows fetched below regardless (already needed for the grid's own
+  // Statcast section), so there's nothing left to conditionally fetch here
+  // for that category.
   const needsPitchlog = pitchlogNeeded(userMatrices)
 
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk, matrixPitchRowsByBatter, matrixSavantSplitsByBatter, precomputedStatcastRows] = await Promise.all([
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk, matrixPitchRowsByBatter, precomputedStatcastRows] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -655,9 +654,6 @@ export async function GET(req: Request) {
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
     isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? getCachedMatrixPitchRows(date, allDisplayedBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
-      : Promise.resolve({} as Record<number, any[]>),
-    isUltimate && neededSavantCategories.length && allDisplayedBatterIdList.length
-      ? getCachedMatrixSavantSplits(date, allDisplayedBatterIdList, neededSavantCategories).catch(e => { console.error('[dugout/data] matrix savant splits failed', e); return {} as Record<number, any[]> })
       : Promise.resolve({} as Record<number, any[]>),
     // Dugout grid's own Statcast section — precomputed daily by
     // /api/cron/dugout-statcast-precompute (see dugoutStatcastPrecompute.ts
@@ -1027,37 +1023,38 @@ export async function GET(req: Request) {
       },
       // Custom Matrix highlight matches — evaluated per player against the
       // OPPOSING pitcher's real hand for this specific game (home batters
-      // face awayPitcher and vice versa), using the bulk pitch-log/Savant
-      // data already fetched once above. Empty array (not undefined) when
-      // the caller has no Matrices, so the client never has to distinguish
-      // "not Ultimate" from "Ultimate with nothing saved."
+      // face awayPitcher and vice versa). pitchlog_stat Factors use the bulk
+      // pitch-log rows fetched once above; savant_stat Factors read the same
+      // cron-precomputed Statcast row (statcastWindows) the grid's own
+      // Statcast section displays — no live Savant fetch for Matrix at all.
+      // Empty array (not undefined) when the caller has no Matrices, so the
+      // client never has to distinguish "not Ultimate" from "Ultimate with
+      // nothing saved."
       homeLineup: homeLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const pHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
-        const savantRows = matrixSavantSplitsByBatter[p.mlb_id] ?? []
+        const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
-          ? evaluateBatterMatrices(userMatrices, p.bats, pHand, pitchRows, savantRows, props, date, {
+          ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        const statcast = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
-        return { ...p, props, matrixMatches, statcast }
+        return { ...p, props, matrixMatches, statcast: statcastWindows }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const pHand = (homePitcher?.hand as 'L' | 'R') || 'R'
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
-        const savantRows = matrixSavantSplitsByBatter[p.mlb_id] ?? []
+        const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
-          ? evaluateBatterMatrices(userMatrices, p.bats, pHand, pitchRows, savantRows, props, date, {
+          ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        const statcast = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
-        return { ...p, props, matrixMatches, statcast }
+        return { ...p, props, matrixMatches, statcast: statcastWindows }
       }),
     }
   }))
