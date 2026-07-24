@@ -13,6 +13,7 @@ import {
 } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
+import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -306,41 +307,13 @@ async function fetchPitcherSplits(mlbIds: number[]) {
   return mpGet(`/rest/v1/pitcher_statcast_splits?mlb_id=in.(${mlbIds.join(',')})&select=*`)
 }
 
-// Real recency-windowed, pitch-type-specific, hand-conditioned outcomes —
-// computed server-side (mlb-party's ingest-pitch-type-recency edge function)
-// from raw Statcast pitch events, not Savant's pitch-arsenal-stats
-// leaderboard (which silently ignores date filters and only ever returns
-// season-to-date). This is what actually answers "is this batter doing
-// damage lately against the exact pitch this pitcher throws, and has this
-// pitcher been getting hit hard on that same pitch recently" — the real
-// matchup edge, not a season-long average that flattens a slump or a streak.
-// avg_launch_angle(_against) and window_start/window_end were on these
-// tables already but never selected — added for the pitcher-report page's
-// pitch-mix tables (launch angle column) and its "as of" date-range label,
-// since `win` only ever has one value ('recent', a fixed 14-day rolling
-// window) rather than the Season/L10/L5/L3/Last-start splits a real scouting
-// report would want — see /pitcher-report for the honest framing of that gap.
-const PITCH_RECENT_BATTER_COLS = 'mlb_id,name_norm,pitch_type,pitcher_hand,pitches,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs,avg_exit_velo,avg_launch_angle,window_start,window_end'
-const PITCH_RECENT_PITCHER_COLS = 'mlb_id,name_norm,pitch_type,bat_hand,pitches,usage_pct,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs_allowed,avg_exit_velo_against,avg_launch_angle_against,window_start,window_end'
-
-async function fetchBatterPitchTypeRecent() {
-  return mpGetAll(`/rest/v1/batter_pitch_type_recent?select=${PITCH_RECENT_BATTER_COLS}&win=eq.recent`, 900)
-}
-
-async function fetchPitcherPitchTypeRecent() {
-  return mpGetAll(`/rest/v1/pitcher_pitch_type_recent?select=${PITCH_RECENT_PITCHER_COLS}&win=eq.recent`, 900)
-}
-
-// Season platoon splits — scoped to just today's lineups since that's the
-// only relevant set, not the whole league. Batter game logs and the raw
-// pitch-event log that used to live alongside this (see ingest-batter-game-
-// logs / ingest-pitch-type-recency) were removed once the Dugout drilldown
-// migrated to real player_pitch_log data (batterStatsEngine.ts) for that —
-// nothing client-side reads them anymore.
-async function fetchBatterPlatoonSplits(mlbIds: number[]) {
-  if (!mlbIds.length) return []
-  return mpGet(`/rest/v1/batter_platoon_splits?mlb_id=in.(${mlbIds.join(',')})&select=mlb_id,name_norm,split_code,games_played,pa,ab,h,hr,rbi,bb,so,avg,obp,slg,ops`, 900)
-}
+// Paper's matchup_edge/platoon_ops inputs — formerly mlb-party's
+// batter_pitch_type_recent/pitcher_pitch_type_recent/batter_platoon_splits,
+// all three confirmed silently stuck (2026-07-24: two hadn't written a new
+// row since Jul 14; the third's own daily cron kept "succeeding" while its
+// computed window stayed frozen at Jul 9). Replaced with our own
+// dugout_matchup_edge_precomputed table — see dugoutMatchupEdgePrecompute.ts —
+// read below alongside the Statcast precompute.
 
 // Live HR feed — pulled fresh from MLB's playByPlay per live/final game, same
 // approach as mlb-party's builder, but enriched with hitData (exit velo,
@@ -631,7 +604,7 @@ export async function GET(req: Request) {
   // for that category.
   const needsPitchlog = pitchlogNeeded(userMatrices)
 
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk, matrixPitchRowsByBatter, precomputedStatcastRows] = await Promise.all([
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, outcomesByGamePk, matrixPitchRowsByBatter, precomputedStatcastRows, precomputedMatchupEdgeRows] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -648,9 +621,6 @@ export async function GET(req: Request) {
     isUltimate ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([]),
     isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> }),
     isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([]),
-    fetchBatterPitchTypeRecent(),
-    fetchPitcherPitchTypeRecent(),
-    isUltimate ? fetchBatterPlatoonSplits(allDisplayedBatterIdList) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
     isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? getCachedMatrixPitchRows(date, allDisplayedBatterIdList).catch(e => { console.error('[dugout/data] matrix pitch rows failed', e); return {} as Record<number, any[]> })
@@ -669,7 +639,28 @@ export async function GET(req: Request) {
         return [] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[])),
+    // Paper's matchup_edge/platoon_ops inputs — precomputed daily by
+    // /api/cron/dugout-matchup-edge-precompute (see
+    // dugoutMatchupEdgePrecompute.ts). One row per (batter|pitcher) mlb_id
+    // for this date; batter rows carry platoonOps + recentByPitchTypeByHand,
+    // pitcher rows carry just recentByPitchTypeByHand (allowed).
+    (isUltimate && admin ? (async () => {
+      try {
+        const { data } = await admin.from(MATCHUP_EDGE_TABLE).select('mlb_id, role, data').eq('game_date', date)
+        return (data ?? []) as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
+      } catch (e) {
+        console.error('[dugout/data] precomputed matchup edge fetch failed', e)
+        return [] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
+      }
+    })() : Promise.resolve([] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[])),
   ])
+
+  const matchupEdgeByBatter: Record<number, any> = {}
+  const matchupEdgeByPitcher: Record<number, any> = {}
+  for (const row of precomputedMatchupEdgeRows) {
+    if (row.role === 'batter') matchupEdgeByBatter[row.mlb_id] = row.data
+    else matchupEdgeByPitcher[row.mlb_id] = row.data
+  }
 
   const precomputedStatcastByBatter: Record<number, Partial<Record<'L' | 'R', Record<StatcastWindow, StatcastLine>>>> = {}
   for (const row of precomputedStatcastRows) {
@@ -947,11 +938,22 @@ export async function GET(req: Request) {
     // that same "do we have any props data at all" check, or The Public's
     // advanced-tier response would leak pitcher odds nobody there reads but
     // an Ultimate-exclusive page charges for.
+    // matchupEdge: this pitcher's own precomputed recent-per-pitch-type-
+    // allowed data (see dugoutMatchupEdgePrecompute.ts) — used by the
+    // OPPOSING lineup's computeMatchupEdge, same isUltimate gate as props.
     const homePitcherWithProps = homePitcher
-      ? { ...homePitcher, props: isUltimate ? (resolveNameEntry(bdlByName, normName(homePitcher.name)) || null) : null }
+      ? {
+          ...homePitcher,
+          props: isUltimate ? (resolveNameEntry(bdlByName, normName(homePitcher.name)) || null) : null,
+          matchupEdge: isUltimate ? (matchupEdgeByPitcher[homePitcher.id] ?? null) : null,
+        }
       : null
     const awayPitcherWithProps = awayPitcher
-      ? { ...awayPitcher, props: isUltimate ? (resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null) : null }
+      ? {
+          ...awayPitcher,
+          props: isUltimate ? (resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null) : null,
+          matchupEdge: isUltimate ? (matchupEdgeByPitcher[awayPitcher.id] ?? null) : null,
+        }
       : null
 
     // Custom Matrix's "picks % of game" Factors need each player's own
@@ -1041,7 +1043,7 @@ export async function GET(req: Request) {
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows }
+        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
@@ -1054,7 +1056,7 @@ export async function GET(req: Request) {
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
             })
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows }
+        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
     }
   }))
@@ -1068,7 +1070,7 @@ export async function GET(req: Request) {
   // never actually reach the page even after a manual refresh. Explicit
   // no-store headers close that gap.
   return NextResponse.json(
-    { date, games, statSplits, timingSplits, pitcherSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits },
+    { date, games, statSplits, timingSplits, pitcherSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
   )
 }

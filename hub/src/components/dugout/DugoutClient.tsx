@@ -122,85 +122,45 @@ function pickPitcherRow(pitcherMap: PitcherMap, pitcherId: string | number | nul
   return row ? (row.season ?? row.recent) : null
 }
 
-// ─── real matchup edge: batter-vs-this-pitch-type recently, pitcher's own
-// recent results allowing that same pitch type — the actual "books" view,
-// not season-long averages that flatten a slump or a hot streak. Computed
-// from raw Statcast pitch events server-side (mlb-party's
-// ingest-pitch-type-recency edge function), not Savant's season-only
-// pitch-arsenal-stats leaderboard.
-function buildBatterPitchMap(rows: any[]) {
-  const map: Record<string, Record<string, Record<string, any>>> = {}
-  for (const r of rows) {
-    const nn = r.name_norm || ''
-    const pt = r.pitch_type || ''
-    const hand = r.pitcher_hand || 'R'
-    if (!nn || !pt) continue
-    if (!map[nn]) map[nn] = {}
-    if (!map[nn][pt]) map[nn][pt] = {}
-    map[nn][pt][hand] = r
-  }
-  return map
-}
-
-function buildPlatoonMap(rows: any[]) {
-  const map: Record<string, { vl?: any; vr?: any }> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    if (!id || (r.split_code !== 'vl' && r.split_code !== 'vr')) continue
-    ;(map[id] ??= {})[r.split_code as 'vl' | 'vr'] = r
-  }
-  return map
-}
-
-function buildPitcherPitchMap(rows: any[]) {
-  const map: Record<string, Record<string, Record<string, any>>> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    const pt = r.pitch_type || ''
-    const hand = r.bat_hand || 'R'
-    if (!id || !pt) continue
-    if (!map[id]) map[id] = {}
-    if (!map[id][pt]) map[id][pt] = {}
-    map[id][pt][hand] = r
-  }
-  return map
-}
-
 // ─── build batter row ─────────────────────────────────────────────────────────
 type SplitMap   = ReturnType<typeof buildSplitMap>
 type PitcherMap = ReturnType<typeof buildPitcherMap>
-type BatterPitchMap  = ReturnType<typeof buildBatterPitchMap>
-type PitcherPitchMap = ReturnType<typeof buildPitcherPitchMap>
-type PlatoonMap = ReturnType<typeof buildPlatoonMap>
 
 // The actual "will this guy go deep TONIGHT" signal — usage-weighted across
 // every pitch this specific pitcher throws: is the batter recently hitting
 // that exact pitch hard (high hard-hit%, low whiff%), AND has the pitcher
 // recently been getting hit hard on that same pitch too. Requires real
 // recent sample on both sides (≥8 pitches) per pitch type, else that pitch
-// type is skipped rather than guessed at. This is what was missing from the
-// paper score — it only ever looked at the batter's own generic season/
-// recent form, never at tonight's specific pitcher or matchup at all.
+// type is skipped rather than guessed at.
+//
+// batterMatchupData/pitcherMatchupData come straight off our own
+// dugout_matchup_edge_precomputed table (dugoutMatchupEdgePrecompute.ts),
+// attached server-side per mlb_id — not looked up by name_norm through a
+// separate map, so there's no cross-entity name-mismatch risk here at all.
+// Real incident (2026-07-24): the mlb-party tables this used to read
+// (batter_pitch_type_recent/pitcher_pitch_type_recent) were silently stuck
+// 15 days stale — matchup_edge is Paper's single heaviest-weighted feature,
+// so this was quietly wrong for every game until moved in-house.
 function computeMatchupEdge(
-  nn: string, pitcherHand: string, batterHand: string, pitRow: any,
-  batterPitchMap: BatterPitchMap, pitcherPitchMap: PitcherPitchMap
+  pitcherHand: string, batterHand: string, pitRow: any,
+  batterMatchupData: any, pitcherMatchupData: any,
 ): number | null {
   if (!pitRow) return null
-  const pitcherIdKey = String(pitRow.mlb_id || '')
   const mix = ([
     ['FF', pitRow.pct_fastball  || 0], ['SI', pitRow.pct_sinker   || 0], ['FC', pitRow.pct_cutter || 0],
     ['SL', pitRow.pct_slider    || 0], ['CU', pitRow.pct_curveball || 0], ['CH', pitRow.pct_changeup || 0],
     ['FS', pitRow.pct_splitter  || 0],
   ] as [string, number][]).filter(([, p]) => p > 4)
   if (!mix.length) return null
-  const batterEntry = batterPitchMap[nn] ?? resolveNameEntry(batterPitchMap, nn)
+  const batterByHand = batterMatchupData?.recentByPitchTypeByHand?.[pitcherHand]
+  const pitcherByHand = pitcherMatchupData?.recentByPitchTypeByHand?.[batterHand || 'R']
   let sum = 0, wsum = 0
   for (const [pt, usage] of mix) {
-    const batEdge = batterEntry?.[pt]?.[pitcherHand]
-    const pitEdge = pitcherPitchMap[pitcherIdKey]?.[pt]?.[batterHand || 'R']
+    const batEdge = batterByHand?.[pt]
+    const pitEdge = pitcherByHand?.[pt]
     if (!batEdge || !pitEdge || batEdge.pitches < 8 || pitEdge.pitches < 8) continue
-    const batScore = (batEdge.hard_hit_pct ?? 30) - (batEdge.whiff_pct ?? 25)
-    const pitScore = (pitEdge.hard_hit_pct ?? 30) - (pitEdge.whiff_pct ?? 20)
+    const batScore = (batEdge.hardHitPct ?? 30) - (batEdge.whiffPct ?? 25)
+    const pitScore = (pitEdge.hardHitPct ?? 30) - (pitEdge.whiffPct ?? 20)
     // A bucket sitting right at the 8-pitch floor is noise, not signal — a
     // batter can look great or terrible off 8 pitches purely by luck. Scale
     // each pitch type's say in the average by how much data actually backs
@@ -229,9 +189,11 @@ function buildBatterRow(
   openingMap: Record<string, { sa_open: number | null; rbi_open: number | null }>,
   hrMap: Record<string, any[]>,
   nearMap: Record<string, any>,
-  batterPitchMap: BatterPitchMap,
-  pitcherPitchMap: PitcherPitchMap,
-  platoonMap: PlatoonMap,
+  // Opposing pitcher's own precomputed recent-per-pitch-type-allowed data
+  // (see dugoutMatchupEdgePrecompute.ts) — the batter's own side of the same
+  // data lives on `player.matchupEdge` directly (attached server-side in
+  // /api/dugout/data), so no separate batter-side map/lookup is needed here.
+  pitcherMatchupEdge: any | null,
   // Which real recency window the Statcast section's "R"/Δ columns read —
   // 'season' is always the fixed baseline (server precomputes all 5, see
   // dugoutStatcast.ts); this just picks which precomputed window renders.
@@ -319,9 +281,8 @@ function buildBatterRow(
 
   const pitRow = pickPitcherRow(pitcherMap, pitcherId, effectiveBats)
 
-  const matchup_edge = computeMatchupEdge(nn, pitcherHand, effectiveBats, pitRow, batterPitchMap, pitcherPitchMap)
-  const platoonSplit = pitcherHand === 'L' ? platoonMap[idKey]?.vl : platoonMap[idKey]?.vr
-  const platoon_ops = platoonSplit?.ops != null ? Number(platoonSplit.ops) : null
+  const matchup_edge = computeMatchupEdge(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
+  const platoon_ops = player.matchupEdge?.platoonOps?.[pitcherHand] ?? null
 
   // How many real recent pitches we actually have on this guy — a proxy for
   // "does he play enough for his season rate stats to mean anything." A
@@ -329,9 +290,12 @@ function buildBatterRow(
   // batted balls, which is noise, not signal, but a z-score has no idea
   // that's different from an everyday player's 25% off 200 batted balls.
   // Used to dampen paper score for anyone we barely have data on, in
-  // computePaper below.
-  const recent_pitch_count = Object.values(batterPitchMap[nn] ?? resolveNameEntry(batterPitchMap, nn) ?? {})
-    .reduce((sum, byHand) => sum + Object.values(byHand).reduce((s2, r: any) => s2 + (r.pitches || 0), 0), 0)
+  // computePaper below. Summed across both pitcher hands' recent buckets
+  // (player.matchupEdge — see dugoutMatchupEdgePrecompute.ts) — a general
+  // "how much recent playing time do we have" signal, not specific to
+  // tonight's particular pitcher hand.
+  const recent_pitch_count = Object.values(player.matchupEdge?.recentByPitchTypeByHand ?? {})
+    .reduce((sum: number, byType: any) => sum + Object.values(byType ?? {}).reduce((s2: number, b: any) => s2 + (b?.pitches || 0), 0), 0)
 
   const props      = player.props
   const fhr_fd     = props?.fhr?.fanduel      ?? null
@@ -1972,7 +1936,7 @@ function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' |
   )
 }
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange }: {
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -1981,9 +1945,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   openingMap: Record<string, { sa_open: number | null; rbi_open: number | null }>
   hrMap: Record<string, any[]>
   nearMap: Record<string, any>
-  batterPitchMap: BatterPitchMap
-  pitcherPitchMap: PitcherPitchMap
-  platoonMap: PlatoonMap
   highlightMlbId?: number | null
   date: string
   statcastWindow: 'l1' | 'l3' | 'l5' | 'l10'
@@ -2052,16 +2013,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     const ap = game.awayPitcher
     const hp = game.homePitcher
     const homeRows = game.homeLineup.map((p: any) =>
-      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, statcastWindow, true, !!game.homeLineupConfirmed)
+      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, ap?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
     )
     const awayRows = game.awayLineup.map((p: any) =>
-      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, statcastWindow, false, !!game.awayLineupConfirmed)
+      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
     )
     const pool = [...homeRows, ...awayRows]
     computePaper(pool)
     computeRanks(pool)
     return { homeRows, awayRows, pool }
-  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, batterPitchMap, pitcherPitchMap, platoonMap, statcastWindow])
+  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, statcastWindow])
 
   const displayHome = sortRowsMulti(homeRows, activeSortKeys)
   const displayAway = sortRowsMulti(awayRows, activeSortKeys)
@@ -2358,9 +2319,6 @@ export function DugoutClient({ date }: { date: string }) {
 
   const splitMap   = useMemo(() => buildSplitMap(data?.statSplits    ?? []), [data?.statSplits])
   const pitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
-  const batterPitchMap  = useMemo(() => buildBatterPitchMap(data?.batterPitchRecent   ?? []), [data?.batterPitchRecent])
-  const pitcherPitchMap = useMemo(() => buildPitcherPitchMap(data?.pitcherPitchRecent ?? []), [data?.pitcherPitchRecent])
-  const platoonMap = useMemo(() => buildPlatoonMap(data?.batterPlatoonSplits ?? []), [data?.batterPlatoonSplits])
 
   // get_fhr_history_avg/get_sa_history_avg return one row per (name_norm,
   // bookmaker) with the season-average AMERICAN ODDS PRICE in `avg_price` —
@@ -2558,9 +2516,6 @@ export function DugoutClient({ date }: { date: string }) {
           saAvgMap={saAvgMap}
           pikkitMap={pikkitMap}
           openingMap={openingMap}
-          batterPitchMap={batterPitchMap}
-          pitcherPitchMap={pitcherPitchMap}
-          platoonMap={platoonMap}
           hrMap={hrMap}
           nearMap={nearMap}
           highlightMlbId={highlightId}

@@ -85,6 +85,10 @@
       "schedule": "20 10 * * *"
     },
     {
+      "path": "/api/cron/dugout-matchup-edge-precompute",
+      "schedule": "25 10 * * *"
+    },
+    {
       "path": "/api/cron/scrape-fanduel",
       "schedule": "0 14,16,18,20,22 * * *"
     },
