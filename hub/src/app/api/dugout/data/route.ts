@@ -50,6 +50,19 @@ function isPastDateET(date: string): boolean {
 }
 const WEEK_SECONDS = 60 * 60 * 24 * 7
 
+// Temporary: real per-step timing for a live "today" request currently
+// reported at ~41s (vs ~15s for a past date, same route) despite every
+// known cache/duplicate-fetch bug already fixed and verified clean in
+// runtime logs. Rather than ship another guessed fix, this logs how long
+// each sequential step actually takes so the next live request pinpoints
+// the real remaining bottleneck. Safe to leave in past the incident —
+// console.log has no meaningful cost next to the awaits it's wrapping —
+// but strip it once the slow step is identified and fixed.
+function timed<T>(reqId: string, label: string, p: Promise<T>): Promise<T> {
+  const start = Date.now()
+  return p.finally(() => { console.log(`[dugout/data:${reqId}] ${label} ${Date.now() - start}ms`) })
+}
+
 // Manually-imported gap-odds reads — the only genuinely uncached Supabase
 // queries in this route (everything else here either already goes through
 // mpGet's own next:{revalidate} fetch caching, or is a deliberately-live
@@ -593,17 +606,31 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const reqId = Math.random().toString(36).slice(2, 8)
+  const reqStart = Date.now()
+  console.log(`[dugout/data:${reqId}] start date=${date} isToday=${!isPastDateET(date)} tier=${tier}`)
   // If the service-role key isn't configured, degrade gracefully: skip
   // snapshot lookup entirely rather than 500ing the whole page (odds just
   // won't populate — everything else on the page still works).
   let admin: ReturnType<typeof createAdminClient> | null = null
   try { admin = createAdminClient() } catch { admin = null }
 
-  // 1. MLB schedule
-  let mlbGames: any[] = []
-  try {
-    mlbGames = await getCachedSchedule(date)
-  } catch {}
+  // 1. MLB schedule + lineup resolution — genuinely independent of each
+  // other (both keyed only by `date`, neither reads the other's result), so
+  // they run concurrently instead of the prior one-after-another awaits.
+  // NOTE: fetchDateLineupResolution (see its definition above) does its own
+  // SEPARATE raw fetchScheduleWithRetry call, under its own 300s cache
+  // window, distinct from getCachedSchedule's 15s window — this is a real,
+  // still-unresolved duplicate-fetch path (not the one already fixed
+  // earlier this session) and a likely contributor to "today" specifically
+  // being slow; the `schedule`/`lineupResolution` timings below will show
+  // whether either one is actually the bottleneck on a live cache miss.
+  const [scheduleResult, lineupResolution] = await Promise.all([
+    timed(reqId, 'schedule', (async () => { try { return await getCachedSchedule(date) } catch { return [] as any[] } })()),
+    timed(reqId, 'lineupResolution', getCachedDateLineupResolution(date)),
+  ])
+  const mlbGames: any[] = scheduleResult
+  const { allDisplayedBatterIds: allDisplayedBatterIdList, projectedByTeamId } = lineupResolution
 
   const lineupBatterIds = new Set<number>()
   for (const g of mlbGames) {
@@ -613,21 +640,11 @@ export async function GET(req: Request) {
   }
   const lineupBatterIdList = Array.from(lineupBatterIds)
 
-  // Real batter list for the bulk Statcast/Matrix/platoon reads below —
-  // confirmed ∪ projected, cached as one per-date bundle (see
-  // getCachedDateLineupResolution above) so resolving projected rosters on
-  // any date before lineups post costs nothing beyond the first request of
-  // each ~5-minute window, shared across every concurrent viewer of that
-  // date. lineupBatterIdList just above stays confirmed-only, which is all
-  // batSideById right below actually needs (projected players resolve
-  // their own bats inside fetchProjectedLineup already).
-  const { allDisplayedBatterIds: allDisplayedBatterIdList, projectedByTeamId } = await getCachedDateLineupResolution(date)
-
   // Custom Matrix — a signed-in Ultimate member's own saved highlight rules.
   // Fetched once, up front: small (≤10 Matrices/≤40 Factors each, capped at
   // both the app and DB level), so always fetching it for an eligible caller
   // is cheap.
-  const userMatrices = isUltimate && admin && gate.userId ? await fetchUserMatrices(admin, gate.userId) : []
+  const userMatrices = isUltimate && admin && gate.userId ? await timed(reqId, 'userMatrices', fetchUserMatrices(admin, gate.userId)) : []
 
   // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry only
   // id/name/position — no batSide at all. Every batter was silently falling
@@ -638,35 +655,6 @@ export async function GET(req: Request) {
   // (which hits the roster endpoint instead) ever had real hand data. Batch-
   // fetch real batSide for every confirmed-lineup player via the people
   // endpoint, which does carry it.
-  const batSideById = new Map<number, string>()
-  if (lineupBatterIdList.length) {
-    try {
-      const res = await fetch(
-        `https://statsapi.mlb.com/api/v1/people?personIds=${lineupBatterIdList.join(',')}`,
-        { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
-      )
-      if (res.ok) {
-        const people = (await res.json()).people ?? []
-        for (const p of people) {
-          const code = p.batSide?.code
-          if (p.id && code) batSideById.set(p.id, code)
-        }
-      }
-    } catch {}
-  }
-
-  // 2. Parallel: BDL games + all mlb-party tables
-  // 2. Parallel: mlb-party tables (BDL odds no longer fetched live here —
-  // see /api/cron/bdl-odds, which polls BDL on a fixed schedule and writes
-  // to pregame_odds_snapshots; this route just reads that table below).
-  //
-  // Statcast splits/pitch-recency/pikkit are computed for every basic+
-  // caller (Pitcher Report needs all of these at its own 'basic' floor).
-  // Everything else here is genuinely Ultimate-exclusive analytics
-  // (season averages, HR feeds, game logs, platoon/pitch-event splits) or
-  // The Public's advanced-tier outcome heatmap — short-circuited to an
-  // empty default rather than computed and then discarded, so a lower-tier
-  // request doesn't pay for work whose result it's not entitled to anyway.
   // Custom Matrix's own bulk pitch-log read — gated to only whether a
   // signed-in member's OWN saved Factors reference pitchlog_stat at all,
   // same as before the Statcast section existed. savant_stat Factors need
@@ -676,9 +664,45 @@ export async function GET(req: Request) {
   // for that category.
   const needsPitchlog = pitchlogNeeded(userMatrices)
 
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, outcomesByGamePk, matrixPitchRowsByBatter, precomputedStatcastRows, precomputedMatchupEdgeRows] = await Promise.all([
-    fetchStatSplits(),
-    fetchTimingSplits(),
+  // Pitcher IDs only need the schedule (already have it) — computed here,
+  // ahead of the big parallel batch below, so pitcherHandById/pitcherSplits
+  // can join that same batch instead of waiting on it afterward.
+  const pitcherIds = new Set<number>()
+  for (const g of mlbGames) {
+    const hp = g.teams?.home?.probablePitcher?.id
+    const ap = g.teams?.away?.probablePitcher?.id
+    if (hp) pitcherIds.add(hp)
+    if (ap) pitcherIds.add(ap)
+  }
+  const pitcherIdList = Array.from(pitcherIds)
+  const gamePksToday = mlbGames.map((g: any) => String(g.gamePk))
+
+  // Real incident (2026-07-24): every one of the fetches below is
+  // independent of every other one — none reads another's result, only
+  // `date`/`mlbGames`/`admin`/tier flags, all already available above — yet
+  // they were previously run as a chain of separate `await`s, one after
+  // another (this whole group, THEN gap odds, THEN opening prices, THEN
+  // pitcherHandById, THEN pitcher splits, THEN the freeze lookup), on top of
+  // batSideById ALSO awaited separately before all of it. A live "today"
+  // request pays the FULL latency of every one of those round-trips added
+  // together, back to back, even though none of them ever needed to wait
+  // for any other — the leading suspect for "why is today ~3x slower than
+  // an old date" (old dates hit the same chain, but every entry in it is
+  // long-since cached under the WEEK_SECONDS historical window, so each
+  // sequential `await` resolves near-instantly; today's short windows and
+  // deliberately-live entries (hrFeed/boxscoreOutcomes) make each link in
+  // that chain a real network round-trip far more often). One Promise.all
+  // means the added time is whichever ONE of these is slowest, not the sum
+  // of all of them. The `timed()` wrapper on each entry logs real
+  // per-request timings so the next live "today" load shows exactly which
+  // one (if any) is still the dominant cost.
+  const [
+    statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, outcomesByGamePk,
+    matrixPitchRowsByBatter, precomputedStatcastRows, precomputedMatchupEdgeRows,
+    batSideEntries, gapOddsResult, gapOddsOpeningResult, pitcherHandEntries, pitcherSplits, freezeResult,
+  ] = await Promise.all([
+    timed(reqId, 'statSplits', fetchStatSplits()),
+    timed(reqId, 'timingSplits', fetchTimingSplits()),
     // A single mpGet() (no pagination) silently caps at the same per-request
     // row limit already worked around elsewhere in this file (see mpGetAll's
     // own comment, and the FanDuel gap-odds .range() fix) — confirmed today:
@@ -687,14 +711,14 @@ export async function GET(req: Request) {
     // the AZ@LAD game-key bug (a real upload "not showing"), but this one
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
-    mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300),
-    isUltimate ? fetchSeasonAvgDirect('batter_first_home_run', date) : Promise.resolve([]),
-    isUltimate ? fetchSeasonAvgDirect('batter_home_runs', date) : Promise.resolve([]),
-    isUltimate ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([]),
-    isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> }),
-    isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([]),
-    isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
-    isUltimate && needsPitchlog && allDisplayedBatterIdList.length
+    timed(reqId, 'pikkit', mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300)),
+    timed(reqId, 'fhrAvg', isUltimate ? fetchSeasonAvgDirect('batter_first_home_run', date) : Promise.resolve([])),
+    timed(reqId, 'saAvg', isUltimate ? fetchSeasonAvgDirect('batter_home_runs', date) : Promise.resolve([])),
+    timed(reqId, 'openingSaRbi', isUltimate ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([])),
+    timed(reqId, 'hrFeed', isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> })),
+    timed(reqId, 'nearHr', isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([])),
+    timed(reqId, 'boxscoreOutcomes', isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>)),
+    timed(reqId, 'matrixPitchRows', isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? (async () => {
           const combined: Record<number, any[]> = {}
           const perBatter = await Promise.all(allDisplayedBatterIdList.map(id =>
@@ -703,13 +727,13 @@ export async function GET(req: Request) {
           for (const r of perBatter) Object.assign(combined, r)
           return combined
         })()
-      : Promise.resolve({} as Record<number, any[]>),
+      : Promise.resolve({} as Record<number, any[]>)),
     // Dugout grid's own Statcast section — precomputed daily by
     // /api/cron/dugout-statcast-precompute (see dugoutStatcastPrecompute.ts
     // for why: aggregating this live, per request, is what caused a real
     // production incident under concurrent load). Just a plain indexed
     // SELECT now, no live aggregation, no per-request MLB calls.
-    (isUltimate && admin ? (async () => {
+    timed(reqId, 'precomputedStatcast', isUltimate && admin ? (async () => {
       try {
         const { data } = await admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
@@ -723,7 +747,7 @@ export async function GET(req: Request) {
     // dugoutMatchupEdgePrecompute.ts). One row per (batter|pitcher) mlb_id
     // for this date; batter rows carry platoonOps + recentByPitchTypeByHand,
     // pitcher rows carry just recentByPitchTypeByHand (allowed).
-    (isUltimate && admin ? (async () => {
+    timed(reqId, 'precomputedMatchupEdge', isUltimate && admin ? (async () => {
       try {
         const { data } = await admin.from(MATCHUP_EDGE_TABLE).select('mlb_id, role, data').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
@@ -732,7 +756,75 @@ export async function GET(req: Request) {
         return [] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[])),
+    // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry
+    // only id/name/position — no batSide at all. Batch-fetch real batSide
+    // for every confirmed-lineup player via the people endpoint, which does
+    // carry it.
+    timed(reqId, 'batSideById', (async () => {
+      if (!lineupBatterIdList.length) return [] as [number, string][]
+      try {
+        const res = await fetch(
+          `https://statsapi.mlb.com/api/v1/people?personIds=${lineupBatterIdList.join(',')}`,
+          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+        )
+        if (!res.ok) return []
+        const people = (await res.json()).people ?? []
+        return people.filter((p: any) => p.id && p.batSide?.code).map((p: any) => [p.id, p.batSide.code] as [number, string])
+      } catch { return [] }
+    })()),
+    // Manually-imported FanDuel/BetMGM gap-market reads — explicit .range()
+    // since PostgREST silently caps unpaginated selects at 1000 rows (see
+    // fetchGapOdds for the full incident this fixed).
+    timed(reqId, 'gapOdds', (admin && isAdvancedPlus) ? getCachedGapOdds(date) : Promise.resolve({ fdRows: [] as any[], mgmRows: [] as any[] })),
+    // Opening/early baselines for the gap markets — Ultimate-only, permanent
+    // first-of-the-day snapshots so the client can show open-vs-current deltas.
+    timed(reqId, 'gapOddsOpening', (admin && isUltimate) ? getCachedGapOddsOpening(date) : Promise.resolve({ openingByGameKey: {} as Record<string, Record<string, Record<string, number>>> })),
+    // Same silent-gap pattern as batSideById above, for the pitcher's own
+    // hand — schedule's hydrate=probablePitcher never returns pitchHand.
+    timed(reqId, 'pitcherHandById', (async () => {
+      if (!pitcherIdList.length) return [] as [number, string][]
+      try {
+        const res = await fetch(
+          `https://statsapi.mlb.com/api/v1/people?personIds=${pitcherIdList.join(',')}`,
+          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+        )
+        if (!res.ok) return []
+        const people = (await res.json()).people ?? []
+        return people.filter((p: any) => p.id && p.pitchHand?.code).map((p: any) => [p.id, p.pitchHand.code] as [number, string])
+      } catch { return [] }
+    })()),
+    timed(reqId, 'pitcherSplits', fetchPitcherSplits(pitcherIdList)),
+    // Odds snapshot lookup — BDL is never called live from this route
+    // anymore (see /api/cron/bdl-odds, which polls it on a fixed schedule
+    // and writes here). A started-but-not-yet-frozen game gets permanently
+    // frozen right here so its odds stop drifting once in-game/settled
+    // markets would otherwise take over.
+    timed(reqId, 'freezeSnapshots', (async () => {
+      const map = new Map<string, { bdl_game_id: number | null; prop_map: BDLPropMap; is_frozen: boolean }>()
+      if (!(admin && isAdvancedPlus && gamePksToday.length)) return map
+      const { data: snapRows } = await admin
+        .from('pregame_odds_snapshots')
+        .select('game_pk, bdl_game_id, prop_map, is_frozen')
+        .in('game_pk', gamePksToday)
+      for (const row of snapRows ?? []) map.set(row.game_pk, row)
+
+      const toFreeze = mlbGames
+        .filter((g: any) => g.status?.abstractGameState !== 'Preview')
+        .map((g: any) => String(g.gamePk))
+        .filter((pk: string) => map.get(pk)?.is_frozen === false)
+      if (toFreeze.length) {
+        await admin
+          .from('pregame_odds_snapshots')
+          .update({ is_frozen: true, frozen_at: new Date().toISOString() })
+          .in('game_pk', toFreeze)
+      }
+      return map
+    })()),
   ])
+
+  const batSideById = new Map<number, string>(batSideEntries)
+  const pitcherHandById = new Map<number, string>(pitcherHandEntries)
+  const snapshotByGamePk = freezeResult
 
   const matchupEdgeByBatter: Record<number, any> = {}
   const matchupEdgeByPitcher: Record<number, any> = {}
@@ -791,21 +883,11 @@ export async function GET(req: Request) {
   // never be looked up when rendering the right game.
   const fanduelGapByGameKey: Record<string, Record<string, any>> = {}
   const mgmGapByGameKey: Record<string, Record<string, any>> = {}
-  if (admin && isAdvancedPlus) {
-    // Explicit .range() — PostgREST silently caps unpaginated selects at
-    // 1000 rows by default. A full slate's worth of gap-market pastes across
-    // every game now regularly exceeds that (1312 rows on 2026-07-10), which
-    // was truncating this result with no error and dropping whichever
-    // games' rows happened to fall past row 1000 — e.g. HOU@TEX/ATL@STL
-    // showing blank FHR/Laser/Moonshot/PA1/HR-ML while other games were fine.
-    // Same root cause already worked around for mlb-party's batter pitch
-    // events fetch above (see fetchBatterPitchEvents).
-    const { fdRows, mgmRows } = await getCachedGapOdds(date)
-    for (const r of fdRows) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
-    // Manually-imported BetMGM anytime-HR odds — backs up/fills sa.betmgm and
-    // hr2.betmgm when BDL's own BetMGM coverage is sparse. See /admin/mgm-import.
-    for (const r of mgmRows) (mgmGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
-  }
+  const { fdRows, mgmRows } = gapOddsResult
+  for (const r of fdRows) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
+  // Manually-imported BetMGM anytime-HR odds — backs up/fills sa.betmgm and
+  // hr2.betmgm when BDL's own BetMGM coverage is sparse. See /admin/mgm-import.
+  for (const r of mgmRows) (mgmGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
 
   // Opening/early baselines for the gap markets — permanent first-of-the-day
   // snapshots, so the client can show open-vs-current deltas. See
@@ -816,79 +898,7 @@ export async function GET(req: Request) {
   // gameKey -> name_norm -> `${market}:${book}` -> opening price (unified
   // across whichever pipeline/book captured it first; see
   // market_opening_prices).
-  const openingByGameKey: Record<string, Record<string, Record<string, number>>> =
-    (admin && isUltimate) ? (await getCachedGapOddsOpening(date)).openingByGameKey : {}
-
-  // 3. Pitcher splits (needs pitcher IDs from schedule)
-  const pitcherIds = new Set<number>()
-  for (const g of mlbGames) {
-    const hp = g.teams?.home?.probablePitcher?.id
-    const ap = g.teams?.away?.probablePitcher?.id
-    if (hp) pitcherIds.add(hp)
-    if (ap) pitcherIds.add(ap)
-  }
-  const pitcherIdList = Array.from(pitcherIds)
-
-  // Same silent-gap pattern as the confirmed-lineup batSide fix above, just
-  // for the pitcher's own hand this time — confirmed live: schedule's
-  // hydrate=probablePitcher NEVER returns pitchHand (every probablePitcher
-  // object came back with it undefined, for every single game checked), so
-  // `pitchHand?.code || 'R'` was silently forcing every pitcher on the
-  // slate to "RHP" regardless of their real hand — real lefties like
-  // Robert Gasser, Matthew Boyd, and Andrew Abbott all showed as RHP. This
-  // fed both the page's own "RHP"/"LHP" label AND effectiveBatSide's
-  // switch-hitter grouping (which pitcher hand a switch hitter should
-  // count as facing), so it wasn't just cosmetic. people?personIds= does
-  // carry it — batch-fetch it the same way batSide already is.
-  const pitcherHandById = new Map<number, string>()
-  if (pitcherIdList.length) {
-    try {
-      const res = await fetch(
-        `https://statsapi.mlb.com/api/v1/people?personIds=${pitcherIdList.join(',')}`,
-        { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
-      )
-      if (res.ok) {
-        const people = (await res.json()).people ?? []
-        for (const p of people) {
-          const code = p.pitchHand?.code
-          if (p.id && code) pitcherHandById.set(p.id, code)
-        }
-      }
-    } catch {}
-  }
-
-  const pitcherSplits = await fetchPitcherSplits(pitcherIdList)
-
-  // 4. Odds snapshot lookup — BDL is never called live from this route
-  // anymore (see /api/cron/bdl-odds, which polls it on a fixed schedule and
-  // writes here). Every game just reads whatever's currently in this table,
-  // started or not; a started-but-not-yet-frozen game gets permanently
-  // frozen right here so its odds stop drifting once in-game/settled markets
-  // would otherwise take over — same freeze-on-first-observation as before.
-  // Basic-tier callers (Pitcher Report) never read a player's `.props` at
-  // all, so there's nothing here for them — skipping this entirely also
-  // means their request never needs the freeze side-effect below, which
-  // still runs correctly off of every advanced+ request instead.
-  const gamePksToday = mlbGames.map((g: any) => String(g.gamePk))
-  const snapshotByGamePk = new Map<string, { bdl_game_id: number | null; prop_map: BDLPropMap; is_frozen: boolean }>()
-  if (admin && isAdvancedPlus && gamePksToday.length) {
-    const { data: snapRows } = await admin
-      .from('pregame_odds_snapshots')
-      .select('game_pk, bdl_game_id, prop_map, is_frozen')
-      .in('game_pk', gamePksToday)
-    for (const row of snapRows ?? []) snapshotByGamePk.set(row.game_pk, row)
-
-    const toFreeze = mlbGames
-      .filter((g: any) => g.status?.abstractGameState !== 'Preview')
-      .map((g: any) => String(g.gamePk))
-      .filter((pk: string) => snapshotByGamePk.get(pk)?.is_frozen === false)
-    if (toFreeze.length) {
-      await admin
-        .from('pregame_odds_snapshots')
-        .update({ is_frozen: true, frozen_at: new Date().toISOString() })
-        .in('game_pk', toFreeze)
-    }
-  }
+  const openingByGameKey: Record<string, Record<string, Record<string, number>>> = gapOddsOpeningResult.openingByGameKey
 
   // 5. Build games
   const games = await Promise.all(mlbGames.map(async (g: any) => {
@@ -1142,6 +1152,7 @@ export async function GET(req: Request) {
   // meant admin pastes could be sitting correctly in the DB (confirmed) but
   // never actually reach the page even after a manual refresh. Explicit
   // no-store headers close that gap.
+  console.log(`[dugout/data:${reqId}] total ${Date.now() - reqStart}ms`)
   return NextResponse.json(
     { date, games, statSplits, timingSplits, pitcherSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
