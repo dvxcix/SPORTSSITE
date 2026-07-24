@@ -406,10 +406,14 @@ function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, op
   if (factor.operator === 'up' || factor.operator === 'down' || factor.operator === 'flat') {
     if (current == null || opener == null) return false
     if (factor.operator === 'flat') return current === opener
-    // Odds delta direction is priced, not signed — a LOWER American price
-    // means the market moved toward this outcome ("shortened"), which reads
-    // as the intuitive "moved up in likelihood" a member means by "up."
-    return factor.operator === 'up' ? current < opener : current > opener
+    // "Up"/"down" mean literal American-price direction, matching the same
+    // convention the Dugout board's own delta arrow already uses (OddsCell
+    // in DugoutClient.tsx: red ▲ when current > opener, green ▼ when
+    // current < opener) — a price moving from +2500 to +3000 is "up," from
+    // +2500 to +800 is "down," regardless of what that implies about
+    // likelihood. Was inverted from this until 2026-07-24 (confirmed live:
+    // a "moved up since open" Factor was actually matching price DECREASES).
+    return factor.operator === 'up' ? current > opener : current < opener
   }
   return compareThreshold(current, factor.operator, factor.value)
 }
