@@ -718,13 +718,31 @@ export async function GET(req: Request) {
     timed(reqId, 'hrFeed', isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> })),
     timed(reqId, 'nearHr', isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([])),
     timed(reqId, 'boxscoreOutcomes', isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>)),
+    // Real incident (2026-07-24, confirmed live via runtime logs on a
+    // production request that took 40.9s total, dominated by this exact
+    // step at 40.5s): firing one getCachedBatterPitchRows call per batter
+    // via a single unbounded Promise.all — a full slate's worth of
+    // confirmed+projected batters easily runs 150-300+ — opened that many
+    // concurrent Supabase connections at once and blew through the
+    // project's connection pool (`PGRST003: Timed out acquiring connection
+    // from connection pool`, dozens of them, on that same request), which
+    // in turn starved every OTHER concurrent DB read in that same request
+    // (gapOdds/gapOddsOpening on the same request went from their usual
+    // <300ms to 15267ms/9893ms). Chunking to the same CONCURRENCY=15 already
+    // used for this exact shape of fan-out elsewhere (see fetchBulkBatterPitchRows/
+    // fetchPlayerHomeRuns-style bulk reads in matrixMatch.ts) keeps this
+    // fetch bounded regardless of slate size.
     timed(reqId, 'matrixPitchRows', isUltimate && needsPitchlog && allDisplayedBatterIdList.length
       ? (async () => {
           const combined: Record<number, any[]> = {}
-          const perBatter = await Promise.all(allDisplayedBatterIdList.map(id =>
-            getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', id, e); return {} as Record<number, any[]> })
-          ))
-          for (const r of perBatter) Object.assign(combined, r)
+          const CONCURRENCY = 15
+          for (let i = 0; i < allDisplayedBatterIdList.length; i += CONCURRENCY) {
+            const chunk = allDisplayedBatterIdList.slice(i, i + CONCURRENCY)
+            const results = await Promise.all(chunk.map(id =>
+              getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', id, e); return {} as Record<number, any[]> })
+            ))
+            for (const r of results) Object.assign(combined, r)
+          }
           return combined
         })()
       : Promise.resolve({} as Record<number, any[]>)),
