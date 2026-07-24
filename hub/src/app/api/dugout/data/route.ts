@@ -7,6 +7,10 @@ import { getEffectiveTier } from '@/lib/requireTier'
 import { hasTierAccess } from '@/lib/tiers'
 import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
+import {
+  fetchUserMatrices, fetchBulkBatterPitchRows, fetchBulkSavantSplits,
+  savantCategoriesUsed, pitchlogNeeded, evaluateBatterMatrices,
+} from '@/lib/matrixMatch'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -95,6 +99,25 @@ const getCachedGapOddsOpening = unstable_cache(
   },
   ['dugout-gap-odds-opening-v3'],
   { revalidate: 60 }
+)
+
+// Custom Matrix's own bulk reads — full-season pitch-by-pitch rows and
+// Savant-model splits for every batter in today's lineups. Identical for
+// every Ultimate member requesting the same date (only the per-member
+// Matrix EVALUATION differs, which happens after this and is cheap in-memory
+// work), so this is the one place the real egress cost lives and the one
+// place it needs to be shared rather than re-paid per request. Skipped
+// entirely server-side (see call sites) when no signed-in member's Matrices
+// actually reference that data source.
+const getCachedMatrixPitchRows = unstable_cache(
+  async (_date: string, batterIds: number[]) => fetchBulkBatterPitchRows(createAdminClient(), batterIds),
+  ['dugout-matrix-pitchlog'],
+  { revalidate: 300 }
+)
+const getCachedMatrixSavantSplits = unstable_cache(
+  async (_date: string, mlbIds: number[], categories: string[]) => fetchBulkSavantSplits(createAdminClient(), mlbIds, categories),
+  ['dugout-matrix-savant'],
+  { revalidate: 300 }
 )
 
 // `${market}:${book}` -> the camelCase field name already used on
@@ -494,6 +517,15 @@ export async function GET(req: Request) {
   }
   const lineupBatterIdList = Array.from(lineupBatterIds)
 
+  // Custom Matrix — a signed-in Ultimate member's own saved highlight rules.
+  // Fetched once, up front: small (≤10 Matrices/≤40 Factors each, capped at
+  // both the app and DB level), so always fetching it for an eligible caller
+  // is cheap. What's NOT cheap (bulk pitch-log/Savant-split reads below) only
+  // runs at all when this member's own Factors actually reference that data.
+  const userMatrices = isUltimate && admin && gate.userId ? await fetchUserMatrices(admin, gate.userId) : []
+  const needsMatrixPitchlog = pitchlogNeeded(userMatrices)
+  const neededMatrixSavantCats = savantCategoriesUsed(userMatrices)
+
   // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry only
   // id/name/position — no batSide at all. Every batter was silently falling
   // back to '?' (shown as "?HB" in the UI) once lineups posted, which also
@@ -532,7 +564,7 @@ export async function GET(req: Request) {
   // The Public's advanced-tier outcome heatmap — short-circuited to an
   // empty default rather than computed and then discarded, so a lower-tier
   // request doesn't pay for work whose result it's not entitled to anyway.
-  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk] = await Promise.all([
+  const [statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, batterPitchRecent, pitcherPitchRecent, batterPlatoonSplits, outcomesByGamePk, matrixPitchRowsByBatter, matrixSavantSplitsByBatter] = await Promise.all([
     fetchStatSplits(),
     fetchTimingSplits(),
     // A single mpGet() (no pagination) silently caps at the same per-request
@@ -553,6 +585,8 @@ export async function GET(req: Request) {
     fetchPitcherPitchTypeRecent(),
     isUltimate ? fetchBatterPlatoonSplits(lineupBatterIdList) : Promise.resolve([]),
     isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>),
+    needsMatrixPitchlog && lineupBatterIdList.length ? getCachedMatrixPitchRows(date, lineupBatterIdList) : Promise.resolve({} as Record<number, any[]>),
+    neededMatrixSavantCats.length && lineupBatterIdList.length ? getCachedMatrixSavantSplits(date, lineupBatterIdList, neededMatrixSavantCats) : Promise.resolve({} as Record<number, any[]>),
   ])
 
   const { hrFeed, pitcherIdByName } = hrFeedResult
@@ -845,8 +879,26 @@ export async function GET(req: Request) {
         bdlNamesSample: Object.values(propMap).slice(0, 5).map((e: any) => e.name),
         homeLineupNamesSample: homeLineup.slice(0, 5).map(p => p.name_norm),
       },
-      homeLineup: homeLineup.map(p => ({ ...p, props: resolveNameEntry(bdlByName, p.name_norm) || null })),
-      awayLineup: awayLineup.map(p => ({ ...p, props: resolveNameEntry(bdlByName, p.name_norm) || null })),
+      // Custom Matrix highlight matches — evaluated per player against the
+      // OPPOSING pitcher's real hand for this specific game (home batters
+      // face awayPitcher and vice versa), using the bulk pitch-log/Savant
+      // data already fetched once above. Empty array (not undefined) when
+      // the caller has no Matrices, so the client never has to distinguish
+      // "not Ultimate" from "Ultimate with nothing saved."
+      homeLineup: homeLineup.map(p => {
+        const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        const matrixMatches = userMatrices.length
+          ? evaluateBatterMatrices(userMatrices, p.bats, (awayPitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date)
+          : []
+        return { ...p, props, matrixMatches }
+      }),
+      awayLineup: awayLineup.map(p => {
+        const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        const matrixMatches = userMatrices.length
+          ? evaluateBatterMatrices(userMatrices, p.bats, (homePitcher?.hand as 'L' | 'R') || 'R', matrixPitchRowsByBatter[p.mlb_id] ?? [], matrixSavantSplitsByBatter[p.mlb_id] ?? [], props, date)
+          : []
+        return { ...p, props, matrixMatches }
+      }),
     }
   }))
 

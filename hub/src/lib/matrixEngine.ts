@@ -134,14 +134,18 @@ const SAVANT_FIELD: Record<string, { category: string; metric: string }> = {
   fb: { category: 'batted_ball_splits', metric: 'fb_rate' },
 }
 
-export type SavantSplitRow = { dims: Record<string, string | number>; metrics: Record<string, number | string | null> }
+export type SavantSplitRow = { category: string; window_type: string; dims: Record<string, string | number>; metrics: Record<string, number | string | null> }
 
-// player_statcast_splits' `recency` window type only has the site-wide
-// fixed 6-day lookback (still used elsewhere, left untouched) — the l1/l3/
-// l5/l10 windows added for this feature are calendar-day approximations of
-// "games played" (Savant's leaderboard endpoints have no per-player
-// game-count parameter), the one honest gap left after moving everything
-// else to exact game-count windows above.
+// A Factor's recency selector must reach Savant-model-only metrics too, not
+// just pitchlog_stat ones — MATRIX_RECENCY_WINDOWS (savantSplitsSync.ts) was
+// built expressly so l1/l3/l5/l10 rows exist per player for this. 'custom'
+// has no Savant-side analog (only exact date-range slicing over raw pitch
+// rows makes sense there), so it falls back to 'season' rather than
+// matching nothing.
+const RECENCY_TO_SAVANT_WINDOW: Record<Exclude<MatrixRecency, 'custom'>, string> = {
+  game: 'l1', l3: 'l3', l5: 'l5', l10: 'l10', season: 'season',
+}
+
 export function evaluateSavantFactor(
   factor: MatrixFactor,
   splitRows: SavantSplitRow[],
@@ -150,8 +154,12 @@ export function evaluateSavantFactor(
 ): boolean {
   const field = SAVANT_FIELD[factor.field_key]
   if (!field) return false
+  const windowType = factor.recency && factor.recency !== 'custom' ? RECENCY_TO_SAVANT_WINDOW[factor.recency] : 'season'
   const weightKey = SAVANT_WEIGHT_FIELD[field.category]
-  const matching = splitRows.filter(r => r.dims.bat_side === batSide && r.dims.pitch_hand === pitcherHand)
+  const matching = splitRows.filter(r =>
+    r.category === field.category && r.window_type === windowType &&
+    r.dims.bat_side === batSide && r.dims.pitch_hand === pitcherHand
+  )
   let weightedSum = 0
   let totalWeight = 0
   for (const row of matching) {
@@ -165,52 +173,61 @@ export function evaluateSavantFactor(
   return compareThreshold(current, factor.operator, factor.value)
 }
 
-// Odds Factors read the exact same per-player entry shape dugout/data
-// already builds (entry.props.<market>.<book>, entry.props.open.<field>) —
-// no separate query. FanDuel is the canonical book for price/delta
+// Odds Factors read the exact same raw per-player props entry dugout/data
+// builds server-side (see bdlByName in api/dugout/data/route.ts) — nested
+// per-market/per-book (props.fhr.fanduel, props.sa.betmgm, ...) plus a
+// sibling `open` object per opening-baseline field (props.open.saFd, ...),
+// NOT the flattened fhr_fd/saFd_open-style fields DugoutClient's own
+// buildBatterRow derives from this same object for its own rendering —
+// evaluated here directly off the server-side shape, before that client
+// flattening ever happens. FanDuel is the canonical book for price/delta
 // thresholds since every one of these markets already treats it as primary
 // (see MARKET_BOOK_TO_OPEN_FIELD) — "books missing X odds" is the one Factor
 // type that's explicitly cross-book by design.
-const ODDS_BOOK_FIELD: Record<string, { current: string; open: string; books?: string[] }> = {
-  fhr: { current: 'fhr_fd', open: 'fhr' },
-  hr: { current: 'sa_fd', open: 'saFd' },
-  hrml: { current: 'hrMl_fd', open: 'hrMl' },
-  laser: { current: 'laser105_fd', open: 'laser105' },
-  moonshot: { current: 'moonshot_fd', open: 'moonshot' },
-  pa1: { current: 'pa1_fd', open: 'pa1' },
-  rbi1: { current: 'rbi_fd', open: 'rbiFd' },
-  rbi2: { current: 'rbi2_fd', open: 'rbi2Fd' },
-  rbi3: { current: 'rbi3_fd', open: 'rbi3Fd' },
-  tb2: { current: 'tb_fd', open: 'tbFd' },
-  tb3: { current: 'tb3_fd', open: 'tb3Fd' },
-  tb4: { current: 'tb4_fd', open: 'tb4Fd' },
-  tb5: { current: 'tb5_fd', open: 'tb5Fd' },
-  hr2: { current: 'hr2_fd', open: 'hr2Fd' },
-  singles: { current: 'sng_fd', open: 'sngFd' },
-  doubles: { current: 'dbl_fd', open: 'dblFd' },
-  triples: { current: 'tri_fd', open: 'triFd' },
-  sb1: { current: 'stolenBases', open: 'stolenBases' },
-  sb2: { current: 'stolenBases2', open: 'stolenBases2' },
-  hits1: { current: 'hits', open: 'hits' },
-  hits2: { current: 'hits2', open: 'hits2' },
-  runs1: { current: 'runs', open: 'runs' },
-  runs2: { current: 'runs2', open: 'runs2' },
+type OddsProps = Record<string, { fanduel?: number | null; caesars?: number | null; betmgm?: number | null; betrivers?: number | null; fanatics?: number | null } | undefined> & {
+  open?: Record<string, number | null | undefined>
 }
-const BOOKS_MISSING_FIELD: Record<string, string[]> = {
-  booksfhr: ['fhr_fd', 'fhr_cz', 'fhr_fan'],
-  bookshr: ['sa_fd', 'sa_mgm', 'sa_cz', 'sa_br', 'sa_fan'],
+const ODDS_BOOK_FIELD: Record<string, { market: string; open: string }> = {
+  fhr: { market: 'fhr', open: 'fhr' },
+  hr: { market: 'sa', open: 'saFd' },
+  hrml: { market: 'hrMl', open: 'hrMl' },
+  laser: { market: 'laser105', open: 'laser105' },
+  moonshot: { market: 'moonshot', open: 'moonshot' },
+  pa1: { market: 'pa1', open: 'pa1' },
+  rbi1: { market: 'rbi', open: 'rbiFd' },
+  rbi2: { market: 'rbi2', open: 'rbi2Fd' },
+  rbi3: { market: 'rbi3', open: 'rbi3Fd' },
+  tb2: { market: 'tb', open: 'tbFd' },
+  tb3: { market: 'tb3', open: 'tb3Fd' },
+  tb4: { market: 'tb4', open: 'tb4Fd' },
+  tb5: { market: 'tb5', open: 'tb5Fd' },
+  hr2: { market: 'hr2', open: 'hr2Fd' },
+  singles: { market: 'singles', open: 'sngFd' },
+  doubles: { market: 'doubles', open: 'dblFd' },
+  triples: { market: 'triples', open: 'triFd' },
+  sb1: { market: 'stolen_bases', open: 'stolenBases' },
+  sb2: { market: 'stolen_bases2', open: 'stolenBases2' },
+  hits1: { market: 'hits', open: 'hits' },
+  hits2: { market: 'hits2', open: 'hits2' },
+  runs1: { market: 'runs', open: 'runs' },
+  runs2: { market: 'runs2', open: 'runs2' },
+}
+const BOOKS_MISSING_FIELD: Record<string, { market: string; books: string[] }> = {
+  booksfhr: { market: 'fhr', books: ['fanduel', 'caesars', 'fanatics'] },
+  bookshr: { market: 'sa', books: ['fanduel', 'betmgm', 'caesars', 'betrivers', 'fanatics'] },
 }
 
-export function evaluateOddsFactor(factor: MatrixFactor, row: Record<string, unknown>): boolean {
+export function evaluateOddsFactor(factor: MatrixFactor, props: OddsProps | null | undefined): boolean {
   if (factor.field_key === 'booksfhr' || factor.field_key === 'bookshr') {
-    const bookKeys = BOOKS_MISSING_FIELD[factor.field_key]
-    const missing = bookKeys.filter(k => row[k] == null).length
+    const spec = BOOKS_MISSING_FIELD[factor.field_key]
+    const marketRow = props?.[spec.market]
+    const missing = spec.books.filter(b => (marketRow as Record<string, number | null | undefined> | undefined)?.[b] == null).length
     return compareThreshold(missing, factor.operator, factor.value)
   }
   const spec = ODDS_BOOK_FIELD[factor.field_key]
   if (!spec) return false
-  const current = row[spec.current] as number | null | undefined
-  const opener = (row.open as Record<string, unknown> | undefined)?.[spec.open] as number | null | undefined
+  const current = props?.[spec.market]?.fanduel ?? null
+  const opener = props?.open?.[spec.open] ?? null
 
   if (factor.operator === 'up' || factor.operator === 'down' || factor.operator === 'flat') {
     if (current == null || opener == null) return false
@@ -220,7 +237,7 @@ export function evaluateOddsFactor(factor: MatrixFactor, row: Record<string, unk
     // as the intuitive "moved up in likelihood" a member means by "up."
     return factor.operator === 'up' ? current < opener : current > opener
   }
-  return compareThreshold(current ?? null, factor.operator, factor.value)
+  return compareThreshold(current, factor.operator, factor.value)
 }
 
 export function evaluateMatrix(matrix: Matrix, evaluateFactor: (f: MatrixFactor) => boolean): boolean {

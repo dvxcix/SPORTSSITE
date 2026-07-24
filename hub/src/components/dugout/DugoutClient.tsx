@@ -16,6 +16,7 @@ import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
+import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,21 @@ const pp = (v: number | null | undefined) => v != null ? `${(v * 100).toFixed(1)
 // fractions (0-1) — using pp() on these double-scales into absurd numbers
 // like 1210.0%. Display as-is instead.
 const ppRaw = (v: number | null | undefined) => v != null ? `${v.toFixed(1)}` : '—'
+
+// Pre-blends a Matrix's arbitrary member-chosen hex color onto the page's
+// near-black background at a given alpha, returning a solid hex — a
+// position:sticky cell MUST stay fully opaque (its whole job is masking
+// columns scrolling underneath it), so a translucent rgba() tint there
+// bleeds the scrolled content straight through, same real bug already
+// fixed once for the hasHr row tint (see BatterRowEl's own comment on it).
+function blendOnBg(hex: string, alpha: number, bg: [number, number, number] = [6, 7, 10]): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return `rgb(${bg[0]},${bg[1]},${bg[2]})`
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const blend = (fg: number, bgc: number) => Math.round(fg * alpha + bgc * (1 - alpha))
+  return `rgb(${blend(r, bg[0])},${blend(g, bg[1])},${blend(b, bg[2])})`
+}
 
 function toImpl(o: number | null): number | null {
   if (o == null) return null
@@ -612,6 +628,13 @@ function buildBatterRow(
     pkTb:      pikkitEntry?.bases ?? null,
     hr_hits: hrEntry    ?? [],
     near_hr: nearEntry  ?? null,
+    // Every Custom Matrix this batter lit up for tonight's specific matchup
+    // — evaluated server-side in /api/dugout/data (see matrixMatch.ts) so
+    // the pitch-log/Savant bulk reads that back it stay shared across every
+    // Ultimate member requesting the same date, not re-fetched per row here.
+    // Always highest-priority-first; empty (not undefined) for non-Ultimate
+    // callers and Ultimate members with nothing saved.
+    matrix_matches: (player.matrixMatches ?? []) as { id: string; name: string; color: string; priority: number }[],
     paper: null as number | null,
     bk_rk: null as number | null,
     pp_rk: null as number | null,
@@ -1214,6 +1237,12 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   const hits = row.hr_hits ?? []
   const hasFirst = hits.some(h => h.is_first_hr_of_game)
   const hasHr = hits.length > 0
+  // Custom Matrix highlight — already sorted highest-priority-first by the
+  // server (see matrixMatch.ts), so the top match's color drives the row
+  // tint; every match still listed in the tooltip. An explicit member-
+  // defined signal, so it wins over the passive hasHr tint rather than
+  // fighting it for the same background.
+  const topMatrix = row.matrix_matches?.[0] ?? null
 
   // Hand badge — always visible at a glance, not buried a click away in the
   // drilldown. Colors are just a fixed convention (L/R/S), not heat-mapped.
@@ -1261,7 +1290,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       id={id}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}
+      style={topMatrix ? { background: blendOnBg(topMatrix.color, 0.09) } : hasHr ? { background: 'rgba(74,222,128,0.05)' } : undefined}
     >
       {/* sticky player cell — narrower on mobile (140px vs 190px) so more of
           the ~60 scrollable stat columns are visible without scrolling past
@@ -1285,7 +1314,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
           // the non-sticky cells in the same row keep the real rgba() tint
           // (they don't have anything to occlude, so translucency there is
           // fine, same reasoning `expanded` already followed here).
-          backgroundColor: expanded ? '#10160e' : hasHr ? '#0b1813' : 'var(--bg)',
+          backgroundColor: expanded ? '#10160e' : topMatrix ? blendOnBg(topMatrix.color, 0.09) : hasHr ? '#0b1813' : 'var(--bg)',
           backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
         }}
       >
@@ -1320,6 +1349,17 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
                 >
                   {badgeSignals[0].icon}
                   {badgeSignals.length > 1 && <span style={{ fontSize: 6, marginLeft: 1 }}>+{badgeSignals.length - 1}</span>}
+                </span>
+              </Tooltip>
+            )}
+            {row.matrix_matches.length > 0 && (
+              <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: 'help',
+                }}>
+                  {row.matrix_matches.slice(0, 3).map(m => (
+                    <span key={m.id} style={{ width: 6, height: 6, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
+                  ))}
                 </span>
               </Tooltip>
             )}
@@ -2474,6 +2514,7 @@ export function DugoutClient({ date }: { date: string }) {
 
   return (
     <div>
+      <MatrixButton />
       {!hasStats && (
         <div style={{ padding: '6px 12px', marginBottom: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 11, color: '#f87171' }}>
           ⚠ Statcast unavailable — mlb-party Supabase anon key may not have read access (RLS). Odds from BDL still load normally.

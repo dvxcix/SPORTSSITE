@@ -40,16 +40,23 @@ export default async function DugoutPage({
     <div style={{ padding: '20px 16px' }}>
       {/* Header */}
       <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <img src="/logo.png" alt="" style={{ width: 34, height: 34, objectFit: 'contain', flexShrink: 0, borderRadius: 8 }} />
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 10 }}>
             The Dugout
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', fontFamily: "'SF Mono',monospace", display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', fontFamily: "'SF Mono',monospace", display: 'flex', alignItems: 'center', gap: 6 }}>
               <span className="live-dot" />
-              MLB ANALYTICS
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 900, letterSpacing: '0.06em',
+              color: 'var(--accent-fg)', background: 'var(--accent)',
+              padding: '2px 7px', borderRadius: 5,
+            }}>
+              ULTIMATE
             </span>
           </h1>
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-            Lineups · Statcast · Live Props — fully automatic
+            Proprietary Game Matrix — Built for Game-By-Game Breakdown
           </p>
         </div>
         <Link href="/sports" style={{
