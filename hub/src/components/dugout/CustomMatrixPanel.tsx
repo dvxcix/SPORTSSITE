@@ -272,7 +272,14 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
           onChange={e => onChange({ ...factor, recency: e.target.value as MatrixFactor['recency'] })}
           style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
         >
-          {(factor.category === 'savant_stat' ? ['game', 'l3', 'l5', 'l10', 'season'] : ['game', 'l3', 'l5', 'l10', 'season', 'custom']).map(r => (
+          {/* 'custom' (an arbitrary exact date range) removed for pitchlog_stat
+              (2026-07-24) — it was the one recency choice the daily precompute
+              can't cover, meaning it forced a live per-batter raw-pitch fetch
+              on every request for whichever member picked it (confirmed live:
+              the exact cause of the 28-56s Dugout load spikes). Every fixed
+              window is precomputed for every category now, same as
+              savant_stat already was. */}
+          {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
             <option key={r} value={r}>{RECENCY_LABEL[r]}</option>
           ))}
         </select>
