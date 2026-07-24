@@ -221,6 +221,29 @@ const getCachedDateLineupResolutionRecent = unstable_cache(fetchDateLineupResolu
 const getCachedDateLineupResolutionHistorical = unstable_cache(fetchDateLineupResolution, ['dugout-date-lineup-resolution-historical'], { revalidate: WEEK_SECONDS })
 const getCachedDateLineupResolution = (date: string) => (isPastDateET(date) ? getCachedDateLineupResolutionHistorical(date) : getCachedDateLineupResolutionRecent(date))
 
+// Real incident (2026-07-24): this exact same MLB schedule fetch (same
+// date, same hydrate string) was ALSO being requested a second time,
+// completely uncached, further down in this route (for the full game
+// objects — scores, live status, venue — that getCachedDateLineupResolution
+// doesn't return). That meant every single one of ~25 concurrent viewers
+// loading "today" independently hit MLB's live API on every request,
+// bypassing every caching fix above entirely — very likely THE dominant
+// source of "why isn't this instant with barely two dozen people online."
+// A past date's game objects (final score, Final status) are as
+// permanently frozen as everything else historical; today's genuinely
+// needs to stay fresh (live score/status), so that gets a short window —
+// still shared across every concurrent viewer within it, instead of paid
+// by every single one of them individually.
+const getCachedScheduleRecent = unstable_cache(
+  (date: string) => fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue'),
+  ['dugout-schedule-recent'], { revalidate: 15 }
+)
+const getCachedScheduleHistorical = unstable_cache(
+  (date: string) => fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue'),
+  ['dugout-schedule-historical'], { revalidate: WEEK_SECONDS }
+)
+const getCachedSchedule = (date: string) => (isPastDateET(date) ? getCachedScheduleHistorical(date) : getCachedScheduleRecent(date))
+
 // `${market}:${book}` -> the camelCase field name already used on
 // entry.open.* throughout this route and consumed by BatterCostClient/
 // DugoutClient. Existing *Fd-suffixed fanduel names are kept as-is so no
@@ -579,7 +602,7 @@ export async function GET(req: Request) {
   // 1. MLB schedule
   let mlbGames: any[] = []
   try {
-    mlbGames = await fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue')
+    mlbGames = await getCachedSchedule(date)
   } catch {}
 
   const lineupBatterIds = new Set<number>()
