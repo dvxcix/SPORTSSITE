@@ -160,7 +160,14 @@ async function fetchGapOddsOpening(date: string) {
 // captured already and will never gain or change a row again (see
 // isPastDateET above) — no real reason to ever re-fetch that from the DB.
 const getCachedGapOddsOpeningRecent = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-recent'], { revalidate: 60 })
-const getCachedGapOddsOpeningHistorical = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-historical'], { revalidate: WEEK_SECONDS })
+// '-v2' (2026-07-24): market_opening_prices only started getting written
+// 2026-07-23 — any past date before that had zero rows here until a one-time
+// backfill from the old fanduel_gap_odds_opening/mgm_gap_odds_opening tables
+// ran today. A viewer who loaded one of those dates earlier today, before
+// the backfill, would have this WEEK_SECONDS cache permanently pinned to an
+// empty result under the old key. Bumping the key busts that stale entry;
+// no other reason to ever bump it again after this.
+const getCachedGapOddsOpeningHistorical = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-historical-v2'], { revalidate: WEEK_SECONDS })
 const getCachedGapOddsOpening = (date: string) => (isPastDateET(date) ? getCachedGapOddsOpeningHistorical(date) : getCachedGapOddsOpeningRecent(date))
 
 // Custom Matrix's own bulk read — full-season pitch-by-pitch rows for every
