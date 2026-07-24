@@ -121,22 +121,45 @@ export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: nu
 }
 
 // Bulk-fetch player_statcast_splits rows for exactly the (mlb_id, category)
-// pairs the caller's Matrices actually reference — scoped narrower than "every
-// category for every batter" since a member with zero Savant-model Factors
-// (Hard-Swing%/Squared-Up%/Blast%/Ideal-Attack-Angle%/pull-air/fly-ball rate)
-// shouldn't pay for this query at all.
+// pairs the caller's Matrices actually reference.
+//
+// Confirmed live (2026-07-24): this table has 125,826 rows across just 602
+// distinct batters for these 4 categories — a full day's ~280 lineup
+// batters scales to roughly 58,000 matching rows. The original single
+// `.in('mlb_id', mlbIds)` query with no `.range()` at all hit the exact
+// same class of bug as fetchBulkBatterPitchRows, just silently instead of
+// with a timeout: PostgREST's own default response-row cap truncated the
+// result long before all 280 batters' rows were included, and since there
+// was no error, no `.catch()` ever caught it — the Statcast section's
+// Savant-derived fields (Timing/Miss, HardSw/SQ/Blast, IdlAA, Pull/FB rate)
+// just went blank for nearly every batter with zero signal anything had
+// gone wrong. Fetching per mlb_id instead (same fix as the pitch-log bulk
+// read) uses the real (mlb_id, role, category, window_type, dims_key)
+// index directly — ~209 rows/batter on average across all 4 categories,
+// comfortably under any row cap, no pagination needed per player at all.
 export async function fetchBulkSavantSplits(admin: AdminClient, mlbIds: number[], categories: string[]): Promise<Record<number, any[]>> {
   const byId: Record<number, any[]> = {}
   if (!mlbIds.length || !categories.length) return byId
-  const { data, error } = await admin
-    .from('player_statcast_splits')
-    .select('mlb_id, category, window_type, dims, metrics')
-    .eq('role', 'batter')
-    .in('mlb_id', mlbIds)
-    .in('category', categories)
-  if (error) throw error
-  for (const r of data ?? []) {
-    (byId[r.mlb_id as number] ??= []).push(r)
+  const CONCURRENCY = 15
+  const MAX_ROWS_PER_BATTER = 2000
+
+  for (let i = 0; i < mlbIds.length; i += CONCURRENCY) {
+    const chunk = mlbIds.slice(i, i + CONCURRENCY)
+    const results = await Promise.all(chunk.map(id =>
+      admin
+        .from('player_statcast_splits')
+        .select('mlb_id, category, window_type, dims, metrics')
+        .eq('role', 'batter')
+        .eq('mlb_id', id)
+        .in('category', categories)
+        .range(0, MAX_ROWS_PER_BATTER - 1)
+    ))
+    for (const { data, error } of results) {
+      if (error) throw error
+      for (const r of data ?? []) {
+        (byId[r.mlb_id as number] ??= []).push(r)
+      }
+    }
   }
   return byId
 }
