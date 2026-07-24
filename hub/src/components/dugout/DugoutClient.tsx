@@ -1447,6 +1447,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       <OddsCell row={row} gameInfo={gameInfo} propKey="hrMl" book="fanduel" odds={row.hrMl_fd} openOdds={row.hrMl_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hrMl_fd, g('hrMl_fd')) }} />
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.sa_div_ml, g('sa_div_ml')) }}>{f2(row.sa_div_ml)}</td>
       <OddsCell row={row} gameInfo={gameInfo} propKey="laser105" book="fanduel" odds={row.laser105_fd} openOdds={row.laser105_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.laser105_fd, g('laser105_fd')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="laser110" book="fanduel" odds={row.laser110_fd} openOdds={row.laser110_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.laser110_fd, g('laser110_fd')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="moonshot" book="fanduel" odds={row.moonshot_fd} openOdds={row.moonshot_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.moonshot_fd, g('moonshot_fd')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="pa1" book="fanduel" odds={row.pa1_fd} openOdds={row.pa1_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.pa1_fd, g('pa1_fd')) }} />
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.pa1_div_sa, g('pa1_div_sa')) }}>{f2(row.pa1_div_sa)}</td>
@@ -1556,7 +1557,6 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_fb,  g('s_fb'))  }}>{pp(row.s_fb)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_ev,  g('s_ev'))  }}>{f1(row.s_ev)}</td>
       <td style={{ ...STD, width: 32, minWidth: 32 }}>{f1(row.s_la)}</td>
-      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_xhr, g('s_xhr')) }}>{f1(row.s_xhr)}</td>
       <td style={{ ...STD, width: 30, minWidth: 30, ...heat(row.s_hr,  g('s_hr'))  }}>
         {row.s_hr != null ? String(Math.round(row.s_hr)) : '—'}
       </td>
@@ -2142,7 +2142,8 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
       {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
       {H('HR÷Parlay', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
-      {H('Laser', 'Laser market price', 50, 'laser105_fd')}
+      {H('Laser 105+', 'Laser (105+ MPH Home Run) market price', 50, 'laser105_fd')}
+      {H('Laser 110+', 'Laser (110+ MPH Home Run) market price', 50, 'laser110_fd')}
       {H('Moon', 'Moonshot market price', 50, 'moonshot_fd')}
       {H('1stPA', '1st Plate Appearance HR price', 50, 'pa1_fd')}
       {H('PA÷HR', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
@@ -2196,7 +2197,6 @@ function GameTable({ game, splitMap, timingMap, pitcherMap, fhrAvgMap, saAvgMap,
       {H('FB%', 'Flyball rate', 34, 's_fb')}
       {H('EV', 'Exit velocity', 34, 's_ev')}
       {H('LA', 'Launch angle', 32, 's_la')}
-      {H('xHR', 'Expected HR (season)', 34, 's_xhr')}
       {H('HR', 'Season HR total', 30, 's_hr')}
     </>
   )

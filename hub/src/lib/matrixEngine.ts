@@ -216,7 +216,13 @@ const ODDS_BOOK_FIELD: Record<string, { market: string; open: string }> = {
   fhr: { market: 'fhr', open: 'fhr' },
   hr: { market: 'sa', open: 'saFd' },
   hrml: { market: 'hrMl', open: 'hrMl' },
+  // laser/laser110 are genuinely different FanDuel markets (105+ MPH vs.
+  // 110+ MPH home run), not two labels for the same price — confirmed live
+  // against fanduel_gap_odds: laser110_fd has been captured by the
+  // automatic scrape all along (~40-50% the volume of laser105 on a normal
+  // day), it just never had its own Factor option until now.
   laser: { market: 'laser105', open: 'laser105' },
+  laser110: { market: 'laser110', open: 'laser110' },
   moonshot: { market: 'moonshot', open: 'moonshot' },
   pa1: { market: 'pa1', open: 'pa1' },
   rbi1: { market: 'rbi', open: 'rbiFd' },
