@@ -10,7 +10,7 @@ import { heat, SortableTH, type SortState, toggleSortState, cmpNullsLast, cmpAny
 import { ZoneGrid, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
 import { PitchList } from '@/components/players/PitchList'
 import { ToggleBtn } from '@/components/players/PlayerPageClient'
-import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, type PitchLogRow, type BatterStats } from '@/lib/batterStatsEngine'
+import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow, type BatterStats } from '@/lib/batterStatsEngine'
 import { PITCHER_RECENCY, BATTER_SCOPES } from '@/components/slate/PitcherVsLineup'
 import { lookupSavantMetricBlended, batterScopeToSavantWindow, type SavantSplitRow } from '@/lib/savantSplitLookup'
 
@@ -88,6 +88,12 @@ function fetchBatTrackingSplitsCached(mlbId: number) {
   }
   return p
 }
+// Reported live (2026-07-24): a batter's pitch-mix breakdown showed almost
+// every column red even where the actual numbers (.300+ AVG, etc.) should
+// read as good — root-caused to MIN_PITCHES_FOR_HEAT's own comment in
+// batterStatsEngine.ts (a single thin-sample outlier skewing the whole
+// column's min-max scale).
+
 const SAVANT_ONLY_COLS: { metric: string; category: 'bat_tracking' | 'swing_path_attack_angle'; label: string; dir: 'hi' | 'lo' }[] = [
   { metric: 'hard_swing_rate', category: 'bat_tracking', label: 'Hard-Swing %', dir: 'hi' },
   { metric: 'squared_up_per_swing', category: 'bat_tracking', label: 'Squared-Up %', dir: 'hi' },
@@ -312,7 +318,7 @@ export function MatchupPitchBreakdown({
     if (activePitSort.col === 'pitch') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), activePitSort.dir)
     return cmpNullsLast((a.stats as any)[activePitSort.col], (b.stats as any)[activePitSort.col], activePitSort.dir)
   })
-  const pitPoolByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, pitcherMixRows.map(r => (r.stats as any)[c.key])]))
+  const pitPoolByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, pitcherMixRows.filter(r => (r.stats as any).pitches >= MIN_PITCHES_FOR_HEAT).map(r => (r.stats as any)[c.key])]))
 
   // How has this pitcher (in his currently selected recency/hand window)
   // actually done against real hitters whose contact-quality profile is
@@ -327,7 +333,7 @@ export function MatchupPitchBreakdown({
     if (activeBatPitchSort.col === 'pitch') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), activeBatPitchSort.dir)
     return cmpNullsLast((a.batterStats as any)[activeBatPitchSort.col], (b.batterStats as any)[activeBatPitchSort.col], activeBatPitchSort.dir)
   })
-  const batPoolByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, batterMixRows.map(r => (r.batterStats as any)[c.key])]))
+  const batPoolByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, batterMixRows.filter(r => (r.batterStats as any).pitches >= MIN_PITCHES_FOR_HEAT).map(r => (r.batterStats as any)[c.key])]))
 
   // Savant-model-only metrics per pitch type — can't come off computeStatLine
   // (no in-house formula for Hard-Swing%/Squared-Up%/Blast%/Ideal-Attack-
@@ -344,7 +350,7 @@ export function MatchupPitchBreakdown({
     )
   }
   const savantPoolByMetric = Object.fromEntries(
-    SAVANT_ONLY_COLS.map(c => [c.metric, batterMixRows.map(r => savantByPitch[r.pitchType]?.[c.metric] ?? null)])
+    SAVANT_ONLY_COLS.map(c => [c.metric, batterMixRows.filter(r => (r.batterStats as any).pitches >= MIN_PITCHES_FOR_HEAT).map(r => savantByPitch[r.pitchType]?.[c.metric] ?? null)])
   )
 
   const zoneMetricConfig = ZONE_METRICS.find(m => m.key === zoneMetric)!
@@ -400,8 +406,9 @@ export function MatchupPitchBreakdown({
                     </td>
                     {PITCHER_STAT_COLS.map(c => {
                       const v = (r.stats as any)[c.key]
+                      const lowSample = (r.stats as any).pitches < MIN_PITCHES_FOR_HEAT
                       return (
-                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v, pitPoolByCol[c.key], c.dir)) }}>
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat || lowSample ? {} : heat(v, pitPoolByCol[c.key], c.dir)) }}>
                           {c.fmt(v)}
                         </td>
                       )
@@ -560,16 +567,18 @@ export function MatchupPitchBreakdown({
                     </td>
                     {BATTER_STAT_COLS.map(c => {
                       const v = (r.batterStats as any)[c.key]
+                      const lowSample = (r.batterStats as any).pitches < MIN_PITCHES_FOR_HEAT
                       return (
-                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v, batPoolByCol[c.key], c.dir)) }}>
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat || lowSample ? {} : heat(v, batPoolByCol[c.key], c.dir)) }}>
                           {c.fmt(v)}
                         </td>
                       )
                     })}
                     {SAVANT_ONLY_COLS.map(c => {
                       const v = savantByPitch[r.pitchType]?.[c.metric] ?? null
+                      const lowSample = (r.batterStats as any).pitches < MIN_PITCHES_FOR_HEAT
                       return (
-                        <td key={c.metric} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...heat(v, savantPoolByMetric[c.metric], c.dir) }}>
+                        <td key={c.metric} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(lowSample ? {} : heat(v, savantPoolByMetric[c.metric], c.dir)) }}>
                           {pFrac(v)}
                         </td>
                       )

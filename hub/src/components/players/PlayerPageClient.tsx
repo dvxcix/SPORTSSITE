@@ -6,6 +6,7 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@/lib/mlb-api'
 import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
+import { MIN_PITCHES_FOR_HEAT } from '@/lib/batterStatsEngine'
 import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
 import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
 import type { PlayerTodayContext } from '@/lib/mlbSchedule'
@@ -382,7 +383,11 @@ function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitW
     }
     return cmpNullsLast(a[sort!.col], b[sort!.col], sort!.dir)
   })
-  const allByCol = Object.fromEntries(config.cols.map(c => [c.key, aggregated.map(r => r[c.key])]))
+  // See MIN_PITCHES_FOR_HEAT's own comment (batterStatsEngine.ts) — a
+  // group with only a handful of underlying swings/BBE can produce an
+  // extreme, statistically meaningless rate that skews the whole column's
+  // min-max scale for every other row.
+  const allByCol = Object.fromEntries(config.cols.map(c => [c.key, aggregated.filter(r => r.weight >= MIN_PITCHES_FOR_HEAT).map(r => r[c.key])]))
 
   function toggleDim(key: string) {
     setGroupBy(prev => (prev.includes(key) ? (prev.length > 1 ? prev.filter(k => k !== key) : prev) : [...prev, key]))
@@ -430,8 +435,9 @@ function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitW
                 {config.cols.map(c => {
                   const v = row[c.key]
                   const display = v == null ? '—' : c.isFrac ? frac1(v) : v.toFixed(c.digits ?? 1)
+                  const lowSample = row.weight < MIN_PITCHES_FOR_HEAT
                   return (
-                    <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', ...(v != null ? heat(v, allByCol[c.key], c.dir) : {}) }}>
+                    <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', ...(v != null && !lowSample ? heat(v, allByCol[c.key], c.dir) : {}) }}>
                       {display}
                     </td>
                   )

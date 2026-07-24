@@ -6,7 +6,7 @@ import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/co
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip, StatGrid } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
 import { ZoneScoreCard } from './ZoneScoreCard'
-import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, r3, d1, p1, i0 } from '@/lib/batterStatsEngine'
+import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, MIN_PITCHES_FOR_HEAT, r3, d1, p1, i0 } from '@/lib/batterStatsEngine'
 
 export type { BatterPitchRow }
 const computeStats = computeBatterStats
@@ -110,7 +110,13 @@ export function BatterMatchupExplorer({ rows, myName, todayOpponent }: { rows: B
     }
     return cmpNullsLast((a as any)[activeSort.col], (b as any)[activeSort.col], activeSort.dir)
   })
-  const allByCol = Object.fromEntries(TABLE_COLS.map(c => [c.key, byPitch.map(r => r[c.key])]))
+  // Same fix as MatchupPitchBreakdown.tsx: a pitch type seen only 1-2 times
+  // can produce an extreme, statistically meaningless rate stat (e.g. a
+  // 1.000 AVG off a single PA) that skews the whole column's min-max scale,
+  // crushing every well-supported real number toward the "bad" end
+  // regardless of whether it's actually good. Excluding thin-sample rows
+  // from the pool keeps the scale honest for everyone else.
+  const allByCol = Object.fromEntries(TABLE_COLS.map(c => [c.key, byPitch.filter(r => r.pitches >= MIN_PITCHES_FOR_HEAT).map(r => r[c.key])]))
   const selectedOpponent = opponentSel === 'all' ? null : opponents.find(o => o.id === opponentSel) ?? null
 
   return (
@@ -194,8 +200,9 @@ export function BatterMatchupExplorer({ rows, myName, todayOpponent }: { rows: B
                     <td style={{ padding: '6px 8px', fontWeight: 700 }}><PitchTypeCell pitchType={row.pitchType} /></td>
                     {TABLE_COLS.map(c => {
                       const v = row[c.key]
+                      const lowSample = row.pitches < MIN_PITCHES_FOR_HEAT
                       return (
-                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v as number | null, allByCol[c.key], c.dir)) }}>
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat || lowSample ? {} : heat(v as number | null, allByCol[c.key], c.dir)) }}>
                           {c.fmt(v)}
                         </td>
                       )

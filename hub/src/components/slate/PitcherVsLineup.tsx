@@ -6,7 +6,7 @@ import { heat, SortableTH, SortState, toggleSortState, cmpAny, cmpNullsLast } fr
 import { HandBadge, PlayerLink, StatGrid, cardStyle, sectionTitleStyle, windowTag, ToggleBtn } from '@/components/players/PlayerPageClient'
 import { ZoneGrid, ChaseZoneStats, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
 import { PitchList } from '@/components/players/PitchList'
-import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, type PitchLogRow } from '@/lib/batterStatsEngine'
+import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow } from '@/lib/batterStatsEngine'
 import type { LineupPlayer, ProbablePitcher, TeamPitcher } from '@/lib/mlbSchedule'
 
 // Exported so other real-pitch-log matchup UIs (Dugout's per-batter
@@ -132,7 +132,11 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
     if (activePitchSort.col === 'pitchType') return cmpAny(pitchLabel(a.pitchType), pitchLabel(b.pitchType), activePitchSort.dir)
     return cmpNullsLast((a as any)[activePitchSort.col], (b as any)[activePitchSort.col], activePitchSort.dir)
   })
-  const mixByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, mixRows.map(r => (r as any)[c.key])]))
+  // See MIN_PITCHES_FOR_HEAT's own comment (batterStatsEngine.ts) — a pitch
+  // type/batter seen only a handful of times can produce an extreme,
+  // statistically meaningless rate stat that skews the whole column's
+  // min-max scale for everyone else in the table.
+  const mixByCol = Object.fromEntries(PITCHER_STAT_COLS.map(c => [c.key, mixRows.filter(r => (r as any).pitches >= MIN_PITCHES_FOR_HEAT).map(r => (r as any)[c.key])]))
 
   function batterRowsForScope(batterId: number): PitchLogRow[] {
     const rows = batterRowsById[batterId] ?? []
@@ -158,7 +162,7 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
     if (activeSort.col === 'name') return cmpAny(a.player.name, b.player.name, activeSort.dir)
     return cmpNullsLast((a.stats as any)[activeSort.col], (b.stats as any)[activeSort.col], activeSort.dir)
   })
-  const allByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, batterRows.map(r => r.stats[c.key])]))
+  const allByCol = Object.fromEntries(BATTER_STAT_COLS.map(c => [c.key, batterRows.filter(r => (r.stats as any).pitches >= MIN_PITCHES_FOR_HEAT).map(r => r.stats[c.key])]))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -221,8 +225,9 @@ export function PitcherVsLineup({ pitcher, pitcherTeamAbbr, pitcherTeamId, oppos
                     </td>
                     {PITCHER_STAT_COLS.map(c => {
                       const v = (row as any)[c.key]
+                      const lowSample = (row as any).pitches < MIN_PITCHES_FOR_HEAT
                       return (
-                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat ? {} : heat(v as number | null, mixByCol[c.key], c.dir)) }}>
+                        <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat || lowSample ? {} : heat(v as number | null, mixByCol[c.key], c.dir)) }}>
                           {c.fmt(v)}
                         </td>
                       )
@@ -313,8 +318,9 @@ function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, filter
         </td>
         {BATTER_STAT_COLS.map(c => {
           const v = stats[c.key]
+          const lowSample = (stats as any).pitches < MIN_PITCHES_FOR_HEAT
           return (
-            <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat || !loaded ? {} : heat(v as number | null, allByCol[c.key], c.dir)) }}>
+            <td key={c.key} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-1)', ...(c.noHeat || !loaded || lowSample ? {} : heat(v as number | null, allByCol[c.key], c.dir)) }}>
               {loaded ? c.fmt(v) : '…'}
             </td>
           )

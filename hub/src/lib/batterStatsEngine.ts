@@ -115,6 +115,20 @@ export function computeStatLine(rows: PitchLogRow[]) {
 export const computeBatterStats = computeStatLine
 export type BatterStats = ReturnType<typeof computeStatLine>
 
+// Real incident (2026-07-24): every per-pitch-type heat-mapped table built
+// its color pool from every row regardless of how few pitches that row
+// actually saw. A pitch type thrown only 1-2 times can produce an extreme,
+// statistically meaningless rate stat (e.g. a 1.000 AVG off a single PA),
+// and that single outlier becomes the column's min-max endpoint — crushing
+// every well-supported real number (a genuine .300 AVG, say) toward the
+// "bad" end of the scale regardless of whether it's actually good.
+// Excluding thin-sample rows from the pool (and skipping heat on that row's
+// own cells, so its own noisy value doesn't render a falsely-saturated
+// color either) fixes both directions — shared here since every pitch-mix
+// table across the app (Dugout, Slate Breakdown, player pages) hit the
+// exact same bug using the exact same BATTER_STAT_COLS/PITCHER_STAT_COLS.
+export const MIN_PITCHES_FOR_HEAT = 10
+
 // noHeat: raw counts (Pitches/Usage%/PA, and H/1B/2B/3B/HR/BB/K right below
 // them) scale with how many pitches of that type were even thrown, not with
 // how well the batter/pitcher actually performed — a pitch type seen 3x more
