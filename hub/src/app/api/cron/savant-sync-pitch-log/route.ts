@@ -45,7 +45,30 @@ export async function GET(req: Request) {
     .limit(1)
   if (latestError) return NextResponse.json({ error: latestError.message }, { status: 500 })
 
-  const start = latest?.[0]?.game_date ? format(addDays(parseISO(latest[0].game_date), 1), 'yyyy-MM-dd') : seasonStartDate(season)
+  let start = latest?.[0]?.game_date ? format(addDays(parseISO(latest[0].game_date), 1), 'yyyy-MM-dd') : seasonStartDate(season)
+
+  // Confirmed live (2026-07-24): `games` gets written unconditionally, one
+  // upsert per date, BEFORE the (much heavier, separately-fetched) pitch
+  // CSV is even requested — so a date where Savant's own search index
+  // simply isn't ready yet for such a recent date (its normal lag; 07-23's
+  // CSV came back genuinely empty same-day, then had real rows the next
+  // day) still gets a `games` row and permanently advances this cursor
+  // past it, since the cursor only ever checked `games`. That date's pitch
+  // log then silently never gets retried by any future run — the exact gap
+  // that let 07-22 AND 07-23 both sit without real per-pitch data despite
+  // `games` looking complete. Re-checking the day immediately before
+  // `start` catches this: if every real game `games` has for that date
+  // isn't matched by at least one `player_pitch_log` row, roll `start`
+  // back to it so the loop below retries it instead of skipping forward.
+  const recheckDate = format(addDays(parseISO(start), -1), 'yyyy-MM-dd')
+  const [{ count: gameCount }, { data: loggedGamePks }] = await Promise.all([
+    admin.from('games').select('game_pk', { count: 'exact', head: true }).eq('season', season).eq('game_date', recheckDate),
+    admin.from(PITCH_LOG_TABLE).select('game_pk').eq('season', season).eq('game_date', recheckDate),
+  ])
+  const loggedCount = new Set((loggedGamePks ?? []).map(r => r.game_pk)).size
+  if ((gameCount ?? 0) > 0 && loggedCount < (gameCount ?? 0)) {
+    start = recheckDate
+  }
 
   const dates: string[] = []
   for (let d = start; d <= end && dates.length < MAX_DAYS_PER_RUN; d = format(addDays(parseISO(d), 1), 'yyyy-MM-dd')) {
