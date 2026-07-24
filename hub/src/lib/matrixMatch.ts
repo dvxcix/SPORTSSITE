@@ -37,11 +37,18 @@ export async function asyncPool<T, R>(concurrency: number, items: T[], fn: (item
 // small (≤10 Matrices, ≤40 Factors each per the app-level + DB-trigger cap),
 // safe to always fetch for a signed-in Ultimate caller regardless of
 // whether any Factor actually needs the heavier bulk data fetched below.
+// Filtering to enabled=true HERE (the single fetch point every caller
+// shares — pitchlogNeeded/pitchlogCustomNeeded/evaluateBatterMatrices all
+// only ever see this function's return value) means a disabled Matrix is
+// invisible everywhere at once: it won't match, and it won't trigger its
+// category's bulk data fetch either. No other call site needs to know
+// enabled/disabled exists.
 export async function fetchUserMatrices(admin: AdminClient, userId: string): Promise<Matrix[]> {
   const { data: matrices } = await admin
     .from('matrices')
     .select('id, name, color, priority, match_mode, match_any_count')
     .eq('user_id', userId)
+    .eq('enabled', true)
     .order('priority', { ascending: true })
   if (!matrices?.length) return []
 

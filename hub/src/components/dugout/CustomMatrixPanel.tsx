@@ -34,6 +34,7 @@ export type MatrixDef = {
   match_mode: 'all' | 'any'
   match_any_count: number | null
   element_code: string
+  enabled: boolean
   factors: MatrixFactor[]
 }
 
@@ -449,9 +450,10 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
   )
 }
 
-function MatrixCard({ matrix, onEdit, onDeleted }: { matrix: MatrixDef; onEdit: () => void; onDeleted: () => void }) {
+function MatrixCard({ matrix, onEdit, onDeleted, onToggled }: { matrix: MatrixDef; onEdit: () => void; onDeleted: () => void; onToggled: () => void }) {
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [toggling, setToggling] = useState(false)
 
   const copyCode = useCallback(() => {
     navigator.clipboard?.writeText(matrix.element_code).then(() => {
@@ -467,16 +469,40 @@ function MatrixCard({ matrix, onEdit, onDeleted }: { matrix: MatrixDef; onEdit: 
     onDeleted()
   }, [matrix, onDeleted])
 
+  // A cheap single-field PATCH — omitting `factors` from the body entirely
+  // skips the delete-and-reinsert Factor path (see /api/matrices/[id]),
+  // so toggling never touches matrix_factors.
+  const toggle = useCallback(async () => {
+    setToggling(true)
+    await api(`/api/matrices/${matrix.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !matrix.enabled }) })
+    setToggling(false)
+    onToggled()
+  }, [matrix, onToggled])
+
   return (
-    <div style={{ padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, opacity: deleting ? 0.5 : 1 }}>
+    <div style={{ padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, opacity: deleting ? 0.5 : matrix.enabled ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: matrix.color, flexShrink: 0 }} />
         <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matrix.name}</span>
+        <button
+          onClick={toggle} disabled={toggling} title={matrix.enabled ? 'On — showing on the board. Click to turn off.' : 'Off — saved but not shown. Click to turn on.'}
+          style={{
+            position: 'relative', width: 30, height: 17, borderRadius: 9, flexShrink: 0, cursor: toggling ? 'default' : 'pointer',
+            border: 'none', padding: 0, background: matrix.enabled ? 'var(--accent)' : 'var(--surface-3, var(--border))',
+            opacity: toggling ? 0.6 : 1, transition: 'background 0.15s',
+          }}
+        >
+          <span style={{
+            position: 'absolute', top: 2, left: matrix.enabled ? 15 : 2, width: 13, height: 13, borderRadius: '50%',
+            background: '#fff', transition: 'left 0.15s',
+          }} />
+        </button>
         <button onClick={onEdit} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Pencil size={13} /></button>
         <button onClick={del} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Trash2 size={13} /></button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
         {matrix.factors.length} Element{matrix.factors.length === 1 ? '' : 's'} · {matrix.match_mode === 'all' ? 'match all' : `match ${matrix.match_any_count ?? 1}+`}
+        {!matrix.enabled && <> · <span style={{ color: 'var(--text-3)' }}>off</span></>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
         <span style={{ fontSize: 10, fontFamily: "'SF Mono',monospace", color: 'var(--text-2)', background: 'var(--surface-2)', padding: '3px 7px', borderRadius: 5, letterSpacing: '0.03em' }}>
@@ -593,7 +619,11 @@ export function MatrixButton() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {matrices.map(m => (
-                    <MatrixCard key={m.id} matrix={m} onEdit={() => setEditing(m)} onDeleted={() => { refresh(); notifyMatricesChanged() }} />
+                    <MatrixCard
+                      key={m.id} matrix={m} onEdit={() => setEditing(m)}
+                      onDeleted={() => { refresh(); notifyMatricesChanged() }}
+                      onToggled={() => { refresh(); notifyMatricesChanged() }}
+                    />
                   ))}
                 </div>
               )}

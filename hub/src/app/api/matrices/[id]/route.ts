@@ -22,6 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (Number.isFinite(body?.priority)) updates.priority = Math.max(1, Math.round(body.priority))
   if (body?.match_mode === 'all' || body?.match_mode === 'any') updates.match_mode = body.match_mode
   if (Number.isFinite(body?.match_any_count)) updates.match_any_count = Math.max(1, Math.round(body.match_any_count))
+  if (typeof body?.enabled === 'boolean') updates.enabled = body.enabled
   updates.updated_at = new Date().toISOString()
 
   const { error: updateError } = await admin.from('matrices').update(updates).eq('id', id)

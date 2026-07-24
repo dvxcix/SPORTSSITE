@@ -57,7 +57,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data: matrices, error } = await admin
     .from('matrices')
-    .select('id, name, color, priority, match_mode, match_any_count, element_code, created_at, updated_at')
+    .select('id, name, color, priority, match_mode, match_any_count, element_code, enabled, created_at, updated_at')
     .eq('user_id', gate.userId!)
     .order('priority', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
