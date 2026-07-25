@@ -15,6 +15,7 @@ import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
+import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
 import type { PitchlogStatWindow, MatrixTiebreaker } from '@/lib/matrixEngine'
 import {
   computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
@@ -408,6 +409,21 @@ async function fetchSeasonAvgDirect(marketKey: string, date: string): Promise<an
   return Array.from(latest.values())
 }
 
+// Past-date read side of the FHR%/HR% season-avg fix (2026-07-25) — see
+// dugoutSeasonAvgPrecompute.ts's own header comment for the full incident.
+// Same return shape as fetchSeasonAvgDirect ({name_norm, bookmaker,
+// avg_price}[]) so the fhrAvgMap/saAvgMap reduction below needs zero
+// changes regardless of which path fed it.
+async function fetchSeasonAvgPrecomputed(admin: ReturnType<typeof createAdminClient> | null, marketKey: string, date: string): Promise<any[]> {
+  if (!admin) return []
+  const { data } = await admin
+    .from(DUGOUT_SEASON_AVG_TABLE)
+    .select('name_norm, bookmaker, avg_price')
+    .eq('game_date', date)
+    .eq('market_key', marketKey)
+  return data ?? []
+}
+
 const STAT_COLS = 'mlb_id,name_norm,pitch_hand,win,avg_bat_speed,hard_swing_rate,squared_up_per_swing,blast_per_swing,swing_length,attack_angle,ideal_attack_angle_rate,swing_tilt,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_pct,pull_air_rate,fb_rate,xhr,hr_total,avg_hr_distance'
 const TIME_COLS = 'mlb_id,name_norm,pitch_hand,pitch_type,win,miss_distance,on_time_percent,n_swings'
 
@@ -751,8 +767,12 @@ export async function GET(req: Request) {
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
     timed(reqId, 'pikkit', mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300)),
-    timed(reqId, 'fhrAvg', isUltimate ? fetchSeasonAvgDirect('batter_first_home_run', date) : Promise.resolve([])),
-    timed(reqId, 'saAvg', isUltimate ? fetchSeasonAvgDirect('batter_home_runs', date) : Promise.resolve([])),
+    timed(reqId, 'fhrAvg', isUltimate
+      ? (isPastDateET(date) ? fetchSeasonAvgPrecomputed(admin, 'batter_first_home_run', date) : fetchSeasonAvgDirect('batter_first_home_run', date))
+      : Promise.resolve([])),
+    timed(reqId, 'saAvg', isUltimate
+      ? (isPastDateET(date) ? fetchSeasonAvgPrecomputed(admin, 'batter_home_runs', date) : fetchSeasonAvgDirect('batter_home_runs', date))
+      : Promise.resolve([])),
     timed(reqId, 'openingSaRbi', isUltimate ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([])),
     timed(reqId, 'hrFeed', isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> })),
     timed(reqId, 'nearHr', isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([])),

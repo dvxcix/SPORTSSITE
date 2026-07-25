@@ -93,6 +93,10 @@
       "schedule": "30 10 * * *"
     },
     {
+      "path": "/api/cron/dugout-season-avg-precompute",
+      "schedule": "35 10 * * *"
+    },
+    {
       "path": "/api/cron/scrape-fanduel",
       "schedule": "0 14,16,18,20,22 * * *"
     },
