@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
@@ -1122,11 +1122,23 @@ function OddsCell({
 }
 
 // ─── batter row ───────────────────────────────────────────────────────────────
-function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: {
+function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle }: {
   row: BatterRow; pool: BatterRow[]; expanded: boolean; onToggle: () => void
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
   onShowHr?: () => void
   id?: string
+  // Highlighter — see the state block in GameTable for the full rationale.
+  // Deliberately does NOT touch every individual <td> in this ~350-line
+  // function (that'd be a huge, risky diff across ~60 stat columns) —
+  // instead a single click-capture handler on the <tr> below figures out
+  // WHICH cell was clicked via the browser's own `cellIndex`, and a layout
+  // effect walks the row's real DOM children to paint/clear backgrounds by
+  // that same index. Additive and reversible: with highlightMode off (the
+  // default), neither the handler nor the effect touch anything, so every
+  // existing click/heat-map behavior in this file is completely unaffected.
+  highlightMode?: boolean
+  cellHighlights?: Record<number, string>
+  onCellToggle?: (cellIndex: number) => void
 }) {
   // Sticky column's hover treatment is computed here in JS rather than via
   // the table's generic `tr:hover > td` CSS rule — that rule needed an
@@ -1140,6 +1152,32 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   // class of issue — it's driven by actual mouseenter/mouseleave on this
   // row's own node, not a CSS pseudo-class that has to survive reordering.
   const [hovered, setHovered] = useState(false)
+  const trRef = useRef<HTMLTableRowElement>(null)
+  // Repaints this row's cells straight against the DOM by index, bypassing
+  // React's own re-render for these specific properties — the only way to
+  // overlay arbitrary per-cell color without threading a prop through every
+  // one of the ~60 <td>s below. No dependency array: re-runs after EVERY
+  // commit of this row (cheap — a ~60-cell walk), which matters because a
+  // live data refresh recomputes plenty of cells' own heat-map background
+  // (see heat()/oddsHeat() below) — if this only ran when cellHighlights
+  // itself changed, a refresh would silently paint back OVER a highlight
+  // with that cell's fresh heat color. Skips the sticky player-name column
+  // entirely — it has its own hard opacity requirement (see the position:
+  // sticky comment on that cell) that this must never fight with.
+  useLayoutEffect(() => {
+    const tr = trRef.current
+    if (!tr) return
+    for (const el of Array.from(tr.children)) {
+      const td = el as HTMLElement
+      if (td.classList.contains('dg-sticky-col')) continue
+      const idx = (td as HTMLTableCellElement).cellIndex
+      const color = cellHighlights?.[idx]
+      if (color) td.style.backgroundColor = blendOnBg(color, 0.35)
+      else td.style.removeProperty('background-color')
+      if (highlightMode) td.style.cursor = 'crosshair'
+      else td.style.removeProperty('cursor')
+    }
+  })
   const g = (f: keyof BatterRow) => pool.map(r => r[f] as number | null)
   // FHR%'s shade is meaningful across the WHOLE game (all ~18 batters, both
   // teams — BDL's FanDuel FHR average is one shared per-game market), but
@@ -1192,8 +1230,17 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id }: 
   return (
     <tr
       id={id}
+      ref={trRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClickCapture={e => {
+        if (!highlightMode) return
+        const td = (e.target as HTMLElement).closest('td')
+        if (!td || td.classList.contains('dg-sticky-col')) return
+        e.preventDefault()
+        e.stopPropagation()
+        onCellToggle?.((td as HTMLTableCellElement).cellIndex)
+      }}
       style={topMatrix ? { background: blendOnBg(topMatrix.color, 0.09) } : undefined}
     >
       {/* sticky player cell — narrower on mobile (140px vs 190px) so more of
@@ -1936,6 +1983,12 @@ function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' |
   )
 }
 
+// Highlighter's own small fixed palette — same swatch-picker convention
+// Custom Matrix's color picker uses, trimmed to the 5 most visually
+// distinct ones so no two options read as "basically the same color" from
+// across a monitor at a glance.
+const HL_SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7']
+
 function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
@@ -1960,6 +2013,41 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   // doesn't throw away the chain you built.
   const [stickyMode, setStickyMode] = useState(false)
   const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>([])
+
+  // Highlighter — a totally separate, member-driven paint tool (own click
+  // mode, own color, own persistence) from the Matrix highlight tint above:
+  // that one is computed server-side off a saved Matrix; this one is purely
+  // "whatever the member clicked, in whatever color they picked," with zero
+  // server involvement. Scoped to THIS game only (keyed by gameKey) and
+  // remembered in localStorage so a refresh — or coming back to this same
+  // game later — doesn't lose it; a different game starts with a clean
+  // slate since GameTable itself remounts per game (key={active.gameKey}
+  // at the call site), so reading localStorage once in the initializer is
+  // enough — no separate reload-on-gameKey-change effect needed.
+  const hlStorageKey = `dugout-highlights:${game.gameKey}`
+  const [highlightMode, setHighlightMode] = useState(false)
+  const [activeHlColor, setActiveHlColor] = useState(HL_SWATCHES[0])
+  const [cellHighlights, setCellHighlights] = useState<Record<string, Record<number, string>>>(() => {
+    if (typeof window === 'undefined') return {}
+    try {
+      const raw = window.localStorage.getItem(hlStorageKey)
+      return raw ? JSON.parse(raw) : {}
+    } catch { return {} }
+  })
+  useEffect(() => {
+    try { window.localStorage.setItem(hlStorageKey, JSON.stringify(cellHighlights)) } catch { /* private-browsing quota, etc. — highlights just won't survive a refresh */ }
+  }, [cellHighlights, hlStorageKey])
+  const toggleCellHighlight = (rowKey: string, cellIndex: number) => {
+    setCellHighlights(prev => {
+      const rowMap = { ...(prev[rowKey] ?? {}) }
+      if (rowMap[cellIndex] != null) delete rowMap[cellIndex]
+      else rowMap[cellIndex] = activeHlColor
+      const next = { ...prev, [rowKey]: rowMap }
+      if (!Object.keys(rowMap).length) delete next[rowKey]
+      return next
+    })
+  }
+  const highlightCount = Object.values(cellHighlights).reduce((n, m) => n + Object.keys(m).length, 0)
   const highlightKey = highlightMlbId != null
     ? (game.homeLineup?.some((p: any) => p.mlb_id === highlightMlbId) ? `h-${highlightMlbId}` : `a-${highlightMlbId}`)
     : null
@@ -2204,6 +2292,54 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                       </button>
                     </Tooltip>
                   )}
+                  <div style={{ position: 'relative' }}>
+                    <Tooltip content={highlightMode
+                      ? 'Highlighter is ON — click any cell to paint it with the selected color, click a painted cell again to clear it.'
+                      : 'Turn on to freely highlight any cell in your own color — sticks around (even across a refresh) until you toggle it off or clear it, just for this game.'}
+                    >
+                      <button
+                        onClick={() => setHighlightMode(v => !v)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                          border: `1px solid ${highlightMode ? activeHlColor : 'var(--border)'}`,
+                          background: highlightMode ? `${activeHlColor}22` : 'var(--surface)',
+                          color: highlightMode ? activeHlColor : 'var(--text-2)',
+                        }}
+                      >
+                        🖍️ Highlighter{highlightCount > 0 ? ` (${highlightCount})` : ''}
+                      </button>
+                    </Tooltip>
+                    {highlightMode && (
+                      <div
+                        style={{
+                          position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 20,
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 8,
+                          border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        }}
+                      >
+                        {HL_SWATCHES.map(c => (
+                          <button
+                            key={c} title={c} onClick={() => setActiveHlColor(c)}
+                            style={{
+                              width: 18, height: 18, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer',
+                              border: activeHlColor === c ? '2px solid var(--text-1)' : '2px solid transparent',
+                            }}
+                          />
+                        ))}
+                        {highlightCount > 0 && (
+                          <Tooltip content="Clear every highlight in this game">
+                            <button
+                              onClick={() => setCellHighlights({})}
+                              style={{ marginLeft: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', background: 'none', color: 'var(--text-3)' }}
+                            >
+                              ✕ Clear
+                            </button>
+                          </Tooltip>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </td>
@@ -2217,7 +2353,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
             const key = `h-${row.mlb_id ?? row.name}`
             return (
               <React.Fragment key={key}>
-                <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
+                <BatterRowEl
+                  row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
+                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
+                  highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={idx => toggleCellHighlight(key, idx)}
+                />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} /></tr>
                 )}
@@ -2257,7 +2397,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
             const key = `a-${row.mlb_id ?? row.name}`
             return (
               <React.Fragment key={key}>
-                <BatterRowEl row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)} gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined} />
+                <BatterRowEl
+                  row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
+                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
+                  highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={idx => toggleCellHighlight(key, idx)}
+                />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} /></tr>
                 )}
