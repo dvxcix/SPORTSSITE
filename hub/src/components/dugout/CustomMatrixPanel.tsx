@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useDraggableFab } from '@/lib/useDraggableFab'
+import { BookLogo } from '@/components/BookLogo'
 import { PipelineBuilder, type MatrixPipelineStep } from './PipelineBuilder'
 import { PipelineSummary } from './PipelineSummary'
 
@@ -104,8 +105,12 @@ const STAT_FIELDS: { key: string; label: string }[] = [
   { key: 'bspd', label: 'Avg Bat Speed' }, { key: 'atk', label: 'Avg Attack Angle' },
   { key: 'swlen', label: 'Avg Swing Length' }, { key: 'tilt', label: 'Avg Swing Tilt' }, { key: 'attackdir', label: 'Avg Attack Direction' },
 ]
+// Labels deliberately echo the board's own header glyphs where one exists
+// (💥/R 💥 for Blast %, DugoutClient.tsx's Statcast column group) so a
+// member scanning this dropdown for "the blast columns" recognizes the
+// match instead of having to already know it's filed under "Bat Tracking."
 const SAVANT_FIELDS: { key: string; label: string }[] = [
-  { key: 'hardsw', label: 'Hard-Swing %' }, { key: 'sq', label: 'Squared-Up %' }, { key: 'blast', label: 'Blast %' },
+  { key: 'hardsw', label: 'Hard-Swing %' }, { key: 'sq', label: 'Squared-Up %' }, { key: 'blast', label: '💥 Blast %' },
   { key: 'idlaa', label: 'Ideal Attack-Angle %' }, { key: 'pullair', label: 'Pull Air Rate' }, { key: 'fb', label: 'Fly-Ball Rate' },
   { key: 'timing', label: 'Timing %' }, { key: 'miss', label: 'Miss Distance' },
 ]
@@ -154,6 +159,20 @@ export const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = {
 export const RECENCY_LABEL: Record<string, string> = {
   game: 'Last Game', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10', season: 'Season', custom: 'Custom Range',
   game_delta: 'Last Game (Δ vs. Season)', l3_delta: 'Last 3 (Δ vs. Season)', l5_delta: 'Last 5 (Δ vs. Season)', l10_delta: 'Last 10 (Δ vs. Season)',
+}
+// savant_stat's 'game' recency resolves to the exact same window the
+// board's own StatcastWindowToggle calls "Last 1" (l1) — see
+// RECENCY_TO_SAVANT_WINDOW in matrixEngine.ts — but shares RECENCY_LABEL's
+// generic 'Last Game' wording with pitchlog_stat, where 'game' really does
+// mean a real most-recently-played game, a subtly different concept.
+// Reported live: a member looking for the board's "Last 1/3/5/10" toggle
+// didn't recognize "Last Game" as the same option. l3/l5/l10 already read
+// identically to the board ('Last 3'/'Last 5'/'Last 10'); only 'game'
+// needed a category-specific override.
+export function recencyLabel(category: MatrixFactor['category'], r: string): string {
+  if (category === 'savant_stat' && r === 'game') return 'Last 1'
+  if (category === 'savant_stat' && r === 'game_delta') return 'Last 1 (Δ vs. Season)'
+  return RECENCY_LABEL[r] ?? r
 }
 export const OPERATOR_LABEL: Record<string, string> = {
   gte: 'At least', lte: 'At most', eq: 'Exactly',
@@ -335,7 +354,7 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
               on "diverging from season norm" instead of only an absolute
               level. Also precomputed, no live fetch. */}
           {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
-            <option key={r} value={r}>{RECENCY_LABEL[r]}</option>
+            <option key={r} value={r}>{recencyLabel(factor.category, r)}</option>
           ))}
         </select>
       )}
@@ -356,18 +375,19 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
             const on = selected.includes(b.key)
             return (
               <button
-                key={b.key}
+                key={b.key} title={b.label}
                 onClick={() => {
                   const next = on ? selected.filter(k => k !== b.key) : [...selected, b.key]
                   onChange({ ...factor, books: next.length ? next : ['fanduel'] })
                 }}
                 style={{
-                  fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, cursor: 'pointer',
-                  color: on ? 'var(--accent-fg)' : 'var(--text-3)', background: on ? 'var(--accent)' : 'var(--surface-3)',
-                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
+                  padding: 0, borderRadius: 6, cursor: 'pointer',
+                  background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
                 }}
               >
-                {b.label}
+                <BookLogo vendor={b.key} size={14} />
               </button>
             )
           })}
@@ -464,19 +484,30 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
           style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
         >
           {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
-            <option key={r} value={r}>{RECENCY_LABEL[r]}</option>
+            <option key={r} value={r}>{recencyLabel(tb.category, r)}</option>
           ))}
         </select>
       )}
 
       {multiBook && (
-        <select
-          className="ss-input" value={tb.book ?? 'fanduel'}
-          onChange={e => onChange({ ...tb, book: e.target.value })}
-          style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
-        >
-          {multiBook.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 3 }}>
+          {multiBook.map(b => {
+            const on = (tb.book ?? 'fanduel') === b.key
+            return (
+              <button
+                key={b.key} title={b.label} onClick={() => onChange({ ...tb, book: b.key })}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22,
+                  padding: 0, borderRadius: 5, cursor: 'pointer',
+                  background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
+                }}
+              >
+                <BookLogo vendor={b.key} size={12} />
+              </button>
+            )
+          })}
+        </div>
       )}
 
       <select

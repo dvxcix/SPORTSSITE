@@ -2,8 +2,9 @@
 import React, { useState } from 'react'
 import { Reorder } from 'motion/react'
 import { GripVertical, X, Plus } from 'lucide-react'
+import { BookLogo } from '@/components/BookLogo'
 import {
-  type MatrixFactor, ALL_CATEGORIES, CATEGORY_LABEL, RECENCY_LABEL, MULTI_BOOK_FIELDS,
+  type MatrixFactor, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, MULTI_BOOK_FIELDS,
   fieldsForCategory, isBooksFieldKey,
 } from './CustomMatrixPanel'
 
@@ -174,19 +175,30 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
             {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
-              <option key={r} value={r}>{RECENCY_LABEL[r]}</option>
+              <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
             ))}
           </select>
         )}
 
         {singleBookField && (
-          <select
-            className="ss-input" value={step.book ?? 'fanduel'}
-            onChange={e => onChange({ ...step, book: e.target.value })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
-          >
-            {singleBookField.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
-          </select>
+          <div style={{ display: 'flex', gap: 3 }}>
+            {singleBookField.map(b => {
+              const on = (step.book ?? 'fanduel') === b.key
+              return (
+                <button
+                  key={b.key} title={b.label} onClick={() => onChange({ ...step, book: b.key })}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
+                    padding: 0, borderRadius: 6, cursor: 'pointer',
+                    background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
+                  }}
+                >
+                  <BookLogo vendor={b.key} size={14} />
+                </button>
+              )
+            })}
+          </div>
         )}
 
         {step.kind === 'rank' && (
@@ -209,18 +221,19 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
             const on = selected.includes(b.key)
             return (
               <button
-                key={b.key}
+                key={b.key} title={b.label}
                 onClick={() => {
                   const next = on ? selected.filter(k => k !== b.key) : [...selected, b.key]
                   onChange({ ...step, books: next.length ? next : ['fanduel'] })
                 }}
                 style={{
-                  fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, cursor: 'pointer',
-                  color: on ? 'var(--accent-fg)' : 'var(--text-3)', background: on ? 'var(--accent)' : 'var(--surface-3)',
-                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
+                  padding: 0, borderRadius: 6, cursor: 'pointer',
+                  background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
                 }}
               >
-                {b.label}
+                <BookLogo vendor={b.key} size={14} />
               </button>
             )
           })}
