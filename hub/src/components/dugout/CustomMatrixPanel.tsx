@@ -167,9 +167,27 @@ const PICKS_FIELDS: { key: string; label: string }[] = [
 export const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = {
   odds: 'Odds', dugout_specs: 'Dugout Specs', pitchlog_stat: 'Stat Line', savant_stat: 'Bat Tracking', picks: 'Picks',
 }
+// Real gap, reported live (2026-07-25): every one of these windows —
+// including 'season' — is filtered to ONE opposing-pitcher hand before the
+// window is even sliced (see matrixEngine.ts's sliceRecencyWindow: "vsHand
+// = allRows.filter(r => r.p_throws === pitcherHand ...)" runs FIRST, then
+// game/l3/l5/l10/season all operate on that already-narrowed pool). Which
+// hand depends entirely on whoever that player's real opponent is in each
+// game a saved Factor gets evaluated against — a batter who simply hasn't
+// faced many righties lately can show "0 HR" on a bare "Last 10" Factor
+// while his real last-10-games total (both hands combined) is nowhere near
+// zero. Confirmed live against a real player (Jackson Merrill: last-10
+// vs-RHP window showed 0 HR/7 AB while his actual last 10 games, both
+// hands, had 4 HR) — the number itself wasn't wrong, but "Last 10" with no
+// disclosure of the hand-scoping is actively misleading. Every label below
+// now says so; there's no way to show a fixed hand here (unlike a live
+// per-game display where tonight's opponent is a known fact) since a
+// saved Factor runs against a different, changing opponent every night.
 export const RECENCY_LABEL: Record<string, string> = {
-  game: 'Last Game', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10', season: 'Season', custom: 'Custom Range',
-  game_delta: 'Last Game (Δ vs. Season)', l3_delta: 'Last 3 (Δ vs. Season)', l5_delta: 'Last 5 (Δ vs. Season)', l10_delta: 'Last 10 (Δ vs. Season)',
+  game: 'Last Game (vs. matching hand)', l3: 'Last 3 (vs. matching hand)', l5: 'Last 5 (vs. matching hand)',
+  l10: 'Last 10 (vs. matching hand)', season: 'Season (vs. matching hand)', custom: 'Custom Range',
+  game_delta: 'Last Game (Δ vs. Season, matching hand)', l3_delta: 'Last 3 (Δ vs. Season, matching hand)',
+  l5_delta: 'Last 5 (Δ vs. Season, matching hand)', l10_delta: 'Last 10 (Δ vs. Season, matching hand)',
 }
 // savant_stat's 'game' recency resolves to the exact same window the
 // board's own StatcastWindowToggle calls "Last 1" (l1) — see
@@ -181,8 +199,8 @@ export const RECENCY_LABEL: Record<string, string> = {
 // identically to the board ('Last 3'/'Last 5'/'Last 10'); only 'game'
 // needed a category-specific override.
 export function recencyLabel(category: MatrixFactor['category'], r: string): string {
-  if (category === 'savant_stat' && r === 'game') return 'Last 1'
-  if (category === 'savant_stat' && r === 'game_delta') return 'Last 1 (Δ vs. Season)'
+  if (category === 'savant_stat' && r === 'game') return 'Last 1 (vs. matching hand)'
+  if (category === 'savant_stat' && r === 'game_delta') return 'Last 1 (Δ vs. Season, matching hand)'
   return RECENCY_LABEL[r] ?? r
 }
 // The only two fields the Dugout board itself actually renders a Δ (recent
@@ -390,6 +408,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
         <select
           className="ss-input" value={factor.recency ?? 'season'}
           onChange={e => onChange({ ...factor, recency: e.target.value as MatrixFactor['recency'] })}
+          title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
           style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
         >
           {/* 'custom' (an arbitrary exact date range) removed for pitchlog_stat
@@ -550,6 +569,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
         <select
           className="ss-input" value={tb.recency ?? 'season'}
           onChange={e => onChange({ ...tb, recency: e.target.value as MatrixTiebreaker['recency'] })}
+          title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
           style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
         >
           {/* Same Bat Speed / Squared-Up% exception as FactorRow's own

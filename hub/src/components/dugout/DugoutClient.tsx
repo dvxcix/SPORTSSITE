@@ -940,8 +940,8 @@ function PlayerDrillDown({
               <StatTile label="FB%" value={row.s_fb != null ? `${(row.s_fb * 100).toFixed(1)}%` : '—'} title="Flyball rate" heatStyle={heat(row.s_fb, g('s_fb'), 'hi')} />
               <StatTile label="EV" value={f1(row.s_ev)} title="Exit velocity" heatStyle={heat(row.s_ev, g('s_ev'), 'hi')} />
               <StatTile label="LA" value={f1(row.s_la)} title="Launch angle" />
-              <StatTile label="XHR" value={f1(row.s_xhr)} title="Expected HR (season)" heatStyle={heat(row.s_xhr, g('s_xhr'), 'hi')} />
-              <StatTile label="HR" value={row.s_hr != null ? String(Math.round(row.s_hr)) : '—'} title="Season HR total" heatStyle={heat(row.s_hr, g('s_hr'), 'hi')} />
+              <StatTile label="XHR" value={f1(row.s_xhr)} title="Expected HR — season, vs. tonight's opposing pitcher hand only, not every game he's played" heatStyle={heat(row.s_xhr, g('s_xhr'), 'hi')} />
+              <StatTile label="HR" value={row.s_hr != null ? String(Math.round(row.s_hr)) : '—'} title="HR — season, vs. tonight's opposing pitcher hand only, not every game he's played" heatStyle={heat(row.s_hr, g('s_hr'), 'hi')} />
             </div>
             {row.mlb_id != null && <RecentFormSplits batterId={row.mlb_id} pitcherHand={pitcherHand} />}
             {/* Ballpark conditions — same park-shape/wind visual as Weather
@@ -2151,7 +2151,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('FB%', 'Flyball rate', 34, 's_fb')}
       {H('EV', 'Exit velocity', 34, 's_ev')}
       {H('LA', 'Launch angle', 32, 's_la')}
-      {H('HR', 'Season HR total', 30, 's_hr')}
+      {H('HR', 'HR — season, vs. tonight\'s opposing pitcher hand only, not every game he\'s played', 30, 's_hr')}
     </>
   )
 

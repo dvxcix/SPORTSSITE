@@ -231,6 +231,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           <select
             className="ss-input" value={step.recency ?? 'season'}
             onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
+            title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
             {/* '_delta' options only for Bat Speed/Squared-Up% — see
@@ -408,6 +409,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
           <select
             className="ss-input" value={step.recency ?? 'season'}
             onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
+            title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
             {recencyOptionsFor(step.category, step.field_key).map(r => (
