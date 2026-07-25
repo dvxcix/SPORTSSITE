@@ -145,24 +145,40 @@ function mapPitchLogRow(r: any) {
 // ~280 batters at real concurrency, that's the same total work this always
 // needed, just shaped as N fast independent lookups instead of one query
 // whose own OFFSET cost grows the deeper it pages. A generous per-batter
-// range (5000) guards against PostgREST's own default response-row cap
-// silently truncating a real player's season — no real hitter approaches
-// that pitch count.
+// Real bug, confirmed live (2026-07-25): a single `.range(0, 4999)` call
+// does NOT get you up to 5000 rows — PostgREST enforces its own server-side
+// max-rows-per-response cap (1000 here) regardless of the range requested,
+// silently truncating anything past that with no error. `MAX_PITCHES_PER_
+// BATTER` used to be (wrongly) treated as "big enough that one request
+// covers a whole season" — it never did; every batter's fetch was already
+// capped at exactly 1000 pitches. A full-time player crosses 1000 pitches
+// well before the season ends (confirmed: a real batter sat at 1696 by
+// late July), so this silently truncated the LATTER part of the season for
+// every one of them — computeAllPitchlogStatWindows' 'season' bucket (and
+// therefore every recency window built from it, since they all start from
+// the same hand-filtered pool) undercounted HR/AB/games for any real
+// everyday player, not just an edge case. Same incident class already hit
+// (and fixed) in matrixBacktest.ts/fetchBulkSavantSplits — paginate for
+// real instead of trusting one big range.
 export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: number[]): Promise<Record<number, any[]>> {
   const byBatter: Record<number, any[]> = {}
   if (!batterIds.length) return byBatter
   const CONCURRENCY = 15
+  const PAGE = 1000
   const MAX_PITCHES_PER_BATTER = 5000
 
   await asyncPool(CONCURRENCY, batterIds, async id => {
-    const { data, error } = await admin
-      .from('player_pitch_log')
-      .select(BULK_PITCHLOG_SELECT)
-      .eq('batter_id', id)
-      .range(0, MAX_PITCHES_PER_BATTER - 1)
-    if (error) throw error
-    for (const r of (data ?? []) as any[]) {
-      (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
+    for (let offset = 0; offset < MAX_PITCHES_PER_BATTER; offset += PAGE) {
+      const { data, error } = await admin
+        .from('player_pitch_log')
+        .select(BULK_PITCHLOG_SELECT)
+        .eq('batter_id', id)
+        .range(offset, offset + PAGE - 1)
+      if (error) throw error
+      for (const r of (data ?? []) as any[]) {
+        (byBatter[r.batter_id] ??= []).push(mapPitchLogRow(r))
+      }
+      if (!data || data.length < PAGE) break
     }
   })
   return byBatter
