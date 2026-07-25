@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeDugoutStatcastForDate } from '@/lib/dugoutStatcastPrecompute'
-import { addDaysToDateStr } from '@/lib/balldontlie'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -39,17 +38,30 @@ export async function GET(req: Request) {
   // An explicit ?date= (manual/admin trigger) still means exactly that one
   // date — the trailing-window reprocessing is only for the cron's own
   // unparameterized daily run.
-  // Also precomputes tomorrow's slate — probable pitchers/projected lineups
-  // are already postable the evening before a game, so the board shouldn't
-  // sit blank overnight just because this only ever looked backward.
-  const dates = explicitDate ? [explicitDate] : [
-    ...Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
-      const d = new Date(`${todayEt}T00:00:00Z`)
-      d.setUTCDate(d.getUTCDate() - i)
-      return d.toISOString().slice(0, 10)
-    }),
-    addDaysToDateStr(todayEt, 1),
-  ]
+  //
+  // Real incident (2026-07-25): this briefly also precomputed tomorrow's
+  // slate (day-ahead prefetching), matching dugout-pitchlog-stat-precompute
+  // and dugout-matchup-edge-precompute. Confirmed live via Vercel's runtime
+  // errors: `precomputeDugoutStatcastForDate` alone takes ~87s for a full
+  // slate (measured directly, zero contention) — 3 dates already left only
+  // ~39s of headroom under this route's 300s maxDuration, and adding a 4th
+  // (tomorrow) pushed the sequential total to ~348s, over budget. Under
+  // real contention (this cron fires right after a burst of savant-sync-*
+  // crons), that manifested as TODAY's own date — first in the array —
+  // hitting a genuine Postgres `57014 canceling statement due to statement
+  // timeout`, silently leaving the live board's Statcast section blank for
+  // the whole day. `dugout-pitchlog-stat-precompute`/`dugout-matchup-edge-
+  // precompute` are structurally identical but empirically proven safe at 4
+  // dates (their tables show complete data for today/tomorrow), so only
+  // this route — the one with a documented prior incident — reverts to its
+  // original 3-date trailing window. The admin backfill route
+  // (/api/admin/dugout-statcast-backfill) remains the escape hatch for any
+  // one-off miss.
+  const dates = explicitDate ? [explicitDate] : Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
+    const d = new Date(`${todayEt}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() - i)
+    return d.toISOString().slice(0, 10)
+  })
 
   const results: Record<string, unknown> = {}
   for (const date of dates) {
