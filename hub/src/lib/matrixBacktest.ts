@@ -342,11 +342,17 @@ function evaluateFactorForPlayer(
 export function evaluateMatrixForGame(matrix: Matrix, gb: GameBundles): Set<string> {
   if (matrix.matrix_type === 'pipeline') {
     const scope = matrix.pipeline_scope === 'game' ? 'game' : 'team'
-    const pools = scope === 'game' ? [new Map([...gb.homeBundle, ...gb.awayBundle])] : [gb.homeBundle, gb.awayBundle]
+    const allBundle = new Map([...gb.homeBundle, ...gb.awayBundle])
+    const pools = scope === 'game' ? [allBundle] : [gb.homeBundle, gb.awayBundle]
     const combined = new Set<string>()
     for (const pool of pools) {
       let poolNames = new Set(pool.keys())
-      for (const step of matrix.pipeline_steps) poolNames = runPipelineStep(poolNames, step, pool, gb.gameTotalPicksByMarket)
+      // Same reasoning as dugout/data/route.ts's mirror of this block: an
+      // 'unless' step's condition_scope='team' means "the same team this
+      // pool already is" — `pool` itself, exactly — and falls back to the
+      // whole game when the outer pipeline is already game-scoped.
+      const scopeBundles = { team: pool, game: allBundle }
+      for (const step of matrix.pipeline_steps) poolNames = runPipelineStep(poolNames, step, pool, gb.gameTotalPicksByMarket, scopeBundles)
       for (const n of poolNames) combined.add(n)
     }
     return combined
@@ -369,11 +375,13 @@ export function evaluateMatrixForGame(matrix: Matrix, gb: GameBundles): Set<stri
 function findExclusionStep(matrix: Matrix, gb: GameBundles, name: string): number | null {
   if (matrix.matrix_type !== 'pipeline') return null
   const scope = matrix.pipeline_scope === 'game' ? 'game' : 'team'
-  const pool = scope === 'game' ? new Map([...gb.homeBundle, ...gb.awayBundle]) : (gb.homeBundle.has(name) ? gb.homeBundle : gb.awayBundle)
+  const allBundle = new Map([...gb.homeBundle, ...gb.awayBundle])
+  const pool = scope === 'game' ? allBundle : (gb.homeBundle.has(name) ? gb.homeBundle : gb.awayBundle)
   if (!pool.has(name)) return null
   let poolNames = new Set(pool.keys())
+  const scopeBundles = { team: pool, game: allBundle }
   for (let i = 0; i < matrix.pipeline_steps.length; i++) {
-    poolNames = runPipelineStep(poolNames, matrix.pipeline_steps[i], pool, gb.gameTotalPicksByMarket)
+    poolNames = runPipelineStep(poolNames, matrix.pipeline_steps[i], pool, gb.gameTotalPicksByMarket, scopeBundles)
     if (!poolNames.has(name)) return i + 1 // 1-indexed step position
   }
   return null // survived every step — must have lost a tie/rank to someone else, or is a genuine flagged winner already

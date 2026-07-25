@@ -8,8 +8,8 @@ const MAX_FACTORS_PER_MATRIX = 40
 const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks']
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
 const MAX_TIEBREAKERS = 5
-const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank']
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null']
+const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank', 'unless']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor']
 const MAX_PIPELINE_STEPS = 10
 
 function cleanTiebreakers(raw: unknown) {
@@ -35,17 +35,25 @@ function cleanTiebreakers(raw: unknown) {
 // MatrixPipelineStep. matrix_type itself is never editable here (a Matrix
 // is created as Classic or Pipeline and stays that way — see
 // api/matrices/route.ts POST), only pipeline_scope + the step list.
-function cleanPipelineSteps(raw: unknown) {
+type CleanPipelineStep = {
+  kind: string; category: string; field_key: string; recency: string | null; book: string | null
+  books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
+  direction: 'highest' | 'lowest' | null; tolerance: number | null
+  condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
+}
+// `allowUnless` caps nesting at one level — same rationale as
+// api/matrices/route.ts's own validatePipelineSteps (kept as two separate
+// small validators rather than a shared import, matching this file's
+// existing precedent of a self-contained "clean" pass distinct from the
+// POST route's "validate" pass).
+function cleanPipelineSteps(raw: unknown, allowUnless = true): CleanPipelineStep[] {
   if (!Array.isArray(raw)) return []
-  const clean: {
-    kind: string; category: string; field_key: string; recency: string | null; book: string | null
-    books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
-    direction: 'highest' | 'lowest' | null; tolerance: number | null
-  }[] = []
+  const clean: CleanPipelineStep[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
+    if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
     clean.push({
@@ -58,6 +66,9 @@ function cleanPipelineSteps(raw: unknown) {
       value: typeof value === 'number' ? value : null,
       direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
+      condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
+      condition_steps: kind === 'unless' ? cleanPipelineSteps(condition_steps, false) : null,
+      then_steps: kind === 'unless' ? cleanPipelineSteps(then_steps, false) : null,
     })
   }
   return clean

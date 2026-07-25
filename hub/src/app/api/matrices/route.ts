@@ -36,11 +36,11 @@ type TiebreakerInput = {
 }
 
 // Pipeline mode — see matrixEngine.ts's MatrixPipelineStep for the full
-// step-kind rationale (filter/group/rank). A Matrix is one mode or the
-// other (matrix_type); pipeline_steps is only ever populated/read when
+// step-kind rationale (filter/group/rank/unless). A Matrix is one mode or
+// the other (matrix_type); pipeline_steps is only ever populated/read when
 // matrix_type === 'pipeline'.
 type PipelineStepInput = {
-  kind: 'filter' | 'group' | 'rank'
+  kind: 'filter' | 'group' | 'rank' | 'unless'
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
   recency: string | null
@@ -54,6 +54,13 @@ type PipelineStepInput = {
   // candidates within that raw distance of the best value. See
   // matrixEngine.ts's MatrixTiebreaker.tolerance.
   tolerance: number | null
+  // unless only — see matrixEngine.ts's MatrixPipelineStep for the full
+  // branching rationale. condition_steps/then_steps are themselves
+  // PipelineStepInput[] (recursive), capped at one level deep — a nested
+  // step's own kind is never 'unless' (validatePipelineSteps enforces this).
+  condition_scope: 'team' | 'game' | null
+  condition_steps: PipelineStepInput[] | null
+  then_steps: PipelineStepInput[] | null
 }
 
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
@@ -62,19 +69,27 @@ const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_
 // the time 5 fields haven't disambiguated a tie, the rule is "keep them
 // all" anyway (see resolveTiebreakers in matrixEngine.ts).
 const MAX_TIEBREAKERS = 5
-const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank']
+const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank', 'unless']
 // 'tied' deliberately excluded — a filter step's threshold operator is
-// never "tied," that's what a group step is for.
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null']
+// never "tied," that's what a group step is for. lt_anchor/gt_anchor are
+// only meaningful on a filter step inside an 'unless' step's
+// condition_steps, but harmless (evaluates to false) anywhere else — see
+// matrixEngine.ts's evaluateFilterStep.
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor']
 const MAX_PIPELINE_STEPS = 10
 
-function validatePipelineSteps(raw: unknown): PipelineStepInput[] {
+// `allowUnless` caps nesting at one level — condition_steps/then_steps are
+// validated with allowUnless=false, so a nested step whose own kind is
+// 'unless' is silently dropped rather than erroring the whole save (same
+// lenient-drop precedent every other malformed-item case here already uses).
+function validatePipelineSteps(raw: unknown, allowUnless = true): PipelineStepInput[] {
   if (!Array.isArray(raw)) return []
   const clean: PipelineStepInput[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
+    if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
     const cleanBooks = Array.isArray(books) ? books.filter((b): b is string => typeof b === 'string' && VALID_BOOKS.includes(b)) : null
@@ -90,6 +105,9 @@ function validatePipelineSteps(raw: unknown): PipelineStepInput[] {
       value: typeof value === 'number' ? value : null,
       direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
+      condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
+      condition_steps: kind === 'unless' ? validatePipelineSteps(condition_steps, false) : null,
+      then_steps: kind === 'unless' ? validatePipelineSteps(then_steps, false) : null,
     })
   }
   return clean
@@ -166,7 +184,7 @@ export async function GET() {
 
   const { data: pipelineSteps, error: stepsError } = await admin
     .from('matrix_pipeline_steps')
-    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance')
+    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (stepsError) return NextResponse.json({ error: stepsError.message }, { status: 500 })

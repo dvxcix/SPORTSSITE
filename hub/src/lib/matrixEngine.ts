@@ -41,7 +41,13 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 // 110+ laser price" or "only players missing an FHR line entirely." These
 // two make "has no value"/"has a value" a first-class condition on any
 // field, any category — see compareThreshold's early-return for them below.
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null'
+// 'lt_anchor'/'gt_anchor' — only meaningful on a filter step living inside
+// an 'unless' step's condition_steps (see MatrixPipelineStep below):
+// compares against that 'unless' step's dynamically-resolved anchor value
+// (whatever the pool going INTO the 'unless' step was tied/ranked on)
+// instead of a literal typed-in number. Evaluates to false wherever no
+// anchor is in scope (fail-safe, never a crash).
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor'
 // Real gap (2026-07-24): the grid's own Statcast section shows every
 // pitchlog_stat/savant_stat field at both a recent window AND a season
 // value, with a Δ (recent − season) alongside some of them — a Matrix
@@ -153,7 +159,24 @@ export type MatrixTiebreaker = {
 // hr) — same single-`book` precedent MatrixTiebreaker already established;
 // full multi-book combination (N+ of these books) stays a filter-only
 // capability, reusing evaluateOddsFactor wholesale for that case.
-export type PipelineStepKind = 'filter' | 'group' | 'rank'
+//
+// unless — real gap (2026-07-25): every step above applies uniformly to
+// whatever survived the step before it; some real formulas need "normally
+// do X, but if a DIFFERENT specific situation exists elsewhere in the game,
+// do Y instead." An 'unless' step is a branch: `category`/`field_key`/
+// `recency`/`book` here mean "the ANCHOR field" (usually the same field the
+// step right above it grouped/ranked on) — its value is read fresh off
+// whoever's in the pool going INTO this step (they're tied/ranked by
+// construction, so any one member's value is the reference). If
+// `condition_steps` (an ordinary Filter/Group/Rank mini-chain, run STRICT —
+// see runPipelineStep — against `condition_scope`'s universe) finds nothing,
+// this step is a no-op and the incoming pool passes through unchanged. If it
+// finds something, `then_steps` (a second mini-chain, run leniently) narrows
+// THAT result down to the replacement pool. Deliberately capped at one level
+// — condition_steps/then_steps must not themselves contain an 'unless' step
+// (enforced by the UI, not the engine, so a determined caller COULD nest
+// deeper, but the builder never offers it).
+export type PipelineStepKind = 'filter' | 'group' | 'rank' | 'unless'
 export type MatrixPipelineStep = {
   kind: PipelineStepKind
   category: MatrixFactor['category']
@@ -173,6 +196,10 @@ export type MatrixPipelineStep = {
   // at that extreme when the pool has more than one — see selectTieCluster.
   direction: 'highest' | 'lowest' | null
   tolerance: number | null          // rank only — see MatrixTiebreaker.tolerance
+  // unless only — see the type-level comment above.
+  condition_scope: 'team' | 'game' | null
+  condition_steps: MatrixPipelineStep[] | null
+  then_steps: MatrixPipelineStep[] | null
 }
 export const MAX_PIPELINE_STEPS = 10
 
@@ -923,7 +950,16 @@ export function evaluateFilterStep(
   step: MatrixPipelineStep,
   bundle: FieldBundle,
   gameTotalPicksByMarket: Record<string, number>,
+  // Only set when this step is running inside an 'unless' step's
+  // condition_steps/then_steps — see MatrixPipelineStep's own comment.
+  anchorValue?: number | null,
 ): boolean {
+  if (step.operator === 'lt_anchor' || step.operator === 'gt_anchor') {
+    if (anchorValue == null) return false // no anchor in scope — fail safe, not a crash
+    const current = resolveFieldValue(step.category, step.field_key, step.recency, step.book, bundle, gameTotalPicksByMarket)
+    if (current == null) return false
+    return step.operator === 'lt_anchor' ? current < anchorValue : current > anchorValue
+  }
   const asFactor: MatrixFactor = {
     id: '', category: step.category, field_key: step.field_key,
     operator: step.operator ?? 'gte', value: step.value,
@@ -938,26 +974,67 @@ export function evaluateFilterStep(
   return evaluatePicksFactor(asFactor, bundle.pikkitEntry, gameTotalPicksByMarket)
 }
 
+// Both bundle maps an 'unless' step might need to search OUTSIDE the
+// current (possibly team-narrowed) pool — 'team' is whichever full side
+// (home or away) the current team-scoped pass is using, 'game' is always
+// the full combined map. Every other step kind ignores this entirely.
+export type PipelineScopeBundles = { team: Map<string, FieldBundle>; game: Map<string, FieldBundle> }
+
 // Runs ONE step against the current pool. `bundles` is keyed by name_norm
 // (same key space `pool` uses) — a name missing from `bundles` simply
 // can't pass a filter / can't contribute a value to group-or-rank.
+// `strict` (only ever true for an 'unless' step's own condition_steps —
+// see runPipeline's 'unless' branch below): group/rank's usual lenient
+// "no signal -> pass the pool through unchanged" is exactly backwards
+// inside a condition, where "found nothing" has to mean the condition
+// genuinely didn't trigger, not "everyone passes." `anchorValue` is only
+// ever set the same way, threading an 'unless' step's resolved anchor down
+// into nested lt_anchor/gt_anchor filter steps.
 export function runPipelineStep(
   pool: Set<string>,
   step: MatrixPipelineStep,
   bundles: Map<string, FieldBundle>,
   gameTotalPicksByMarket: Record<string, number>,
+  scopeBundles?: PipelineScopeBundles,
+  strict?: boolean,
+  anchorValue?: number | null,
 ): Set<string> {
   if (step.kind === 'filter') {
     const survivors = new Set<string>()
     for (const name of pool) {
       const b = bundles.get(name)
-      if (b && evaluateFilterStep(step, b, gameTotalPicksByMarket)) survivors.add(name)
+      if (b && evaluateFilterStep(step, b, gameTotalPicksByMarket, anchorValue)) survivors.add(name)
     }
     return survivors
   }
+  if (step.kind === 'unless') {
+    // No scope info to search elsewhere, or nothing in the incoming pool to
+    // anchor against — a no-op rather than a crash.
+    if (!scopeBundles || !pool.size) return pool
+    const anchorName = pool.values().next().value as string
+    const anchorBundle = bundles.get(anchorName)
+    const resolvedAnchor = anchorBundle
+      ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, anchorBundle, gameTotalPicksByMarket)
+      : null
+
+    const universeMap = scopeBundles[step.condition_scope ?? 'team']
+    let conditionPool = new Set(universeMap.keys())
+    for (const condStep of step.condition_steps ?? []) {
+      conditionPool = runPipelineStep(conditionPool, condStep, universeMap, gameTotalPicksByMarket, scopeBundles, true, resolvedAnchor)
+    }
+    if (!conditionPool.size) return pool // condition didn't trigger -> no-op, original pool continues
+
+    let thenPool = conditionPool
+    for (const thenStep of step.then_steps ?? []) {
+      thenPool = runPipelineStep(thenPool, thenStep, universeMap, gameTotalPicksByMarket, scopeBundles, false, resolvedAnchor)
+    }
+    // then_steps somehow emptying out a real, triggered condition shouldn't
+    // silently highlight nobody — fall back to the original incoming pool.
+    return thenPool.size ? thenPool : pool
+  }
   // group/rank are no-ops on an already-singleton (or empty) pool — nothing
   // left to tie or rank against.
-  if (pool.size <= 1) return pool
+  if (pool.size <= 1) return strict ? new Set() : pool
   const resolveValue = (name: string): number | null => {
     const b = bundles.get(name)
     return b ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, b, gameTotalPicksByMarket) : null
@@ -970,12 +1047,14 @@ export function runPipelineStep(
     }
     const groups = groupTiedCandidates(values)
     const winners = selectTieCluster(groups, step.direction ?? null)
+    if (strict) return winners
     return winners.size ? winners : pool // lenient: no ties found -> unchanged
   }
   // rank — resolveTiebreakers already implements exactly this ("keep
   // whoever's best on one field"); called with a single-step chain.
   const tb: MatrixTiebreaker = { category: step.category, field_key: step.field_key, recency: step.recency, book: step.book, direction: step.direction ?? 'highest', tolerance: step.tolerance ?? null }
   const survivors = resolveTiebreakers([...pool], [tb], name => resolveValue(name))
+  if (strict) return survivors
   return survivors.size ? survivors : pool // lenient: nobody had a value -> unchanged
 }
 
@@ -984,8 +1063,9 @@ export function runPipeline(
   steps: MatrixPipelineStep[],
   bundles: Map<string, FieldBundle>,
   gameTotalPicksByMarket: Record<string, number>,
+  scopeBundles?: PipelineScopeBundles,
 ): Set<string> {
   let pool = universe
-  for (const step of steps) pool = runPipelineStep(pool, step, bundles, gameTotalPicksByMarket)
+  for (const step of steps) pool = runPipelineStep(pool, step, bundles, gameTotalPicksByMarket, scopeBundles)
   return pool
 }

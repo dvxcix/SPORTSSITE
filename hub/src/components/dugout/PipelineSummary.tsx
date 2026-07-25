@@ -8,6 +8,7 @@ const OP_WORD: Record<string, string> = {
   up: 'moved up since open', down: 'moved down since open', flat: 'unchanged since open',
   positive: 'positive', negative: 'negative',
   is_null: 'blank (no value)', is_not_null: 'has a value',
+  lt_anchor: 'lower than the tied value', gt_anchor: 'higher than the tied value',
 }
 
 // One clause per step, position-independent (no special-casing "first" vs.
@@ -27,8 +28,19 @@ function describeStep(step: MatrixPipelineStep): string {
     const which = step.direction === 'highest' ? ' (highest group)' : step.direction === 'lowest' ? ' (lowest group)' : ''
     return `tied on ${field}${which}`
   }
-  const tol = step.tolerance ? ` (±${step.tolerance})` : ''
-  return `${step.direction === 'lowest' ? 'lowest' : 'highest'} ${field}${tol}`
+  if (step.kind === 'rank') {
+    const tol = step.tolerance ? ` (±${step.tolerance})` : ''
+    return `${step.direction === 'lowest' ? 'lowest' : 'highest'} ${field}${tol}`
+  }
+  // unless — describes its own nested condition/then chains recursively.
+  const scope = step.condition_scope === 'game' ? 'either team' : 'the same team'
+  const condition = describeChain(step.condition_steps ?? [])
+  const then = describeChain(step.then_steps ?? [])
+  return `unless ${condition || '…'} on ${scope} → then ${then || '…'}`
+}
+
+function describeChain(steps: MatrixPipelineStep[]): string {
+  return steps.map(describeStep).join(' → ')
 }
 
 export function PipelineSummary({ steps }: { steps: MatrixPipelineStep[] }) {

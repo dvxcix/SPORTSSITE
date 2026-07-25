@@ -11,7 +11,7 @@ import {
 // A Pipeline is an ordered chain of steps that narrows a pool of players
 // down to a final winner (or winners, if the chain runs out of information
 // to pick just one) — see matrixEngine.ts's MatrixPipelineStep for the
-// engine-side reduction this UI is authoring. Three verbs, freely mixed and
+// engine-side reduction this UI is authoring. Four verbs, freely mixed and
 // reordered:
 //
 //   filter — a plain threshold (exactly a classic Factor's condition). Hard
@@ -19,15 +19,29 @@ import {
 //   group  — "tied with each other on this field." Lenient: no ties found
 //            just leaves the pool as-is rather than wiping it.
 //   rank   — "keep whoever's highest/lowest on this field." Also lenient.
+//   unless — real gap (2026-07-25): every step above applies uniformly to
+//            whatever survived the step before it. Some real formulas need
+//            "normally do X, but if a DIFFERENT specific situation exists
+//            elsewhere in the game, do Y instead." An Unless step is a
+//            branch: its own category/field/recency/book are the ANCHOR
+//            field (usually matching whatever the step right above it
+//            grouped/ranked on) — read fresh off whoever's in the pool
+//            going into it. Contains its own nested condition mini-pipeline
+//            (searched across condition_scope's universe; a Filter step in
+//            here can compare "lower/higher than the anchor value" instead
+//            of a typed-in number) and a then mini-pipeline (narrows the
+//            condition's own findings down to the replacement). If the
+//            condition finds nothing, this step is a no-op. Capped at one
+//            level deep — nested steps can't themselves be Unless.
 export type MatrixPipelineStep = {
-  kind: 'filter' | 'group' | 'rank'
+  kind: 'filter' | 'group' | 'rank' | 'unless'
   category: MatrixFactor['category']
   field_key: string
   recency: MatrixFactor['recency']
   book: string | null
   books: string[] | null
   books_min_count: number | null
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | null
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | null
   value: number | null
   // rank: which extreme to keep. group: null keeps every tied cluster
   // (original behavior); 'highest'/'lowest' narrows to the single cluster
@@ -39,31 +53,52 @@ export type MatrixPipelineStep = {
   // standout no longer needs an exact 2-decimal match to survive. See
   // matrixEngine.ts's MatrixTiebreaker.tolerance for the full rationale.
   tolerance: number | null
+  // unless only — see the type-level comment above.
+  condition_scope: 'team' | 'game' | null
+  condition_steps: MatrixPipelineStep[] | null
+  then_steps: MatrixPipelineStep[] | null
 }
 
-const KIND_LABEL: Record<MatrixPipelineStep['kind'], string> = { filter: 'Filter', group: 'Group', rank: 'Rank' }
-const KIND_COLOR: Record<MatrixPipelineStep['kind'], string> = { filter: 'var(--blue)', group: 'var(--gold)', rank: 'var(--accent)' }
+const KIND_LABEL: Record<MatrixPipelineStep['kind'], string> = { filter: 'Filter', group: 'Group', rank: 'Rank', unless: 'Unless' }
+const KIND_COLOR: Record<MatrixPipelineStep['kind'], string> = { filter: 'var(--blue)', group: 'var(--gold)', rank: 'var(--accent)', unless: 'var(--purple)' }
 const KIND_DESC: Record<MatrixPipelineStep['kind'], string> = {
   filter: 'Keep players that pass a threshold',
   group: 'Keep players tied with each other on a field — for a standout value nobody else shares, use Rank instead',
   rank: 'Narrow to whoever is highest/lowest on a field (add a tolerance to also keep close runners-up)',
+  unless: 'Normally leave the pool as-is — unless a different condition is true elsewhere in the game, then swap in a different result',
 }
 export const MAX_PIPELINE_STEPS = 10
 
-export function newPipelineStep(kind: MatrixPipelineStep['kind']): MatrixPipelineStep {
-  const category: MatrixFactor['category'] = 'odds'
-  const field = fieldsForCategory(category).filter(f => !f.boolean)[0]
+// `anchorFrom` (only ever used for a new Unless step) copies the category/
+// field/recency/book of whatever step precedes it in the list — the anchor
+// is overwhelmingly almost always "whatever we just grouped/ranked on," so
+// this is the sane default rather than making a member re-pick it every time.
+export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: MatrixPipelineStep): MatrixPipelineStep {
+  const useAnchor = kind === 'unless' && !!anchorFrom
+  const category: MatrixFactor['category'] = useAnchor ? anchorFrom!.category : 'odds'
+  const fieldsList = fieldsForCategory(category).filter(f => !f.boolean)
+  const field_key = useAnchor && fieldsList.some(f => f.key === anchorFrom!.field_key) ? anchorFrom!.field_key : fieldsList[0].key
   return {
-    kind, category, field_key: field.key, recency: null, book: null, books: null, books_min_count: null,
+    kind, category, field_key,
+    recency: useAnchor ? anchorFrom!.recency : null,
+    book: useAnchor ? anchorFrom!.book : null,
+    books: null, books_min_count: null,
     operator: kind === 'filter' ? 'gte' : null,
     value: null,
     direction: kind === 'rank' ? 'highest' : null,
     tolerance: null,
+    condition_scope: kind === 'unless' ? 'team' : null,
+    condition_steps: kind === 'unless' ? [] : null,
+    then_steps: kind === 'unless' ? [] : null,
   }
 }
 
-function PipelineStepCard({ step, index, onChange, onRemove }: {
-  step: MatrixPipelineStep; index: number
+// `hasAnchor` (true only for a step living inside an Unless step's
+// condition/then list) unlocks the lt_anchor/gt_anchor filter operators —
+// "lower/higher than the tied value" — worded plainly rather than exposing
+// the word "anchor" to the member.
+function PipelineStepCard({ step, index, hasAnchor, onChange, onRemove }: {
+  step: MatrixPipelineStep; index: number; hasAnchor?: boolean
   onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
 }) {
   // group/rank exclude boolean fields (Is PWR ⚡?) — "tied"/"highest" on a
@@ -72,11 +107,8 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
   const isBoolean = step.kind === 'filter' && fields.find(f => f.key === step.field_key)?.boolean === true
   const isBooksField = step.kind === 'filter' && isBooksFieldKey(step.field_key)
   const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat'
-  const hidesValue = step.kind === 'filter' && (
-    (step.category === 'odds' && ['up', 'down', 'flat'].includes(step.operator ?? '')) ||
-    step.operator === 'positive' || step.operator === 'negative' ||
-    step.operator === 'is_null' || step.operator === 'is_not_null'
-  )
+  const needsValue = step.operator === 'gte' || step.operator === 'lte' || step.operator === 'eq'
+  const hidesValue = step.kind === 'filter' && !needsValue
   const multiBookFilter = step.kind === 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
   const singleBookField = step.kind !== 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
 
@@ -149,7 +181,7 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
             <select
               className="ss-input" value={step.operator ?? 'gte'}
               onChange={e => onChange({ ...step, operator: e.target.value as MatrixPipelineStep['operator'] })}
-              style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+              style={{ fontSize: 11, padding: '5px 6px', width: 190 }}
             >
               <option value="gte">At least</option>
               <option value="lte">At most</option>
@@ -158,6 +190,12 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
                 <>
                   <option value="is_null">Is blank (no value)</option>
                   <option value="is_not_null">Has a value</option>
+                </>
+              )}
+              {hasAnchor && !isBooksField && (
+                <>
+                  <option value="lt_anchor">Lower than the tied value</option>
+                  <option value="gt_anchor">Higher than the tied value</option>
                 </>
               )}
               {step.category === 'odds' && !isBooksField && (
@@ -304,11 +342,133 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
   )
 }
 
-// The "+ Add step" control — a 3-choice picker rather than a generic
-// button, since the whole point of Pipeline mode is a member choosing
-// which of the 3 verbs they mean at each point in the chain.
-function AddStepMenu({ onAdd, disabled }: { onAdd: (kind: MatrixPipelineStep['kind']) => void; disabled: boolean }) {
+// An Unless step's own row picks the ANCHOR field (its category/field_key/
+// recency/book), the search scope for its condition, and contains two
+// nested StepLists (condition, then) — capped at allowUnless=false so a
+// member can never nest a second Unless inside either one.
+function UnlessStepCard({ step, index, onChange, onRemove }: {
+  step: MatrixPipelineStep; index: number
+  onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
+}) {
+  const fields = fieldsForCategory(step.category).filter(f => !f.boolean)
+  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat'
+  const singleBookField = step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
+
+  function changeCategory(category: MatrixFactor['category']) {
+    const opts = fieldsForCategory(category).filter(f => !f.boolean)
+    onChange({ ...step, category, field_key: opts[0].key, book: null, recency: category === 'pitchlog_stat' || category === 'savant_stat' ? 'season' : null })
+  }
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 12px',
+      background: 'var(--surface-2)', border: `1px solid ${KIND_COLOR.unless}`, borderRadius: 10,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <GripVertical size={14} style={{ color: 'var(--text-3)', cursor: 'grab', flexShrink: 0 }} />
+        <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
+        <span style={{
+          fontSize: 10, fontWeight: 800, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
+          color: KIND_COLOR.unless, background: 'var(--surface-3)', border: `1px solid ${KIND_COLOR.unless}`,
+        }}>
+          UNLESS
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{KIND_DESC.unless}</span>
+        <button onClick={onRemove} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+          <X size={14} />
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingLeft: 22 }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>TIED VALUE FROM</span>
+        <select
+          className="ss-input" value={step.category}
+          onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
+          style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
+        >
+          {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+        </select>
+        <select
+          className="ss-input" value={step.field_key}
+          onChange={e => onChange({ ...step, field_key: e.target.value, book: null })}
+          style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
+        >
+          {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+        </select>
+        {needsRecency && (
+          <select
+            className="ss-input" value={step.recency ?? 'season'}
+            onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
+            style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+          >
+            {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
+              <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
+            ))}
+          </select>
+        )}
+        {singleBookField && (
+          <div style={{ display: 'flex', gap: 3 }}>
+            {singleBookField.map(b => {
+              const on = (step.book ?? 'fanduel') === b.key
+              return (
+                <button
+                  key={b.key} title={b.label} onClick={() => onChange({ ...step, book: b.key })}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
+                    padding: 0, borderRadius: 6, cursor: 'pointer',
+                    background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
+                  }}
+                >
+                  <BookLogo vendor={b.key} size={14} />
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>SEARCH FOR THE EXCEPTION ON</span>
+        <select
+          className="ss-input" value={step.condition_scope ?? 'team'}
+          onChange={e => onChange({ ...step, condition_scope: e.target.value as 'team' | 'game' })}
+          style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
+        >
+          <option value="team">Same team</option>
+          <option value="game">Either team</option>
+        </select>
+      </div>
+
+      <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.05em', marginBottom: 6 }}>IF THIS IS TRUE</div>
+        <StepList
+          steps={step.condition_steps ?? []}
+          onChange={condition_steps => onChange({ ...step, condition_steps })}
+          allowUnless={false} hasAnchor showHeader={false}
+          emptyText="No condition yet — add a Filter/Group/Rank step to define what triggers this exception."
+        />
+      </div>
+
+      <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.05em', marginBottom: 6 }}>THEN DO THIS INSTEAD</div>
+        <StepList
+          steps={step.then_steps ?? []}
+          onChange={then_steps => onChange({ ...step, then_steps })}
+          allowUnless={false} hasAnchor showHeader={false}
+          emptyText="No replacement rule yet — add a Rank step to pick the winner among whoever the condition found."
+        />
+      </div>
+    </div>
+  )
+}
+
+// The "+ Add step" control — a choice picker rather than a generic button,
+// since the whole point of Pipeline mode is a member choosing which verb
+// they mean at each point in the chain.
+function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPipelineStep['kind']) => void; disabled: boolean; allowUnless: boolean }) {
   const [open, setOpen] = useState(false)
+  const kinds = allowUnless ? (['filter', 'group', 'rank', 'unless'] as const) : (['filter', 'group', 'rank'] as const)
   return (
     <div style={{ position: 'relative' }}>
       <button
@@ -330,7 +490,7 @@ function AddStepMenu({ onAdd, disabled }: { onAdd: (kind: MatrixPipelineStep['ki
             background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 10,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden',
           }}>
-            {(['filter', 'group', 'rank'] as const).map(kind => (
+            {kinds.map(kind => (
               <button
                 key={kind}
                 onClick={() => { onAdd(kind); setOpen(false) }}
@@ -352,33 +512,57 @@ function AddStepMenu({ onAdd, disabled }: { onAdd: (kind: MatrixPipelineStep['ki
   )
 }
 
-export function PipelineBuilder({ steps, onChange }: { steps: MatrixPipelineStep[]; onChange: (s: MatrixPipelineStep[]) => void }) {
+// Reusable list-of-steps renderer — the top-level PipelineBuilder is just
+// `<StepList allowUnless />`; an Unless step's condition/then lists are two
+// more instances with allowUnless={false} (structurally capping nesting at
+// one level, not just by convention) and hasAnchor (unlocking the
+// lt_anchor/gt_anchor filter operators). `showHeader=false` drops the
+// "Steps (N)" label for the compact nested case, keeping just the Add button.
+function StepList({ steps, onChange, allowUnless, hasAnchor, showHeader = true, emptyText }: {
+  steps: MatrixPipelineStep[]; onChange: (s: MatrixPipelineStep[]) => void
+  allowUnless: boolean; hasAnchor?: boolean; showHeader?: boolean; emptyText?: string
+}) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Steps ({steps.length})</span>
-        <div style={{ marginLeft: 'auto' }}>
-          <AddStepMenu disabled={steps.length >= MAX_PIPELINE_STEPS} onAdd={kind => onChange([...steps, newPipelineStep(kind)])} />
+        {showHeader && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Steps ({steps.length})</span>}
+        <div style={{ marginLeft: showHeader ? 'auto' : 0 }}>
+          <AddStepMenu
+            disabled={steps.length >= MAX_PIPELINE_STEPS} allowUnless={allowUnless}
+            onAdd={kind => onChange([...steps, newPipelineStep(kind, steps[steps.length - 1])])}
+          />
         </div>
       </div>
 
       {steps.length === 0 ? (
         <div style={{ padding: '18px 8px', textAlign: 'center', color: 'var(--text-3)', fontSize: 12, background: 'var(--surface-2)', borderRadius: 8 }}>
-          No steps yet. Add a Filter, Group, or Rank step to start narrowing your pool of players.
+          {emptyText ?? 'No steps yet. Add a Filter, Group, or Rank step to start narrowing your pool of players.'}
         </div>
       ) : (
         <Reorder.Group as="div" axis="y" values={steps} onReorder={onChange} style={{ display: 'flex', flexDirection: 'column', gap: 8, listStyle: 'none', margin: 0, padding: 0 }}>
           {steps.map((step, i) => (
             <Reorder.Item key={i} value={step} as="div" style={{ listStyle: 'none' }}>
-              <PipelineStepCard
-                step={step} index={i}
-                onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
-                onRemove={() => onChange(steps.filter((_, si) => si !== i))}
-              />
+              {step.kind === 'unless' ? (
+                <UnlessStepCard
+                  step={step} index={i}
+                  onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
+                  onRemove={() => onChange(steps.filter((_, si) => si !== i))}
+                />
+              ) : (
+                <PipelineStepCard
+                  step={step} index={i} hasAnchor={hasAnchor}
+                  onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
+                  onRemove={() => onChange(steps.filter((_, si) => si !== i))}
+                />
+              )}
             </Reorder.Item>
           ))}
         </Reorder.Group>
       )}
     </div>
   )
+}
+
+export function PipelineBuilder({ steps, onChange }: { steps: MatrixPipelineStep[]; onChange: (s: MatrixPipelineStep[]) => void }) {
+  return <StepList steps={steps} onChange={onChange} allowUnless />
 }

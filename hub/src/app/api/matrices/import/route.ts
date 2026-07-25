@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   if (isPipeline) {
     const { data, error } = await admin
       .from('matrix_pipeline_steps')
-      .select('position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance')
+      .select('position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps')
       .eq('matrix_id', source.id)
       .order('position', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

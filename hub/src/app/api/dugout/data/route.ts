@@ -1289,7 +1289,14 @@ export async function GET(req: Request) {
         const combined = new Set<string>()
         for (const pool of pools) {
           const universe = new Set(pool.keys())
-          for (const n of runPipeline(universe, m.pipeline_steps, pool, gameTotalPicksByMarket)) combined.add(n)
+          // An 'unless' step's condition_scope='team' means "the same team
+          // this pool already IS" when the outer pipeline is team-scoped —
+          // `pool` itself already is exactly that (home or away). When the
+          // outer pipeline is game-scoped, `pool` IS allBundle already, so
+          // 'team' falls back to the whole game too — there's no single
+          // well-defined team to narrow to in that mode anyway.
+          const scopeBundles = { team: pool, game: allBundle }
+          for (const n of runPipeline(universe, m.pipeline_steps, pool, gameTotalPicksByMarket, scopeBundles)) combined.add(n)
         }
         pipelineMatrixWinners.set(m.id, combined)
       }
