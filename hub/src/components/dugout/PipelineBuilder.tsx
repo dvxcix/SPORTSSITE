@@ -174,7 +174,11 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
             onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
-            {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
+            {/* No '_delta' options — see CustomMatrixPanel.tsx's FactorRow
+                recency select comment: the board never displays a computed
+                delta anywhere, only the raw season/recent values, so there's
+                no real number to calibrate a delta threshold against. */}
+            {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
               <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
             ))}
           </select>

@@ -348,12 +348,15 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
               window is precomputed for every category now, same as
               savant_stat already was.
 
-              The '_delta' options compare a recent window against this same
-              player's season line (recent minus season) — the same Δ math
-              the Dugout Statcast board itself shows, so a Factor can match
-              on "diverging from season norm" instead of only an absolute
-              level. Also precomputed, no live fetch. */}
-          {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
+              '_delta' options (recent minus season) removed from this list
+              (2026-07-24) — reported live: the board never actually displays
+              that computed delta anywhere, only the raw season value and
+              whichever recent window is currently toggled (R·BLA/R·ATK/etc.),
+              so a member had no real number to calibrate a delta threshold
+              against. The engine still evaluates '*_delta' recencies
+              correctly (one existing saved Factor already uses one), this
+              just stops offering them for new selections. */}
+          {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
             <option key={r} value={r}>{recencyLabel(factor.category, r)}</option>
           ))}
         </select>
@@ -483,7 +486,9 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
           onChange={e => onChange({ ...tb, recency: e.target.value as MatrixTiebreaker['recency'] })}
           style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
         >
-          {['game', 'l3', 'l5', 'l10', 'season', 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta'].map(r => (
+          {/* No '_delta' options here either — see the matching comment on
+              FactorRow's own recency select above. */}
+          {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
             <option key={r} value={r}>{recencyLabel(tb.category, r)}</option>
           ))}
         </select>
