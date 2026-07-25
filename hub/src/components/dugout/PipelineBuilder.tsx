@@ -27,8 +27,12 @@ export type MatrixPipelineStep = {
   book: string | null
   books: string[] | null
   books_min_count: number | null
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | null
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | null
   value: number | null
+  // rank: which extreme to keep. group: null keeps every tied cluster
+  // (original behavior); 'highest'/'lowest' narrows to the single cluster
+  // at that extreme when the pool has more than one — see matrixEngine.ts's
+  // selectTieCluster.
   direction: 'highest' | 'lowest' | null
   // rank only — null/0 keeps the exact-match behavior; a positive number
   // also keeps anyone within that raw distance of the best value, so a real
@@ -70,7 +74,8 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
   const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat'
   const hidesValue = step.kind === 'filter' && (
     (step.category === 'odds' && ['up', 'down', 'flat'].includes(step.operator ?? '')) ||
-    step.operator === 'positive' || step.operator === 'negative'
+    step.operator === 'positive' || step.operator === 'negative' ||
+    step.operator === 'is_null' || step.operator === 'is_not_null'
   )
   const multiBookFilter = step.kind === 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
   const singleBookField = step.kind !== 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
@@ -149,6 +154,12 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
               <option value="gte">At least</option>
               <option value="lte">At most</option>
               <option value="eq">Exactly</option>
+              {!isBooksField && (
+                <>
+                  <option value="is_null">Is blank (no value)</option>
+                  <option value="is_not_null">Has a value</option>
+                </>
+              )}
               {step.category === 'odds' && !isBooksField && (
                 <>
                   <option value="up">Moved up since open</option>
@@ -219,6 +230,19 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
           >
             <option value="highest">Highest</option>
             <option value="lowest">Lowest</option>
+          </select>
+        )}
+
+        {step.kind === 'group' && (
+          <select
+            className="ss-input" value={step.direction ?? 'all'}
+            onChange={e => onChange({ ...step, direction: e.target.value === 'all' ? null : e.target.value as 'highest' | 'lowest' })}
+            title="When more than one pair/group ties at different values, which one to keep"
+            style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+          >
+            <option value="all">Keep every tied group</option>
+            <option value="highest">Keep the highest-tied group</option>
+            <option value="lowest">Keep the lowest-tied group</option>
           </select>
         )}
 

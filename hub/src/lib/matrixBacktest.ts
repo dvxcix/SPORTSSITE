@@ -11,7 +11,7 @@ import type { BatterStats } from '@/lib/batterStatsEngine'
 import {
   type Matrix, type MatrixFactor, type MatrixTiebreaker, type MatrixPipelineStep,
   type FieldBundle, type OddsProps, type PitchlogStatWindow, type DugoutSpecsAverages,
-  runPipelineStep, evaluateMatrix, groupTiedCandidates, resolveTiebreakers, resolveFieldValue,
+  runPipelineStep, evaluateMatrix, groupTiedCandidates, filterTieGroups, resolveTiebreakers, resolveFieldValue,
   evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluatePicksFactor,
   MULTI_BOOK_MARKET,
 } from '@/lib/matrixEngine'
@@ -285,7 +285,7 @@ function buildTiedWinners(
       const v = rootValue(f, book, b)
       if (v != null) values.set(name, v)
     }
-    const groups = groupTiedCandidates(values)
+    const groups = filterTieGroups(groupTiedCandidates(values), f.tie_direction ?? null)
     const winners = new Set<string>()
     for (const group of groups.values()) {
       const survivors = f.tiebreakers?.length

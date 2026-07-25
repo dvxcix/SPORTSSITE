@@ -19,7 +19,7 @@ import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
 import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle } from '@/lib/matrixEngine'
 import {
   computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
-  groupTiedCandidates, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
+  groupTiedCandidates, filterTieGroups, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
 } from '@/lib/matrixEngine'
 import type { BatterStats } from '@/lib/batterStatsEngine'
 
@@ -1239,7 +1239,7 @@ export async function GET(req: Request) {
             const v = rootValue(f, book, b)
             if (v != null) values.set(name, v)
           }
-          const groups = groupTiedCandidates(values)
+          const groups = filterTieGroups(groupTiedCandidates(values), f.tie_direction ?? null)
           const winners = new Set<string>()
           for (const group of groups.values()) {
             const survivors = f.tiebreakers?.length

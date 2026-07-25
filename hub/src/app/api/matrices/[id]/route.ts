@@ -9,7 +9,7 @@ const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
 const MAX_TIEBREAKERS = 5
 const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank']
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null']
 const MAX_PIPELINE_STEPS = 10
 
 function cleanTiebreakers(raw: unknown) {
@@ -107,6 +107,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         books: Array.isArray(f.books) && f.books.length ? f.books.filter(b => typeof b === 'string') : null,
         books_min_count: typeof f.books_min_count === 'number' ? Math.max(1, Math.round(f.books_min_count)) : null,
         tie_scope: f.tie_scope === 'game' ? 'game' : f.tie_scope === 'team' ? 'team' : null,
+        tie_direction: f.tie_direction === 'highest' ? 'highest' : f.tie_direction === 'lowest' ? 'lowest' : null,
         tiebreakers: cleanTiebreakers(f.tiebreakers),
       }))
     )

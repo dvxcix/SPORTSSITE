@@ -17,7 +17,7 @@ export type MatrixFactor = {
   id?: string
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null'
   value: number | null
   recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | 'game_delta' | 'l3_delta' | 'l5_delta' | 'l10_delta' | null
   // Only meaningful for the two real multi-book odds fields (fhr, hr) —
@@ -30,6 +30,11 @@ export type MatrixFactor = {
   // Only meaningful for operator 'tied' — 'team' (the default, incl. null)
   // compares only this player's own side; 'game' pools both teams.
   tie_scope: 'team' | 'game' | null
+  // Only meaningful for operator 'tied' — when the pool has more than one
+  // raw tie cluster at different values, null keeps every cluster (the
+  // original behavior); 'highest'/'lowest' narrows to just the single
+  // cluster at that extreme before any tiebreaker chain below runs on it.
+  tie_direction: 'highest' | 'lowest' | null
   // Only meaningful for operator 'tied' — an ordered fallback chain that
   // narrows a raw tie group down to whoever ranks best on some OTHER field
   // (any category — e.g. "of everyone tied on HR÷Parlay, keep the highest
@@ -184,6 +189,7 @@ export const OPERATOR_LABEL: Record<string, string> = {
   up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
   positive: 'Is positive (+)', negative: 'Is negative (−)',
   tied: 'Tied w/ a teammate',
+  is_null: 'Is blank (no value)', is_not_null: 'Has a value',
 }
 
 export type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
@@ -197,7 +203,7 @@ export function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
 }
 function newFactor(): MatrixFactor {
-  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null, tiebreakers: [] }
+  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null, tie_direction: null, tiebreakers: [] }
 }
 function newTiebreaker(): MatrixTiebreaker {
   return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null }
@@ -241,6 +247,7 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
   // member picks — see evaluateOddsFactor/evaluateDugoutSpecsFactor).
   const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
     || factor.operator === 'positive' || factor.operator === 'negative' || factor.operator === 'tied'
+    || factor.operator === 'is_null' || factor.operator === 'is_not_null'
   const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat'
   // "Is PWR ⚡?" — a real Yes/No gate (buildBatterRow's is_pwr), not a ratio
   // to type a number for. Represented under the hood as an ordinary eq-1/
@@ -302,6 +309,12 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
             <option value="gte">{OPERATOR_LABEL.gte}</option>
             <option value="lte">{OPERATOR_LABEL.lte}</option>
             <option value="eq">{OPERATOR_LABEL.eq}</option>
+            {!isBooksField && (
+              <>
+                <option value="is_null">{OPERATOR_LABEL.is_null}</option>
+                <option value="is_not_null">{OPERATOR_LABEL.is_not_null}</option>
+              </>
+            )}
             {factor.category === 'odds' && !isBooksField && (
               <>
                 <option value="up">{OPERATOR_LABEL.up}</option>
@@ -320,14 +333,26 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
           </select>
 
           {factor.operator === 'tied' ? (
-            <select
-              className="ss-input" value={factor.tie_scope ?? 'team'}
-              onChange={e => onChange({ ...factor, tie_scope: e.target.value as MatrixFactor['tie_scope'] })}
-              style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
-            >
-              <option value="team">Same team</option>
-              <option value="game">Either team</option>
-            </select>
+            <>
+              <select
+                className="ss-input" value={factor.tie_scope ?? 'team'}
+                onChange={e => onChange({ ...factor, tie_scope: e.target.value as MatrixFactor['tie_scope'] })}
+                style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
+              >
+                <option value="team">Same team</option>
+                <option value="game">Either team</option>
+              </select>
+              <select
+                className="ss-input" value={factor.tie_direction ?? 'all'}
+                onChange={e => onChange({ ...factor, tie_direction: e.target.value === 'all' ? null : e.target.value as MatrixFactor['tie_direction'] })}
+                title="When more than one pair/group ties at different values, which one to keep"
+                style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
+              >
+                <option value="all">Keep every tied group</option>
+                <option value="highest">Keep the highest-tied group</option>
+                <option value="lowest">Keep the lowest-tied group</option>
+              </select>
+            </>
           ) : !hidesValue && (
             <input
               className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}

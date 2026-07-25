@@ -7,6 +7,7 @@ const OP_WORD: Record<string, string> = {
   gte: 'at least', lte: 'at most', eq: 'exactly',
   up: 'moved up since open', down: 'moved down since open', flat: 'unchanged since open',
   positive: 'positive', negative: 'negative',
+  is_null: 'blank (no value)', is_not_null: 'has a value',
 }
 
 // One clause per step, position-independent (no special-casing "first" vs.
@@ -22,7 +23,10 @@ function describeStep(step: MatrixPipelineStep): string {
     const needsValue = step.operator === 'gte' || step.operator === 'lte' || step.operator === 'eq'
     return `${field} ${op}${needsValue && step.value != null ? ` ${step.value}` : ''}`.trim()
   }
-  if (step.kind === 'group') return `tied on ${field}`
+  if (step.kind === 'group') {
+    const which = step.direction === 'highest' ? ' (highest group)' : step.direction === 'lowest' ? ' (lowest group)' : ''
+    return `tied on ${field}${which}`
+  }
   const tol = step.tolerance ? ` (±${step.tolerance})` : ''
   return `${step.direction === 'lowest' ? 'lowest' : 'highest'} ${field}${tol}`
 }

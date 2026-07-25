@@ -34,7 +34,14 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 // the caller (dugout/data/route.ts, the only place with visibility into
 // every batter on the same team at once) via the isTied callbacks threaded
 // through MatrixMatchContext — see evaluateOddsFactor/evaluateDugoutSpecsFactor.
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied'
+// 'is_null'/'is_not_null' — real gap (2026-07-25): a filter always silently
+// FAILED for a player with no value at all (no price posted for that book,
+// no season average computed yet, no picks data) — there was no way to
+// build a rule OUT OF that absence itself, e.g. "exclude anyone with no
+// 110+ laser price" or "only players missing an FHR line entirely." These
+// two make "has no value"/"has a value" a first-class condition on any
+// field, any category — see compareThreshold's early-return for them below.
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null'
 // Real gap (2026-07-24): the grid's own Statcast section shows every
 // pitchlog_stat/savant_stat field at both a recent window AND a season
 // value, with a Δ (recent − season) alongside some of them — a Matrix
@@ -79,6 +86,15 @@ export type MatrixFactor = {
   // in the game on either side ('game'). null/'team' preserves the original
   // per-team-only behavior 'tied' shipped with.
   tie_scope: 'team' | 'game' | null
+  // Only meaningful for operator 'tied' — real gap (2026-07-25): when a
+  // 'tied' Factor's pool has more than one raw tie cluster at different
+  // values (e.g. two players tied at .50 on one team, two different
+  // players tied at .35 on the other), the original behavior kept EVERY
+  // cluster's members. null keeps that original behavior; 'highest'/
+  // 'lowest' narrows to just the single tie cluster at that extreme value
+  // BEFORE any tiebreaker chain below runs (which then narrows WITHIN that
+  // one chosen cluster, if it's still >1 player) — see selectTieCluster.
+  tie_direction: 'highest' | 'lowest' | null
   // Only meaningful for operator 'tied' — an ordered fallback chain that
   // narrows a raw tie group down to whoever ranks best on some OTHER field
   // (any category, e.g. "of everyone tied on HR÷Parlay, keep only the
@@ -152,7 +168,10 @@ export type MatrixPipelineStep = {
   books_min_count: number | null
   operator: MatrixOperator | null   // filter only
   value: number | null              // filter only
-  direction: 'highest' | 'lowest' | null // rank only
+  // rank: which extreme to keep. group: null keeps every tied cluster
+  // (original behavior); 'highest'/'lowest' narrows to the single cluster
+  // at that extreme when the pool has more than one — see selectTieCluster.
+  direction: 'highest' | 'lowest' | null
   tolerance: number | null          // rank only — see MatrixTiebreaker.tolerance
 }
 export const MAX_PIPELINE_STEPS = 10
@@ -243,6 +262,11 @@ const PITCHLOG_FIELD: Record<string, keyof BatterStats> = {
 }
 
 function compareThreshold(current: number | null, operator: MatrixOperator, value: number | null): boolean {
+  // Checked before the null-guard below (every other operator treats null
+  // as "can't possibly pass") — these two are the only operators FOR which
+  // null is exactly the thing being asked about.
+  if (operator === 'is_null') return current == null
+  if (operator === 'is_not_null') return current != null
   if (current == null) return false
   // Sign-only check — no threshold value needed, same "no value input" shape
   // as odds' up/down/flat. Meant for genuinely signed metrics (a delta vs.
@@ -802,6 +826,26 @@ export function groupTiedCandidates(values: Map<string, number>): Map<number, st
   return groups
 }
 
+// When a pool has more than one raw tie cluster at different values (e.g.
+// two players tied at .50, two different players tied at .35), the
+// original 'tied' behavior kept every cluster. This narrows the group map
+// down to just the single cluster at the requested extreme — null returns
+// every cluster unchanged. Kept as a map (not flattened) so a caller that
+// still needs to run a per-cluster tiebreaker chain (classic 'tied'
+// Factors) can do so on whichever cluster(s) survive; pipeline group steps
+// use the flattening convenience below since they have no such chain.
+export function filterTieGroups(groups: Map<number, string[]>, direction: 'highest' | 'lowest' | null): Map<number, string[]> {
+  if (!direction || !groups.size) return groups
+  const best = direction === 'lowest' ? Math.min(...groups.keys()) : Math.max(...groups.keys())
+  const only = groups.get(best)
+  return only ? new Map([[best, only]]) : new Map()
+}
+export function selectTieCluster(groups: Map<number, string[]>, direction: 'highest' | 'lowest' | null): Set<string> {
+  const winners = new Set<string>()
+  for (const g of filterTieGroups(groups, direction).values()) for (const n of g) winners.add(n)
+  return winners
+}
+
 // Narrows one raw tie group down via an ordered tiebreaker chain: at each
 // step, keep only the candidate(s) with the best value (per that step's
 // direction) for that step's field; once only one candidate remains, later
@@ -885,7 +929,7 @@ export function evaluateFilterStep(
     operator: step.operator ?? 'gte', value: step.value,
     recency: step.recency, recency_start: null, recency_end: null,
     books: step.books, books_min_count: step.books_min_count,
-    tie_scope: null, tiebreakers: null,
+    tie_scope: null, tie_direction: null, tiebreakers: null,
   }
   if (step.category === 'odds') return evaluateOddsFactor(asFactor, bundle.props)
   if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg)
@@ -925,8 +969,7 @@ export function runPipelineStep(
       if (v != null) values.set(name, v)
     }
     const groups = groupTiedCandidates(values)
-    const winners = new Set<string>()
-    for (const g of groups.values()) for (const n of g) winners.add(n)
+    const winners = selectTieCluster(groups, step.direction ?? null)
     return winners.size ? winners : pool // lenient: no ties found -> unchanged
   }
   // rank — resolveTiebreakers already implements exactly this ("keep

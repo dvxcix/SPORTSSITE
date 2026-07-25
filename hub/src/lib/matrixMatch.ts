@@ -54,7 +54,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
 
   const { data: factors } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tiebreakers')
+    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 

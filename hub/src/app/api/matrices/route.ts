@@ -10,7 +10,7 @@ const MAX_FACTORS_PER_MATRIX = 40
 type FactorInput = {
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null'
   value: number | null
   recency: string | null
   recency_start: string | null
@@ -22,6 +22,7 @@ type FactorInput = {
   books_min_count: number | null
   // Only meaningful for operator 'tied' — see matrixEngine.ts's MatrixFactor.
   tie_scope: 'team' | 'game' | null
+  tie_direction: 'highest' | 'lowest' | null
   tiebreakers: TiebreakerInput[]
 }
 
@@ -64,7 +65,7 @@ const MAX_TIEBREAKERS = 5
 const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank']
 // 'tied' deliberately excluded — a filter step's threshold operator is
 // never "tied," that's what a group step is for.
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null']
 const MAX_PIPELINE_STEPS = 10
 
 function validatePipelineSteps(raw: unknown): PipelineStepInput[] {
@@ -120,10 +121,10 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
   const clean: FactorInput[] = []
   for (const f of factors) {
     if (!f || typeof f !== 'object') return { ok: false, error: 'Malformed Factor.' }
-    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tiebreakers } = f as Record<string, unknown>
+    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
-    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
+    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied', 'is_null', 'is_not_null'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
     const cleanBooks = Array.isArray(books) ? books.filter((b): b is string => typeof b === 'string' && VALID_BOOKS.includes(b)) : null
     clean.push({
       category: category as FactorInput['category'],
@@ -136,6 +137,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
       books: cleanBooks?.length ? cleanBooks : null,
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
       tie_scope: tie_scope === 'game' ? 'game' : tie_scope === 'team' ? 'team' : null,
+      tie_direction: tie_direction === 'highest' ? 'highest' : tie_direction === 'lowest' ? 'lowest' : null,
       tiebreakers: validateTiebreakers(tiebreakers),
     })
   }
@@ -157,7 +159,7 @@ export async function GET() {
 
   const { data: factors, error: factorsError } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tiebreakers')
+    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })
