@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeMatchupEdgeForDate } from '@/lib/dugoutMatchupEdgePrecompute'
+import { addDaysToDateStr } from '@/lib/balldontlie'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -28,11 +29,17 @@ export async function GET(req: Request) {
   const explicitDate = searchParams.get('date')
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
-  const dates = explicitDate ? [explicitDate] : Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
-    const d = new Date(`${todayEt}T00:00:00Z`)
-    d.setUTCDate(d.getUTCDate() - i)
-    return d.toISOString().slice(0, 10)
-  })
+  // Also precomputes tomorrow's slate — see dugout-statcast-precompute for
+  // why (probable pitchers/projected lineups are already postable the
+  // evening before a game).
+  const dates = explicitDate ? [explicitDate] : [
+    ...Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
+      const d = new Date(`${todayEt}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() - i)
+      return d.toISOString().slice(0, 10)
+    }),
+    addDaysToDateStr(todayEt, 1),
+  ]
 
   const results: Record<string, unknown> = {}
   for (const date of dates) {

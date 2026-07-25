@@ -98,7 +98,19 @@
     },
     {
       "path": "/api/cron/scrape-fanduel",
-      "schedule": "0 14,16,18,20,22 * * *"
+      "schedule": "0 14,16,18,20,22,0,2 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-fanduel?dayAhead=1",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-fanduel?dayAhead=1",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/scrape-fanduel?dayAhead=1",
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/cron/dispatch-scrapes",

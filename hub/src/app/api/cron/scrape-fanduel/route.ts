@@ -6,6 +6,7 @@ import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
 import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
+import { addDaysToDateStr } from '@/lib/balldontlie'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -73,21 +74,33 @@ export async function GET(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
-  const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const url = new URL(req.url)
+  const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  // Resolved once per sweep and threaded through every fanned-out
+  // sub-request below (as its own explicit ?date=) instead of letting each
+  // one independently re-derive "today" from wall-clock time — a sweep that
+  // starts before midnight ET and fans out after it used to have
+  // sub-requests silently resolve a DIFFERENT day, 404-ing on a gamePk that
+  // wasn't in the newly-recomputed day's slate. ?dayAhead=1 is how the
+  // static vercel.json cron schedule reaches "tomorrow" (it can't compute
+  // that itself), while ?date= (used only by our own fan-out) always wins
+  // once already resolved.
+  const dayAhead = url.searchParams.get('dayAhead') === '1'
+  const date = url.searchParams.get('date') || (dayAhead ? addDaysToDateStr(todayEt, 1) : todayEt)
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ date, games: 0, results: [] })
 
-  const url = new URL(req.url)
   const gamePkParam = url.searchParams.get('gamePk')
   const dryRun = url.searchParams.get('dryRun') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
-    if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
+    if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in ${date}'s matchups` }, { status: 404 })
     const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
-  const results = await fanOutToSelf('/api/cron/scrape-fanduel', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
+  const extraQuery = `&date=${date}${dryRun ? '&dryRun=1' : ''}`
+  const results = await fanOutToSelf('/api/cron/scrape-fanduel', games.map(g => g.gamePk), extraQuery)
   return NextResponse.json({ date, games: games.length, results })
 }

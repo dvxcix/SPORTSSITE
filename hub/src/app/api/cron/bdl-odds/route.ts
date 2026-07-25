@@ -43,20 +43,14 @@ export const maxDuration = 60
 // player_props calls (one per game) + a couple of players chunks — well
 // under 3% of budget even every minute, so there's no need to spread this
 // across a longer interval.
-export async function GET(req: Request) {
-  const authError = requireCronAuth(req)
-  if (authError) return authError
-
-  let admin: ReturnType<typeof createAdminClient>
-  try {
-    admin = createAdminClient()
-  } catch (e) {
-    console.error('[bdl-odds cron] admin client not configured', e)
-    return NextResponse.json({ error: 'Supabase admin client not configured' }, { status: 500 })
-  }
-
-  const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-
+//
+// Also always polls tomorrow's ET slate (not just today's UTC-boundary
+// spillover) — probable pitchers/lines that are already postable the
+// evening before a game shouldn't sit blank on the board all night just
+// because this cron only ever looked at "today." Wrapped in its own
+// try/catch per date so a failure fetching tomorrow's (thinner, less
+// reliable) slate can never take down today's live-odds polling.
+async function processDate(admin: ReturnType<typeof createAdminClient>, date: string) {
   // Just enough hydration to match games and skip started ones — no lineups
   // needed here, that's the page's own concern when it reads this back.
   let mlbGames: any[] = []
@@ -67,7 +61,7 @@ export async function GET(req: Request) {
     )
     if (res.ok) mlbGames = (await res.json()).dates?.[0]?.games ?? []
   } catch (e) {
-    console.error('[bdl-odds cron] MLB schedule fetch failed', e)
+    console.error('[bdl-odds cron] MLB schedule fetch failed', date, e)
   }
 
   // Once a game is live/final, live odds aren't pregame research anymore —
@@ -75,7 +69,7 @@ export async function GET(req: Request) {
   // logic can permanently lock whatever was last captured here, unchanged.
   const pendingGames = mlbGames.filter((g: any) => (g.status?.abstractGameState ?? 'Preview') === 'Preview')
   if (!pendingGames.length) {
-    return NextResponse.json({ date, matched: 0, totalGames: mlbGames.length, note: 'No pending (pregame) games right now' })
+    return { date, matched: 0, totalGames: mlbGames.length, note: 'No pending (pregame) games right now' }
   }
 
   // BDL's dates[] filter matches UTC calendar day, not ET — a late-ET game
@@ -159,7 +153,7 @@ export async function GET(req: Request) {
 
   if (upserts.length) {
     const { error } = await admin.from('pregame_odds_snapshots').upsert(upserts, { onConflict: 'game_pk' })
-    if (error) console.error('[bdl-odds cron] snapshot upsert failed', error)
+    if (error) console.error('[bdl-odds cron] snapshot upsert failed', date, error)
 
     // Append-only companion to the upsert above — the upsert only ever
     // keeps the LATEST value per game_pk, so this is the only place an
@@ -169,15 +163,43 @@ export async function GET(req: Request) {
     const { error: historyError } = await admin.from('pregame_odds_snapshot_history').insert(
       upserts.map(u => ({ game_pk: u.game_pk, game_date: u.game_date, prop_map: u.prop_map, captured_at: u.captured_at }))
     )
-    if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', historyError)
+    if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', date, historyError)
   }
 
   if (openingRows.length) {
     const { error: openingError } = await admin
       .from('market_opening_prices')
       .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market,book', ignoreDuplicates: true })
-    if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', openingError)
+    if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', date, openingError)
   }
 
-  return NextResponse.json({ date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, openingRowAttempts: openingRows.length })
+  return { date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, openingRowAttempts: openingRows.length }
+}
+
+export async function GET(req: Request) {
+  const authError = requireCronAuth(req)
+  if (authError) return authError
+
+  let admin: ReturnType<typeof createAdminClient>
+  try {
+    admin = createAdminClient()
+  } catch (e) {
+    console.error('[bdl-odds cron] admin client not configured', e)
+    return NextResponse.json({ error: 'Supabase admin client not configured' }, { status: 500 })
+  }
+
+  const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const dates = [todayEt, addDaysToDateStr(todayEt, 1)]
+
+  const results: Record<string, unknown> = {}
+  for (const date of dates) {
+    try {
+      results[date] = await processDate(admin, date)
+    } catch (e: any) {
+      console.error('[bdl-odds cron] date failed', date, e)
+      results[date] = { error: e?.message || String(e) }
+    }
+  }
+
+  return NextResponse.json({ dates, results })
 }

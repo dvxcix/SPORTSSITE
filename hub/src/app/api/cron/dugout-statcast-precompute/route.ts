@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeDugoutStatcastForDate } from '@/lib/dugoutStatcastPrecompute'
+import { addDaysToDateStr } from '@/lib/balldontlie'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -38,11 +39,17 @@ export async function GET(req: Request) {
   // An explicit ?date= (manual/admin trigger) still means exactly that one
   // date — the trailing-window reprocessing is only for the cron's own
   // unparameterized daily run.
-  const dates = explicitDate ? [explicitDate] : Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
-    const d = new Date(`${todayEt}T00:00:00Z`)
-    d.setUTCDate(d.getUTCDate() - i)
-    return d.toISOString().slice(0, 10)
-  })
+  // Also precomputes tomorrow's slate — probable pitchers/projected lineups
+  // are already postable the evening before a game, so the board shouldn't
+  // sit blank overnight just because this only ever looked backward.
+  const dates = explicitDate ? [explicitDate] : [
+    ...Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
+      const d = new Date(`${todayEt}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() - i)
+      return d.toISOString().slice(0, 10)
+    }),
+    addDaysToDateStr(todayEt, 1),
+  ]
 
   const results: Record<string, unknown> = {}
   for (const date of dates) {
