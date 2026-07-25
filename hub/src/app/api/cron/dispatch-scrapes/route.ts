@@ -37,6 +37,26 @@ export const maxDuration = 280
 // FHR-less opening line. Capped at one retry (retry_count) so a game that
 // genuinely never gets an FHR market (or one already past its window)
 // doesn't loop forever.
+//
+// Real gap (2026-07-25): FHR had this check, nothing else did — confirmed
+// live across a full day's slate, TWO distinct silent tab-scrape misses:
+// (1) fhr_fd/rbi3_fd/combo1_min/combo2_min all zero together on 7 games,
+// (2) laser105_fd/laser110_fd/moonshot_fd/pa1_fd all zero together on 2
+// games (one game hit both). fanduelScraper.ts clicks through every tab in
+// one pass and silently swallows a failed section-expand/match (no error,
+// no retry signal), so any one tab going empty while others succeeded was
+// permanently invisible — the only success check was "did ANY market come
+// back." RETRY_MARKETS below is every market a genuinely healthy scrape of
+// ANY real game this session had non-zero coverage for — every one of
+// these should already be per-player 0 < count < players for a normal
+// game, so a flat 0 across the whole game is always a real miss, not "this
+// game just doesn't have that market." Kept as a plain list (not literally
+// every fanduel_gap_odds column) since some columns are legitimately
+// allowed to be 0 for specific games (see combo1/combo2 in a normal game —
+// still nonzero here since not every batter gets a combo price, but a
+// whole game at exactly 0 never happens in healthy data either).
+const RETRY_MARKETS = ['fhr_fd', 'rbi3_fd', 'combo1_min', 'combo2_min', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'pa1_fd'] as const
+
 export async function GET(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
@@ -67,19 +87,21 @@ export async function GET(req: Request) {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
       })
       const body = await res.json().catch(() => null)
-      const fhrCount = body?.result?.imported?.body?.marketSummary?.fhr_fd ?? 0
-      return { gamePk: row.game_pk, status: res.status, fhrCount, retryCount: row.retry_count }
+      const marketSummary: Record<string, number> = body?.result?.imported?.body?.marketSummary ?? {}
+      const counts = Object.fromEntries(RETRY_MARKETS.map(k => [k, marketSummary[k] ?? 0])) as Record<typeof RETRY_MARKETS[number], number>
+      return { gamePk: row.game_pk, status: res.status, counts, retryCount: row.retry_count }
     })
   )
 
   const fulfilled = results
     .map(r => r.status === 'fulfilled' ? r.value : null)
-    .filter((r): r is { gamePk: number; status: number; fhrCount: number; retryCount: number } => r !== null)
+    .filter((r): r is { gamePk: number; status: number; counts: Record<typeof RETRY_MARKETS[number], number>; retryCount: number } => r !== null)
 
-  const needsFhrRetry = fulfilled.filter(r => r.status === 200 && r.fhrCount === 0 && r.retryCount < 1)
-  if (needsFhrRetry.length) {
+  const missingMarkets = (counts: Record<typeof RETRY_MARKETS[number], number>) => RETRY_MARKETS.filter(k => counts[k] === 0)
+  const needsRetry = fulfilled.filter(r => r.status === 200 && r.retryCount < 1 && missingMarkets(r.counts).length > 0)
+  if (needsRetry.length) {
     const retryReadyAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-    await Promise.all(needsFhrRetry.map(r =>
+    await Promise.all(needsRetry.map(r =>
       admin.from('scrape_dispatch_queue')
         .update({ dispatched_at: null, ready_at: retryReadyAt, retry_count: r.retryCount + 1 })
         .eq('game_pk', r.gamePk)
@@ -91,7 +113,7 @@ export async function GET(req: Request) {
     dispatched: toScrape.length,
     skippedAlreadyLive: live.map(r => r.game_pk),
     gamePks: toScrape.map(r => r.game_pk),
-    fhrRetryQueued: needsFhrRetry.map(r => r.gamePk),
+    retryQueued: needsRetry.map(r => ({ gamePk: r.gamePk, missing: missingMarkets(r.counts) })),
     results: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason?.message ?? String(r.reason) }),
   })
 }
