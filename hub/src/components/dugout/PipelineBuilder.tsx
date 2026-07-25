@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { Reorder } from 'motion/react'
+import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { GripVertical, X, Plus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import {
@@ -97,8 +97,8 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: M
 // condition/then list) unlocks the lt_anchor/gt_anchor filter operators —
 // "lower/higher than the tied value" — worded plainly rather than exposing
 // the word "anchor" to the member.
-function PipelineStepCard({ step, index, hasAnchor, onChange, onRemove }: {
-  step: MatrixPipelineStep; index: number; hasAnchor?: boolean
+function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRemove }: {
+  step: MatrixPipelineStep; index: number; hasAnchor?: boolean; dragControls?: DragControls
   onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
 }) {
   // group/rank exclude boolean fields (Is PWR ⚡?) — "tied"/"highest" on a
@@ -128,7 +128,11 @@ function PipelineStepCard({ step, index, hasAnchor, onChange, onRemove }: {
       background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <GripVertical size={14} style={{ color: 'var(--text-3)', cursor: 'grab', flexShrink: 0 }} />
+        <GripVertical
+          size={14}
+          onPointerDown={e => dragControls?.start(e)}
+          style={{ color: 'var(--text-3)', cursor: dragControls ? 'grab' : 'default', flexShrink: 0, touchAction: 'none' }}
+        />
         <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
         <span style={{
           fontSize: 10, fontWeight: 800, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
@@ -346,8 +350,8 @@ function PipelineStepCard({ step, index, hasAnchor, onChange, onRemove }: {
 // recency/book), the search scope for its condition, and contains two
 // nested StepLists (condition, then) — capped at allowUnless=false so a
 // member can never nest a second Unless inside either one.
-function UnlessStepCard({ step, index, onChange, onRemove }: {
-  step: MatrixPipelineStep; index: number
+function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
+  step: MatrixPipelineStep; index: number; dragControls?: DragControls
   onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
 }) {
   const fields = fieldsForCategory(step.category).filter(f => !f.boolean)
@@ -365,7 +369,11 @@ function UnlessStepCard({ step, index, onChange, onRemove }: {
       background: 'var(--surface-2)', border: `1px solid ${KIND_COLOR.unless}`, borderRadius: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <GripVertical size={14} style={{ color: 'var(--text-3)', cursor: 'grab', flexShrink: 0 }} />
+        <GripVertical
+          size={14}
+          onPointerDown={e => dragControls?.start(e)}
+          style={{ color: 'var(--text-3)', cursor: dragControls ? 'grab' : 'default', flexShrink: 0, touchAction: 'none' }}
+        />
         <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', flexShrink: 0 }}>{index + 1}</span>
         <span style={{
           fontSize: 10, fontWeight: 800, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 999,
@@ -541,25 +549,38 @@ function StepList({ steps, onChange, allowUnless, hasAnchor, showHeader = true, 
       ) : (
         <Reorder.Group as="div" axis="y" values={steps} onReorder={onChange} style={{ display: 'flex', flexDirection: 'column', gap: 8, listStyle: 'none', margin: 0, padding: 0 }}>
           {steps.map((step, i) => (
-            <Reorder.Item key={i} value={step} as="div" style={{ listStyle: 'none' }}>
-              {step.kind === 'unless' ? (
-                <UnlessStepCard
-                  step={step} index={i}
-                  onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
-                  onRemove={() => onChange(steps.filter((_, si) => si !== i))}
-                />
-              ) : (
-                <PipelineStepCard
-                  step={step} index={i} hasAnchor={hasAnchor}
-                  onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
-                  onRemove={() => onChange(steps.filter((_, si) => si !== i))}
-                />
-              )}
-            </Reorder.Item>
+            <StepListItem
+              key={i} step={step} index={i} hasAnchor={hasAnchor}
+              onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
+              onRemove={() => onChange(steps.filter((_, si) => si !== i))}
+            />
           ))}
         </Reorder.Group>
       )}
     </div>
+  )
+}
+
+// Reorder.Item's default `dragListener` makes the ENTIRE item a drag
+// surface — including every dropdown/input inside it, so clicking a select
+// could just as easily start a drag as open it, and dragging never had a
+// precise, reliable starting point. `dragListener={false}` + a manual
+// `dragControls` bound ONLY to the GripVertical handle's pointerdown (see
+// PipelineStepCard/UnlessStepCard) fixes both: normal clicks on the card's
+// controls stay normal clicks, and a drag only ever starts from the handle.
+function StepListItem({ step, index, hasAnchor, onChange, onRemove }: {
+  step: MatrixPipelineStep; index: number; hasAnchor?: boolean
+  onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
+}) {
+  const dragControls = useDragControls()
+  return (
+    <Reorder.Item value={step} as="div" dragListener={false} dragControls={dragControls} style={{ listStyle: 'none' }}>
+      {step.kind === 'unless' ? (
+        <UnlessStepCard step={step} index={index} dragControls={dragControls} onChange={onChange} onRemove={onRemove} />
+      ) : (
+        <PipelineStepCard step={step} index={index} hasAnchor={hasAnchor} dragControls={dragControls} onChange={onChange} onRemove={onRemove} />
+      )}
+    </Reorder.Item>
   )
 }
 

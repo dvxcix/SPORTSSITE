@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
-import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X } from 'lucide-react'
+import { Reorder, useDragControls, type DragControls } from 'motion/react'
+import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X, GripVertical } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 import { BookLogo } from '@/components/BookLogo'
@@ -237,7 +238,7 @@ export async function api<T>(url: string, opts?: RequestInit): Promise<{ data: T
 
 export const ALL_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'] as const
 
-function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onChange: (f: MatrixFactor) => void; onRemove: () => void }) {
+function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: MatrixFactor; onChange: (f: MatrixFactor) => void; onRemove: () => void; dragControls?: DragControls }) {
   const fields = fieldsForCategory(factor.category)
   const isBooksField = factor.field_key === 'booksfhr' || factor.field_key === 'bookshr'
   // No threshold VALUE needed for any of these — odds' delta-vs-open trio,
@@ -258,6 +259,13 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8 }}>
+      <div
+        onPointerDown={e => dragControls?.start(e)}
+        style={{ display: 'flex', alignItems: 'center', color: 'var(--text-3)', cursor: dragControls ? 'grab' : 'default', touchAction: 'none' }}
+      >
+        <GripVertical size={14} />
+      </div>
+
       <select
         className="ss-input" value={factor.category}
         onChange={e => {
@@ -473,6 +481,18 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
   )
 }
 export function isBooksFieldKey(k: string) { return k === 'booksfhr' || k === 'bookshr' }
+
+// Own useDragControls() instance per row (hooks can't run in a loop) so
+// dragging only starts from the grip handle, not the whole card — otherwise
+// every dropdown/input inside FactorRow becomes a drag surface too.
+function FactorListItem({ factor, onChange, onRemove }: { factor: MatrixFactor; onChange: (f: MatrixFactor) => void; onRemove: () => void }) {
+  const dragControls = useDragControls()
+  return (
+    <Reorder.Item value={factor} as="div" dragListener={false} dragControls={dragControls} style={{ listStyle: 'none' }}>
+      <FactorRow factor={factor} onChange={onChange} onRemove={onRemove} dragControls={dragControls} />
+    </Reorder.Item>
+  )
+}
 
 // One step of a 'tied' Factor's fallback chain — "of everyone still tied,
 // keep only whoever ranks best on THIS field." Reuses the exact same
@@ -702,15 +722,18 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+            <Reorder.Group
+              axis="y" values={factors} onReorder={setFactors} as="div"
+              style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, listStyle: 'none', padding: 0, margin: '0 0 14px' }}
+            >
               {factors.map((f, i) => (
-                <FactorRow
+                <FactorListItem
                   key={i} factor={f}
                   onChange={nf => setFactors(factors.map((x, xi) => xi === i ? nf : x))}
                   onRemove={() => setFactors(factors.filter((_, xi) => xi !== i))}
                 />
               ))}
-            </div>
+            </Reorder.Group>
           </>
         )}
 
