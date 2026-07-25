@@ -4,7 +4,7 @@ import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { GripVertical, X, Plus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import {
-  type MatrixFactor, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, MULTI_BOOK_FIELDS,
+  type MatrixFactor, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, recencyOptionsFor, MULTI_BOOK_FIELDS,
   fieldsForCategory, isBooksFieldKey,
 } from './CustomMatrixPanel'
 
@@ -233,11 +233,12 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
-            {/* No '_delta' options — see CustomMatrixPanel.tsx's FactorRow
-                recency select comment: the board never displays a computed
-                delta anywhere, only the raw season/recent values, so there's
-                no real number to calibrate a delta threshold against. */}
-            {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
+            {/* '_delta' options only for Bat Speed/Squared-Up% — see
+                CustomMatrixPanel.tsx's recencyOptionsFor/DELTA_DISPLAYED_FIELDS:
+                those are the only two fields the board actually shows a
+                computed Δ for, so they're the only ones with a real number
+                to calibrate a delta threshold against. */}
+            {recencyOptionsFor(step.category, step.field_key).map(r => (
               <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
             ))}
           </select>
@@ -409,7 +410,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
             onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
-            {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
+            {recencyOptionsFor(step.category, step.field_key).map(r => (
               <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
             ))}
           </select>

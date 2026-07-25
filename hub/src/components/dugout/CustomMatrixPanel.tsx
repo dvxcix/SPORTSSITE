@@ -185,6 +185,20 @@ export function recencyLabel(category: MatrixFactor['category'], r: string): str
   if (category === 'savant_stat' && r === 'game_delta') return 'Last 1 (Δ vs. Season)'
   return RECENCY_LABEL[r] ?? r
 }
+// The only two fields the Dugout board itself actually renders a Δ (recent
+// minus season) value for — Bat Speed's "ΔSPD" and Squared-Up%'s "ΔSQ" (see
+// DugoutClient.tsx's d_spd/d_sq) — which is exactly the real number the
+// '_delta' recency removal above was worried a member had nothing to
+// calibrate against. These two DO have that number, so they get the delta
+// options back; every other field stays exact-window-only.
+const DELTA_DISPLAYED_FIELDS: Partial<Record<MatrixFactor['category'], string[]>> = {
+  pitchlog_stat: ['bspd'], savant_stat: ['sq'],
+}
+export function recencyOptionsFor(category: MatrixFactor['category'], field_key: string): string[] {
+  const base = ['game', 'l3', 'l5', 'l10', 'season']
+  if (!DELTA_DISPLAYED_FIELDS[category]?.includes(field_key)) return base
+  return [...base, 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta']
+}
 export const OPERATOR_LABEL: Record<string, string> = {
   gte: 'At least', lte: 'At most', eq: 'Exactly',
   up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
@@ -387,14 +401,16 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
               savant_stat already was.
 
               '_delta' options (recent minus season) removed from this list
-              (2026-07-24) — reported live: the board never actually displays
-              that computed delta anywhere, only the raw season value and
-              whichever recent window is currently toggled (R·BLA/R·ATK/etc.),
-              so a member had no real number to calibrate a delta threshold
-              against. The engine still evaluates '*_delta' recencies
-              correctly (one existing saved Factor already uses one), this
-              just stops offering them for new selections. */}
-          {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
+              (2026-07-24) for most fields — the board never actually displays
+              that computed delta anywhere for them, only the raw season value
+              and whichever recent window is currently toggled, so a member
+              had no real number to calibrate a delta threshold against.
+              Restored (2026-07-25) for the two fields that DO have a real
+              displayed delta — Bat Speed (ΔSPD) and Squared-Up% (ΔSQ) — see
+              recencyOptionsFor/DELTA_DISPLAYED_FIELDS above. The engine
+              always supported '*_delta' regardless of what the picker
+              offered. */}
+          {recencyOptionsFor(factor.category, factor.field_key).map(r => (
             <option key={r} value={r}>{recencyLabel(factor.category, r)}</option>
           ))}
         </select>
@@ -536,9 +552,9 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
           onChange={e => onChange({ ...tb, recency: e.target.value as MatrixTiebreaker['recency'] })}
           style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
         >
-          {/* No '_delta' options here either — see the matching comment on
-              FactorRow's own recency select above. */}
-          {['game', 'l3', 'l5', 'l10', 'season'].map(r => (
+          {/* Same Bat Speed / Squared-Up% exception as FactorRow's own
+              recency select — see recencyOptionsFor above. */}
+          {recencyOptionsFor(tb.category, tb.field_key).map(r => (
             <option key={r} value={r}>{recencyLabel(tb.category, r)}</option>
           ))}
         </select>
