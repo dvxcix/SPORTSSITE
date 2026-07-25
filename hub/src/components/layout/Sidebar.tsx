@@ -7,14 +7,24 @@ import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X,
+  ChevronLeft, ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
+import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { MovingBorderGlow } from './MovingBorderGlow'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
 const MLB_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png'
+
+// Mirrors --sidebar-w / --sidebar-w-collapsed in globals.css — kept as
+// plain numbers here because the collapse toggle transitions this value,
+// and animating between two var() references (rather than one) doesn't
+// transition reliably (confirmed live); those CSS vars remain the source
+// of truth for anything reading the sidebar's width statically.
+const SIDEBAR_W = 220
+const SIDEBAR_W_COLLAPSED = 64
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
@@ -59,6 +69,12 @@ const nav: NavItem[] = [
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePathname()
+  const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
+  // The persisted collapse preference is desktop/tablet-only — if it's on
+  // and the user then opens the mobile drawer (e.g. after resizing down),
+  // the drawer should still show full nav, not a useless icon rail they
+  // can't reach the toggle button for (it's hidden on mobile).
+  const isCollapsed = collapsed && !open
   // Beta launch default: assume the gated sections are off until the real
   // flags load, so testers don't see items flash on then disappear — matches
   // the site_settings rows we ship disabled by default.
@@ -95,9 +111,22 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
         // that custom property (0px when it's not showing) so this sticks
         // right below the banner instead of overlapping it once scrolled.
-        className={`fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          width: 'var(--sidebar-w)',
+          // Confirmed live: a `width` transition on this element never
+          // resolves — it commits the inline style and the DOM value
+          // instantly but getComputedStyle/getBoundingClientRect stay
+          // pinned to the pre-toggle width indefinitely (reflow, resize,
+          // and scroll events don't unstick it either). That reproduced
+          // identically whether width referenced CSS custom properties or
+          // plain numbers, so it's specific to `position: sticky` + a
+          // `width` transition on this element, not the value source.
+          // Collapse/expand snaps instantly instead; only `transform`
+          // (the mobile drawer's slide) stays animated.
+          width: isCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
+          transitionProperty: 'transform',
+          transitionDuration: '200ms',
+          transitionTimingFunction: 'ease-out',
           background: 'var(--surface)',
           borderRight: '1px solid var(--border)',
           // Deliberately still 100vh, not calc(100vh - banner-h) — that
@@ -116,28 +145,59 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       {/* Logo */}
       <Link href="/feed" style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '20px 16px 18px',
+        justifyContent: isCollapsed ? 'center' : 'flex-start',
+        padding: isCollapsed ? '20px 8px 18px' : '20px 16px 18px',
         borderBottom: '1px solid var(--border)',
         textDecoration: 'none',
       }}>
         <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
-            Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
+        {!isCollapsed && (
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
+              Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
+            </div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: -1 }}>
+              SPORTS · PICKS · SOCIAL
+            </div>
           </div>
-          <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: -1 }}>
-            SPORTS · PICKS · SOCIAL
-          </div>
-        </div>
-        <button
-          onClick={e => { e.preventDefault(); onClose() }}
-          className="md:hidden"
-          style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
-          aria-label="Close menu"
-        >
-          <X size={18} />
-        </button>
+        )}
+        {!isCollapsed && (
+          <button
+            onClick={e => { e.preventDefault(); onClose() }}
+            className="md:hidden"
+            style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        )}
       </Link>
+
+      {/* Collapse toggle — desktop/tablet only, mirrors the mobile X button's
+          spot in the flow but lives in its own row since collapsing needs to
+          stay reachable even when the logo row above is icon-only. */}
+      <button
+        onClick={toggleCollapsed}
+        className="hidden md:flex"
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        style={{
+          alignItems: 'center', gap: 6,
+          justifyContent: isCollapsed ? 'center' : 'flex-end',
+          padding: '6px 12px 10px',
+          background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer',
+          borderBottom: '1px solid var(--border)', marginBottom: 6,
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}
+      >
+        {isCollapsed ? <ChevronRight size={14} /> : (
+          <>
+            <ChevronLeft size={14} />
+            <span style={{ fontSize: 11, fontWeight: 600 }}>Collapse</span>
+          </>
+        )}
+      </button>
 
       {/* Nav */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -147,9 +207,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           }
           if ('section' in item) {
             return (
-              <div key={`section-${item.section}`} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 10px 4px' }}>
-                <img src={item.logo} alt={item.section} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
-                <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>
+              <div key={`section-${item.section}`} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                padding: isCollapsed ? '10px 0 4px' : '10px 10px 4px',
+              }}>
+                <img src={item.logo} alt={item.section} title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
+                {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
               </div>
             )
           }
@@ -161,9 +225,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           // fill so only the 1.5px ring around the edge reads as lit.
           const idleBg = item.movingBorder ? 'var(--surface)' : 'transparent'
           const link = (
-            <Link key={item.href} href={item.href} className="nav-item" data-active={isActive} style={{
-              position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 10px', borderRadius: item.movingBorder ? 7 : 8,
+            <Link key={item.href} href={item.href} className="nav-item" data-active={isActive} title={isCollapsed ? item.label : undefined} style={{
+              position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              padding: isCollapsed ? '8px' : '8px 10px', borderRadius: item.movingBorder ? 7 : 8,
               fontSize: 13, fontWeight: isActive ? 700 : 500,
               color: isActive ? 'var(--accent)' : 'var(--text-2)',
               background: isActive ? 'var(--accent-dim)' : idleBg,
@@ -174,8 +239,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; } }}
             onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = idleBg; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
               <Icon size={16} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />
-              <span style={{ flex: 1, lineHeight: 1.2 }}>{item.label}</span>
-              {item.badge && (
+              {!isCollapsed && <span style={{ flex: 1, lineHeight: 1.2 }}>{item.label}</span>}
+              {!isCollapsed && item.badge && (
                 <span style={{
                   fontSize: 9, fontWeight: 900, letterSpacing: '0.04em',
                   background: item.badgeColor ?? 'var(--red)', color: '#fff',
@@ -183,6 +248,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 }}>
                   {item.badge}
                 </span>
+              )}
+              {isCollapsed && item.badge && (
+                <span style={{
+                  position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: '50%',
+                  background: item.badgeColor ?? 'var(--red)',
+                }} aria-hidden="true" />
               )}
             </Link>
           )
@@ -203,16 +274,17 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
-        <Link href="/settings" style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 10px', borderRadius: 8,
+        <Link href="/settings" title={isCollapsed ? 'Settings & Help' : undefined} style={{
+          display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
           fontSize: 12, fontWeight: 500, color: 'var(--text-3)',
           textDecoration: 'none', transition: 'all 130ms',
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}>
           <span>⚙</span>
-          <span>Settings & Help</span>
+          {!isCollapsed && <span>Settings & Help</span>}
         </Link>
       </div>
       </aside>
