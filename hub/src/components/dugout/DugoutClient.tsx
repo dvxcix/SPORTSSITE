@@ -1153,29 +1153,40 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
   // row's own node, not a CSS pseudo-class that has to survive reordering.
   const [hovered, setHovered] = useState(false)
   const trRef = useRef<HTMLTableRowElement>(null)
-  // Repaints this row's cells straight against the DOM by index, bypassing
-  // React's own re-render for these specific properties — the only way to
-  // overlay arbitrary per-cell color without threading a prop through every
-  // one of the ~60 <td>s below. No dependency array: re-runs after EVERY
-  // commit of this row (cheap — a ~60-cell walk), which matters because a
-  // live data refresh recomputes plenty of cells' own heat-map background
-  // (see heat()/oddsHeat() below) — if this only ran when cellHighlights
-  // itself changed, a refresh would silently paint back OVER a highlight
-  // with that cell's fresh heat color. Skips the sticky player-name column
-  // entirely — it has its own hard opacity requirement (see the position:
-  // sticky comment on that cell) that this must never fight with.
+  // Which cell indices WE'VE personally painted a background onto — the
+  // only ones this effect is ever allowed to clear. Real regression, caught
+  // live: the first version cleared `background-color` on every cell with
+  // no active highlight, on every render — but a heat-mapped cell's color
+  // (heat()/oddsHeat() below) is ALSO just its own `background-color`, so
+  // this was wiping out every heat-map cell in the whole table the instant
+  // Highlighter mounted, highlight mode on or off. Tracking exactly which
+  // indices we set means we only ever clear OUR OWN prior paint (when a
+  // cell gets un-highlighted) and never touch a cell React itself colored.
+  const highlightedIndices = useRef<Set<number>>(new Set())
   useLayoutEffect(() => {
     const tr = trRef.current
     if (!tr) return
+    const nextHighlighted = new Set(Object.keys(cellHighlights ?? {}).map(Number))
+    for (const idx of highlightedIndices.current) {
+      if (nextHighlighted.has(idx)) continue
+      const td = tr.children[idx] as HTMLElement | undefined
+      td?.style.removeProperty('background-color')
+    }
+    for (const idx of nextHighlighted) {
+      const td = tr.children[idx] as HTMLElement | undefined
+      if (!td || td.classList.contains('dg-sticky-col')) continue
+      td.style.backgroundColor = blendOnBg(cellHighlights![idx], 0.35)
+    }
+    highlightedIndices.current = nextHighlighted
+    // Cursor carries no data, so a coarser rule is fine here: show the
+    // paint-mode affordance on every non-sticky cell while highlighting,
+    // and only clear OUR crosshair (never some other cell's own intentional
+    // cursor, e.g. the "help" cursor on the bats-hand badge) when it's off.
     for (const el of Array.from(tr.children)) {
       const td = el as HTMLElement
       if (td.classList.contains('dg-sticky-col')) continue
-      const idx = (td as HTMLTableCellElement).cellIndex
-      const color = cellHighlights?.[idx]
-      if (color) td.style.backgroundColor = blendOnBg(color, 0.35)
-      else td.style.removeProperty('background-color')
       if (highlightMode) td.style.cursor = 'crosshair'
-      else td.style.removeProperty('cursor')
+      else if (td.style.cursor === 'crosshair') td.style.removeProperty('cursor')
     }
   })
   const g = (f: keyof BatterRow) => pool.map(r => r[f] as number | null)
