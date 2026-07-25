@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   evaluateMatrix, evaluatePitchlogFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor,
-  type Matrix, type MatrixFactor, type DugoutSpecsAverages, type PitchlogStatWindow,
+  type Matrix, type MatrixFactor, type MatrixPipelineStep, type DugoutSpecsAverages, type PitchlogStatWindow,
 } from '@/lib/matrixEngine'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import type { BatterStats } from '@/lib/batterStatsEngine'
@@ -46,7 +46,7 @@ export async function asyncPool<T, R>(concurrency: number, items: T[], fn: (item
 export async function fetchUserMatrices(admin: AdminClient, userId: string): Promise<Matrix[]> {
   const { data: matrices } = await admin
     .from('matrices')
-    .select('id, name, color, priority, match_mode, match_any_count')
+    .select('id, name, color, priority, match_mode, match_any_count, matrix_type, pipeline_scope')
     .eq('user_id', userId)
     .eq('enabled', true)
     .order('priority', { ascending: true })
@@ -58,13 +58,32 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
+  // Pipeline-mode Matrices keep their steps in a sibling table (same
+  // fetch-then-group-by-matrix_id shape as matrix_factors above) instead of
+  // `factors` — a Matrix is one or the other, never both (see matrix_type).
+  const { data: pipelineSteps } = await admin
+    .from('matrix_pipeline_steps')
+    .select('matrix_id, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction')
+    .in('matrix_id', matrices.map(m => m.id))
+    .order('position', { ascending: true })
+
   const byMatrix = new Map<string, MatrixFactor[]>()
   for (const f of factors ?? []) {
     const arr = byMatrix.get(f.matrix_id as string) ?? []
     arr.push(f as unknown as MatrixFactor)
     byMatrix.set(f.matrix_id as string, arr)
   }
-  return matrices.map(m => ({ ...m, factors: byMatrix.get(m.id) ?? [] })) as unknown as Matrix[]
+  const stepsByMatrix = new Map<string, MatrixPipelineStep[]>()
+  for (const s of pipelineSteps ?? []) {
+    const arr = stepsByMatrix.get(s.matrix_id as string) ?? []
+    arr.push(s as unknown as MatrixPipelineStep)
+    stepsByMatrix.set(s.matrix_id as string, arr)
+  }
+  return matrices.map(m => ({
+    ...m,
+    factors: byMatrix.get(m.id) ?? [],
+    pipeline_steps: stepsByMatrix.get(m.id) ?? [],
+  })) as unknown as Matrix[]
 }
 
 // Columns actually read by computeStatLine/matrixEngine — the `raw` jsonb
@@ -191,7 +210,7 @@ export async function fetchBulkSavantSplits(admin: AdminClient, mlbIds: number[]
 export type MatrixMatch = { id: string; name: string; color: string; priority: number }
 
 export function pitchlogNeeded(matrices: Matrix[]): boolean {
-  return matrices.some(m => m.factors.some(f => f.category === 'pitchlog_stat'))
+  return matrices.some(m => m.factors.some(f => f.category === 'pitchlog_stat') || m.pipeline_steps.some(s => s.category === 'pitchlog_stat'))
 }
 
 // A pitchlog_stat Factor with recency 'custom' (an arbitrary exact date
@@ -221,6 +240,11 @@ export type MatrixMatchContext = {
   // player rather than threading whole per-game winner maps down through
   // evaluateOddsFactor/evaluateDugoutSpecsFactor.
   isFactorTied?: (factorId: string) => boolean
+  // Pipeline-mode analog of isFactorTied — "is THIS player one of the final
+  // survivors dugout/data/route.ts's runPipeline computed for THIS matrix's
+  // whole step chain?" Keyed by matrix.id since a pipeline's winners are a
+  // whole-Matrix result, not per-step.
+  isPipelineMatrixWinner?: (matrixId: string) => boolean
 }
 
 // Evaluates every one of a member's Matrices against ONE batter for ONE
@@ -246,22 +270,28 @@ export function evaluateBatterMatrices(
   if (!matrices.length) return []
   const matches: MatrixMatch[] = []
   for (const matrix of matrices) {
-    const ok = evaluateMatrix(matrix, (factor: MatrixFactor) => {
-      if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isFactorTied)
-      if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied)
-      // 'custom' recency (an arbitrary exact date range) is the only
-      // pitchlog_stat case that can't be precomputed as a fixed bucket —
-      // see evaluatePitchlogFactorPrecomputed's own comment. Everything
-      // else reads the daily cron-precomputed table, same as savant_stat.
-      if (factor.category === 'pitchlog_stat') {
-        return factor.recency === 'custom'
-          ? evaluatePitchlogFactor(factor, batterPitchRows, pitcherHand, asOfDate)
-          : evaluatePitchlogFactorPrecomputed(factor, pitchlogStatWindows)
-      }
-      if (factor.category === 'savant_stat') return evaluateSavantFactor(factor, statcastWindows)
-      if (factor.category === 'picks') return evaluatePicksFactor(factor, context.pikkitEntry, context.gameTotalPicksByMarket ?? {})
-      return false
-    })
+    // Pipeline mode: the "match" is whole-Matrix, not per-Factor — the
+    // caller already ran the full step chain game-wide (the only place
+    // with visibility into every batter at once) and just needs a
+    // membership check for this one player.
+    const ok = matrix.matrix_type === 'pipeline'
+      ? (context.isPipelineMatrixWinner?.(matrix.id) ?? false)
+      : evaluateMatrix(matrix, (factor: MatrixFactor) => {
+          if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isFactorTied)
+          if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied)
+          // 'custom' recency (an arbitrary exact date range) is the only
+          // pitchlog_stat case that can't be precomputed as a fixed bucket —
+          // see evaluatePitchlogFactorPrecomputed's own comment. Everything
+          // else reads the daily cron-precomputed table, same as savant_stat.
+          if (factor.category === 'pitchlog_stat') {
+            return factor.recency === 'custom'
+              ? evaluatePitchlogFactor(factor, batterPitchRows, pitcherHand, asOfDate)
+              : evaluatePitchlogFactorPrecomputed(factor, pitchlogStatWindows)
+          }
+          if (factor.category === 'savant_stat') return evaluateSavantFactor(factor, statcastWindows)
+          if (factor.category === 'picks') return evaluatePicksFactor(factor, context.pikkitEntry, context.gameTotalPicksByMarket ?? {})
+          return false
+        })
     if (ok) matches.push({ id: matrix.id, name: matrix.name, color: matrix.color, priority: matrix.priority })
   }
   return matches

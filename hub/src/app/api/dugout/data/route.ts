@@ -16,10 +16,10 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
-import type { PitchlogStatWindow, MatrixTiebreaker } from '@/lib/matrixEngine'
+import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle } from '@/lib/matrixEngine'
 import {
   computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
-  groupTiedCandidates, resolveTiebreakers, MULTI_BOOK_MARKET,
+  groupTiedCandidates, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
 } from '@/lib/matrixEngine'
 import type { BatterStats } from '@/lib/batterStatsEngine'
 
@@ -1203,86 +1203,95 @@ export async function GET(req: Request) {
     const homePHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
     const awayPHand = (homePitcher?.hand as 'L' | 'R') || 'R'
     const tiedFactors = userMatrices.flatMap(m => m.factors.filter(f => f.operator === 'tied'))
+    // Pipeline-mode Matrices need the identical per-player Bundle the tied-
+    // Factor precompute below already builds — see FieldBundle/runPipeline
+    // in matrixEngine.ts — so both share the SAME bundle-building pass
+    // rather than fetching/resolving the same data twice.
+    const pipelineMatrices = userMatrices.filter(m => m.matrix_type === 'pipeline' && m.pipeline_steps.length)
     const factorTiedWinners = new Map<string, Set<string>>() // factor.id -> winning name_norms (whole game, scope already applied)
-    if (tiedFactors.length) {
-      type Bundle = {
-        props: any
-        fhrAvg: any
-        saAvg: any
-        pitchlogWindows: Record<PitchlogStatWindow, BatterStats> | null
-        statcastWindows: Record<StatcastWindow, StatcastLine> | null
-        pikkitEntry: any
-      }
-      const resolveBundle = (p: typeof homeLineup[number], pHand: 'L' | 'R'): Bundle => ({
+    const pipelineMatrixWinners = new Map<string, Set<string>>() // matrix.id -> winning name_norms (whole game, scope already applied)
+    if (tiedFactors.length || pipelineMatrices.length) {
+      const resolveBundle = (p: typeof homeLineup[number], pHand: 'L' | 'R'): FieldBundle => ({
         props: resolveNameEntry(bdlByName, p.name_norm) || null,
         fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm),
         saAvg: resolveNameEntry(saAvgMap, p.name_norm),
         pitchlogWindows: isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null,
         statcastWindows: isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null,
-        pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm),
+        pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
       })
       const homeBundle = new Map(homeLineup.map(p => [p.name_norm, resolveBundle(p, homePHand)]))
       const awayBundle = new Map(awayLineup.map(p => [p.name_norm, resolveBundle(p, awayPHand)]))
       const allBundle = new Map([...homeBundle, ...awayBundle])
 
-      function resolveTiebreakerValue(name: string, tb: MatrixTiebreaker, pool: Map<string, Bundle>): number | null {
-        const b = pool.get(name)
-        if (!b) return null
-        if (tb.category === 'odds') return computeOddsRawPrice(tb.field_key, tb.book ?? 'fanduel', b.props)
-        if (tb.category === 'dugout_specs') return computeDugoutSpecsValue(tb.field_key, b.props, b.fhrAvg, b.saAvg)
-        if (tb.category === 'pitchlog_stat') return computePitchlogStatValue(tb.field_key, tb.recency, b.pitchlogWindows)
-        if (tb.category === 'savant_stat') return computeSavantStatValue(tb.field_key, tb.recency, b.statcastWindows)
-        return computePicksValue(tb.field_key, b.pikkitEntry, gameTotalPicksByMarket)
-      }
-      function rootValue(f: (typeof tiedFactors)[number], book: string | null, b: Bundle): number | null {
-        return f.category === 'odds' ? computeOddsRawPrice(f.field_key, book ?? 'fanduel', b.props) : computeDugoutSpecsValue(f.field_key, b.props, b.fhrAvg, b.saAvg)
-      }
-      // One raw field(+book), one pool (home-only/away-only/whole-game) ->
-      // the final surviving winner set, after any tiebreaker chain runs.
-      function winnersForPool(f: (typeof tiedFactors)[number], book: string | null, pool: Map<string, Bundle>): Set<string> {
-        const values = new Map<string, number>()
-        for (const [name, b] of pool) {
-          const v = rootValue(f, book, b)
-          if (v != null) values.set(name, v)
+      if (tiedFactors.length) {
+        function resolveTiebreakerValue(name: string, tb: MatrixTiebreaker, pool: Map<string, FieldBundle>): number | null {
+          const b = pool.get(name)
+          return b ? resolveFieldValue(tb.category, tb.field_key, tb.recency, tb.book, b, gameTotalPicksByMarket) : null
         }
-        const groups = groupTiedCandidates(values)
-        const winners = new Set<string>()
-        for (const group of groups.values()) {
-          const survivors = f.tiebreakers?.length
-            ? resolveTiebreakers(group, f.tiebreakers, (name, tb) => resolveTiebreakerValue(name, tb, pool))
-            : new Set(group)
-          for (const n of survivors) winners.add(n)
+        function rootValue(f: (typeof tiedFactors)[number], book: string | null, b: FieldBundle): number | null {
+          return resolveFieldValue(f.category, f.field_key, f.recency, book, b, gameTotalPicksByMarket)
         }
-        return winners
+        // One raw field(+book), one pool (home-only/away-only/whole-game) ->
+        // the final surviving winner set, after any tiebreaker chain runs.
+        function winnersForPool(f: (typeof tiedFactors)[number], book: string | null, pool: Map<string, FieldBundle>): Set<string> {
+          const values = new Map<string, number>()
+          for (const [name, b] of pool) {
+            const v = rootValue(f, book, b)
+            if (v != null) values.set(name, v)
+          }
+          const groups = groupTiedCandidates(values)
+          const winners = new Set<string>()
+          for (const group of groups.values()) {
+            const survivors = f.tiebreakers?.length
+              ? resolveTiebreakers(group, f.tiebreakers, (name, tb) => resolveTiebreakerValue(name, tb, pool))
+              : new Set(group)
+            for (const n of survivors) winners.add(n)
+          }
+          return winners
+        }
+
+        for (const f of tiedFactors) {
+          const pools = f.tie_scope === 'game' ? [allBundle] : [homeBundle, awayBundle]
+          if (f.category === 'odds') {
+            const multi = MULTI_BOOK_MARKET[f.field_key]
+            const books = multi && f.books?.length ? f.books : ['fanduel']
+            // Per book, per pool -> combine per-player across books via the
+            // same every/N+ semantics every other multi-book odds operator
+            // already uses (see evaluateOddsFactor).
+            const perBookWinners = books.map(book => {
+              const combined = new Set<string>()
+              for (const pool of pools) for (const n of winnersForPool(f, book, pool)) combined.add(n)
+              return combined
+            })
+            const universe = new Set<string>()
+            for (const pool of pools) for (const name of pool.keys()) universe.add(name)
+            const finalWinners = new Set<string>()
+            for (const name of universe) {
+              const hits = perBookWinners.filter(s => s.has(name)).length
+              const passes = multi && f.books_min_count != null ? hits >= f.books_min_count : hits === books.length
+              if (passes) finalWinners.add(name)
+            }
+            factorTiedWinners.set(f.id, finalWinners)
+          } else if (f.category === 'dugout_specs') {
+            const combined = new Set<string>()
+            for (const pool of pools) for (const n of winnersForPool(f, null, pool)) combined.add(n)
+            factorTiedWinners.set(f.id, combined)
+          }
+        }
       }
 
-      for (const f of tiedFactors) {
-        const pools = f.tie_scope === 'game' ? [allBundle] : [homeBundle, awayBundle]
-        if (f.category === 'odds') {
-          const multi = MULTI_BOOK_MARKET[f.field_key]
-          const books = multi && f.books?.length ? f.books : ['fanduel']
-          // Per book, per pool -> combine per-player across books via the
-          // same every/N+ semantics every other multi-book odds operator
-          // already uses (see evaluateOddsFactor).
-          const perBookWinners = books.map(book => {
-            const combined = new Set<string>()
-            for (const pool of pools) for (const n of winnersForPool(f, book, pool)) combined.add(n)
-            return combined
-          })
-          const universe = new Set<string>()
-          for (const pool of pools) for (const name of pool.keys()) universe.add(name)
-          const finalWinners = new Set<string>()
-          for (const name of universe) {
-            const hits = perBookWinners.filter(s => s.has(name)).length
-            const passes = multi && f.books_min_count != null ? hits >= f.books_min_count : hits === books.length
-            if (passes) finalWinners.add(name)
-          }
-          factorTiedWinners.set(f.id, finalWinners)
-        } else if (f.category === 'dugout_specs') {
-          const combined = new Set<string>()
-          for (const pool of pools) for (const n of winnersForPool(f, null, pool)) combined.add(n)
-          factorTiedWinners.set(f.id, combined)
+      // Pipeline mode: run each Matrix's whole step chain once per scope
+      // partition (team-scoped = once per side, game-scoped = once across
+      // both) — same team/game split tied Factors already use above, just
+      // driving runPipeline instead of a single tie-group reduction.
+      for (const m of pipelineMatrices) {
+        const pools = m.pipeline_scope === 'game' ? [allBundle] : [homeBundle, awayBundle]
+        const combined = new Set<string>()
+        for (const pool of pools) {
+          const universe = new Set(pool.keys())
+          for (const n of runPipeline(universe, m.pipeline_steps, pool, gameTotalPicksByMarket)) combined.add(n)
         }
+        pipelineMatrixWinners.set(m.id, combined)
       }
     }
 
@@ -1342,6 +1351,7 @@ export async function GET(req: Request) {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
+              isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
@@ -1357,6 +1367,7 @@ export async function GET(req: Request) {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
+              isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }

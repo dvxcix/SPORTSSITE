@@ -8,6 +8,9 @@ const MAX_FACTORS_PER_MATRIX = 40
 const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks']
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
 const MAX_TIEBREAKERS = 5
+const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative']
+const MAX_PIPELINE_STEPS = 10
 
 function cleanTiebreakers(raw: unknown) {
   if (!Array.isArray(raw)) return []
@@ -22,6 +25,37 @@ function cleanTiebreakers(raw: unknown) {
       recency: typeof recency === 'string' ? recency : null,
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       direction: direction === 'lowest' ? 'lowest' : 'highest',
+    })
+  }
+  return clean
+}
+
+// Pipeline mode's Factor-list equivalent — see matrixEngine.ts's
+// MatrixPipelineStep. matrix_type itself is never editable here (a Matrix
+// is created as Classic or Pipeline and stays that way — see
+// api/matrices/route.ts POST), only pipeline_scope + the step list.
+function cleanPipelineSteps(raw: unknown) {
+  if (!Array.isArray(raw)) return []
+  const clean: {
+    kind: string; category: string; field_key: string; recency: string | null; book: string | null
+    books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
+    direction: 'highest' | 'lowest' | null
+  }[] = []
+  for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
+    if (!s || typeof s !== 'object') continue
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction } = s as Record<string, unknown>
+    if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
+    if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
+    if (typeof field_key !== 'string' || !field_key) continue
+    clean.push({
+      kind: kind as string, category: category as string, field_key,
+      recency: typeof recency === 'string' ? recency : null,
+      book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
+      books: Array.isArray(books) && books.length ? books.filter(b => typeof b === 'string' && VALID_BOOKS.includes(b)) : null,
+      books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
+      operator: typeof operator === 'string' && PIPELINE_OPERATORS.includes(operator) ? operator : null,
+      value: typeof value === 'number' ? value : null,
+      direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
     })
   }
   return clean
@@ -44,6 +78,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body?.match_mode === 'all' || body?.match_mode === 'any') updates.match_mode = body.match_mode
   if (Number.isFinite(body?.match_any_count)) updates.match_any_count = Math.max(1, Math.round(body.match_any_count))
   if (typeof body?.enabled === 'boolean') updates.enabled = body.enabled
+  if (body?.pipeline_scope === 'game' || body?.pipeline_scope === 'team') updates.pipeline_scope = body.pipeline_scope
   updates.updated_at = new Date().toISOString()
 
   const { error: updateError } = await admin.from('matrices').update(updates).eq('id', id)
@@ -74,6 +109,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }))
     )
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
+
+  // Same delete-and-reinsert shape as the Factor list above, for Pipeline
+  // mode's step list.
+  if (Array.isArray(body?.pipeline_steps)) {
+    if (!body.pipeline_steps.length) return NextResponse.json({ error: 'A Pipeline needs at least one step.' }, { status: 400 })
+    if (body.pipeline_steps.length > MAX_PIPELINE_STEPS) return NextResponse.json({ error: `A Pipeline can hold at most ${MAX_PIPELINE_STEPS} steps.` }, { status: 400 })
+    const { error: deleteStepsError } = await admin.from('matrix_pipeline_steps').delete().eq('matrix_id', id)
+    if (deleteStepsError) return NextResponse.json({ error: deleteStepsError.message }, { status: 500 })
+    const { error: insertStepsError } = await admin.from('matrix_pipeline_steps').insert(
+      cleanPipelineSteps(body.pipeline_steps).map((s, i) => ({ ...s, matrix_id: id, position: i }))
+    )
+    if (insertStepsError) return NextResponse.json({ error: insertStepsError.message }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })

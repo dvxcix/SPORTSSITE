@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useDraggableFab } from '@/lib/useDraggableFab'
+import { PipelineBuilder, type MatrixPipelineStep } from './PipelineBuilder'
+import { PipelineSummary } from './PipelineSummary'
 
 // "Custom Matrix" — a member's own saved highlight rules for The Dugout's
 // batter table. Terminology is deliberately its own: a saved rule is a
@@ -53,6 +55,14 @@ export type MatrixDef = {
   element_code: string
   enabled: boolean
   factors: MatrixFactor[]
+  // 'classic' (default — every Matrix before Pipeline mode existed) is the
+  // Elements/Factors system above. 'pipeline' ignores match_mode/factors
+  // entirely and uses pipeline_scope/pipeline_steps instead — see
+  // PipelineBuilder.tsx. A Matrix's mode is fixed at creation, not
+  // switchable afterward (see MatrixEditor).
+  matrix_type: 'classic' | 'pipeline'
+  pipeline_scope: 'team' | 'game' | null
+  pipeline_steps: MatrixPipelineStep[]
 }
 
 const ODDS_FIELDS: { key: string; label: string; deltaOnly?: boolean }[] = [
@@ -138,28 +148,28 @@ const PICKS_FIELDS: { key: string; label: string }[] = [
   { key: 'hrr', label: 'HRR Picks' }, { key: 'hrrPct', label: 'HRR Picks — % of Game' },
   { key: 'tb', label: 'TB Picks' }, { key: 'tbPct', label: 'TB Picks — % of Game' },
 ]
-const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = {
+export const CATEGORY_LABEL: Record<MatrixFactor['category'], string> = {
   odds: 'Odds', dugout_specs: 'Dugout Specs', pitchlog_stat: 'Stat Line', savant_stat: 'Bat Tracking', picks: 'Picks',
 }
-const RECENCY_LABEL: Record<string, string> = {
+export const RECENCY_LABEL: Record<string, string> = {
   game: 'Last Game', l3: 'Last 3', l5: 'Last 5', l10: 'Last 10', season: 'Season', custom: 'Custom Range',
   game_delta: 'Last Game (Δ vs. Season)', l3_delta: 'Last 3 (Δ vs. Season)', l5_delta: 'Last 5 (Δ vs. Season)', l10_delta: 'Last 10 (Δ vs. Season)',
 }
-const OPERATOR_LABEL: Record<string, string> = {
+export const OPERATOR_LABEL: Record<string, string> = {
   gte: 'At least', lte: 'At most', eq: 'Exactly',
   up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
   positive: 'Is positive (+)', negative: 'Is negative (−)',
   tied: 'Tied w/ a teammate',
 }
 
-type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
+export type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
 const FIELDS_BY_CATEGORY: Record<MatrixFactor['category'], FactorField[]> = {
   odds: ODDS_FIELDS, dugout_specs: DUGOUT_SPECS_FIELDS, pitchlog_stat: STAT_FIELDS, savant_stat: SAVANT_FIELDS, picks: PICKS_FIELDS,
 }
-function fieldsForCategory(cat: MatrixFactor['category']): FactorField[] {
+export function fieldsForCategory(cat: MatrixFactor['category']): FactorField[] {
   return FIELDS_BY_CATEGORY[cat]
 }
-function fieldLabel(cat: MatrixFactor['category'], key: string) {
+export function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
 }
 function newFactor(): MatrixFactor {
@@ -174,7 +184,7 @@ const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED57
 // one book for — every other odds Factor is FanDuel-only in our data (see
 // matrixEngine.ts's own ODDS_BOOK_FIELD/MULTI_BOOK_MARKET). Labels match
 // the exact book names DugoutClient already shows columns for.
-const MULTI_BOOK_FIELDS: Record<string, { key: string; label: string }[]> = {
+export const MULTI_BOOK_FIELDS: Record<string, { key: string; label: string }[]> = {
   fhr: [
     { key: 'fanduel', label: 'FanDuel' }, { key: 'caesars', label: 'Caesars' }, { key: 'fanatics', label: 'Fanatics' },
   ],
@@ -184,7 +194,7 @@ const MULTI_BOOK_FIELDS: Record<string, { key: string; label: string }[]> = {
   ],
 }
 
-async function api<T>(url: string, opts?: RequestInit): Promise<{ data: T | null; error: string | null }> {
+export async function api<T>(url: string, opts?: RequestInit): Promise<{ data: T | null; error: string | null }> {
   try {
     const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts?.headers || {}) } })
     const json = await res.json().catch(() => ({}))
@@ -195,7 +205,7 @@ async function api<T>(url: string, opts?: RequestInit): Promise<{ data: T | null
   }
 }
 
-const ALL_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'] as const
+export const ALL_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'] as const
 
 function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onChange: (f: MatrixFactor) => void; onRemove: () => void }) {
   const fields = fieldsForCategory(factor.category)
@@ -409,7 +419,7 @@ function FactorRow({ factor, onChange, onRemove }: { factor: MatrixFactor; onCha
     </div>
   )
 }
-function isBooksFieldKey(k: string) { return k === 'booksfhr' || k === 'bookshr' }
+export function isBooksFieldKey(k: string) { return k === 'booksfhr' || k === 'bookshr' }
 
 // One step of a 'tied' Factor's fallback chain — "of everyone still tied,
 // keep only whoever ranks best on THIS field." Reuses the exact same
@@ -491,29 +501,64 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
   const [matchMode, setMatchMode] = useState<'all' | 'any'>(initial?.match_mode ?? 'all')
   const [matchAnyCount, setMatchAnyCount] = useState(initial?.match_any_count ?? 2)
   const [factors, setFactors] = useState<MatrixFactor[]>(initial?.factors?.length ? initial.factors : [newFactor()])
+  // Mode is fixed once a Matrix exists — only choosable while creating new,
+  // so a member never lands in a half-migrated state (Factors that used to
+  // exist silently vanishing, or vice versa).
+  const [matrixType, setMatrixType] = useState<'classic' | 'pipeline'>(initial?.matrix_type ?? 'classic')
+  const [pipelineScope, setPipelineScope] = useState<'team' | 'game'>(initial?.pipeline_scope ?? 'team')
+  const [pipelineSteps, setPipelineSteps] = useState<MatrixPipelineStep[]>(initial?.pipeline_steps ?? [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const save = useCallback(async () => {
     if (!name.trim()) { setError('Give this Matrix a name.'); return }
-    if (!factors.length) { setError('A Matrix needs at least one Factor.'); return }
+    if (matrixType === 'pipeline') {
+      if (!pipelineSteps.length) { setError('A Pipeline needs at least one step.'); return }
+    } else if (!factors.length) {
+      setError('A Matrix needs at least one Factor.'); return
+    }
     setSaving(true); setError(null)
-    const body = { name: name.trim(), color, match_mode: matchMode, match_any_count: matchMode === 'any' ? matchAnyCount : null, factors }
+    const body = matrixType === 'pipeline'
+      ? { name: name.trim(), color, matrix_type: 'pipeline', pipeline_scope: pipelineScope, pipeline_steps: pipelineSteps }
+      : { name: name.trim(), color, matrix_type: 'classic', match_mode: matchMode, match_any_count: matchMode === 'any' ? matchAnyCount : null, factors }
     const { error: err } = initial
       ? await api(`/api/matrices/${initial.id}`, { method: 'PATCH', body: JSON.stringify(body) })
       : await api('/api/matrices', { method: 'POST', body: JSON.stringify(body) })
     setSaving(false)
     if (err) { setError(err); return }
     onSaved()
-  }, [name, color, matchMode, matchAnyCount, factors, initial, onSaved])
+  }, [name, color, matrixType, matchMode, matchAnyCount, factors, pipelineScope, pipelineSteps, initial, onSaved])
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 14, padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: matrixType === 'pipeline' ? 'min(640px, 100%)' : 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 14, padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{initial ? 'Edit Matrix' : 'New Matrix'}</span>
           <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
         </div>
+
+        {!initial && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14, padding: 3, background: 'var(--surface-2)', borderRadius: 9 }}>
+            {(['classic', 'pipeline'] as const).map(t => (
+              <button
+                key={t} onClick={() => setMatrixType(t)}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, padding: '7px 8px',
+                  borderRadius: 7, border: 'none', cursor: 'pointer',
+                  background: matrixType === t ? 'var(--surface)' : 'none',
+                  boxShadow: matrixType === t ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 800, color: matrixType === t ? 'var(--accent)' : 'var(--text-2)' }}>
+                  {t === 'classic' ? 'Classic' : 'Pipeline'}
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
+                  {t === 'classic' ? 'All Elements must match' : 'A step-by-step narrowing chain'}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input
@@ -533,44 +578,66 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 12, color: 'var(--text-2)' }}>
-          Highlight when a batter meets
-          <select className="ss-input" value={matchMode} onChange={e => setMatchMode(e.target.value as 'all' | 'any')} style={{ fontSize: 12, padding: '5px 6px' }}>
-            <option value="all">every Element</option>
-            <option value="any">at least</option>
-          </select>
-          {matchMode === 'any' && (
-            <input
-              className="ss-input" type="number" min={1} max={factors.length || 1} value={matchAnyCount}
-              onChange={e => setMatchAnyCount(Math.max(1, Number(e.target.value) || 1))}
-              style={{ fontSize: 12, padding: '5px 6px', width: 50 }}
-            />
-          )}
-          {matchMode === 'any' && 'Elements'}
-        </div>
+        {matrixType === 'pipeline' ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 12, color: 'var(--text-2)' }}>
+              Compare players on
+              <select className="ss-input" value={pipelineScope} onChange={e => setPipelineScope(e.target.value as 'team' | 'game')} style={{ fontSize: 12, padding: '5px 6px' }}>
+                <option value="team">the same team</option>
+                <option value="game">either team</option>
+              </select>
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Elements ({factors.length})</span>
-          <button
-            onClick={() => setFactors([...factors, newFactor()])}
-            style={{
-              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
-              color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer',
-            }}
-          >
-            <Plus size={12} /> Add Factor
-          </button>
-        </div>
+            <div style={{ marginBottom: 14 }}>
+              <PipelineSummary steps={pipelineSteps} />
+            </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-          {factors.map((f, i) => (
-            <FactorRow
-              key={i} factor={f}
-              onChange={nf => setFactors(factors.map((x, xi) => xi === i ? nf : x))}
-              onRemove={() => setFactors(factors.filter((_, xi) => xi !== i))}
-            />
-          ))}
-        </div>
+            <div style={{ marginBottom: 14 }}>
+              <PipelineBuilder steps={pipelineSteps} onChange={setPipelineSteps} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 12, color: 'var(--text-2)' }}>
+              Highlight when a batter meets
+              <select className="ss-input" value={matchMode} onChange={e => setMatchMode(e.target.value as 'all' | 'any')} style={{ fontSize: 12, padding: '5px 6px' }}>
+                <option value="all">every Element</option>
+                <option value="any">at least</option>
+              </select>
+              {matchMode === 'any' && (
+                <input
+                  className="ss-input" type="number" min={1} max={factors.length || 1} value={matchAnyCount}
+                  onChange={e => setMatchAnyCount(Math.max(1, Number(e.target.value) || 1))}
+                  style={{ fontSize: 12, padding: '5px 6px', width: 50 }}
+                />
+              )}
+              {matchMode === 'any' && 'Elements'}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Elements ({factors.length})</span>
+              <button
+                onClick={() => setFactors([...factors, newFactor()])}
+                style={{
+                  marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+                  color: 'var(--accent)', background: 'var(--accent-dim)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer',
+                }}
+              >
+                <Plus size={12} /> Add Factor
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              {factors.map((f, i) => (
+                <FactorRow
+                  key={i} factor={f}
+                  onChange={nf => setFactors(factors.map((x, xi) => xi === i ? nf : x))}
+                  onRemove={() => setFactors(factors.filter((_, xi) => xi !== i))}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {error && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</div>}
 
@@ -618,7 +685,13 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled }: { matrix: MatrixDe
     <div style={{ padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, opacity: deleting ? 0.5 : matrix.enabled ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: matrix.color, flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matrix.name}</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matrix.name}</span>
+        {matrix.matrix_type === 'pipeline' && (
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.03em', color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 999, padding: '2px 6px', flexShrink: 0 }}>
+            PIPELINE
+          </span>
+        )}
+        <span style={{ flex: 1, minWidth: 4 }} />
         <button
           onClick={toggle} disabled={toggling} title={matrix.enabled ? 'On — showing on the board. Click to turn off.' : 'Off — saved but not shown. Click to turn on.'}
           style={{
@@ -636,7 +709,10 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled }: { matrix: MatrixDe
         <button onClick={del} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Trash2 size={13} /></button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-        {matrix.factors.length} Element{matrix.factors.length === 1 ? '' : 's'} · {matrix.match_mode === 'all' ? 'match all' : `match ${matrix.match_any_count ?? 1}+`}
+        {matrix.matrix_type === 'pipeline'
+          ? <>{matrix.pipeline_steps.length} step{matrix.pipeline_steps.length === 1 ? '' : 's'} · {matrix.pipeline_scope === 'game' ? 'either team' : 'same team'}</>
+          : <>{matrix.factors.length} Element{matrix.factors.length === 1 ? '' : 's'} · {matrix.match_mode === 'all' ? 'match all' : `match ${matrix.match_any_count ?? 1}+`}</>
+        }
         {!matrix.enabled && <> · <span style={{ color: 'var(--text-3)' }}>off</span></>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>

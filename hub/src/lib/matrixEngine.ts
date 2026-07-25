@@ -104,6 +104,65 @@ export type MatrixTiebreaker = {
   direction: 'highest' | 'lowest'
 }
 
+// ─── Pipeline mode ──────────────────────────────────────────────────────
+// A Matrix is either "Classic" (the AND-of-Factors system above) or
+// "Pipeline" — a freely-ordered chain of steps that narrows a pool of
+// players down to a final winner (or winners, if the chain runs out of
+// information to pick just one). Three step kinds, one per verb a member
+// might reach for while describing a formula in plain English:
+//
+//   filter — a plain threshold, exactly a classic Factor's condition (hard
+//            requirement: if nobody passes, that branch highlights nobody,
+//            same as a Factor that never matches).
+//   group  — "tied on this field" (reuses groupTiedCandidates below), keeps
+//            only the union of whoever's tied with someone else in the
+//            CURRENT pool. Lenient: if nobody ties, the pool passes through
+//            unchanged rather than being wiped — a narrowing attempt that
+//            finds nothing shouldn't destroy a formula that was otherwise
+//            working.
+//   rank   — "highest/lowest on this field" (reuses resolveTiebreakers
+//            below, called with a single-step chain). Also lenient: if
+//            nobody in the pool has a value for this field, pass through
+//            unchanged.
+//
+// group/rank only ever consider ONE book for a multi-book odds field (fhr/
+// hr) — same single-`book` precedent MatrixTiebreaker already established;
+// full multi-book combination (N+ of these books) stays a filter-only
+// capability, reusing evaluateOddsFactor wholesale for that case.
+export type PipelineStepKind = 'filter' | 'group' | 'rank'
+export type MatrixPipelineStep = {
+  kind: PipelineStepKind
+  category: MatrixFactor['category']
+  field_key: string
+  recency: MatrixRecency | null
+  // group/rank: which single book to read for a multi-book field (fhr/hr).
+  // null defaults to 'fanduel', same as everywhere else in this engine.
+  book: string | null
+  // filter only — full multi-book support, identical semantics to a
+  // classic Factor's own books/books_min_count.
+  books: string[] | null
+  books_min_count: number | null
+  operator: MatrixOperator | null   // filter only
+  value: number | null              // filter only
+  direction: 'highest' | 'lowest' | null // rank only
+}
+export const MAX_PIPELINE_STEPS = 10
+
+// Per-player data a pipeline step might need, keyed by name_norm by the
+// caller (dugout/data/route.ts — the only place with visibility into every
+// batter in a game at once). Identical shape to the ad-hoc `Bundle` type
+// that block already builds for the tie/tiebreaker precompute — promoted
+// here so both that precompute and the pipeline runner share one type
+// instead of two independently-typed copies of the same thing.
+export type FieldBundle = {
+  props: OddsProps | null
+  fhrAvg: DugoutSpecsAverages | null | undefined
+  saAvg: DugoutSpecsAverages | null | undefined
+  pitchlogWindows: Record<PitchlogStatWindow, BatterStats> | null
+  statcastWindows: Record<StatcastWindow, StatcastLine> | null
+  pikkitEntry: Record<string, { picks?: number | null } | undefined> | null
+}
+
 export type Matrix = {
   id: string
   name: string
@@ -112,6 +171,14 @@ export type Matrix = {
   match_mode: 'all' | 'any'
   match_any_count: number | null
   factors: MatrixFactor[]
+  // 'classic' (the default — every Matrix before Pipeline mode existed) uses
+  // `factors` above via evaluateMatrix. 'pipeline' ignores `factors`
+  // entirely — matching is instead "is this player in the winners set
+  // dugout/data/route.ts computed by running `pipeline_steps` through
+  // runPipeline," threaded in via MatrixMatchContext.isPipelineMatrixWinner.
+  matrix_type: 'classic' | 'pipeline'
+  pipeline_scope: 'team' | 'game' | null
+  pipeline_steps: MatrixPipelineStep[]
 }
 
 // A switch hitter always bats opposite the pitcher's throwing hand — same
@@ -414,7 +481,7 @@ export function evaluateSavantFactor(
 // thresholds since every one of these markets already treats it as primary
 // (see MARKET_BOOK_TO_OPEN_FIELD) — "books missing X odds" is the one Factor
 // type that's explicitly cross-book by design.
-type OddsProps = Record<string, { fanduel?: number | null; caesars?: number | null; betmgm?: number | null; betrivers?: number | null; fanatics?: number | null } | undefined> & {
+export type OddsProps = Record<string, { fanduel?: number | null; caesars?: number | null; betmgm?: number | null; betrivers?: number | null; fanatics?: number | null } | undefined> & {
   open?: Record<string, number | null | undefined>
 }
 const ODDS_BOOK_FIELD: Record<string, { market: string; open: string }> = {
@@ -756,4 +823,110 @@ export function resolveTiebreakers(
     pool = withValues.filter(c => Math.round(c.value * 100) / 100 === bestRounded).map(c => c.name)
   }
   return new Set(pool)
+}
+
+// ─── Pipeline runner (pure logic, no data-fetching) ────────────────────
+// Same caller/shape convention as the tie/tiebreaker functions above:
+// dugout/data/route.ts builds one FieldBundle per player once, then calls
+// these to turn a pipeline's ordered steps into a final winners set.
+
+// One raw value for a group/rank step — dispatches to whichever
+// computeXxxValue helper applies for that step's category, identical
+// dispatch to what route.ts's tie-precompute block used to hand-roll
+// inline (resolveTiebreakerValue/rootValue) before this existed.
+export function resolveFieldValue(
+  category: MatrixFactor['category'],
+  fieldKey: string,
+  recency: MatrixRecency | null,
+  book: string | null,
+  bundle: FieldBundle,
+  gameTotalPicksByMarket: Record<string, number>,
+): number | null {
+  if (category === 'odds') return computeOddsRawPrice(fieldKey, book ?? 'fanduel', bundle.props)
+  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg)
+  if (category === 'pitchlog_stat') return computePitchlogStatValue(fieldKey, recency, bundle.pitchlogWindows)
+  if (category === 'savant_stat') return computeSavantStatValue(fieldKey, recency, bundle.statcastWindows)
+  return computePicksValue(fieldKey, bundle.pikkitEntry, gameTotalPicksByMarket)
+}
+
+// A filter step IS a classic Factor condition — built on the fly into the
+// exact shape evaluateOddsFactor/evaluateDugoutSpecsFactor/etc. already
+// expect, so a Filter step behaves identically to a Factor with the same
+// category/field/operator/value (same multi-book books/books_min_count
+// combination logic for fhr/hr included, via evaluateOddsFactor itself).
+// `id: ''`/`tie_scope: null`/`tiebreakers: null` are inert here — no
+// pipeline step's operator is ever 'tied' (the UI never offers it), and
+// even if one leaked through, isFactorTied is intentionally omitted below
+// so evaluateOddsFactor/evaluateDugoutSpecsFactor's 'tied' branch falls
+// back to `?? false`.
+export function evaluateFilterStep(
+  step: MatrixPipelineStep,
+  bundle: FieldBundle,
+  gameTotalPicksByMarket: Record<string, number>,
+): boolean {
+  const asFactor: MatrixFactor = {
+    id: '', category: step.category, field_key: step.field_key,
+    operator: step.operator ?? 'gte', value: step.value,
+    recency: step.recency, recency_start: null, recency_end: null,
+    books: step.books, books_min_count: step.books_min_count,
+    tie_scope: null, tiebreakers: null,
+  }
+  if (step.category === 'odds') return evaluateOddsFactor(asFactor, bundle.props)
+  if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg)
+  if (step.category === 'pitchlog_stat') return evaluatePitchlogFactorPrecomputed(asFactor, bundle.pitchlogWindows)
+  if (step.category === 'savant_stat') return evaluateSavantFactor(asFactor, bundle.statcastWindows)
+  return evaluatePicksFactor(asFactor, bundle.pikkitEntry, gameTotalPicksByMarket)
+}
+
+// Runs ONE step against the current pool. `bundles` is keyed by name_norm
+// (same key space `pool` uses) — a name missing from `bundles` simply
+// can't pass a filter / can't contribute a value to group-or-rank.
+export function runPipelineStep(
+  pool: Set<string>,
+  step: MatrixPipelineStep,
+  bundles: Map<string, FieldBundle>,
+  gameTotalPicksByMarket: Record<string, number>,
+): Set<string> {
+  if (step.kind === 'filter') {
+    const survivors = new Set<string>()
+    for (const name of pool) {
+      const b = bundles.get(name)
+      if (b && evaluateFilterStep(step, b, gameTotalPicksByMarket)) survivors.add(name)
+    }
+    return survivors
+  }
+  // group/rank are no-ops on an already-singleton (or empty) pool — nothing
+  // left to tie or rank against.
+  if (pool.size <= 1) return pool
+  const resolveValue = (name: string): number | null => {
+    const b = bundles.get(name)
+    return b ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, b, gameTotalPicksByMarket) : null
+  }
+  if (step.kind === 'group') {
+    const values = new Map<string, number>()
+    for (const name of pool) {
+      const v = resolveValue(name)
+      if (v != null) values.set(name, v)
+    }
+    const groups = groupTiedCandidates(values)
+    const winners = new Set<string>()
+    for (const g of groups.values()) for (const n of g) winners.add(n)
+    return winners.size ? winners : pool // lenient: no ties found -> unchanged
+  }
+  // rank — resolveTiebreakers already implements exactly this ("keep
+  // whoever's best on one field"); called with a single-step chain.
+  const tb: MatrixTiebreaker = { category: step.category, field_key: step.field_key, recency: step.recency, book: step.book, direction: step.direction ?? 'highest' }
+  const survivors = resolveTiebreakers([...pool], [tb], name => resolveValue(name))
+  return survivors.size ? survivors : pool // lenient: nobody had a value -> unchanged
+}
+
+export function runPipeline(
+  universe: Set<string>,
+  steps: MatrixPipelineStep[],
+  bundles: Map<string, FieldBundle>,
+  gameTotalPicksByMarket: Record<string, number>,
+): Set<string> {
+  let pool = universe
+  for (const step of steps) pool = runPipelineStep(pool, step, bundles, gameTotalPicksByMarket)
+  return pool
 }
