@@ -102,6 +102,14 @@ export type MatrixTiebreaker = {
   // which single book to rank by. null defaults to 'fanduel'.
   book: string | null
   direction: 'highest' | 'lowest'
+  // Real gap (2026-07-25): the best value in a pool almost never has an
+  // EXACT (2-decimal-rounded) match — confirmed live, e.g. two real HR
+  // hitters at 0.2621/0.2688 on the same ratio landed in different rounding
+  // buckets and only one survived. null/0 keeps the original exact-match
+  // behavior (every existing saved chain evaluates identically); a positive
+  // number widens the winner set to anyone within that RAW distance of the
+  // best value, direction-aware — see resolveTiebreakers below.
+  tolerance: number | null
 }
 
 // ─── Pipeline mode ──────────────────────────────────────────────────────
@@ -145,6 +153,7 @@ export type MatrixPipelineStep = {
   operator: MatrixOperator | null   // filter only
   value: number | null              // filter only
   direction: 'highest' | 'lowest' | null // rank only
+  tolerance: number | null          // rank only — see MatrixTiebreaker.tolerance
 }
 export const MAX_PIPELINE_STEPS = 10
 
@@ -819,8 +828,15 @@ export function resolveTiebreakers(
     const best = tb.direction === 'lowest'
       ? Math.min(...withValues.map(c => c.value))
       : Math.max(...withValues.map(c => c.value))
+    // tolerance>0: widen the winner set to anyone within that RAW distance
+    // of the best value instead of requiring an exact 2-decimal match — see
+    // MatrixTiebreaker.tolerance for the real gap this closes.
     const bestRounded = Math.round(best * 100) / 100
-    pool = withValues.filter(c => Math.round(c.value * 100) / 100 === bestRounded).map(c => c.name)
+    pool = withValues
+      .filter(c => tb.tolerance
+        ? (tb.direction === 'lowest' ? c.value <= best + tb.tolerance : c.value >= best - tb.tolerance)
+        : Math.round(c.value * 100) / 100 === bestRounded)
+      .map(c => c.name)
   }
   return new Set(pool)
 }
@@ -915,7 +931,7 @@ export function runPipelineStep(
   }
   // rank — resolveTiebreakers already implements exactly this ("keep
   // whoever's best on one field"); called with a single-step chain.
-  const tb: MatrixTiebreaker = { category: step.category, field_key: step.field_key, recency: step.recency, book: step.book, direction: step.direction ?? 'highest' }
+  const tb: MatrixTiebreaker = { category: step.category, field_key: step.field_key, recency: step.recency, book: step.book, direction: step.direction ?? 'highest', tolerance: step.tolerance ?? null }
   const survivors = resolveTiebreakers([...pool], [tb], name => resolveValue(name))
   return survivors.size ? survivors : pool // lenient: nobody had a value -> unchanged
 }

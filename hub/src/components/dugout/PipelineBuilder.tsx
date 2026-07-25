@@ -30,14 +30,19 @@ export type MatrixPipelineStep = {
   operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | null
   value: number | null
   direction: 'highest' | 'lowest' | null
+  // rank only — null/0 keeps the exact-match behavior; a positive number
+  // also keeps anyone within that raw distance of the best value, so a real
+  // standout no longer needs an exact 2-decimal match to survive. See
+  // matrixEngine.ts's MatrixTiebreaker.tolerance for the full rationale.
+  tolerance: number | null
 }
 
 const KIND_LABEL: Record<MatrixPipelineStep['kind'], string> = { filter: 'Filter', group: 'Group', rank: 'Rank' }
 const KIND_COLOR: Record<MatrixPipelineStep['kind'], string> = { filter: 'var(--blue)', group: 'var(--gold)', rank: 'var(--accent)' }
 const KIND_DESC: Record<MatrixPipelineStep['kind'], string> = {
   filter: 'Keep players that pass a threshold',
-  group: 'Keep players tied with each other on a field',
-  rank: 'Narrow to whoever is highest/lowest on a field',
+  group: 'Keep players tied with each other on a field — for a standout value nobody else shares, use Rank instead',
+  rank: 'Narrow to whoever is highest/lowest on a field (add a tolerance to also keep close runners-up)',
 }
 export const MAX_PIPELINE_STEPS = 10
 
@@ -49,6 +54,7 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind']): MatrixPipelin
     operator: kind === 'filter' ? 'gte' : null,
     value: null,
     direction: kind === 'rank' ? 'highest' : null,
+    tolerance: null,
   }
 }
 
@@ -214,6 +220,17 @@ function PipelineStepCard({ step, index, onChange, onRemove }: {
             <option value="highest">Highest</option>
             <option value="lowest">Lowest</option>
           </select>
+        )}
+
+        {step.kind === 'rank' && (
+          <input
+            type="number" min={0} step={0.01} className="ss-input"
+            placeholder="± tolerance"
+            title="Also keep anyone within this amount of the best value (e.g. 0.02) — leave blank for an exact match only"
+            value={step.tolerance ?? ''}
+            onChange={e => onChange({ ...step, tolerance: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+            style={{ fontSize: 11, padding: '5px 6px', width: 90 }}
+          />
         )}
       </div>
 

@@ -23,7 +23,8 @@ function describeStep(step: MatrixPipelineStep): string {
     return `${field} ${op}${needsValue && step.value != null ? ` ${step.value}` : ''}`.trim()
   }
   if (step.kind === 'group') return `tied on ${field}`
-  return `${step.direction === 'lowest' ? 'lowest' : 'highest'} ${field}`
+  const tol = step.tolerance ? ` (±${step.tolerance})` : ''
+  return `${step.direction === 'lowest' ? 'lowest' : 'highest'} ${field}${tol}`
 }
 
 export function PipelineSummary({ steps }: { steps: MatrixPipelineStep[] }) {

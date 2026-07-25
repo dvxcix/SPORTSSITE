@@ -14,10 +14,10 @@ const MAX_PIPELINE_STEPS = 10
 
 function cleanTiebreakers(raw: unknown) {
   if (!Array.isArray(raw)) return []
-  const clean: { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest' }[] = []
+  const clean: { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest'; tolerance: number | null }[] = []
   for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
     if (!t || typeof t !== 'object') continue
-    const { category, field_key, recency, book, direction } = t as Record<string, unknown>
+    const { category, field_key, recency, book, direction, tolerance } = t as Record<string, unknown>
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
     clean.push({
@@ -25,6 +25,7 @@ function cleanTiebreakers(raw: unknown) {
       recency: typeof recency === 'string' ? recency : null,
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       direction: direction === 'lowest' ? 'lowest' : 'highest',
+      tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
     })
   }
   return clean
@@ -39,11 +40,11 @@ function cleanPipelineSteps(raw: unknown) {
   const clean: {
     kind: string; category: string; field_key: string; recency: string | null; book: string | null
     books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
-    direction: 'highest' | 'lowest' | null
+    direction: 'highest' | 'lowest' | null; tolerance: number | null
   }[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
@@ -56,6 +57,7 @@ function cleanPipelineSteps(raw: unknown) {
       operator: typeof operator === 'string' && PIPELINE_OPERATORS.includes(operator) ? operator : null,
       value: typeof value === 'number' ? value : null,
       direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
+      tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
     })
   }
   return clean

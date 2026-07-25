@@ -31,6 +31,7 @@ type TiebreakerInput = {
   recency: string | null
   book: string | null
   direction: 'highest' | 'lowest'
+  tolerance: number | null
 }
 
 // Pipeline mode — see matrixEngine.ts's MatrixPipelineStep for the full
@@ -48,6 +49,10 @@ type PipelineStepInput = {
   operator: string | null
   value: number | null
   direction: 'highest' | 'lowest' | null
+  // rank only — null/0 keeps exact-match tie resolution; >0 also keeps
+  // candidates within that raw distance of the best value. See
+  // matrixEngine.ts's MatrixTiebreaker.tolerance.
+  tolerance: number | null
 }
 
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
@@ -67,7 +72,7 @@ function validatePipelineSteps(raw: unknown): PipelineStepInput[] {
   const clean: PipelineStepInput[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
@@ -83,6 +88,7 @@ function validatePipelineSteps(raw: unknown): PipelineStepInput[] {
       operator: typeof operator === 'string' && PIPELINE_OPERATORS.includes(operator) ? operator : null,
       value: typeof value === 'number' ? value : null,
       direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
+      tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
     })
   }
   return clean
@@ -93,7 +99,7 @@ function validateTiebreakers(raw: unknown): TiebreakerInput[] {
   const clean: TiebreakerInput[] = []
   for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
     if (!t || typeof t !== 'object') continue
-    const { category, field_key, recency, book, direction } = t as Record<string, unknown>
+    const { category, field_key, recency, book, direction, tolerance } = t as Record<string, unknown>
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
     clean.push({
@@ -102,6 +108,7 @@ function validateTiebreakers(raw: unknown): TiebreakerInput[] {
       recency: typeof recency === 'string' ? recency : null,
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       direction: direction === 'lowest' ? 'lowest' : 'highest',
+      tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
     })
   }
   return clean
@@ -157,7 +164,7 @@ export async function GET() {
 
   const { data: pipelineSteps, error: stepsError } = await admin
     .from('matrix_pipeline_steps')
-    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction')
+    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (stepsError) return NextResponse.json({ error: stepsError.message }, { status: 500 })

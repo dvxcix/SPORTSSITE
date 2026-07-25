@@ -44,6 +44,11 @@ export type MatrixTiebreaker = {
   recency: MatrixFactor['recency']
   book: string | null
   direction: 'highest' | 'lowest'
+  // null/0 keeps the exact-match behavior; a positive number also keeps
+  // anyone within that raw distance of the best value, so a real standout
+  // no longer needs an exact 2-decimal match to survive. See
+  // matrixEngine.ts's MatrixTiebreaker.tolerance for the full rationale.
+  tolerance: number | null
 }
 
 export type MatrixDef = {
@@ -195,7 +200,7 @@ function newFactor(): MatrixFactor {
   return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null, tiebreakers: [] }
 }
 function newTiebreaker(): MatrixTiebreaker {
-  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest' }
+  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null }
 }
 const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED573', '#FF8FA3', '#5EEAD4']
 
@@ -523,6 +528,15 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
         <option value="highest">Highest</option>
         <option value="lowest">Lowest</option>
       </select>
+
+      <input
+        type="number" min={0} step={0.01} className="ss-input"
+        placeholder="± tolerance"
+        title="Also keep anyone within this amount of the best value (e.g. 0.02) — leave blank for an exact match only"
+        value={tb.tolerance ?? ''}
+        onChange={e => onChange({ ...tb, tolerance: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+        style={{ fontSize: 10, padding: '4px 5px', width: 80 }}
+      />
 
       <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
         <X size={12} />
