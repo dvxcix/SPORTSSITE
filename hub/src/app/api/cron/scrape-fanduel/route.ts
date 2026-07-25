@@ -7,6 +7,7 @@ import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
 import { addDaysToDateStr } from '@/lib/balldontlie'
+import { missingMarkets } from '@/lib/scrapers/retryMarkets'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -36,7 +37,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
+async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
   const bb = await openSession({ metadata: { book: 'fanduel', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     await bb.page.goto('https://sportsbook.fanduel.com/navigation/mlb', { waitUntil: 'domcontentloaded' })
@@ -68,6 +69,30 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
   } finally {
     await bb.close()
   }
+}
+
+// Real gap (2026-07-25): fanduelScraper.ts's per-tab section-expand/match
+// can silently drop a whole market group with no error while every other
+// market on the same page succeeds (see that file's own comments) — one
+// scrape attempt had no way to know. dispatch-scrapes' own 5-minute-later
+// retry only reacts to ITS queue, so it never fires for a manual direct
+// hit on this route (confirmed live: a member's manual re-trigger for a
+// missed lineup-confirm window reproduced the exact same gap). Moving the
+// self-check + retry HERE instead means every caller — the automated
+// dispatcher, the 2-hour sweep, AND a manual gamePk hit — gets the same
+// one-retry safety net, no queue required. A fresh Browserbase session on
+// the retry (not the same page) since whatever DOM state caused the miss
+// shouldn't be trusted to have cleared on its own.
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
+  const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
+  if (dryRun || 'error' in first) return first
+  const missing = missingMarkets(first.imported?.body?.marketSummary ?? {})
+  if (!missing.length) return first
+
+  const retry = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
+  if ('error' in retry) return { ...first, retriedFor: missing, retryError: retry.error }
+  const stillMissing = missingMarkets(retry.imported?.body?.marketSummary ?? {})
+  return { ...retry, retriedFor: missing, stillMissing: stillMissing.length ? stillMissing : undefined }
 }
 
 export async function GET(req: Request) {

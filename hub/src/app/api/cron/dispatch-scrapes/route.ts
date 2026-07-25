@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@/lib/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/stripe'
+import { missingMarkets } from '@/lib/scrapers/retryMarkets'
 
 export const revalidate = 0
 export const maxDuration = 280
@@ -42,21 +43,17 @@ export const maxDuration = 280
 // live across a full day's slate, TWO distinct silent tab-scrape misses:
 // (1) fhr_fd/rbi3_fd/combo1_min/combo2_min all zero together on 7 games,
 // (2) laser105_fd/laser110_fd/moonshot_fd/pa1_fd all zero together on 2
-// games (one game hit both). fanduelScraper.ts clicks through every tab in
-// one pass and silently swallows a failed section-expand/match (no error,
-// no retry signal), so any one tab going empty while others succeeded was
-// permanently invisible — the only success check was "did ANY market come
-// back." RETRY_MARKETS below is every market a genuinely healthy scrape of
-// ANY real game this session had non-zero coverage for — every one of
-// these should already be per-player 0 < count < players for a normal
-// game, so a flat 0 across the whole game is always a real miss, not "this
-// game just doesn't have that market." Kept as a plain list (not literally
-// every fanduel_gap_odds column) since some columns are legitimately
-// allowed to be 0 for specific games (see combo1/combo2 in a normal game —
-// still nonzero here since not every batter gets a combo price, but a
-// whole game at exactly 0 never happens in healthy data either).
-const RETRY_MARKETS = ['fhr_fd', 'rbi3_fd', 'combo1_min', 'combo2_min', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'pa1_fd'] as const
-
+// games (one game hit both) — see lib/scrapers/retryMarkets.ts for the
+// full list and why each entry on it is a safe zero-means-miss signal.
+//
+// scrape-fanduel/route.ts's own scrapeOneGame now does ONE same-request
+// retry itself the moment it sees any of these at zero — this queue-based
+// retry is the SECOND layer, for whatever's still missing after that (the
+// market genuinely isn't posted yet, not just a one-off tab glitch) —
+// waits 5 real minutes rather than immediately hammering the same still-
+// not-ready page again. Capped at one retry (retry_count) so a game that
+// genuinely never gets a market (or one already past its window) doesn't
+// loop forever.
 export async function GET(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
@@ -87,18 +84,21 @@ export async function GET(req: Request) {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
       })
       const body = await res.json().catch(() => null)
-      const marketSummary: Record<string, number> = body?.result?.imported?.body?.marketSummary ?? {}
-      const counts = Object.fromEntries(RETRY_MARKETS.map(k => [k, marketSummary[k] ?? 0])) as Record<typeof RETRY_MARKETS[number], number>
-      return { gamePk: row.game_pk, status: res.status, counts, retryCount: row.retry_count }
+      // scrape-fanduel's own scrapeOneGame already retried once same-request
+      // — `stillMissing` is what survived THAT retry. Fall back to deriving
+      // it from marketSummary directly for an older/error-shaped response
+      // that never got that far.
+      const stillMissing: string[] = body?.result?.stillMissing
+        ?? missingMarkets(body?.result?.imported?.body?.marketSummary ?? {})
+      return { gamePk: row.game_pk, status: res.status, stillMissing, retryCount: row.retry_count }
     })
   )
 
   const fulfilled = results
     .map(r => r.status === 'fulfilled' ? r.value : null)
-    .filter((r): r is { gamePk: number; status: number; counts: Record<typeof RETRY_MARKETS[number], number>; retryCount: number } => r !== null)
+    .filter((r): r is { gamePk: number; status: number; stillMissing: string[]; retryCount: number } => r !== null)
 
-  const missingMarkets = (counts: Record<typeof RETRY_MARKETS[number], number>) => RETRY_MARKETS.filter(k => counts[k] === 0)
-  const needsRetry = fulfilled.filter(r => r.status === 200 && r.retryCount < 1 && missingMarkets(r.counts).length > 0)
+  const needsRetry = fulfilled.filter(r => r.status === 200 && r.retryCount < 1 && r.stillMissing.length > 0)
   if (needsRetry.length) {
     const retryReadyAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
     await Promise.all(needsRetry.map(r =>
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
     dispatched: toScrape.length,
     skippedAlreadyLive: live.map(r => r.game_pk),
     gamePks: toScrape.map(r => r.game_pk),
-    retryQueued: needsRetry.map(r => ({ gamePk: r.gamePk, missing: missingMarkets(r.counts) })),
+    retryQueued: needsRetry.map(r => ({ gamePk: r.gamePk, missing: r.stillMissing })),
     results: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason?.message ?? String(r.reason) }),
   })
 }
