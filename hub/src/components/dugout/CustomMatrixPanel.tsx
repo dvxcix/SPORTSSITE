@@ -15,7 +15,7 @@ import { PipelineSummary } from './PipelineSummary'
 // own header comment for the full data-source breakdown this UI drives).
 
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
-export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative'
+export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat'
 
 export type MatrixFactor = {
   id?: string
@@ -285,6 +285,7 @@ export const MM_WINDOWS: { key: MmWindowKey; label: string }[] = [
 export const MM_DIRECTION_LABEL: Record<MmTrendDirection, string> = {
   increased: 'Increased', decreased: 'Decreased',
   crossed_positive: 'Crossed to positive (+)', crossed_negative: 'Crossed to negative (−)',
+  flat: 'Stayed flat (no change)',
 }
 // Shared by Classic Factors (FactorRow) and Pipeline filter steps
 // (PipelineStepCard) — both let a member reuse this exact block since a

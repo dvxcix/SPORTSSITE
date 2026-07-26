@@ -56,7 +56,7 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 // between L5 and L1"). See evaluateMmTrend/MatrixFactor's mm_* fields below.
 export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
-export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative'
+export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat'
 // Real gap (2026-07-24): the grid's own Statcast section shows every
 // pitchlog_stat/savant_stat field at both a recent window AND a season
 // value, with a Δ (recent − season) alongside some of them — a Matrix
@@ -857,9 +857,13 @@ export function computeMmMoveValue(
 // controlling whether ANY (default/null) or ALL of them must satisfy
 // `direction`. `amount` (the Factor/Step's own `value`) is the minimum
 // magnitude of the move for 'increased'/'decreased' — null means "any move
-// that direction," irrelevant for the two 'crossed_*' directions (a sign
-// flip needs no magnitude). Fails safe (false) on any missing input rather
-// than crashing — same defensive shape as lt_anchor/gt_anchor above.
+// that direction," irrelevant for 'crossed_positive'/'crossed_negative' (a
+// sign flip needs no magnitude) and 'flat' (real gap, reported live
+// 2026-07-26: no way to ask "stayed exactly the same" — a member may
+// specifically want whoever's MM DIDN'T move at all between the checked
+// windows, distinct from every directional case above). Fails safe (false)
+// on any missing input rather than crashing — same defensive shape as
+// lt_anchor/gt_anchor above.
 export function evaluateMmTrend(
   baseWindow: MmWindowKey | null,
   compareWindows: MmWindowKey[] | null,
@@ -877,7 +881,8 @@ export function evaluateMmTrend(
     if (direction === 'increased') return amount != null ? cmpVal - baseVal >= amount : cmpVal > baseVal
     if (direction === 'decreased') return amount != null ? baseVal - cmpVal >= amount : cmpVal < baseVal
     if (direction === 'crossed_positive') return baseVal < 0 && cmpVal > 0
-    return baseVal > 0 && cmpVal < 0 // crossed_negative
+    if (direction === 'crossed_negative') return baseVal > 0 && cmpVal < 0
+    return cmpVal === baseVal // flat
   })
   if (!results.length) return false
   return matchMode === 'all' ? results.every(Boolean) : results.some(Boolean)

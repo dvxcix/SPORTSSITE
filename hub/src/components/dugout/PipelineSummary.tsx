@@ -13,6 +13,7 @@ const OP_WORD: Record<string, string> = {
 const MM_WINDOW_WORD: Record<string, string> = { l1: 'L1', l3: 'L3', l5: 'L5', l10: 'L10' }
 const MM_DIRECTION_WORD: Record<string, string> = {
   increased: 'increased', decreased: 'decreased', crossed_positive: 'crossed to +', crossed_negative: 'crossed to −',
+  flat: 'stayed flat',
 }
 
 // mm_trend spans 2+ of the board's own windows at once instead of a single
