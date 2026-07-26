@@ -1,5 +1,6 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { GripVertical, X, Plus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
@@ -477,13 +478,53 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
 // The "+ Add step" control — a choice picker rather than a generic button,
 // since the whole point of Pipeline mode is a member choosing which verb
 // they mean at each point in the chain.
+const ADD_STEP_MENU_WIDTH = 220
+
 function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPipelineStep['kind']) => void; disabled: boolean; allowUnless: boolean }) {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
   const kinds = allowUnless ? (['filter', 'group', 'rank', 'unless'] as const) : (['filter', 'group', 'rank'] as const)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // Real gap, reported live (2026-07-26): this menu used to render as a
+  // plain position:absolute child of its own button — fine at the top
+  // level, but an Unless step's condition/then StepLists nest their own
+  // "Add step" button several levels deep inside the Matrix modal's own
+  // scrollable body (CustomMatrixPanel.tsx's overflowY:auto container),
+  // and per the CSS overflow spec, setting overflow-y to a non-visible
+  // value also forces overflow-x to behave as non-visible on that same
+  // box — so any menu that popped out wider than the modal's remaining
+  // width got silently clipped off-screen, invisible and unclickable.
+  // Portaled to document.body with fixed/viewport coordinates instead
+  // (same fix already used for Tooltip in ui/tooltip-card.tsx) so it
+  // always renders on top of everything, never clipped by an ancestor.
+  // Recomputed once at open time (not tracked live) and dismissed on
+  // scroll — this menu is only open for the second it takes to pick an
+  // option, so a live-tracking reposition isn't worth the complexity.
+  const openMenu = () => {
+    const rect = btnRef.current?.getBoundingClientRect()
+    if (rect) {
+      const left = Math.max(4, Math.min(rect.right - ADD_STEP_MENU_WIDTH, window.innerWidth - ADD_STEP_MENU_WIDTH - 4))
+      setMenuPos({ top: rect.bottom + 4, left })
+    }
+    setOpen(true)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const closeOnScroll = () => setOpen(false)
+    window.addEventListener('scroll', closeOnScroll, true)
+    return () => window.removeEventListener('scroll', closeOnScroll, true)
+  }, [open])
+
   return (
     <div style={{ position: 'relative' }}>
       <button
-        onClick={() => setOpen(v => !v)}
+        ref={btnRef}
+        onClick={() => (open ? setOpen(false) : openMenu())}
         disabled={disabled}
         style={{
           display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
@@ -493,11 +534,11 @@ function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPip
       >
         <Plus size={12} /> Add step
       </button>
-      {open && !disabled && (
+      {mounted && open && !disabled && menuPos && createPortal(
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 80 }} />
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
           <div style={{
-            position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 81, width: 220,
+            position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999, width: ADD_STEP_MENU_WIDTH,
             background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 10,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden',
           }}>
@@ -517,7 +558,8 @@ function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPip
               </button>
             ))}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   )
