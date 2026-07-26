@@ -209,6 +209,15 @@ export const MAX_PIPELINE_STEPS = 10
 // that block already builds for the tie/tiebreaker precompute — promoted
 // here so both that precompute and the pipeline runner share one type
 // instead of two independently-typed copies of the same thing.
+// The board's own "MM" column (❓ — sportsbook rank vs. Statcast-composite
+// rank, see dugoutPaperScore.ts) pre-resolved for each of the board's own
+// Last-1/3/5/10 windows — a pool-wide rank, so unlike every other
+// dugout_specs field it can't be derived from this one player's own props
+// alone. Computed ONCE per game (whole game, both lineups, matching the
+// live board) by the caller and attached here so evaluation stays a pure
+// per-player lookup like everything else.
+export type MmByWindow = { l1: number | null; l3: number | null; l5: number | null; l10: number | null }
+
 export type FieldBundle = {
   props: OddsProps | null
   fhrAvg: DugoutSpecsAverages | null | undefined
@@ -216,6 +225,7 @@ export type FieldBundle = {
   pitchlogWindows: Record<PitchlogStatWindow, BatterStats> | null
   statcastWindows: Record<StatcastWindow, StatcastLine> | null
   pikkitEntry: Record<string, { picks?: number | null } | undefined> | null
+  mmByWindow?: MmByWindow | null
 }
 
 export type Matrix = {
@@ -751,7 +761,20 @@ export function computeDugoutSpecsValue(
   props: OddsProps | null | undefined,
   fhrAvg: DugoutSpecsAverages | null | undefined,
   saAvg: DugoutSpecsAverages | null | undefined,
+  // Only 'mm' (see MmByWindow above) ever reads these two — every other
+  // dugout_specs field is a plain function of `props` alone, so both stay
+  // optional rather than forcing every existing call site to pass them.
+  recency?: MatrixRecency | null,
+  mmByWindow?: MmByWindow | null,
 ): number | null {
+  if (fieldKey === 'mm') {
+    // 'mm' reuses MatrixRecency's existing 'game' value for "Last 1" (same
+    // convention savant_stat's own 'game' recency already uses — see
+    // RECENCY_TO_SAVANT_WINDOW) rather than inventing a new recency value
+    // just for this one field.
+    const w = recency === 'game' ? 'l1' : recency === 'l3' || recency === 'l5' || recency === 'l10' ? recency : 'l10'
+    return mmByWindow?.[w] ?? null
+  }
   if (fieldKey === 'fhr_pct' || fieldKey === 'sa_pct') {
     const fd = props?.[fieldKey === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
     const avg = fieldKey === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
@@ -772,9 +795,10 @@ export function evaluateDugoutSpecsFactor(
   // function stays a pure per-player evaluator like every other
   // dugout_specs Factor.
   isFactorTied?: (factorId: string) => boolean,
+  mmByWindow?: MmByWindow | null,
 ): boolean {
   if (factor.operator === 'tied') return isFactorTied?.(factor.id) ?? false
-  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg)
+  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow)
   return compareThreshold(current, factor.operator, factor.value)
 }
 
@@ -930,7 +954,7 @@ export function resolveFieldValue(
   gameTotalPicksByMarket: Record<string, number>,
 ): number | null {
   if (category === 'odds') return computeOddsRawPrice(fieldKey, book ?? 'fanduel', bundle.props)
-  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg)
+  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow)
   if (category === 'pitchlog_stat') return computePitchlogStatValue(fieldKey, recency, bundle.pitchlogWindows)
   if (category === 'savant_stat') return computeSavantStatValue(fieldKey, recency, bundle.statcastWindows)
   return computePicksValue(fieldKey, bundle.pikkitEntry, gameTotalPicksByMarket)
@@ -968,7 +992,7 @@ export function evaluateFilterStep(
     tie_scope: null, tie_direction: null, tiebreakers: null,
   }
   if (step.category === 'odds') return evaluateOddsFactor(asFactor, bundle.props)
-  if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg)
+  if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg, undefined, bundle.mmByWindow)
   if (step.category === 'pitchlog_stat') return evaluatePitchlogFactorPrecomputed(asFactor, bundle.pitchlogWindows)
   if (step.category === 'savant_stat') return evaluateSavantFactor(asFactor, bundle.statcastWindows)
   return evaluatePicksFactor(asFactor, bundle.pikkitEntry, gameTotalPicksByMarket)

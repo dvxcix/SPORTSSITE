@@ -107,7 +107,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
   const fields = step.kind === 'filter' ? fieldsForCategory(step.category) : fieldsForCategory(step.category).filter(f => !f.boolean)
   const isBoolean = step.kind === 'filter' && fields.find(f => f.key === step.field_key)?.boolean === true
   const isBooksField = step.kind === 'filter' && isBooksFieldKey(step.field_key)
-  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat'
+  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && step.field_key === 'mm')
   const needsValue = step.operator === 'gte' || step.operator === 'lte' || step.operator === 'eq'
   const hidesValue = step.kind === 'filter' && !needsValue
   const multiBookFilter = step.kind === 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
@@ -358,7 +358,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
   onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
 }) {
   const fields = fieldsForCategory(step.category).filter(f => !f.boolean)
-  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat'
+  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && step.field_key === 'mm')
   const singleBookField = step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
 
   function changeCategory(category: MatrixFactor['category']) {

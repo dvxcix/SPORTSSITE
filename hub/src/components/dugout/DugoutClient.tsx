@@ -16,6 +16,7 @@ import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
+import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,93 +90,9 @@ function buildSplitMap(rows: any[]) {
   return { byId, byName }
 }
 
-// Ingestion (mlb-party's ingest-pitcher-statcast edge function) writes one
-// row per (mlb_id, bat_hand, win) — batted-ball-against, bat-tracking-against,
-// and arm-angle are genuinely computed separately for facing lefties vs
-// righties. This USED to collapse straight to `map[id][win]`, discarding
-// bat_hand entirely and silently keeping whichever hand's row happened to
-// upsert last — same "map collapse drops a real dimension" bug as the
-// FanDuel game_key issue. Now keyed by hand first, matched against the
-// specific batter standing in the box (see the `handRow` lookup at each
-// call site), falling back to 'R' then whatever's there if that batter's
-// hand is missing for this pitcher.
-function buildPitcherMap(rows: any[]) {
-  const map: Record<string, Record<string, { season?: any; recent?: any }>> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    if (!id) continue
-    const hand = r.bat_hand || 'R'
-    const win = r.win || 'season'
-    if (!map[id]) map[id] = {}
-    if (!map[id][hand]) map[id][hand] = {}
-    ;(map[id][hand] as any)[win] = r
-  }
-  return map
-}
-
-function pickPitcherRow(pitcherMap: PitcherMap, pitcherId: string | number | null | undefined, batterHand: string | null | undefined) {
-  if (!pitcherId) return null
-  const byHand = pitcherMap[String(pitcherId)]
-  if (!byHand) return null
-  const hand = (batterHand || 'R') as string
-  const row = byHand[hand] ?? byHand['R'] ?? Object.values(byHand)[0]
-  return row ? (row.season ?? row.recent) : null
-}
-
 // ─── build batter row ─────────────────────────────────────────────────────────
 type SplitMap   = ReturnType<typeof buildSplitMap>
 type PitcherMap = ReturnType<typeof buildPitcherMap>
-
-// The actual "will this guy go deep TONIGHT" signal — usage-weighted across
-// every pitch this specific pitcher throws: is the batter recently hitting
-// that exact pitch hard (high hard-hit%, low whiff%), AND has the pitcher
-// recently been getting hit hard on that same pitch too. Requires real
-// recent sample on both sides (≥8 pitches) per pitch type, else that pitch
-// type is skipped rather than guessed at.
-//
-// batterMatchupData/pitcherMatchupData come straight off our own
-// dugout_matchup_edge_precomputed table (dugoutMatchupEdgePrecompute.ts),
-// attached server-side per mlb_id — not looked up by name_norm through a
-// separate map, so there's no cross-entity name-mismatch risk here at all.
-// Real incident (2026-07-24): the mlb-party tables this used to read
-// (batter_pitch_type_recent/pitcher_pitch_type_recent) were silently stuck
-// 15 days stale — matchup_edge is Paper's single heaviest-weighted feature,
-// so this was quietly wrong for every game until moved in-house.
-function computeMatchupEdge(
-  pitcherHand: string, batterHand: string, pitRow: any,
-  batterMatchupData: any, pitcherMatchupData: any,
-): number | null {
-  if (!pitRow) return null
-  const mix = ([
-    ['FF', pitRow.pct_fastball  || 0], ['SI', pitRow.pct_sinker   || 0], ['FC', pitRow.pct_cutter || 0],
-    ['SL', pitRow.pct_slider    || 0], ['CU', pitRow.pct_curveball || 0], ['CH', pitRow.pct_changeup || 0],
-    ['FS', pitRow.pct_splitter  || 0],
-  ] as [string, number][]).filter(([, p]) => p > 4)
-  if (!mix.length) return null
-  const batterByHand = batterMatchupData?.recentByPitchTypeByHand?.[pitcherHand]
-  const pitcherByHand = pitcherMatchupData?.recentByPitchTypeByHand?.[batterHand || 'R']
-  let sum = 0, wsum = 0
-  for (const [pt, usage] of mix) {
-    const batEdge = batterByHand?.[pt]
-    const pitEdge = pitcherByHand?.[pt]
-    if (!batEdge || !pitEdge || batEdge.pitches < 8 || pitEdge.pitches < 8) continue
-    const batScore = (batEdge.hardHitPct ?? 30) - (batEdge.whiffPct ?? 25)
-    const pitScore = (pitEdge.hardHitPct ?? 30) - (pitEdge.whiffPct ?? 20)
-    // A bucket sitting right at the 8-pitch floor is noise, not signal — a
-    // batter can look great or terrible off 8 pitches purely by luck. Scale
-    // each pitch type's say in the average by how much data actually backs
-    // it (20 pitches ≈ full confidence), so a well-sampled bucket properly
-    // outweighs a barely-qualifying one instead of both counting equally
-    // via usage% alone. This is what let noisy small-sample edges (e.g. a
-    // bench bat's one hot bucket) outrank a genuinely strong hitter's more
-    // tempered matchup read.
-    const sampleConf = Math.min(1, Math.min(batEdge.pitches, pitEdge.pitches) / 20)
-    const w = usage * sampleConf
-    sum += w * (batScore + pitScore)
-    wsum += w
-  }
-  return wsum > 0 ? sum / wsum : null
-}
 
 function buildBatterRow(
   player: any,
@@ -281,7 +198,7 @@ function buildBatterRow(
 
   const pitRow = pickPitcherRow(pitcherMap, pitcherId, effectiveBats)
 
-  const matchup_edge = computeMatchupEdge(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
+  const matchup_edge = computeMatchupEdgeScore(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
   const platoon_ops = player.matchupEdge?.platoonOps?.[pitcherHand] ?? null
 
   // How many real recent pitches we actually have on this guy — a proxy for
@@ -552,77 +469,6 @@ function buildBatterRow(
 type BatterRow = ReturnType<typeof buildBatterRow>
 
 // ─── paper score ─────────────────────────────────────────────────────────────
-function computePaper(rows: BatterRow[]) {
-  // matchup_edge carries the heaviest weight on purpose: it's the only
-  // feature here that actually looks at TONIGHT's specific pitcher (recent
-  // pitch-type-level results on both sides), everything else is the
-  // batter's own generic season/recent form in a vacuum. Before this, paper
-  // could rank a good hitter with no real matchup edge above someone who'd
-  // actually just done damage against exactly what tonight's pitcher throws
-  // — which is the whole point of a "who's going deep tonight" score.
-  const feats: Array<{ s: keyof BatterRow; r: keyof BatterRow | null; w: number; neg?: boolean }> = [
-    { s: 'matchup_edge', r: null,       w: 0.26 },
-    { s: 's_brl',        r: null,       w: 0.20 },
-    { s: 's_spd',        r: 'r_spd',    w: 0.15 },
-    { s: 'platoon_ops',  r: null,       w: 0.12 },
-    { s: 's_pa',         r: null,       w: 0.12 },
-    { s: 's_sq',         r: 'r_sq',     w: 0.08 },
-    { s: 's_hh',         r: null,       w: 0.04 },
-    { s: 's_ev',         r: null,       w: 0.02 },
-    { s: 's_timing',     r: 'r_timing', w: 0.01 },
-  ]
-  const blend = (row: BatterRow, f: typeof feats[0]): number | null => {
-    const sv = row[f.s] as number | null
-    const rv = f.r ? row[f.r] as number | null : null
-    if (rv != null && sv != null) return 0.7 * rv + 0.3 * sv
-    return rv ?? sv ?? null
-  }
-  const stats: Record<string, { m: number; sd: number }> = {}
-  for (const f of feats) {
-    const vals = rows.map(r => blend(r, f)).filter((x): x is number => x != null)
-    const m  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0
-    const sd = vals.length > 1 ? Math.sqrt(vals.reduce((a, b) => a + (b - m) ** 2, 0) / vals.length) : 1
-    stats[String(f.s)] = { m, sd: sd || 1 }
-  }
-  for (const r of rows) {
-    let p = 0, tw = 0
-    for (const f of feats) {
-      const v = blend(r, f)
-      const { m, sd } = stats[String(f.s)]
-      if (v != null && sd > 0) {
-        const z = (v - m) / sd
-        p  += f.w * (f.neg ? -z : z)
-        tw += f.w
-      }
-    }
-    const raw = tw > 0 ? p / tw : null
-    // Confidence dampening: a bench bat with a handful of recent pitches can
-    // post a wild season rate stat (e.g. 25% barrel rate off 3 batted balls)
-    // that z-scores identically to an everyday player's stable 25% off 200 —
-    // the z-score math has no idea one is noise and the other is signal.
-    // Scale the final score toward 0 (neutral) the less recent data we
-    // actually have on this player, using batter_pitch_type_recent's real
-    // pitch counts as the confidence signal. 40 recent pitches ≈ full
-    // confidence; below that, dampen proportionally.
-    const confidence = Math.min(1, (r.recent_pitch_count ?? 0) / 40)
-    r.paper = raw != null ? Math.round(raw * confidence * 1000) / 1000 : null
-  }
-}
-
-function computeRanks(rows: BatterRow[]) {
-  const bk = [...rows].filter(r => r.sa_fd != null)
-    .sort((a, b) => (toImpl(b.sa_fd) ?? 0) - (toImpl(a.sa_fd) ?? 0))
-  bk.forEach((r, i) => { r.bk_rk = i + 1 })
-
-  const pp = [...rows].filter(r => r.paper != null)
-    .sort((a, b) => (b.paper ?? 0) - (a.paper ?? 0))
-  pp.forEach((r, i) => { r.pp_rk = i + 1 })
-
-  for (const r of rows) {
-    if (r.bk_rk != null && r.pp_rk != null) r.mm = r.bk_rk - r.pp_rk
-  }
-}
-
 // ─── heat ─────────────────────────────────────────────────────────────────────
 function heat(v: number | null, all: (number | null)[], dir: 'hi' | 'lo' = 'hi'): React.CSSProperties {
   if (v == null) return {}
@@ -2118,8 +1964,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
     )
     const pool = [...homeRows, ...awayRows]
-    computePaper(pool)
-    computeRanks(pool)
+    computePaperScores(pool)
+    computeMmRanks(pool)
     return { homeRows, awayRows, pool }
   }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, statcastWindow])
 

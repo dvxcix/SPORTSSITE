@@ -148,6 +148,14 @@ const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boole
   { key: 'sa_div_hr2', label: 'HR ÷ 2HR' },
   { key: 'fhr_pct', label: 'FHR % (vs. season avg)', signed: true },
   { key: 'sa_pct', label: 'HR % (vs. season avg)', signed: true },
+  // The board's own ❓ column — sportsbook rank minus Statcast-composite
+  // rank (negative = the market's more bullish on this guy than the
+  // numbers are; positive = the numbers like him more than the market
+  // does). Ranked across the WHOLE GAME, both lineups — see
+  // computeMmByWindowForGame (dugoutPaperScore.ts). The one dugout_specs
+  // field with a real recency selector, since it changes with whichever
+  // Statcast window (Last 1/3/5/10) is behind the "Statcast rank" half.
+  { key: 'mm', label: 'MM (Sportsbook Rank − Statcast Rank)', signed: true },
 ]
 // Community pick counts — a plain threshold, or (the "% of Game" variant)
 // this player's share of his own game's total picks for that market across
@@ -199,7 +207,7 @@ export const RECENCY_LABEL: Record<string, string> = {
 // identically to the board ('Last 3'/'Last 5'/'Last 10'); only 'game'
 // needed a category-specific override.
 export function recencyLabel(category: MatrixFactor['category'], r: string): string {
-  if (category === 'savant_stat' && r === 'game') return 'Last 1 (vs. matching hand)'
+  if ((category === 'savant_stat' || category === 'dugout_specs') && r === 'game') return 'Last 1 (vs. matching hand)'
   if (category === 'savant_stat' && r === 'game_delta') return 'Last 1 (Δ vs. Season, matching hand)'
   return RECENCY_LABEL[r] ?? r
 }
@@ -213,6 +221,9 @@ const DELTA_DISPLAYED_FIELDS: Partial<Record<MatrixFactor['category'], string[]>
   pitchlog_stat: ['bspd'], savant_stat: ['sq'],
 }
 export function recencyOptionsFor(category: MatrixFactor['category'], field_key: string): string[] {
+  // MM has no "Season" concept of its own (see MmByWindow, matrixEngine.ts)
+  // — it's always one of the board's own 4 windows, never a delta either.
+  if (category === 'dugout_specs' && field_key === 'mm') return ['game', 'l3', 'l5', 'l10']
   const base = ['game', 'l3', 'l5', 'l10', 'season']
   if (!DELTA_DISPLAYED_FIELDS[category]?.includes(field_key)) return base
   return [...base, 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta']
@@ -281,7 +292,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
   const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
     || factor.operator === 'positive' || factor.operator === 'negative' || factor.operator === 'tied'
     || factor.operator === 'is_null' || factor.operator === 'is_not_null'
-  const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat'
+  const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat' || (factor.category === 'dugout_specs' && factor.field_key === 'mm')
   // "Is PWR ⚡?" — a real Yes/No gate (buildBatterRow's is_pwr), not a ratio
   // to type a number for. Represented under the hood as an ordinary eq-1/
   // eq-0 Factor (see matrixEngine.ts) so it reuses the same evaluation path
@@ -537,7 +548,7 @@ function FactorListItem({ factor, onChange, onRemove }: { factor: MatrixFactor; 
 // Yes/No" is meaningless.
 function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onChange: (t: MatrixTiebreaker) => void; onRemove: () => void }) {
   const fields = fieldsForCategory(tb.category).filter(f => !f.boolean)
-  const needsRecency = tb.category === 'pitchlog_stat' || tb.category === 'savant_stat'
+  const needsRecency = tb.category === 'pitchlog_stat' || tb.category === 'savant_stat' || (tb.category === 'dugout_specs' && tb.field_key === 'mm')
   const multiBook = tb.category === 'odds' ? MULTI_BOOK_FIELDS[tb.field_key] : null
 
   return (

@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   evaluateMatrix, evaluatePitchlogFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor,
-  type Matrix, type MatrixFactor, type MatrixPipelineStep, type DugoutSpecsAverages, type PitchlogStatWindow,
+  type Matrix, type MatrixFactor, type MatrixPipelineStep, type DugoutSpecsAverages, type PitchlogStatWindow, type MmByWindow,
 } from '@/lib/matrixEngine'
 import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import type { BatterStats } from '@/lib/batterStatsEngine'
@@ -246,6 +246,9 @@ export type MatrixMatchContext = {
   saAvg?: DugoutSpecsAverages | null
   pikkitEntry?: Record<string, { picks?: number | null } | undefined> | null
   gameTotalPicksByMarket?: Record<string, number>
+  // dugout_specs' 'mm' field only — see MmByWindow (matrixEngine.ts) for why
+  // this one field needs a whole-game-pool rank the caller must precompute.
+  mmByWindow?: MmByWindow | null
   // Backs the 'tied' operator — "is THIS player one of the final surviving
   // winners of THIS exact Factor's tie group?" (scope, book selection, and
   // any tiebreaker chain already fully resolved by the caller — see
@@ -294,7 +297,7 @@ export function evaluateBatterMatrices(
       ? (context.isPipelineMatrixWinner?.(matrix.id) ?? false)
       : evaluateMatrix(matrix, (factor: MatrixFactor) => {
           if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isFactorTied)
-          if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied)
+          if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied, context.mmByWindow)
           // 'custom' recency (an arbitrary exact date range) is the only
           // pitchlog_stat case that can't be precomputed as a fixed bucket —
           // see evaluatePitchlogFactorPrecomputed's own comment. Everything

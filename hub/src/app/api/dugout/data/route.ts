@@ -16,7 +16,8 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
-import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle } from '@/lib/matrixEngine'
+import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle, MmByWindow } from '@/lib/matrixEngine'
+import { computeMmByWindowForGame, buildPitcherMap, type MmPlayerInput } from '@/lib/dugoutPaperScore'
 import {
   computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
   groupTiedCandidates, filterTieGroups, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
@@ -693,6 +694,14 @@ export async function GET(req: Request) {
   // both the app and DB level), so always fetching it for an eligible caller
   // is cheap.
   const userMatrices = isUltimate && admin && gate.userId ? await timed(reqId, 'userMatrices', fetchUserMatrices(admin, gate.userId)) : []
+  // dugout_specs' 'mm' field (the board's own ❓ column — see MmByWindow,
+  // matrixEngine.ts) is the one dugout_specs field that needs real extra
+  // per-game work (a whole-game pool rank, not a plain per-player lookup),
+  // so it's gated behind whether anyone actually saved a Factor/step on it
+  // — nobody else should pay for this.
+  const needsMm = userMatrices.some(m =>
+    m.factors.some(f => f.category === 'dugout_specs' && f.field_key === 'mm')
+    || m.pipeline_steps.some(s => s.category === 'dugout_specs' && s.field_key === 'mm'))
 
   // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry only
   // id/name/position — no batSide at all. Every batter was silently falling
@@ -938,6 +947,7 @@ export async function GET(req: Request) {
   for (const row of precomputedStatcastRows) {
     (precomputedStatcastByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
   }
+  const pitcherMap = needsMm ? buildPitcherMap(pitcherSplits) : {}
 
   const precomputedPitchlogByBatter: Record<number, Partial<Record<'L' | 'R', Record<PitchlogStatWindow, BatterStats>>>> = {}
   for (const row of precomputedPitchlogRows) {
@@ -1202,6 +1212,39 @@ export async function GET(req: Request) {
     // instead of three separate inline copies.
     const homePHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
     const awayPHand = (homePitcher?.hand as 'L' | 'R') || 'R'
+
+    // 'mm' dugout_specs support (see needsMm above) — ranked across the
+    // WHOLE GAME (both lineups combined), matching exactly how the live
+    // board's own MM column ranks (DugoutClient.tsx's `pool`). Computed
+    // once per game, threaded into both the classic-Factor evaluation
+    // context below and each pipeline/tied-Factor FieldBundle further down.
+    const mmByWindowByMlbId: Record<number, MmByWindow> = {}
+    if (needsMm) {
+      const effectiveBatsFor = (bats: string | null | undefined, pHand: 'L' | 'R'): 'L' | 'R' =>
+        bats === 'S' ? (pHand === 'L' ? 'R' : 'L') : ((bats as 'L' | 'R') || 'R')
+      const mmInputs: MmPlayerInput[] = [
+        ...homeLineup.map((p): MmPlayerInput => ({
+          mlbId: p.mlb_id,
+          effectiveBats: effectiveBatsFor(p.bats, homePHand),
+          pitcherHand: homePHand,
+          pitcherId: awayPitcher?.id ?? null,
+          saFd: resolveNameEntry(bdlByName, p.name_norm)?.sa?.fanduel ?? null,
+          statcastWindows: precomputedStatcastByBatter[p.mlb_id]?.[homePHand] ?? null,
+          batterMatchupData: matchupEdgeByBatter[p.mlb_id] ?? null,
+        })),
+        ...awayLineup.map((p): MmPlayerInput => ({
+          mlbId: p.mlb_id,
+          effectiveBats: effectiveBatsFor(p.bats, awayPHand),
+          pitcherHand: awayPHand,
+          pitcherId: homePitcher?.id ?? null,
+          saFd: resolveNameEntry(bdlByName, p.name_norm)?.sa?.fanduel ?? null,
+          statcastWindows: precomputedStatcastByBatter[p.mlb_id]?.[awayPHand] ?? null,
+          batterMatchupData: matchupEdgeByBatter[p.mlb_id] ?? null,
+        })),
+      ]
+      Object.assign(mmByWindowByMlbId, computeMmByWindowForGame(mmInputs, pitcherMap, matchupEdgeByPitcher))
+    }
+
     const tiedFactors = userMatrices.flatMap(m => m.factors.filter(f => f.operator === 'tied'))
     // Pipeline-mode Matrices need the identical per-player Bundle the tied-
     // Factor precompute below already builds — see FieldBundle/runPipeline
@@ -1218,6 +1261,7 @@ export async function GET(req: Request) {
         pitchlogWindows: isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null,
         statcastWindows: isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null,
         pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
+        mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
       })
       const homeBundle = new Map(homeLineup.map(p => [p.name_norm, resolveBundle(p, homePHand)]))
       const awayBundle = new Map(awayLineup.map(p => [p.name_norm, resolveBundle(p, awayPHand)]))
@@ -1359,6 +1403,7 @@ export async function GET(req: Request) {
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
               isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
+              mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
@@ -1375,6 +1420,7 @@ export async function GET(req: Request) {
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
               isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
+              mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
