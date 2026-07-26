@@ -28,7 +28,7 @@ type FactorInput = {
   // evaluateMmTrend/MatrixFactor.
   mm_base_window: 'l1' | 'l3' | 'l5' | 'l10' | null
   mm_compare_windows: string[] | null
-  mm_direction: 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | null
+  mm_direction: 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat' | null
   mm_match_mode: 'any' | 'all' | null
 }
 
@@ -74,7 +74,7 @@ type PipelineStepInput = {
   // filter only, operator 'mm_trend' — see matrixEngine.ts's evaluateMmTrend.
   mm_base_window: 'l1' | 'l3' | 'l5' | 'l10' | null
   mm_compare_windows: string[] | null
-  mm_direction: 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | null
+  mm_direction: 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat' | null
   mm_match_mode: 'any' | 'all' | null
 }
 
@@ -96,7 +96,7 @@ const MAX_PIPELINE_STEPS = 10
 // Only meaningful for operator 'mm_trend' (field_key 'mm') — see
 // matrixEngine.ts's evaluateMmTrend/MmByWindow.
 const MM_WINDOWS = ['l1', 'l3', 'l5', 'l10']
-const MM_DIRECTIONS = ['increased', 'decreased', 'crossed_positive', 'crossed_negative']
+const MM_DIRECTIONS = ['increased', 'decreased', 'crossed_positive', 'crossed_negative', 'flat']
 function cleanMmBaseWindow(v: unknown): 'l1' | 'l3' | 'l5' | 'l10' | null {
   return typeof v === 'string' && MM_WINDOWS.includes(v) ? v as 'l1' | 'l3' | 'l5' | 'l10' : null
 }
@@ -105,8 +105,8 @@ function cleanMmCompareWindows(v: unknown, base: string | null): string[] | null
   const clean = [...new Set(v.filter((w): w is string => typeof w === 'string' && MM_WINDOWS.includes(w) && w !== base))]
   return clean.length ? clean : null
 }
-function cleanMmDirection(v: unknown): 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | null {
-  return typeof v === 'string' && MM_DIRECTIONS.includes(v) ? v as 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' : null
+function cleanMmDirection(v: unknown): 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat' | null {
+  return typeof v === 'string' && MM_DIRECTIONS.includes(v) ? v as 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat' : null
 }
 function cleanMmMatchMode(v: unknown): 'any' | 'all' | null {
   return v === 'all' ? 'all' : v === 'any' ? 'any' : null
