@@ -39,6 +39,10 @@ type TiebreakerInput = {
   book: string | null
   direction: 'highest' | 'lowest'
   tolerance: number | null
+  // Only meaningful for field_key 'mm_move' — see matrixEngine.ts's
+  // computeMmMoveValue.
+  mm_base_window: 'l1' | 'l3' | 'l5' | 'l10' | null
+  mm_compare_windows: string[] | null
 }
 
 // Pipeline mode — see matrixEngine.ts's MatrixPipelineStep for the full
@@ -153,9 +157,10 @@ function validateTiebreakers(raw: unknown): TiebreakerInput[] {
   const clean: TiebreakerInput[] = []
   for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
     if (!t || typeof t !== 'object') continue
-    const { category, field_key, recency, book, direction, tolerance } = t as Record<string, unknown>
+    const { category, field_key, recency, book, direction, tolerance, mm_base_window, mm_compare_windows } = t as Record<string, unknown>
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
+    const cleanBaseWindow = cleanMmBaseWindow(mm_base_window)
     clean.push({
       category: category as TiebreakerInput['category'],
       field_key,
@@ -163,6 +168,8 @@ function validateTiebreakers(raw: unknown): TiebreakerInput[] {
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       direction: direction === 'lowest' ? 'lowest' : 'highest',
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
+      mm_base_window: cleanBaseWindow,
+      mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
     })
   }
   return clean

@@ -1270,10 +1270,10 @@ export async function GET(req: Request) {
       if (tiedFactors.length) {
         function resolveTiebreakerValue(name: string, tb: MatrixTiebreaker, pool: Map<string, FieldBundle>): number | null {
           const b = pool.get(name)
-          return b ? resolveFieldValue(tb.category, tb.field_key, tb.recency, tb.book, b, gameTotalPicksByMarket) : null
+          return b ? resolveFieldValue(tb.category, tb.field_key, tb.recency, tb.book, b, gameTotalPicksByMarket, tb.mm_base_window, tb.mm_compare_windows) : null
         }
         function rootValue(f: (typeof tiedFactors)[number], book: string | null, b: FieldBundle): number | null {
-          return resolveFieldValue(f.category, f.field_key, f.recency, book, b, gameTotalPicksByMarket)
+          return resolveFieldValue(f.category, f.field_key, f.recency, book, b, gameTotalPicksByMarket, f.mm_base_window, f.mm_compare_windows)
         }
         // One raw field(+book), one pool (home-only/away-only/whole-game) ->
         // the final surviving winner set, after any tiebreaker chain runs.

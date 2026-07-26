@@ -6,7 +6,7 @@ import { GripVertical, X, Plus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import {
   type MatrixFactor, type MmWindowKey, type MmTrendDirection, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, recencyOptionsFor, MULTI_BOOK_FIELDS,
-  fieldsForCategory, isBooksFieldKey, MmTrendFields,
+  fieldsForCategory, isBooksFieldKey, MmTrendFields, MmMoveWindowPicker,
 } from './CustomMatrixPanel'
 
 // A Pipeline is an ordered chain of steps that narrows a pool of players
@@ -178,12 +178,22 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               // 'mm_trend' is only ever offered for field_key 'mm' — switching
               // away from it resets to a plain threshold.
               ...(step.operator === 'mm_trend' && field_key !== 'mm' ? { operator: 'gte' as const, value: null } : {}),
+              // Switching TO 'mm_move' (any step kind — filter threshold,
+              // group tie, or rank) needs its own base/compare windows.
+              ...(field_key === 'mm_move' && !step.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
             })
           }}
           style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
         >
           {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
         </select>
+
+        {step.field_key === 'mm_move' && (
+          <MmMoveWindowPicker
+            baseWindow={step.mm_base_window} compareWindows={step.mm_compare_windows}
+            onPatch={patch => onChange({ ...step, ...patch })}
+          />
+        )}
 
         {step.kind === 'filter' && (isBoolean ? (
           <select
@@ -430,11 +440,23 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
         </select>
         <select
           className="ss-input" value={step.field_key}
-          onChange={e => onChange({ ...step, field_key: e.target.value, book: null })}
+          onChange={e => {
+            const field_key = e.target.value
+            onChange({
+              ...step, field_key, book: null,
+              ...(field_key === 'mm_move' && !step.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
+            })
+          }}
           style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
         >
           {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
         </select>
+        {step.field_key === 'mm_move' && (
+          <MmMoveWindowPicker
+            baseWindow={step.mm_base_window} compareWindows={step.mm_compare_windows}
+            onPatch={patch => onChange({ ...step, ...patch })}
+          />
+        )}
         {needsRecency && (
           <select
             className="ss-input" value={step.recency ?? 'season'}

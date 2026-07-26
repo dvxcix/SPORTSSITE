@@ -67,6 +67,9 @@ export type MatrixTiebreaker = {
   // no longer needs an exact 2-decimal match to survive. See
   // matrixEngine.ts's MatrixTiebreaker.tolerance for the full rationale.
   tolerance: number | null
+  // Only meaningful for field_key 'mm_move' — see MmMoveWindowPicker below.
+  mm_base_window: MmWindowKey | null
+  mm_compare_windows: MmWindowKey[] | null
 }
 
 export type MatrixDef = {
@@ -168,6 +171,14 @@ const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boole
   // field with a real recency selector, since it changes with whichever
   // Statcast window (Last 1/3/5/10) is behind the "Statcast rank" half.
   { key: 'mm', label: 'MM (Sportsbook Rank − Statcast Rank)', signed: true },
+  // Real gap, reported live (2026-07-26): once a member filters down to
+  // whoever's MM moved a certain way (via the 'mm_trend' operator above),
+  // there was no way to then pick a WINNER among survivors by "whoever
+  // moved the most" — a plain numeric field, usable as a Rank/Group field
+  // (Pipeline) or a tiebreaker field (Classic 'tied' chain) so "highest"
+  // means "biggest mover" directly. Also usable as an ordinary Filter
+  // threshold (e.g. "moved 3+ in either direction") — see MmMoveWindowPicker.
+  { key: 'mm_move', label: 'MM Movement (biggest change across windows)' },
 ]
 // Community pick counts — a plain threshold, or (the "% of Game" variant)
 // this player's share of his own game's total picks for that market across
@@ -363,8 +374,59 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
     </div>
   )
 }
+
+// field_key 'mm_move' — the magnitude of a player's biggest MM swing between
+// a base window and whichever OTHER window(s) are checked (see
+// computeMmMoveValue, matrixEngine.ts). No direction/amount here (unlike
+// MmTrendFields) — "highest" on this value already means "moved the most,"
+// regardless of which way. Shared by Filter/Group/Rank steps (Pipeline) and
+// tiebreaker chains (Classic 'tied' Factors) — anywhere a member ranks or
+// thresholds on "who moved the most."
+export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
+  baseWindow: MmWindowKey | null
+  compareWindows: MmWindowKey[] | null
+  onPatch: (patch: { mm_base_window?: MmWindowKey; mm_compare_windows?: MmWindowKey[] }) => void
+}) {
+  const base = baseWindow ?? 'l10'
+  const compare = compareWindows ?? []
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>MOVEMENT FROM</span>
+      <select
+        className="ss-input" value={base}
+        onChange={e => {
+          const nextBase = e.target.value as MmWindowKey
+          onPatch({ mm_base_window: nextBase, mm_compare_windows: compare.filter(w => w !== nextBase) })
+        }}
+        style={{ fontSize: 11, padding: '5px 6px', width: 66 }}
+      >
+        {MM_WINDOWS.map(w => <option key={w.key} value={w.key}>{w.label}</option>)}
+      </select>
+      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>VS</span>
+      <div style={{ display: 'flex', gap: 3 }}>
+        {MM_WINDOWS.filter(w => w.key !== base).map(w => {
+          const on = compare.includes(w.key)
+          return (
+            <button
+              key={w.key}
+              onClick={() => onPatch({ mm_compare_windows: on ? compare.filter(k => k !== w.key) : [...compare, w.key] })}
+              style={{
+                fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                color: on ? 'var(--accent)' : 'var(--text-3)',
+                background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
+              }}
+            >
+              {w.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 function newTiebreaker(): MatrixTiebreaker {
-  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null }
+  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null, mm_base_window: null, mm_compare_windows: null }
 }
 const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED573', '#FF8FA3', '#5EEAD4']
 
@@ -455,12 +517,22 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             // away from it resets to a plain threshold rather than leaving
             // the Factor in an operator/field combo the UI never offers.
             ...(factor.operator === 'mm_trend' && field_key !== 'mm' ? { operator: 'gte' as const, value: null } : {}),
+            // Switching TO 'mm_move' needs its own base/compare windows to
+            // be usable immediately, same default pair mm_trend seeds.
+            ...(field_key === 'mm_move' && !factor.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
           })
         }}
         style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
       >
         {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
       </select>
+
+      {factor.field_key === 'mm_move' && (
+        <MmMoveWindowPicker
+          baseWindow={factor.mm_base_window} compareWindows={factor.mm_compare_windows}
+          onPatch={patch => onChange({ ...factor, ...patch })}
+        />
+      )}
 
       {isBoolean ? (
         <select
@@ -708,11 +780,24 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
 
       <select
         className="ss-input" value={tb.field_key}
-        onChange={e => onChange({ ...tb, field_key: e.target.value, book: null })}
+        onChange={e => {
+          const field_key = e.target.value
+          onChange({
+            ...tb, field_key, book: null,
+            ...(field_key === 'mm_move' && !tb.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
+          })
+        }}
         style={{ fontSize: 10, padding: '4px 5px', minWidth: 130, flex: '1 1 130px' }}
       >
         {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
       </select>
+
+      {tb.field_key === 'mm_move' && (
+        <MmMoveWindowPicker
+          baseWindow={tb.mm_base_window} compareWindows={tb.mm_compare_windows}
+          onPatch={patch => onChange({ ...tb, ...patch })}
+        />
+      )}
 
       {needsRecency && (
         <select

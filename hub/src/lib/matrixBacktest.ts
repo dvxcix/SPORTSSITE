@@ -274,10 +274,10 @@ function buildTiedWinners(
 ): Map<string, Set<string>> {
   const allBundle = new Map([...homeBundle, ...awayBundle])
   const factorTiedWinners = new Map<string, Set<string>>()
-  const rootValue = (f: MatrixFactor, book: string | null, b: FieldBundle) => resolveFieldValue(f.category, f.field_key, f.recency, book, b, gameTotalPicksByMarket)
+  const rootValue = (f: MatrixFactor, book: string | null, b: FieldBundle) => resolveFieldValue(f.category, f.field_key, f.recency, book, b, gameTotalPicksByMarket, f.mm_base_window, f.mm_compare_windows)
   const resolveTbValue = (name: string, tb: MatrixTiebreaker, pool: Map<string, FieldBundle>) => {
     const b = pool.get(name)
-    return b ? resolveFieldValue(tb.category, tb.field_key, tb.recency, tb.book, b, gameTotalPicksByMarket) : null
+    return b ? resolveFieldValue(tb.category, tb.field_key, tb.recency, tb.book, b, gameTotalPicksByMarket, tb.mm_base_window, tb.mm_compare_windows) : null
   }
   const winnersForPool = (f: MatrixFactor, book: string | null, pool: Map<string, FieldBundle>): Set<string> => {
     const values = new Map<string, number>()

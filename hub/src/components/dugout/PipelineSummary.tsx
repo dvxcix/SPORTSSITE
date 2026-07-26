@@ -28,6 +28,18 @@ function describeMmTrend(step: MatrixPipelineStep): string {
   return `MM ${dir}${amount} from ${base} to ${compare.join('/') || '?'}${mode}`
 }
 
+// 'mm_move' resolves to a plain number (see computeMmMoveValue,
+// matrixEngine.ts) so it flows through describeStep's ordinary filter/
+// group/rank sentence shapes fine — this just appends which windows it's
+// measuring between, since "MM Movement" alone doesn't say that.
+function fieldLabelFor(step: MatrixPipelineStep): string {
+  const base = fieldLabel(step.category, step.field_key)
+  if (step.field_key !== 'mm_move') return base
+  const from = step.mm_base_window ? MM_WINDOW_WORD[step.mm_base_window] ?? step.mm_base_window : '?'
+  const to = (step.mm_compare_windows ?? []).map(w => MM_WINDOW_WORD[w] ?? w).join('/')
+  return `${base} (${from} vs ${to || '?'})`
+}
+
 // One clause per step, position-independent (no special-casing "first" vs.
 // "later" grammar) — the → separators between clauses are what convey the
 // pipeline itself, same shape as the walkthrough sentence this feature was
@@ -35,7 +47,7 @@ function describeMmTrend(step: MatrixPipelineStep): string {
 // → highest Anytime HR"). Purely mechanical, built from the member's own
 // field/operator/direction choices — not written copy.
 function describeStep(step: MatrixPipelineStep): string {
-  const field = fieldLabel(step.category, step.field_key)
+  const field = fieldLabelFor(step)
   if (step.kind === 'filter') {
     if (step.operator === 'mm_trend') return describeMmTrend(step)
     const op = step.operator ? OP_WORD[step.operator] ?? step.operator : ''

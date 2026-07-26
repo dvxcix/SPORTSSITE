@@ -150,6 +150,9 @@ export type MatrixTiebreaker = {
   // number widens the winner set to anyone within that RAW distance of the
   // best value, direction-aware — see resolveTiebreakers below.
   tolerance: number | null
+  // Only meaningful for field_key 'mm_move' — see computeMmMoveValue below.
+  mm_base_window: MmWindowKey | null
+  mm_compare_windows: MmWindowKey[] | null
 }
 
 // ─── Pipeline mode ──────────────────────────────────────────────────────
@@ -785,11 +788,13 @@ export function computeDugoutSpecsValue(
   props: OddsProps | null | undefined,
   fhrAvg: DugoutSpecsAverages | null | undefined,
   saAvg: DugoutSpecsAverages | null | undefined,
-  // Only 'mm' (see MmByWindow above) ever reads these two — every other
-  // dugout_specs field is a plain function of `props` alone, so both stay
-  // optional rather than forcing every existing call site to pass them.
+  // Only 'mm'/'mm_move' (see MmByWindow above) ever read these — every other
+  // dugout_specs field is a plain function of `props` alone, so all three
+  // stay optional rather than forcing every existing call site to pass them.
   recency?: MatrixRecency | null,
   mmByWindow?: MmByWindow | null,
+  mmBaseWindow?: MmWindowKey | null,
+  mmCompareWindows?: MmWindowKey[] | null,
 ): number | null {
   if (fieldKey === 'mm') {
     // 'mm' reuses MatrixRecency's existing 'game' value for "Last 1" (same
@@ -799,12 +804,45 @@ export function computeDugoutSpecsValue(
     const w = recency === 'game' ? 'l1' : recency === 'l3' || recency === 'l5' || recency === 'l10' ? recency : 'l10'
     return mmByWindow?.[w] ?? null
   }
+  // 'mm_move' — real gap, reported live (2026-07-26): once a member filters
+  // down to whoever's MM crossed/moved a certain way (see evaluateMmTrend
+  // above), there was no way to then pick a single WINNER among survivors
+  // by "whoever moved the most" — a plain numeric field, rankable via a
+  // Pipeline Rank step (or a Classic 'tied' tiebreaker), was needed instead
+  // of another boolean condition. See computeMmMoveValue below.
+  if (fieldKey === 'mm_move') return computeMmMoveValue(mmBaseWindow ?? null, mmCompareWindows ?? null, mmByWindow)
   if (fieldKey === 'fhr_pct' || fieldKey === 'sa_pct') {
     const fd = props?.[fieldKey === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
     const avg = fieldKey === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
     return fd != null && avg ? ((fd - avg) / avg) * 100 : null
   }
   return DUGOUT_SPECS_FIELD[fieldKey]?.(props) ?? null
+}
+
+// The magnitude of this player's biggest MM swing between `baseWindow` and
+// any ONE of `compareWindows` — e.g. base L10 vs compare [L5, L3, L1] takes
+// whichever of those three windows differs from L10 by the most, and
+// returns that absolute distance. Ranking "highest" on this value directly
+// means "whoever moved the most," regardless of direction — pairs with
+// evaluateMmTrend's own directional/signed boolean check, which answers "did
+// it move a specific way" rather than "who moved most."
+export function computeMmMoveValue(
+  baseWindow: MmWindowKey | null,
+  compareWindows: MmWindowKey[] | null,
+  mmByWindow: MmByWindow | null | undefined,
+): number | null {
+  if (!baseWindow || !compareWindows?.length || !mmByWindow) return null
+  const baseVal = mmByWindow[baseWindow]
+  if (baseVal == null) return null
+  let best: number | null = null
+  for (const w of compareWindows) {
+    if (w === baseWindow) continue
+    const cmpVal = mmByWindow[w]
+    if (cmpVal == null) continue
+    const delta = Math.abs(cmpVal - baseVal)
+    if (best == null || delta > best) best = delta
+  }
+  return best
 }
 
 // 'mm_trend' — only meaningful for field_key 'mm' (the UI restricts it to
@@ -863,7 +901,7 @@ export function evaluateDugoutSpecsFactor(
   if (factor.operator === 'mm_trend') {
     return evaluateMmTrend(factor.mm_base_window, factor.mm_compare_windows, factor.mm_direction, factor.value, factor.mm_match_mode, mmByWindow)
   }
-  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow)
+  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow, factor.mm_base_window, factor.mm_compare_windows)
   return compareThreshold(current, factor.operator, factor.value)
 }
 
@@ -1017,9 +1055,12 @@ export function resolveFieldValue(
   book: string | null,
   bundle: FieldBundle,
   gameTotalPicksByMarket: Record<string, number>,
+  // Only field_key 'mm_move' ever reads these two — see computeMmMoveValue.
+  mmBaseWindow?: MmWindowKey | null,
+  mmCompareWindows?: MmWindowKey[] | null,
 ): number | null {
   if (category === 'odds') return computeOddsRawPrice(fieldKey, book ?? 'fanduel', bundle.props)
-  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow)
+  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow, mmBaseWindow, mmCompareWindows)
   if (category === 'pitchlog_stat') return computePitchlogStatValue(fieldKey, recency, bundle.pitchlogWindows)
   if (category === 'savant_stat') return computeSavantStatValue(fieldKey, recency, bundle.statcastWindows)
   return computePicksValue(fieldKey, bundle.pikkitEntry, gameTotalPicksByMarket)
@@ -1045,7 +1086,7 @@ export function evaluateFilterStep(
 ): boolean {
   if (step.operator === 'lt_anchor' || step.operator === 'gt_anchor') {
     if (anchorValue == null) return false // no anchor in scope — fail safe, not a crash
-    const current = resolveFieldValue(step.category, step.field_key, step.recency, step.book, bundle, gameTotalPicksByMarket)
+    const current = resolveFieldValue(step.category, step.field_key, step.recency, step.book, bundle, gameTotalPicksByMarket, step.mm_base_window, step.mm_compare_windows)
     if (current == null) return false
     return step.operator === 'lt_anchor' ? current < anchorValue : current > anchorValue
   }
@@ -1105,7 +1146,7 @@ export function runPipelineStep(
     const anchorName = pool.values().next().value as string
     const anchorBundle = bundles.get(anchorName)
     const resolvedAnchor = anchorBundle
-      ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, anchorBundle, gameTotalPicksByMarket)
+      ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, anchorBundle, gameTotalPicksByMarket, step.mm_base_window, step.mm_compare_windows)
       : null
 
     const universeMap = scopeBundles[step.condition_scope ?? 'team']
@@ -1128,7 +1169,7 @@ export function runPipelineStep(
   if (pool.size <= 1) return strict ? new Set() : pool
   const resolveValue = (name: string): number | null => {
     const b = bundles.get(name)
-    return b ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, b, gameTotalPicksByMarket) : null
+    return b ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, b, gameTotalPicksByMarket, step.mm_base_window, step.mm_compare_windows) : null
   }
   if (step.kind === 'group') {
     const values = new Map<string, number>()
@@ -1143,7 +1184,11 @@ export function runPipelineStep(
   }
   // rank — resolveTiebreakers already implements exactly this ("keep
   // whoever's best on one field"); called with a single-step chain.
-  const tb: MatrixTiebreaker = { category: step.category, field_key: step.field_key, recency: step.recency, book: step.book, direction: step.direction ?? 'highest', tolerance: step.tolerance ?? null }
+  const tb: MatrixTiebreaker = {
+    category: step.category, field_key: step.field_key, recency: step.recency, book: step.book,
+    direction: step.direction ?? 'highest', tolerance: step.tolerance ?? null,
+    mm_base_window: step.mm_base_window, mm_compare_windows: step.mm_compare_windows,
+  }
   const survivors = resolveTiebreakers([...pool], [tb], name => resolveValue(name))
   if (strict) return survivors
   return survivors.size ? survivors : pool // lenient: nobody had a value -> unchanged
