@@ -9,8 +9,27 @@ const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
 const MAX_TIEBREAKERS = 5
 const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank', 'unless']
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor', 'mm_trend']
 const MAX_PIPELINE_STEPS = 10
+
+// Only meaningful for operator 'mm_trend' (field_key 'mm') — see
+// matrixEngine.ts's evaluateMmTrend/MmByWindow.
+const MM_WINDOWS = ['l1', 'l3', 'l5', 'l10']
+const MM_DIRECTIONS = ['increased', 'decreased', 'crossed_positive', 'crossed_negative']
+function cleanMmBaseWindow(v: unknown): string | null {
+  return typeof v === 'string' && MM_WINDOWS.includes(v) ? v : null
+}
+function cleanMmCompareWindows(v: unknown, base: string | null): string[] | null {
+  if (!Array.isArray(v)) return null
+  const clean = [...new Set(v.filter((w): w is string => typeof w === 'string' && MM_WINDOWS.includes(w) && w !== base))]
+  return clean.length ? clean : null
+}
+function cleanMmDirection(v: unknown): string | null {
+  return typeof v === 'string' && MM_DIRECTIONS.includes(v) ? v : null
+}
+function cleanMmMatchMode(v: unknown): 'any' | 'all' | null {
+  return v === 'all' ? 'all' : v === 'any' ? 'any' : null
+}
 
 function cleanTiebreakers(raw: unknown) {
   if (!Array.isArray(raw)) return []
@@ -40,6 +59,7 @@ type CleanPipelineStep = {
   books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
   direction: 'highest' | 'lowest' | null; tolerance: number | null
   condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
+  mm_base_window: string | null; mm_compare_windows: string[] | null; mm_direction: string | null; mm_match_mode: 'any' | 'all' | null
 }
 // `allowUnless` caps nesting at one level — same rationale as
 // api/matrices/route.ts's own validatePipelineSteps (kept as two separate
@@ -51,11 +71,12 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true): CleanPipelineStep
   const clean: CleanPipelineStep[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
+    const cleanBaseWindow = cleanMmBaseWindow(mm_base_window)
     clean.push({
       kind: kind as string, category: category as string, field_key,
       recency: typeof recency === 'string' ? recency : null,
@@ -69,6 +90,10 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true): CleanPipelineStep
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
       condition_steps: kind === 'unless' ? cleanPipelineSteps(condition_steps, false) : null,
       then_steps: kind === 'unless' ? cleanPipelineSteps(then_steps, false) : null,
+      mm_base_window: cleanBaseWindow,
+      mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
+      mm_direction: cleanMmDirection(mm_direction),
+      mm_match_mode: cleanMmMatchMode(mm_match_mode),
     })
   }
   return clean
@@ -108,19 +133,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { error: deleteError } = await admin.from('matrix_factors').delete().eq('matrix_id', id)
     if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
     const { error: insertError } = await admin.from('matrix_factors').insert(
-      body.factors.map((f: Record<string, unknown>, i: number) => ({
-        matrix_id: id, position: i,
-        category: f.category, field_key: f.field_key, operator: f.operator,
-        value: typeof f.value === 'number' ? f.value : null,
-        recency: typeof f.recency === 'string' ? f.recency : null,
-        recency_start: typeof f.recency_start === 'string' ? f.recency_start : null,
-        recency_end: typeof f.recency_end === 'string' ? f.recency_end : null,
-        books: Array.isArray(f.books) && f.books.length ? f.books.filter(b => typeof b === 'string') : null,
-        books_min_count: typeof f.books_min_count === 'number' ? Math.max(1, Math.round(f.books_min_count)) : null,
-        tie_scope: f.tie_scope === 'game' ? 'game' : f.tie_scope === 'team' ? 'team' : null,
-        tie_direction: f.tie_direction === 'highest' ? 'highest' : f.tie_direction === 'lowest' ? 'lowest' : null,
-        tiebreakers: cleanTiebreakers(f.tiebreakers),
-      }))
+      body.factors.map((f: Record<string, unknown>, i: number) => {
+        const baseWindow = cleanMmBaseWindow(f.mm_base_window)
+        return {
+          matrix_id: id, position: i,
+          category: f.category, field_key: f.field_key, operator: f.operator,
+          value: typeof f.value === 'number' ? f.value : null,
+          recency: typeof f.recency === 'string' ? f.recency : null,
+          recency_start: typeof f.recency_start === 'string' ? f.recency_start : null,
+          recency_end: typeof f.recency_end === 'string' ? f.recency_end : null,
+          books: Array.isArray(f.books) && f.books.length ? f.books.filter(b => typeof b === 'string') : null,
+          books_min_count: typeof f.books_min_count === 'number' ? Math.max(1, Math.round(f.books_min_count)) : null,
+          tie_scope: f.tie_scope === 'game' ? 'game' : f.tie_scope === 'team' ? 'team' : null,
+          tie_direction: f.tie_direction === 'highest' ? 'highest' : f.tie_direction === 'lowest' ? 'lowest' : null,
+          tiebreakers: cleanTiebreakers(f.tiebreakers),
+          mm_base_window: baseWindow,
+          mm_compare_windows: cleanMmCompareWindows(f.mm_compare_windows, baseWindow),
+          mm_direction: cleanMmDirection(f.mm_direction),
+          mm_match_mode: cleanMmMatchMode(f.mm_match_mode),
+        }
+      })
     )
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
   }

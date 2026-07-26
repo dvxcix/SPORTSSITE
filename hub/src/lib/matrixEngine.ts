@@ -47,7 +47,16 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 // (whatever the pool going INTO the 'unless' step was tied/ranked on)
 // instead of a literal typed-in number. Evaluates to false wherever no
 // anchor is in scope (fail-safe, never a crash).
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor'
+// 'mm_trend' — only meaningful for field_key 'mm' (the board only ever
+// precomputes all 4 windows at once for THAT field — see MmByWindow below).
+// Real gap, reported live (2026-07-26): a plain 'mm' Factor can only ever
+// check ONE recency window's value against a fixed number — there was no
+// way to ask "did this player's MM MOVE between two of the board's own
+// windows" (e.g. "was + on L10 but crossed negative by L1," or "dropped 3+
+// between L5 and L1"). See evaluateMmTrend/MatrixFactor's mm_* fields below.
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
+export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
+export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative'
 // Real gap (2026-07-24): the grid's own Statcast section shows every
 // pitchlog_stat/savant_stat field at both a recent window AND a season
 // value, with a Δ (recent − season) alongside some of them — a Matrix
@@ -111,6 +120,15 @@ export type MatrixFactor = {
   // nothing is silently dropped. null/empty = the original plain-tie
   // behavior (every member of the raw tie group counts).
   tiebreakers: MatrixTiebreaker[] | null
+  // Only meaningful for operator 'mm_trend' — see evaluateMmTrend below.
+  // baseWindow is the reference point; compareWindows (1-3 of the other
+  // three) are each checked against it.
+  mm_base_window: MmWindowKey | null
+  mm_compare_windows: MmWindowKey[] | null
+  mm_direction: MmTrendDirection | null
+  // null/'any' = the trend only needs to hold in ANY one of
+  // mm_compare_windows; 'all' = it must hold in every one of them.
+  mm_match_mode: 'any' | 'all' | null
 }
 
 export type MatrixTiebreaker = {
@@ -200,6 +218,12 @@ export type MatrixPipelineStep = {
   condition_scope: 'team' | 'game' | null
   condition_steps: MatrixPipelineStep[] | null
   then_steps: MatrixPipelineStep[] | null
+  // filter only, operator 'mm_trend' — see MatrixFactor's own mm_* fields
+  // and evaluateMmTrend below.
+  mm_base_window: MmWindowKey | null
+  mm_compare_windows: MmWindowKey[] | null
+  mm_direction: MmTrendDirection | null
+  mm_match_mode: 'any' | 'all' | null
 }
 export const MAX_PIPELINE_STEPS = 10
 
@@ -783,6 +807,44 @@ export function computeDugoutSpecsValue(
   return DUGOUT_SPECS_FIELD[fieldKey]?.(props) ?? null
 }
 
+// 'mm_trend' — only meaningful for field_key 'mm' (the UI restricts it to
+// that). Real gap, reported live (2026-07-26): a plain 'mm' Factor can only
+// ever check ONE recency window against a fixed number — there was no way
+// to ask "did this player's MM MOVE between two of the board's own windows"
+// (e.g. "was + on L10 but crossed negative by L1," or "dropped 3+ between
+// L5 and L1"). mmByWindow already holds all four windows per player (see
+// MmByWindow above), so this reads straight off that instead of a single
+// resolved value. `baseWindow` is the reference point; `compareWindows`
+// (1-3 of the other three) are each checked against it, `matchMode`
+// controlling whether ANY (default/null) or ALL of them must satisfy
+// `direction`. `amount` (the Factor/Step's own `value`) is the minimum
+// magnitude of the move for 'increased'/'decreased' — null means "any move
+// that direction," irrelevant for the two 'crossed_*' directions (a sign
+// flip needs no magnitude). Fails safe (false) on any missing input rather
+// than crashing — same defensive shape as lt_anchor/gt_anchor above.
+export function evaluateMmTrend(
+  baseWindow: MmWindowKey | null,
+  compareWindows: MmWindowKey[] | null,
+  direction: MmTrendDirection | null,
+  amount: number | null,
+  matchMode: 'any' | 'all' | null,
+  mmByWindow: MmByWindow | null | undefined,
+): boolean {
+  if (!baseWindow || !compareWindows?.length || !direction || !mmByWindow) return false
+  const baseVal = mmByWindow[baseWindow]
+  if (baseVal == null) return false
+  const results = compareWindows.filter(w => w !== baseWindow).map(w => {
+    const cmpVal = mmByWindow[w]
+    if (cmpVal == null) return false
+    if (direction === 'increased') return amount != null ? cmpVal - baseVal >= amount : cmpVal > baseVal
+    if (direction === 'decreased') return amount != null ? baseVal - cmpVal >= amount : cmpVal < baseVal
+    if (direction === 'crossed_positive') return baseVal < 0 && cmpVal > 0
+    return baseVal > 0 && cmpVal < 0 // crossed_negative
+  })
+  if (!results.length) return false
+  return matchMode === 'all' ? results.every(Boolean) : results.some(Boolean)
+}
+
 export function evaluateDugoutSpecsFactor(
   factor: MatrixFactor,
   props: OddsProps | null | undefined,
@@ -798,6 +860,9 @@ export function evaluateDugoutSpecsFactor(
   mmByWindow?: MmByWindow | null,
 ): boolean {
   if (factor.operator === 'tied') return isFactorTied?.(factor.id) ?? false
+  if (factor.operator === 'mm_trend') {
+    return evaluateMmTrend(factor.mm_base_window, factor.mm_compare_windows, factor.mm_direction, factor.value, factor.mm_match_mode, mmByWindow)
+  }
   const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow)
   return compareThreshold(current, factor.operator, factor.value)
 }
@@ -990,6 +1055,8 @@ export function evaluateFilterStep(
     recency: step.recency, recency_start: null, recency_end: null,
     books: step.books, books_min_count: step.books_min_count,
     tie_scope: null, tie_direction: null, tiebreakers: null,
+    mm_base_window: step.mm_base_window, mm_compare_windows: step.mm_compare_windows,
+    mm_direction: step.mm_direction, mm_match_mode: step.mm_match_mode,
   }
   if (step.category === 'odds') return evaluateOddsFactor(asFactor, bundle.props)
   if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg, undefined, bundle.mmByWindow)

@@ -14,11 +14,14 @@ import { PipelineSummary } from './PipelineSummary'
 // from a competitor's naming rather than reusing it (see matrixEngine.ts's
 // own header comment for the full data-source breakdown this UI drives).
 
+export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
+export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative'
+
 export type MatrixFactor = {
   id?: string
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'mm_trend'
   value: number | null
   recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | 'game_delta' | 'l3_delta' | 'l5_delta' | 'l10_delta' | null
   // Only meaningful for the two real multi-book odds fields (fhr, hr) —
@@ -42,6 +45,15 @@ export type MatrixFactor = {
   // recent Attack Angle"). Empty = every member of the raw tie group counts,
   // the original plain-tie behavior. See matrixEngine.ts's resolveTiebreakers.
   tiebreakers: MatrixTiebreaker[]
+  // Only meaningful for operator 'mm_trend' — see matrixEngine.ts's
+  // evaluateMmTrend. baseWindow is the reference point; compareWindows (1-3
+  // of the other three) are each checked against it.
+  mm_base_window: MmWindowKey | null
+  mm_compare_windows: MmWindowKey[] | null
+  mm_direction: MmTrendDirection | null
+  // null/'any' = the trend only needs to hold in ANY one of
+  // mm_compare_windows; 'all' = it must hold in every one of them.
+  mm_match_mode: 'any' | 'all' | null
 }
 
 export type MatrixTiebreaker = {
@@ -234,6 +246,7 @@ export const OPERATOR_LABEL: Record<string, string> = {
   positive: 'Is positive (+)', negative: 'Is negative (−)',
   tied: 'Tied w/ a teammate',
   is_null: 'Is blank (no value)', is_not_null: 'Has a value',
+  mm_trend: 'Trend across L1/L3/L5/L10',
 }
 
 export type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
@@ -247,7 +260,108 @@ export function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
 }
 function newFactor(): MatrixFactor {
-  return { category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null, tie_scope: null, tie_direction: null, tiebreakers: [] }
+  return {
+    category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null,
+    tie_scope: null, tie_direction: null, tiebreakers: [],
+    mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null,
+  }
+}
+// The board's own 4 MM windows, broadest to narrowest — same order the
+// board's own recency toggle presents them in.
+export const MM_WINDOWS: { key: MmWindowKey; label: string }[] = [
+  { key: 'l10', label: 'L10' }, { key: 'l5', label: 'L5' }, { key: 'l3', label: 'L3' }, { key: 'l1', label: 'L1' },
+]
+export const MM_DIRECTION_LABEL: Record<MmTrendDirection, string> = {
+  increased: 'Increased', decreased: 'Decreased',
+  crossed_positive: 'Crossed to positive (+)', crossed_negative: 'Crossed to negative (−)',
+}
+// Shared by Classic Factors (FactorRow) and Pipeline filter steps
+// (PipelineStepCard) — both let a member reuse this exact block since a
+// 'mm_trend' condition needs the same 4 inputs (base window, direction, an
+// optional minimum move amount, and which OTHER window(s) to check it
+// against) regardless of which builder it's being edited in. `onPatch`
+// receives only the fields that changed — each caller spreads it onto its
+// own Factor/Step shape, which already share these exact field names.
+export function MmTrendFields({ baseWindow, compareWindows, direction, amount, matchMode, onPatch }: {
+  baseWindow: MmWindowKey | null
+  compareWindows: MmWindowKey[] | null
+  direction: MmTrendDirection | null
+  amount: number | null
+  matchMode: 'any' | 'all' | null
+  onPatch: (patch: {
+    mm_base_window?: MmWindowKey; mm_compare_windows?: MmWindowKey[]; mm_direction?: MmTrendDirection
+    value?: number | null; mm_match_mode?: 'any' | 'all'
+  }) => void
+}) {
+  const base = baseWindow ?? 'l10'
+  const compare = compareWindows ?? []
+  const needsAmount = direction === 'increased' || direction === 'decreased'
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>FROM</span>
+      <select
+        className="ss-input" value={base}
+        onChange={e => {
+          const nextBase = e.target.value as MmWindowKey
+          onPatch({ mm_base_window: nextBase, mm_compare_windows: compare.filter(w => w !== nextBase) })
+        }}
+        style={{ fontSize: 11, padding: '5px 6px', width: 66 }}
+      >
+        {MM_WINDOWS.map(w => <option key={w.key} value={w.key}>{w.label}</option>)}
+      </select>
+
+      <select
+        className="ss-input" value={direction ?? 'decreased'}
+        onChange={e => onPatch({ mm_direction: e.target.value as MmTrendDirection })}
+        style={{ fontSize: 11, padding: '5px 6px', width: 160 }}
+      >
+        {(Object.keys(MM_DIRECTION_LABEL) as MmTrendDirection[]).map(d => <option key={d} value={d}>{MM_DIRECTION_LABEL[d]}</option>)}
+      </select>
+
+      {needsAmount && (
+        <input
+          className="ss-input" type="number" min={0} placeholder="any amount"
+          title="Minimum move required — leave blank for any move at all in this direction"
+          value={amount ?? ''}
+          onChange={e => onPatch({ value: e.target.value === '' ? null : Math.abs(Number(e.target.value)) })}
+          style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
+        />
+      )}
+
+      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>IN</span>
+      <div style={{ display: 'flex', gap: 3 }}>
+        {MM_WINDOWS.filter(w => w.key !== base).map(w => {
+          const on = compare.includes(w.key)
+          return (
+            <button
+              key={w.key}
+              onClick={() => onPatch({ mm_compare_windows: on ? compare.filter(k => k !== w.key) : [...compare, w.key] })}
+              style={{
+                fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                color: on ? 'var(--accent)' : 'var(--text-3)',
+                background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
+              }}
+            >
+              {w.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {compare.length > 1 && (
+        <select
+          className="ss-input" value={matchMode ?? 'any'}
+          onChange={e => onPatch({ mm_match_mode: e.target.value as 'any' | 'all' })}
+          title="Whether the trend needs to hold in ANY of the checked windows, or ALL of them"
+          style={{ fontSize: 10, padding: '4px 5px', width: 150 }}
+        >
+          <option value="any">True in any checked window</option>
+          <option value="all">True in every checked window</option>
+        </select>
+      )}
+    </div>
+  )
 }
 function newTiebreaker(): MatrixTiebreaker {
   return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null }
@@ -291,8 +405,11 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
   // member picks — see evaluateOddsFactor/evaluateDugoutSpecsFactor).
   const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
     || factor.operator === 'positive' || factor.operator === 'negative' || factor.operator === 'tied'
-    || factor.operator === 'is_null' || factor.operator === 'is_not_null'
-  const needsRecency = factor.category === 'pitchlog_stat' || factor.category === 'savant_stat' || (factor.category === 'dugout_specs' && factor.field_key === 'mm')
+    || factor.operator === 'is_null' || factor.operator === 'is_not_null' || factor.operator === 'mm_trend'
+  // 'mm_trend' spans all 4 windows itself (see MmTrendFields below) — the
+  // plain recency picker is meaningless once that operator is selected.
+  const needsRecency = (factor.category === 'pitchlog_stat' || factor.category === 'savant_stat' || (factor.category === 'dugout_specs' && factor.field_key === 'mm'))
+    && factor.operator !== 'mm_trend'
   // "Is PWR ⚡?" — a real Yes/No gate (buildBatterRow's is_pwr), not a ratio
   // to type a number for. Represented under the hood as an ordinary eq-1/
   // eq-0 Factor (see matrixEngine.ts) so it reuses the same evaluation path
@@ -334,6 +451,10 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             ...factor, field_key,
             ...(isBooksFieldKey(field_key) ? { operator: 'gte' } : {}),
             ...(nowBoolean ? { operator: 'eq', value: 1 } : isBoolean ? { operator: 'gte', value: null } : {}),
+            // 'mm_trend' is only ever offered for field_key 'mm' — switching
+            // away from it resets to a plain threshold rather than leaving
+            // the Factor in an operator/field combo the UI never offers.
+            ...(factor.operator === 'mm_trend' && field_key !== 'mm' ? { operator: 'gte' as const, value: null } : {}),
           })
         }}
         style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
@@ -354,7 +475,15 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
         <>
           <select
             className="ss-input" value={factor.operator}
-            onChange={e => onChange({ ...factor, operator: e.target.value as MatrixFactor['operator'] })}
+            onChange={e => {
+              const operator = e.target.value as MatrixFactor['operator']
+              onChange({
+                ...factor, operator,
+                ...(operator === 'mm_trend' && !factor.mm_base_window
+                  ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const, mm_direction: 'decreased' as const, mm_match_mode: null }
+                  : {}),
+              })
+            }}
             style={{ fontSize: 11, padding: '5px 6px', width: 170 }}
           >
             <option value="gte">{OPERATOR_LABEL.gte}</option>
@@ -379,9 +508,18 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                 <option value="positive">{OPERATOR_LABEL.positive}</option>
                 <option value="negative">{OPERATOR_LABEL.negative}</option>
                 <option value="tied">{OPERATOR_LABEL.tied}</option>
+                {factor.field_key === 'mm' && <option value="mm_trend">{OPERATOR_LABEL.mm_trend}</option>}
               </>
             )}
           </select>
+
+          {factor.operator === 'mm_trend' && (
+            <MmTrendFields
+              baseWindow={factor.mm_base_window} compareWindows={factor.mm_compare_windows}
+              direction={factor.mm_direction} amount={factor.value} matchMode={factor.mm_match_mode}
+              onPatch={patch => onChange({ ...factor, ...patch })}
+            />
+          )}
 
           {factor.operator === 'tied' ? (
             <>

@@ -5,8 +5,8 @@ import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { GripVertical, X, Plus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import {
-  type MatrixFactor, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, recencyOptionsFor, MULTI_BOOK_FIELDS,
-  fieldsForCategory, isBooksFieldKey,
+  type MatrixFactor, type MmWindowKey, type MmTrendDirection, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, recencyOptionsFor, MULTI_BOOK_FIELDS,
+  fieldsForCategory, isBooksFieldKey, MmTrendFields,
 } from './CustomMatrixPanel'
 
 // A Pipeline is an ordered chain of steps that narrows a pool of players
@@ -42,7 +42,7 @@ export type MatrixPipelineStep = {
   book: string | null
   books: string[] | null
   books_min_count: number | null
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | null
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend' | null
   value: number | null
   // rank: which extreme to keep. group: null keeps every tied cluster
   // (original behavior); 'highest'/'lowest' narrows to the single cluster
@@ -58,6 +58,12 @@ export type MatrixPipelineStep = {
   condition_scope: 'team' | 'game' | null
   condition_steps: MatrixPipelineStep[] | null
   then_steps: MatrixPipelineStep[] | null
+  // filter only, operator 'mm_trend' — see CustomMatrixPanel.tsx's
+  // MmTrendFields / matrixEngine.ts's evaluateMmTrend.
+  mm_base_window: MmWindowKey | null
+  mm_compare_windows: MmWindowKey[] | null
+  mm_direction: MmTrendDirection | null
+  mm_match_mode: 'any' | 'all' | null
 }
 
 const KIND_LABEL: Record<MatrixPipelineStep['kind'], string> = { filter: 'Filter', group: 'Group', rank: 'Rank', unless: 'Unless' }
@@ -91,6 +97,7 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: M
     condition_scope: kind === 'unless' ? 'team' : null,
     condition_steps: kind === 'unless' ? [] : null,
     then_steps: kind === 'unless' ? [] : null,
+    mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null,
   }
 }
 
@@ -107,7 +114,10 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
   const fields = step.kind === 'filter' ? fieldsForCategory(step.category) : fieldsForCategory(step.category).filter(f => !f.boolean)
   const isBoolean = step.kind === 'filter' && fields.find(f => f.key === step.field_key)?.boolean === true
   const isBooksField = step.kind === 'filter' && isBooksFieldKey(step.field_key)
-  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && step.field_key === 'mm')
+  // 'mm_trend' spans all 4 windows itself (see MmTrendFields below) — the
+  // plain recency picker is meaningless once that operator is selected.
+  const needsRecency = (step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && step.field_key === 'mm'))
+    && step.operator !== 'mm_trend'
   const needsValue = step.operator === 'gte' || step.operator === 'lte' || step.operator === 'eq'
   const hidesValue = step.kind === 'filter' && !needsValue
   const multiBookFilter = step.kind === 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
@@ -165,6 +175,9 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               ...step, field_key, book: null, books: null, books_min_count: null,
               ...(step.kind === 'filter' && isBooksFieldKey(field_key) ? { operator: 'gte' } : {}),
               ...(nowBoolean ? { operator: 'eq', value: 1 } : isBoolean ? { operator: 'gte', value: null } : {}),
+              // 'mm_trend' is only ever offered for field_key 'mm' — switching
+              // away from it resets to a plain threshold.
+              ...(step.operator === 'mm_trend' && field_key !== 'mm' ? { operator: 'gte' as const, value: null } : {}),
             })
           }}
           style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
@@ -185,7 +198,15 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           <>
             <select
               className="ss-input" value={step.operator ?? 'gte'}
-              onChange={e => onChange({ ...step, operator: e.target.value as MatrixPipelineStep['operator'] })}
+              onChange={e => {
+                const operator = e.target.value as MatrixPipelineStep['operator']
+                onChange({
+                  ...step, operator,
+                  ...(operator === 'mm_trend' && !step.mm_base_window
+                    ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const, mm_direction: 'decreased' as const, mm_match_mode: null }
+                    : {}),
+                })
+              }}
               style={{ fontSize: 11, padding: '5px 6px', width: 190 }}
             >
               <option value="gte">At least</option>
@@ -214,9 +235,17 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                 <>
                   <option value="positive">Is positive (+)</option>
                   <option value="negative">Is negative (−)</option>
+                  {step.field_key === 'mm' && <option value="mm_trend">Trend across L1/L3/L5/L10</option>}
                 </>
               )}
             </select>
+            {step.operator === 'mm_trend' && (
+              <MmTrendFields
+                baseWindow={step.mm_base_window} compareWindows={step.mm_compare_windows}
+                direction={step.mm_direction} amount={step.value} matchMode={step.mm_match_mode}
+                onPatch={patch => onChange({ ...step, ...patch })}
+              />
+            )}
             {!hidesValue && (
               <input
                 className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}

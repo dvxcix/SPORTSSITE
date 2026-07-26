@@ -54,7 +54,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
 
   const { data: factors } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers')
+    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
@@ -63,7 +63,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
   // `factors` — a Matrix is one or the other, never both (see matrix_type).
   const { data: pipelineSteps } = await admin
     .from('matrix_pipeline_steps')
-    .select('matrix_id, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps')
+    .select('matrix_id, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
