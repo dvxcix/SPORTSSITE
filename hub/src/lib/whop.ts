@@ -133,12 +133,18 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
   } catch { return false }
 }
 
-// CAVEAT: per Whop's public REST docs this is DELETE /api/v2/memberships/:id
-// — same base path as fetchAllWhopMemberships (whopMembershipsFetch.ts),
-// which IS confirmed live, but this specific verb+path has never itself been
-// exercised against a real membership. Verify against a real (non-customer)
-// test membership before trusting this in production; adjust the path if it
-// 404s/behaves unexpectedly, same caution as checkHasAccess above.
+// Real bug, confirmed live (2026-07-27): this originally guessed
+// `DELETE /api/v2/memberships/:id`, which Whop rejected on every single
+// attempt (70 straight 502s in production, zero successes) — the guess was
+// wrong on BOTH the verb and the path. Whop's actual documented endpoint
+// (docs.whop.com/api-reference/memberships/cancel-membership) is
+// `POST /memberships/:id/cancel`, with an optional `cancellation_mode` body
+// ('at_period_end' [default] or 'immediate'). Kept on the same /api/v2 base
+// as fetchAllWhopMemberships (whopMembershipsFetch.ts, confirmed live) since
+// that's the proven-correct version prefix for this exact resource in this
+// codebase — Whop's own docs are inconsistent about v1 vs v2 elsewhere.
+// Omitting the body relies on the 'at_period_end' default, matching the
+// caller's own UI copy ("you'll keep access until period end").
 //
 // Whop cancels at the end of the current billing period by default (access
 // continues, auto-renew stops) rather than revoking immediately — the caller
@@ -148,16 +154,18 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
 // webhook branch once Whop actually ends the membership.
 export async function cancelWhopMembership(membershipId: string, apiKey: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   try {
-    const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}`, {
-      method: 'DELETE',
+    const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}/cancel`, {
+      method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}` },
     })
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
+      console.error('[cancelWhopMembership] Whop rejected the cancel request', { membershipId, status: res.status, body: errBody })
       return { ok: false, status: res.status, error: errBody || `Whop returned ${res.status}` }
     }
     return { ok: true }
   } catch (e: any) {
+    console.error('[cancelWhopMembership] network error contacting Whop', { membershipId, error: e?.message })
     return { ok: false, status: 0, error: e?.message || 'Network error contacting Whop' }
   }
 }
