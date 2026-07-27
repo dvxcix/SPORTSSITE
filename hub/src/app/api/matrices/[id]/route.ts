@@ -62,6 +62,7 @@ type CleanPipelineStep = {
   books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
   direction: 'highest' | 'lowest' | null; tolerance: number | null
   condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
+  unless_mode: 'replace' | 'suppress' | 'add' | null; uses_anchor: boolean | null
   mm_base_window: string | null; mm_compare_windows: string[] | null; mm_direction: string | null; mm_match_mode: 'any' | 'all' | null
 }
 // `allowUnless` caps nesting at one level — same rationale as
@@ -74,7 +75,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true): CleanPipelineStep
   const clean: CleanPipelineStep[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -93,6 +94,8 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true): CleanPipelineStep
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
       condition_steps: kind === 'unless' ? cleanPipelineSteps(condition_steps, false) : null,
       then_steps: kind === 'unless' ? cleanPipelineSteps(then_steps, false) : null,
+      unless_mode: unless_mode === 'suppress' ? 'suppress' : unless_mode === 'add' ? 'add' : unless_mode === 'replace' ? 'replace' : null,
+      uses_anchor: uses_anchor === false ? false : uses_anchor === true ? true : null,
       mm_base_window: cleanBaseWindow,
       mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
       mm_direction: cleanMmDirection(mm_direction),

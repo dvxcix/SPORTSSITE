@@ -184,19 +184,44 @@ export type MatrixTiebreaker = {
 // unless — real gap (2026-07-25): every step above applies uniformly to
 // whatever survived the step before it; some real formulas need "normally
 // do X, but if a DIFFERENT specific situation exists elsewhere in the game,
-// do Y instead." An 'unless' step is a branch: `category`/`field_key`/
-// `recency`/`book` here mean "the ANCHOR field" (usually the same field the
-// step right above it grouped/ranked on) — its value is read fresh off
-// whoever's in the pool going INTO this step (they're tied/ranked by
-// construction, so any one member's value is the reference). If
-// `condition_steps` (an ordinary Filter/Group/Rank mini-chain, run STRICT —
-// see runPipelineStep — against `condition_scope`'s universe) finds nothing,
-// this step is a no-op and the incoming pool passes through unchanged. If it
-// finds something, `then_steps` (a second mini-chain, run leniently) narrows
-// THAT result down to the replacement pool. Deliberately capped at one level
-// — condition_steps/then_steps must not themselves contain an 'unless' step
-// (enforced by the UI, not the engine, so a determined caller COULD nest
-// deeper, but the builder never offers it).
+// do Y instead." An 'unless' step is a branch: `condition_steps` (an
+// ordinary Filter/Group/Rank mini-chain, run STRICT — see runPipelineStep —
+// against `condition_scope`'s universe) checks whether some OTHER situation
+// exists elsewhere in the game. If it finds nothing, this step is a no-op —
+// the incoming pool passes through unchanged, regardless of `unless_mode`.
+// If it DOES find something, `unless_mode` decides what happens to the
+// incoming pool:
+//   'replace' (default/null, the original behavior) — `then_steps` (a
+//              second mini-chain, run leniently) narrows the condition's own
+//              findings down to a replacement pool, which REPLACES the
+//              incoming pool.
+//   'suppress' — real gap, reported live (2026-07-26): the incoming pool is
+//              wiped to empty outright (nobody highlighted) — `then_steps`
+//              is irrelevant/unused in this mode, since there's no
+//              replacement to compute.
+//   'add'      — `then_steps` narrows the condition's own findings the same
+//              way 'replace' does, but the result is UNIONED onto the
+//              incoming pool instead of replacing it.
+// `category`/`field_key`/`recency`/`book` here mean "the ANCHOR field"
+// (usually the same field the step right above it grouped/ranked on) — its
+// value is read fresh off whoever's in the pool going INTO this step (they're
+// tied/ranked by construction, so any one member's value is the reference),
+// only when `uses_anchor` is true — the anchor exists solely to let a nested
+// Filter step's `lt_anchor`/`gt_anchor` operator compare against it (e.g. the
+// tie-breaker formula this feature was modeled on: "...unless someone else
+// has a LOWER, unique value who's ALSO tied cross-team..."). Real gap,
+// reported live (2026-07-26): most "unless" formulas are a plain existence
+// check ("unless factors X/Y/Z exist elsewhere") with no number to compare
+// against at all — forcing every Unless step to configure an anchor field
+// it never uses was pointless clutter. `uses_anchor` — null/undefined
+// (every Unless step saved before this existed) still resolves the anchor,
+// preserving old behavior exactly; only an explicit `false` (the new
+// default for an Unless step created going forward) skips it, in which case
+// nested condition/then Filter steps never see `lt_anchor`/`gt_anchor` as
+// options in the first place (enforced by the UI). Deliberately capped at
+// one level — condition_steps/then_steps must not themselves contain an
+// 'unless' step (enforced by the UI, not the engine, so a determined caller
+// COULD nest deeper, but the builder never offers it).
 export type PipelineStepKind = 'filter' | 'group' | 'rank' | 'unless'
 export type MatrixPipelineStep = {
   kind: PipelineStepKind
@@ -221,6 +246,14 @@ export type MatrixPipelineStep = {
   condition_scope: 'team' | 'game' | null
   condition_steps: MatrixPipelineStep[] | null
   then_steps: MatrixPipelineStep[] | null
+  // unless only — null/'replace' = original behavior (swap in the
+  // condition's findings). 'suppress' = wipe the pool to empty. 'add' =
+  // union the condition's findings onto the existing pool.
+  unless_mode: 'replace' | 'suppress' | 'add' | null
+  // unless only — null/undefined resolves the anchor (backward-compatible
+  // default for every Unless step saved before this existed); explicit
+  // false skips it entirely. See the type-level comment above.
+  uses_anchor: boolean | null
   // filter only, operator 'mm_trend' — see MatrixFactor's own mm_* fields
   // and evaluateMmTrend below.
   mm_base_window: MmWindowKey | null
@@ -1148,26 +1181,36 @@ export function runPipelineStep(
     // No scope info to search elsewhere, or nothing in the incoming pool to
     // anchor against — a no-op rather than a crash.
     if (!scopeBundles || !pool.size) return pool
-    const anchorName = pool.values().next().value as string
-    const anchorBundle = bundles.get(anchorName)
-    const resolvedAnchor = anchorBundle
-      ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, anchorBundle, gameTotalPicksByMarket, step.mm_base_window, step.mm_compare_windows)
-      : null
+    // Only null/undefined (every Unless step saved before uses_anchor
+    // existed) resolves the anchor by default — an explicit false skips it,
+    // and no anchor value ever reaches nested lt_anchor/gt_anchor operators.
+    let resolvedAnchor: number | null = null
+    if (step.uses_anchor !== false) {
+      const anchorName = pool.values().next().value as string
+      const anchorBundle = bundles.get(anchorName)
+      resolvedAnchor = anchorBundle
+        ? resolveFieldValue(step.category, step.field_key, step.recency, step.book, anchorBundle, gameTotalPicksByMarket, step.mm_base_window, step.mm_compare_windows)
+        : null
+    }
 
     const universeMap = scopeBundles[step.condition_scope ?? 'team']
     let conditionPool = new Set(universeMap.keys())
     for (const condStep of step.condition_steps ?? []) {
       conditionPool = runPipelineStep(conditionPool, condStep, universeMap, gameTotalPicksByMarket, scopeBundles, true, resolvedAnchor)
     }
-    if (!conditionPool.size) return pool // condition didn't trigger -> no-op, original pool continues
+    if (!conditionPool.size) return pool // condition didn't trigger anywhere -> no-op, regardless of mode
+
+    const mode = step.unless_mode ?? 'replace'
+    if (mode === 'suppress') return new Set() // condition triggered -> cancel every normal pick, then_steps unused
 
     let thenPool = conditionPool
     for (const thenStep of step.then_steps ?? []) {
       thenPool = runPipelineStep(thenPool, thenStep, universeMap, gameTotalPicksByMarket, scopeBundles, false, resolvedAnchor)
     }
     // then_steps somehow emptying out a real, triggered condition shouldn't
-    // silently highlight nobody — fall back to the original incoming pool.
-    return thenPool.size ? thenPool : pool
+    // silently highlight nobody — fall back to a safe default per mode.
+    if (mode === 'add') return thenPool.size ? new Set([...pool, ...thenPool]) : pool
+    return thenPool.size ? thenPool : pool // 'replace'
   }
   // group/rank are no-ops on an already-singleton (or empty) pool — nothing
   // left to tie or rank against.

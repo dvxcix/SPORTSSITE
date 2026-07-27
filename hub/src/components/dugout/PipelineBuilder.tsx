@@ -23,17 +23,23 @@ import {
 //   unless — real gap (2026-07-25): every step above applies uniformly to
 //            whatever survived the step before it. Some real formulas need
 //            "normally do X, but if a DIFFERENT specific situation exists
-//            elsewhere in the game, do Y instead." An Unless step is a
-//            branch: its own category/field/recency/book are the ANCHOR
-//            field (usually matching whatever the step right above it
-//            grouped/ranked on) — read fresh off whoever's in the pool
-//            going into it. Contains its own nested condition mini-pipeline
-//            (searched across condition_scope's universe; a Filter step in
-//            here can compare "lower/higher than the anchor value" instead
-//            of a typed-in number) and a then mini-pipeline (narrows the
-//            condition's own findings down to the replacement). If the
-//            condition finds nothing, this step is a no-op. Capped at one
-//            level deep — nested steps can't themselves be Unless.
+//            elsewhere in the game, do Y instead." An Unless step's own
+//            nested condition mini-pipeline (searched across
+//            condition_scope's universe) checks whether that other situation
+//            exists. If it finds nothing, the step is a no-op. If it DOES,
+//            `unless_mode` decides what happens: 'replace' (default) swaps
+//            the pool for the condition's own findings (narrowed by a then
+//            mini-pipeline); 'suppress' wipes the pool to nobody; 'add'
+//            unions the condition's findings onto the existing pool instead
+//            of replacing it. `uses_anchor` (real gap, 2026-07-26: most
+//            "unless" formulas are a plain existence check with no number to
+//            compare, so forcing an anchor field on every Unless step was
+//            needless clutter) optionally exposes category/field/recency/book
+//            as the ANCHOR field — read fresh off whoever's in the pool going
+//            into this step — so a nested condition Filter step can compare
+//            "lower/higher than the anchor value" instead of a typed-in
+//            number. Capped at one level deep — nested steps can't
+//            themselves be Unless.
 export type MatrixPipelineStep = {
   kind: 'filter' | 'group' | 'rank' | 'unless'
   category: MatrixFactor['category']
@@ -58,6 +64,8 @@ export type MatrixPipelineStep = {
   condition_scope: 'team' | 'game' | null
   condition_steps: MatrixPipelineStep[] | null
   then_steps: MatrixPipelineStep[] | null
+  unless_mode: 'replace' | 'suppress' | 'add' | null
+  uses_anchor: boolean | null
   // filter only, operator 'mm_trend' — see CustomMatrixPanel.tsx's
   // MmTrendFields / matrixEngine.ts's evaluateMmTrend.
   mm_base_window: MmWindowKey | null
@@ -72,23 +80,27 @@ const KIND_DESC: Record<MatrixPipelineStep['kind'], string> = {
   filter: 'Keep players that pass a threshold',
   group: 'Keep players tied with each other on a field — for a standout value nobody else shares, use Rank instead',
   rank: 'Narrow to whoever is highest/lowest on a field (add a tolerance to also keep close runners-up)',
-  unless: 'Normally leave the pool as-is — unless a different condition is true elsewhere in the game, then swap in a different result',
+  unless: 'Normally leave the pool as-is — unless a different condition is true elsewhere in the game, then replace/add/suppress the result',
 }
 export const MAX_PIPELINE_STEPS = 10
 
-// `anchorFrom` (only ever used for a new Unless step) copies the category/
-// field/recency/book of whatever step precedes it in the list — the anchor
-// is overwhelmingly almost always "whatever we just grouped/ranked on," so
-// this is the sane default rather than making a member re-pick it every time.
+// `anchorFrom` (only ever used for a new Unless step, and only matters once
+// `uses_anchor` is turned on) copies the category/field/recency/book of
+// whatever step precedes it in the list — the anchor is overwhelmingly
+// almost always "whatever we just grouped/ranked on," so this is the sane
+// default rather than making a member re-pick it every time. New Unless
+// steps default `uses_anchor` to false (most "unless" formulas are a plain
+// existence check with no number to compare) and `unless_mode` to 'replace'
+// (the original, most common behavior) — both freely changeable in the UI.
 export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: MatrixPipelineStep): MatrixPipelineStep {
-  const useAnchor = kind === 'unless' && !!anchorFrom
-  const category: MatrixFactor['category'] = useAnchor ? anchorFrom!.category : 'odds'
+  const seedFromAnchor = kind === 'unless' && !!anchorFrom
+  const category: MatrixFactor['category'] = seedFromAnchor ? anchorFrom!.category : 'odds'
   const fieldsList = fieldsForCategory(category).filter(f => !f.boolean)
-  const field_key = useAnchor && fieldsList.some(f => f.key === anchorFrom!.field_key) ? anchorFrom!.field_key : fieldsList[0].key
+  const field_key = seedFromAnchor && fieldsList.some(f => f.key === anchorFrom!.field_key) ? anchorFrom!.field_key : fieldsList[0].key
   return {
     kind, category, field_key,
-    recency: useAnchor ? anchorFrom!.recency : null,
-    book: useAnchor ? anchorFrom!.book : null,
+    recency: seedFromAnchor ? anchorFrom!.recency : null,
+    book: seedFromAnchor ? anchorFrom!.book : null,
     books: null, books_min_count: null,
     operator: kind === 'filter' ? 'gte' : null,
     value: null,
@@ -97,6 +109,8 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: M
     condition_scope: kind === 'unless' ? 'team' : null,
     condition_steps: kind === 'unless' ? [] : null,
     then_steps: kind === 'unless' ? [] : null,
+    unless_mode: kind === 'unless' ? 'replace' : null,
+    uses_anchor: kind === 'unless' ? false : null,
     mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null,
   }
 }
@@ -429,69 +443,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingLeft: 22 }}>
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>TIED VALUE FROM</span>
-        <select
-          className="ss-input" value={step.category}
-          onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
-          style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
-        >
-          {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-        </select>
-        <select
-          className="ss-input" value={step.field_key}
-          onChange={e => {
-            const field_key = e.target.value
-            onChange({
-              ...step, field_key, book: null,
-              ...(field_key === 'mm_move' && !step.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
-            })
-          }}
-          style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
-        >
-          {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-        </select>
-        {step.field_key === 'mm_move' && (
-          <MmMoveWindowPicker
-            baseWindow={step.mm_base_window} compareWindows={step.mm_compare_windows}
-            onPatch={patch => onChange({ ...step, ...patch })}
-          />
-        )}
-        {needsRecency && (
-          <select
-            className="ss-input" value={step.recency ?? 'season'}
-            onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
-            title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
-            style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
-          >
-            {recencyOptionsFor(step.category, step.field_key).map(r => (
-              <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
-            ))}
-          </select>
-        )}
-        {singleBookField && (
-          <div style={{ display: 'flex', gap: 3 }}>
-            {singleBookField.map(b => {
-              const on = (step.book ?? 'fanduel') === b.key
-              return (
-                <button
-                  key={b.key} title={b.label} onClick={() => onChange({ ...step, book: b.key })}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
-                    padding: 0, borderRadius: 6, cursor: 'pointer',
-                    background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
-                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
-                  }}
-                >
-                  <BookLogo vendor={b.key} size={14} />
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
         <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>SEARCH FOR THE EXCEPTION ON</span>
         <select
           className="ss-input" value={step.condition_scope ?? 'team'}
@@ -501,27 +453,119 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
           <option value="team">Same team</option>
           <option value="game">Either team</option>
         </select>
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em', marginLeft: 8 }}>WHEN FOUND</span>
+        <select
+          className="ss-input" value={step.unless_mode ?? 'replace'}
+          onChange={e => onChange({ ...step, unless_mode: e.target.value as MatrixPipelineStep['unless_mode'] })}
+          title="What happens to the normal pool once the exception condition below is found"
+          style={{ fontSize: 11, padding: '5px 6px', width: 190 }}
+        >
+          <option value="replace">Replace with the exception</option>
+          <option value="add">Add the exception too</option>
+          <option value="suppress">Suppress — highlight nobody</option>
+        </select>
       </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22, fontSize: 10, color: 'var(--text-3)', cursor: 'pointer', userSelect: 'none' }}>
+        <input
+          type="checkbox" checked={step.uses_anchor === true}
+          onChange={e => onChange({ ...step, uses_anchor: e.target.checked })}
+          style={{ margin: 0 }}
+        />
+        Compare the exception against a value from my normal picks
+      </label>
+
+      {step.uses_anchor === true && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingLeft: 22 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>TIED VALUE FROM</span>
+          <select
+            className="ss-input" value={step.category}
+            onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
+            style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
+          >
+            {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+          </select>
+          <select
+            className="ss-input" value={step.field_key}
+            onChange={e => {
+              const field_key = e.target.value
+              onChange({
+                ...step, field_key, book: null,
+                ...(field_key === 'mm_move' && !step.mm_base_window ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const } : {}),
+              })
+            }}
+            style={{ fontSize: 11, padding: '5px 6px', minWidth: 150, flex: '1 1 150px' }}
+          >
+            {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+          </select>
+          {step.field_key === 'mm_move' && (
+            <MmMoveWindowPicker
+              baseWindow={step.mm_base_window} compareWindows={step.mm_compare_windows}
+              onPatch={patch => onChange({ ...step, ...patch })}
+            />
+          )}
+          {needsRecency && (
+            <select
+              className="ss-input" value={step.recency ?? 'season'}
+              onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
+              title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
+              style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
+            >
+              {recencyOptionsFor(step.category, step.field_key).map(r => (
+                <option key={r} value={r}>{recencyLabel(step.category, r)}</option>
+              ))}
+            </select>
+          )}
+          {singleBookField && (
+            <div style={{ display: 'flex', gap: 3 }}>
+              {singleBookField.map(b => {
+                const on = (step.book ?? 'fanduel') === b.key
+                return (
+                  <button
+                    key={b.key} title={b.label} onClick={() => onChange({ ...step, book: b.key })}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
+                      padding: 0, borderRadius: 6, cursor: 'pointer',
+                      background: on ? 'var(--accent-dim)' : 'var(--surface-3)',
+                      border: `1px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`, opacity: on ? 1 : 0.55,
+                    }}
+                  >
+                    <BookLogo vendor={b.key} size={14} />
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
         <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.05em', marginBottom: 6 }}>IF THIS IS TRUE</div>
         <StepList
           steps={step.condition_steps ?? []}
           onChange={condition_steps => onChange({ ...step, condition_steps })}
-          allowUnless={false} hasAnchor showHeader={false}
+          allowUnless={false} hasAnchor={step.uses_anchor === true} showHeader={false}
           emptyText="No condition yet — add a Filter/Group/Rank step to define what triggers this exception."
         />
       </div>
 
-      <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.05em', marginBottom: 6 }}>THEN DO THIS INSTEAD</div>
-        <StepList
-          steps={step.then_steps ?? []}
-          onChange={then_steps => onChange({ ...step, then_steps })}
-          allowUnless={false} hasAnchor showHeader={false}
-          emptyText="No replacement rule yet — add a Rank step to pick the winner among whoever the condition found."
-        />
-      </div>
+      {step.unless_mode === 'suppress' ? (
+        <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: 10, color: 'var(--text-3)', fontStyle: 'italic' }}>
+          Highlighting is suppressed entirely for this pool once the condition above is found — nobody gets highlighted.
+        </div>
+      ) : (
+        <div style={{ paddingLeft: 22, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.05em', marginBottom: 6 }}>
+            {step.unless_mode === 'add' ? 'THEN ALSO HIGHLIGHT' : 'THEN DO THIS INSTEAD'}
+          </div>
+          <StepList
+            steps={step.then_steps ?? []}
+            onChange={then_steps => onChange({ ...step, then_steps })}
+            allowUnless={false} hasAnchor={step.uses_anchor === true} showHeader={false}
+            emptyText="No replacement rule yet — add a Rank step to pick the winner among whoever the condition found."
+          />
+        </div>
+      )}
     </div>
   )
 }

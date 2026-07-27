@@ -71,6 +71,12 @@ type PipelineStepInput = {
   condition_scope: 'team' | 'game' | null
   condition_steps: PipelineStepInput[] | null
   then_steps: PipelineStepInput[] | null
+  // unless only — see matrixEngine.ts's MatrixPipelineStep. null/'replace' =
+  // original swap-in behavior; 'suppress' wipes the pool; 'add' unions.
+  unless_mode: 'replace' | 'suppress' | 'add' | null
+  // unless only — null/undefined resolves the anchor (backward-compatible);
+  // explicit false skips it.
+  uses_anchor: boolean | null
   // filter only, operator 'mm_trend' — see matrixEngine.ts's evaluateMmTrend.
   mm_base_window: 'l1' | 'l3' | 'l5' | 'l10' | null
   mm_compare_windows: string[] | null
@@ -121,7 +127,7 @@ function validatePipelineSteps(raw: unknown, allowUnless = true): PipelineStepIn
   const clean: PipelineStepInput[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -143,6 +149,8 @@ function validatePipelineSteps(raw: unknown, allowUnless = true): PipelineStepIn
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
       condition_steps: kind === 'unless' ? validatePipelineSteps(condition_steps, false) : null,
       then_steps: kind === 'unless' ? validatePipelineSteps(then_steps, false) : null,
+      unless_mode: unless_mode === 'suppress' ? 'suppress' : unless_mode === 'add' ? 'add' : unless_mode === 'replace' ? 'replace' : null,
+      uses_anchor: uses_anchor === false ? false : uses_anchor === true ? true : null,
       mm_base_window: cleanBaseWindow,
       mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
       mm_direction: cleanMmDirection(mm_direction),
@@ -231,7 +239,7 @@ export async function GET() {
 
   const { data: pipelineSteps, error: stepsError } = await admin
     .from('matrix_pipeline_steps')
-    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (stepsError) return NextResponse.json({ error: stepsError.message }, { status: 500 })

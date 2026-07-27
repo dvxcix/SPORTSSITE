@@ -65,9 +65,12 @@ function describeStep(step: MatrixPipelineStep): string {
   }
   // unless — describes its own nested condition/then chains recursively.
   const scope = step.condition_scope === 'game' ? 'either team' : 'the same team'
-  const condition = describeChain(step.condition_steps ?? [])
-  const then = describeChain(step.then_steps ?? [])
-  return `unless ${condition || '…'} on ${scope} → then ${then || '…'}`
+  const condition = describeChain(step.condition_steps ?? []) || '…'
+  const mode = step.unless_mode ?? 'replace'
+  if (mode === 'suppress') return `unless ${condition} on ${scope} → then show nobody`
+  const then = describeChain(step.then_steps ?? []) || '…'
+  if (mode === 'add') return `unless ${condition} on ${scope} → then ALSO ${then}`
+  return `unless ${condition} on ${scope} → then ${then}`
 }
 
 function describeChain(steps: MatrixPipelineStep[]): string {
