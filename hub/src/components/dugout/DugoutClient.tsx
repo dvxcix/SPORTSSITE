@@ -2074,8 +2074,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('BSpd', 'Season bat speed', 38, 's_spd')}
       {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
       {H('ΔSpd', 'Recent−season bat speed', 34, 'd_spd')}
-      {H('Timing', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
-      {H('R·Timing', 'Recent timing', 36, 'r_timing')}
+      {H('Time', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
+      {H('R·Time', 'Recent timing', 36, 'r_timing')}
       {H('Miss', 'Season miss distance', 34, 's_miss')}
       {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
       {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
