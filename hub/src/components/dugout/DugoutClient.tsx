@@ -179,6 +179,16 @@ function buildBatterRow(
   const s_ev  = statSeason?.avgEv ?? null
   const s_la  = statSeason?.avgLa ?? null
   const s_brl = statSeason?.barrelPct ?? null
+  // Fixed L1/L3/L5 barrel columns — unlike r_spd/r_sq/etc above, these
+  // aren't tied to the shared statcastWindow toggle. Every window is
+  // already precomputed server-side (computeAllStatcastWindows), so this
+  // just reads 3 more of them directly so all three are visible together.
+  const l1_brl = player.statcast?.l1?.barrelPct ?? null
+  const l3_brl = player.statcast?.l3?.barrelPct ?? null
+  const l5_brl = player.statcast?.l5?.barrelPct ?? null
+  const d1_brl = l1_brl != null && s_brl != null ? l1_brl - s_brl : null
+  const d3_brl = l3_brl != null && s_brl != null ? l3_brl - s_brl : null
+  const d5_brl = l5_brl != null && s_brl != null ? l5_brl - s_brl : null
   const s_hh  = statSeason?.hardHitPct ?? null
   const s_pa  = statSeason?.pullAirRate ?? null
   const s_fb  = statSeason?.fbRate ?? null
@@ -429,7 +439,7 @@ function buildBatterRow(
     is_pwr, is_money_sa_rbi,
     rawProps: props ?? null,
     s_spd, s_hrd, s_sq, s_bla, s_len, s_atk, s_iaa, s_tlt,
-    s_ev, s_la, s_brl, s_hh, s_pa, s_fb, s_xhr, s_hr,
+    s_ev, s_la, s_brl, l1_brl, l3_brl, l5_brl, d1_brl, d3_brl, d5_brl, s_hh, s_pa, s_fb, s_xhr, s_hr,
     r_spd, r_sq, r_bla, r_atk,
     d_spd, d_sq,
     s_timing, r_timing, s_miss, r_miss,
@@ -780,7 +790,13 @@ function PlayerDrillDown({
             </div>
             <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: 5 }}>BATTED BALL</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              <StatTile label="BRL%" value={ppRaw(row.s_brl)} title="Barrel batted rate" heatStyle={heat(row.s_brl, g('s_brl'), 'hi')} />
+              <StatTile label="BRL%" value={ppRaw(row.s_brl)} title="Barrel batted rate — season" heatStyle={heat(row.s_brl, g('s_brl'), 'hi')} />
+              <StatTile label="L1·BRL" value={ppRaw(row.l1_brl)} title="Barrel rate — last 1 game played" heatStyle={heat(row.l1_brl, g('l1_brl'), 'hi')} />
+              <StatTile label="ΔL1" value={dlt(row.d1_brl)} title="Last 1 − season barrel rate" heatStyle={heat(row.d1_brl, g('d1_brl'), 'hi')} />
+              <StatTile label="L3·BRL" value={ppRaw(row.l3_brl)} title="Barrel rate — last 3 games played" heatStyle={heat(row.l3_brl, g('l3_brl'), 'hi')} />
+              <StatTile label="ΔL3" value={dlt(row.d3_brl)} title="Last 3 − season barrel rate" heatStyle={heat(row.d3_brl, g('d3_brl'), 'hi')} />
+              <StatTile label="L5·BRL" value={ppRaw(row.l5_brl)} title="Barrel rate — last 5 games played" heatStyle={heat(row.l5_brl, g('l5_brl'), 'hi')} />
+              <StatTile label="ΔL5" value={dlt(row.d5_brl)} title="Last 5 − season barrel rate" heatStyle={heat(row.d5_brl, g('d5_brl'), 'hi')} />
               <StatTile label="HH%" value={ppRaw(row.s_hh)} title="Hard hit rate" heatStyle={heat(row.s_hh, g('s_hh'), 'hi')} />
               <StatTile label="PULLAIR" value={row.s_pa != null ? `${(row.s_pa * 100).toFixed(1)}%` : '—'} title="Pull air rate" heatStyle={heat(row.s_pa, g('s_pa'), 'hi')} />
               <StatTile label="FB%" value={row.s_fb != null ? `${(row.s_fb * 100).toFixed(1)}%` : '—'} title="Flyball rate" heatStyle={heat(row.s_fb, g('s_fb'), 'hi')} />
