@@ -473,6 +473,13 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
   // plain recency picker is meaningless once that operator is selected.
   const needsRecency = (factor.category === 'pitchlog_stat' || factor.category === 'savant_stat' || (factor.category === 'dugout_specs' && factor.field_key === 'mm'))
     && factor.operator !== 'mm_trend'
+  // Real gap, reported live (2026-07-27): 'positive'/'negative' was gated to
+  // dugout_specs only, but a pitchlog_stat/savant_stat field on a '_delta'
+  // recency (Bat Speed/Squared-Up%, the only two with one — see
+  // DELTA_DISPLAYED_FIELDS) is JUST as signed a value (recent minus season)
+  // — "did it speed up or slow down" is exactly a positive/negative
+  // question, not a "type in the right number" one.
+  const isDeltaRecency = typeof factor.recency === 'string' && factor.recency.endsWith('_delta')
   // "Is PWR ⚡?" — a real Yes/No gate (buildBatterRow's is_pwr), not a ratio
   // to type a number for. Represented under the hood as an ordinary eq-1/
   // eq-0 Factor (see matrixEngine.ts) so it reuses the same evaluation path
@@ -584,6 +591,12 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                 {factor.field_key === 'mm' && <option value="mm_trend">{OPERATOR_LABEL.mm_trend}</option>}
               </>
             )}
+            {factor.category !== 'dugout_specs' && isDeltaRecency && (
+              <>
+                <option value="positive">{OPERATOR_LABEL.positive}</option>
+                <option value="negative">{OPERATOR_LABEL.negative}</option>
+              </>
+            )}
           </select>
 
           {factor.operator === 'mm_trend' && (
@@ -629,7 +642,21 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
       {needsRecency && (
         <select
           className="ss-input" value={factor.recency ?? 'season'}
-          onChange={e => onChange({ ...factor, recency: e.target.value as MatrixFactor['recency'] })}
+          onChange={e => {
+            const recency = e.target.value as MatrixFactor['recency']
+            const stillDelta = typeof recency === 'string' && recency.endsWith('_delta')
+            onChange({
+              ...factor, recency,
+              // 'positive'/'negative' outside dugout_specs is only offered
+              // for a '_delta' recency (see isDeltaRecency above) — leaving
+              // one selected while switching to a non-delta window would
+              // strand the Factor on an operator its own dropdown no longer
+              // shows, same class of fix as the mm_trend field-switch reset.
+              ...((factor.operator === 'positive' || factor.operator === 'negative') && factor.category !== 'dugout_specs' && !stillDelta
+                ? { operator: 'gte' as const, value: null }
+                : {}),
+            })
+          }}
           title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
           style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
         >

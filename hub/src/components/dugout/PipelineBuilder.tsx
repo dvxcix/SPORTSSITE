@@ -136,6 +136,12 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
   const hidesValue = step.kind === 'filter' && !needsValue
   const multiBookFilter = step.kind === 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
   const singleBookField = step.kind !== 'filter' && step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
+  // Real gap, reported live (2026-07-27): 'positive'/'negative' was gated to
+  // dugout_specs only, but a pitchlog_stat/savant_stat field on a '_delta'
+  // recency (Bat Speed/Squared-Up%, the only two with one) is just as
+  // signed a value (recent minus season) — see CustomMatrixPanel.tsx's
+  // FactorRow for the matching Classic-mode fix.
+  const isDeltaRecency = typeof step.recency === 'string' && step.recency.endsWith('_delta')
 
   function changeCategory(category: MatrixFactor['category']) {
     const opts = step.kind === 'filter' ? fieldsForCategory(category) : fieldsForCategory(category).filter(f => !f.boolean)
@@ -262,6 +268,12 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                   {step.field_key === 'mm' && <option value="mm_trend">Trend across L1/L3/L5/L10</option>}
                 </>
               )}
+              {step.category !== 'dugout_specs' && isDeltaRecency && (
+                <>
+                  <option value="positive">Is positive (+)</option>
+                  <option value="negative">Is negative (−)</option>
+                </>
+              )}
             </select>
             {step.operator === 'mm_trend' && (
               <MmTrendFields
@@ -284,7 +296,20 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
         {needsRecency && (
           <select
             className="ss-input" value={step.recency ?? 'season'}
-            onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
+            onChange={e => {
+              const recency = e.target.value as MatrixFactor['recency']
+              const stillDelta = typeof recency === 'string' && recency.endsWith('_delta')
+              onChange({
+                ...step, recency,
+                // Same reset as CustomMatrixPanel.tsx's FactorRow — leaving
+                // 'positive'/'negative' selected while switching away from a
+                // '_delta' recency would strand the step on an operator its
+                // own dropdown no longer offers.
+                ...((step.operator === 'positive' || step.operator === 'negative') && step.category !== 'dugout_specs' && !stillDelta
+                  ? { operator: 'gte' as const, value: null }
+                  : {}),
+              })
+            }}
             title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
           >
