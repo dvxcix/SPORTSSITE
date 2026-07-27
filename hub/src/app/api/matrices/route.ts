@@ -118,12 +118,26 @@ function cleanMmMatchMode(v: unknown): 'any' | 'all' | null {
   return v === 'all' ? 'all' : v === 'any' ? 'any' : null
 }
 
+type PipelineStepsResult = { ok: true; steps: PipelineStepInput[] } | { ok: false; error: string }
+
 // `allowUnless` caps nesting at one level — condition_steps/then_steps are
 // validated with allowUnless=false, so a nested step whose own kind is
 // 'unless' is silently dropped rather than erroring the whole save (same
-// lenient-drop precedent every other malformed-item case here already uses).
-function validatePipelineSteps(raw: unknown, allowUnless = true): PipelineStepInput[] {
-  if (!Array.isArray(raw)) return []
+// lenient-drop precedent every other malformed-item case here already uses
+// for genuinely malformed SHAPE — a bad kind/category/field_key). Real gap,
+// reported live (2026-07-27): a well-FORMED step that's still structurally
+// guaranteed to never do anything (a threshold with no value, an MM field
+// missing its window config, an anchor comparison outside an Unless
+// condition, an Unless with no condition at all) used to save silently —
+// confirmed live across an audit of every saved Matrix, several members had
+// built Factors/steps exactly like this with zero indication anything was
+// wrong. Those cases now HARD-REJECT the save with a specific error instead
+// of silently persisting a dead condition. `anchorAvailable` mirrors
+// runPipelineStep's own backward-compatible default (matrixEngine.ts:
+// `step.uses_anchor !== false` resolves the anchor) — true for both an
+// explicit uses_anchor:true and the old/unset null case.
+function validatePipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = false): PipelineStepsResult {
+  if (!Array.isArray(raw)) return { ok: true, steps: [] }
   const clean: PipelineStepInput[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
@@ -132,8 +146,40 @@ function validatePipelineSteps(raw: unknown, allowUnless = true): PipelineStepIn
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
+    const cleanOperator = typeof operator === 'string' && PIPELINE_OPERATORS.includes(operator) ? operator : null
     const cleanBooks = Array.isArray(books) ? books.filter((b): b is string => typeof b === 'string' && VALID_BOOKS.includes(b)) : null
     const cleanBaseWindow = cleanMmBaseWindow(mm_base_window)
+    const cleanCompareWindows = cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow)
+    const cleanValue = typeof value === 'number' ? value : null
+
+    if (kind === 'filter') {
+      if (['gte', 'lte', 'eq'].includes(cleanOperator as string) && cleanValue == null) {
+        return { ok: false, error: `A Filter step on ${field_key} needs a value — it can never match anyone left blank.` }
+      }
+      if (cleanOperator === 'mm_trend' && (!cleanBaseWindow || !cleanCompareWindows?.length)) {
+        return { ok: false, error: `A Filter step's MM Trend needs a "from" window and at least one window to compare against.` }
+      }
+      if ((cleanOperator === 'lt_anchor' || cleanOperator === 'gt_anchor') && !anchorAvailable) {
+        return { ok: false, error: `A Filter step compares against the tied value, but isn't inside an Unless condition with "Compare against a value" turned on.` }
+      }
+    }
+    if (field_key === 'mm_move' && (!cleanBaseWindow || !cleanCompareWindows?.length)) {
+      return { ok: false, error: `MM Movement needs a "from" window and at least one window to compare against.` }
+    }
+
+    let cleanConditionSteps: PipelineStepInput[] | null = null
+    let cleanThenSteps: PipelineStepInput[] | null = null
+    const cleanUsesAnchor = uses_anchor === false ? false : uses_anchor === true ? true : null
+    if (kind === 'unless') {
+      const condResult = validatePipelineSteps(condition_steps, false, cleanUsesAnchor !== false)
+      if (!condResult.ok) return condResult
+      if (!condResult.steps.length) return { ok: false, error: 'An Unless step needs at least one condition step — an empty condition always triggers against everyone in scope.' }
+      cleanConditionSteps = condResult.steps
+      const thenResult = validatePipelineSteps(then_steps, false, cleanUsesAnchor !== false)
+      if (!thenResult.ok) return thenResult
+      cleanThenSteps = thenResult.steps
+    }
+
     clean.push({
       kind: kind as PipelineStepInput['kind'],
       category: category as PipelineStepInput['category'],
@@ -142,26 +188,26 @@ function validatePipelineSteps(raw: unknown, allowUnless = true): PipelineStepIn
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       books: cleanBooks?.length ? cleanBooks : null,
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
-      operator: typeof operator === 'string' && PIPELINE_OPERATORS.includes(operator) ? operator : null,
-      value: typeof value === 'number' ? value : null,
+      operator: cleanOperator,
+      value: cleanValue,
       direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
-      condition_steps: kind === 'unless' ? validatePipelineSteps(condition_steps, false) : null,
-      then_steps: kind === 'unless' ? validatePipelineSteps(then_steps, false) : null,
+      condition_steps: cleanConditionSteps,
+      then_steps: cleanThenSteps,
       unless_mode: unless_mode === 'suppress' ? 'suppress' : unless_mode === 'add' ? 'add' : unless_mode === 'replace' ? 'replace' : null,
-      uses_anchor: uses_anchor === false ? false : uses_anchor === true ? true : null,
+      uses_anchor: cleanUsesAnchor,
       mm_base_window: cleanBaseWindow,
-      mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
+      mm_compare_windows: cleanCompareWindows,
       mm_direction: cleanMmDirection(mm_direction),
       mm_match_mode: cleanMmMatchMode(mm_match_mode),
     })
   }
-  return clean
+  return { ok: true, steps: clean }
 }
 
-function validateTiebreakers(raw: unknown): TiebreakerInput[] {
-  if (!Array.isArray(raw)) return []
+function validateTiebreakers(raw: unknown): { ok: true; tiebreakers: TiebreakerInput[] } | { ok: false; error: string } {
+  if (!Array.isArray(raw)) return { ok: true, tiebreakers: [] }
   const clean: TiebreakerInput[] = []
   for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
     if (!t || typeof t !== 'object') continue
@@ -169,6 +215,10 @@ function validateTiebreakers(raw: unknown): TiebreakerInput[] {
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
     const cleanBaseWindow = cleanMmBaseWindow(mm_base_window)
+    const cleanCompareWindows = cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow)
+    if (field_key === 'mm_move' && (!cleanBaseWindow || !cleanCompareWindows?.length)) {
+      return { ok: false, error: 'A tiebreaker ranking by MM Movement needs a "from" window and at least one window to compare against.' }
+    }
     clean.push({
       category: category as TiebreakerInput['category'],
       field_key,
@@ -177,12 +227,18 @@ function validateTiebreakers(raw: unknown): TiebreakerInput[] {
       direction: direction === 'lowest' ? 'lowest' : 'highest',
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
       mm_base_window: cleanBaseWindow,
-      mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
+      mm_compare_windows: cleanCompareWindows,
     })
   }
-  return clean
+  return { ok: true, tiebreakers: clean }
 }
 
+// Real gap, reported live (2026-07-27): a Factor with operator gte/lte/eq
+// and no typed-in value ALWAYS evaluates false (see compareThreshold,
+// matrixEngine.ts) — confirmed live across an audit of every saved Matrix,
+// 15+ members had exactly this: a Factor that looks configured but can
+// never match anyone. Same for 'mm_trend'/'mm_move' missing their window
+// config. These now hard-reject the save instead of silently persisting.
 function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] } | { ok: false; error: string } {
   if (!Array.isArray(factors) || !factors.length) return { ok: false, error: 'A Matrix needs at least one Factor.' }
   if (factors.length > MAX_FACTORS_PER_MATRIX) return { ok: false, error: `A Matrix can hold at most ${MAX_FACTORS_PER_MATRIX} Factors.` }
@@ -193,13 +249,26 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
     if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied', 'is_null', 'is_not_null', 'mm_trend'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
+    const cleanValue = typeof value === 'number' ? value : null
+    if (['gte', 'lte', 'eq'].includes(operator as string) && cleanValue == null) {
+      return { ok: false, error: `A Factor on ${field_key} needs a value — it can never match anyone left blank.` }
+    }
     const cleanBooks = Array.isArray(books) ? books.filter((b): b is string => typeof b === 'string' && VALID_BOOKS.includes(b)) : null
     const cleanBaseWindow = cleanMmBaseWindow(mm_base_window)
+    const cleanCompareWindows = cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow)
+    if (operator === 'mm_trend' && (!cleanBaseWindow || !cleanCompareWindows?.length)) {
+      return { ok: false, error: `A Factor's MM Trend needs a "from" window and at least one window to compare against.` }
+    }
+    if (field_key === 'mm_move' && (!cleanBaseWindow || !cleanCompareWindows?.length)) {
+      return { ok: false, error: `A Factor on MM Movement needs a "from" window and at least one window to compare against.` }
+    }
+    const tbResult = validateTiebreakers(tiebreakers)
+    if (!tbResult.ok) return tbResult
     clean.push({
       category: category as FactorInput['category'],
       field_key,
       operator: operator as FactorInput['operator'],
-      value: typeof value === 'number' ? value : null,
+      value: cleanValue,
       recency: typeof recency === 'string' ? recency : null,
       recency_start: typeof recency_start === 'string' ? recency_start : null,
       recency_end: typeof recency_end === 'string' ? recency_end : null,
@@ -207,9 +276,9 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
       tie_scope: tie_scope === 'game' ? 'game' : tie_scope === 'team' ? 'team' : null,
       tie_direction: tie_direction === 'highest' ? 'highest' : tie_direction === 'lowest' ? 'lowest' : null,
-      tiebreakers: validateTiebreakers(tiebreakers),
+      tiebreakers: tbResult.tiebreakers,
       mm_base_window: cleanBaseWindow,
-      mm_compare_windows: cleanMmCompareWindows(mm_compare_windows, cleanBaseWindow),
+      mm_compare_windows: cleanCompareWindows,
       mm_direction: cleanMmDirection(mm_direction),
       mm_match_mode: cleanMmMatchMode(mm_match_mode),
     })
@@ -276,12 +345,21 @@ export async function POST(req: Request) {
   let validatedFactors: FactorInput[] = []
   let validatedSteps: PipelineStepInput[] = []
   if (matrixType === 'pipeline') {
-    validatedSteps = validatePipelineSteps(body?.pipeline_steps)
+    const stepsResult = validatePipelineSteps(body?.pipeline_steps)
+    if (!stepsResult.ok) return NextResponse.json({ error: stepsResult.error }, { status: 400 })
+    validatedSteps = stepsResult.steps
     if (!validatedSteps.length) return NextResponse.json({ error: 'A Pipeline needs at least one step.' }, { status: 400 })
   } else {
     const validated = validateFactors(body?.factors)
     if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: 400 })
     validatedFactors = validated.factors
+    // Real gap, reported live (2026-07-27): "match at least N of these
+    // Factors" with N > the actual Factor count can never be satisfied —
+    // confirmed live, 2 saved Matrices had exactly this (e.g. "at least 10
+    // of 1 Factor").
+    if (matchMode === 'any' && matchAnyCount != null && matchAnyCount > validatedFactors.length) {
+      return NextResponse.json({ error: `"At least ${matchAnyCount}" needs that many Factors — this Matrix only has ${validatedFactors.length}.` }, { status: 400 })
+    }
   }
 
   const admin = createAdminClient()
