@@ -1013,7 +1013,7 @@ function OddsCell({
 }
 
 // ─── batter row ───────────────────────────────────────────────────────────────
-function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle }: {
+function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow }: {
   row: BatterRow; pool: BatterRow[]; expanded: boolean; onToggle: () => void
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
   onShowHr?: () => void
@@ -1030,6 +1030,13 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
   highlightMode?: boolean
   cellHighlights?: Record<number, string>
   onCellToggle?: (cellIndex: number) => void
+  // Eraser — same click-capture-on-<tr> shape as Highlighter, but whole-row
+  // instead of per-cell: any click anywhere in the row (including the
+  // sticky name column, unlike Highlighter — there's no per-cell state to
+  // preserve here, so there's no reason to carve out an exception) just
+  // toggles this ONE row's membership in GameTable's erasedIds set.
+  eraserMode?: boolean
+  onEraseRow?: () => void
 }) {
   // Sticky column's hover treatment is computed here in JS rather than via
   // the table's generic `tr:hover > td` CSS rule — that rule needed an
@@ -1079,6 +1086,10 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       if (highlightMode) td.style.cursor = 'crosshair'
       else if (td.style.cursor === 'crosshair') td.style.removeProperty('cursor')
     }
+    // Eraser is whole-row (unlike Highlighter, no per-cell exception for the
+    // sticky column) — a single cursor on the <tr> itself is enough, no
+    // per-cell bookkeeping needed.
+    tr.style.cursor = eraserMode ? 'not-allowed' : ''
   })
   const g = (f: keyof BatterRow) => pool.map(r => r[f] as number | null)
   // FHR%'s shade is meaningful across the WHOLE game (all ~18 batters, both
@@ -1136,6 +1147,12 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClickCapture={e => {
+        if (eraserMode) {
+          e.preventDefault()
+          e.stopPropagation()
+          onEraseRow?.()
+          return
+        }
         if (!highlightMode) return
         const td = (e.target as HTMLElement).closest('td')
         if (!td || td.classList.contains('dg-sticky-col')) return
@@ -1998,6 +2015,29 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     })
   }
   const highlightCount = Object.values(cellHighlights).reduce((n, m) => n + Object.keys(m).length, 0)
+
+  // Eraser — a member-driven "temporarily remove this guy from the board"
+  // tool for narrowing a big slate down to just the few players still under
+  // consideration, without touching anyone else's data or the real matchup
+  // pool (matrix matching, paper scores, etc. all still compute against the
+  // FULL roster — this only hides rows from THIS render). Client-side-only
+  // and intentionally NOT persisted to localStorage (unlike Highlighter) —
+  // an erased slate is meant to reset the moment you leave/refresh, same as
+  // any other scratch-work filter; nothing here should ever look like a
+  // permanent decision about a player. Same row-key shape as Highlighter's
+  // own cellHighlights keys (`h-${mlb_id ?? name}` / `a-${...}`) so it's
+  // guaranteed collision-safe within a game.
+  const [eraserMode, setEraserMode] = useState(false)
+  const [erasedIds, setErasedIds] = useState<Set<string>>(new Set())
+  const toggleErased = (rowKey: string) => {
+    setErasedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(rowKey)) next.delete(rowKey)
+      else next.add(rowKey)
+      return next
+    })
+  }
+
   const highlightKey = highlightMlbId != null
     ? (game.homeLineup?.some((p: any) => p.mlb_id === highlightMlbId) ? `h-${highlightMlbId}` : `a-${highlightMlbId}`)
     : null
@@ -2062,8 +2102,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     return { homeRows, awayRows, pool }
   }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, statcastWindow])
 
-  const displayHome = sortRowsMulti(homeRows, activeSortKeys)
-  const displayAway = sortRowsMulti(awayRows, activeSortKeys)
+  // Erased rows are filtered AFTER sorting — order among survivors stays
+  // exactly what it would've been with nobody erased, just with the erased
+  // rows themselves missing.
+  const displayHome = sortRowsMulti(homeRows, activeSortKeys).filter(row => !erasedIds.has(`h-${row.mlb_id ?? row.name}`))
+  const displayAway = sortRowsMulti(awayRows, activeSortKeys).filter(row => !erasedIds.has(`a-${row.mlb_id ?? row.name}`))
 
   const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
 
@@ -2315,6 +2358,33 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                       </div>
                     )}
                   </div>
+                  <Tooltip content={eraserMode
+                    ? 'Eraser is ON — click a player row to temporarily remove them from this board (sort/highlight everyone else as usual). Click again to bring them back.'
+                    : 'Turn on to click players off the board while you narrow down who you like — purely visual, nothing is saved, and it resets the moment you leave this page.'}
+                  >
+                    <button
+                      onClick={() => setEraserMode(v => !v)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                        border: `1px solid ${eraserMode ? '#f87171' : 'var(--border)'}`,
+                        background: eraserMode ? 'rgba(248,113,113,0.12)' : 'var(--surface)',
+                        color: eraserMode ? '#f87171' : 'var(--text-2)',
+                      }}
+                    >
+                      🧹 Eraser{erasedIds.size > 0 ? ` (${erasedIds.size})` : ''}
+                    </button>
+                  </Tooltip>
+                  {erasedIds.size > 0 && (
+                    <Tooltip content="Bring every erased player back">
+                      <button
+                        onClick={() => setErasedIds(new Set())}
+                        style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+                      >
+                        ✕ Restore all
+                      </button>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             </td>
@@ -2332,6 +2402,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                   row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
                   gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={idx => toggleCellHighlight(key, idx)}
+                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)}
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} /></tr>
@@ -2376,6 +2447,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                   row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
                   gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={idx => toggleCellHighlight(key, idx)}
+                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)}
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} /></tr>
