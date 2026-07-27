@@ -166,18 +166,32 @@ function buildBatterRow(
   const r_spd = statRecent?.avgBatSpeed ?? null
   const d_spd = r_spd != null && s_spd != null ? r_spd - s_spd : null
   const s_hrd = statSeason?.hardSwingRate ?? null
+  const r_hrd = statRecent?.hardSwingRate ?? null
+  const d_hrd = r_hrd != null && s_hrd != null ? r_hrd - s_hrd : null
   const s_sq  = statSeason?.squaredUpPct ?? null
   const r_sq  = statRecent?.squaredUpPct ?? null
   const d_sq  = r_sq != null && s_sq != null ? r_sq - s_sq : null
   const s_bla = statSeason?.blastPct ?? null
   const r_bla = statRecent?.blastPct ?? null
+  const d_bla = r_bla != null && s_bla != null ? r_bla - s_bla : null
   const s_len = statSeason?.avgSwingLength ?? null
+  const r_len = statRecent?.avgSwingLength ?? null
+  const d_len = r_len != null && s_len != null ? r_len - s_len : null
   const s_atk = statSeason?.avgAttackAngle ?? null
   const r_atk = statRecent?.avgAttackAngle ?? null
+  const d_atk = r_atk != null && s_atk != null ? r_atk - s_atk : null
   const s_iaa = statSeason?.idealAttackAngleRate ?? null
+  const r_iaa = statRecent?.idealAttackAngleRate ?? null
+  const d_iaa = r_iaa != null && s_iaa != null ? r_iaa - s_iaa : null
   const s_tlt = statSeason?.avgTilt ?? null
+  const r_tlt = statRecent?.avgTilt ?? null
+  const d_tlt = r_tlt != null && s_tlt != null ? r_tlt - s_tlt : null
   const s_ev  = statSeason?.avgEv ?? null
+  const r_ev  = statRecent?.avgEv ?? null
+  const d_ev  = r_ev != null && s_ev != null ? r_ev - s_ev : null
   const s_la  = statSeason?.avgLa ?? null
+  const r_la  = statRecent?.avgLa ?? null
+  const d_la  = r_la != null && s_la != null ? r_la - s_la : null
   const s_brl = statSeason?.barrelPct ?? null
   // Toggle-driven recent/delta, same shape as r_spd/d_spd and r_sq/d_sq
   // above — real gap, reported live (2026-07-27): every other Bat Tracking
@@ -197,13 +211,21 @@ function buildBatterRow(
   const d3_brl = l3_brl != null && s_brl != null ? l3_brl - s_brl : null
   const d5_brl = l5_brl != null && s_brl != null ? l5_brl - s_brl : null
   const s_hh  = statSeason?.hardHitPct ?? null
+  const r_hh  = statRecent?.hardHitPct ?? null
+  const d_hh  = r_hh != null && s_hh != null ? r_hh - s_hh : null
   const s_pa  = statSeason?.pullAirRate ?? null
+  const r_pa  = statRecent?.pullAirRate ?? null
+  const d_pa  = r_pa != null && s_pa != null ? r_pa - s_pa : null
   const s_fb  = statSeason?.fbRate ?? null
+  const r_fb  = statRecent?.fbRate ?? null
+  const d_fb  = r_fb != null && s_fb != null ? r_fb - s_fb : null
   const s_hr  = statSeason?.hr ?? null
   const s_timing = statSeason?.onTimePct ?? null
   const r_timing = statRecent?.onTimePct ?? null
+  const d_timing = r_timing != null && s_timing != null ? r_timing - s_timing : null
   const s_miss = statSeason?.missDistance ?? null
   const r_miss = statRecent?.missDistance ?? null
+  const d_miss = r_miss != null && s_miss != null ? r_miss - s_miss : null
 
   // Switch hitters always bat opposite the pitcher's throwing hand (that's
   // the entire point of switching) — 'S' isn't itself a real hand key in
@@ -447,9 +469,9 @@ function buildBatterRow(
     rawProps: props ?? null,
     s_spd, s_hrd, s_sq, s_bla, s_len, s_atk, s_iaa, s_tlt,
     s_ev, s_la, s_brl, l1_brl, l3_brl, l5_brl, d1_brl, d3_brl, d5_brl, s_hh, s_pa, s_fb, s_xhr, s_hr,
-    r_spd, r_sq, r_bla, r_atk, r_brl,
-    d_spd, d_sq, d_brl,
-    s_timing, r_timing, s_miss, r_miss,
+    r_spd, r_sq, r_bla, r_atk, r_brl, r_hrd, r_len, r_iaa, r_tlt, r_ev, r_la, r_hh, r_pa, r_fb,
+    d_spd, d_sq, d_brl, d_hrd, d_bla, d_len, d_atk, d_iaa, d_tlt, d_ev, d_la, d_hh, d_pa, d_fb,
+    s_timing, r_timing, d_timing, s_miss, r_miss, d_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
     // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
     // own entry now — a player can have picks in more than one market for
@@ -1367,9 +1389,19 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_timing, g('s_timing')) }}>{pp(row.s_timing)}</td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.r_timing, g('r_timing')) }}>{pp(row.r_timing)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_timing != null ? (row.d_timing > 0.01 ? '#4ade80' : row.d_timing < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_timing, 100)}
+      </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_miss, g('s_miss'), 'lo') }}>{f1(row.s_miss)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_miss, g('r_miss'), 'lo') }}>{f1(row.r_miss)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_miss != null ? (row.d_miss < -0.1 ? '#4ade80' : row.d_miss > 0.1 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_miss)}
+      </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_hrd, g('s_hrd')) }}>{pp(row.s_hrd)}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.r_hrd, g('r_hrd')) }}>{pp(row.r_hrd)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_hrd != null ? (row.d_hrd > 0.01 ? '#4ade80' : row.d_hrd < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_hrd, 100)}
+      </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_sq,  g('s_sq'))  }}>{pp(row.s_sq)}</td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.r_sq,  g('r_sq'))  }}>{pp(row.r_sq)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_sq != null ? (row.d_sq > 0.01 ? '#4ade80' : row.d_sq < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
@@ -1377,11 +1409,27 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_bla, g('s_bla')) }}>{pp(row.s_bla)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_bla, g('r_bla')) }}>{pp(row.r_bla)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_bla != null ? (row.d_bla > 0.01 ? '#4ade80' : row.d_bla < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_bla, 100)}
+      </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_len, g('s_len'), 'lo') }}>{f1(row.s_len)}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.r_len, g('r_len'), 'lo') }}>{f1(row.r_len)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_len != null ? (row.d_len < -0.3 ? '#4ade80' : row.d_len > 0.3 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_len)}
+      </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_atk, g('s_atk')) }}>{f1(row.s_atk)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_atk, g('r_atk')) }}>{f1(row.r_atk)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_atk != null ? (row.d_atk > 2 ? '#4ade80' : row.d_atk < -2 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_atk)}
+      </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_iaa, g('s_iaa')) }}>{pp(row.s_iaa)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_iaa, g('r_iaa')) }}>{pp(row.r_iaa)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_iaa != null ? (row.d_iaa > 0.01 ? '#4ade80' : row.d_iaa < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_iaa, 100)}
+      </td>
       <td style={{ ...STD, width: 32, minWidth: 32 }}>{f1(row.s_tlt)}</td>
+      <td style={{ ...STD, width: 32, minWidth: 32 }}>{f1(row.r_tlt)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: 'var(--text-2)' }}>{dlt(row.d_tlt)}</td>
 
       <td style={SDIV_D} />
 
@@ -1392,10 +1440,28 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
         {dlt(row.d_brl)}
       </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_hh,  g('s_hh'))  }}>{ppRaw(row.s_hh)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_hh,  g('r_hh'))  }}>{ppRaw(row.r_hh)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_hh != null ? (row.d_hh > 1 ? '#4ade80' : row.d_hh < -1 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_hh)}
+      </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_pa,  g('s_pa'))  }}>{pp(row.s_pa)}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.r_pa,  g('r_pa'))  }}>{pp(row.r_pa)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_pa != null ? (row.d_pa > 0.01 ? '#4ade80' : row.d_pa < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_pa, 100)}
+      </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_fb,  g('s_fb'))  }}>{pp(row.s_fb)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_fb,  g('r_fb'))  }}>{pp(row.r_fb)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_fb != null ? (row.d_fb > 0.01 ? '#4ade80' : row.d_fb < -0.01 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_fb, 100)}
+      </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_ev,  g('s_ev'))  }}>{f1(row.s_ev)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_ev,  g('r_ev'))  }}>{f1(row.r_ev)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_ev != null ? (row.d_ev > 1 ? '#4ade80' : row.d_ev < -1 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_ev)}
+      </td>
       <td style={{ ...STD, width: 32, minWidth: 32 }}>{f1(row.s_la)}</td>
+      <td style={{ ...STD, width: 32, minWidth: 32 }}>{f1(row.r_la)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: 'var(--text-2)' }}>{dlt(row.d_la)}</td>
       <td style={{ ...STD, width: 30, minWidth: 30, ...heat(row.s_hr,  g('s_hr'))  }}>
         {row.s_hr != null ? String(Math.round(row.s_hr)) : '—'}
       </td>
@@ -2103,28 +2169,50 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('ΔSpd', 'Recent−season bat speed', 34, 'd_spd')}
       {H('Time', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
       {H('R·Time', 'Recent timing', 36, 'r_timing')}
+      {H('ΔTime', 'Recent−season timing ×100', 34, 'd_timing')}
       {H('Miss', 'Season miss distance', 34, 's_miss')}
       {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
+      {H('ΔMiss', 'Recent−season miss distance', 34, 'd_miss')}
       {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
+      {H('R·HrdSw', 'Recent hard swing rate', 36, 'r_hrd')}
+      {H('ΔHrdSw', 'Recent−season hard swing rate ×100', 34, 'd_hrd')}
       {H('Sq', 'Squared-up per swing', 36, 's_sq')}
       {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
       {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
       {H('💥', 'Blast per swing', 34, 's_bla')}
       {H('R 💥', 'Recent blast per swing', 34, 'r_bla')}
+      {H('Δ💥', 'Recent−season blast per swing ×100', 34, 'd_bla')}
       {H('SwLen', 'Swing length', 36, 's_len')}
+      {H('R·SwLen', 'Recent swing length', 36, 'r_len')}
+      {H('ΔSwLen', 'Recent−season swing length', 34, 'd_len')}
       {H('Atk°', 'Attack angle', 34, 's_atk')}
       {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
+      {H('ΔAtk', 'Recent−season attack angle', 34, 'd_atk')}
       {H('IdlAA', 'Ideal attack angle rate', 34, 's_iaa')}
+      {H('R·IdlAA', 'Recent ideal attack angle rate', 34, 'r_iaa')}
+      {H('ΔIdlAA', 'Recent−season ideal attack angle rate ×100', 34, 'd_iaa')}
       {H('Tilt', 'Swing tilt', 32, 's_tlt')}
+      {H('R·Tilt', 'Recent swing tilt', 32, 'r_tlt')}
+      {H('ΔTilt', 'Recent−season swing tilt', 34, 'd_tlt')}
       <th style={SDIV_H} />
       {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
       {H('R·Brl', 'Recent barrel rate', 34, 'r_brl')}
       {H('ΔBrl', 'Recent−season barrel rate', 34, 'd_brl')}
       {H('HH%', 'Hard hit rate', 34, 's_hh')}
+      {H('R·HH', 'Recent hard hit rate', 34, 'r_hh')}
+      {H('ΔHH', 'Recent−season hard hit rate', 34, 'd_hh')}
       {H('PULL%', 'Pull air rate', 36, 's_pa')}
+      {H('R·Pull', 'Recent pull air rate', 36, 'r_pa')}
+      {H('ΔPull', 'Recent−season pull air rate ×100', 34, 'd_pa')}
       {H('FB%', 'Flyball rate', 34, 's_fb')}
+      {H('R·FB', 'Recent flyball rate', 34, 'r_fb')}
+      {H('ΔFB', 'Recent−season flyball rate ×100', 34, 'd_fb')}
       {H('EV', 'Exit velocity', 34, 's_ev')}
+      {H('R·EV', 'Recent exit velocity', 34, 'r_ev')}
+      {H('ΔEV', 'Recent−season exit velocity', 34, 'd_ev')}
       {H('LA', 'Launch angle', 32, 's_la')}
+      {H('R·LA', 'Recent launch angle', 32, 'r_la')}
+      {H('ΔLA', 'Recent−season launch angle', 34, 'd_la')}
       {H('HR', 'HR — season, vs. tonight\'s opposing pitcher hand only, not every game he\'s played', 30, 's_hr')}
     </>
   )
