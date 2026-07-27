@@ -179,6 +179,13 @@ function buildBatterRow(
   const s_ev  = statSeason?.avgEv ?? null
   const s_la  = statSeason?.avgLa ?? null
   const s_brl = statSeason?.barrelPct ?? null
+  // Toggle-driven recent/delta, same shape as r_spd/d_spd and r_sq/d_sq
+  // above — real gap, reported live (2026-07-27): every other Bat Tracking
+  // field with a season number also got an R·/Δ pair tied to the Last
+  // 1/3/5/10 toggle at the top of the grid; Barrel% never did, even though
+  // the underlying recent window was already being computed either way.
+  const r_brl = statRecent?.barrelPct ?? null
+  const d_brl = r_brl != null && s_brl != null ? r_brl - s_brl : null
   // Fixed L1/L3/L5 barrel columns — unlike r_spd/r_sq/etc above, these
   // aren't tied to the shared statcastWindow toggle. Every window is
   // already precomputed server-side (computeAllStatcastWindows), so this
@@ -440,8 +447,8 @@ function buildBatterRow(
     rawProps: props ?? null,
     s_spd, s_hrd, s_sq, s_bla, s_len, s_atk, s_iaa, s_tlt,
     s_ev, s_la, s_brl, l1_brl, l3_brl, l5_brl, d1_brl, d3_brl, d5_brl, s_hh, s_pa, s_fb, s_xhr, s_hr,
-    r_spd, r_sq, r_bla, r_atk,
-    d_spd, d_sq,
+    r_spd, r_sq, r_bla, r_atk, r_brl,
+    d_spd, d_sq, d_brl,
     s_timing, r_timing, s_miss, r_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
     // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
@@ -1380,6 +1387,10 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
 
       {/* Batted ball */}
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_brl, g('s_brl')) }}>{ppRaw(row.s_brl)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_brl, g('r_brl')) }}>{ppRaw(row.r_brl)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_brl != null ? (row.d_brl > 1 ? '#4ade80' : row.d_brl < -1 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_brl)}
+      </td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_hh,  g('s_hh'))  }}>{ppRaw(row.s_hh)}</td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_pa,  g('s_pa'))  }}>{pp(row.s_pa)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_fb,  g('s_fb'))  }}>{pp(row.s_fb)}</td>
@@ -2107,6 +2118,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('Tilt', 'Swing tilt', 32, 's_tlt')}
       <th style={SDIV_H} />
       {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
+      {H('R·Brl', 'Recent barrel rate', 34, 'r_brl')}
+      {H('ΔBrl', 'Recent−season barrel rate', 34, 'd_brl')}
       {H('HH%', 'Hard hit rate', 34, 's_hh')}
       {H('PULL%', 'Pull air rate', 36, 's_pa')}
       {H('FB%', 'Flyball rate', 34, 's_fb')}
