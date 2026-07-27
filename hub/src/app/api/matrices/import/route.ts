@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   if (isPipeline) {
     const { data, error } = await admin
       .from('matrix_pipeline_steps')
-      .select('position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+      .select('position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
       .eq('matrix_id', source.id)
       .order('position', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   } else {
     const { data, error } = await admin
       .from('matrix_factors')
-      .select('position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+      .select('position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
       .eq('matrix_id', source.id)
       .order('position', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -54,7 +54,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
 
   const { data: factors } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+    .select('id, matrix_id, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
@@ -63,7 +63,7 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
   // `factors` — a Matrix is one or the other, never both (see matrix_type).
   const { data: pipelineSteps } = await admin
     .from('matrix_pipeline_steps')
-    .select('matrix_id, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+    .select('matrix_id, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
 
@@ -160,6 +160,28 @@ function mapPitchLogRow(r: any) {
 // everyday player, not just an edge case. Same incident class already hit
 // (and fixed) in matrixBacktest.ts/fetchBulkSavantSplits — paginate for
 // real instead of trusting one big range.
+//
+// Real bug, confirmed live (2026-07-27): this loop paginated via
+// `.range()` with NO `.order()` — the same anti-pattern already caught and
+// fixed in savantPitchArsenalSync.ts/savantHrDetailsSync.ts ("`.range()`
+// without an explicit `.order()` has no guaranteed row ordering between
+// separate calls"), just never applied here. The comment above about
+// dropping ORDER BY only argued the FINAL consumer doesn't need sorted
+// output (lastNGameDates re-sorts internally) — it didn't account for
+// pagination itself needing a stable order to assemble a complete, gap-free
+// row set across multiple `.range()` calls. Without one, two independent
+// callers of this same function (dugoutStatcastPrecompute.ts and
+// dugoutPitchlogStatPrecompute.ts, ~10 minutes apart per vercel.json) could
+// each get a DIFFERENT subset of a high-volume batter's rows — confirmed by
+// cross-checking both precomputed tables for the same date/batter/hand:
+// season Barrel% disagreed by double digits for numerous real players
+// (e.g. one batter's own `dugout_statcast_precomputed` row showed 0%
+// against the SAME `dugout_pitchlog_stat_precomputed` row showing 50%),
+// which is exactly why a member's saved "Barrel % < 10" Factor could match
+// someone the board itself displays well above 10 — the Factor and the
+// board were quietly matching against two different row subsets of the
+// same batter's season. Ordering by `id` (the table's uuid PK) makes every
+// page deterministic and complete regardless of who calls this or when.
 export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: number[]): Promise<Record<number, any[]>> {
   const byBatter: Record<number, any[]> = {}
   if (!batterIds.length) return byBatter
@@ -173,6 +195,7 @@ export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: nu
         .from('player_pitch_log')
         .select(BULK_PITCHLOG_SELECT)
         .eq('batter_id', id)
+        .order('id', { ascending: true })
         .range(offset, offset + PAGE - 1)
       if (error) throw error
       for (const r of (data ?? []) as any[]) {

@@ -72,6 +72,7 @@ export type MatrixPipelineStep = {
   mm_compare_windows: MmWindowKey[] | null
   mm_direction: MmTrendDirection | null
   mm_match_mode: 'any' | 'all' | null
+  mm_amount_mode: 'at_least' | 'exactly' | null
 }
 
 const KIND_LABEL: Record<MatrixPipelineStep['kind'], string> = { filter: 'Filter', group: 'Group', rank: 'Rank', unless: 'Unless' }
@@ -111,7 +112,7 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: M
     then_steps: kind === 'unless' ? [] : null,
     unless_mode: kind === 'unless' ? 'replace' : null,
     uses_anchor: kind === 'unless' ? false : null,
-    mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null,
+    mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null, mm_amount_mode: null,
   }
 }
 
@@ -233,7 +234,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                 onChange({
                   ...step, operator,
                   ...(operator === 'mm_trend' && !step.mm_base_window
-                    ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const, mm_direction: 'decreased' as const, mm_match_mode: null }
+                    ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const, mm_direction: 'decreased' as const, mm_match_mode: null, mm_amount_mode: null }
                     : {}),
                 })
               }}
@@ -279,6 +280,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               <MmTrendFields
                 baseWindow={step.mm_base_window} compareWindows={step.mm_compare_windows}
                 direction={step.mm_direction} amount={step.value} matchMode={step.mm_match_mode}
+                amountMode={step.mm_amount_mode}
                 onPatch={patch => onChange({ ...step, ...patch })}
               />
             )}

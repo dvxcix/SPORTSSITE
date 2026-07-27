@@ -31,6 +31,9 @@ function cleanMmDirection(v: unknown): string | null {
 function cleanMmMatchMode(v: unknown): 'any' | 'all' | null {
   return v === 'all' ? 'all' : v === 'any' ? 'any' : null
 }
+function cleanMmAmountMode(v: unknown): 'at_least' | 'exactly' | null {
+  return v === 'exactly' ? 'exactly' : v === 'at_least' ? 'at_least' : null
+}
 
 type CleanTiebreaker = { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest'; tolerance: number | null; mm_base_window: string | null; mm_compare_windows: string[] | null }
 type TiebreakersResult = { ok: true; tiebreakers: CleanTiebreaker[] } | { ok: false; error: string }
@@ -71,6 +74,7 @@ type CleanPipelineStep = {
   condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
   unless_mode: 'replace' | 'suppress' | 'add' | null; uses_anchor: boolean | null
   mm_base_window: string | null; mm_compare_windows: string[] | null; mm_direction: string | null; mm_match_mode: 'any' | 'all' | null
+  mm_amount_mode: 'at_least' | 'exactly' | null
 }
 type PipelineStepsResult = { ok: true; steps: CleanPipelineStep[] } | { ok: false; error: string }
 
@@ -91,7 +95,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
   const clean: CleanPipelineStep[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -148,6 +152,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
       mm_compare_windows: cleanCompareWindows,
       mm_direction: cleanMmDirection(mm_direction),
       mm_match_mode: cleanMmMatchMode(mm_match_mode),
+      mm_amount_mode: cleanMmAmountMode(mm_amount_mode),
     })
   }
   return { ok: true, steps: clean }
@@ -169,6 +174,7 @@ type CleanFactor = {
   tie_scope: 'team' | 'game' | null; tie_direction: 'highest' | 'lowest' | null
   tiebreakers: CleanTiebreaker[]
   mm_base_window: string | null; mm_compare_windows: string[] | null; mm_direction: string | null; mm_match_mode: 'any' | 'all' | null
+  mm_amount_mode: 'at_least' | 'exactly' | null
 }
 function buildFactorInsert(f: Record<string, unknown>): { ok: true; value: CleanFactor } | { ok: false; error: string } {
   if (!TIEBREAKER_CATEGORIES.includes(f.category as string)) return { ok: false, error: 'Invalid Factor category.' }
@@ -205,6 +211,7 @@ function buildFactorInsert(f: Record<string, unknown>): { ok: true; value: Clean
       mm_compare_windows: compareWindows,
       mm_direction: cleanMmDirection(f.mm_direction),
       mm_match_mode: cleanMmMatchMode(f.mm_match_mode),
+      mm_amount_mode: cleanMmAmountMode(f.mm_amount_mode),
     },
   }
 }

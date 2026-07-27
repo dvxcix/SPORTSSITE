@@ -57,6 +57,14 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
 export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat'
+// Only meaningful alongside 'increased'/'decreased' + a non-null `amount` —
+// null/'at_least' preserves the original behavior (amount is a MINIMUM
+// magnitude, i.e. "moved up 2 OR MORE"). 'exactly' is a real gap, reported
+// live (2026-07-27): a member wanted "moved up EXACTLY 2 ranks," not "2 or
+// more" — MM is itself a rank difference (see MmByWindow/dugoutPaperScore.ts),
+// so asking for an exact move count is a completely literal, common request
+// ("moved up 1 rank... 2... 3...").
+export type MmAmountMode = 'at_least' | 'exactly'
 // Real gap (2026-07-24): the grid's own Statcast section shows every
 // pitchlog_stat/savant_stat field at both a recent window AND a season
 // value, with a Δ (recent − season) alongside some of them — a Matrix
@@ -129,6 +137,8 @@ export type MatrixFactor = {
   // null/'any' = the trend only needs to hold in ANY one of
   // mm_compare_windows; 'all' = it must hold in every one of them.
   mm_match_mode: 'any' | 'all' | null
+  // See MmAmountMode above — null defaults to 'at_least'.
+  mm_amount_mode: MmAmountMode | null
 }
 
 export type MatrixTiebreaker = {
@@ -260,6 +270,7 @@ export type MatrixPipelineStep = {
   mm_compare_windows: MmWindowKey[] | null
   mm_direction: MmTrendDirection | null
   mm_match_mode: 'any' | 'all' | null
+  mm_amount_mode: MmAmountMode | null
 }
 export const MAX_PIPELINE_STEPS = 10
 
@@ -888,15 +899,17 @@ export function computeMmMoveValue(
 // resolved value. `baseWindow` is the reference point; `compareWindows`
 // (1-3 of the other three) are each checked against it, `matchMode`
 // controlling whether ANY (default/null) or ALL of them must satisfy
-// `direction`. `amount` (the Factor/Step's own `value`) is the minimum
-// magnitude of the move for 'increased'/'decreased' — null means "any move
-// that direction," irrelevant for 'crossed_positive'/'crossed_negative' (a
-// sign flip needs no magnitude) and 'flat' (real gap, reported live
-// 2026-07-26: no way to ask "stayed exactly the same" — a member may
-// specifically want whoever's MM DIDN'T move at all between the checked
-// windows, distinct from every directional case above). Fails safe (false)
-// on any missing input rather than crashing — same defensive shape as
-// lt_anchor/gt_anchor above.
+// `direction`. `amount` (the Factor/Step's own `value`) is the move
+// magnitude for 'increased'/'decreased' — null means "any move that
+// direction," irrelevant for 'crossed_positive'/'crossed_negative' (a sign
+// flip needs no magnitude) and 'flat' (real gap, reported live 2026-07-26:
+// no way to ask "stayed exactly the same" — a member may specifically want
+// whoever's MM DIDN'T move at all between the checked windows, distinct
+// from every directional case above). `amountMode` (real gap, reported live
+// 2026-07-27) picks whether `amount` is a floor ('at_least'/null, the
+// original "2 OR MORE" behavior) or an exact match ('exactly' — "moved up
+// EXACTLY 2 ranks", not 2-or-more). Fails safe (false) on any missing input
+// rather than crashing — same defensive shape as lt_anchor/gt_anchor above.
 export function evaluateMmTrend(
   baseWindow: MmWindowKey | null,
   compareWindows: MmWindowKey[] | null,
@@ -904,15 +917,23 @@ export function evaluateMmTrend(
   amount: number | null,
   matchMode: 'any' | 'all' | null,
   mmByWindow: MmByWindow | null | undefined,
+  amountMode?: MmAmountMode | null,
 ): boolean {
   if (!baseWindow || !compareWindows?.length || !direction || !mmByWindow) return false
   const baseVal = mmByWindow[baseWindow]
   if (baseVal == null) return false
+  const exact = amountMode === 'exactly'
   const results = compareWindows.filter(w => w !== baseWindow).map(w => {
     const cmpVal = mmByWindow[w]
     if (cmpVal == null) return false
-    if (direction === 'increased') return amount != null ? cmpVal - baseVal >= amount : cmpVal > baseVal
-    if (direction === 'decreased') return amount != null ? baseVal - cmpVal >= amount : cmpVal < baseVal
+    if (direction === 'increased') {
+      if (amount == null) return cmpVal > baseVal
+      return exact ? cmpVal - baseVal === amount : cmpVal - baseVal >= amount
+    }
+    if (direction === 'decreased') {
+      if (amount == null) return cmpVal < baseVal
+      return exact ? baseVal - cmpVal === amount : baseVal - cmpVal >= amount
+    }
     if (direction === 'crossed_positive') return baseVal < 0 && cmpVal > 0
     if (direction === 'crossed_negative') return baseVal > 0 && cmpVal < 0
     return cmpVal === baseVal // flat
@@ -937,7 +958,7 @@ export function evaluateDugoutSpecsFactor(
 ): boolean {
   if (factor.operator === 'tied') return isFactorTied?.(factor.id) ?? false
   if (factor.operator === 'mm_trend') {
-    return evaluateMmTrend(factor.mm_base_window, factor.mm_compare_windows, factor.mm_direction, factor.value, factor.mm_match_mode, mmByWindow)
+    return evaluateMmTrend(factor.mm_base_window, factor.mm_compare_windows, factor.mm_direction, factor.value, factor.mm_match_mode, mmByWindow, factor.mm_amount_mode)
   }
   const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow, factor.mm_base_window, factor.mm_compare_windows)
   return compareThreshold(current, factor.operator, factor.value)
@@ -1135,7 +1156,7 @@ export function evaluateFilterStep(
     books: step.books, books_min_count: step.books_min_count,
     tie_scope: null, tie_direction: null, tiebreakers: null,
     mm_base_window: step.mm_base_window, mm_compare_windows: step.mm_compare_windows,
-    mm_direction: step.mm_direction, mm_match_mode: step.mm_match_mode,
+    mm_direction: step.mm_direction, mm_match_mode: step.mm_match_mode, mm_amount_mode: step.mm_amount_mode,
   }
   if (step.category === 'odds') return evaluateOddsFactor(asFactor, bundle.props)
   if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg, undefined, bundle.mmByWindow)

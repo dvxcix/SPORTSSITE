@@ -54,6 +54,11 @@ export type MatrixFactor = {
   // null/'any' = the trend only needs to hold in ANY one of
   // mm_compare_windows; 'all' = it must hold in every one of them.
   mm_match_mode: 'any' | 'all' | null
+  // Only meaningful alongside mm_direction 'increased'/'decreased' + a
+  // non-null value — null/'at_least' = value is a floor ("moved 2+");
+  // 'exactly' = an exact match ("moved exactly 2"). See matrixEngine.ts's
+  // MmAmountMode.
+  mm_amount_mode: 'at_least' | 'exactly' | null
 }
 
 export type MatrixTiebreaker = {
@@ -274,7 +279,7 @@ function newFactor(): MatrixFactor {
   return {
     category: 'odds', field_key: 'fhr', operator: 'gte', value: null, recency: null, books: null, books_min_count: null,
     tie_scope: null, tie_direction: null, tiebreakers: [],
-    mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null,
+    mm_base_window: null, mm_compare_windows: null, mm_direction: null, mm_match_mode: null, mm_amount_mode: null,
   }
 }
 // The board's own 4 MM windows, broadest to narrowest — same order the
@@ -294,15 +299,16 @@ export const MM_DIRECTION_LABEL: Record<MmTrendDirection, string> = {
 // against) regardless of which builder it's being edited in. `onPatch`
 // receives only the fields that changed — each caller spreads it onto its
 // own Factor/Step shape, which already share these exact field names.
-export function MmTrendFields({ baseWindow, compareWindows, direction, amount, matchMode, onPatch }: {
+export function MmTrendFields({ baseWindow, compareWindows, direction, amount, matchMode, amountMode, onPatch }: {
   baseWindow: MmWindowKey | null
   compareWindows: MmWindowKey[] | null
   direction: MmTrendDirection | null
   amount: number | null
   matchMode: 'any' | 'all' | null
+  amountMode?: 'at_least' | 'exactly' | null
   onPatch: (patch: {
     mm_base_window?: MmWindowKey; mm_compare_windows?: MmWindowKey[]; mm_direction?: MmTrendDirection
-    value?: number | null; mm_match_mode?: 'any' | 'all'
+    value?: number | null; mm_match_mode?: 'any' | 'all'; mm_amount_mode?: 'at_least' | 'exactly' | null
   }) => void
 }) {
   const base = baseWindow ?? 'l10'
@@ -331,13 +337,24 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
       </select>
 
       {needsAmount && (
-        <input
-          className="ss-input" type="number" min={0} placeholder="any amount"
-          title="Minimum move required — leave blank for any move at all in this direction"
-          value={amount ?? ''}
-          onChange={e => onPatch({ value: e.target.value === '' ? null : Math.abs(Number(e.target.value)) })}
-          style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
-        />
+        <>
+          <select
+            className="ss-input" value={amountMode ?? 'at_least'}
+            onChange={e => onPatch({ mm_amount_mode: e.target.value as 'at_least' | 'exactly' })}
+            title="Whether the amount below is a minimum (2 or more) or an exact match (exactly 2)"
+            style={{ fontSize: 11, padding: '5px 6px', width: 92 }}
+          >
+            <option value="at_least">At least</option>
+            <option value="exactly">Exactly</option>
+          </select>
+          <input
+            className="ss-input" type="number" min={0} placeholder="any amount"
+            title={amountMode === 'exactly' ? 'Exact rank move required — leave blank for any move at all in this direction' : 'Minimum move required — leave blank for any move at all in this direction'}
+            value={amount ?? ''}
+            onChange={e => onPatch({ value: e.target.value === '' ? null : Math.abs(Number(e.target.value)) })}
+            style={{ fontSize: 11, padding: '5px 6px', width: 84 }}
+          />
+        </>
       )}
 
       <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>IN</span>
@@ -560,7 +577,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
               onChange({
                 ...factor, operator,
                 ...(operator === 'mm_trend' && !factor.mm_base_window
-                  ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const, mm_direction: 'decreased' as const, mm_match_mode: null }
+                  ? { mm_base_window: 'l10' as const, mm_compare_windows: ['l1'] as const, mm_direction: 'decreased' as const, mm_match_mode: null, mm_amount_mode: null }
                   : {}),
               })
             }}
@@ -603,6 +620,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             <MmTrendFields
               baseWindow={factor.mm_base_window} compareWindows={factor.mm_compare_windows}
               direction={factor.mm_direction} amount={factor.value} matchMode={factor.mm_match_mode}
+              amountMode={factor.mm_amount_mode}
               onPatch={patch => onChange({ ...factor, ...patch })}
             />
           )}

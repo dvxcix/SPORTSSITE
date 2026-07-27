@@ -24,7 +24,7 @@ function describeMmTrend(step: MatrixPipelineStep): string {
   const compare = (step.mm_compare_windows ?? []).map(w => MM_WINDOW_WORD[w] ?? w)
   const dir = step.mm_direction ? MM_DIRECTION_WORD[step.mm_direction] ?? step.mm_direction : '?'
   const needsAmount = step.mm_direction === 'increased' || step.mm_direction === 'decreased'
-  const amount = needsAmount && step.value != null ? ` by ${step.value}+` : ''
+  const amount = needsAmount && step.value != null ? ` by ${step.value}${step.mm_amount_mode === 'exactly' ? '' : '+'}` : ''
   const mode = compare.length > 1 ? (step.mm_match_mode === 'all' ? ' (all)' : ' (any)') : ''
   return `MM ${dir}${amount} from ${base} to ${compare.join('/') || '?'}${mode}`
 }

@@ -30,6 +30,9 @@ type FactorInput = {
   mm_compare_windows: string[] | null
   mm_direction: 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat' | null
   mm_match_mode: 'any' | 'all' | null
+  // See matrixEngine.ts's MmAmountMode — null/'at_least' = amount is a
+  // floor ("moved 2+"); 'exactly' = an exact match ("moved exactly 2").
+  mm_amount_mode: 'at_least' | 'exactly' | null
 }
 
 type TiebreakerInput = {
@@ -82,6 +85,7 @@ type PipelineStepInput = {
   mm_compare_windows: string[] | null
   mm_direction: 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat' | null
   mm_match_mode: 'any' | 'all' | null
+  mm_amount_mode: 'at_least' | 'exactly' | null
 }
 
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
@@ -117,6 +121,9 @@ function cleanMmDirection(v: unknown): 'increased' | 'decreased' | 'crossed_posi
 function cleanMmMatchMode(v: unknown): 'any' | 'all' | null {
   return v === 'all' ? 'all' : v === 'any' ? 'any' : null
 }
+function cleanMmAmountMode(v: unknown): 'at_least' | 'exactly' | null {
+  return v === 'exactly' ? 'exactly' : v === 'at_least' ? 'at_least' : null
+}
 
 type PipelineStepsResult = { ok: true; steps: PipelineStepInput[] } | { ok: false; error: string }
 
@@ -141,7 +148,7 @@ function validatePipelineSteps(raw: unknown, allowUnless = true, anchorAvailable
   const clean: PipelineStepInput[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -201,6 +208,7 @@ function validatePipelineSteps(raw: unknown, allowUnless = true, anchorAvailable
       mm_compare_windows: cleanCompareWindows,
       mm_direction: cleanMmDirection(mm_direction),
       mm_match_mode: cleanMmMatchMode(mm_match_mode),
+      mm_amount_mode: cleanMmAmountMode(mm_amount_mode),
     })
   }
   return { ok: true, steps: clean }
@@ -245,7 +253,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
   const clean: FactorInput[] = []
   for (const f of factors) {
     if (!f || typeof f !== 'object') return { ok: false, error: 'Malformed Factor.' }
-    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode } = f as Record<string, unknown>
+    const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
     if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied', 'is_null', 'is_not_null', 'mm_trend'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
@@ -281,6 +289,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
       mm_compare_windows: cleanCompareWindows,
       mm_direction: cleanMmDirection(mm_direction),
       mm_match_mode: cleanMmMatchMode(mm_match_mode),
+      mm_amount_mode: cleanMmAmountMode(mm_amount_mode),
     })
   }
   return { ok: true, factors: clean }
@@ -301,14 +310,14 @@ export async function GET() {
 
   const { data: factors, error: factorsError } = await admin
     .from('matrix_factors')
-    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+    .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })
 
   const { data: pipelineSteps, error: stepsError } = await admin
     .from('matrix_pipeline_steps')
-    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode')
+    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (stepsError) return NextResponse.json({ error: stepsError.message }, { status: 500 })
