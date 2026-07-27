@@ -2103,11 +2103,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   // together with — and stay visually centered over — that exact section
   // regardless of the total table width. COLS_BEFORE_STATCAST = every
   // header cell from "Player" through the divider right before "BSpd"
-  // (49); STATCAST_COL_COUNT = "BSpd" through the last column, "HR" (26).
+  // (49); STATCAST_COL_COUNT = "BSpd" through the last column, "HR" (50,
+  // bumped from 26 once every remaining field got its own R·/Δ pair).
   // If a column is ever added/removed anywhere in headerCells below, these
   // two numbers need the same edit or this breaks silently again.
   const COLS_BEFORE_STATCAST = 49
-  const STATCAST_COL_COUNT = 26
+  const STATCAST_COL_COUNT = 50
 
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
@@ -2174,8 +2175,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
       {H('ΔMiss', 'Recent−season miss distance', 34, 'd_miss')}
       {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
-      {H('R·HrdSw', 'Recent hard swing rate', 36, 'r_hrd')}
-      {H('ΔHrdSw', 'Recent−season hard swing rate ×100', 34, 'd_hrd')}
+      {H('R·Hrd', 'Recent hard swing rate', 34, 'r_hrd')}
+      {H('ΔHrd', 'Recent−season hard swing rate ×100', 34, 'd_hrd')}
       {H('Sq', 'Squared-up per swing', 36, 's_sq')}
       {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
       {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
@@ -2183,17 +2184,17 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('R 💥', 'Recent blast per swing', 34, 'r_bla')}
       {H('Δ💥', 'Recent−season blast per swing ×100', 34, 'd_bla')}
       {H('SwLen', 'Swing length', 36, 's_len')}
-      {H('R·SwLen', 'Recent swing length', 36, 'r_len')}
-      {H('ΔSwLen', 'Recent−season swing length', 34, 'd_len')}
+      {H('R·Len', 'Recent swing length', 34, 'r_len')}
+      {H('ΔLen', 'Recent−season swing length', 34, 'd_len')}
       {H('Atk°', 'Attack angle', 34, 's_atk')}
       {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
       {H('ΔAtk', 'Recent−season attack angle', 34, 'd_atk')}
       {H('IdlAA', 'Ideal attack angle rate', 34, 's_iaa')}
-      {H('R·IdlAA', 'Recent ideal attack angle rate', 34, 'r_iaa')}
-      {H('ΔIdlAA', 'Recent−season ideal attack angle rate ×100', 34, 'd_iaa')}
+      {H('R·IAA', 'Recent ideal attack angle rate', 34, 'r_iaa')}
+      {H('ΔIAA', 'Recent−season ideal attack angle rate ×100', 34, 'd_iaa')}
       {H('Tilt', 'Swing tilt', 32, 's_tlt')}
-      {H('R·Tilt', 'Recent swing tilt', 32, 'r_tlt')}
-      {H('ΔTilt', 'Recent−season swing tilt', 34, 'd_tlt')}
+      {H('R·Tlt', 'Recent swing tilt', 32, 'r_tlt')}
+      {H('ΔTlt', 'Recent−season swing tilt', 34, 'd_tlt')}
       <th style={SDIV_H} />
       {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
       {H('R·Brl', 'Recent barrel rate', 34, 'r_brl')}
@@ -2202,8 +2203,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('R·HH', 'Recent hard hit rate', 34, 'r_hh')}
       {H('ΔHH', 'Recent−season hard hit rate', 34, 'd_hh')}
       {H('PULL%', 'Pull air rate', 36, 's_pa')}
-      {H('R·Pull', 'Recent pull air rate', 36, 'r_pa')}
-      {H('ΔPull', 'Recent−season pull air rate ×100', 34, 'd_pa')}
+      {H('R·Pul', 'Recent pull air rate', 34, 'r_pa')}
+      {H('ΔPul', 'Recent−season pull air rate ×100', 34, 'd_pa')}
       {H('FB%', 'Flyball rate', 34, 's_fb')}
       {H('R·FB', 'Recent flyball rate', 34, 'r_fb')}
       {H('ΔFB', 'Recent−season flyball rate ×100', 34, 'd_fb')}
