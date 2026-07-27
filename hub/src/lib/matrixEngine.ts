@@ -56,8 +56,15 @@ import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
 // between L5 and L1"). See evaluateMmTrend/MatrixFactor's mm_* fields below.
 export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
-export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat'
-// Only meaningful alongside 'increased'/'decreased' + a non-null `amount` —
+// 'moved' is a real gap, reported live (2026-07-27): 'increased'/'decreased'
+// each only check ONE direction — asking "did this player move AT ALL"
+// (either direction, as opposed to 'flat') required building two separate
+// Factors/steps and OR-ing them together, when a member just wants "he
+// moved" without caring which way. Direction-agnostic version of
+// 'increased'/'decreased' — same `amount`/`amountMode` semantics, just
+// checked against the absolute value of the move.
+export type MmTrendDirection = 'increased' | 'decreased' | 'moved' | 'crossed_positive' | 'crossed_negative' | 'flat'
+// Only meaningful alongside 'increased'/'decreased'/'moved' + a non-null `amount` —
 // null/'at_least' preserves the original behavior (amount is a MINIMUM
 // magnitude, i.e. "moved up 2 OR MORE"). 'exactly' is a real gap, reported
 // live (2026-07-27): a member wanted "moved up EXACTLY 2 ranks," not "2 or
@@ -933,6 +940,11 @@ export function evaluateMmTrend(
     if (direction === 'decreased') {
       if (amount == null) return cmpVal < baseVal
       return exact ? baseVal - cmpVal === amount : baseVal - cmpVal >= amount
+    }
+    if (direction === 'moved') {
+      if (amount == null) return cmpVal !== baseVal
+      const magnitude = Math.abs(cmpVal - baseVal)
+      return exact ? magnitude === amount : magnitude >= amount
     }
     if (direction === 'crossed_positive') return baseVal < 0 && cmpVal > 0
     if (direction === 'crossed_negative') return baseVal > 0 && cmpVal < 0

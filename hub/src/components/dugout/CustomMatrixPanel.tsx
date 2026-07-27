@@ -15,7 +15,7 @@ import { PipelineSummary } from './PipelineSummary'
 // own header comment for the full data-source breakdown this UI drives).
 
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
-export type MmTrendDirection = 'increased' | 'decreased' | 'crossed_positive' | 'crossed_negative' | 'flat'
+export type MmTrendDirection = 'increased' | 'decreased' | 'moved' | 'crossed_positive' | 'crossed_negative' | 'flat'
 
 export type MatrixFactor = {
   id?: string
@@ -288,7 +288,7 @@ export const MM_WINDOWS: { key: MmWindowKey; label: string }[] = [
   { key: 'l10', label: 'L10' }, { key: 'l5', label: 'L5' }, { key: 'l3', label: 'L3' }, { key: 'l1', label: 'L1' },
 ]
 export const MM_DIRECTION_LABEL: Record<MmTrendDirection, string> = {
-  increased: 'Increased', decreased: 'Decreased',
+  increased: 'Increased', decreased: 'Decreased', moved: 'Moved (either direction)',
   crossed_positive: 'Crossed to positive (+)', crossed_negative: 'Crossed to negative (−)',
   flat: 'Stayed flat (no change)',
 }
@@ -313,7 +313,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
 }) {
   const base = baseWindow ?? 'l10'
   const compare = compareWindows ?? []
-  const needsAmount = direction === 'increased' || direction === 'decreased'
+  const needsAmount = direction === 'increased' || direction === 'decreased' || direction === 'moved'
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
       <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>FROM</span>

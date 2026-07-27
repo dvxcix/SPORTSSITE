@@ -16,7 +16,7 @@ const FACTOR_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 
 // Only meaningful for operator 'mm_trend' (field_key 'mm') — see
 // matrixEngine.ts's evaluateMmTrend/MmByWindow.
 const MM_WINDOWS = ['l1', 'l3', 'l5', 'l10']
-const MM_DIRECTIONS = ['increased', 'decreased', 'crossed_positive', 'crossed_negative', 'flat']
+const MM_DIRECTIONS = ['increased', 'decreased', 'moved', 'crossed_positive', 'crossed_negative', 'flat']
 function cleanMmBaseWindow(v: unknown): string | null {
   return typeof v === 'string' && MM_WINDOWS.includes(v) ? v : null
 }

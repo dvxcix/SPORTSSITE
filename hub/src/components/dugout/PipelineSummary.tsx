@@ -12,7 +12,7 @@ const OP_WORD: Record<string, string> = {
 }
 const MM_WINDOW_WORD: Record<string, string> = { l1: 'L1', l3: 'L3', l5: 'L5', l10: 'L10' }
 const MM_DIRECTION_WORD: Record<string, string> = {
-  increased: 'increased', decreased: 'decreased', crossed_positive: 'crossed to +', crossed_negative: 'crossed to −',
+  increased: 'increased', decreased: 'decreased', moved: 'moved', crossed_positive: 'crossed to +', crossed_negative: 'crossed to −',
   flat: 'stayed flat',
 }
 
@@ -23,7 +23,7 @@ function describeMmTrend(step: MatrixPipelineStep): string {
   const base = step.mm_base_window ? MM_WINDOW_WORD[step.mm_base_window] ?? step.mm_base_window : '?'
   const compare = (step.mm_compare_windows ?? []).map(w => MM_WINDOW_WORD[w] ?? w)
   const dir = step.mm_direction ? MM_DIRECTION_WORD[step.mm_direction] ?? step.mm_direction : '?'
-  const needsAmount = step.mm_direction === 'increased' || step.mm_direction === 'decreased'
+  const needsAmount = step.mm_direction === 'increased' || step.mm_direction === 'decreased' || step.mm_direction === 'moved'
   const amount = needsAmount && step.value != null ? ` by ${step.value}${step.mm_amount_mode === 'exactly' ? '' : '+'}` : ''
   const mode = compare.length > 1 ? (step.mm_match_mode === 'all' ? ' (all)' : ' (any)') : ''
   return `MM ${dir}${amount} from ${base} to ${compare.join('/') || '?'}${mode}`
