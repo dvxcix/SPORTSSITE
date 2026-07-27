@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeDugoutPitchlogStatForDate } from '@/lib/dugoutPitchlogStatPrecompute'
-import { addDaysToDateStr } from '@/lib/balldontlie'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -27,16 +26,31 @@ export async function GET(req: Request) {
   const explicitDate = searchParams.get('date')
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
-  // Also precomputes tomorrow's slate — see dugout-statcast-precompute for
-  // why (projected lineups are already postable the evening before).
-  const dates = explicitDate ? [explicitDate] : [
-    ...Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
-      const d = new Date(`${todayEt}T00:00:00Z`)
-      d.setUTCDate(d.getUTCDate() - i)
-      return d.toISOString().slice(0, 10)
-    }),
-    addDaysToDateStr(todayEt, 1),
-  ]
+  // Real gap, reported live (2026-07-27): this briefly also precomputed
+  // tomorrow's slate (day-ahead prefetching), matching
+  // dugout-statcast-precompute/dugout-matchup-edge-precompute — but unlike
+  // Statcast (a live third-party feed), this table's whole source
+  // (player_pitch_log) for "yesterday" doesn't finish ingesting until the
+  // NEXT morning's savant-sync-pitch-log cron run. Running this cron
+  // "day-ahead" therefore means computing a real player's L1/L3/L5/L10
+  // windows off a pitch log that's still missing games from the day that
+  // just happened — a genuinely wrong snapshot, not just an early one — and
+  // since that date is never revisited once it stops being "today" or
+  // "tomorrow" in this window, the wrong numbers stick. Confirmed live: a
+  // saved Matrix Factor ("Last 5 Δ vs Season bat speed is positive") lit up
+  // a real player (Ty France, SD@MIA 2026-07-26) whose actual L5 delta was
+  // negative — his day-ahead-precomputed row and the board's own (same-day,
+  // not day-ahead) Statcast table had diverged because they were computed
+  // at different points against different amounts of ingested pitch data.
+  // Reverted to the same trailing-window-only shape as
+  // dugout-statcast-precompute (which already reverted this after its own
+  // 2026-07-25 timeout incident) — every Dugout precompute cron now stays
+  // in the same today+PAST_DAYS window, so they can't drift apart this way.
+  const dates = explicitDate ? [explicitDate] : Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
+    const d = new Date(`${todayEt}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() - i)
+    return d.toISOString().slice(0, 10)
+  })
 
   const results: Record<string, unknown> = {}
   for (const date of dates) {
