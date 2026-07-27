@@ -1228,7 +1228,20 @@ export function runPipelineStep(
     const groups = groupTiedCandidates(values)
     const winners = selectTieCluster(groups, step.direction ?? null)
     if (strict) return winners
-    return winners.size ? winners : pool // lenient: no ties found -> unchanged
+    // Real bug, reported live (2026-07-26): "no ties found" was always
+    // treated as "no signal" and passed the pool through unchanged — correct
+    // when NOBODY in the pool has a value for this field at all (there's
+    // genuinely nothing to judge, so a narrowing attempt that finds nothing
+    // shouldn't destroy a formula that was otherwise working), but WRONG
+    // when real values exist and simply don't tie (a determinate "nobody
+    // qualifies" result). That conflation let a chain of "group: tied on X"
+    // steps silently degrade into "tied on AT LEAST ONE of them" — confirmed
+    // live: a 3-group-step Matrix highlighted a player only genuinely tied
+    // on the FIRST field, because steps 2 and 3 each found zero ties among
+    // the already-narrowed survivors and, being lenient, let them all
+    // through instead of enforcing their own tie requirement.
+    if (!values.size) return pool // nobody had a value at all -> genuinely no signal, unchanged
+    return winners // real values existed but nobody tied -> nobody qualifies
   }
   // rank — resolveTiebreakers already implements exactly this ("keep
   // whoever's best on one field"); called with a single-step chain.
