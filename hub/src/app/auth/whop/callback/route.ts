@@ -85,8 +85,6 @@ export async function GET(request: Request) {
     return handleWhopLink(admin, stored.linkUserId, whopUser, discordHasAccess, origin, linkNext)
   }
 
-  if (!betaHasAccess && !discordHasAccess) return loginFailed('whop_no_access')
-
   // Find an existing bridged account by Whop user ID first (stable across
   // email changes), falling back to nothing — a fresh Whop login always
   // needs a fresh Supabase auth.users row if this is the first time we've
@@ -96,6 +94,24 @@ export async function GET(request: Request) {
     .select('id, email')
     .eq('whop_user_id', whopUser.sub)
     .maybeSingle()
+
+  // The beta-pass/Discord-community gate below only makes sense for a
+  // BRAND NEW Whop identity — someone with an already-existing SlipSurge
+  // account (matched by this whop_user_id from a prior login/link, or by
+  // email if this is the first time signing in with Whop on an account
+  // created some other way) must always be able to log back in via Whop,
+  // regardless of whether they separately hold the beta pass or the
+  // Discord-community product. Confirmed live (Spik3rs/andre.stewart623):
+  // a genuine paying Ultimate subscriber — bought via /pricing, holds
+  // neither product — got rejected with "doesn't have an active
+  // subscription" on every Whop login attempt because this gate used to
+  // run before ever checking for an existing account.
+  let hasExistingAccount = !!existing
+  if (!hasExistingAccount) {
+    const { data: byEmailForGate } = await admin.from('users').select('id').eq('email', whopUser.email).maybeSingle()
+    hasExistingAccount = !!byEmailForGate
+  }
+  if (!betaHasAccess && !discordHasAccess && !hasExistingAccount) return loginFailed('whop_no_access')
 
   let authUserId: string
   let authUserEmail: string
