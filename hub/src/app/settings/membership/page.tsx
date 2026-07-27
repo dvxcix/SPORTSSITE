@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { WHOP_PLANS, effectiveTier, hasTierAccess, type Tier } from '@/lib/tiers'
 import { PricingCheckoutButton } from '@/app/pricing/PricingCheckoutButton'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CancelMembershipButton } from './CancelMembershipButton'
+import { CheckCircle2, XCircle, Clock } from 'lucide-react'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 const DISCORD_ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
@@ -26,7 +27,7 @@ export default async function MembershipSettingsPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('tier, tier_status, tier_current_period_end, whop_plan_id, beta_access_active, account_type, discord_advanced_claimed, admin_granted_tier, whop_user_id')
+    .select('tier, tier_status, tier_current_period_end, whop_plan_id, whop_membership_id, tier_cancel_at_period_end, beta_access_active, account_type, discord_advanced_claimed, admin_granted_tier, whop_user_id')
     .eq('id', user.id)
     .single()
 
@@ -97,9 +98,9 @@ export default async function MembershipSettingsPage({
         <div className="flex items-center justify-between mb-1">
           <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Current Plan</p>
           {isPaid && (
-            <span className={`flex items-center gap-1 text-xs font-bold ${isActive ? 'text-green-400' : 'text-red-400'}`}>
-              {isActive ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
-              {isActive ? 'Active' : profile?.tier_status || 'Inactive'}
+            <span className={`flex items-center gap-1 text-xs font-bold ${profile?.tier_cancel_at_period_end ? 'text-yellow-400' : isActive ? 'text-green-400' : 'text-red-400'}`}>
+              {profile?.tier_cancel_at_period_end ? <Clock size={13} /> : isActive ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+              {profile?.tier_cancel_at_period_end ? 'Cancels at period end' : isActive ? 'Active' : profile?.tier_status || 'Inactive'}
             </span>
           )}
         </div>
@@ -135,13 +136,28 @@ export default async function MembershipSettingsPage({
       {isPaid && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
           <h3 className="font-bold text-white mb-2">Manage or Cancel</h3>
-          <p className="text-xs text-zinc-500 mb-3">
-            Billing is handled by Whop, not SlipSurge directly — sign in to your Whop account to update payment info or cancel your subscription anytime.
-          </p>
-          <a href="https://whop.com" target="_blank" rel="noopener noreferrer"
-            className="inline-block border border-zinc-700 text-white hover:bg-zinc-800 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
-            Manage on Whop
-          </a>
+          {profile?.tier_cancel_at_period_end ? (
+            <p className="text-xs text-zinc-500">
+              Your subscription is set to cancel{renewalDate ? ` — you'll keep access until ${renewalDate}, then your account moves to Free` : ''}.
+            </p>
+          ) : profile?.whop_membership_id ? (
+            <>
+              <p className="text-xs text-zinc-500 mb-3">
+                Cancel any time — you'll keep your current tier until the end of the billing period, then your account moves to Free.
+              </p>
+              <CancelMembershipButton renewalDate={renewalDate} />
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-zinc-500 mb-3">
+                Billing is handled by Whop, not SlipSurge directly — sign in to your Whop account to update payment info or cancel your subscription anytime.
+              </p>
+              <a href="https://whop.com" target="_blank" rel="noopener noreferrer"
+                className="inline-block border border-zinc-700 text-white hover:bg-zinc-800 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
+                Manage on Whop
+              </a>
+            </>
+          )}
         </div>
       )}
     </div>

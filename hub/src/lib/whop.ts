@@ -132,3 +132,32 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
     return !!data?.has_access
   } catch { return false }
 }
+
+// CAVEAT: per Whop's public REST docs this is DELETE /api/v2/memberships/:id
+// — same base path as fetchAllWhopMemberships (whopMembershipsFetch.ts),
+// which IS confirmed live, but this specific verb+path has never itself been
+// exercised against a real membership. Verify against a real (non-customer)
+// test membership before trusting this in production; adjust the path if it
+// 404s/behaves unexpectedly, same caution as checkHasAccess above.
+//
+// Whop cancels at the end of the current billing period by default (access
+// continues, auto-renew stops) rather than revoking immediately — the caller
+// should reflect that ("still active until period end") rather than treating
+// a successful call as an instant downgrade. The real tier/tier_status flip
+// still happens later via the existing membership.deactivated/went_invalid
+// webhook branch once Whop actually ends the membership.
+export async function cancelWhopMembership(membershipId: string, apiKey: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  try {
+    const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      return { ok: false, status: res.status, error: errBody || `Whop returned ${res.status}` }
+    }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, status: 0, error: e?.message || 'Network error contacting Whop' }
+  }
+}

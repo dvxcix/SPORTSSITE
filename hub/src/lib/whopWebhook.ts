@@ -108,6 +108,11 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           tier_current_period_end: periodEnd,
           whop_membership_id: membershipId ?? null,
           tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
+          // A renewal payment on the still-cancelling membership can't reach
+          // here (Whop wouldn't charge it again), but a fresh purchase —
+          // same or new membership — means whatever was scheduled to lapse
+          // no longer applies, so clear it rather than leave a stale flag.
+          tier_cancel_at_period_end: false,
         }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
         await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
         // Only a genuine first-time purchase, never a renewal (see the
@@ -145,6 +150,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           tier: 'free',
           tier_status: type,
           tier_purchased_at: null,
+          tier_cancel_at_period_end: false,
         }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
         // Losing a purchased tier doesn't necessarily mean losing every
         // badge — someone who cancels the $10 add-on drops from Ultimate
