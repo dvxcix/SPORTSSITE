@@ -16,5 +16,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     ? await admin.from('nfl_teams').select('team_abbr, team_name, team_nick, team_conf, team_division, team_color, team_logo_espn').eq('team_abbr', player.latest_team).maybeSingle()
     : { data: null }
 
-  return NextResponse.json({ player, team })
+  const [{ data: gameLog }, { data: ngsPassing }, { data: ngsReceiving }, { data: ngsRushing }] = await Promise.all([
+    admin.from('nfl_player_stats').select('*').eq('player_id', id).order('season', { ascending: false }).order('week', { ascending: false }),
+    admin.from('nfl_ngs_passing').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }),
+    admin.from('nfl_ngs_receiving').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }),
+    admin.from('nfl_ngs_rushing').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }),
+  ])
+
+  return NextResponse.json({
+    player,
+    team,
+    gameLog: gameLog ?? [],
+    ngsPassing: ngsPassing ?? [],
+    ngsReceiving: ngsReceiving ?? [],
+    ngsRushing: ngsRushing ?? [],
+  })
 }

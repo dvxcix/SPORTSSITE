@@ -1,3 +1,4 @@
+import { gunzipSync } from 'zlib'
 import type { createAdminClient } from '@/lib/supabase/admin'
 
 // Free NFL data foundation — nflverse (nflreadr's underlying source) publishes
@@ -51,6 +52,18 @@ async function fetchNflverseCsv(url: string): Promise<Record<string, string>[]> 
   return parseCsv(text)
 }
 
+// player_stats.csv is plain text, but the combined NGS files (ngs_passing/
+// receiving/rushing.csv.gz — the ones that actually stay current, unlike
+// the stale/incomplete per-season ngs_YYYY_*.csv.gz assets) are gzipped.
+// Node's built-in zlib covers this with no new dependency.
+async function fetchNflverseCsvGz(url: string): Promise<Record<string, string>[]> {
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`nflverse CSV.gz ${res.status}: ${url}`)
+  const buf = Buffer.from(await res.arrayBuffer())
+  const text = gunzipSync(buf).toString('utf8')
+  return parseCsv(text)
+}
+
 const s = (v: string | undefined): string | null => (v != null && v !== '' ? v : null)
 const n = (v: string | undefined): number | null => {
   if (v == null || v === '') return null
@@ -60,6 +73,22 @@ const n = (v: string | undefined): number | null => {
 const b = (v: string | undefined): boolean | null => {
   if (v == null || v === '') return null
   return v === '1' || v.toLowerCase() === 'true'
+}
+
+// Real bug, confirmed live (2026-07-28): player_stats.csv has at least one
+// genuine duplicate (player_id, season, week, season_type) combo — Postgres
+// upsert rejects a whole batch outright ("ON CONFLICT DO UPDATE command
+// cannot affect row a second time") the moment two rows in the SAME chunk
+// share a conflict key, unlike a plain insert which would just error per-row.
+// Keeping the LAST occurrence of each key (nflverse's own row order, so a
+// later row for the same key is presumably a correction) sidesteps this for
+// every composite-keyed sync here, not just player_stats — cheap enough to
+// apply everywhere rather than debug field-by-field which source file has
+// the duplicate this week.
+function dedupeByKey<T extends Record<string, unknown>>(rows: T[], keyFields: (keyof T)[]): T[] {
+  const byKey = new Map<string, T>()
+  for (const row of rows) byKey.set(keyFields.map(f => String(row[f])).join('|'), row)
+  return Array.from(byKey.values())
 }
 
 async function upsertChunked(
@@ -187,4 +216,115 @@ export async function syncNflSchedule(admin: ReturnType<typeof createAdminClient
     }))
     .filter(r => r.game_id && r.season != null)
   return upsertChunked(admin, 'nfl_schedule', mapped, 'game_id')
+}
+
+// player_stats.csv is the combined all-seasons box-score file (~134k rows,
+// one row per player per week) — nflverse's own aggregation of raw PBP
+// into passing/rushing/receiving/fantasy totals, exactly the "season stat
+// line + per-game log" a player page needs, with no PBP aggregation work
+// of our own required. Real gap, confirmed live (2026-07-28): this combined
+// file currently only goes through the 2024 season — nflverse hasn't
+// published a 2025 file under this release yet (unlike nextgen_stats below,
+// which IS current through the 2025 postseason) — but the sync re-fetches
+// the same URL every run, so whenever nflverse catches up, the very next
+// cron run picks up 2025+ with no code change needed here.
+export async function syncNflPlayerStats(admin: ReturnType<typeof createAdminClient>, sinceSeason?: number): Promise<number> {
+  const rows = await fetchNflverseCsv(`${RELEASE_BASE}/player_stats/player_stats.csv`)
+  const mapped = rows
+    .filter(r => sinceSeason == null || Number(r.season) >= sinceSeason)
+    .map(r => ({
+      player_id: r.player_id,
+      season: n(r.season),
+      week: n(r.week),
+      season_type: s(r.season_type),
+      player_name: s(r.player_name),
+      player_display_name: s(r.player_display_name),
+      position: s(r.position),
+      position_group: s(r.position_group),
+      headshot_url: s(r.headshot_url),
+      recent_team: s(r.recent_team),
+      opponent_team: s(r.opponent_team),
+      completions: n(r.completions), attempts: n(r.attempts), passing_yards: n(r.passing_yards),
+      passing_tds: n(r.passing_tds), interceptions: n(r.interceptions),
+      sacks: n(r.sacks), sack_yards: n(r.sack_yards), sack_fumbles: n(r.sack_fumbles), sack_fumbles_lost: n(r.sack_fumbles_lost),
+      passing_air_yards: n(r.passing_air_yards), passing_yards_after_catch: n(r.passing_yards_after_catch),
+      passing_first_downs: n(r.passing_first_downs), passing_epa: n(r.passing_epa),
+      passing_2pt_conversions: n(r.passing_2pt_conversions), pacr: n(r.pacr), dakota: n(r.dakota),
+      carries: n(r.carries), rushing_yards: n(r.rushing_yards), rushing_tds: n(r.rushing_tds),
+      rushing_fumbles: n(r.rushing_fumbles), rushing_fumbles_lost: n(r.rushing_fumbles_lost),
+      rushing_first_downs: n(r.rushing_first_downs), rushing_epa: n(r.rushing_epa), rushing_2pt_conversions: n(r.rushing_2pt_conversions),
+      receptions: n(r.receptions), targets: n(r.targets), receiving_yards: n(r.receiving_yards), receiving_tds: n(r.receiving_tds),
+      receiving_fumbles: n(r.receiving_fumbles), receiving_fumbles_lost: n(r.receiving_fumbles_lost),
+      receiving_air_yards: n(r.receiving_air_yards), receiving_yards_after_catch: n(r.receiving_yards_after_catch),
+      receiving_first_downs: n(r.receiving_first_downs), receiving_epa: n(r.receiving_epa),
+      receiving_2pt_conversions: n(r.receiving_2pt_conversions), racr: n(r.racr),
+      target_share: n(r.target_share), air_yards_share: n(r.air_yards_share), wopr: n(r.wopr),
+      special_teams_tds: n(r.special_teams_tds), fantasy_points: n(r.fantasy_points), fantasy_points_ppr: n(r.fantasy_points_ppr),
+      updated_at: new Date().toISOString(),
+    }))
+    .filter(r => r.player_id && r.season != null && r.week != null && r.season_type)
+  return upsertChunked(admin, 'nfl_player_stats', dedupeByKey(mapped, ['player_id', 'season', 'week', 'season_type']), 'player_id,season,week,season_type')
+}
+
+// The combined ngs_passing/receiving/rushing.csv.gz files (unlike the stale
+// per-season ngs_YYYY_*.csv.gz assets, which stop after a couple of weeks
+// each season) are nflverse's actively-maintained source, confirmed live
+// running through the 2025 postseason. week=0 is nflverse's own convention
+// for "full season aggregate" row, alongside individual weeks 1-18/POST —
+// both are kept as-is rather than treated specially here, since which one
+// a caller wants ("season" vs "recent") is a query-time concern, not a
+// sync-time one.
+export async function syncNflNgsPassing(admin: ReturnType<typeof createAdminClient>): Promise<number> {
+  const rows = await fetchNflverseCsvGz(`${RELEASE_BASE}/nextgen_stats/ngs_passing.csv.gz`)
+  const mapped = rows.map(r => ({
+    player_gsis_id: r.player_gsis_id, season: n(r.season), week: n(r.week), season_type: s(r.season_type),
+    player_display_name: s(r.player_display_name), player_first_name: s(r.player_first_name), player_last_name: s(r.player_last_name),
+    player_short_name: s(r.player_short_name), player_position: s(r.player_position), team_abbr: s(r.team_abbr),
+    player_jersey_number: n(r.player_jersey_number),
+    avg_time_to_throw: n(r.avg_time_to_throw), avg_completed_air_yards: n(r.avg_completed_air_yards),
+    avg_intended_air_yards: n(r.avg_intended_air_yards), avg_air_yards_differential: n(r.avg_air_yards_differential),
+    aggressiveness: n(r.aggressiveness), max_completed_air_distance: n(r.max_completed_air_distance),
+    avg_air_yards_to_sticks: n(r.avg_air_yards_to_sticks), attempts: n(r.attempts), pass_yards: n(r.pass_yards),
+    pass_touchdowns: n(r.pass_touchdowns), interceptions: n(r.interceptions), passer_rating: n(r.passer_rating),
+    completions: n(r.completions), completion_percentage: n(r.completion_percentage),
+    expected_completion_percentage: n(r.expected_completion_percentage),
+    completion_percentage_above_expectation: n(r.completion_percentage_above_expectation),
+    avg_air_distance: n(r.avg_air_distance), max_air_distance: n(r.max_air_distance),
+    updated_at: new Date().toISOString(),
+  })).filter(r => r.player_gsis_id && r.season != null && r.week != null && r.season_type)
+  return upsertChunked(admin, 'nfl_ngs_passing', dedupeByKey(mapped, ['player_gsis_id', 'season', 'week', 'season_type']), 'player_gsis_id,season,week,season_type')
+}
+
+export async function syncNflNgsReceiving(admin: ReturnType<typeof createAdminClient>): Promise<number> {
+  const rows = await fetchNflverseCsvGz(`${RELEASE_BASE}/nextgen_stats/ngs_receiving.csv.gz`)
+  const mapped = rows.map(r => ({
+    player_gsis_id: r.player_gsis_id, season: n(r.season), week: n(r.week), season_type: s(r.season_type),
+    player_display_name: s(r.player_display_name), player_first_name: s(r.player_first_name), player_last_name: s(r.player_last_name),
+    player_short_name: s(r.player_short_name), player_position: s(r.player_position), team_abbr: s(r.team_abbr),
+    player_jersey_number: n(r.player_jersey_number),
+    avg_cushion: n(r.avg_cushion), avg_separation: n(r.avg_separation), avg_intended_air_yards: n(r.avg_intended_air_yards),
+    percent_share_of_intended_air_yards: n(r.percent_share_of_intended_air_yards),
+    receptions: n(r.receptions), targets: n(r.targets), catch_percentage: n(r.catch_percentage),
+    yards: n(r.yards), rec_touchdowns: n(r.rec_touchdowns), avg_yac: n(r.avg_yac),
+    avg_expected_yac: n(r.avg_expected_yac), avg_yac_above_expectation: n(r.avg_yac_above_expectation),
+    updated_at: new Date().toISOString(),
+  })).filter(r => r.player_gsis_id && r.season != null && r.week != null && r.season_type)
+  return upsertChunked(admin, 'nfl_ngs_receiving', dedupeByKey(mapped, ['player_gsis_id', 'season', 'week', 'season_type']), 'player_gsis_id,season,week,season_type')
+}
+
+export async function syncNflNgsRushing(admin: ReturnType<typeof createAdminClient>): Promise<number> {
+  const rows = await fetchNflverseCsvGz(`${RELEASE_BASE}/nextgen_stats/ngs_rushing.csv.gz`)
+  const mapped = rows.map(r => ({
+    player_gsis_id: r.player_gsis_id, season: n(r.season), week: n(r.week), season_type: s(r.season_type),
+    player_display_name: s(r.player_display_name), player_first_name: s(r.player_first_name), player_last_name: s(r.player_last_name),
+    player_short_name: s(r.player_short_name), player_position: s(r.player_position), team_abbr: s(r.team_abbr),
+    player_jersey_number: n(r.player_jersey_number),
+    efficiency: n(r.efficiency), percent_attempts_gte_eight_defenders: n(r.percent_attempts_gte_eight_defenders),
+    avg_time_to_los: n(r.avg_time_to_los), rush_attempts: n(r.rush_attempts), rush_yards: n(r.rush_yards),
+    avg_rush_yards: n(r.avg_rush_yards), rush_touchdowns: n(r.rush_touchdowns),
+    expected_rush_yards: n(r.expected_rush_yards), rush_yards_over_expected: n(r.rush_yards_over_expected),
+    rush_yards_over_expected_per_att: n(r.rush_yards_over_expected_per_att), rush_pct_over_expected: n(r.rush_pct_over_expected),
+    updated_at: new Date().toISOString(),
+  })).filter(r => r.player_gsis_id && r.season != null && r.week != null && r.season_type)
+  return upsertChunked(admin, 'nfl_ngs_rushing', dedupeByKey(mapped, ['player_gsis_id', 'season', 'week', 'season_type']), 'player_gsis_id,season,week,season_type')
 }

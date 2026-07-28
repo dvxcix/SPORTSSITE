@@ -32,8 +32,10 @@ type QuickResults = {
   users: any[]; posts: any[]
   players: { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null }[]
   teams: { id: number; abbr: string; name: string; gamePk: number | null }[]
+  nflPlayers: { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null }[]
+  nflTeams: { team_abbr: string; team_name: string; team_logo_espn: string | null }[]
 }
-const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [] }
+const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [], nflPlayers: [], nflTeams: [] }
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, profile } = useAuth()
@@ -66,7 +68,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     setQuickLoading(true)
     const t = setTimeout(async () => {
       const postCols = 'id, content, pick_data, author:users!posts_author_id_fkey(username, display_name)'
-      const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData] = await Promise.all([
+      const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData] = await Promise.all([
         supabase.from('users')
           .select('id, username, display_name, avatar_url')
           .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
@@ -89,6 +91,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           .order('created_at', { ascending: false })
           .limit(150),
         fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+        fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
       ])
       if (cancelled) return
       const q = query.toLowerCase()
@@ -101,13 +104,15 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         users: u ?? [], posts: p,
         players: (sportsData.players ?? []).slice(0, 3),
         teams: (sportsData.teams ?? []).slice(0, 2),
+        nflPlayers: (nflData.players ?? []).slice(0, 3),
+        nflTeams: (nflData.teams ?? []).slice(0, 2),
       })
       setQuickLoading(false)
     }, 250)
     return () => { cancelled = true; clearTimeout(t) }
   }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0
+  const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0
 
   // Same effectiveTier() fold used everywhere else tier is checked or shown
   // (TierGate, requireTier, /pricing, /settings/membership) — the profile
@@ -273,6 +278,30 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{[p.position, p.teamName].filter(Boolean).join(' · ')}</div>
+                    </div>
+                  </button>
+                ))}
+                {quickResults.nflTeams.map(t => (
+                  <button key={`nt-${t.team_abbr}`} onClick={() => goTo(`/nfl/teams/${t.team_abbr}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    className="notif-dropdown-item">
+                    {t.team_logo_espn
+                      ? <img src={t.team_logo_espn} alt={t.team_abbr} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
+                      : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />}
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{t.team_name}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, color: 'var(--text-3)' }}>NFL</span>
+                  </button>
+                ))}
+                {quickResults.nflPlayers.map(p => (
+                  <button key={`np-${p.gsis_id}`} onClick={() => goTo(`/nfl/players/${p.gsis_id}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    className="notif-dropdown-item">
+                    {p.headshot
+                      ? <img src={p.headshot} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.display_name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{[p.position, p.latest_team].filter(Boolean).join(' · ')}</div>
                     </div>
                   </button>
                 ))}
