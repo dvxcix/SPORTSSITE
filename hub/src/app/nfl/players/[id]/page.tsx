@@ -20,6 +20,38 @@ async function getPlayerData(id: string) {
     admin.from('nfl_ngs_rushing').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }).limit(5),
   ])
 
+  // Opponent adjustment ("defense vs position") for the player's next
+  // scheduled game — nfl_schedule already has the 2026 slate published even
+  // pre-season, so this resolves to a real upcoming opponent as soon as
+  // there is one.
+  let opponent: { team_abbr: string; games: number; season: number } | null = null
+  let dvpRows: Record<string, unknown>[] = []
+  if (player.latest_team) {
+    const today = new Date().toISOString().slice(0, 10)
+    const { data: nextGame } = await admin
+      .from('nfl_schedule')
+      .select('home_team, away_team, gameday')
+      .or(`home_team.eq.${player.latest_team},away_team.eq.${player.latest_team}`)
+      .gte('gameday', today)
+      .order('gameday', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    const opponentTeam = nextGame ? (nextGame.home_team === player.latest_team ? nextGame.away_team : nextGame.home_team) : null
+    if (opponentTeam && player.position) {
+      const { data } = await admin
+        .from('nfl_dvp')
+        .select('*')
+        .eq('opponent_team', opponentTeam)
+        .eq('position', player.position)
+        .order('season', { ascending: false })
+      const latestSeason = data?.[0]?.season as number | undefined
+      if (latestSeason != null) {
+        dvpRows = (data ?? []).filter(r => r.season === latestSeason)
+        opponent = { team_abbr: opponentTeam, games: dvpRows[0]?.games as number ?? 0, season: latestSeason }
+      }
+    }
+  }
+
   return {
     player,
     team,
@@ -27,6 +59,8 @@ async function getPlayerData(id: string) {
     ngsPassing: ngsPassing ?? [],
     ngsReceiving: ngsReceiving ?? [],
     ngsRushing: ngsRushing ?? [],
+    opponent,
+    dvpRows,
   }
 }
 
@@ -81,7 +115,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
   const { id } = await params
   const data = await getPlayerData(id)
   if (!data) notFound()
-  const { player, team, gameLog, ngsPassing, ngsReceiving, ngsRushing } = data
+  const { player, team, gameLog, ngsPassing, ngsReceiving, ngsRushing, opponent, dvpRows } = data
 
   const heightStr = player.height ? `${Math.floor(player.height / 12)}'${player.height % 12}"` : null
 
@@ -90,6 +124,13 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
   const seasonStats = sumBySeason(gameLog as StatRow[])
   const recentGames = (gameLog as StatRow[]).slice(0, 5)
   const ngsRows: StatRow[] = isQb ? ngsPassing : isRb ? ngsRushing : ngsReceiving
+
+  const DVP_LABELS: Record<string, string> = {
+    passing_yards: 'Pass Yds', passing_tds: 'Pass TD', interceptions: 'INT', completions: 'Comp', attempts: 'Att',
+    rushing_yards: 'Rush Yds', rushing_tds: 'Rush TD', receiving_yards: 'Rec Yds', receiving_tds: 'Rec TD',
+    receptions: 'Rec', targets: 'Tgt',
+  }
+  const dvpByCategory = new Map((dvpRows as StatRow[]).map(r => [r.stat_category as string, r]))
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
@@ -114,6 +155,36 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           </p>
         </div>
       </div>
+
+      {opponent && dvpByCategory.size > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6 overflow-x-auto">
+          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+            Next Matchup vs {opponent.team_abbr} <span className="normal-case text-zinc-600">({opponent.season} defense vs {player.position}, {opponent.games} games)</span>
+          </h2>
+          <div className="flex gap-4 overflow-x-auto">
+            {(isQb
+              ? ['passing_yards', 'passing_tds', 'interceptions']
+              : isRb
+              ? ['rushing_yards', 'rushing_tds', 'receiving_yards', 'receptions']
+              : ['receiving_yards', 'receiving_tds', 'receptions', 'targets']
+            ).map(cat => {
+              const row = dvpByCategory.get(cat)
+              if (!row) return null
+              const pctDiff = row.pct_diff as number | null
+              const favorable = pctDiff != null && pctDiff > 0
+              return (
+                <div key={cat} className="flex-shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg p-3 min-w-[120px]">
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">{DVP_LABELS[cat] ?? cat}</div>
+                  <div className="text-sm font-bold text-white tabular-nums">{num(row.avg_allowed, 1)}/gm</div>
+                  <div className={`text-xs font-semibold tabular-nums ${pctDiff == null ? 'text-zinc-500' : favorable ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {pctDiff != null ? `${pctDiff > 0 ? '+' : ''}${pctDiff.toFixed(1)}% vs avg` : '—'}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
         <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Bio</h2>

@@ -328,3 +328,158 @@ export async function syncNflNgsRushing(admin: ReturnType<typeof createAdminClie
   })).filter(r => r.player_gsis_id && r.season != null && r.week != null && r.season_type)
   return upsertChunked(admin, 'nfl_ngs_rushing', dedupeByKey(mapped, ['player_gsis_id', 'season', 'week', 'season_type']), 'player_gsis_id,season,week,season_type')
 }
+
+// Raw play-by-play — unlike every sync above (one combined all-seasons file),
+// nflverse only publishes pbp as one release asset PER SEASON (~372 columns,
+// ~49k rows, ~98MB uncompressed each) under its own 'pbp' release tag, not
+// under RELEASE_BASE's other per-category tags. Real gap confirmed live
+// (2026-07-28): the field list is enormous and most of it (lateral-play
+// tracking, individual tackle-assist attribution, WP curves for exotic bet
+// markets) is never going to matter for player-prop research. Rather than
+// hand-maintain 372 typed columns (or worse, silently drop the long tail),
+// this keeps ~100 typed columns for everything prop research actually
+// touches — situation (down/distance/red zone), efficiency (EPA/WPA/CPOE/
+// xyac/pass_oe), and the passer/rusher/receiver id/name/yardage fields any
+// per-player split needs — and stashes the ENTIRE untouched row in `raw`
+// jsonb, so nothing is actually lost even though it isn't individually
+// indexed.
+const PBP_NUM_FIELDS = [
+  'yardline_100', 'drive', 'quarter_seconds_remaining', 'half_seconds_remaining', 'game_seconds_remaining',
+  'yards_gained', 'air_yards', 'yards_after_catch', 'penalty_yards',
+  'ep', 'epa', 'wp', 'wpa', 'def_wp', 'home_wp', 'away_wp', 'qb_epa', 'air_epa', 'yac_epa', 'comp_air_epa', 'comp_yac_epa',
+  'cp', 'cpoe', 'xyac_epa', 'xyac_mean_yardage', 'xyac_median_yardage', 'xyac_success', 'xyac_fd', 'xpass', 'pass_oe',
+  'passing_yards', 'receiving_yards', 'rushing_yards',
+  'result', 'total', 'spread_line', 'total_line', 'temp', 'wind', 'kick_distance',
+  'fixed_drive', 'drive_play_count', 'drive_first_downs',
+] as const
+const PBP_INT_FIELDS = [
+  'season', 'week', 'qtr', 'down', 'ydstogo', 'total_home_score', 'total_away_score',
+  'posteam_score', 'defteam_score', 'score_differential', 'home_score', 'away_score',
+] as const
+const PBP_BOOL_FIELDS = [
+  'goal_to_go', 'shotgun', 'no_huddle', 'qb_dropback', 'qb_kneel', 'qb_spike', 'qb_scramble',
+  'sack', 'complete_pass', 'incomplete_pass', 'interception', 'fumble', 'fumble_lost',
+  'touchdown', 'pass_touchdown', 'rush_touchdown', 'first_down', 'first_down_rush', 'first_down_pass', 'first_down_penalty',
+  'third_down_converted', 'third_down_failed', 'fourth_down_converted', 'fourth_down_failed', 'penalty', 'safety', 'touchback',
+  'div_game', 'success', 'rush_attempt', 'pass_attempt', 'field_goal_attempt', 'punt_attempt',
+  'extra_point_attempt', 'two_point_attempt', 'drive_inside20', 'drive_ended_with_score',
+  'special_teams_play', 'aborted_play', 'play_deleted',
+] as const
+const PBP_STR_FIELDS = [
+  'old_game_id', 'season_type', 'home_team', 'away_team', 'posteam', 'posteam_type', 'defteam', 'side_of_field',
+  'game_half', 'play_type', 'play_type_nfl', 'pass_length', 'pass_location', 'run_location', 'run_gap',
+  'penalty_team', 'penalty_type', 'roof', 'surface', 'location', 'stadium',
+  'field_goal_result', 'extra_point_result', 'two_point_conv_result', 'fixed_drive_result', 'drive_time_of_possession', 'st_play_type',
+  'passer_player_id', 'passer_player_name', 'receiver_player_id', 'receiver_player_name', 'rusher_player_id', 'rusher_player_name',
+  'interception_player_id', 'interception_player_name', 'sack_player_id', 'sack_player_name',
+  'fumble_recovery_1_player_id', 'fumble_recovery_1_player_name',
+  'punt_returner_player_id', 'punt_returner_player_name', 'kickoff_returner_player_id', 'kickoff_returner_player_name',
+  'kicker_player_id', 'kicker_player_name', 'punter_player_id', 'punter_player_name',
+] as const
+
+export async function syncNflPbp(admin: ReturnType<typeof createAdminClient>, season: number): Promise<number> {
+  const rows = await fetchNflverseCsvGz(`https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_${season}.csv.gz`)
+  const mapped = rows.map(r => {
+    const row: Record<string, unknown> = {
+      play_id: n(r.play_id),
+      game_id: r.game_id,
+      game_date: s(r.game_date),
+      play_desc: s(r.desc),
+      raw: r,
+      updated_at: new Date().toISOString(),
+    }
+    for (const f of PBP_NUM_FIELDS) row[f] = n(r[f])
+    for (const f of PBP_INT_FIELDS) row[f] = n(r[f])
+    for (const f of PBP_BOOL_FIELDS) row[f] = b(r[f])
+    for (const f of PBP_STR_FIELDS) row[f] = s(r[f])
+    return row
+  }).filter(r => r.game_id && r.play_id != null)
+  return upsertChunked(admin, 'nfl_pbp', dedupeByKey(mapped, ['game_id', 'play_id']), 'game_id,play_id')
+}
+
+// Opponent-adjustment ("defense vs position") — the real answer to "is this
+// matchup good for a prop" doesn't need play-by-play at all: nfl_player_stats
+// (already synced, full history) already has opponent_team + position on
+// every weekly box score row, so "how much does this defense allow to WRs
+// per game, vs the league average" is a pure aggregation over data already
+// on hand. PBP (above) is for deeper route/leverage-specific splits later;
+// this is the immediate, cheap layer.
+const DVP_STAT_FIELDS: Record<string, readonly string[]> = {
+  QB: ['passing_yards', 'passing_tds', 'interceptions', 'completions', 'attempts'],
+  RB: ['rushing_yards', 'rushing_tds', 'receiving_yards', 'receptions'],
+  FB: ['rushing_yards', 'rushing_tds', 'receiving_yards', 'receptions'],
+  WR: ['receiving_yards', 'receiving_tds', 'receptions', 'targets'],
+  TE: ['receiving_yards', 'receiving_tds', 'receptions', 'targets'],
+}
+
+export async function computeNflDvp(admin: ReturnType<typeof createAdminClient>, season: number): Promise<number> {
+  // PostgREST caps a single select at 1000 rows by default — a REG season
+  // is ~5,300+ nfl_player_stats rows, so this must page through with
+  // .range() or it silently undercounts games for every team.
+  const rows: Record<string, unknown>[] = []
+  const PAGE = 1000
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await admin
+      .from('nfl_player_stats')
+      .select('opponent_team, position, week, completions, attempts, passing_yards, passing_tds, interceptions, rushing_yards, rushing_tds, receptions, targets, receiving_yards, receiving_tds')
+      .eq('season', season)
+      .eq('season_type', 'REG')
+      .range(offset, offset + PAGE - 1)
+    if (error) throw error
+    rows.push(...(data ?? []))
+    if (!data || data.length < PAGE) break
+  }
+
+  // Step 1: sum every stat allowed to each position, by (opponent_team, week)
+  // — multiple players of the same position facing the same defense in the
+  // same week all contribute to that one game's "allowed" total.
+  const perGame = new Map<string, Record<string, number>>()
+  for (const r of rows ?? []) {
+    const position = r.position as string | null
+    if (!position || !DVP_STAT_FIELDS[position] || r.opponent_team == null || r.week == null) continue
+    const key = `${r.opponent_team}|${position}|${r.week}`
+    const acc = perGame.get(key) ?? {}
+    for (const f of DVP_STAT_FIELDS[position]) acc[f] = (acc[f] ?? 0) + (Number((r as Record<string, unknown>)[f]) || 0)
+    perGame.set(key, acc)
+  }
+
+  // Step 2: from the per-game totals, roll up to (opponent_team, position)
+  // averages, and separately to league-wide (position) averages for the
+  // pct_diff baseline.
+  type Agg = { games: number; totals: Record<string, number> }
+  const byTeamPos = new Map<string, Agg>()
+  const byPos = new Map<string, Agg>()
+  for (const [key, totals] of perGame) {
+    const [opponent_team, position] = key.split('|')
+    const teamPosAgg = byTeamPos.get(`${opponent_team}|${position}`) ?? { games: 0, totals: {} }
+    teamPosAgg.games += 1
+    for (const [f, v] of Object.entries(totals)) teamPosAgg.totals[f] = (teamPosAgg.totals[f] ?? 0) + v
+    byTeamPos.set(`${opponent_team}|${position}`, teamPosAgg)
+
+    const posAgg = byPos.get(position) ?? { games: 0, totals: {} }
+    posAgg.games += 1
+    for (const [f, v] of Object.entries(totals)) posAgg.totals[f] = (posAgg.totals[f] ?? 0) + v
+    byPos.set(position, posAgg)
+  }
+
+  const mapped: Record<string, unknown>[] = []
+  for (const [key, agg] of byTeamPos) {
+    const [opponent_team, position] = key.split('|')
+    const leagueAgg = byPos.get(position)
+    for (const f of DVP_STAT_FIELDS[position]) {
+      const avg_allowed = agg.totals[f] != null ? agg.totals[f] / agg.games : null
+      const leagueAvg = leagueAgg && leagueAgg.games > 0 ? (leagueAgg.totals[f] ?? 0) / leagueAgg.games : null
+      if (avg_allowed == null || leagueAvg == null) continue
+      mapped.push({
+        season, position, opponent_team, stat_category: f,
+        games: agg.games,
+        total_allowed: agg.totals[f] ?? 0,
+        avg_allowed,
+        league_avg_allowed: leagueAvg,
+        pct_diff: leagueAvg !== 0 ? ((avg_allowed - leagueAvg) / leagueAvg) * 100 : null,
+        updated_at: new Date().toISOString(),
+      })
+    }
+  }
+  return upsertChunked(admin, 'nfl_dvp', mapped, 'season,position,opponent_team,stat_category')
+}
