@@ -94,6 +94,39 @@ export const SWING_TIMING_MISS_DISTANCE: SplitLeaderboard = {
     `&sortColumn=bat_contact_code&sortDirection=asc&csv=true`,
 }
 
+// Real incident: savant-sync-swing-take and savant-sync-batting-stance were
+// throwing "ON CONFLICT DO UPDATE command cannot affect row a second time"
+// (Postgres 21000) daily — Savant's own CSV occasionally repeats a row for
+// the same (mlb_id, role, category, window_type, dims_key) within one
+// response, which Postgres's single-statement upsert can't reconcile since
+// it isn't allowed to touch the same target row twice in one command. Same
+// class of bug nflverseSync.ts's own dedupeByKey already fixes there — keep
+// the last occurrence, applied before every upsert in this file that keys
+// on this table's real unique constraint.
+function dedupeByKey<T extends Record<string, unknown>>(rows: T[], keyFields: (keyof T)[]): T[] {
+  const byKey = new Map<string, T>()
+  for (const row of rows) byKey.set(keyFields.map(f => String(row[f])).join('|'), row)
+  return Array.from(byKey.values())
+}
+
+// Real incident: savant-splits:swing_timing_miss_distance/bat_tracking/
+// swing_path_attack_angle were throwing 57014 statement-timeout — these
+// leaderboards' dim columns (up to 4, e.g. bat_side x pitch_hand x
+// api_pitch_type x bat_contact_code) fan a single Savant response out into
+// thousands of split rows across every qualifying player, all of which used
+// to go into ONE unchunked upsert call. nflverseSync.ts's own
+// upsertChunked already proved 500-row chunks keep an upsert well inside
+// statement_timeout for exactly this shape of bulk write; same fix here.
+async function upsertSplitsChunked(admin: AdminClient, rows: Record<string, unknown>[]): Promise<number> {
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await admin.from('player_statcast_splits')
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'mlb_id,role,category,window_type,dims_key' })
+    if (error) throw error
+  }
+  return rows.length
+}
+
 export type SplitWindowType = 'season' | 'recency' | 'l1' | 'l3' | 'l5' | 'l10'
 
 export async function syncSplitLeaderboard(
@@ -131,11 +164,10 @@ export async function syncSplitLeaderboard(
     }
   })
 
-  const { error } = await admin.from('player_statcast_splits')
-    .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
-  if (error) throw error
+  const deduped = dedupeByKey(upsertRows, ['mlb_id', 'role', 'category', 'window_type', 'dims_key'])
+  const rowsWritten = await upsertSplitsChunked(admin, deduped)
 
-  return { rows: upsertRows.length }
+  return { rows: rowsWritten }
 }
 
 // MLB's own season-schedule endpoint confirmed 2026's regularSeasonStartDate.
@@ -241,11 +273,10 @@ export async function syncSwingTake(admin: AdminClient, season: number) {
         }
       })
 
-      const { error } = await admin.from('player_statcast_splits')
-        .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
-      if (error) throw error
+      const deduped = dedupeByKey(upsertRows, ['mlb_id', 'role', 'category', 'window_type', 'dims_key'])
+      const rowsWritten = await upsertSplitsChunked(admin, deduped)
 
-      return [key, { rows: upsertRows.length }] as const
+      return [key, { rows: rowsWritten }] as const
     } catch (e: any) {
       console.error('[savant-swing-take] job failed', key, e)
       return [key, { error: e?.message || String(e) }] as const
@@ -308,11 +339,8 @@ export async function syncBattingStance(admin: AdminClient, season: number) {
           }
         })
 
-        const { error } = await admin.from('player_statcast_splits')
-          .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
-        if (error) throw error
-
-        results[key] = { rows: upsertRows.length }
+        const deduped = dedupeByKey(upsertRows, ['mlb_id', 'role', 'category', 'window_type', 'dims_key'])
+        results[key] = { rows: await upsertSplitsChunked(admin, deduped) }
       } catch (e: any) {
         console.error('[savant-batting-stance] job failed', key, e)
         results[key] = { error: e?.message || String(e) }
@@ -421,11 +449,8 @@ export async function syncPitchArsenalStats(admin: AdminClient, season: number) 
         }
       })
 
-      const { error } = await admin.from('player_statcast_splits')
-        .upsert(upsertRows, { onConflict: 'mlb_id,role,category,window_type,dims_key' })
-      if (error) throw error
-
-      results[role] = { rows: upsertRows.length }
+      const deduped = dedupeByKey(upsertRows, ['mlb_id', 'role', 'category', 'window_type', 'dims_key'])
+      results[role] = { rows: await upsertSplitsChunked(admin, deduped) }
     } catch (e: any) {
       console.error('[savant-pitch-arsenal-stats] failed', role, e)
       results[role] = { error: e?.message || String(e) }

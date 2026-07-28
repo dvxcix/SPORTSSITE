@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'crypto'
+import { createHash } from 'crypto'
 
 // Server-side X (Twitter) Conversions API — fires two events: a brand-new
 // account signing up (auth/callback/route.ts, auth/whop/callback/route.ts)
@@ -19,12 +19,30 @@ function sha256Hex(input: string): string {
   return createHash('sha256').update(input.trim().toLowerCase()).digest('hex')
 }
 
+// Real incident: X rejected every single conversion with "MISSING_PARAMETER
+// event_id" — X's `event_id` is NOT a per-call unique id we generate (that's
+// what `conversion_id` below is for); per X's own docs it's the fixed Event
+// ID of a specific tracked conversion event, created once in Ads Manager
+// (looks like a short code, e.g. "ol288") and reused on every call for that
+// event type. The old code generated a fresh random string per call, which
+// X correctly doesn't recognize as any registered event. One real Event ID
+// per event type this app tracks, read from env — set X_SIGNUP_EVENT_ID and
+// X_PURCHASE_EVENT_ID to the values shown for each event in Ads Manager's
+// Events page (business.x.com > Tools > Events Manager).
+const X_EVENT_IDS: Record<'signup' | 'purchase', string | undefined> = {
+  signup: process.env.X_SIGNUP_EVENT_ID,
+  purchase: process.env.X_PURCHASE_EVENT_ID,
+}
+
 // Fire-and-forget by design — a failure or slow response from X's API must
 // never block or fail the real user-facing action (signup redirect, webhook
 // ack, cron reconcile) it's attached to. Every failure path just logs.
 export async function sendXConversion({
-  conversionId, email, eventSourceUrl, ip, userAgent,
+  eventType, conversionId, email, eventSourceUrl, ip, userAgent,
 }: {
+  // Which registered X conversion event this call reports — determines
+  // which X_*_EVENT_ID env var supplies the required event_id.
+  eventType: 'signup' | 'purchase'
   // Stable per-real-world-event key (e.g. `signup-${userId}`,
   // `purchase-${userId}`) — lets X dedupe if this ever fires twice for the
   // same actual signup/purchase.
@@ -37,6 +55,11 @@ export async function sendXConversion({
   const token = process.env.X_PIXEL_ACCESSTOKEN
   if (!token) {
     console.error('[xConversion] X_PIXEL_ACCESSTOKEN not configured — skipping', conversionId)
+    return
+  }
+  const eventId = X_EVENT_IDS[eventType]
+  if (!eventId) {
+    console.error(`[xConversion] X_${eventType.toUpperCase()}_EVENT_ID not configured — skipping`, conversionId)
     return
   }
 
@@ -62,7 +85,7 @@ export async function sendXConversion({
       body: JSON.stringify({
         conversions: [{
           conversion_time: new Date().toISOString(),
-          event_id: `tw-${X_PIXEL_ID}-${randomUUID()}`,
+          event_id: eventId,
           ...(eventSourceUrl ? { event_source_url: eventSourceUrl } : {}),
           conversion_id: conversionId,
           identifiers: [identifiers],

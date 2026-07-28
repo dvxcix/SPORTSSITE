@@ -95,7 +95,31 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  // Real incident (confirmed via Vercel logs: ~44 users/week hitting this):
+  // @supabase/ssr rotates the refresh token on every use, so when a page
+  // load fires several concurrent requests through this middleware (common
+  // — a page and its parallel API calls all carry the same stale access
+  // token), each one tries to refresh with the SAME cookie-borne refresh
+  // token. The first to land wins and gets a new one; every other
+  // concurrent request's refresh attempt fails with "already used" or "not
+  // found" against a token that's already been rotated out from under it —
+  // even though the user's session is perfectly valid. Before this check,
+  // that failure left `user` null, which the block below (correctly, for a
+  // truly logged-out visitor) treated as a hard redirect to /auth/login —
+  // bouncing a real active session for what's actually a same-session race
+  // with a sibling request, not an expired login. Passing this one request
+  // through unauthenticated (skip the redirect/onboarding gate below, don't
+  // touch cookies) is the safe side of the race: the next request from this
+  // same browser carries whichever refresh token cookie actually won, and
+  // resolves normally. Any GENUINELY dead session hits this same code path
+  // on every subsequent request too, and gets handled by whatever
+  // page/route-level auth check runs downstream instead of a middleware
+  // redirect — not silently treated as logged in.
+  if (authError && (authError.code === 'refresh_token_already_used' || authError.code === 'refresh_token_not_found')) {
+    return supabaseResponse
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   // Only the marketing homepage, static legal/info pages, and pricing (no

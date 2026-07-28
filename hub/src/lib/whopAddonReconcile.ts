@@ -77,7 +77,7 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     // reasoning as whopWebhook.ts, must never delay this reconcile job.
     if (isFirstPurchase && updated.email) {
       const email = updated.email
-      after(() => sendXConversion({ conversionId: `purchase-${internalUserId}`, email }))
+      after(() => sendXConversion({ eventType: 'purchase', conversionId: `purchase-${internalUserId}`, email }))
     }
     results.push({ membershipId, internalUserId, username: updated.username, status, granted: planInfo.tier })
   }

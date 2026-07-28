@@ -203,6 +203,7 @@ export async function GET(request: Request) {
       const ip = clientIpFromRequest(request)
       const userAgent = request.headers.get('user-agent')
       after(() => sendXConversion({
+        eventType: 'signup',
         conversionId: `signup-${authUserId}`,
         email,
         eventSourceUrl: `${origin}/auth/whop/callback`,

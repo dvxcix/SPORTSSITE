@@ -66,7 +66,20 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     const metadata = data?.metadata ?? {}
     const internalUserId: string | undefined = metadata?.internal_user_id
     const planId: string | undefined = data?.plan_id ?? data?.plan?.id
-    const membershipId: string | undefined = data?.membership_id ?? data?.id
+    // Real bug (confirmed via Whop's actual payment.succeeded schema): on a
+    // payment event, `data` is the PAYMENT object, and its own real
+    // membership reference lives at `data.membership` (a plain "mem_..."
+    // string) — there is no `data.membership_id` field, so the old
+    // `data?.membership_id ?? data?.id` fell through to `data.id`, which on
+    // a payment event is the PAYMENT's own "pay_..." id, not a membership
+    // id. That got written straight into users.whop_membership_id, so any
+    // later cancelWhopMembership() call sent Whop's cancel endpoint a
+    // payment id and got back a real "No such Membership found" 404. On a
+    // membership.* event `data` genuinely IS the membership resource (no
+    // `.membership` field on itself), so this still correctly falls through
+    // to `data.id` there — unchanged for that case.
+    const membershipId: string | undefined =
+      (typeof data?.membership === 'string' ? data.membership : data?.membership?.id) ?? data?.membership_id ?? data?.id
     const periodEndRaw = data?.renewal_period_end ?? data?.period_end ?? data?.expires_at
     const periodEnd = typeof periodEndRaw === 'number'
       ? new Date(periodEndRaw * 1000).toISOString()
@@ -121,7 +134,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         // webhook's ack to Whop or fail the tier grant itself.
         if (isFirstPurchase && updated?.email) {
           const email = updated.email
-          after(() => sendXConversion({ conversionId: `purchase-${internalUserId}`, email }))
+          after(() => sendXConversion({ eventType: 'purchase', conversionId: `purchase-${internalUserId}`, email }))
         }
         break
       }

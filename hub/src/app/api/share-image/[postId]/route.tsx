@@ -75,8 +75,19 @@ function TeamLine({ team, detail, fontSize, color }: { team?: string | null; det
   )
 }
 
+// Real incident: satori (what ImageResponse renders through) can only
+// decode PNG/JPEG for a fetched <img src>, not WebP — a user or player
+// headshot stored as .webp (common from Discord/X-sourced avatars, or a
+// browser upload that picked WebP) made the whole share-image request throw
+// "Unsupported image type: image/webp" instead of just that one avatar.
+// Falling back to the initials placeholder for a WebP source keeps the rest
+// of the card rendering instead of failing the entire image.
+function isUnsupportedImageFormat(src: string): boolean {
+  return /\.webp(\?|$)/i.test(src)
+}
+
 function Avatar({ src, name, size }: { src?: string | null; name?: string | null; size: number }) {
-  if (src) return <img src={src} width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  if (src && !isUnsupportedImageFormat(src)) return <img src={src} width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   return (
     <div style={{
       display: 'flex', width: size, height: size, borderRadius: '50%', flexShrink: 0,
