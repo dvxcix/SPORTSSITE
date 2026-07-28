@@ -72,17 +72,30 @@ const SUM_FIELDS = [
   'receptions', 'targets', 'receiving_yards', 'receiving_tds',
 ] as const
 
+// week=0 rows are a season-total stopgap fill (used for a season nflverse
+// hasn't published real weekly data for yet — same week=0 "aggregate" row
+// convention nflverse's own NGS files already use), not a real game. Once
+// real weekly rows exist for that season, those are summed and the
+// stopgap row is ignored entirely, so the total never double-counts.
 function sumBySeason(gameLog: StatRow[]): StatRow[] {
-  const bySeason = new Map<string, StatRow>()
+  const bySeason = new Map<number, StatRow[]>()
   for (const row of gameLog) {
     if (row.season_type !== 'REG') continue
-    const key = `${row.season}`
-    const acc = bySeason.get(key) ?? { season: row.season, games: 0 }
-    acc.games = (acc.games as number) + 1
-    for (const f of SUM_FIELDS) acc[f] = ((acc[f] as number) ?? 0) + ((row[f] as number) ?? 0)
-    bySeason.set(key, acc)
+    const season = row.season as number
+    const rows = bySeason.get(season) ?? []
+    rows.push(row)
+    bySeason.set(season, rows)
   }
-  return Array.from(bySeason.values()).sort((a, b) => (b.season as number) - (a.season as number))
+  return Array.from(bySeason.entries()).map(([season, rows]) => {
+    const weekly = rows.filter(r => r.week !== 0)
+    if (weekly.length > 0) {
+      const acc: StatRow = { season, games: weekly.length }
+      for (const f of SUM_FIELDS) acc[f] = weekly.reduce((sum, r) => sum + ((r[f] as number) ?? 0), 0)
+      return acc
+    }
+    const aggregate = rows[0]
+    return { ...aggregate, season }
+  }).sort((a, b) => (b.season as number) - (a.season as number))
 }
 
 const num = (v: unknown, digits = 0): string => (typeof v === 'number' ? v.toFixed(digits) : '—')
@@ -122,7 +135,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
   const isQb = player.position === 'QB'
   const isRb = player.position === 'RB' || player.position === 'FB'
   const seasonStats = sumBySeason(gameLog as StatRow[])
-  const recentGames = (gameLog as StatRow[]).slice(0, 5)
+  const recentGames = (gameLog as StatRow[]).filter(r => r.week !== 0).slice(0, 5)
   const ngsRows: StatRow[] = isQb ? ngsPassing : isRb ? ngsRushing : ngsReceiving
 
   const DVP_LABELS: Record<string, string> = {
@@ -233,7 +246,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
               {seasonStats.map(row => (
                 <tr key={String(row.season)} className="border-t border-zinc-800">
                   <td className="py-2 text-white font-semibold">{String(row.season)}</td>
-                  <td className="py-2 text-center text-zinc-300 tabular-nums">{String(row.games)}</td>
+                  <td className="py-2 text-center text-zinc-300 tabular-nums">{row.games != null ? String(row.games) : '—'}</td>
                   {isQb ? (
                     <>
                       <td className="py-2 text-center text-zinc-300 tabular-nums">{num(row.completions)}/{num(row.attempts)}</td>
