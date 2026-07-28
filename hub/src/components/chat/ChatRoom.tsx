@@ -136,7 +136,7 @@ export function ChatRoom({ channelId, initialMessages, currentUserId }: ChatRoom
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Message..."
+              placeholder="Message…"
               maxLength={1000}
               className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500 transition-colors"
             />

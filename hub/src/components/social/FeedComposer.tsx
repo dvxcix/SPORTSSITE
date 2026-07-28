@@ -184,7 +184,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             ref={textareaRef}
             value={content}
             onChange={e => setContent(e.target.value)}
-            placeholder="Drop a pick, take, or hot comment…"
+            placeholder="Drop a pick, share data, or make a post…"
             maxLength={charLimit}
             rows={content.length > 80 ? 3 : 2}
             style={{
