@@ -102,6 +102,11 @@ export function computeStatLine(rows: PitchLogRow[]) {
     avgLa: withLa.length ? avg(withLa.map(r => r.launch_angle)) : null,
     hardHitPct: withEv.length ? (hardHit.length / withEv.length) * 100 : null,
     barrelPct: inPlay.length ? (barrels.length / inPlay.length) * 100 : null,
+    // Statcast's own definition: batted balls hit at a launch angle between
+    // 8-32° (the range that produces the best outcomes) as a share of every
+    // batted ball with a measured launch angle — same withLa population
+    // avgLa already uses, just a range filter instead of an average.
+    sweetSpotPct: withLa.length ? (withLa.filter(r => r.launch_angle >= 8 && r.launch_angle <= 32).length / withLa.length) * 100 : null,
     xwobaContact: withXwoba.length ? avg(withXwoba.map(r => r.xwoba)) : null,
     avgBatSpeed: withBatSpeed.length ? avg(withBatSpeed.map(r => r.bat_speed)) : null,
     avgAttackAngle: withAttackAngle.length ? avg(withAttackAngle.map(r => r.attack_angle)) : null,
@@ -160,6 +165,7 @@ export const BATTER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'hi
   { key: 'xwobaContact', label: 'xwOBA (Ct)', dir: 'hi', fmt: r3 },
   { key: 'avgBatSpeed', label: 'Bat Speed', dir: 'hi', fmt: d1 },
   { key: 'barrelPct', label: 'Barrel %', dir: 'hi', fmt: p1 },
+  { key: 'sweetSpotPct', label: 'Sweet Spot %', dir: 'hi', fmt: p1 },
   { key: 'avgAttackAngle', label: 'Attack Angle', dir: 'hi', fmt: d1 },
   { key: 'avgSwingLength', label: 'Swing Length', dir: 'hi', fmt: d1 },
 ]
@@ -189,6 +195,7 @@ export const PITCHER_STAT_COLS: { key: keyof BatterStats; label: string; dir: 'h
   { key: 'xwobaContact', label: 'xwOBA (Ct)', dir: 'lo', fmt: r3 },
   { key: 'runValuePer100', label: 'RV/100', dir: 'lo', fmt: d1 },
   { key: 'barrelPct', label: 'Barrel % Allowed', dir: 'lo', fmt: p1 },
+  { key: 'sweetSpotPct', label: 'Sweet Spot % Allowed', dir: 'lo', fmt: p1 },
   { key: 'avgAttackAngle', label: 'Attack Angle Induced', dir: 'lo', fmt: d1 },
   { key: 'avgSwingLength', label: 'Swing Length Induced', dir: 'lo', fmt: d1 },
 ]

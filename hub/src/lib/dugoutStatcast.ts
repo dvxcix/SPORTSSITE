@@ -23,6 +23,7 @@ export type StatcastLine = {
   avgTilt: number | null
   barrelPct: number | null
   hardHitPct: number | null
+  sweetSpotPct: number | null
   avgEv: number | null
   avgLa: number | null
   hr: number | null
@@ -90,6 +91,7 @@ export function computeStatcastLine(
   return {
     avgBatSpeed: line.avgBatSpeed, avgAttackAngle: line.avgAttackAngle, avgSwingLength: line.avgSwingLength,
     avgTilt: line.avgTilt, barrelPct: line.barrelPct, hardHitPct: line.hardHitPct,
+    sweetSpotPct: line.sweetSpotPct,
     avgEv: line.avgEv, avgLa: line.avgLa, hr: line.hr,
     hardSwingRate: savant.hardSwingRate, squaredUpPct: savant.squaredUpPct, blastPct: savant.blastPct,
     idealAttackAngleRate: savant.idealAttackAngleRate, pullAirRate: savant.pullAirRate, fbRate: savant.fbRate,

@@ -132,7 +132,7 @@ const STAT_FIELDS: { key: string; label: string }[] = [
   { key: 'avg', label: 'Batting Average' }, { key: 'obp', label: 'On-Base %' }, { key: 'slg', label: 'Slugging %' },
   { key: 'whiff', label: 'Whiff %' }, { key: 'chase', label: 'Chase %' },
   { key: 'avgev', label: 'Avg Exit Velocity' }, { key: 'la', label: 'Avg Launch Angle' },
-  { key: 'hh', label: 'Hard-Hit %' }, { key: 'brl', label: 'Barrel %' }, { key: 'xwoba', label: 'xwOBA (Contact)' },
+  { key: 'hh', label: 'Hard-Hit %' }, { key: 'brl', label: 'Barrel %' }, { key: 'sweetspot', label: 'Sweet Spot %' }, { key: 'xwoba', label: 'xwOBA (Contact)' },
   { key: 'bspd', label: 'Avg Bat Speed' }, { key: 'atk', label: 'Avg Attack Angle' },
   { key: 'swlen', label: 'Avg Swing Length' }, { key: 'tilt', label: 'Avg Swing Tilt' }, { key: 'attackdir', label: 'Avg Attack Direction' },
 ]
@@ -246,7 +246,7 @@ export function recencyLabel(category: MatrixFactor['category'], r: string): str
 // calibrate against. These two DO have that number, so they get the delta
 // options back; every other field stays exact-window-only.
 const DELTA_DISPLAYED_FIELDS: Partial<Record<MatrixFactor['category'], string[]>> = {
-  pitchlog_stat: ['bspd'], savant_stat: ['sq'],
+  pitchlog_stat: ['bspd', 'sweetspot'], savant_stat: ['sq'],
 }
 export function recencyOptionsFor(category: MatrixFactor['category'], field_key: string): string[] {
   // MM has no "Season" concept of its own (see MmByWindow, matrixEngine.ts)

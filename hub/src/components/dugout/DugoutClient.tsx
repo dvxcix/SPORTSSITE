@@ -213,6 +213,9 @@ function buildBatterRow(
   const s_hh  = statSeason?.hardHitPct ?? null
   const r_hh  = statRecent?.hardHitPct ?? null
   const d_hh  = r_hh != null && s_hh != null ? r_hh - s_hh : null
+  const s_sweetspot = statSeason?.sweetSpotPct ?? null
+  const r_sweetspot = statRecent?.sweetSpotPct ?? null
+  const d_sweetspot = r_sweetspot != null && s_sweetspot != null ? r_sweetspot - s_sweetspot : null
   const s_pa  = statSeason?.pullAirRate ?? null
   const r_pa  = statRecent?.pullAirRate ?? null
   const d_pa  = r_pa != null && s_pa != null ? r_pa - s_pa : null
@@ -468,9 +471,9 @@ function buildBatterRow(
     is_pwr, is_money_sa_rbi,
     rawProps: props ?? null,
     s_spd, s_hrd, s_sq, s_bla, s_len, s_atk, s_iaa, s_tlt,
-    s_ev, s_la, s_brl, l1_brl, l3_brl, l5_brl, d1_brl, d3_brl, d5_brl, s_hh, s_pa, s_fb, s_xhr, s_hr,
-    r_spd, r_sq, r_bla, r_atk, r_brl, r_hrd, r_len, r_iaa, r_tlt, r_ev, r_la, r_hh, r_pa, r_fb,
-    d_spd, d_sq, d_brl, d_hrd, d_bla, d_len, d_atk, d_iaa, d_tlt, d_ev, d_la, d_hh, d_pa, d_fb,
+    s_ev, s_la, s_brl, l1_brl, l3_brl, l5_brl, d1_brl, d3_brl, d5_brl, s_hh, s_sweetspot, s_pa, s_fb, s_xhr, s_hr,
+    r_spd, r_sq, r_bla, r_atk, r_brl, r_hrd, r_len, r_iaa, r_tlt, r_ev, r_la, r_hh, r_sweetspot, r_pa, r_fb,
+    d_spd, d_sq, d_brl, d_hrd, d_bla, d_len, d_atk, d_iaa, d_tlt, d_ev, d_la, d_hh, d_sweetspot, d_pa, d_fb,
     s_timing, r_timing, d_timing, s_miss, r_miss, d_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
     // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
@@ -827,6 +830,9 @@ function PlayerDrillDown({
               <StatTile label="L5·BRL" value={ppRaw(row.l5_brl)} title="Barrel rate — last 5 games played" heatStyle={heat(row.l5_brl, g('l5_brl'), 'hi')} />
               <StatTile label="ΔL5" value={dlt(row.d5_brl)} title="Last 5 − season barrel rate" heatStyle={heat(row.d5_brl, g('d5_brl'), 'hi')} />
               <StatTile label="HH%" value={ppRaw(row.s_hh)} title="Hard hit rate" heatStyle={heat(row.s_hh, g('s_hh'), 'hi')} />
+              <StatTile label="SwSp%" value={ppRaw(row.s_sweetspot)} title="Sweet spot rate — batted balls hit 8-32° launch angle, season" heatStyle={heat(row.s_sweetspot, g('s_sweetspot'), 'hi')} />
+              <StatTile label="R·SwSp" value={ppRaw(row.r_sweetspot)} title="Recent sweet spot rate" heatStyle={heat(row.r_sweetspot, g('r_sweetspot'), 'hi')} />
+              <StatTile label="ΔSwSp" value={dlt(row.d_sweetspot)} title="Recent − season sweet spot rate" heatStyle={heat(row.d_sweetspot, g('d_sweetspot'), 'hi')} />
               <StatTile label="PULLAIR" value={row.s_pa != null ? `${(row.s_pa * 100).toFixed(1)}%` : '—'} title="Pull air rate" heatStyle={heat(row.s_pa, g('s_pa'), 'hi')} />
               <StatTile label="FB%" value={row.s_fb != null ? `${(row.s_fb * 100).toFixed(1)}%` : '—'} title="Flyball rate" heatStyle={heat(row.s_fb, g('s_fb'), 'hi')} />
               <StatTile label="EV" value={f1(row.s_ev)} title="Exit velocity" heatStyle={heat(row.s_ev, g('s_ev'), 'hi')} />
@@ -1460,6 +1466,11 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_hh,  g('r_hh'))  }}>{ppRaw(row.r_hh)}</td>
       <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_hh != null ? (row.d_hh > 1 ? '#4ade80' : row.d_hh < -1 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
         {dlt(row.d_hh)}
+      </td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.s_sweetspot, g('s_sweetspot')) }}>{ppRaw(row.s_sweetspot)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, ...heat(row.r_sweetspot, g('r_sweetspot')) }}>{ppRaw(row.r_sweetspot)}</td>
+      <td style={{ ...STD, width: 34, minWidth: 34, color: row.d_sweetspot != null ? (row.d_sweetspot > 1 ? '#4ade80' : row.d_sweetspot < -1 ? '#f87171' : 'var(--text-2)') : 'var(--text-3)' }}>
+        {dlt(row.d_sweetspot)}
       </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.s_pa,  g('s_pa'))  }}>{pp(row.s_pa)}</td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.r_pa,  g('r_pa'))  }}>{pp(row.r_pa)}</td>
@@ -2245,6 +2256,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('HH%', 'Hard hit rate', 34, 's_hh')}
       {H('R·HH', 'Recent hard hit rate', 34, 'r_hh')}
       {H('ΔHH', 'Recent−season hard hit rate', 34, 'd_hh')}
+      {H('SwSp%', 'Sweet spot rate — batted balls hit 8-32° launch angle', 34, 's_sweetspot')}
+      {H('R·SwSp', 'Recent sweet spot rate', 34, 'r_sweetspot')}
+      {H('ΔSwSp', 'Recent−season sweet spot rate', 34, 'd_sweetspot')}
       {H('PULL%', 'Pull air rate', 36, 's_pa')}
       {H('R·Pul', 'Recent pull air rate', 34, 'r_pa')}
       {H('ΔPul', 'Recent−season pull air rate ×100', 34, 'd_pa')}

@@ -372,7 +372,7 @@ const PITCHLOG_FIELD: Record<string, keyof BatterStats> = {
   pa: 'pa', h: 'hits', '1b': 'singles', '2b': 'doubles', '3b': 'triples', hr: 'hr',
   bb: 'bb', k: 'k', avg: 'avg', obp: 'obp', slg: 'slg',
   whiff: 'whiffPct', chase: 'chasePct', avgev: 'avgEv', la: 'avgLa',
-  hh: 'hardHitPct', brl: 'barrelPct', xwoba: 'xwobaContact',
+  hh: 'hardHitPct', brl: 'barrelPct', sweetspot: 'sweetSpotPct', xwoba: 'xwobaContact',
   bspd: 'avgBatSpeed', atk: 'avgAttackAngle', swlen: 'avgSwingLength', tilt: 'avgTilt', attackdir: 'avgAttackDirection',
 }
 
