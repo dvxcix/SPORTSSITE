@@ -1,6 +1,6 @@
 import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { WHOP_PLANS, effectiveTier, type Tier } from '@slipsurge/core/tiers'
+import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
@@ -55,8 +55,26 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     // Only stamp tier_purchased_at when unset — this route re-runs on a
     // schedule and would otherwise bump it to "now" every time it sees the
     // same still-active membership, same reasoning as the webhook handler.
-    const { data: existing } = await admin.from('users').select('tier_purchased_at').eq('id', internalUserId).maybeSingle()
+    const { data: existing } = await admin.from('users').select('tier, tier_purchased_at').eq('id', internalUserId).maybeSingle()
     const isFirstPurchase = !existing?.tier_purchased_at
+
+    // Real incident: a user can hold simultaneously active memberships on
+    // BOTH the main and addon Whop businesses (e.g. a real paid main-tier
+    // subscriber who separately joined Discord and also pays this $10
+    // addon). This cron only ever sees the addon business, and
+    // whopMainReconcile.ts only ever sees the main business — both run on
+    // the identical 15-minute schedule and, before this check, each
+    // unconditionally overwrote the same `tier` column with whatever it
+    // alone saw. Never let a single-business reconcile silently lower a
+    // tier the OTHER business already granted — only raise or hold. Real
+    // downgrades still reach the user via the webhook's own membership-
+    // specific deactivation path.
+    const currentTier = (existing?.tier as Tier | undefined) ?? 'free'
+    if (TIER_RANK[planInfo.tier] < TIER_RANK[currentTier]) {
+      results.push({ membershipId, internalUserId, skipped: `current tier ${currentTier} already higher (likely granted by the main business)` })
+      continue
+    }
+
     const { data: updated, error } = await admin.from('users').update({
       tier: planInfo.tier,
       whop_plan_id: ADDON_PLAN_ID,
