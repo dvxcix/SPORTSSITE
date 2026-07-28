@@ -830,9 +830,9 @@ function PlayerDrillDown({
               <StatTile label="L5·BRL" value={ppRaw(row.l5_brl)} title="Barrel rate — last 5 games played" heatStyle={heat(row.l5_brl, g('l5_brl'), 'hi')} />
               <StatTile label="ΔL5" value={dlt(row.d5_brl)} title="Last 5 − season barrel rate" heatStyle={heat(row.d5_brl, g('d5_brl'), 'hi')} />
               <StatTile label="HH%" value={ppRaw(row.s_hh)} title="Hard hit rate" heatStyle={heat(row.s_hh, g('s_hh'), 'hi')} />
-              <StatTile label="SwSp%" value={ppRaw(row.s_sweetspot)} title="Sweet spot rate — batted balls hit 8-32° launch angle, season" heatStyle={heat(row.s_sweetspot, g('s_sweetspot'), 'hi')} />
-              <StatTile label="R·SwSp" value={ppRaw(row.r_sweetspot)} title="Recent sweet spot rate" heatStyle={heat(row.r_sweetspot, g('r_sweetspot'), 'hi')} />
-              <StatTile label="ΔSwSp" value={dlt(row.d_sweetspot)} title="Recent − season sweet spot rate" heatStyle={heat(row.d_sweetspot, g('d_sweetspot'), 'hi')} />
+              <StatTile label="SS%" value={ppRaw(row.s_sweetspot)} title="Sweet spot rate — batted balls hit 8-32° launch angle, season" heatStyle={heat(row.s_sweetspot, g('s_sweetspot'), 'hi')} />
+              <StatTile label="R·SS" value={ppRaw(row.r_sweetspot)} title="Recent sweet spot rate" heatStyle={heat(row.r_sweetspot, g('r_sweetspot'), 'hi')} />
+              <StatTile label="ΔSS" value={dlt(row.d_sweetspot)} title="Recent − season sweet spot rate" heatStyle={heat(row.d_sweetspot, g('d_sweetspot'), 'hi')} />
               <StatTile label="PULLAIR" value={row.s_pa != null ? `${(row.s_pa * 100).toFixed(1)}%` : '—'} title="Pull air rate" heatStyle={heat(row.s_pa, g('s_pa'), 'hi')} />
               <StatTile label="FB%" value={row.s_fb != null ? `${(row.s_fb * 100).toFixed(1)}%` : '—'} title="Flyball rate" heatStyle={heat(row.s_fb, g('s_fb'), 'hi')} />
               <StatTile label="EV" value={f1(row.s_ev)} title="Exit velocity" heatStyle={heat(row.s_ev, g('s_ev'), 'hi')} />
@@ -2256,9 +2256,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('HH%', 'Hard hit rate', 34, 's_hh')}
       {H('R·HH', 'Recent hard hit rate', 34, 'r_hh')}
       {H('ΔHH', 'Recent−season hard hit rate', 34, 'd_hh')}
-      {H('SwSp%', 'Sweet spot rate — batted balls hit 8-32° launch angle', 34, 's_sweetspot')}
-      {H('R·SwSp', 'Recent sweet spot rate', 34, 'r_sweetspot')}
-      {H('ΔSwSp', 'Recent−season sweet spot rate', 34, 'd_sweetspot')}
+      {H('SS%', 'Sweet spot rate — batted balls hit 8-32° launch angle', 34, 's_sweetspot')}
+      {H('R·SS', 'Recent sweet spot rate', 34, 'r_sweetspot')}
+      {H('ΔSS', 'Recent−season sweet spot rate', 34, 'd_sweetspot')}
       {H('PULL%', 'Pull air rate', 36, 's_pa')}
       {H('R·Pul', 'Recent pull air rate', 34, 'r_pa')}
       {H('ΔPul', 'Recent−season pull air rate ×100', 34, 'd_pa')}

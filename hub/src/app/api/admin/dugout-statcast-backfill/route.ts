@@ -25,20 +25,35 @@ async function requireAdmin() {
 // whichever date is passed — same both-hands, all-5-windows result,
 // upserted the same way, instantly usable by every viewer of that date
 // afterward.
+//
+// Accepts either ?date=YYYY-MM-DD (a single date, original behavior) or
+// ?dates=YYYY-MM-DD,YYYY-MM-DD,... (a specific list, not necessarily
+// contiguous — e.g. skipping All-Star break days with no real slate) —
+// same shape as dugout-pitchlog-stat-backfill's own multi-date support,
+// added for the exact same reason: re-running a whole season's worth of
+// past dates after adding a brand-new StatcastLine field (e.g. Sweet Spot
+// %) shouldn't need one manual request per date.
 export async function GET(req: Request) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
 
   const { searchParams } = new URL(req.url)
-  const date = searchParams.get('date')
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: 'Pass a ?date=YYYY-MM-DD query param' }, { status: 400 })
+  const single = searchParams.get('date')
+  const list = searchParams.get('dates')
+  const dates = list ? list.split(',').map(d => d.trim()).filter(Boolean) : single ? [single] : []
+
+  if (!dates.length || dates.some(d => !/^\d{4}-\d{2}-\d{2}$/.test(d))) {
+    return NextResponse.json({ error: 'Pass a ?date=YYYY-MM-DD or ?dates=YYYY-MM-DD,YYYY-MM-DD,... query param' }, { status: 400 })
   }
 
-  try {
-    const result = await precomputeDugoutStatcastForDate(date)
-    return NextResponse.json(result)
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+  const results: Record<string, unknown> = {}
+  for (const date of dates) {
+    try {
+      results[date] = await precomputeDugoutStatcastForDate(date)
+    } catch (e: any) {
+      console.error('[dugout-statcast-backfill] date failed', date, e)
+      results[date] = { error: e?.message || String(e) }
+    }
   }
+  return NextResponse.json({ dates, results })
 }
