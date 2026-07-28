@@ -91,10 +91,23 @@ export async function fetchUserMatrices(admin: AdminClient, userId: string): Pro
 // fields buried in it are pulled out via PostgREST's `->` path operator
 // instead, which cuts payload size enormously at full-slate scale (a
 // day's lineups run ~250-300 batters, full season-to-date pitch-by-pitch).
+// attack_angle/swing_length/swing_path_tilt/attack_direction/launch_speed_angle
+// used to be pulled out of the `raw` jsonb blob via PostgREST's `->` path
+// operator — confirmed live (2026-07-28) that this forces Postgres to fully
+// detoast+decompress `raw` (~1.9KB/row average, ~3KB row width overall) for
+// EVERY matching row just to extract 5 small numbers, even though `raw`
+// itself is never selected. A single batter's ~2,100-row fetch measured
+// ~930ms; under this function's real 15-way concurrent fan-out across a
+// full slate (~250-300 batters), that was almost certainly the root cause
+// of repeated `57014 statement timeout` failures on this route (both live
+// and on manual backfills of past dates). Materializing these 5 fields as
+// real columns (one-time backfill + statcastPitchLogSync.ts now writes them
+// going forward) and reading them directly here dropped the same query to
+// ~18ms — no jsonb touched at all.
 const BULK_PITCHLOG_SELECT = [
   'game_date', 'batter_id', 'events', 'description', 'is_in_play', 'is_swing', 'is_whiff',
   'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'bat_speed', 'p_throws',
-  'raw->attack_angle', 'raw->swing_length', 'raw->swing_path_tilt', 'raw->attack_direction', 'raw->launch_speed_angle',
+  'attack_angle', 'swing_length', 'swing_path_tilt', 'attack_direction', 'launch_speed_angle',
 ].join(', ')
 
 function numOrNull(v: unknown): number | null {

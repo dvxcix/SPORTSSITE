@@ -124,6 +124,14 @@ export async function syncPitchLogForDate(admin: AdminClient, date: string, seas
     // run_value in the CSV (that's `delta_run_exp`), but the same concept
     // the column name in this table is going for.
     run_value: numOrNull(r.delta_run_exp),
+    // Materialized as real columns (2026-07-28) so bulk per-batter reads
+    // (matrixMatch.ts's BULK_PITCHLOG_SELECT) never need to detoast `raw`
+    // just to pull these 5 fields out — see that file's own comment for
+    // the real timeout incident this fixes. `raw` itself is kept below for
+    // any other/future consumer of the full Savant row.
+    attack_angle: numOrNull(r.attack_angle), swing_length: numOrNull(r.swing_length),
+    swing_path_tilt: numOrNull(r.swing_path_tilt), attack_direction: numOrNull(r.attack_direction),
+    launch_speed_angle: intOrNull(r.launch_speed_angle),
     raw: r,
   }))
 
