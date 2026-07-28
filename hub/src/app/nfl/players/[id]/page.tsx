@@ -20,6 +20,23 @@ async function getPlayerData(id: string) {
     admin.from('nfl_ngs_rushing').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }).limit(5),
   ])
 
+  // week=0 rows are a season-total stopgap fill (see sumBySeason) with no
+  // games-played count of their own (nfl_player_stats has no such column) —
+  // backfill a real count from nfl_pbp, which already has this player's
+  // actual per-game appearances as passer/rusher/receiver.
+  const aggregateRows = (gameLog ?? []).filter(r => r.week === 0)
+  if (aggregateRows.length > 0) {
+    await Promise.all(aggregateRows.map(async row => {
+      const { data: plays } = await admin
+        .from('nfl_pbp')
+        .select('game_id')
+        .eq('season', row.season)
+        .eq('season_type', 'REG')
+        .or(`passer_player_id.eq.${id},rusher_player_id.eq.${id},receiver_player_id.eq.${id}`)
+      row.games = new Set((plays ?? []).map(p => p.game_id)).size
+    }))
+  }
+
   // Opponent adjustment ("defense vs position") for the player's next
   // scheduled game — nfl_schedule already has the 2026 slate published even
   // pre-season, so this resolves to a real upcoming opponent as soon as
