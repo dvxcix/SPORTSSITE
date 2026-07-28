@@ -35,7 +35,7 @@ function cleanMmAmountMode(v: unknown): 'at_least' | 'exactly' | null {
   return v === 'exactly' ? 'exactly' : v === 'at_least' ? 'at_least' : null
 }
 
-type CleanTiebreaker = { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest'; tolerance: number | null; mm_base_window: string | null; mm_compare_windows: string[] | null }
+type CleanTiebreaker = { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest' | 'closest_zero'; tolerance: number | null; mm_base_window: string | null; mm_compare_windows: string[] | null }
 type TiebreakersResult = { ok: true; tiebreakers: CleanTiebreaker[] } | { ok: false; error: string }
 function cleanTiebreakers(raw: unknown): TiebreakersResult {
   if (!Array.isArray(raw)) return { ok: true, tiebreakers: [] }
@@ -54,7 +54,7 @@ function cleanTiebreakers(raw: unknown): TiebreakersResult {
       category: category as string, field_key,
       recency: typeof recency === 'string' ? recency : null,
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
-      direction: direction === 'lowest' ? 'lowest' : 'highest',
+      direction: direction === 'lowest' ? 'lowest' : direction === 'closest_zero' ? 'closest_zero' : 'highest',
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
       mm_base_window: cleanBaseWindow,
       mm_compare_windows: cleanCompareWindows,
@@ -70,7 +70,7 @@ function cleanTiebreakers(raw: unknown): TiebreakersResult {
 type CleanPipelineStep = {
   kind: string; category: string; field_key: string; recency: string | null; book: string | null
   books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
-  direction: 'highest' | 'lowest' | null; tolerance: number | null
+  direction: 'highest' | 'lowest' | 'closest_zero' | null; tolerance: number | null
   condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
   unless_mode: 'replace' | 'suppress' | 'add' | null; uses_anchor: boolean | null
   mm_base_window: string | null; mm_compare_windows: string[] | null; mm_direction: string | null; mm_match_mode: 'any' | 'all' | null
@@ -141,7 +141,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
       operator: cleanOperator,
       value: cleanValue,
-      direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : null,
+      direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : direction === 'closest_zero' ? 'closest_zero' : null,
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
       condition_steps: cleanConditionSteps,

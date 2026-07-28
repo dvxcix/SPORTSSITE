@@ -61,7 +61,8 @@ function describeStep(step: MatrixPipelineStep): string {
   }
   if (step.kind === 'rank') {
     const tol = step.tolerance ? ` (±${step.tolerance})` : ''
-    return `${step.direction === 'lowest' ? 'lowest' : 'highest'} ${field}${tol}`
+    const dirWord = step.direction === 'lowest' ? 'lowest' : step.direction === 'closest_zero' ? 'closest to 0' : 'highest'
+    return `${dirWord} ${field}${tol}`
   }
   // unless — describes its own nested condition/then chains recursively.
   const scope = step.condition_scope === 'game' ? 'either team' : 'the same team'

@@ -50,11 +50,13 @@ export type MatrixPipelineStep = {
   books_min_count: number | null
   operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend' | null
   value: number | null
-  // rank: which extreme to keep. group: null keeps every tied cluster
+  // rank: which extreme to keep — 'closest_zero' (rank-only, not offered by
+  // the Group step's own UI) ranks by absolute distance from 0 instead,
+  // excluding literal 0 itself. group: null keeps every tied cluster
   // (original behavior); 'highest'/'lowest' narrows to the single cluster
   // at that extreme when the pool has more than one — see matrixEngine.ts's
   // selectTieCluster.
-  direction: 'highest' | 'lowest' | null
+  direction: 'highest' | 'lowest' | 'closest_zero' | null
   // rank only — null/0 keeps the exact-match behavior; a positive number
   // also keeps anyone within that raw distance of the best value, so a real
   // standout no longer needs an exact 2-decimal match to survive. See
@@ -350,11 +352,12 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
         {step.kind === 'rank' && (
           <select
             className="ss-input" value={step.direction ?? 'highest'}
-            onChange={e => onChange({ ...step, direction: e.target.value as 'highest' | 'lowest' })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 90 }}
+            onChange={e => onChange({ ...step, direction: e.target.value as 'highest' | 'lowest' | 'closest_zero' })}
+            style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
           >
             <option value="highest">Highest</option>
             <option value="lowest">Lowest</option>
+            <option value="closest_zero">Closest to 0</option>
           </select>
         )}
 
