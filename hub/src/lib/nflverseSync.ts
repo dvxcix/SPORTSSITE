@@ -432,33 +432,150 @@ export async function computeNflDvp(admin: ReturnType<typeof createAdminClient>,
 
   // Step 1: sum every stat allowed to each position, by (opponent_team, week)
   // — multiple players of the same position facing the same defense in the
-  // same week all contribute to that one game's "allowed" total.
-  const perGame = new Map<string, Record<string, number>>()
-  for (const r of rows ?? []) {
-    const position = r.position as string | null
-    if (!position || !DVP_STAT_FIELDS[position] || r.opponent_team == null || r.week == null) continue
-    const key = `${r.opponent_team}|${position}|${r.week}`
-    const acc = perGame.get(key) ?? {}
-    for (const f of DVP_STAT_FIELDS[position]) acc[f] = (acc[f] ?? 0) + (Number((r as Record<string, unknown>)[f]) || 0)
-    perGame.set(key, acc)
-  }
-
-  // Step 2: from the per-game totals, roll up to (opponent_team, position)
-  // averages, and separately to league-wide (position) averages for the
-  // pct_diff baseline.
+  // same week all contribute to that one game's "allowed" total. week=0
+  // season-aggregate rows (a stopgap fill for a season with no real weekly
+  // data yet) are skipped here — DVP is fundamentally per-opponent, and a
+  // player's season total is collapsed across every team they actually
+  // faced, so there's no single defense to attribute it to. That gap is
+  // covered by computeNflDvpFromPbp below, which derives real per-game,
+  // per-opponent splits straight from play-by-play instead.
   type Agg = { games: number; totals: Record<string, number> }
   const byTeamPos = new Map<string, Agg>()
-  const byPos = new Map<string, Agg>()
-  for (const [key, totals] of perGame) {
-    const [opponent_team, position] = key.split('|')
-    const teamPosAgg = byTeamPos.get(`${opponent_team}|${position}`) ?? { games: 0, totals: {} }
-    teamPosAgg.games += 1
-    for (const [f, v] of Object.entries(totals)) teamPosAgg.totals[f] = (teamPosAgg.totals[f] ?? 0) + v
-    byTeamPos.set(`${opponent_team}|${position}`, teamPosAgg)
+  const weeksSeenByTeamPos = new Map<string, Set<number>>()
+  for (const r of rows ?? []) {
+    const position = r.position as string | null
+    if (!position || !DVP_STAT_FIELDS[position] || r.opponent_team == null || r.week == null || r.week === 0) continue
+    const teamPosKey = `${r.opponent_team}|${position}`
+    const teamPosAgg = byTeamPos.get(teamPosKey) ?? { games: 0, totals: {} }
+    const weeksSeen = weeksSeenByTeamPos.get(teamPosKey) ?? new Set<number>()
+    if (!weeksSeen.has(r.week as number)) { weeksSeen.add(r.week as number); teamPosAgg.games += 1 }
+    weeksSeenByTeamPos.set(teamPosKey, weeksSeen)
+    for (const f of DVP_STAT_FIELDS[position]) teamPosAgg.totals[f] = (teamPosAgg.totals[f] ?? 0) + (Number((r as Record<string, unknown>)[f]) || 0)
+    byTeamPos.set(teamPosKey, teamPosAgg)
+  }
 
+  // League-wide totals for the pct_diff baseline — sum of every team's
+  // totals/games for that position, computed the same way per team above.
+  const byPos = new Map<string, Agg>()
+  for (const [key, agg] of byTeamPos) {
+    const [, position] = key.split('|')
     const posAgg = byPos.get(position) ?? { games: 0, totals: {} }
-    posAgg.games += 1
-    for (const [f, v] of Object.entries(totals)) posAgg.totals[f] = (posAgg.totals[f] ?? 0) + v
+    posAgg.games += agg.games
+    for (const [f, v] of Object.entries(agg.totals)) posAgg.totals[f] = (posAgg.totals[f] ?? 0) + v
+    byPos.set(position, posAgg)
+  }
+
+  const mapped: Record<string, unknown>[] = []
+  for (const [key, agg] of byTeamPos) {
+    const [opponent_team, position] = key.split('|')
+    const leagueAgg = byPos.get(position)
+    for (const f of DVP_STAT_FIELDS[position]) {
+      const avg_allowed = agg.totals[f] != null ? agg.totals[f] / agg.games : null
+      const leagueAvg = leagueAgg && leagueAgg.games > 0 ? (leagueAgg.totals[f] ?? 0) / leagueAgg.games : null
+      if (avg_allowed == null || leagueAvg == null) continue
+      mapped.push({
+        season, position, opponent_team, stat_category: f,
+        games: agg.games,
+        total_allowed: agg.totals[f] ?? 0,
+        avg_allowed,
+        league_avg_allowed: leagueAvg,
+        pct_diff: leagueAvg !== 0 ? ((avg_allowed - leagueAvg) / leagueAvg) * 100 : null,
+        updated_at: new Date().toISOString(),
+      })
+    }
+  }
+  return upsertChunked(admin, 'nfl_dvp', mapped, 'season,position,opponent_team,stat_category')
+}
+
+// Fallback DVP source for a season where nfl_player_stats has no real
+// weekly rows yet (nflverse's player_stats.csv release consistently lags a
+// season behind its own pbp/nextgen_stats releases — confirmed live, both
+// currently reach 2025 while player_stats.csv still stops at 2024). Unlike
+// a player's season total, a play in nfl_pbp already carries its own
+// game_id/defteam, so per-opponent attribution is possible directly —
+// each play is credited to whichever defense (defteam) was on the field.
+export async function computeNflDvpFromPbp(admin: ReturnType<typeof createAdminClient>, season: number): Promise<number> {
+  const positionById = new Map<string, string>()
+  {
+    const PAGE = 1000
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await admin.from('nfl_players').select('gsis_id, position').range(offset, offset + PAGE - 1)
+      if (error) throw error
+      for (const p of data ?? []) if (p.gsis_id && p.position) positionById.set(p.gsis_id, p.position)
+      if (!data || data.length < PAGE) break
+    }
+  }
+
+  const plays: Record<string, unknown>[] = []
+  {
+    const PAGE = 1000
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await admin
+        .from('nfl_pbp')
+        .select('game_id, defteam, pass_attempt, rush_attempt, complete_pass, interception, pass_touchdown, rush_touchdown, passer_player_id, rusher_player_id, receiver_player_id, passing_yards, rushing_yards, receiving_yards')
+        .eq('season', season)
+        .eq('season_type', 'REG')
+        .range(offset, offset + PAGE - 1)
+      if (error) throw error
+      plays.push(...(data ?? []))
+      if (!data || data.length < PAGE) break
+    }
+  }
+
+  type Agg = { games: number; totals: Record<string, number> }
+  const byTeamPos = new Map<string, Agg>()
+  const gamesSeenByTeamPos = new Map<string, Set<string>>()
+  const credit = (defteam: string, position: string, gameId: string, field: string, value: number) => {
+    const key = `${defteam}|${position}`
+    const agg = byTeamPos.get(key) ?? { games: 0, totals: {} }
+    const gamesSeen = gamesSeenByTeamPos.get(key) ?? new Set<string>()
+    if (!gamesSeen.has(gameId)) { gamesSeen.add(gameId); agg.games += 1 }
+    gamesSeenByTeamPos.set(key, gamesSeen)
+    agg.totals[field] = (agg.totals[field] ?? 0) + value
+    byTeamPos.set(key, agg)
+  }
+
+  for (const p of plays) {
+    const defteam = p.defteam as string | null
+    const gameId = p.game_id as string
+    if (!defteam) continue
+    if (p.pass_attempt && p.passer_player_id) {
+      const pos = positionById.get(p.passer_player_id as string)
+      if (pos && DVP_STAT_FIELDS[pos]) {
+        credit(defteam, pos, gameId, 'attempts', 1)
+        if (p.complete_pass) credit(defteam, pos, gameId, 'completions', 1)
+        if (p.interception) credit(defteam, pos, gameId, 'interceptions', 1)
+        if (p.pass_touchdown) credit(defteam, pos, gameId, 'passing_tds', 1)
+        credit(defteam, pos, gameId, 'passing_yards', Number(p.passing_yards) || 0)
+      }
+    }
+    if (p.rush_attempt && p.rusher_player_id) {
+      const pos = positionById.get(p.rusher_player_id as string)
+      if (pos && DVP_STAT_FIELDS[pos]) {
+        credit(defteam, pos, gameId, 'carries', 1)
+        if (p.rush_touchdown) credit(defteam, pos, gameId, 'rushing_tds', 1)
+        credit(defteam, pos, gameId, 'rushing_yards', Number(p.rushing_yards) || 0)
+      }
+    }
+    if (p.pass_attempt && p.receiver_player_id) {
+      const pos = positionById.get(p.receiver_player_id as string)
+      if (pos && DVP_STAT_FIELDS[pos]) {
+        credit(defteam, pos, gameId, 'targets', 1)
+        if (p.complete_pass) {
+          credit(defteam, pos, gameId, 'receptions', 1)
+          credit(defteam, pos, gameId, 'receiving_yards', Number(p.receiving_yards) || 0)
+          if (p.pass_touchdown) credit(defteam, pos, gameId, 'receiving_tds', 1)
+        }
+      }
+    }
+  }
+
+  const byPos = new Map<string, Agg>()
+  for (const [key, agg] of byTeamPos) {
+    const [, position] = key.split('|')
+    const posAgg = byPos.get(position) ?? { games: 0, totals: {} }
+    posAgg.games += agg.games
+    for (const [f, v] of Object.entries(agg.totals)) posAgg.totals[f] = (posAgg.totals[f] ?? 0) + v
     byPos.set(position, posAgg)
   }
 
