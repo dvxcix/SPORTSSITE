@@ -76,6 +76,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // The mobile app carries no browser cookies at all — just an
+  // Authorization: Bearer <access_token> header from its own
+  // @supabase/supabase-js client. Without this, every /api/* request from
+  // mobile hit the cookie-session redirect below and got an HTML 307 to
+  // /auth/login instead of ever reaching the route handler, where
+  // requireTier()/getEffectiveTier() (see requireTier.ts) already know how
+  // to validate that same bearer token themselves. This only skips the
+  // proxy's own cookie-only gate for API routes carrying a bearer header —
+  // it isn't a bypass of auth itself, since every gated route still calls
+  // its own requireTier/requireAdmin check and returns a real 401/403 for
+  // an invalid or missing token.
+  if (request.nextUrl.pathname.startsWith('/api/') && /^Bearer\s+/i.test(request.headers.get('authorization') ?? '')) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
