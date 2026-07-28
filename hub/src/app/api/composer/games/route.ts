@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysMatchups, isPregame } from '@/lib/mlbSchedule'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 
 export const revalidate = 0
 

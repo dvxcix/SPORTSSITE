@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { effectiveTier, type Tier } from '@/lib/tiers'
+import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { PricingClient } from './PricingClient'
 
 export default async function PricingPage({

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Lock } from 'lucide-react'
-import type { Tier } from '@/lib/tiers'
+import type { Tier } from '@slipsurge/core/tiers'
 
 const TIER_LABELS: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 

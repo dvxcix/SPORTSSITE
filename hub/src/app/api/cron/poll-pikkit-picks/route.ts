@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, isPregame } from '@/lib/mlbSchedule'
+import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/stripe'
 
 export const revalidate = 0

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { WHOP_PLANS, checkoutApiKeyEnvFor } from '@/lib/tiers'
+import { WHOP_PLANS, checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
 import { PLATFORM_URL } from '@/lib/stripe'
 
 export const revalidate = 0

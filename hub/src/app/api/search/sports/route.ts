@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { searchMlbTeams } from '@/lib/mlbTeams'
+import { searchMlbTeams } from '@slipsurge/core/mlbTeams'
 
 export const revalidate = 0
 

@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import type { TodayGame } from '@/lib/mlbSchedule'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import type { TodayGame } from '@slipsurge/core/mlbSchedule'
 import { GameMatchup } from './GameMatchup'
 
 export function SlateBreakdownClient({ date }: { date: string }) {

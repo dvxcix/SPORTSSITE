@@ -8,10 +8,10 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
-import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
+import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import { useCustomEmojis } from '@/lib/emoji'
 import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
-import { effectiveTier, hasFullAccessOverride, type Tier } from '@/lib/tiers'
+import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { Badge } from '@/components/ui/badge'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }

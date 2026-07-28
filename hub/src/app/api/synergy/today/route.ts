@@ -3,10 +3,10 @@ import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { currentSeason } from '@/lib/playerSync'
-import { getTodaysMatchups, type LineupPlayer, type ProbablePitcher } from '@/lib/mlbSchedule'
+import { getTodaysMatchups, type LineupPlayer, type ProbablePitcher } from '@slipsurge/core/mlbSchedule'
 import { fetchPlayerHomeRuns, fetchPlayerGameDates, enrichPitchRows } from '@/lib/pitchLogFetch'
-import { type PitchLogRow } from '@/lib/batterStatsEngine'
-import { scoreFrom } from '@/lib/affinityScore'
+import { type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
+import { scoreFrom } from '@slipsurge/core/affinityScore'
 
 export const revalidate = 0
 

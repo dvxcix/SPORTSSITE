@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysMatchups } from '@/lib/mlbSchedule'
-import { computeStatLine, lastNGameDates, type PitchLogRow } from '@/lib/batterStatsEngine'
+import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
+import { computeStatLine, lastNGameDates, type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 

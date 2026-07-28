@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { heat } from '@/components/pitcher-report/MatchupTables'
-import { computeStatLine, lastNGameDates, type PitchLogRow } from '@/lib/batterStatsEngine'
+import { computeStatLine, lastNGameDates, type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
 import { fetchPitchLogCached } from '@/components/dugout/MatchupPitchBreakdown'
 
 const r3 = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/^0\./, '.').replace(/^-0\./, '-.'))

@@ -1,7 +1,7 @@
 'use client'
 
 import { heat } from '@/components/pitcher-report/MatchupTables'
-import type { PitchLogRow } from '@/lib/batterStatsEngine'
+import type { PitchLogRow } from '@slipsurge/core/batterStatsEngine'
 
 // Savant's own 1-9 zone codes, laid out as the standard broadcast strike-
 // zone-plot grid (catcher's-eye view of the plate): row-major top-left to

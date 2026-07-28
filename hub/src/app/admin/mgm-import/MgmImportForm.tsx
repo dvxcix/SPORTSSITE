@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 
 type GameOption = {
   gameKey: string

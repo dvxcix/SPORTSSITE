@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { AffinityMatchupCards, type Evidence } from '@/components/dugout/AffinityMatchupScore'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 
 type SynergyMatchup = {
   gameKey: string

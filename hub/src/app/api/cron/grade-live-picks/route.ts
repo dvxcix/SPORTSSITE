@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, checkEarlyWin, settleFinalPick, applyLegResultToPost } from '@/lib/pickGrading'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 
 export const revalidate = 0
 export const maxDuration = 60

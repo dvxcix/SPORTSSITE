@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { effectiveTier, type Tier } from '@/lib/tiers'
+import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 
 // Whop isn't a Supabase-native identity, so there's no auth.unlinkIdentity()

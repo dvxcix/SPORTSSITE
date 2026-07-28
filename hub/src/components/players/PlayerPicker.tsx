@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { mlbHeadshot } from '@/lib/mlb-api'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 
 export type PickerOption = { id: number; name: string; teamAbbr?: string | null; count: number }

@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { sportLogoUrl } from '@/lib/sportLogos'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 
 // BookLogo.tsx's normalizeVendor isn't importable here — it's a 'use client'
 // module, and every export of a client module becomes an opaque client

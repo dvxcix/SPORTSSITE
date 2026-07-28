@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { WHOP_PLANS, effectiveTier, hasTierAccess, type Tier } from '@/lib/tiers'
+import { WHOP_PLANS, effectiveTier, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { PricingCheckoutButton } from '@/app/pricing/PricingCheckoutButton'
 import { CancelMembershipButton } from './CancelMembershipButton'
 import { CheckCircle2, XCircle, Clock } from 'lucide-react'

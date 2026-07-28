@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { getGameStatus, getTeams } from '@/lib/espn-api'
-import type { ESPNGame, SportKey } from '@/lib/espn-api'
+import { getGameStatus, getTeams } from '@slipsurge/core/espn-api'
+import type { ESPNGame, SportKey } from '@slipsurge/core/espn-api'
 
 export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
   const [hovered, setHovered] = useState(false)

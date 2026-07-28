@@ -1,6 +1,6 @@
 'use client'
-import { pitchOutcomeColor } from '@/lib/mlb-api'
-import type { MLBPitch } from '@/lib/mlb-api'
+import { pitchOutcomeColor } from '@slipsurge/core/mlb-api'
+import type { MLBPitch } from '@slipsurge/core/mlb-api'
 
 // Statcast plate-crossing coordinates: pX is in feet from center of plate,
 // raw sign convention is the CATCHER's-eye view (positive = catcher's right

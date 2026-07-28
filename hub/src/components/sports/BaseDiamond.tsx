@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { mlbHeadshot } from '@/lib/mlb-api'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 
 type Runner = { id: number; fullName: string } | null | undefined
 

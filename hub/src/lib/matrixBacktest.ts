@@ -1,20 +1,20 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
-import { canonGameKey } from '@/lib/teamAbbr'
-import { getTodaysMatchups, type TodayGame } from '@/lib/mlbSchedule'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { canonGameKey } from '@slipsurge/core/teamAbbr'
+import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { asyncPool } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
-import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
-import type { BatterStats } from '@/lib/batterStatsEngine'
+import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
+import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 import {
   type Matrix, type MatrixFactor, type MatrixTiebreaker, type MatrixPipelineStep,
   type FieldBundle, type OddsProps, type PitchlogStatWindow, type DugoutSpecsAverages,
   runPipelineStep, evaluateMatrix, groupTiedCandidates, filterTieGroups, resolveTiebreakers, resolveFieldValue,
   evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluatePicksFactor,
   MULTI_BOOK_MARKET,
-} from '@/lib/matrixEngine'
+} from '@slipsurge/core/matrixEngine'
 
 // Backtests a saved Matrix (classic or pipeline) against real, already-
 // completed slates — for a given PAST date, independently reconstructs

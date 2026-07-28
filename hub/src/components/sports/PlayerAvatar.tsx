@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getTeamColor } from '@/lib/mlbTeamColors'
+import { getTeamColor } from '@slipsurge/core/mlbTeamColors'
 
 interface PlayerAvatarProps {
   /** Player headshot URL */

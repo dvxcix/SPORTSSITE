@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
-import { MLB_TEAMS } from '@/lib/mlbTeams'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
 
 // dynamic(..., { ssr: false }) isn't allowed inside the server-rendered

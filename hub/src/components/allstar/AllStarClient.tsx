@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Spotlight } from '@/components/ui/spotlight'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
-import { MLB_TEAM_IDS } from '@/lib/mlbTeamColors'
+import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
+import { MLB_TEAM_IDS } from '@slipsurge/core/mlbTeamColors'
 import { BookLogo } from '@/components/BookLogo'
 import {
   groupByBook, marketsForPlayer, groupBySection, searchMarkets, devig,
@@ -19,7 +19,7 @@ import {
   computeHrDistanceSettlement, computeHrMoneylineParlaySettlement, computeMvpSettlement, outcomeBg, outcomeMark,
   canonicalizeTitle,
   type Market, type MarketOption, type Sportsbook, type HrRaceRow, type LiveGameState, type MarketOutcome,
-} from '@/lib/allStarMarkets'
+} from '@slipsurge/core/allStarMarkets'
 
 const BOOK_LABEL: Record<Sportsbook, string> = { fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars' }
 

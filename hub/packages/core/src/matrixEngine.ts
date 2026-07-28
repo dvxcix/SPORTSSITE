@@ -1,5 +1,5 @@
-import { computeStatLine, lastNGameDates, type PitchLogRow, type BatterStats } from '@/lib/batterStatsEngine'
-import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
+import { computeStatLine, lastNGameDates, type PitchLogRow, type BatterStats } from './batterStatsEngine'
+import type { StatcastWindow, StatcastLine } from './dugoutStatcast'
 
 // The evaluation core for Custom Matrix — given a member's saved Matrix
 // (Elements/Factors) and one batter's real data for today's game, decides

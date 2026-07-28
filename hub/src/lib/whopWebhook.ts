@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { WHOP_PLANS, effectiveTier } from '@/lib/tiers'
+import { WHOP_PLANS, effectiveTier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
 

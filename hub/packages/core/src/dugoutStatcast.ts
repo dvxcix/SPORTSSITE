@@ -1,5 +1,5 @@
-import { computeStatLine, type PitchLogRow } from '@/lib/batterStatsEngine'
-import { sliceRecencyWindow, effectiveBatSide, weightedSavantMetric, type SavantSplitRow, type MatrixRecency } from '@/lib/matrixEngine'
+import { computeStatLine, type PitchLogRow } from './batterStatsEngine'
+import { sliceRecencyWindow, effectiveBatSide, weightedSavantMetric, type SavantSplitRow, type MatrixRecency } from './matrixEngine'
 
 // The Dugout grid's own "Statcast" section (BSpd through HR, plus Timing/
 // Miss) — previously sourced from mlb-party's third-party proxy

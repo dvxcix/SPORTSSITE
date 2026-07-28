@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@/lib/tiers'
+import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { TierUpsell } from './TierUpsell'
 
 // Mirrors FeatureGate.tsx's shape exactly, swapping the site_settings flag

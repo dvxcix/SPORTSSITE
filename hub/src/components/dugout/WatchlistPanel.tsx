@@ -5,7 +5,7 @@ import { BookLogo } from '@/components/BookLogo'
 import { type WatchlistItem } from '@/lib/watchlist'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PostBetModal } from './PostBetModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 

@@ -8,8 +8,8 @@ import { BaseDiamond } from '@/components/sports/BaseDiamond'
 import { StrikeZonePlot } from '@/components/sports/StrikeZonePlot'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { createClient } from '@/lib/supabase/client'
-import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel, pitchOutcomeColor, pitchOutcomeLabel } from '@/lib/mlb-api'
-import type { MLBGameFeed, MLBPlay, MLBBoxPlayer } from '@/lib/mlb-api'
+import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel, pitchOutcomeColor, pitchOutcomeLabel } from '@slipsurge/core/mlb-api'
+import type { MLBGameFeed, MLBPlay, MLBBoxPlayer } from '@slipsurge/core/mlb-api'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function fmt(n: number | undefined, dec = 0): string {

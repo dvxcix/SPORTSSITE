@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@/lib/tiers'
+import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 
 // Same { error?: NextResponse } return shape used by requireAdmin() across
 // hub/src/app/api/admin/*/route.ts — call site pattern:

@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { mlbHeadshot } from '@/lib/mlb-api'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 
 interface FavoritePlayer { mlb_id: number; name: string; team: string }
 

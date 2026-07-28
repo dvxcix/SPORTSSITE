@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DollarSign } from 'lucide-react'
 import { MonetizationSettingsForm } from '@/components/admin/MonetizationSettingsForm'
 import { BookLogo } from '@/components/BookLogo'
-import { fmtUsd, formatOdds } from '@/lib/parlayCalc'
+import { fmtUsd, formatOdds } from '@slipsurge/core/parlayCalc'
 
 export const dynamic = 'force-dynamic'
 

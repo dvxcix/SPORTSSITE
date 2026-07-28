@@ -6,7 +6,7 @@
 // so both call sites can share one implementation with zero drift risk —
 // the whole reason a Matrix "MM" filter must always agree with what a
 // member sees in the live column it's named after.
-import type { MmByWindow } from '@/lib/matrixEngine'
+import type { MmByWindow } from '@slipsurge/core/matrixEngine'
 
 export type PitcherSplitRow = {
   mlb_id?: string | number | null

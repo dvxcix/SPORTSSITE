@@ -2,7 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess, buildWhopVerifiedIdentity, type WhopUserInfo } from '@/lib/whop'
-import { effectiveTier, type Tier } from '@/lib/tiers'
+import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 

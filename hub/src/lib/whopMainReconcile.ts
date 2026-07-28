@@ -1,6 +1,6 @@
 import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@/lib/tiers'
+import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'

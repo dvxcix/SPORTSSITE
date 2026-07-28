@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { fetchTeamPitcherIds } from '@/lib/mlbSchedule'
+import { fetchTeamPitcherIds } from '@slipsurge/core/mlbSchedule'
 import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0

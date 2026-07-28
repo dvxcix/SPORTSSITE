@@ -1,4 +1,4 @@
-import { getMLBGameFeed } from '@/lib/mlb-api'
+import { getMLBGameFeed } from '@slipsurge/core/mlb-api'
 import { NextResponse } from 'next/server'
 import { requireTier } from '@/lib/requireTier'
 

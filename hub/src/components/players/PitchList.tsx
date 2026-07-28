@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { pitchColor, pitchLabel } from '@/lib/mlb-api'
+import { pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { PlayerLink, ToggleBtn } from '@/components/players/PlayerPageClient'
-import type { PitchLogRow } from '@/lib/batterStatsEngine'
+import type { PitchLogRow } from '@slipsurge/core/batterStatsEngine'
 
 const OUT_EVENTS = new Set(['field_out', 'force_out', 'fielders_choice_out', 'grounded_into_double_play', 'double_play', 'triple_play'])
 

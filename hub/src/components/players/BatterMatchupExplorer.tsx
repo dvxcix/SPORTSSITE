@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { pitchColor, pitchLabel } from '@/lib/mlb-api'
+import { pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip, StatGrid } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
 import { ZoneScoreCard } from './ZoneScoreCard'
-import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, MIN_PITCHES_FOR_HEAT, r3, d1, p1, i0 } from '@/lib/batterStatsEngine'
+import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, MIN_PITCHES_FOR_HEAT, r3, d1, p1, i0 } from '@slipsurge/core/batterStatsEngine'
 
 export type { BatterPitchRow }
 const computeStats = computeBatterStats

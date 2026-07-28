@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normName } from '@/lib/nameNorm'
+import { normName } from '@slipsurge/core/nameNorm'
 
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token
 // the /api/cron/* jobs already use — the latter lets the scrape-books

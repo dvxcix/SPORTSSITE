@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { WHOP_PLANS, TIER_LABEL, type Tier } from '@/lib/tiers'
+import { WHOP_PLANS, TIER_LABEL, type Tier } from '@slipsurge/core/tiers'
 import { AdminUserActions } from './AdminUserActions'
 import { AdminUserSupportActions } from './AdminUserSupportActions'
 

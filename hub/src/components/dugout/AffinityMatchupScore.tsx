@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { pitchColor, pitchLabel, mlbHeadshot } from '@/lib/mlb-api'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { pitchColor, pitchLabel, mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { PitchList } from '@/components/players/PitchList'
-import { lastNGameDates, computeStatLine, type PitchLogRow } from '@/lib/batterStatsEngine'
+import { lastNGameDates, computeStatLine, type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
 import { fetchPitchLogCached } from '@/components/dugout/MatchupPitchBreakdown'
-import { scoreFrom } from '@/lib/affinityScore'
+import { scoreFrom } from '@slipsurge/core/affinityScore'
 
 // Same fixed hand-color convention used on the row header in DugoutClient —
 // right orange, left blue, switch purple.

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, TrendingUp, BarChart2, List } from 'lucide-react'
-import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@/lib/espn-api'
-import { getGameStatus } from '@/lib/espn-api'
+import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@slipsurge/core/espn-api'
+import { getGameStatus } from '@slipsurge/core/espn-api'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
 

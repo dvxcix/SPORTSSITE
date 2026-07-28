@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { mlbGameLabel, mlbGameIsLive, mlbTeamLogo } from '@/lib/mlb-api'
-import type { MLBGame } from '@/lib/mlb-api'
+import { mlbGameLabel, mlbGameIsLive, mlbTeamLogo } from '@slipsurge/core/mlb-api'
+import type { MLBGame } from '@slipsurge/core/mlb-api'
 
 function TeamLogo({ id, name, size = 28 }: { id: number; name: string; size?: number }) {
   const [err, setErr] = useState(false)

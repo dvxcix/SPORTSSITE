@@ -6,8 +6,8 @@ import {
   matchBDLGame, addDaysToDateStr, toETDate,
   type BDLGame, type BDLPropMap,
 } from '@/lib/balldontlie'
-import { canonGameKey } from '@/lib/teamAbbr'
-import { normName } from '@/lib/nameNorm'
+import { canonGameKey } from '@slipsurge/core/teamAbbr'
+import { normName } from '@slipsurge/core/nameNorm'
 
 // Bare market keys shared with fanduel-import's own OPENING_MARKET list —
 // whichever pipeline sees a real price for a given (game, player, market)

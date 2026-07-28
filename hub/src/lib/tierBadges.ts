@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Tier } from './tiers'
+import type { Tier } from '@slipsurge/core/tiers'
 
 // Real badge ids from /admin/badges (queried directly, not looked up by
 // name at call time — same reasoning as BETA_TESTER_BADGE_ID: badge names

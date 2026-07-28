@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runMatrixBacktest } from '@/lib/matrixBacktest'
-import type { Matrix } from '@/lib/matrixEngine'
+import type { Matrix } from '@slipsurge/core/matrixEngine'
 
 export const revalidate = 0
 export const maxDuration = 300

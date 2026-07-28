@@ -2,15 +2,15 @@
 
 import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { pitchColor, pitchLabel, mlbHeadshot } from '@/lib/mlb-api'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { pitchColor, pitchLabel, mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { heat, SortableTH, type SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { ZoneGrid, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
 import { PitchList } from '@/components/players/PitchList'
 import { ToggleBtn } from '@/components/players/PlayerPageClient'
-import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow, type BatterStats } from '@/lib/batterStatsEngine'
+import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow, type BatterStats } from '@slipsurge/core/batterStatsEngine'
 import { PITCHER_RECENCY, BATTER_SCOPES } from '@/components/slate/PitcherVsLineup'
 import { lookupSavantMetricBlended, batterScopeToSavantWindow, type SavantSplitRow } from '@/lib/savantSplitLookup'
 

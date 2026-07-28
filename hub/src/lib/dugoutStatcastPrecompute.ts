@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysMatchups } from '@/lib/mlbSchedule'
+import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchBulkBatterPitchRows, fetchBulkSavantSplits } from '@/lib/matrixMatch'
-import { computeAllStatcastWindows, type StatcastWindow, type StatcastLine } from '@/lib/dugoutStatcast'
+import { computeAllStatcastWindows, type StatcastWindow, type StatcastLine } from '@slipsurge/core/dugoutStatcast'
 
 // Precomputes the Dugout grid's own Statcast section (BSpd through HR, plus
 // Timing/Miss, HardSw/SQ/Blast, IdlAA, Pull/FB rate — see dugoutStatcast.ts)

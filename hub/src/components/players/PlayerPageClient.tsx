@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@/lib/mlb-api'
-import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
+import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
+import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
-import { MIN_PITCHES_FOR_HEAT } from '@/lib/batterStatsEngine'
+import { MIN_PITCHES_FOR_HEAT } from '@slipsurge/core/batterStatsEngine'
 import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
 import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
-import type { PlayerTodayContext } from '@/lib/mlbSchedule'
+import type { PlayerTodayContext } from '@slipsurge/core/mlbSchedule'
 
 type SplitRow = { dims: Record<string, any>; metrics: Record<string, any> }
 type SplitWindow = { season: SplitRow[]; recency: SplitRow[] }

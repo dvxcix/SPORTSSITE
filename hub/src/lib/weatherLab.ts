@@ -1,5 +1,5 @@
-import { getMLBSchedule } from '@/lib/mlb-api'
-import { MLB_PARKS } from '@/lib/mlbParks'
+import { getMLBSchedule } from '@slipsurge/core/mlb-api'
+import { MLB_PARKS } from '@slipsurge/core/mlbParks'
 
 interface HourEntry {
   label: string        // "1pm"

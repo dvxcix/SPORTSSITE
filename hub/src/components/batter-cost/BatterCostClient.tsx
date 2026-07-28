@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { Tooltip } from '@/components/ui/tooltip-card'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
 

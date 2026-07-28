@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PROP_META } from '@/lib/watchlist'
-import { mlbHeadshot } from '@/lib/mlb-api'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 
 // A star next to a batter's name/link, toggling one specific prop (defaults
 // to FanDuel's anytime-HR line, "sa") in/out of the watchlist — same

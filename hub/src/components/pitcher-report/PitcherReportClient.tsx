@@ -2,12 +2,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { PitchMixTable, BatterVsPitchTable, TeamLogoImg, effectiveBatSide, pct } from './MatchupTables'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 
 // ─── shapes from /api/dugout/data ──────────────────────────────────────────
 interface PitcherInfo { id: number; name: string; hand: string }

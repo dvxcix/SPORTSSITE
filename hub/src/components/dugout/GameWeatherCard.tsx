@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getTeamColor, getTeamSecondaryColor, getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore } from '@/lib/mlbParks'
+import { getTeamColor, getTeamSecondaryColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore } from '@slipsurge/core/mlbParks'
 import { ParkShape, WindCanvas, WIND_CANVAS_SIZE, hexToRgba, type WeatherGame } from '@/components/weather/WeatherLabClient'
 import { Tooltip } from '@/components/ui/tooltip-card'
 

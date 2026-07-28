@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { pitchLabel } from '@/lib/mlb-api'
+import { pitchLabel } from '@slipsurge/core/mlb-api'
 import { heat, SortableTH, SortState, toggleSortState, cmpAny, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
 import { HandBadge, PlayerLink, StatGrid, cardStyle, sectionTitleStyle, windowTag, ToggleBtn } from '@/components/players/PlayerPageClient'
 import { ZoneGrid, ChaseZoneStats, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
 import { PitchList } from '@/components/players/PitchList'
-import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow } from '@/lib/batterStatsEngine'
-import type { LineupPlayer, ProbablePitcher, TeamPitcher } from '@/lib/mlbSchedule'
+import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
+import type { LineupPlayer, ProbablePitcher, TeamPitcher } from '@slipsurge/core/mlbSchedule'
 
 // Exported so other real-pitch-log matchup UIs (Dugout's per-batter
 // drilldown) reuse the exact same recency-window vocabulary instead of a

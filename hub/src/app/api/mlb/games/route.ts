@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getTodaysGames } from '@/lib/mlb-api'
+import { getTodaysGames } from '@slipsurge/core/mlb-api'
 import { requireTier } from '@/lib/requireTier'
 
 export async function GET() {

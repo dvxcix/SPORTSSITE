@@ -1,12 +1,12 @@
 'use client'
 import { Fragment, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import { mlbHeadshot, pitchColor, pitchLabel } from '@/lib/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip } from '@/components/ui/tooltip-card'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 
 // Pulled out of PitcherReportClient.tsx so Dugout's per-batter drilldown can

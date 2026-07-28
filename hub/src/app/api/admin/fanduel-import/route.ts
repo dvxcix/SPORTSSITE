@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normName } from '@/lib/nameNorm'
+import { normName } from '@slipsurge/core/nameNorm'
 
 // Full franchise names as they appear in FanDuel's own event.title (e.g.
 // "Colorado Rockies @ San Francisco Giants Player Combos Odds") — used to

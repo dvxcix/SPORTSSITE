@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason, claimBatch, markSyncState, toNum, fetchMlbJson } from '@/lib/playerSync'
-import { mlbTeamAbbrById } from '@/lib/mlbTeams'
+import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 
 export const revalidate = 0
 export const maxDuration = 60

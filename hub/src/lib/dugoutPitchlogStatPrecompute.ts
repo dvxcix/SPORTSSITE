@@ -1,8 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysMatchups } from '@/lib/mlbSchedule'
+import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchBulkBatterPitchRows } from '@/lib/matrixMatch'
-import { computeAllPitchlogStatWindows, type PitchlogStatWindow } from '@/lib/matrixEngine'
-import type { BatterStats } from '@/lib/batterStatsEngine'
+import { computeAllPitchlogStatWindows, type PitchlogStatWindow } from '@slipsurge/core/matrixEngine'
+import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 
 // Precomputes Custom Matrix's pitchlog_stat category (whiff%/chase%/hard-
 // hit%/barrel%/HR/etc, real "last N games played" windows — see

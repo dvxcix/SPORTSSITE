@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { combineOdds } from '@/lib/parlayCalc'
+import { combineOdds } from '@slipsurge/core/parlayCalc'
 
 // ─── Prop metadata ─────────────────────────────────────────────────────────
 // Maps a raw BDL propMap key (or synthetic key) to what shows on the

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, type TodayGame } from '@/lib/mlbSchedule'
+import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
 import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'

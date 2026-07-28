@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import {
   getPitcherStarts, getBatterGames, fetchManyGamePitchEvents,
   pitcherRowsByHand, batterRowsByPitchTypeAndHand,
-} from '@/lib/pitchLog'
+} from '@slipsurge/core/pitchLog'
 import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0

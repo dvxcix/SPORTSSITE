@@ -1,0 +1,28 @@
+{
+  "name": "@slipsurge/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./matrixEngine": "./src/matrixEngine.ts",
+    "./batterStatsEngine": "./src/batterStatsEngine.ts",
+    "./dugoutStatcast": "./src/dugoutStatcast.ts",
+    "./tiers": "./src/tiers.ts",
+    "./affinityScore": "./src/affinityScore.ts",
+    "./parlayCalc": "./src/parlayCalc.ts",
+    "./mlbTeams": "./src/mlbTeams.ts",
+    "./mlbTeamColors": "./src/mlbTeamColors.ts",
+    "./mlbParks": "./src/mlbParks.ts",
+    "./mlbParkShapes": "./src/mlbParkShapes.ts",
+    "./mlbSchedule": "./src/mlbSchedule.ts",
+    "./nameNorm": "./src/nameNorm.ts",
+    "./teamAbbr": "./src/teamAbbr.ts",
+    "./pitchLog": "./src/pitchLog.ts",
+    "./allStarMarkets": "./src/allStarMarkets.ts",
+    "./mlb-api": "./src/mlb-api.ts",
+    "./espn-api": "./src/espn-api.ts"
+  }
+}

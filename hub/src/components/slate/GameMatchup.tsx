@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import type { TodayGame } from '@/lib/mlbSchedule'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import type { TodayGame } from '@slipsurge/core/mlbSchedule'
 import { PitcherVsLineup } from './PitcherVsLineup'
 
 const tabStyle = (active: boolean): React.CSSProperties => ({

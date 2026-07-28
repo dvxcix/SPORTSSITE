@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 
 // Read-only diagnostic for the "why are some batters always blank on
 // FHR%/HR%" investigation — does NOT touch buildBatterRow's fhr_pct/sa_pct

@@ -7,8 +7,8 @@ import { TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
 import { BookLogo } from '@/components/BookLogo'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 
 // Every book we actually store odds under (see BookLogo.tsx) — every
 // category shows whichever of these actually have a real price for that

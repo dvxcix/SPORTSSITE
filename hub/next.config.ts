@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // @slipsurge/core is a workspace package (packages/core) holding the
+  // matrixEngine/batterStatsEngine/etc. logic shared with the mobile app —
+  // it ships raw .ts source (no build step of its own), so Next needs to
+  // run it through its own compiler same as first-party src/ code, instead
+  // of treating it as an already-built external node_modules dependency.
+  transpilePackages: ['@slipsurge/core'],
   // playwright-core is already in Next's default server-external-packages
   // list, so it isn't bundled — but Vercel's file tracer (@vercel/nft)
   // still misses browsers.json, a data file the package reads at runtime

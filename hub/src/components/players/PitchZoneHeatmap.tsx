@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { pitchLabel } from '@/lib/mlb-api'
+import { pitchLabel } from '@slipsurge/core/mlb-api'
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
 import { ZoneScoreCard } from './ZoneScoreCard'
 import { ZoneGrid, ChaseZoneStats, ZONE_METRICS, type ZoneMetricKey } from './ZoneGrid'
-import { type PitcherPitchRow } from '@/lib/batterStatsEngine'
+import { type PitcherPitchRow } from '@slipsurge/core/batterStatsEngine'
 
 export type { PitcherPitchRow }
 

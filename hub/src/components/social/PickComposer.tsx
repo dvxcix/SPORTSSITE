@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { X } from 'lucide-react'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
-import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
-import { mlbHeadshot } from '@/lib/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PROP_META } from '@/lib/watchlist'
 
 export type ComposedPick = {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkoutApiKeyEnvFor } from '@/lib/tiers'
+import { checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
 import { cancelWhopMembership } from '@/lib/whop'
 
 export const revalidate = 0

@@ -2,27 +2,27 @@ import { NextResponse } from 'next/server'
 import { unstable_cache } from 'next/cache'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normName, resolveNameEntry } from '@/lib/nameNorm'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { getEffectiveTier } from '@/lib/requireTier'
-import { hasTierAccess } from '@/lib/tiers'
-import { fetchScheduleWithRetry } from '@/lib/mlbSchedule'
-import { canonAbbr, canonGameKey } from '@/lib/teamAbbr'
+import { hasTierAccess } from '@slipsurge/core/tiers'
+import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
+import { canonAbbr, canonGameKey } from '@slipsurge/core/teamAbbr'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows,
   evaluateBatterMatrices, pitchlogNeeded, pitchlogCustomNeeded, asyncPool,
 } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
-import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
+import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
 import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
-import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle, MmByWindow } from '@/lib/matrixEngine'
+import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle, MmByWindow } from '@slipsurge/core/matrixEngine'
 import { computeMmByWindowForGame, buildPitcherMap, type MmPlayerInput } from '@/lib/dugoutPaperScore'
 import {
   computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
   groupTiedCandidates, filterTieGroups, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
-} from '@/lib/matrixEngine'
-import type { BatterStats } from '@/lib/batterStatsEngine'
+} from '@slipsurge/core/matrixEngine'
+import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 
 export const revalidate = 0
 export const maxDuration = 60

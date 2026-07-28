@@ -2,9 +2,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
   evaluateMatrix, evaluatePitchlogFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePicksFactor,
   type Matrix, type MatrixFactor, type MatrixPipelineStep, type DugoutSpecsAverages, type PitchlogStatWindow, type MmByWindow,
-} from '@/lib/matrixEngine'
-import type { StatcastWindow, StatcastLine } from '@/lib/dugoutStatcast'
-import type { BatterStats } from '@/lib/batterStatsEngine'
+} from '@slipsurge/core/matrixEngine'
+import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
+import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 

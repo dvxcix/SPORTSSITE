@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, isPregame, type LineupPlayer } from '@/lib/mlbSchedule'
-import { getTeamLogoUrl, getTeamName } from '@/lib/mlbTeamColors'
+import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core/mlbSchedule'
+import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 
 export const revalidate = 0
 export const maxDuration = 60

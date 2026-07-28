@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserRow } from '@/components/admin/AdminUserRow'
 import { Search } from 'lucide-react'
-import { effectiveTier, hasTierAccess, type Tier } from '@/lib/tiers'
+import { effectiveTier, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
 export const dynamic = 'force-dynamic'
 
