@@ -11,12 +11,14 @@ import { UserBadges } from '@/components/social/UserBadges'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
 
-type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb'
+type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb' | 'nfl'
 
 const TRENDING_TAGS = ['MLB', 'Yankees', 'Dodgers', 'OverUnder', 'NFL2026', 'Props', 'Parlays', 'NBA']
 
 type MlbPlayerResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null; gamePk: number | null; isProbableStarter: boolean }
 type MlbTeamResult = { id: number; abbr: string; name: string; shortName: string; gamePk: number | null }
+type NflPlayerResult = { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null }
+type NflTeamResult = { team_abbr: string; team_name: string; team_nick: string | null; team_logo_espn: string | null }
 
 export function SearchClient() {
   // The topbar's search box links here with ?q= already filled in — read
@@ -32,15 +34,17 @@ export function SearchClient() {
   const [players, setPlayers] = useState<MlbPlayerResult[]>([])
   const [teams, setTeams] = useState<MlbTeamResult[]>([])
   const [mlbDate, setMlbDate] = useState<string | null>(null)
+  const [nflPlayers, setNflPlayers] = useState<NflPlayerResult[]>([])
+  const [nflTeams, setNflTeams] = useState<NflTeamResult[]>([])
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
   const doSearch = useCallback(async (query: string) => {
-    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); return }
+    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); return }
     setLoading(true)
 
     const postCols = 'id, content, post_type, pick_data, sport, created_at, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
-    const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData] = await Promise.all([
+    const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData] = await Promise.all([
       supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
@@ -70,6 +74,7 @@ export function SearchClient() {
         .order('created_at', { ascending: false })
         .limit(150),
       fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
+      fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
     ])
 
     const q = query.toLowerCase()
@@ -85,6 +90,8 @@ export function SearchClient() {
     setPlayers(sportsData.players ?? [])
     setTeams(sportsData.teams ?? [])
     setMlbDate(sportsData.date ?? null)
+    setNflPlayers(nflData.players ?? [])
+    setNflTeams(nflData.teams ?? [])
     setLoading(false)
   }, [])
 
@@ -96,11 +103,12 @@ export function SearchClient() {
   // Picks used to only match post_type === 'pick', silently excluding
   // parlays — same bug already found/fixed on /feed and /picks.
   const picks = posts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-  const hasResults = users.length > 0 || posts.length > 0 || players.length > 0 || teams.length > 0
+  const hasResults = users.length > 0 || posts.length > 0 || players.length > 0 || teams.length > 0 || nflPlayers.length > 0 || nflTeams.length > 0
   const showUsers = tab === 'all' || tab === 'users'
   const showPosts = tab === 'all' || tab === 'posts'
   const showPicks = tab === 'picks'
   const showMlb = tab === 'all' || tab === 'mlb'
+  const showNfl = tab === 'all' || tab === 'nfl'
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
@@ -139,7 +147,7 @@ export function SearchClient() {
         <>
           {/* Tabs */}
           <div className="flex gap-1 mb-4 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
-            {([['all', 'All'], ['mlb', 'MLB'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as const).map(([k, l]) => (
+            {([['all', 'All'], ['mlb', 'MLB'], ['nfl', 'NFL'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as const).map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 {l}
@@ -212,6 +220,51 @@ export function SearchClient() {
                       )}
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NFL players & teams */}
+          {showNfl && (nflPlayers.length > 0 || nflTeams.length > 0) && (
+            <div className="mb-6">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+                🏈 NFL
+              </h3>
+              <div className="space-y-2">
+                {nflTeams.map(t => (
+                  <Link key={t.team_abbr} href={`/nfl/teams/${t.team_abbr}`}
+                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                    {t.team_logo_espn ? (
+                      <img src={t.team_logo_espn} alt={t.team_abbr} className="w-10 h-10 object-contain shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-zinc-800 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{t.team_name}</p>
+                      <p className="text-xs text-zinc-500">Team</p>
+                    </div>
+                  </Link>
+                ))}
+                {nflPlayers.map(p => (
+                  <Link key={p.gsis_id} href={`/nfl/players/${p.gsis_id}`}
+                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                    {p.headshot ? (
+                      <img src={p.headshot} alt={p.display_name} className="w-11 h-11 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-500 shrink-0">
+                        {p.position || '—'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{p.display_name}</p>
+                      <p className="text-xs text-zinc-500 truncate">
+                        {p.position && <span>{p.position}</span>}
+                        {p.position && p.latest_team && <span> · </span>}
+                        {p.latest_team}
+                      </p>
+                    </div>
+                  </Link>
                 ))}
               </div>
             </div>
