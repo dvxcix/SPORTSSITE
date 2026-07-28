@@ -239,14 +239,19 @@ export function recencyLabel(category: MatrixFactor['category'], r: string): str
   if (category === 'savant_stat' && r === 'game_delta') return 'Last 1 (Δ vs. Season, matching hand)'
   return RECENCY_LABEL[r] ?? r
 }
-// The only two fields the Dugout board itself actually renders a Δ (recent
-// minus season) value for — Bat Speed's "ΔSPD" and Squared-Up%'s "ΔSQ" (see
-// DugoutClient.tsx's d_spd/d_sq) — which is exactly the real number the
-// '_delta' recency removal above was worried a member had nothing to
-// calibrate against. These two DO have that number, so they get the delta
-// options back; every other field stays exact-window-only.
+// Every field the Dugout board itself actually renders a Δ (recent minus
+// season) value for — see DugoutClient.tsx's d_* variables/header cells —
+// which is exactly the real number the '_delta' recency removal above was
+// worried a member had nothing to calibrate against. This list had gone
+// stale (only bspd/sweetspot/sq were listed here even after "Add R·/Δ for
+// all remaining Statcast fields" gave the grid Δ columns for everything
+// else below) — a field with a real Δ column in the grid but no Δ option in
+// this picker was silently unreachable as a Matrix condition. Keep this in
+// sync with DugoutClient.tsx's own d_* set; every field NOT listed here
+// really does stay exact-window-only (no d_* counterpart exists for it).
 const DELTA_DISPLAYED_FIELDS: Partial<Record<MatrixFactor['category'], string[]>> = {
-  pitchlog_stat: ['bspd', 'sweetspot'], savant_stat: ['sq'],
+  pitchlog_stat: ['bspd', 'sweetspot', 'swlen', 'atk', 'tilt', 'brl', 'hh', 'avgev', 'la'],
+  savant_stat: ['sq', 'hardsw', 'blast', 'idlaa', 'timing', 'miss', 'pullair', 'fb'],
 }
 export function recencyOptionsFor(category: MatrixFactor['category'], field_key: string): string[] {
   // MM has no "Season" concept of its own (see MmByWindow, matrixEngine.ts)
