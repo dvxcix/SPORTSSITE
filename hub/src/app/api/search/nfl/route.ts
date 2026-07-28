@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   if (q.length < 2) return NextResponse.json({ players: [], teams: [] })
 
   const admin = createAdminClient()
-  const [{ data: players }, { data: teams }] = await Promise.all([
+  const [{ data: players }, { data: teams }, { data: allTeams }] = await Promise.all([
     admin.from('nfl_players')
       .select('gsis_id, display_name, position, latest_team, headshot')
       .ilike('display_name', `%${q}%`)
@@ -24,7 +24,13 @@ export async function GET(req: Request) {
       .select('team_abbr, team_name, team_nick, team_logo_espn')
       .or(`team_name.ilike.%${q}%,team_nick.ilike.%${q}%,team_abbr.ilike.%${q}%`)
       .limit(5),
+    admin.from('nfl_teams').select('team_abbr, team_logo_espn'),
   ])
 
-  return NextResponse.json({ players: players ?? [], teams: teams ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
+  // Players don't carry their own logo — the UI shows a team logo next to
+  // every player result (not the bare team abbreviation), so merge it in here.
+  const logoByAbbr = new Map((allTeams ?? []).map(t => [t.team_abbr, t.team_logo_espn]))
+  const playersWithLogo = (players ?? []).map(p => ({ ...p, team_logo_espn: p.latest_team ? logoByAbbr.get(p.latest_team) ?? null : null }))
+
+  return NextResponse.json({ players: playersWithLogo, teams: teams ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
 }

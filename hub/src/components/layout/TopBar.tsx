@@ -7,6 +7,7 @@ import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, Messa
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
+import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { useCustomEmojis } from '@/lib/emoji'
 import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
@@ -32,7 +33,7 @@ type QuickResults = {
   users: any[]; posts: any[]
   players: { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null }[]
   teams: { id: number; abbr: string; name: string; gamePk: number | null }[]
-  nflPlayers: { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null }[]
+  nflPlayers: { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null; team_logo_espn: string | null }[]
   nflTeams: { team_abbr: string; team_name: string; team_logo_espn: string | null }[]
 }
 const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [], nflPlayers: [], nflTeams: [] }
@@ -301,7 +302,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />}
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.display_name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{[p.position, p.latest_team].filter(Boolean).join(' · ')}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>{p.position}</span>
+                        {p.position && p.latest_team && <span>·</span>}
+                        {p.latest_team && <NflTeamLogo abbr={p.latest_team} logoUrl={p.team_logo_espn} size={12} />}
+                      </div>
                     </div>
                   </button>
                 ))}

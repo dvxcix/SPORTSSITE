@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 
 export const revalidate = 0
 
@@ -13,12 +14,15 @@ async function getPlayerData(id: string) {
     ? await admin.from('nfl_teams').select('team_abbr, team_name, team_color, team_logo_espn').eq('team_abbr', player.latest_team).maybeSingle()
     : { data: null }
 
-  const [{ data: gameLog }, { data: ngsPassing }, { data: ngsReceiving }, { data: ngsRushing }] = await Promise.all([
+  const [{ data: gameLog }, { data: ngsPassing }, { data: ngsReceiving }, { data: ngsRushing }, { data: allTeams }] = await Promise.all([
     admin.from('nfl_player_stats').select('*').eq('player_id', id).order('season', { ascending: false }).order('week', { ascending: false }),
     admin.from('nfl_ngs_passing').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }).limit(5),
     admin.from('nfl_ngs_receiving').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }).limit(5),
     admin.from('nfl_ngs_rushing').select('*').eq('player_gsis_id', id).order('season', { ascending: false }).order('week', { ascending: false }).limit(5),
+    admin.from('nfl_teams').select('team_abbr, team_logo_espn'),
   ])
+  const teamLogos: Record<string, string | null> = {}
+  for (const t of allTeams ?? []) teamLogos[t.team_abbr] = t.team_logo_espn
 
   // week=0 rows are a season-total stopgap fill (see sumBySeason) with no
   // games-played count of their own (nfl_player_stats has no such column) —
@@ -78,6 +82,7 @@ async function getPlayerData(id: string) {
     ngsRushing: ngsRushing ?? [],
     opponent,
     dvpRows,
+    teamLogos,
   }
 }
 
@@ -145,7 +150,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
   const { id } = await params
   const data = await getPlayerData(id)
   if (!data) notFound()
-  const { player, team, gameLog, ngsPassing, ngsReceiving, ngsRushing, opponent, dvpRows } = data
+  const { player, team, gameLog, ngsPassing, ngsReceiving, ngsRushing, opponent, dvpRows, teamLogos } = data
 
   const heightStr = player.height ? `${Math.floor(player.height / 12)}'${player.height % 12}"` : null
 
@@ -178,18 +183,30 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
         )}
         <div>
           <h1 className="text-2xl font-black text-white">{player.display_name}</h1>
-          <p className="text-sm text-zinc-300">
-            {player.position}
-            {player.jersey_number != null ? ` · #${player.jersey_number}` : ''}
-            {team && <> · <Link href={`/nfl/teams/${team.team_abbr}`} className="underline hover:text-white">{team.team_name}</Link></>}
+          <p className="text-sm text-zinc-300 flex items-center gap-1.5">
+            <span>
+              {player.position}
+              {player.jersey_number != null ? ` · #${player.jersey_number}` : ''}
+            </span>
+            {team && (
+              <>
+                <span>·</span>
+                <Link href={`/nfl/teams/${team.team_abbr}`} className="inline-flex items-center gap-1.5 hover:text-white">
+                  <NflTeamLogo abbr={team.team_abbr} logoUrl={team.team_logo_espn} size={18} />
+                  <span className="underline">{team.team_name}</span>
+                </Link>
+              </>
+            )}
           </p>
         </div>
       </div>
 
       {opponent && dvpByCategory.size > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6 overflow-x-auto">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
-            Next Matchup vs {opponent.team_abbr} <span className="normal-case text-zinc-600">({opponent.season} defense vs {player.position}, {opponent.games} games)</span>
+          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <span>Next Matchup vs</span>
+            <NflTeamLogo abbr={opponent.team_abbr} logoUrl={teamLogos[opponent.team_abbr]} size={18} />
+            <span className="normal-case text-zinc-600">({opponent.season} defense vs {player.position}, {opponent.games} games)</span>
           </h2>
           <div className="flex gap-4 overflow-x-auto">
             {(isQb
@@ -223,7 +240,12 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
         {bioRow('Height / Weight', heightStr && player.weight ? `${heightStr}, ${player.weight} lbs` : null)}
         {bioRow('College', player.college_name)}
         {bioRow('Rookie Season', player.rookie_season)}
-        {bioRow('Draft', player.draft_year ? `${player.draft_year}, Round ${player.draft_round ?? '—'}, Pick ${player.draft_pick ?? '—'} (${player.draft_team ?? '—'})` : null)}
+        {bioRow('Draft', player.draft_year ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span>{player.draft_year}, Round {player.draft_round ?? '—'}, Pick {player.draft_pick ?? '—'}</span>
+            {player.draft_team && <NflTeamLogo abbr={player.draft_team} logoUrl={teamLogos[player.draft_team]} size={16} />}
+          </span>
+        ) : null)}
       </div>
 
       {seasonStats.length > 0 && (
@@ -300,8 +322,16 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           <div className="flex gap-4 overflow-x-auto">
             {recentGames.map((g, i) => (
               <div key={i} className="flex-shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg p-3 min-w-[140px]">
-                <div className="text-[10px] text-zinc-500 mb-2">
-                  {String(g.season)} Wk {String(g.week)} · {String(g.opponent_team ?? '—')}
+                <div className="text-[10px] text-zinc-500 mb-2 flex items-center gap-1">
+                  <span>{String(g.season)} Wk {String(g.week)}</span>
+                  {g.opponent_team ? (
+                    <>
+                      <span>·</span>
+                      <NflTeamLogo abbr={g.opponent_team as string} logoUrl={teamLogos[g.opponent_team as string]} size={14} />
+                    </>
+                  ) : (
+                    <span>· —</span>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {isQb ? (

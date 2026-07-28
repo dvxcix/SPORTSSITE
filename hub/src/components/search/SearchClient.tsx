@@ -10,6 +10,7 @@ import { mlbHeadshot, mlbTeamLogo } from '@/lib/mlb-api'
 import { UserBadges } from '@/components/social/UserBadges'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { getTeamLogoUrl } from '@/lib/mlbTeamColors'
+import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb' | 'nfl'
 
@@ -17,7 +18,7 @@ const TRENDING_TAGS = ['MLB', 'Yankees', 'Dodgers', 'OverUnder', 'NFL2026', 'Pro
 
 type MlbPlayerResult = { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null; gamePk: number | null; isProbableStarter: boolean }
 type MlbTeamResult = { id: number; abbr: string; name: string; shortName: string; gamePk: number | null }
-type NflPlayerResult = { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null }
+type NflPlayerResult = { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null; team_logo_espn: string | null }
 type NflTeamResult = { team_abbr: string; team_name: string; team_nick: string | null; team_logo_espn: string | null }
 
 export function SearchClient() {
@@ -258,10 +259,10 @@ export function SearchClient() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-white text-sm truncate">{p.display_name}</p>
-                      <p className="text-xs text-zinc-500 truncate">
+                      <p className="text-xs text-zinc-500 truncate flex items-center gap-1">
                         {p.position && <span>{p.position}</span>}
-                        {p.position && p.latest_team && <span> · </span>}
-                        {p.latest_team}
+                        {p.position && p.latest_team && <span>·</span>}
+                        {p.latest_team && <NflTeamLogo abbr={p.latest_team} logoUrl={p.team_logo_espn} size={14} />}
                       </p>
                     </div>
                   </Link>
