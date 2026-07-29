@@ -6,7 +6,7 @@ import type { MatrixPipelineStep } from './PipelineBuilder'
 const OP_WORD: Record<string, string> = {
   gte: 'at least', lte: 'at most', eq: 'exactly',
   up: 'moved up since open', down: 'moved down since open', flat: 'unchanged since open',
-  positive: 'positive', negative: 'negative',
+  positive: 'positive', negative: 'negative', zero: 'zero',
   is_null: 'blank (no value)', is_not_null: 'has a value',
   lt_anchor: 'lower than the tied value', gt_anchor: 'higher than the tied value',
 }

@@ -9,9 +9,9 @@ const TIEBREAKER_CATEGORIES = ['odds', 'dugout_specs', 'pitchlog_stat', 'savant_
 const VALID_BOOKS = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
 const MAX_TIEBREAKERS = 5
 const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank', 'unless']
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor', 'mm_trend']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'zero', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor', 'mm_trend']
 const MAX_PIPELINE_STEPS = 10
-const FACTOR_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'tied', 'is_null', 'is_not_null', 'mm_trend']
+const FACTOR_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'zero', 'tied', 'is_null', 'is_not_null', 'mm_trend']
 
 // Only meaningful for operator 'mm_trend' (field_key 'mm') — see
 // matrixEngine.ts's evaluateMmTrend/MmByWindow.

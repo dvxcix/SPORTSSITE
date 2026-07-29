@@ -41,6 +41,11 @@ import type { StatcastWindow, StatcastLine } from './dugoutStatcast'
 // 110+ laser price" or "only players missing an FHR line entirely." These
 // two make "has no value"/"has a value" a first-class condition on any
 // field, any category — see compareThreshold's early-return for them below.
+// 'zero' — real gap, reported live (2026-07-28): 'positive'/'negative' cover
+// the two signed directions but not "exactly 0" itself (e.g. MM with no
+// line movement at all) — typing 'eq' + 0 worked but wasn't discoverable
+// next to the one-click positive/negative options. Same 2-decimal rounding
+// as 'eq' (see below) since these are raw division results.
 // 'lt_anchor'/'gt_anchor' — only meaningful on a filter step living inside
 // an 'unless' step's condition_steps (see MatrixPipelineStep below):
 // compares against that 'unless' step's dynamically-resolved anchor value
@@ -54,7 +59,7 @@ import type { StatcastWindow, StatcastLine } from './dugoutStatcast'
 // way to ask "did this player's MM MOVE between two of the board's own
 // windows" (e.g. "was + on L10 but crossed negative by L1," or "dropped 3+
 // between L5 and L1"). See evaluateMmTrend/MatrixFactor's mm_* fields below.
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
 // 'moved' is a real gap, reported live (2026-07-27): 'increased'/'decreased'
 // each only check ONE direction — asking "did this player move AT ALL"
@@ -397,6 +402,10 @@ function compareThreshold(current: number | null, operator: MatrixOperator, valu
   // member just wants "trending the right way," not a specific number.
   if (operator === 'positive') return current > 0
   if (operator === 'negative') return current < 0
+  // Same rounding as 'eq' below — MM and other ratio fields are raw
+  // division results, so "is zero" needs to match whatever the board
+  // itself displays rounded to 2 decimals, not a literal current === 0.
+  if (operator === 'zero') return Math.round(current * 100) / 100 === 0
   if (value == null) return false
   if (operator === 'gte') return current >= value
   if (operator === 'lte') return current <= value

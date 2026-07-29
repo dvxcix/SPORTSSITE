@@ -48,7 +48,7 @@ export type MatrixPipelineStep = {
   book: string | null
   books: string[] | null
   books_min_count: number | null
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend' | null
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'zero' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend' | null
   value: number | null
   // rank: which extreme to keep — 'closest_zero' (rank-only, not offered by
   // the Group step's own UI) ranks by absolute distance from 0 instead,
@@ -268,6 +268,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                 <>
                   <option value="positive">Is positive (+)</option>
                   <option value="negative">Is negative (−)</option>
+                  <option value="zero">Is zero (0)</option>
                   {step.field_key === 'mm' && <option value="mm_trend">Trend across L1/L3/L5/L10</option>}
                 </>
               )}
@@ -275,6 +276,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                 <>
                   <option value="positive">Is positive (+)</option>
                   <option value="negative">Is negative (−)</option>
+                  <option value="zero">Is zero (0)</option>
                 </>
               )}
             </select>
@@ -309,7 +311,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                 // 'positive'/'negative' selected while switching away from a
                 // '_delta' recency would strand the step on an operator its
                 // own dropdown no longer offers.
-                ...((step.operator === 'positive' || step.operator === 'negative') && step.category !== 'dugout_specs' && !stillDelta
+                ...((step.operator === 'positive' || step.operator === 'negative' || step.operator === 'zero') && step.category !== 'dugout_specs' && !stillDelta
                   ? { operator: 'gte' as const, value: null }
                   : {}),
               })
