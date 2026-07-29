@@ -60,8 +60,8 @@ export default function TermsPage() {
       </Section>
 
       <Section id="billing" title="5. Subscriptions & Billing">
-        Paid tiers (Basic, Advanced, Ultimate) are billed on a recurring basis through Whop, our third-party
-        billing partner. Subscribing unlocks platform features (research tools, feed features, higher-tier content)
+        Paid tiers (Basic, Advanced, Ultimate) are billed on a recurring basis through a third-party billing
+        partner. Subscribing unlocks platform features (research tools, feed features, higher-tier content)
         only — it does not grant any betting product, wagering credit, or guarantee of any outcome. Your
         subscription renews automatically until you cancel; you can cancel any time from{' '}
         <a href="/settings/membership" style={{ color: 'var(--accent)' }}>Settings → Membership</a>, and
@@ -96,16 +96,17 @@ export default function TermsPage() {
         The SlipSurge name, logo, and the Service&apos;s design, software, and original content are owned by
         SlipSurge LLC and protected by intellectual property law — you may not copy, modify, or reverse-engineer
         any part of it outside normal use of the Service. Team logos, player photos, and certain statistical data
-        displayed on the Service are sourced from Major League Baseball&apos;s public Stats API and are the
-        property of MLB and its member clubs; we display them for informational and statistical purposes only.
+        displayed on the Service are sourced from a public sports-league data source and remain the property of
+        the applicable league and its member clubs; we display them for informational and statistical purposes
+        only.
       </Section>
 
       <Section id="third-party" title="9. Third-Party Services & Data">
-        The Service displays sports data, statistics, and betting odds aggregated from third-party sources
-        (including MLB&apos;s public APIs, balldontlie, and publicly posted sportsbook lines). We do our best to
-        keep this data accurate and current, but we don&apos;t control these sources and can&apos;t guarantee
-        their accuracy, availability, or timeliness. SlipSurge is not affiliated with, sponsored by, or endorsed
-        by MLB, any MLB club, or any sportsbook referenced on the Service.
+        The Service displays sports data, statistics, and betting odds aggregated from third-party sources,
+        including public league data feeds, a sports-data aggregator, and publicly posted sportsbook lines. We do
+        our best to keep this data accurate and current, but we don&apos;t control these sources and can&apos;t
+        guarantee their accuracy, availability, or timeliness. SlipSurge is not affiliated with, sponsored by, or
+        endorsed by any sports league, club, or sportsbook referenced on the Service.
       </Section>
 
       <Section id="no-advice" title="10. No Betting, Financial, or Investment Advice">

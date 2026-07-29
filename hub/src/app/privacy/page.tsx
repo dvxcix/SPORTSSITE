@@ -40,15 +40,16 @@ export default function PrivacyPage() {
         <p style={{ marginBottom: 12 }}><strong>Account information.</strong> Email address, username, password
         (stored as a salted hash, never in plain text), and profile details you choose to add (display name, bio,
         avatar/banner image).</p>
-        <p style={{ marginBottom: 12 }}><strong>Sign-in via Discord or X.</strong> If you register or sign in
-        through Discord or X (Twitter), we receive your account ID, username, and public profile photo from that
-        provider so we can create and authenticate your SlipSurge account. We don&apos;t receive your password for
-        that provider and can&apos;t post to it on your behalf beyond what you explicitly connect.</p>
+        <p style={{ marginBottom: 12 }}><strong>Sign-in via a third-party provider.</strong> If you register or
+        sign in through a supported third-party identity provider, we receive your account ID, username, and
+        public profile photo from that provider so we can create and authenticate your SlipSurge account. We
+        don&apos;t receive your password for that provider and can&apos;t post to it on your behalf beyond what
+        you explicitly connect.</p>
         <p style={{ marginBottom: 12 }}><strong>Content you create.</strong> Posts, comments, picks, parlays,
         Custom Matrices, watchlist entries, and any other content you submit.</p>
-        <p style={{ marginBottom: 12 }}><strong>Billing information.</strong> Subscriptions are processed by Whop,
-        our payment and membership platform. We receive your tier, subscription status, and renewal dates from
-        Whop — we never see or store your full card number.</p>
+        <p style={{ marginBottom: 12 }}><strong>Billing information.</strong> Subscriptions are processed by a
+        third-party payment and subscription platform. We receive your tier, subscription status, and renewal
+        dates from that processor — we never see or store your full card number.</p>
         <p style={{ marginBottom: 12 }}><strong>Device & usage data.</strong> IP address, browser/device type,
         pages viewed, and general usage patterns, collected automatically to keep the Service working and secure.
         If you enable push notifications, we store the device token needed to deliver them.</p>
@@ -97,15 +98,17 @@ export default function PrivacyPage() {
           your data under its own privacy practices:
         </p>
         <ul style={{ margin: '0 0 12px', paddingLeft: 20, lineHeight: 1.8 }}>
-          <li><strong>Supabase</strong> — authentication, database, and file storage for your account and content.</li>
-          <li><strong>Whop</strong> — subscription billing and membership management.</li>
-          <li><strong>Vercel</strong> — application hosting and delivery.</li>
-          <li><strong>MLB&apos;s public Stats API and Statcast data</strong> — game schedules, box scores, player
-          bios, and official player headshots/team logos, used to power research tools like the Dugout and Slate
-          Breakdown. This is public league data, not information about you.</li>
-          <li><strong>balldontlie and public sportsbook lines</strong> (FanDuel, BetMGM, Caesars, and others) — we
-          aggregate publicly posted betting odds for display in our research tools. SlipSurge is not affiliated
-          with, and does not share your data with, any sportsbook.</li>
+          <li><strong>Authentication, database, and file storage</strong> — a third-party provider handles account
+          authentication and stores your account and content data on our behalf.</li>
+          <li><strong>Subscription billing and membership management</strong> — a third-party payment and
+          subscription platform.</li>
+          <li><strong>Application hosting and delivery</strong> — a third-party cloud hosting provider.</li>
+          <li><strong>Official league data</strong> — game schedules, box scores, player bios, and official player
+          headshots/team logos are pulled from a public sports-league data source to power research tools like the
+          Dugout and Slate Breakdown. This is public league data, not information about you.</li>
+          <li><strong>Sports-data aggregation and public sportsbook lines</strong> — we aggregate publicly posted
+          betting odds from major U.S. sportsbooks for display in our research tools, via a third-party sports-data
+          aggregator. SlipSurge is not affiliated with, and does not share your data with, any sportsbook.</li>
         </ul>
         <p>
           Each provider only receives the data it needs to perform its function for us — none of them is authorized
