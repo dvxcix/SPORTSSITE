@@ -22,11 +22,6 @@ const TOC = [
 export default function PrivacyPage() {
   return (
     <InfoPageShell title="Privacy Policy" subtitle="Last updated: July 29, 2026 · SlipSurge LLC">
-      <div style={{ background: 'rgba(255,184,77,0.08)', border: '1px solid rgba(255,184,77,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 28, fontSize: 13, color: 'var(--gold)', lineHeight: 1.6 }}>
-        This has not been reviewed by legal counsel. Treat it as a good-faith, accurate description of what
-        SlipSurge actually does with your data today — not a finished legal document.
-      </div>
-
       <Toc items={TOC} />
 
       <Section id="overview" title="1. Overview">
