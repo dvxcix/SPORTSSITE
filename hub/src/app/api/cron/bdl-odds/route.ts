@@ -23,6 +23,23 @@ const BDL_OPENING_MARKETS = [
   'runs', 'runs2', 'runs3', 'hrr',
 ] as const
 
+// Real bug, reported live (2026-07-29): MLB's `abstractGameState` collapses
+// to 'Live' the moment a game enters Warmup (statusCode 'PW') — confirmed
+// live, ~20-30 minutes before actual first pitch — so gating on
+// `abstractGameState === 'Preview'` alone stopped this cron (and froze the
+// board, see dugout/data/route.ts's matching check) a full 20-30 minutes
+// before any pitch was thrown, cutting off legitimate last-second market
+// postings for every book/market on the game, not just one. `detailedState`
+// distinguishes genuine pregame states (including Warmup) from real live
+// play; only fall back to the coarser abstractGameState check once detailedState
+// itself isn't one of the known pregame states.
+const PREGAME_DETAILED_STATES = new Set(['Scheduled', 'Pre-Game', 'Warmup', 'Delayed Start', 'Delayed'])
+function isEffectivelyPregame(g: any): boolean {
+  const abstract = g.status?.abstractGameState ?? 'Preview'
+  if (abstract === 'Preview') return true
+  return PREGAME_DETAILED_STATES.has(g.status?.detailedState ?? '')
+}
+
 export const revalidate = 0
 export const maxDuration = 60
 
@@ -64,10 +81,12 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
     console.error('[bdl-odds cron] MLB schedule fetch failed', date, e)
   }
 
-  // Once a game is live/final, live odds aren't pregame research anymore —
-  // stop touching its row entirely so the page's freeze-on-first-observation
-  // logic can permanently lock whatever was last captured here, unchanged.
-  const pendingGames = mlbGames.filter((g: any) => (g.status?.abstractGameState ?? 'Preview') === 'Preview')
+  // Once a game is genuinely live/final, live odds aren't pregame research
+  // anymore — stop touching its row entirely so the page's
+  // freeze-on-first-observation logic can permanently lock whatever was
+  // last captured here, unchanged. See isEffectivelyPregame above for why
+  // this isn't a plain abstractGameState check.
+  const pendingGames = mlbGames.filter((g: any) => isEffectivelyPregame(g))
   if (!pendingGames.length) {
     return { date, matched: 0, totalGames: mlbGames.length, note: 'No pending (pregame) games right now' }
   }

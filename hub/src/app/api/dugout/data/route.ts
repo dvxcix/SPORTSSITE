@@ -918,8 +918,19 @@ export async function GET(req: Request) {
         .in('game_pk', gamePksToday)
       for (const row of snapRows ?? []) map.set(row.game_pk, row)
 
+      // Real bug, reported live (2026-07-29): MLB's `abstractGameState`
+      // collapses to 'Live' the moment a game enters Warmup (statusCode
+      // 'PW') — confirmed live, ~20-30 minutes before actual first pitch —
+      // so this froze boards a full 20-30 minutes before any pitch was
+      // thrown, for every book/market on the game. See the matching
+      // isEffectivelyPregame() in api/cron/bdl-odds/route.ts for the same fix.
+      const PREGAME_DETAILED_STATES = new Set(['Scheduled', 'Pre-Game', 'Warmup', 'Delayed Start', 'Delayed'])
       const toFreeze = mlbGames
-        .filter((g: any) => g.status?.abstractGameState !== 'Preview')
+        .filter((g: any) => {
+          const abstract = g.status?.abstractGameState ?? 'Preview'
+          if (abstract === 'Preview') return false
+          return !PREGAME_DETAILED_STATES.has(g.status?.detailedState ?? '')
+        })
         .map((g: any) => String(g.gamePk))
         .filter((pk: string) => map.get(pk)?.is_frozen === false)
       if (toFreeze.length) {
