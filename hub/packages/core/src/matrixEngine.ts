@@ -183,6 +183,16 @@ export type MatrixTiebreaker = {
   // number widens the winner set to anyone within that RAW distance of the
   // best value, direction-aware — see resolveTiebreakers below.
   tolerance: number | null
+  // Only meaningful when direction is 'closest_zero' — real gap, reported
+  // live (2026-07-28): the literal-0 exclusion above was built for DIV,
+  // where 0 usually means "no line/no data," never a genuine reading —
+  // but that's not true of every signed field. MM at exactly 0 ("no line
+  // movement") is a completely real, meaningful value, so excluding it
+  // made a legitimate MM=0 winner unable to ever win its own "closest to
+  // zero" rank. null/false keeps the original DIV-shaped behavior
+  // (existing saved chains evaluate identically); true lets a literal 0
+  // compete and win like any other value.
+  zero_eligible: boolean | null
   // Only meaningful for field_key 'mm_move' — see computeMmMoveValue below.
   mm_base_window: MmWindowKey | null
   mm_compare_windows: MmWindowKey[] | null
@@ -277,6 +287,7 @@ export type MatrixPipelineStep = {
   // extreme when the pool has more than one — see selectTieCluster.
   direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null
   tolerance: number | null          // rank only — see MatrixTiebreaker.tolerance
+  zero_eligible: boolean | null     // rank only, direction 'closest_zero' — see MatrixTiebreaker.zero_eligible
   // unless only — see the type-level comment above.
   condition_scope: 'team' | 'game' | null
   condition_steps: MatrixPipelineStep[] | null
@@ -1120,11 +1131,13 @@ export function resolveTiebreakers(
     let withValues = pool
       .map(name => ({ name, value: resolveValue(name, tb) }))
       .filter((c): c is { name: string; value: number } => c.value != null)
-    // closest_zero: a literal 0 never qualifies as "closest to zero" — for
-    // a field like DIV that's normally a real no-signal/no-opposing-line
-    // placeholder, not a genuine near-zero reading, so it's excluded from
-    // candidacy entirely rather than trivially winning every time.
-    if (tb.direction === 'closest_zero') withValues = withValues.filter(c => c.value !== 0)
+    // closest_zero: a literal 0 defaults to excluded — for a field like DIV
+    // that's normally a real no-signal/no-opposing-line placeholder, not a
+    // genuine near-zero reading, so it doesn't trivially win every time.
+    // zero_eligible opts back in for fields where 0 IS a genuine, meaningful
+    // reading (e.g. MM at exactly 0 — real "no line movement," not missing
+    // data) — see MatrixTiebreaker.zero_eligible.
+    if (tb.direction === 'closest_zero' && !tb.zero_eligible) withValues = withValues.filter(c => c.value !== 0)
     if (!withValues.length) continue
     const isZeroAnchored = tb.direction === 'closest_zero' || tb.direction === 'farthest_zero'
     const best = tb.direction === 'lowest'
@@ -1325,6 +1338,7 @@ export function runPipelineStep(
   const tb: MatrixTiebreaker = {
     category: step.category, field_key: step.field_key, recency: step.recency, book: step.book,
     direction: step.direction ?? 'highest', tolerance: step.tolerance ?? null,
+    zero_eligible: step.zero_eligible ?? null,
     mm_base_window: step.mm_base_window, mm_compare_windows: step.mm_compare_windows,
   }
   const survivors = resolveTiebreakers([...pool], [tb], name => resolveValue(name))

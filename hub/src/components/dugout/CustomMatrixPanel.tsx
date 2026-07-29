@@ -75,6 +75,12 @@ export type MatrixTiebreaker = {
   // no longer needs an exact 2-decimal match to survive. See
   // matrixEngine.ts's MatrixTiebreaker.tolerance for the full rationale.
   tolerance: number | null
+  // Only meaningful for direction 'closest_zero' — false/null (default)
+  // excludes a literal 0 (right for DIV, where 0 usually means no line/no
+  // data); true lets 0 win like any other value (right for MM, where 0 is
+  // a real "no movement" reading). See matrixEngine.ts's
+  // MatrixTiebreaker.zero_eligible.
+  zero_eligible: boolean | null
   // Only meaningful for field_key 'mm_move' — see MmMoveWindowPicker below.
   mm_base_window: MmWindowKey | null
   mm_compare_windows: MmWindowKey[] | null
@@ -452,7 +458,7 @@ export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
   )
 }
 function newTiebreaker(): MatrixTiebreaker {
-  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null, mm_base_window: null, mm_compare_windows: null }
+  return { category: 'pitchlog_stat', field_key: STAT_FIELDS[0].key, recency: 'season', book: null, direction: 'highest', tolerance: null, zero_eligible: null, mm_base_window: null, mm_compare_windows: null }
 }
 const SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7', '#2ED573', '#FF8FA3', '#5EEAD4']
 
@@ -901,6 +907,19 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
         <option value="closest_zero">Closest to 0</option>
         <option value="farthest_zero">Farthest from 0</option>
       </select>
+
+      {tb.direction === 'closest_zero' && (
+        <label
+          title="Off (default): a literal 0 never wins — right for a field like DIV where 0 usually means no line/no data. On: 0 competes and can win — right for a field like MM where 0 is a real 'no movement' reading."
+          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+        >
+          <input
+            type="checkbox" checked={tb.zero_eligible === true}
+            onChange={e => onChange({ ...tb, zero_eligible: e.target.checked })}
+          />
+          0 can win
+        </label>
+      )}
 
       <input
         type="number" min={0} step={0.01} className="ss-input"

@@ -62,6 +62,9 @@ export type MatrixPipelineStep = {
   // standout no longer needs an exact 2-decimal match to survive. See
   // matrixEngine.ts's MatrixTiebreaker.tolerance for the full rationale.
   tolerance: number | null
+  // rank only, direction 'closest_zero' — see CustomMatrixPanel.tsx's
+  // MatrixTiebreaker.zero_eligible for the full rationale.
+  zero_eligible: boolean | null
   // unless only — see the type-level comment above.
   condition_scope: 'team' | 'game' | null
   condition_steps: MatrixPipelineStep[] | null
@@ -109,6 +112,7 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: M
     value: null,
     direction: kind === 'rank' ? 'highest' : null,
     tolerance: null,
+    zero_eligible: null,
     condition_scope: kind === 'unless' ? 'team' : null,
     condition_steps: kind === 'unless' ? [] : null,
     then_steps: kind === 'unless' ? [] : null,
@@ -362,6 +366,19 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             <option value="closest_zero">Closest to 0</option>
             <option value="farthest_zero">Farthest from 0</option>
           </select>
+        )}
+
+        {step.kind === 'rank' && step.direction === 'closest_zero' && (
+          <label
+            title="Off (default): a literal 0 never wins — right for a field like DIV where 0 usually means no line/no data. On: 0 competes and can win — right for a field like MM where 0 is a real 'no movement' reading."
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+          >
+            <input
+              type="checkbox" checked={step.zero_eligible === true}
+              onChange={e => onChange({ ...step, zero_eligible: e.target.checked })}
+            />
+            0 can win
+          </label>
         )}
 
         {step.kind === 'group' && (

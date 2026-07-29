@@ -35,14 +35,14 @@ function cleanMmAmountMode(v: unknown): 'at_least' | 'exactly' | null {
   return v === 'exactly' ? 'exactly' : v === 'at_least' ? 'at_least' : null
 }
 
-type CleanTiebreaker = { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero'; tolerance: number | null; mm_base_window: string | null; mm_compare_windows: string[] | null }
+type CleanTiebreaker = { category: string; field_key: string; recency: string | null; book: string | null; direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero'; tolerance: number | null; zero_eligible: boolean | null; mm_base_window: string | null; mm_compare_windows: string[] | null }
 type TiebreakersResult = { ok: true; tiebreakers: CleanTiebreaker[] } | { ok: false; error: string }
 function cleanTiebreakers(raw: unknown): TiebreakersResult {
   if (!Array.isArray(raw)) return { ok: true, tiebreakers: [] }
   const clean: CleanTiebreaker[] = []
   for (const t of raw.slice(0, MAX_TIEBREAKERS)) {
     if (!t || typeof t !== 'object') continue
-    const { category, field_key, recency, book, direction, tolerance, mm_base_window, mm_compare_windows } = t as Record<string, unknown>
+    const { category, field_key, recency, book, direction, tolerance, zero_eligible, mm_base_window, mm_compare_windows } = t as Record<string, unknown>
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
     if (typeof field_key !== 'string' || !field_key) continue
     const cleanBaseWindow = cleanMmBaseWindow(mm_base_window)
@@ -56,6 +56,7 @@ function cleanTiebreakers(raw: unknown): TiebreakersResult {
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       direction: direction === 'lowest' ? 'lowest' : direction === 'closest_zero' ? 'closest_zero' : direction === 'farthest_zero' ? 'farthest_zero' : 'highest',
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
+      zero_eligible: zero_eligible === true,
       mm_base_window: cleanBaseWindow,
       mm_compare_windows: cleanCompareWindows,
     })
@@ -70,7 +71,7 @@ function cleanTiebreakers(raw: unknown): TiebreakersResult {
 type CleanPipelineStep = {
   kind: string; category: string; field_key: string; recency: string | null; book: string | null
   books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
-  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null; tolerance: number | null
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null; tolerance: number | null; zero_eligible: boolean | null
   condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
   unless_mode: 'replace' | 'suppress' | 'add' | null; uses_anchor: boolean | null
   mm_base_window: string | null; mm_compare_windows: string[] | null; mm_direction: string | null; mm_match_mode: 'any' | 'all' | null
@@ -95,7 +96,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
   const clean: CleanPipelineStep[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
+    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -143,6 +144,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
       value: cleanValue,
       direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : direction === 'closest_zero' ? 'closest_zero' : direction === 'farthest_zero' ? 'farthest_zero' : null,
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
+      zero_eligible: zero_eligible === true,
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
       condition_steps: cleanConditionSteps,
       then_steps: cleanThenSteps,
