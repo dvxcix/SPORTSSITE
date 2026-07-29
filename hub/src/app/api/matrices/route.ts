@@ -40,7 +40,7 @@ type TiebreakerInput = {
   field_key: string
   recency: string | null
   book: string | null
-  direction: 'highest' | 'lowest' | 'closest_zero'
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero'
   tolerance: number | null
   // Only meaningful for field_key 'mm_move' — see matrixEngine.ts's
   // computeMmMoveValue.
@@ -62,7 +62,7 @@ type PipelineStepInput = {
   books_min_count: number | null
   operator: string | null
   value: number | null
-  direction: 'highest' | 'lowest' | 'closest_zero' | null
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null
   // rank only — null/0 keeps exact-match tie resolution; >0 also keeps
   // candidates within that raw distance of the best value. See
   // matrixEngine.ts's MatrixTiebreaker.tolerance.
@@ -197,7 +197,7 @@ function validatePipelineSteps(raw: unknown, allowUnless = true, anchorAvailable
       books_min_count: typeof books_min_count === 'number' ? Math.max(1, Math.round(books_min_count)) : null,
       operator: cleanOperator,
       value: cleanValue,
-      direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : direction === 'closest_zero' ? 'closest_zero' : null,
+      direction: direction === 'lowest' ? 'lowest' : direction === 'highest' ? 'highest' : direction === 'closest_zero' ? 'closest_zero' : direction === 'farthest_zero' ? 'farthest_zero' : null,
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
       condition_scope: condition_scope === 'game' ? 'game' : condition_scope === 'team' ? 'team' : null,
       condition_steps: cleanConditionSteps,
@@ -232,7 +232,7 @@ function validateTiebreakers(raw: unknown): { ok: true; tiebreakers: TiebreakerI
       field_key,
       recency: typeof recency === 'string' ? recency : null,
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
-      direction: direction === 'lowest' ? 'lowest' : direction === 'closest_zero' ? 'closest_zero' : 'highest',
+      direction: direction === 'lowest' ? 'lowest' : direction === 'closest_zero' ? 'closest_zero' : direction === 'farthest_zero' ? 'farthest_zero' : 'highest',
       tolerance: typeof tolerance === 'number' && Number.isFinite(tolerance) && tolerance > 0 ? tolerance : null,
       mm_base_window: cleanBaseWindow,
       mm_compare_windows: cleanCompareWindows,

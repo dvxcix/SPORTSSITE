@@ -56,7 +56,7 @@ export type MatrixPipelineStep = {
   // (original behavior); 'highest'/'lowest' narrows to the single cluster
   // at that extreme when the pool has more than one — see matrixEngine.ts's
   // selectTieCluster.
-  direction: 'highest' | 'lowest' | 'closest_zero' | null
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null
   // rank only — null/0 keeps the exact-match behavior; a positive number
   // also keeps anyone within that raw distance of the best value, so a real
   // standout no longer needs an exact 2-decimal match to survive. See
@@ -354,12 +354,13 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
         {step.kind === 'rank' && (
           <select
             className="ss-input" value={step.direction ?? 'highest'}
-            onChange={e => onChange({ ...step, direction: e.target.value as 'highest' | 'lowest' | 'closest_zero' })}
-            style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
+            onChange={e => onChange({ ...step, direction: e.target.value as 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' })}
+            style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
           >
             <option value="highest">Highest</option>
             <option value="lowest">Lowest</option>
             <option value="closest_zero">Closest to 0</option>
+            <option value="farthest_zero">Farthest from 0</option>
           </select>
         )}
 

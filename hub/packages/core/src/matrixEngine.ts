@@ -169,7 +169,12 @@ export type MatrixTiebreaker = {
   // special, only "how close to even." A literal 0 is excluded from
   // candidacy entirely (usually a no-signal/no-line placeholder, not a
   // genuine near-zero reading) — see resolveTiebreakers below.
-  direction: 'highest' | 'lowest' | 'closest_zero'
+  // farthest_zero: the mirror image — biggest absolute swing either
+  // direction (e.g. DIV -1.4 beats 0.4), for "who moved the most" instead
+  // of "who's most neutral." No need to exclude a literal 0 here — it's
+  // the worst possible candidate for "farthest," so it never wins unless
+  // every candidate is 0, same as any other direction's all-tied edge case.
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero'
   // Real gap (2026-07-25): the best value in a pool almost never has an
   // EXACT (2-decimal-rounded) match — confirmed live, e.g. two real HR
   // hitters at 0.2621/0.2688 on the same ratio landed in different rounding
@@ -265,12 +270,12 @@ export type MatrixPipelineStep = {
   books_min_count: number | null
   operator: MatrixOperator | null   // filter only
   value: number | null              // filter only
-  // rank: which extreme to keep — 'closest_zero' is rank-only (see
-  // MatrixTiebreaker.direction), the Group step's UI never offers it.
-  // group: null keeps every tied cluster (original behavior); 'highest'/
-  // 'lowest' narrows to the single cluster at that extreme when the pool
-  // has more than one — see selectTieCluster.
-  direction: 'highest' | 'lowest' | 'closest_zero' | null
+  // rank: which extreme to keep — 'closest_zero'/'farthest_zero' are
+  // rank-only (see MatrixTiebreaker.direction), the Group step's UI never
+  // offers either. group: null keeps every tied cluster (original
+  // behavior); 'highest'/'lowest' narrows to the single cluster at that
+  // extreme when the pool has more than one — see selectTieCluster.
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null
   tolerance: number | null          // rank only — see MatrixTiebreaker.tolerance
   // unless only — see the type-level comment above.
   condition_scope: 'team' | 'game' | null
@@ -1076,18 +1081,18 @@ export function groupTiedCandidates(values: Map<string, number>): Map<number, st
 // still needs to run a per-cluster tiebreaker chain (classic 'tied'
 // Factors) can do so on whichever cluster(s) survive; pipeline group steps
 // use the flattening convenience below since they have no such chain.
-// direction's type includes 'closest_zero' only so callers can pass a
-// MatrixPipelineStep's direction through untouched — that value is rank-
-// only (see MatrixPipelineStep.direction) and the Group step's own UI
-// never offers it, so it's never actually reached here; falls through to
-// the 'highest' branch if it somehow were.
-export function filterTieGroups(groups: Map<number, string[]>, direction: 'highest' | 'lowest' | 'closest_zero' | null): Map<number, string[]> {
+// direction's type includes 'closest_zero'/'farthest_zero' only so callers
+// can pass a MatrixPipelineStep's direction through untouched — those
+// values are rank-only (see MatrixPipelineStep.direction) and the Group
+// step's own UI never offers either, so this is never actually reached;
+// falls through to the 'highest' branch if it somehow were.
+export function filterTieGroups(groups: Map<number, string[]>, direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null): Map<number, string[]> {
   if (!direction || !groups.size) return groups
   const best = direction === 'lowest' ? Math.min(...groups.keys()) : Math.max(...groups.keys())
   const only = groups.get(best)
   return only ? new Map([[best, only]]) : new Map()
 }
-export function selectTieCluster(groups: Map<number, string[]>, direction: 'highest' | 'lowest' | 'closest_zero' | null): Set<string> {
+export function selectTieCluster(groups: Map<number, string[]>, direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null): Set<string> {
   const winners = new Set<string>()
   for (const g of filterTieGroups(groups, direction).values()) for (const n of g) winners.add(n)
   return winners
@@ -1121,20 +1126,24 @@ export function resolveTiebreakers(
     // candidacy entirely rather than trivially winning every time.
     if (tb.direction === 'closest_zero') withValues = withValues.filter(c => c.value !== 0)
     if (!withValues.length) continue
+    const isZeroAnchored = tb.direction === 'closest_zero' || tb.direction === 'farthest_zero'
     const best = tb.direction === 'lowest'
       ? Math.min(...withValues.map(c => c.value))
       : tb.direction === 'closest_zero'
         ? Math.min(...withValues.map(c => Math.abs(c.value)))
-        : Math.max(...withValues.map(c => c.value))
+        : tb.direction === 'farthest_zero'
+          ? Math.max(...withValues.map(c => Math.abs(c.value)))
+          : Math.max(...withValues.map(c => c.value))
     // tolerance>0: widen the winner set to anyone within that RAW distance
     // of the best value instead of requiring an exact 2-decimal match — see
     // MatrixTiebreaker.tolerance for the real gap this closes.
     const bestRounded = Math.round(best * 100) / 100
     pool = withValues
       .filter(c => {
-        if (tb.direction === 'closest_zero') {
+        if (isZeroAnchored) {
           const dist = Math.abs(c.value)
-          return tb.tolerance ? dist <= best + tb.tolerance : Math.round(dist * 100) / 100 === bestRounded
+          if (!tb.tolerance) return Math.round(dist * 100) / 100 === bestRounded
+          return tb.direction === 'closest_zero' ? dist <= best + tb.tolerance : dist >= best - tb.tolerance
         }
         return tb.tolerance
           ? (tb.direction === 'lowest' ? c.value <= best + tb.tolerance : c.value >= best - tb.tolerance)

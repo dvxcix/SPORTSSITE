@@ -67,8 +67,9 @@ export type MatrixTiebreaker = {
   recency: MatrixFactor['recency']
   book: string | null
   // closest_zero ranks by absolute distance from 0 (e.g. DIV's -0.7 vs 0.4
-  // — 0.4 wins), excluding a literal 0 from candidacy entirely.
-  direction: 'highest' | 'lowest' | 'closest_zero'
+  // — 0.4 wins), excluding a literal 0 from candidacy entirely. farthest_zero
+  // is the mirror — biggest absolute swing either direction wins instead.
+  direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero'
   // null/0 keeps the exact-match behavior; a positive number also keeps
   // anyone within that raw distance of the best value, so a real standout
   // no longer needs an exact 2-decimal match to survive. See
@@ -893,11 +894,12 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
       <select
         className="ss-input" value={tb.direction}
         onChange={e => onChange({ ...tb, direction: e.target.value as MatrixTiebreaker['direction'] })}
-        style={{ fontSize: 10, padding: '4px 5px', width: 100 }}
+        style={{ fontSize: 10, padding: '4px 5px', width: 120 }}
       >
         <option value="highest">Highest</option>
         <option value="lowest">Lowest</option>
         <option value="closest_zero">Closest to 0</option>
+        <option value="farthest_zero">Farthest from 0</option>
       </select>
 
       <input
