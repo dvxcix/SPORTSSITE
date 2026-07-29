@@ -26,12 +26,6 @@ const TOC = [
 export default function TermsPage() {
   return (
     <InfoPageShell title="Terms of Service" subtitle="Last updated: July 29, 2026 · SlipSurge LLC">
-      <div style={{ background: 'rgba(255,184,77,0.08)', border: '1px solid rgba(255,184,77,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 28, fontSize: 13, color: 'var(--gold)', lineHeight: 1.6 }}>
-        This has not been reviewed by legal counsel. Treat it as a good-faith starting point — not a finished
-        legal document. Section 15 (Dispute Resolution) in particular should be reviewed by an attorney licensed
-        in your operating jurisdiction before you rely on it.
-      </div>
-
       <Toc items={TOC} />
 
       <Section id="acceptance" title="1. Acceptance of Terms">
@@ -157,10 +151,7 @@ export default function TermsPage() {
         These Terms are governed by the laws of the state in which SlipSurge LLC is organized, without regard to
         conflict-of-law principles. Before filing any formal claim, you agree to contact us at{' '}
         <a href="mailto:support@slipsurge.com" style={{ color: 'var(--accent)' }}>support@slipsurge.com</a> so we
-        can try to resolve the dispute informally. <em>This is the section most likely to need a real attorney&apos;s
-        input</em> — many platforms in this space use binding arbitration and a class-action waiver here, but
-        whether that&apos;s enforceable (and how to draft it correctly) depends on your state and how you operate,
-        so we&apos;ve deliberately left it at &quot;informal resolution first&quot; until that review happens.
+        can try to resolve the dispute informally first.
       </Section>
 
       <Section id="misc" title="16. Miscellaneous">
