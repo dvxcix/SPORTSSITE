@@ -405,7 +405,28 @@ const PITCHLOG_FIELD: Record<string, keyof BatterStats> = {
   bspd: 'avgBatSpeed', atk: 'avgAttackAngle', swlen: 'avgSwingLength', tilt: 'avgTilt', attackdir: 'avgAttackDirection',
 }
 
-function compareThreshold(current: number | null, operator: MatrixOperator, value: number | null): boolean {
+// div/fhr_pct/sa_pct are raw fractions the board multiplies by 100 for
+// display (e.g. raw -0.004 shown as "-0.4") — a full percentage POINT of
+// real signal only moves the raw number by 0.01. Every other ratio field
+// this app rounds to (sa_div_tb, fhr_div_sa, MM, etc.) sits at a ~1-or-more
+// raw scale where 2 decimal places IS the board's real display precision.
+// Real bug, reported live (2026-07-29): Math.round(x * 100) / 100 rounds
+// ANY raw div under ±0.005 (i.e. any board-displayed DIV under ±0.5) down
+// to exactly 0 — a batter genuinely showing "-0.4" on the board register as
+// a literal zero to 'eq'/'zero' and to a Pipeline rank step's closest-to-
+// zero exact-match, so a "closest to 0, 0 CAN win" rank step let a real
+// -0.4 DIV batter win right alongside a genuine DIV-0 teammate instead of
+// losing to him. Rounding to 4 decimals instead for just these 3 fields
+// keeps the same "match what the board shows" intent (board's 1-decimal
+// ×100 display = 4 raw decimals) without collapsing their entire real
+// range into zero.
+const PCT_SCALED_DUGOUT_FIELDS = new Set(['div', 'fhr_pct', 'sa_pct'])
+function roundForField(fieldKey: string | null | undefined, v: number): number {
+  const p = fieldKey && PCT_SCALED_DUGOUT_FIELDS.has(fieldKey) ? 10000 : 100
+  return Math.round(v * p) / p
+}
+
+function compareThreshold(current: number | null, operator: MatrixOperator, value: number | null, fieldKey?: string | null): boolean {
   // Checked before the null-guard below (every other operator treats null
   // as "can't possibly pass") — these two are the only operators FOR which
   // null is exactly the thing being asked about.
@@ -421,7 +442,7 @@ function compareThreshold(current: number | null, operator: MatrixOperator, valu
   // Same rounding as 'eq' below — MM and other ratio fields are raw
   // division results, so "is zero" needs to match whatever the board
   // itself displays rounded to 2 decimals, not a literal current === 0.
-  if (operator === 'zero') return Math.round(current * 100) / 100 === 0
+  if (operator === 'zero') return roundForField(fieldKey, current) === 0
   if (value == null) return false
   if (operator === 'gte') return current >= value
   if (operator === 'lte') return current <= value
@@ -435,7 +456,7 @@ function compareThreshold(current: number | null, operator: MatrixOperator, valu
   // same 2 decimals every fractional value in this app is displayed at
   // fixes it; harmless for whole-number fields (odds prices, counts) since
   // rounding an integer is a no-op.
-  if (operator === 'eq') return Math.round(current * 100) / 100 === Math.round(value * 100) / 100
+  if (operator === 'eq') return roundForField(fieldKey, current) === roundForField(fieldKey, value)
   return false
 }
 
@@ -1006,7 +1027,7 @@ export function evaluateDugoutSpecsFactor(
     return evaluateMmTrend(factor.mm_base_window, factor.mm_compare_windows, factor.mm_direction, factor.value, factor.mm_match_mode, mmByWindow, factor.mm_amount_mode)
   }
   const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow, factor.mm_base_window, factor.mm_compare_windows)
-  return compareThreshold(current, factor.operator, factor.value)
+  return compareThreshold(current, factor.operator, factor.value, factor.field_key)
 }
 
 // Community HR-pick counts (from Pikkit's public board) — either a plain
@@ -1072,10 +1093,10 @@ export function evaluateMatrix(matrix: Matrix, evaluateFactor: (f: MatrixFactor)
 // every fractional value in this app displays at (matches compareThreshold's
 // 'eq' fix) — singleton "groups" (nobody else shares that value) are
 // dropped, since a lone value never counts as a tie.
-export function groupTiedCandidates(values: Map<string, number>): Map<number, string[]> {
+export function groupTiedCandidates(values: Map<string, number>, fieldKey?: string | null): Map<number, string[]> {
   const groups = new Map<number, string[]>()
   for (const [name, raw] of values) {
-    const v = Math.round(raw * 100) / 100
+    const v = roundForField(fieldKey, raw)
     const arr = groups.get(v) ?? []
     arr.push(name)
     groups.set(v, arr)
@@ -1148,19 +1169,22 @@ export function resolveTiebreakers(
           ? Math.max(...withValues.map(c => Math.abs(c.value)))
           : Math.max(...withValues.map(c => c.value))
     // tolerance>0: widen the winner set to anyone within that RAW distance
-    // of the best value instead of requiring an exact 2-decimal match — see
-    // MatrixTiebreaker.tolerance for the real gap this closes.
-    const bestRounded = Math.round(best * 100) / 100
+    // of the best value instead of requiring an exact match — see
+    // MatrixTiebreaker.tolerance for the real gap this closes. The exact-
+    // match rounding itself is field-aware (roundForField) rather than a
+    // flat 2 decimals — see roundForField's own comment for why a flat
+    // rounding wrongly tied a real -0.4 DIV to a literal 0.
+    const bestRounded = roundForField(tb.field_key, best)
     pool = withValues
       .filter(c => {
         if (isZeroAnchored) {
           const dist = Math.abs(c.value)
-          if (!tb.tolerance) return Math.round(dist * 100) / 100 === bestRounded
+          if (!tb.tolerance) return roundForField(tb.field_key, dist) === bestRounded
           return tb.direction === 'closest_zero' ? dist <= best + tb.tolerance : dist >= best - tb.tolerance
         }
         return tb.tolerance
           ? (tb.direction === 'lowest' ? c.value <= best + tb.tolerance : c.value >= best - tb.tolerance)
-          : Math.round(c.value * 100) / 100 === bestRounded
+          : roundForField(tb.field_key, c.value) === bestRounded
       })
       .map(c => c.name)
   }
@@ -1315,7 +1339,7 @@ export function runPipelineStep(
       const v = resolveValue(name)
       if (v != null) values.set(name, v)
     }
-    const groups = groupTiedCandidates(values)
+    const groups = groupTiedCandidates(values, step.field_key)
     const winners = selectTieCluster(groups, step.direction ?? null)
     if (strict) return winners
     // Real bug, reported live (2026-07-26): "no ties found" was always

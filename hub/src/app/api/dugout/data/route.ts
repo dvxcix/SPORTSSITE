@@ -1294,7 +1294,7 @@ export async function GET(req: Request) {
             const v = rootValue(f, book, b)
             if (v != null) values.set(name, v)
           }
-          const groups = filterTieGroups(groupTiedCandidates(values), f.tie_direction ?? null)
+          const groups = filterTieGroups(groupTiedCandidates(values, f.field_key), f.tie_direction ?? null)
           const winners = new Set<string>()
           for (const group of groups.values()) {
             const survivors = f.tiebreakers?.length
