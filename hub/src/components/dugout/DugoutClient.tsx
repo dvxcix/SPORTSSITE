@@ -7,7 +7,7 @@ import { Tooltip } from '@/components/ui/tooltip-card'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
@@ -48,6 +48,19 @@ function blendOnBg(hex: string, alpha: number, bg: [number, number, number] = [6
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
   const blend = (fg: number, bgc: number) => Math.round(fg * alpha + bgc * (1 - alpha))
   return `rgb(${blend(r, bg[0])},${blend(g, bg[1])},${blend(b, bg[2])})`
+}
+
+// Team-banner row background — a subtle gradient blend of that team's own
+// primary/secondary brand colors (reported live: the flat grey background
+// didn't read as "this row belongs to this team" the way real team colors
+// would) instead of the flat var(--surface-2) every team's banner used to
+// share. Blended onto --surface-2 (not pure --bg) via the same blendOnBg
+// helper the Matrix/Highlighter tints already use, at a low enough alpha to
+// stay a background, not compete with the white text sitting on top of it.
+function teamBannerGradient(abbr?: string | null): string {
+  const primary = blendOnBg(getTeamColor(abbr), 0.16, [18, 21, 25])
+  const secondary = blendOnBg(getTeamSecondaryColor(abbr), 0.16, [18, 21, 25])
+  return `linear-gradient(90deg, ${primary}, ${secondary})`
 }
 
 function toImpl(o: number | null): number | null {
@@ -2772,8 +2785,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               flex row instead of a dedicated spanning cell above just its
               own columns. */}
           <tr>
-            <td colSpan={renderedHeaderCells.length} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <td colSpan={renderedHeaderCells.length} style={{ background: teamBannerGradient(game.homeAbbr), padding: 0, borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
+              {/* Sticky, content-hugging (not stretched full row width) —
+                  reported live: the team-info/mode-buttons content used to
+                  scroll away with the rest of this very wide row instead of
+                  staying visible the way the sticky Player column already
+                  does. The <td>'s own background (above) still fills the
+                  full colSpan width behind this regardless of scroll
+                  position — only the CONTENT needs to stay pinned. */}
+              <div style={{ position: 'sticky', left: 0, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '7px 8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.homeAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
@@ -2784,7 +2804,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                   )}
                   {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Tooltip content={stickyMode
                     ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
                     : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
@@ -2915,8 +2935,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               of the home team's block above it. */}
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
-            <td colSpan={renderedHeaderCells.length} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <td colSpan={renderedHeaderCells.length} style={{ background: teamBannerGradient(game.awayAbbr), padding: 0, borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
+              <div style={{ position: 'sticky', left: 0, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '7px 8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.awayAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
