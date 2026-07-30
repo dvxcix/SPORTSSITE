@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { Switch as Toggle } from '@/components/ui/Switch'
+import { Modal } from '@/components/ui/Modal'
+import { ChangelogPopupBody } from '@/components/layout/ChangelogPopupBody'
 import { X } from 'lucide-react'
 import type { ChangelogEntry } from '@/lib/changelog'
 
@@ -17,6 +19,11 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // "Preview as popup" — the exact same Modal + ChangelogPopupBody a real
+  // member sees, just fed the in-progress draft instead of a DB row, and
+  // with no DB write on dismiss. This is the honest answer to "show me
+  // exactly what my users will see" — not a lookalike mockup.
+  const [showFullPreview, setShowFullPreview] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -88,7 +95,32 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
       )}
 
       {draft && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+        <>
+          {/* Live preview — the SAME ChangelogPopupBody component the real
+              popup renders, so this is never a hand-copied approximation
+              that could drift from what a member actually sees. */}
+          <div>
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Preview</p>
+            <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[var(--surface)]" style={{ maxWidth: 440 }}>
+              <ChangelogPopupBody
+                title={draft.title}
+                description={draft.description}
+                how_to_use={draft.how_to_use.trim() || null}
+                screenshot_urls={draft.screenshot_urls}
+                dismissLabel="Got it — Don't show again"
+                onDismiss={() => {}}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFullPreview(true)}
+              className="mt-2 text-xs font-bold text-green-400 hover:text-green-300"
+            >
+              Preview as popup (full-screen, exactly as a member sees it) →
+            </button>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
           {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
           <div>
@@ -138,7 +170,21 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
               Cancel
             </button>
           </div>
-        </div>
+          </div>
+        </>
+      )}
+
+      {showFullPreview && draft && (
+        <Modal onClose={() => setShowFullPreview(false)} maxWidth={440} zIndex={300}>
+          <ChangelogPopupBody
+            title={draft.title}
+            description={draft.description}
+            how_to_use={draft.how_to_use.trim() || null}
+            screenshot_urls={draft.screenshot_urls}
+            dismissLabel="Got it — Don't show again"
+            onDismiss={() => setShowFullPreview(false)}
+          />
+        </Modal>
       )}
 
       <div className="space-y-2">
