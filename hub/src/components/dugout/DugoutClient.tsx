@@ -17,6 +17,8 @@ import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
+import { createClient } from '@/lib/supabase/client'
+import { Switch } from '@/components/ui/Switch'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -873,7 +875,7 @@ function PlayerDrillDown({
 
 // ─── watchlist-able odds cell ─────────────────────────────────────────────────
 function OddsCell({
-  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount,
+  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount, dataColKey,
 }: {
   row: BatterRow
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
@@ -882,6 +884,12 @@ function OddsCell({
   odds: number | null
   style: React.CSSProperties
   display?: React.ReactNode
+  // Column-customization identity — see withColKey/renderDugoutColumns above
+  // GameTable. Forwarded straight onto this cell's real <td> as a
+  // data-col-key DOM attribute so Highlighter mode can key a saved
+  // highlight to a stable column, not a raw DOM cellIndex that shifts
+  // whenever a member hides/reorders a column.
+  dataColKey?: string
   // onClick lets a badge (e.g. an FHR/HR achievement flag) open something
   // of its own (the HR detail popup) instead of falling through to this
   // cell's own click-to-watchlist handler below.
@@ -905,9 +913,9 @@ function OddsCell({
     // it — a pick count is independent of whether FanDuel happens to have
     // posted odds yet, so it shouldn't silently disappear just because the
     // odds side of the cell has nothing to show.
-    if (pickCount == null) return <td style={style}>—</td>
+    if (pickCount == null) return <td style={style} data-col-key={dataColKey}>—</td>
     return (
-      <td style={style}>
+      <td style={style} data-col-key={dataColKey}>
         —
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
           <div style={{ fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1, marginTop: 1 }}>
@@ -1001,6 +1009,7 @@ function OddsCell({
   return (
     <td
       onClick={handleClick}
+      data-col-key={dataColKey}
       style={{
         ...style,
         cursor: wl.signedIn ? 'pointer' : style.cursor,
@@ -1019,23 +1028,28 @@ function OddsCell({
 }
 
 // ─── batter row ───────────────────────────────────────────────────────────────
-function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow }: {
+function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow, visibleColumns }: {
   row: BatterRow; pool: BatterRow[]; expanded: boolean; onToggle: () => void
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
   onShowHr?: () => void
   id?: string
   // Highlighter — see the state block in GameTable for the full rationale.
   // Deliberately does NOT touch every individual <td> in this ~350-line
-  // function (that'd be a huge, risky diff across ~60 stat columns) —
-  // instead a single click-capture handler on the <tr> below figures out
-  // WHICH cell was clicked via the browser's own `cellIndex`, and a layout
-  // effect walks the row's real DOM children to paint/clear backgrounds by
-  // that same index. Additive and reversible: with highlightMode off (the
-  // default), neither the handler nor the effect touch anything, so every
-  // existing click/heat-map behavior in this file is completely unaffected.
+  // function's own rendering (that'd be a huge, risky diff across ~95 stat
+  // columns) — instead a single click-capture handler on the <tr> below
+  // figures out WHICH cell was clicked via its data-col-key attribute (see
+  // withColKey/renderDugoutColumns above GameTable), and a layout effect
+  // walks the row's real DOM children to paint/clear backgrounds by that
+  // same key. Keyed by column identity rather than raw DOM cellIndex
+  // specifically because column customization makes cellIndex meaningless —
+  // two members with different hidden/reordered columns would otherwise
+  // have the same numeric index point at two completely different stats.
+  // Additive and reversible: with highlightMode off (the default), neither
+  // the handler nor the effect touch anything, so every existing
+  // click/heat-map behavior in this file is completely unaffected.
   highlightMode?: boolean
-  cellHighlights?: Record<number, string>
-  onCellToggle?: (cellIndex: number) => void
+  cellHighlights?: Record<string, string>
+  onCellToggle?: (colKey: string) => void
   // Eraser — same click-capture-on-<tr> shape as Highlighter, but whole-row
   // instead of per-cell: any click anywhere in the row (including the
   // sticky name column, unlike Highlighter — there's no per-cell state to
@@ -1043,6 +1057,10 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
   // toggles this ONE row's membership in GameTable's erasedIds set.
   eraserMode?: boolean
   onEraseRow?: () => void
+  // This member's resolved column show/hide/order — see resolveDugoutColumns
+  // above GameTable, which computes it once and passes the SAME reference
+  // down to every row so the header and every row always render identically.
+  visibleColumns: { key: string; group: string }[]
 }) {
   // Sticky column's hover treatment is computed here in JS rather than via
   // the table's generic `tr:hover > td` CSS rule — that rule needed an
@@ -1057,29 +1075,29 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
   // row's own node, not a CSS pseudo-class that has to survive reordering.
   const [hovered, setHovered] = useState(false)
   const trRef = useRef<HTMLTableRowElement>(null)
-  // Which cell indices WE'VE personally painted a background onto — the
+  // Which column keys WE'VE personally painted a background onto — the
   // only ones this effect is ever allowed to clear. Real regression, caught
   // live: the first version cleared `background-color` on every cell with
   // no active highlight, on every render — but a heat-mapped cell's color
   // (heat()/oddsHeat() below) is ALSO just its own `background-color`, so
   // this was wiping out every heat-map cell in the whole table the instant
   // Highlighter mounted, highlight mode on or off. Tracking exactly which
-  // indices we set means we only ever clear OUR OWN prior paint (when a
+  // keys we set means we only ever clear OUR OWN prior paint (when a
   // cell gets un-highlighted) and never touch a cell React itself colored.
-  const highlightedIndices = useRef<Set<number>>(new Set())
+  const highlightedIndices = useRef<Set<string>>(new Set())
   useLayoutEffect(() => {
     const tr = trRef.current
     if (!tr) return
-    const nextHighlighted = new Set(Object.keys(cellHighlights ?? {}).map(Number))
-    for (const idx of highlightedIndices.current) {
-      if (nextHighlighted.has(idx)) continue
-      const td = tr.children[idx] as HTMLElement | undefined
-      td?.style.removeProperty('background-color')
+    const findCell = (colKey: string) => tr.querySelector(`[data-col-key="${CSS.escape(colKey)}"]`) as HTMLElement | null
+    const nextHighlighted = new Set(Object.keys(cellHighlights ?? {}))
+    for (const key of highlightedIndices.current) {
+      if (nextHighlighted.has(key)) continue
+      findCell(key)?.style.removeProperty('background-color')
     }
-    for (const idx of nextHighlighted) {
-      const td = tr.children[idx] as HTMLElement | undefined
+    for (const key of nextHighlighted) {
+      const td = findCell(key)
       if (!td || td.classList.contains('dg-sticky-col')) continue
-      td.style.backgroundColor = blendOnBg(cellHighlights![idx], 0.35)
+      td.style.backgroundColor = blendOnBg(cellHighlights![key], 0.35)
     }
     highlightedIndices.current = nextHighlighted
     // Cursor carries no data, so a coarser rule is fine here: show the
@@ -1146,28 +1164,16 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       ? { label: '🎯', color: '#fbbf24', title: `Near-miss: ${row.near_hr.exit_velocity ?? '?'}mph / ${row.near_hr.hit_distance ?? '?'}ft — click for details`, onClick: () => onShowHr?.() }
       : undefined
 
-  return (
-    <tr
-      id={id}
-      ref={trRef}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClickCapture={e => {
-        if (eraserMode) {
-          e.preventDefault()
-          e.stopPropagation()
-          onEraseRow?.()
-          return
-        }
-        if (!highlightMode) return
-        const td = (e.target as HTMLElement).closest('td')
-        if (!td || td.classList.contains('dg-sticky-col')) return
-        e.preventDefault()
-        e.stopPropagation()
-        onCellToggle?.((td as HTMLTableCellElement).cellIndex)
-      }}
-      style={topMatrix ? { background: blendOnBg(topMatrix.color, 0.09) } : undefined}
-    >
+  // Every actual column cell, exactly as always rendered — unchanged from
+  // before this member-driven show/hide/reorder feature existed. Collected
+  // into a fragment (rather than returned as the <tr>'s direct children)
+  // purely so renderDugoutColumns can filter/reorder it against this
+  // member's saved prefs and re-tag each surviving cell with a stable
+  // data-col-key for Highlighter — see the actual `return` below, and
+  // DUGOUT_COLUMN_LAYOUT/renderDugoutColumns above GameTable for why this
+  // is safer than hand-maintaining two independently-ordered cell lists.
+  const rowCells = (
+    <>
       {/* sticky player cell — narrower on mobile (140px vs 190px) so more of
           the ~60 scrollable stat columns are visible without scrolling past
           a name column that's eating half a 375px viewport. Width/min/max
@@ -1493,8 +1499,48 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
       <td style={{ ...STD, width: 30, minWidth: 30, ...heat(row.s_hr,  g('s_hr'))  }}>
         {row.s_hr != null ? String(Math.round(row.s_hr)) : '—'}
       </td>
+    </>
+  )
+
+  return (
+    <tr
+      id={id}
+      ref={trRef}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClickCapture={e => {
+        if (eraserMode) {
+          e.preventDefault()
+          e.stopPropagation()
+          onEraseRow?.()
+          return
+        }
+        if (!highlightMode) return
+        const td = (e.target as HTMLElement).closest('td')
+        if (!td || td.classList.contains('dg-sticky-col')) return
+        const colKey = td.getAttribute('data-col-key')
+        if (!colKey) return
+        e.preventDefault()
+        e.stopPropagation()
+        onCellToggle?.(colKey)
+      }}
+      style={topMatrix ? { background: blendOnBg(topMatrix.color, 0.09) } : undefined}
+    >
+      {renderDugoutColumns(
+        rowCells, visibleColumns,
+        key => <td key={key} style={SDIV_D} />,
+        (el, key) => withColKey(el, key),
+      )}
     </tr>
   )
+}
+
+// Column-customization identity tagger for a row cell (see renderDugoutColumns
+// above GameTable) — OddsCell doesn't spread arbitrary DOM attrs, so it needs
+// its own dataColKey prop; every plain <td> accepts data-* natively.
+function withColKey(el: React.ReactElement, key: string): React.ReactElement {
+  if (el.type === OddsCell) return React.cloneElement(el as React.ReactElement<any>, { key, dataColKey: key })
+  return React.cloneElement(el as React.ReactElement<any>, { key, 'data-col-key': key })
 }
 
 // ─── HR / near-HR popup ─────────────────────────────────────────────────────
@@ -1967,7 +2013,378 @@ function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' |
 // across a monitor at a glance.
 const HL_SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7']
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange }: {
+// ─── column customization ──────────────────────────────────────────────────
+// Position-indexed map of every real column in headerCells/BatterRowEl's own
+// JSX (defined further down, never duplicated here) — cross-checked 1:1
+// against their actual child order so this file has exactly ONE place that
+// knows "column N is fhr_fd, in the fhr group" instead of the header list
+// and the row-cell list each separately assuming they stay in sync (the old
+// COLS_BEFORE_STATCAST comment already flagged that assumption as fragile).
+// Group ORDER here is fixed and never reordered by member prefs — only
+// individual columns move WITHIN their own group, or a whole group hides —
+// so batspeed+barrel stay a guaranteed-contiguous trailing "Statcast"
+// section (COLS_BEFORE_STATCAST/STATCAST_COL_COUNT below depend on that).
+type DugoutColSlot = { type: 'player' } | { type: 'divider' } | { type: 'col'; key: string; group: string }
+const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
+  { type: 'player' },
+  { type: 'col', key: 'pk', group: 'picks' },
+  { type: 'divider' },
+  { type: 'col', key: 'fhr_fd', group: 'fhr' },
+  { type: 'col', key: 'fhr_cz', group: 'fhr' },
+  { type: 'col', key: 'fhr_fan', group: 'fhr' },
+  { type: 'col', key: 'div', group: 'fhr' },
+  { type: 'col', key: 'fhr_div_sa', group: 'fhr' },
+  { type: 'col', key: 'fhr_pct', group: 'fhr' },
+  { type: 'col', key: 'sa_pct', group: 'fhr' },
+  { type: 'divider' },
+  { type: 'col', key: 'sa_fd', group: 'hr' },
+  { type: 'col', key: 'sa_cz', group: 'hr' },
+  { type: 'col', key: 'sa_mgm', group: 'hr' },
+  { type: 'col', key: 'sa_br', group: 'hr' },
+  { type: 'col', key: 'sa_fan', group: 'hr' },
+  { type: 'col', key: 'm_div_f', group: 'hr' },
+  { type: 'col', key: 'hrMl_fd', group: 'hr' },
+  { type: 'col', key: 'sa_div_ml', group: 'hr' },
+  { type: 'col', key: 'laser105_fd', group: 'hr' },
+  { type: 'col', key: 'laser110_fd', group: 'hr' },
+  { type: 'col', key: 'moonshot_fd', group: 'hr' },
+  { type: 'col', key: 'pa1_fd', group: 'hr' },
+  { type: 'col', key: 'pa1_div_sa', group: 'hr' },
+  { type: 'col', key: 'sa_div_rbi', group: 'hr' },
+  { type: 'col', key: 'sa_div_rbi2', group: 'hr' },
+  { type: 'col', key: 'sa_div_rbi3', group: 'hr' },
+  { type: 'col', key: 'sa_div_hrr', group: 'hr' },
+  { type: 'col', key: 'sa_div_tb', group: 'hr' },
+  { type: 'col', key: 'sa_div_tb3', group: 'hr' },
+  { type: 'col', key: 'sa_div_tb4', group: 'hr' },
+  { type: 'col', key: 'sa_div_tb5', group: 'hr' },
+  { type: 'col', key: 'sa_div_hr2', group: 'hr' },
+  { type: 'divider' },
+  { type: 'col', key: 'sng_fd', group: 'props' },
+  { type: 'col', key: 'dbl_fd', group: 'props' },
+  { type: 'col', key: 'tri_fd', group: 'props' },
+  { type: 'col', key: 'sb_fd', group: 'props' },
+  { type: 'col', key: 'sb2_fd', group: 'props' },
+  { type: 'col', key: 'hits_fd', group: 'props' },
+  { type: 'col', key: 'hits2_fd', group: 'props' },
+  { type: 'col', key: 'runs_fd', group: 'props' },
+  { type: 'col', key: 'runs2_fd', group: 'props' },
+  { type: 'divider' },
+  { type: 'col', key: 'paper', group: 'ranks' },
+  { type: 'col', key: 'bk_rk', group: 'ranks' },
+  { type: 'col', key: 'pp_rk', group: 'ranks' },
+  { type: 'col', key: 'mm', group: 'ranks' },
+  { type: 'divider' },
+  { type: 'col', key: 's_spd', group: 'batspeed' },
+  { type: 'col', key: 'r_spd', group: 'batspeed' },
+  { type: 'col', key: 'd_spd', group: 'batspeed' },
+  { type: 'col', key: 's_timing', group: 'batspeed' },
+  { type: 'col', key: 'r_timing', group: 'batspeed' },
+  { type: 'col', key: 'd_timing', group: 'batspeed' },
+  { type: 'col', key: 's_miss', group: 'batspeed' },
+  { type: 'col', key: 'r_miss', group: 'batspeed' },
+  { type: 'col', key: 'd_miss', group: 'batspeed' },
+  { type: 'col', key: 's_hrd', group: 'batspeed' },
+  { type: 'col', key: 'r_hrd', group: 'batspeed' },
+  { type: 'col', key: 'd_hrd', group: 'batspeed' },
+  { type: 'col', key: 's_sq', group: 'batspeed' },
+  { type: 'col', key: 'r_sq', group: 'batspeed' },
+  { type: 'col', key: 'd_sq', group: 'batspeed' },
+  { type: 'col', key: 's_bla', group: 'batspeed' },
+  { type: 'col', key: 'r_bla', group: 'batspeed' },
+  { type: 'col', key: 'd_bla', group: 'batspeed' },
+  { type: 'col', key: 's_len', group: 'batspeed' },
+  { type: 'col', key: 'r_len', group: 'batspeed' },
+  { type: 'col', key: 'd_len', group: 'batspeed' },
+  { type: 'col', key: 's_atk', group: 'batspeed' },
+  { type: 'col', key: 'r_atk', group: 'batspeed' },
+  { type: 'col', key: 'd_atk', group: 'batspeed' },
+  { type: 'col', key: 's_iaa', group: 'batspeed' },
+  { type: 'col', key: 'r_iaa', group: 'batspeed' },
+  { type: 'col', key: 'd_iaa', group: 'batspeed' },
+  { type: 'col', key: 's_tlt', group: 'batspeed' },
+  { type: 'col', key: 'r_tlt', group: 'batspeed' },
+  { type: 'col', key: 'd_tlt', group: 'batspeed' },
+  { type: 'divider' },
+  { type: 'col', key: 's_brl', group: 'barrel' },
+  { type: 'col', key: 'r_brl', group: 'barrel' },
+  { type: 'col', key: 'd_brl', group: 'barrel' },
+  { type: 'col', key: 's_hh', group: 'barrel' },
+  { type: 'col', key: 'r_hh', group: 'barrel' },
+  { type: 'col', key: 'd_hh', group: 'barrel' },
+  { type: 'col', key: 's_sweetspot', group: 'barrel' },
+  { type: 'col', key: 'r_sweetspot', group: 'barrel' },
+  { type: 'col', key: 'd_sweetspot', group: 'barrel' },
+  { type: 'col', key: 's_pa', group: 'barrel' },
+  { type: 'col', key: 'r_pa', group: 'barrel' },
+  { type: 'col', key: 'd_pa', group: 'barrel' },
+  { type: 'col', key: 's_fb', group: 'barrel' },
+  { type: 'col', key: 'r_fb', group: 'barrel' },
+  { type: 'col', key: 'd_fb', group: 'barrel' },
+  { type: 'col', key: 's_ev', group: 'barrel' },
+  { type: 'col', key: 'r_ev', group: 'barrel' },
+  { type: 'col', key: 'd_ev', group: 'barrel' },
+  { type: 'col', key: 's_la', group: 'barrel' },
+  { type: 'col', key: 'r_la', group: 'barrel' },
+  { type: 'col', key: 'd_la', group: 'barrel' },
+  { type: 'col', key: 's_hr', group: 'barrel' },
+]
+const DUGOUT_GROUP_ORDER = ['picks', 'fhr', 'hr', 'props', 'ranks', 'batspeed', 'barrel'] as const
+// The two Statcast-toggle banner cells (see GameTable) span "everything
+// before Statcast" vs. "Statcast" — batspeed+barrel are that section.
+const DUGOUT_STATCAST_GROUPS = new Set(['batspeed', 'barrel'])
+const DUGOUT_ALL_COLUMNS = DUGOUT_COLUMN_LAYOUT.filter((s): s is Extract<DugoutColSlot, { type: 'col' }> => s.type === 'col')
+// Human labels for the customize panel's group toggles — the terse internal
+// group keys above (fhr/hr/props/...) aren't fit to show a member.
+export const DUGOUT_GROUP_LABELS: Record<string, string> = {
+  picks: 'Community Picks', fhr: 'First HR Odds', hr: 'Anytime HR Odds', props: 'Other Props',
+  ranks: 'Rank / Composite Scores', batspeed: 'Bat Tracking', barrel: 'Batted Ball (Statcast)',
+}
+
+export type DugoutColumnPrefs = {
+  hiddenGroups?: string[]
+  hiddenColumns?: string[]
+  // Reorders WITHIN each group only — an ordered list of column keys. A key
+  // from that group not present here keeps its default relative position,
+  // appended after the explicitly-ordered ones, so a column added to the
+  // app later never silently vanishes for someone with an old saved order.
+  columnOrder?: string[]
+}
+
+// Resolves a member's prefs into the final ordered list of VISIBLE columns
+// (no player, no dividers — the caller adds those back). Pure/stateless so
+// GameTable (building the header once) and every BatterRowEl (building its
+// own row) always derive the identical sequence from the same input,
+// instead of two independently hand-maintained lists that can drift apart.
+export function resolveDugoutColumns(prefs: DugoutColumnPrefs | null | undefined): { key: string; group: string }[] {
+  const hiddenGroups = new Set(prefs?.hiddenGroups ?? [])
+  const hiddenColumns = new Set(prefs?.hiddenColumns ?? [])
+  const orderRank = new Map((prefs?.columnOrder ?? []).map((k, i) => [k, i]))
+  const byGroup = new Map<string, { key: string; group: string }[]>()
+  for (const col of DUGOUT_ALL_COLUMNS) {
+    if (hiddenGroups.has(col.group) || hiddenColumns.has(col.key)) continue
+    const arr = byGroup.get(col.group) ?? []
+    arr.push(col)
+    byGroup.set(col.group, arr)
+  }
+  const out: { key: string; group: string }[] = []
+  for (const group of DUGOUT_GROUP_ORDER) {
+    const cols = byGroup.get(group)
+    if (!cols?.length) continue
+    const sorted = [...cols].sort((a, b) => {
+      const ra = orderRank.has(a.key) ? orderRank.get(a.key)! : Infinity
+      const rb = orderRank.has(b.key) ? orderRank.get(b.key)! : Infinity
+      return ra - rb // stable sort — ties keep their original relative order
+    })
+    out.push(...sorted)
+  }
+  return out
+}
+
+// Turns headerCells'/BatterRowEl's own unmodified JSX fragment (still the
+// ONLY place that defines what a column actually renders) into the
+// member's customized subset/order, re-inserting a divider at every real
+// group change instead of the fixed manually-placed divider cells the JSX
+// used to hardcode. `tagCell` lets the header vs. row renderer each attach
+// their own extras (row cells also want a data-col-key — see withColKey).
+function renderDugoutColumns(
+  fragment: React.ReactNode,
+  visible: { key: string; group: string }[],
+  dividerFactory: (key: string) => React.ReactElement,
+  tagCell: (el: React.ReactElement, colKey: string) => React.ReactElement,
+): React.ReactNode[] {
+  const children = React.Children.toArray(fragment)
+  if (children.length !== DUGOUT_COLUMN_LAYOUT.length) {
+    // A column was added/removed in the JSX without updating
+    // DUGOUT_COLUMN_LAYOUT above — fail loud in dev instead of silently
+    // misattributing every cell after the drift to the wrong key.
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error(`Dugout column layout mismatch: expected ${DUGOUT_COLUMN_LAYOUT.length} cells, got ${children.length} — update DUGOUT_COLUMN_LAYOUT`)
+    }
+    return children
+  }
+  const byKey = new Map<string, React.ReactElement>()
+  DUGOUT_COLUMN_LAYOUT.forEach((slot, i) => {
+    if (slot.type === 'col') byKey.set(slot.key, children[i] as React.ReactElement)
+  })
+  const playerEl = children[0] as React.ReactElement // position 0 is always 'player'
+  const out: React.ReactNode[] = [React.cloneElement(playerEl, { key: 'player' })]
+  let lastGroup: string | null = null
+  for (const { key, group } of visible) {
+    if (lastGroup !== null && group !== lastGroup) out.push(dividerFactory(`div-${key}`))
+    const el = byKey.get(key)
+    if (el) out.push(tagCell(el, key))
+    lastGroup = group
+  }
+  return out
+}
+
+// Human labels for the customize panel — the terse internal column keys
+// above (fhr_fd, sa_div_rbi, ...) aren't fit to show a member; these mirror
+// the tooltip text each column's real header (H()/BL() inside GameTable)
+// already uses, so the panel reads consistently with the board itself.
+const DUGOUT_COLUMN_LABELS: Record<string, string> = {
+  pk: 'Community HR pick count',
+  fhr_fd: 'FanDuel First HR', fhr_cz: 'Caesars First HR', fhr_fan: 'Fanatics First HR',
+  div: 'FD−CZ implied diff', fhr_div_sa: 'FHR ÷ Anytime HR implied',
+  fhr_pct: 'FHR historical hit rate', sa_pct: 'Anytime HR historical rate',
+  sa_fd: 'FanDuel Anytime HR', sa_cz: 'Caesars Anytime HR', sa_mgm: 'BetMGM Anytime HR',
+  sa_br: 'BetRivers Anytime HR', sa_fan: 'Fanatics Anytime HR',
+  m_div_f: 'BetMGM÷FD implied ratio', hrMl_fd: 'HR/Moneyline Parlay price',
+  sa_div_ml: 'Anytime HR ÷ HR/Moneyline ratio',
+  laser105_fd: 'Laser 105+ MPH HR price', laser110_fd: 'Laser 110+ MPH HR price',
+  moonshot_fd: 'Moonshot market price', pa1_fd: '1st Plate Appearance HR price',
+  pa1_div_sa: '1st PA HR ÷ Anytime HR ratio',
+  sa_div_rbi: 'Anytime HR÷RBI implied', sa_div_rbi2: 'Anytime HR÷2+RBI implied', sa_div_rbi3: 'Anytime HR÷3+RBI implied',
+  sa_div_hrr: 'Anytime HR÷Hits+Runs+RBIs implied',
+  sa_div_tb: 'Anytime HR÷2+ total bases implied', sa_div_tb3: 'Anytime HR÷3+ total bases implied',
+  sa_div_tb4: 'Anytime HR÷4+ total bases implied', sa_div_tb5: 'Anytime HR÷5+ total bases implied',
+  sa_div_hr2: 'Anytime HR÷2+ HR implied',
+  sng_fd: 'Singles', dbl_fd: 'Doubles', tri_fd: 'Triples', sb_fd: 'Stolen Base', sb2_fd: '2+ Stolen Bases',
+  hits_fd: '1+ Hit', hits2_fd: '2+ Hits', runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
+  paper: 'Composite Statcast score', bk_rk: 'Sportsbook rank', pp_rk: 'Statcast rank', mm: 'Market vs. Statcast gap',
+  s_spd: 'Season bat speed', r_spd: 'Recent bat speed', d_spd: 'Recent−season bat speed',
+  s_timing: 'Season timing %', r_timing: 'Recent timing', d_timing: 'Recent−season timing',
+  s_miss: 'Season miss distance', r_miss: 'Recent miss distance', d_miss: 'Recent−season miss distance',
+  s_hrd: 'Hard swing rate', r_hrd: 'Recent hard swing rate', d_hrd: 'Recent−season hard swing rate',
+  s_sq: 'Squared-up per swing', r_sq: 'Recent squared-up', d_sq: 'Squared-up delta',
+  s_bla: 'Blast per swing', r_bla: 'Recent blast per swing', d_bla: 'Recent−season blast per swing',
+  s_len: 'Swing length', r_len: 'Recent swing length', d_len: 'Recent−season swing length',
+  s_atk: 'Attack angle', r_atk: 'Recent attack angle', d_atk: 'Recent−season attack angle',
+  s_iaa: 'Ideal attack angle rate', r_iaa: 'Recent ideal attack angle rate', d_iaa: 'Recent−season ideal attack angle rate',
+  s_tlt: 'Swing tilt', r_tlt: 'Recent swing tilt', d_tlt: 'Recent−season swing tilt',
+  s_brl: 'Barrel batted rate', r_brl: 'Recent barrel rate', d_brl: 'Recent−season barrel rate',
+  s_hh: 'Hard hit rate', r_hh: 'Recent hard hit rate', d_hh: 'Recent−season hard hit rate',
+  s_sweetspot: 'Sweet spot rate', r_sweetspot: 'Recent sweet spot rate', d_sweetspot: 'Recent−season sweet spot rate',
+  s_pa: 'Pull air rate', r_pa: 'Recent pull air rate', d_pa: 'Recent−season pull air rate',
+  s_fb: 'Flyball rate', r_fb: 'Recent flyball rate', d_fb: 'Recent−season flyball rate',
+  s_ev: 'Exit velocity', r_ev: 'Recent exit velocity', d_ev: 'Recent−season exit velocity',
+  s_la: 'Launch angle', r_la: 'Recent launch angle', d_la: 'Recent−season launch angle',
+  s_hr: 'HR (season, vs. opposing pitcher hand)',
+}
+
+// Per-account Dugout column show/hide/reorder editor. Local-only draft state
+// (nothing hits the board or the DB until Save) — Cancel/backdrop-click just
+// discards it. Reordering is deliberately WITHIN a group only, not free-form
+// across all 95 columns (see DUGOUT_GROUP_ORDER's own comment) — plain
+// up/down move buttons rather than drag-and-drop, since there's no
+// drag-and-drop library in this app and up/down is far more reliable on the
+// touch viewports ~90% of members are actually on.
+function ColumnCustomizePanel({ prefs, onSave, onClose }: {
+  prefs: DugoutColumnPrefs | null
+  onSave: (next: DugoutColumnPrefs) => void
+  onClose: () => void
+}) {
+  const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set(prefs?.hiddenGroups ?? []))
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set(prefs?.hiddenColumns ?? []))
+  // Working order is the FULL resolved column list (every column, not just
+  // visible ones) so hiding/showing a column mid-edit doesn't lose its
+  // position — resolveDugoutColumns already puts saved-order columns first,
+  // per group, with everything else appended in default order.
+  const [order, setOrder] = useState<string[]>(() => resolveDugoutColumns(prefs).map(c => c.key))
+
+  const byGroup = useMemo(() => {
+    const m = new Map<string, string[]>()
+    for (const key of order) {
+      const col = DUGOUT_ALL_COLUMNS.find(c => c.key === key)
+      if (!col) continue
+      const arr = m.get(col.group) ?? []
+      arr.push(key)
+      m.set(col.group, arr)
+    }
+    return m
+  }, [order])
+
+  const moveWithinGroup = (group: string, key: string, dir: -1 | 1) => {
+    const groupKeys = byGroup.get(group) ?? []
+    const i = groupKeys.indexOf(key)
+    const j = i + dir
+    if (i === -1 || j < 0 || j >= groupKeys.length) return
+    const reordered = [...groupKeys]
+    ;[reordered[i], reordered[j]] = [reordered[j], reordered[i]]
+    // Splice the reordered group back into the full flat `order` array, in
+    // the positions its own members previously occupied.
+    let gi = 0
+    setOrder(prev => prev.map(k => (DUGOUT_ALL_COLUMNS.find(c => c.key === k)?.group === group ? reordered[gi++] : k)))
+  }
+
+  const save = () => onSave({
+    hiddenGroups: [...hiddenGroups],
+    hiddenColumns: [...hiddenColumns],
+    columnOrder: order,
+  })
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--surface)', zIndex: 1 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Show/hide a whole section or a single column, reorder within a section</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+        </div>
+
+        <div style={{ padding: 16 }}>
+          {DUGOUT_GROUP_ORDER.map(group => {
+            const groupCols = byGroup.get(group) ?? []
+            const groupHidden = hiddenGroups.has(group)
+            return (
+              <div key={group} style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{DUGOUT_GROUP_LABELS[group]}</span>
+                  <Switch
+                    checked={!groupHidden}
+                    onChange={v => setHiddenGroups(prev => {
+                      const next = new Set(prev)
+                      if (v) next.delete(group); else next.add(group)
+                      return next
+                    })}
+                  />
+                </div>
+                {!groupHidden && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, opacity: groupHidden ? 0.4 : 1 }}>
+                    {groupCols.map((key, i) => (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <button disabled={i === 0} onClick={() => moveWithinGroup(group, key, -1)} style={{ background: 'none', border: 'none', color: i === 0 ? 'var(--text-4)' : 'var(--text-3)', cursor: i === 0 ? 'default' : 'pointer', fontSize: 9, lineHeight: 1, padding: 1 }}>▲</button>
+                          <button disabled={i === groupCols.length - 1} onClick={() => moveWithinGroup(group, key, 1)} style={{ background: 'none', border: 'none', color: i === groupCols.length - 1 ? 'var(--text-4)' : 'var(--text-3)', cursor: i === groupCols.length - 1 ? 'default' : 'pointer', fontSize: 9, lineHeight: 1, padding: 1 }}>▼</button>
+                        </div>
+                        <span style={{ flex: 1, fontSize: 11, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
+                        <Switch
+                          checked={!hiddenColumns.has(key)}
+                          onChange={v => setHiddenColumns(prev => {
+                            const next = new Set(prev)
+                            if (v) next.delete(key); else next.add(key)
+                            return next
+                          })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'space-between', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <button
+            onClick={() => { setHiddenGroups(new Set()); setHiddenColumns(new Set()); setOrder(DUGOUT_ALL_COLUMNS.map(c => c.key)) }}
+            style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', background: 'none', color: 'var(--text-3)' }}
+          >
+            Reset to default
+          </button>
+          <button onClick={save} style={{ fontSize: 12, fontWeight: 800, cursor: 'pointer', border: '1px solid var(--accent)', borderRadius: 8, padding: '7px 16px', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -1980,6 +2397,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   date: string
   statcastWindow: 'l1' | 'l3' | 'l5' | 'l10'
   onStatcastWindowChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void
+  // This member's saved Dugout column show/hide/order — null/undefined
+  // means "show everything, default order" (see resolveDugoutColumns).
+  columnPrefs?: DugoutColumnPrefs | null
 }) {
   const [sort, setSort] = useState<SortState>(null)
   // Sticky multi-column sort — when on, each header click ADDS that column
@@ -2002,10 +2422,19 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   // slate since GameTable itself remounts per game (key={active.gameKey}
   // at the call site), so reading localStorage once in the initializer is
   // enough — no separate reload-on-gameKey-change effect needed.
-  const hlStorageKey = `dugout-highlights:${game.gameKey}`
+  // Storage key bumped to v2 — highlights used to be keyed by raw DOM
+  // cellIndex; column customization makes that index meaningless (two
+  // members with different hidden/reordered columns would have the same
+  // index point at different stats), so cells are now keyed by stable
+  // column key instead (see BatterRowEl/withColKey). Old v1 data is simply
+  // never read again rather than migrated — Highlighter has always
+  // documented itself as a purely cosmetic, per-game scratch tool ("sticks
+  // around until you clear it, just for this game"), not a permanent
+  // record worth writing migration logic for.
+  const hlStorageKey = `dugout-highlights-v2:${game.gameKey}`
   const [highlightMode, setHighlightMode] = useState(false)
   const [activeHlColor, setActiveHlColor] = useState(HL_SWATCHES[0])
-  const [cellHighlights, setCellHighlights] = useState<Record<string, Record<number, string>>>(() => {
+  const [cellHighlights, setCellHighlights] = useState<Record<string, Record<string, string>>>(() => {
     if (typeof window === 'undefined') return {}
     try {
       const raw = window.localStorage.getItem(hlStorageKey)
@@ -2015,11 +2444,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   useEffect(() => {
     try { window.localStorage.setItem(hlStorageKey, JSON.stringify(cellHighlights)) } catch { /* private-browsing quota, etc. — highlights just won't survive a refresh */ }
   }, [cellHighlights, hlStorageKey])
-  const toggleCellHighlight = (rowKey: string, cellIndex: number) => {
+  const toggleCellHighlight = (rowKey: string, colKey: string) => {
     setCellHighlights(prev => {
       const rowMap = { ...(prev[rowKey] ?? {}) }
-      if (rowMap[cellIndex] != null) delete rowMap[cellIndex]
-      else rowMap[cellIndex] = activeHlColor
+      if (rowMap[colKey] != null) delete rowMap[colKey]
+      else rowMap[colKey] = activeHlColor
       const next = { ...prev, [rowKey]: rowMap }
       if (!Object.keys(rowMap).length) delete next[rowKey]
       return next
@@ -2144,25 +2573,45 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     )
   }
 
-  // The Statcast toggle bar's colSpan split below MUST stay in sync with
-  // these two counts. Confirmed live (2026-07-24): centering the toggle in
-  // a single colSpan-spans-everything cell (grid '1fr auto 1fr' across ALL
-  // ~75 columns) put it at the table's overall horizontal midpoint, not
-  // over the Statcast columns specifically — Statcast is column 50 of 75,
-  // well past center, so on any real slate width the toggle landed to the
+  // This member's resolved column show/hide/order (null prefs = show
+  // everything, default order — see resolveDugoutColumns above GameTable).
+  // Computed once and reused by the header, both team-banner colSpans
+  // below, and every BatterRowEl row, so all four always agree.
+  const visibleDugoutColumns = useMemo(() => resolveDugoutColumns(columnPrefs), [columnPrefs])
+
+  // The Statcast toggle bar's colSpan split below MUST span exactly the
+  // real rendered column count on each side. Confirmed live (2026-07-24):
+  // centering the toggle in a single colSpan-spans-everything cell put it
+  // at the table's overall horizontal midpoint, not over the Statcast
+  // columns specifically, so on a wide slate the toggle landed well to the
   // LEFT of the columns it's supposed to sit above, and scrolled out of
   // view entirely on mobile before the Statcast section ever came into
-  // frame. Giving the toggle its OWN colSpan matching exactly the Statcast
-  // columns' width (BSpd through the final HR column) makes it scroll
-  // together with — and stay visually centered over — that exact section
-  // regardless of the total table width. COLS_BEFORE_STATCAST = every
-  // header cell from "Player" through the divider right before "BSpd"
-  // (49); STATCAST_COL_COUNT = "BSpd" through the last column, "HR" (50,
-  // bumped from 26 once every remaining field got its own R·/Δ pair).
-  // If a column is ever added/removed anywhere in headerCells below, these
-  // two numbers need the same edit or this breaks silently again.
-  const COLS_BEFORE_STATCAST = 49
-  const STATCAST_COL_COUNT = 50
+  // frame. Giving the toggle its own colSpan matching exactly the Statcast
+  // section's width (batspeed+barrel groups) makes it scroll together with
+  // — and stay centered over — that exact section regardless of table
+  // width or how many columns a member has hidden. Computed from
+  // visibleDugoutColumns (real rendered count) instead of a hardcoded
+  // number specifically because the OLD hardcoded pair (49/50) had
+  // silently drifted from the true column count already — hand-maintaining
+  // two numbers in sync with headerCells was exactly the fragile assumption
+  // this whole column-array refactor exists to remove.
+  const { COLS_BEFORE_STATCAST, STATCAST_COL_COUNT } = useMemo(() => {
+    let before = 1 // the sticky Player column, always its own leading cell
+    let statcast = 0
+    let lastGroup: string | null = null
+    let inStatcast = false
+    for (const { group } of visibleDugoutColumns) {
+      const dividerHere = lastGroup !== null && group !== lastGroup
+      // A transition divider belongs to whichever side is being LEFT —
+      // matches the original convention where the ranks→batspeed divider
+      // counted toward "before Statcast," not the Statcast section itself.
+      if (dividerHere) { if (inStatcast) statcast++; else before++ }
+      if (!inStatcast && DUGOUT_STATCAST_GROUPS.has(group)) inStatcast = true
+      if (inStatcast) statcast++; else before++
+      lastGroup = group
+    }
+    return { COLS_BEFORE_STATCAST: before, STATCAST_COL_COUNT: statcast }
+  }, [visibleDugoutColumns])
 
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
@@ -2274,12 +2723,17 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       {H('HR', 'HR — season, vs. tonight\'s opposing pitcher hand only, not every game he\'s played', 30, 's_hr')}
     </>
   )
+  const renderedHeaderCells = renderDugoutColumns(
+    headerCells, visibleDugoutColumns,
+    key => <th key={key} style={SDIV_H} />,
+    (el, key) => React.cloneElement(el, { key }),
+  )
 
   return (
     <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8 }}>
       <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
         <thead>
-          <tr>{headerCells}</tr>
+          <tr>{renderedHeaderCells}</tr>
         </thead>
         <tbody>
           {/* Home */}
@@ -2415,8 +2869,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 <BatterRowEl
                   row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
                   gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
-                  highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={idx => toggleCellHighlight(key, idx)}
-                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)}
+                  highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
+                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={visibleDugoutColumns}
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} /></tr>
@@ -2452,7 +2906,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
           {/* Repeated column header — placed directly under the away team's
               own divider bar (not above it) so it visually belongs to the
               away section, not the tail end of the home team's block. */}
-          <tr>{headerCells}</tr>
+          <tr>{renderedHeaderCells}</tr>
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
             return (
@@ -2460,8 +2914,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 <BatterRowEl
                   row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
                   gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
-                  highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={idx => toggleCellHighlight(key, idx)}
-                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)}
+                  highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
+                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={visibleDugoutColumns}
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} /></tr>
@@ -2489,6 +2943,33 @@ export function DugoutClient({ date }: { date: string }) {
   // just picking which one to render, not a re-fetch. Lives here (not in
   // GameTable) so it survives switching between today's games.
   const [statcastWindow, setStatcastWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>('l10')
+
+  // Per-member Dugout column show/hide/reorder — fetched once on mount
+  // (null while loading behaves identically to "no prefs saved," i.e. show
+  // everything in default order, so there's no layout flash while this
+  // resolves) and written back through the same direct
+  // supabase.from('users').update() pattern PrivacySettingsForm already
+  // uses for every other member preference on this table.
+  const [columnPrefs, setColumnPrefsState] = useState<DugoutColumnPrefs | null>(null)
+  const [showColumnPanel, setShowColumnPanel] = useState(false)
+  useEffect(() => {
+    const supabase = createClient()
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data } = await supabase.from('users').select('dugout_column_prefs').eq('id', user.id).single()
+      if (!cancelled && data?.dugout_column_prefs) setColumnPrefsState(data.dugout_column_prefs as DugoutColumnPrefs)
+    })()
+    return () => { cancelled = true }
+  }, [])
+  const saveColumnPrefs = async (next: DugoutColumnPrefs) => {
+    setColumnPrefsState(next) // update the board immediately — don't wait on the write
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('users').update({ dugout_column_prefs: next }).eq('id', user.id)
+  }
 
   // Deep link from elsewhere (e.g. Weather Lab's park-HR modal) — jump
   // straight to this player's row, expanded, on whichever game he's in
@@ -2724,17 +3205,43 @@ export function DugoutClient({ date }: { date: string }) {
             <span style={{ background: 'rgba(251,146,60,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{nearHrCount}</span>
           </button>
         )}
+
+        {/* Per-account column customization — applies across every game's
+            table below, not just the active one, so it lives up here at
+            the page level rather than inside GameTable's per-game toolbar. */}
+        <button onClick={() => setShowColumnPanel(true)} style={{
+          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
+          border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)',
+          fontSize: 12, fontWeight: 800, cursor: 'pointer',
+        }}>
+          ⚙️ Columns
+        </button>
       </div>
 
-      {/* Game tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      {showColumnPanel && (
+        <ColumnCustomizePanel
+          prefs={columnPrefs}
+          onSave={next => { saveColumnPrefs(next); setShowColumnPanel(false) }}
+          onClose={() => setShowColumnPanel(false)}
+        />
+      )}
+
+      {/* Game tabs — a CSS grid (not flex-wrap) so every row has the same
+          column count and every chip fills its cell at equal width. Chip
+          content length varies a lot (a bare "@" matchup vs. a live score
+          vs. a doubleheader G2 badge), which under the old flex-wrap made
+          rows wrap raggedly/unevenly, especially on mobile (~90% of
+          traffic) where only 2 columns fit. Grid removes that: content
+          length no longer drives chip width, so rows always align. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6" style={{ gap: 6, marginBottom: 16 }}>
         {games.map(g => {
           const isAct = g.gameKey === activeGame
           const isLive = g.status === 'Live'
           const isFin  = g.status === 'Final'
           return (
             <button key={g.gameKey} onClick={() => setActiveGame(g.gameKey)} style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              width: '100%', minWidth: 0, padding: '7px 8px', borderRadius: 8, cursor: 'pointer',
               border: isAct ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: isAct ? 'var(--accent-dim)' : 'var(--surface)',
               color: isAct ? 'var(--accent)' : 'var(--text-2)',
@@ -2744,7 +3251,7 @@ export function DugoutClient({ date }: { date: string }) {
               <span style={{ color: 'var(--text-3)', fontSize: 9 }}>@</span>
               <TeamLogo abbr={g.homeAbbr} size={16} />
               {g.gameNum > 1 && <span style={{ fontSize: 9, fontWeight: 900, color: '#f59e0b' }}>G{g.gameNum}</span>}
-              {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
+              {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />}
               {(isLive || isFin) && <span style={{ fontSize: 10, fontFamily: 'monospace' }}>{g.awayScore}–{g.homeScore}</span>}
               {!isLive && !isFin && g.gameDate && (
                 <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'monospace' }}>
@@ -2773,6 +3280,7 @@ export function DugoutClient({ date }: { date: string }) {
           highlightMlbId={highlightId}
           statcastWindow={statcastWindow}
           onStatcastWindowChange={setStatcastWindow}
+          columnPrefs={columnPrefs}
         />
       )}
 

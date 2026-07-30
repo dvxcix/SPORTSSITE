@@ -44,7 +44,7 @@ async function normalizeImage(file: File): Promise<{ buffer: Buffer; contentType
 // then the write happens with the service role, bypassing Storage's own
 // broken RLS check entirely.
 const ALLOWED_KINDS = new Set([
-  'avatars', 'banners', 'posts', 'stories', 'emojis', 'badges', 'badge-cards', 'social-platforms',
+  'avatars', 'banners', 'posts', 'stories', 'emojis', 'badges', 'badge-cards', 'social-platforms', 'changelog',
 ])
 
 export async function POST(req: Request) {

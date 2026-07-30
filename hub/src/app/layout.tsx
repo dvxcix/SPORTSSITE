@@ -7,6 +7,7 @@ import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
 import { SiteBanner } from '@/components/layout/SiteBanner'
+import { ChangelogPopup } from '@/components/layout/ChangelogPopup'
 
 const geist = Geist({ subsets: ['latin'] })
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark">
       <body className={`${geist.className} bg-zinc-950 text-white antialiased`}>
         <SiteBanner />
+        <ChangelogPopup />
         <AuthProvider>
           <RootLayoutShell>
             {children}

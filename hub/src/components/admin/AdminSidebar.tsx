@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare, Flag,
   Settings, CreditCard, Megaphone, Star, Calendar,
   ShoppingBag, Briefcase, BookOpen, Zap, Radio,
-  Bell, Shield, ChevronDown, ChevronRight, Upload, Smile, Award, AtSign, AlertTriangle
+  Bell, Shield, ChevronDown, ChevronRight, Upload, Smile, Award, AtSign, AlertTriangle, Sparkles
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -47,6 +47,7 @@ const nav = [
   { href: '/admin/badges', icon: Award, label: 'Badges' },
   { href: '/admin/social-platforms', icon: AtSign, label: 'Connected Accounts' },
   { href: '/admin/site-banner', icon: AlertTriangle, label: 'Site Banner' },
+  { href: '/admin/changelog', icon: Sparkles, label: 'What\'s New / Changelog' },
   {
     label: 'Settings', icon: Settings, children: [
       { href: '/admin/settings/general', label: 'General' },

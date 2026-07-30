@@ -48,6 +48,10 @@ export interface User {
   admin_granted_tier_by?: string | null
   admin_granted_tier_at?: string | null
   admin_granted_tier_note?: string | null
+  // Per-member Dugout grid column show/hide/reorder — see
+  // resolveDugoutColumns in DugoutClient.tsx for the shape's real meaning.
+  // Null/absent means show every column, default order.
+  dugout_column_prefs?: { hiddenGroups?: string[]; hiddenColumns?: string[]; columnOrder?: string[] } | null
 }
 
 export interface Post {
