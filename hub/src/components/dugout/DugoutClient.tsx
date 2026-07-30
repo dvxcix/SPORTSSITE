@@ -2020,10 +2020,14 @@ const HL_SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7']
 // knows "column N is fhr_fd, in the fhr group" instead of the header list
 // and the row-cell list each separately assuming they stay in sync (the old
 // COLS_BEFORE_STATCAST comment already flagged that assumption as fragile).
-// Group ORDER here is fixed and never reordered by member prefs — only
-// individual columns move WITHIN their own group, or a whole group hides —
-// so batspeed+barrel stay a guaranteed-contiguous trailing "Statcast"
-// section (COLS_BEFORE_STATCAST/STATCAST_COL_COUNT below depend on that).
+// `group` here is each column's fixed "home" tag — what a "hide this whole
+// section" toggle keys off, and what the reorder panel shows as a label —
+// but display ORDER is a fully free, flat, cross-group sort (see
+// resolveDugoutColumns): a member can genuinely move any column anywhere,
+// including in front of a different section's columns or splitting a
+// section into two runs. renderDugoutColumns already inserts a divider on
+// any adjacent group change with no contiguity assumption, so arbitrary
+// interleaving renders correctly with zero special-casing.
 type DugoutColSlot = { type: 'player' } | { type: 'divider' } | { type: 'col'; key: string; group: string }
 const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'player' },
@@ -2129,10 +2133,11 @@ const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'col', key: 'd_la', group: 'barrel' },
   { type: 'col', key: 's_hr', group: 'barrel' },
 ]
+// Default column order and the fixed list of static "home" groups the
+// customize panel's per-section hide toggles iterate over — NOT a
+// constraint on display order, which is fully free (see
+// resolveDugoutColumns/DUGOUT_COLUMN_LAYOUT's own comment).
 const DUGOUT_GROUP_ORDER = ['picks', 'fhr', 'hr', 'props', 'ranks', 'batspeed', 'barrel'] as const
-// The two Statcast-toggle banner cells (see GameTable) span "everything
-// before Statcast" vs. "Statcast" — batspeed+barrel are that section.
-const DUGOUT_STATCAST_GROUPS = new Set(['batspeed', 'barrel'])
 const DUGOUT_ALL_COLUMNS = DUGOUT_COLUMN_LAYOUT.filter((s): s is Extract<DugoutColSlot, { type: 'col' }> => s.type === 'col')
 // Human labels for the customize panel's group toggles — the terse internal
 // group keys above (fhr/hr/props/...) aren't fit to show a member.
@@ -2159,26 +2164,25 @@ export type DugoutColumnPrefs = {
 export function resolveDugoutColumns(prefs: DugoutColumnPrefs | null | undefined): { key: string; group: string }[] {
   const hiddenGroups = new Set(prefs?.hiddenGroups ?? [])
   const hiddenColumns = new Set(prefs?.hiddenColumns ?? [])
+  const visible = DUGOUT_ALL_COLUMNS.filter(c => !hiddenGroups.has(c.group) && !hiddenColumns.has(c.key))
+  // A column's "home" group (DUGOUT_COLUMN_LAYOUT's static tag) is fixed —
+  // it's what a "hide this whole section" toggle always keys off, wherever
+  // that column currently sits — but this ordering itself is a genuinely
+  // flat, cross-group sort: columnOrder is the member's own complete
+  // absolute position for every column, free to interleave sections however
+  // they like (move MM in front of PK, drop a Statcast column between two
+  // FHR-odds columns, whatever). renderDugoutColumns already inserts a
+  // divider on any adjacent group change regardless of contiguity, so this
+  // needs no special handling on the render side — real interleaving was
+  // already supported there; only this sort (and the Statcast banner's
+  // colSpan, fixed separately) assumed sections stayed contiguous blocks.
   const orderRank = new Map((prefs?.columnOrder ?? []).map((k, i) => [k, i]))
-  const byGroup = new Map<string, { key: string; group: string }[]>()
-  for (const col of DUGOUT_ALL_COLUMNS) {
-    if (hiddenGroups.has(col.group) || hiddenColumns.has(col.key)) continue
-    const arr = byGroup.get(col.group) ?? []
-    arr.push(col)
-    byGroup.set(col.group, arr)
-  }
-  const out: { key: string; group: string }[] = []
-  for (const group of DUGOUT_GROUP_ORDER) {
-    const cols = byGroup.get(group)
-    if (!cols?.length) continue
-    const sorted = [...cols].sort((a, b) => {
-      const ra = orderRank.has(a.key) ? orderRank.get(a.key)! : Infinity
-      const rb = orderRank.has(b.key) ? orderRank.get(b.key)! : Infinity
-      return ra - rb // stable sort — ties keep their original relative order
-    })
-    out.push(...sorted)
-  }
-  return out
+  return [...visible].sort((a, b) => {
+    const ra = orderRank.has(a.key) ? orderRank.get(a.key)! : Infinity
+    const rb = orderRank.has(b.key) ? orderRank.get(b.key)! : Infinity
+    if (ra !== rb) return ra - rb
+    return 0 // both unranked (or tied) — stable sort keeps DUGOUT_ALL_COLUMNS' default relative order
+  })
 }
 
 // Turns headerCells'/BatterRowEl's own unmodified JSX fragment (still the
@@ -2265,11 +2269,16 @@ const DUGOUT_COLUMN_LABELS: Record<string, string> = {
 
 // Per-account Dugout column show/hide/reorder editor. Local-only draft state
 // (nothing hits the board or the DB until Save) — Cancel/backdrop-click just
-// discards it. Reordering is deliberately WITHIN a group only, not free-form
-// across all 95 columns (see DUGOUT_GROUP_ORDER's own comment) — plain
-// up/down move buttons rather than drag-and-drop, since there's no
-// drag-and-drop library in this app and up/down is far more reliable on the
-// touch viewports ~90% of members are actually on.
+// discards it. Fully free reordering: any column can move anywhere,
+// including across section boundaries (move MM in front of PK, drop a
+// Statcast column between two FHR-odds columns, whatever) — a column's
+// `group` is just a fixed label for the "hide this whole section" toggle
+// and for grouping this list visually, never a constraint on where it can
+// sit. Plain move buttons (▲▼ one step, ⤒⤓ to the very top/bottom) rather
+// than drag-and-drop, since there's no drag-and-drop library in this app
+// and touch-drag reliability is genuinely poor on the mobile viewports
+// ~90% of members are actually on — ⤒/⤓ covers the "move it 80 spots"
+// case a pure up/down chain would make painfully slow.
 function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   prefs: DugoutColumnPrefs | null
   onSave: (next: DugoutColumnPrefs) => void
@@ -2277,35 +2286,68 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
 }) {
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set(prefs?.hiddenGroups ?? []))
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set(prefs?.hiddenColumns ?? []))
-  // Working order is the FULL resolved column list (every column, not just
-  // visible ones) so hiding/showing a column mid-edit doesn't lose its
-  // position — resolveDugoutColumns already puts saved-order columns first,
-  // per group, with everything else appended in default order.
-  const [order, setOrder] = useState<string[]>(() => resolveDugoutColumns(prefs).map(c => c.key))
+  // Full flat order of every column (hidden or not) — hiding/showing a
+  // column mid-edit doesn't lose its last position, it's just skipped over
+  // by visibleOrder below until re-shown.
+  const [order, setOrder] = useState<string[]>(() => {
+    const resolved = new Set(resolveDugoutColumns(prefs).map(c => c.key))
+    const rest = DUGOUT_ALL_COLUMNS.map(c => c.key).filter(k => !resolved.has(k))
+    return [...resolved, ...rest]
+  })
+  const colByKey = useMemo(() => new Map(DUGOUT_ALL_COLUMNS.map(c => [c.key, c])), [])
 
-  const byGroup = useMemo(() => {
-    const m = new Map<string, string[]>()
-    for (const key of order) {
-      const col = DUGOUT_ALL_COLUMNS.find(c => c.key === key)
-      if (!col) continue
-      const arr = m.get(col.group) ?? []
-      arr.push(key)
-      m.set(col.group, arr)
+  const visibleOrder = useMemo(
+    () => order.filter(k => {
+      const col = colByKey.get(k)
+      return col && !hiddenGroups.has(col.group) && !hiddenColumns.has(k)
+    }),
+    [order, hiddenGroups, hiddenColumns, colByKey],
+  )
+  // Consecutive runs of the same static group within the CURRENT order —
+  // purely a display grouping (headers/pills), recomputed every render from
+  // wherever things actually sit, so it never drifts from reality even
+  // after a column's been moved out of its section's usual neighborhood.
+  const runs = useMemo(() => {
+    const result: { group: string; keys: string[] }[] = []
+    for (const key of visibleOrder) {
+      const group = colByKey.get(key)!.group
+      const last = result[result.length - 1]
+      if (last && last.group === group) last.keys.push(key)
+      else result.push({ group, keys: [key] })
     }
-    return m
-  }, [order])
+    return result
+  }, [visibleOrder, colByKey])
 
-  const moveWithinGroup = (group: string, key: string, dir: -1 | 1) => {
-    const groupKeys = byGroup.get(group) ?? []
-    const i = groupKeys.indexOf(key)
+  // Splices a reordered visible-subset back into the full `order` array (in
+  // whichever positions the visible items previously occupied), leaving
+  // hidden columns exactly where they were.
+  const applyVisibleOrder = (nextVisible: string[]) => {
+    let vi = 0
+    setOrder(prev => prev.map(k => (visibleOrder.includes(k) ? nextVisible[vi++] : k)))
+  }
+  const moveColumn = (key: string, dir: -1 | 1) => {
+    const i = visibleOrder.indexOf(key)
     const j = i + dir
-    if (i === -1 || j < 0 || j >= groupKeys.length) return
-    const reordered = [...groupKeys]
-    ;[reordered[i], reordered[j]] = [reordered[j], reordered[i]]
-    // Splice the reordered group back into the full flat `order` array, in
-    // the positions its own members previously occupied.
-    let gi = 0
-    setOrder(prev => prev.map(k => (DUGOUT_ALL_COLUMNS.find(c => c.key === k)?.group === group ? reordered[gi++] : k)))
+    if (i === -1 || j < 0 || j >= visibleOrder.length) return
+    const next = [...visibleOrder]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    applyVisibleOrder(next)
+  }
+  const moveColumnToEdge = (key: string, edge: 'top' | 'bottom') => {
+    const rest = visibleOrder.filter(k => k !== key)
+    applyVisibleOrder(edge === 'top' ? [key, ...rest] : [...rest, key])
+  }
+  // Swaps two ADJACENT runs' whole key-blocks — the fast "move this entire
+  // section up/down" action, distinct from moving one column at a time.
+  const moveRun = (runIndex: number, dir: -1 | 1) => {
+    const otherIndex = runIndex + dir
+    if (otherIndex < 0 || otherIndex >= runs.length) return
+    const [lowIdx, highIdx] = runIndex < otherIndex ? [runIndex, otherIndex] : [otherIndex, runIndex]
+    const lowRun = runs[lowIdx], highRun = runs[highIdx]
+    const startPos = visibleOrder.indexOf(lowRun.keys[0])
+    const next = [...visibleOrder]
+    next.splice(startPos, lowRun.keys.length + highRun.keys.length, ...highRun.keys, ...lowRun.keys)
+    applyVisibleOrder(next)
   }
 
   const save = () => onSave({
@@ -2314,58 +2356,77 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
     columnOrder: order,
   })
 
+  const moveBtnStyle = (disabled: boolean): React.CSSProperties => ({
+    background: 'none', border: 'none', color: disabled ? 'var(--text-4)' : 'var(--text-3)',
+    cursor: disabled ? 'default' : 'pointer', fontSize: 10, lineHeight: 1, padding: 2,
+  })
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--surface)', zIndex: 1 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Show/hide a whole section or a single column, reorder within a section</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Hide a whole section below, or reorder/hide individual columns freely — any column can move anywhere</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
+        <div style={{ padding: '14px 16px 4px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Hide a whole section</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+            {DUGOUT_GROUP_ORDER.map(group => (
+              <label key={group} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)', cursor: 'pointer' }}>
+                <Switch
+                  checked={!hiddenGroups.has(group)}
+                  onChange={v => setHiddenGroups(prev => {
+                    const next = new Set(prev)
+                    if (v) next.delete(group); else next.add(group)
+                    return next
+                  })}
+                />
+                {DUGOUT_GROUP_LABELS[group]}
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div style={{ padding: 16 }}>
-          {DUGOUT_GROUP_ORDER.map(group => {
-            const groupCols = byGroup.get(group) ?? []
-            const groupHidden = hiddenGroups.has(group)
-            return (
-              <div key={group} style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{DUGOUT_GROUP_LABELS[group]}</span>
-                  <Switch
-                    checked={!groupHidden}
-                    onChange={v => setHiddenGroups(prev => {
-                      const next = new Set(prev)
-                      if (v) next.delete(group); else next.add(group)
-                      return next
-                    })}
-                  />
+          {runs.map((run, runIndex) => (
+            <div key={`${run.group}-${runIndex}`} style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)' }}>{DUGOUT_GROUP_LABELS[run.group]}</span>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  <button disabled={runIndex === 0} onClick={() => moveRun(runIndex, -1)} title="Move this whole section up" style={moveBtnStyle(runIndex === 0)}>▲ section</button>
+                  <button disabled={runIndex === runs.length - 1} onClick={() => moveRun(runIndex, 1)} title="Move this whole section down" style={moveBtnStyle(runIndex === runs.length - 1)}>▼ section</button>
                 </div>
-                {!groupHidden && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, opacity: groupHidden ? 0.4 : 1 }}>
-                    {groupCols.map((key, i) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <button disabled={i === 0} onClick={() => moveWithinGroup(group, key, -1)} style={{ background: 'none', border: 'none', color: i === 0 ? 'var(--text-4)' : 'var(--text-3)', cursor: i === 0 ? 'default' : 'pointer', fontSize: 9, lineHeight: 1, padding: 1 }}>▲</button>
-                          <button disabled={i === groupCols.length - 1} onClick={() => moveWithinGroup(group, key, 1)} style={{ background: 'none', border: 'none', color: i === groupCols.length - 1 ? 'var(--text-4)' : 'var(--text-3)', cursor: i === groupCols.length - 1 ? 'default' : 'pointer', fontSize: 9, lineHeight: 1, padding: 1 }}>▼</button>
-                        </div>
-                        <span style={{ flex: 1, fontSize: 11, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
-                        <Switch
-                          checked={!hiddenColumns.has(key)}
-                          onChange={v => setHiddenColumns(prev => {
-                            const next = new Set(prev)
-                            if (v) next.delete(key); else next.add(key)
-                            return next
-                          })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            )
-          })}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {run.keys.map(key => {
+                  const i = visibleOrder.indexOf(key)
+                  return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)' }}>
+                      <div style={{ display: 'flex', gap: 0 }}>
+                        <button disabled={i === 0} onClick={() => moveColumnToEdge(key, 'top')} title="Move to top" style={moveBtnStyle(i === 0)}>⤒</button>
+                        <button disabled={i === 0} onClick={() => moveColumn(key, -1)} title="Move up" style={moveBtnStyle(i === 0)}>▲</button>
+                        <button disabled={i === visibleOrder.length - 1} onClick={() => moveColumn(key, 1)} title="Move down" style={moveBtnStyle(i === visibleOrder.length - 1)}>▼</button>
+                        <button disabled={i === visibleOrder.length - 1} onClick={() => moveColumnToEdge(key, 'bottom')} title="Move to bottom" style={moveBtnStyle(i === visibleOrder.length - 1)}>⤓</button>
+                      </div>
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
+                      <Switch
+                        checked={!hiddenColumns.has(key)}
+                        onChange={v => setHiddenColumns(prev => {
+                          const next = new Set(prev)
+                          if (v) next.delete(key); else next.add(key)
+                          return next
+                        })}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'space-between', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
@@ -2579,40 +2640,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   // below, and every BatterRowEl row, so all four always agree.
   const visibleDugoutColumns = useMemo(() => resolveDugoutColumns(columnPrefs), [columnPrefs])
 
-  // The Statcast toggle bar's colSpan split below MUST span exactly the
-  // real rendered column count on each side. Confirmed live (2026-07-24):
-  // centering the toggle in a single colSpan-spans-everything cell put it
-  // at the table's overall horizontal midpoint, not over the Statcast
-  // columns specifically, so on a wide slate the toggle landed well to the
-  // LEFT of the columns it's supposed to sit above, and scrolled out of
-  // view entirely on mobile before the Statcast section ever came into
-  // frame. Giving the toggle its own colSpan matching exactly the Statcast
-  // section's width (batspeed+barrel groups) makes it scroll together with
-  // — and stay centered over — that exact section regardless of table
-  // width or how many columns a member has hidden. Computed from
-  // visibleDugoutColumns (real rendered count) instead of a hardcoded
-  // number specifically because the OLD hardcoded pair (49/50) had
-  // silently drifted from the true column count already — hand-maintaining
-  // two numbers in sync with headerCells was exactly the fragile assumption
-  // this whole column-array refactor exists to remove.
-  const { COLS_BEFORE_STATCAST, STATCAST_COL_COUNT } = useMemo(() => {
-    let before = 1 // the sticky Player column, always its own leading cell
-    let statcast = 0
-    let lastGroup: string | null = null
-    let inStatcast = false
-    for (const { group } of visibleDugoutColumns) {
-      const dividerHere = lastGroup !== null && group !== lastGroup
-      // A transition divider belongs to whichever side is being LEFT —
-      // matches the original convention where the ranks→batspeed divider
-      // counted toward "before Statcast," not the Statcast section itself.
-      if (dividerHere) { if (inStatcast) statcast++; else before++ }
-      if (!inStatcast && DUGOUT_STATCAST_GROUPS.has(group)) inStatcast = true
-      if (inStatcast) statcast++; else before++
-      lastGroup = group
-    }
-    return { COLS_BEFORE_STATCAST: before, STATCAST_COL_COUNT: statcast }
-  }, [visibleDugoutColumns])
-
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
   // of view above the home lineup was otherwise unreadable by the time you
@@ -2736,10 +2763,17 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
           <tr>{renderedHeaderCells}</tr>
         </thead>
         <tbody>
-          {/* Home */}
+          {/* Home — a single full-width cell (not two colSpan'd halves) since
+              free-form column reordering means the Statcast columns
+              (batspeed/barrel) are no longer guaranteed to stay one
+              contiguous trailing block an HTML colSpan could target — a
+              member can freely interleave a Statcast column between two
+              odds columns now. The Statcast window toggle sits in this same
+              flex row instead of a dedicated spanning cell above just its
+              own columns. */}
           <tr>
-            <td colSpan={COLS_BEFORE_STATCAST} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <td colSpan={renderedHeaderCells.length} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.homeAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
@@ -2853,12 +2887,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                       </button>
                     </Tooltip>
                   )}
+                  <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
                 </div>
-              </div>
-            </td>
-            <td colSpan={STATCAST_COL_COUNT} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
               </div>
             </td>
           </tr>
@@ -2885,20 +2915,18 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               of the home team's block above it. */}
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
-            <td colSpan={COLS_BEFORE_STATCAST} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                <TeamLogo abbr={game.awayAbbr} size={22} />
-                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
-                {!game.awayLineupConfirmed && (
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                    {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
-                  </span>
-                )}
-                {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
-              </div>
-            </td>
-            <td colSpan={STATCAST_COL_COUNT} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <td colSpan={renderedHeaderCells.length} style={{ background: 'var(--surface-2)', padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <TeamLogo abbr={game.awayAbbr} size={22} />
+                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
+                  {!game.awayLineupConfirmed && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+                      {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
+                    </span>
+                  )}
+                  {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
+                </div>
                 <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
               </div>
             </td>
