@@ -2701,6 +2701,191 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   // below, and every BatterRowEl row, so all four always agree.
   const visibleDugoutColumns = useMemo(() => resolveDugoutColumns(columnPrefs), [columnPrefs])
 
+  // Shared by both team banners (home + away both get their own copy of
+  // Sticky/Highlighter/Eraser now, not just home) — icon-only labels (no more
+  // "Sticky Columns"/"Highlighter"/"Eraser" text) to leave room for two full
+  // copies to fit on a mobile-width banner row. Tooltips still carry the
+  // full explanation, so nothing is lost, just not shown by default.
+  const modeButtons = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <Tooltip content={stickyMode
+        ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
+        : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
+      >
+        <button
+          onClick={() => setStickyMode(v => !v)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            border: `1px solid ${stickyMode ? 'var(--accent)' : 'var(--border)'}`,
+            background: stickyMode ? 'rgba(180,255,77,0.12)' : 'var(--surface)',
+            color: stickyMode ? 'var(--accent)' : 'var(--text-2)',
+          }}
+        >
+          📌{stickyMode && stickyCols.length > 0 ? ` ${stickyCols.length}` : ''}
+        </button>
+      </Tooltip>
+      {stickyMode && stickyCols.length > 0 && (
+        <Tooltip content="Clear the sticky sort chain">
+          <button
+            onClick={() => setStickyCols([])}
+            style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+          >
+            ✕
+          </button>
+        </Tooltip>
+      )}
+      <div style={{ position: 'relative' }}>
+        <Tooltip content={highlightMode
+          ? 'Highlighter is ON — click any cell to paint it with the selected color, click a painted cell again to clear it.'
+          : 'Turn on to freely highlight any cell in your own color — sticks around (even across a refresh) until you toggle it off or clear it, just for this game.'}
+        >
+          <button
+            onClick={() => setHighlightMode(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              border: `1px solid ${highlightMode ? activeHlColor : 'var(--border)'}`,
+              background: highlightMode ? `${activeHlColor}22` : 'var(--surface)',
+              color: highlightMode ? activeHlColor : 'var(--text-2)',
+            }}
+          >
+            🖍️{highlightCount > 0 ? ` ${highlightCount}` : ''}
+          </button>
+        </Tooltip>
+        {highlightMode && (
+          <div
+            style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 20,
+              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            }}
+          >
+            {HL_SWATCHES.map(c => (
+              <button
+                key={c} title={c} onClick={() => setActiveHlColor(c)}
+                style={{
+                  width: 18, height: 18, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer',
+                  border: activeHlColor === c ? '2px solid var(--text-1)' : '2px solid transparent',
+                }}
+              />
+            ))}
+            {highlightCount > 0 && (
+              <Tooltip content="Clear every highlight in this game">
+                <button
+                  onClick={() => setCellHighlights({})}
+                  style={{ marginLeft: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', background: 'none', color: 'var(--text-3)' }}
+                >
+                  ✕
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        )}
+      </div>
+      <Tooltip content={eraserMode
+        ? 'Eraser is ON — click a player row to temporarily remove them from this board (sort/highlight everyone else as usual). Click again to bring them back.'
+        : 'Turn on to click players off the board while you narrow down who you like — purely visual, nothing is saved, and it resets the moment you leave this page.'}
+      >
+        <button
+          onClick={() => setEraserMode(v => !v)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            border: `1px solid ${eraserMode ? '#f87171' : 'var(--border)'}`,
+            background: eraserMode ? 'rgba(248,113,113,0.12)' : 'var(--surface)',
+            color: eraserMode ? '#f87171' : 'var(--text-2)',
+          }}
+        >
+          🧹{erasedIds.size > 0 ? ` ${erasedIds.size}` : ''}
+        </button>
+      </Tooltip>
+      {erasedIds.size > 0 && (
+        <Tooltip content="Bring every erased player back">
+          <button
+            onClick={() => setErasedIds(new Set())}
+            style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
+          >
+            ✕
+          </button>
+        </Tooltip>
+      )}
+      <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
+    </div>
+  )
+
+  // Team-info + modeButtons content, shared between each team's real in-table
+  // banner row and its pinned-overlay clone rendered in the return below, so
+  // the two never drift out of sync.
+  const bannerContent = (side: 'home' | 'away') => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <TeamLogo abbr={side === 'home' ? game.homeAbbr : game.awayAbbr} size={22} />
+        <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
+        {side === 'home' && !game.homeLineupConfirmed && (
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+            {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
+          </span>
+        )}
+        {side === 'away' && !game.awayLineupConfirmed && (
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+            {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
+          </span>
+        )}
+        {side === 'home' && game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
+        {side === 'away' && game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
+      </div>
+      {modeButtons}
+    </div>
+  )
+
+  // position:sticky on the banner <td>s themselves doesn't work — confirmed
+  // live: the table's own horizontal-scroll wrapper (overflowX:'auto' below)
+  // forces its computed overflowY to 'auto' too per the CSS2.1 visible/
+  // non-visible overflow-pairing rule, even though it never actually
+  // overflows vertically (its content is exactly its own height). That makes
+  // this wrapper — not the page — the "nearest scrolling ancestor" any
+  // sticky descendant is constrained to, and since the wrapper's own
+  // scrollTop never moves, a sticky td inside it never visually sticks
+  // either — confirmed with a live getBoundingClientRect probe (the real
+  // banner just scrolled straight past its intended top offset instead of
+  // clamping there). A `position:fixed` element dropped in the same spot
+  // WAS confirmed to track the real viewport correctly through a scroll (no
+  // transform/filter ancestor trapping it, unlike the MatrixButton incident
+  // referenced in RootLayoutShell.tsx), so this recreates "sticky" in JS
+  // instead: track each banner's natural position, and once it's scrolled
+  // above the topbar, swap in a `position:fixed` clone pinned right below
+  // the topbar until the next team's banner (or the end of this game's
+  // table) takes over.
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const homeBannerRef = useRef<HTMLTableCellElement>(null)
+  const awayBannerRef = useRef<HTMLTableCellElement>(null)
+  const [pinnedBanner, setPinnedBanner] = useState<{ side: 'home' | 'away'; left: number; width: number } | null>(null)
+  useEffect(() => {
+    const measure = () => {
+      const wrap = wrapRef.current, homeEl = homeBannerRef.current, awayEl = awayBannerRef.current
+      if (!wrap || !homeEl || !awayEl) return
+      const rootStyle = getComputedStyle(document.documentElement)
+      const bannerH = parseFloat(rootStyle.getPropertyValue('--banner-h')) || 0
+      const topbarH = parseFloat(rootStyle.getPropertyValue('--topbar-h')) || 52
+      const offset = bannerH + topbarH
+      const homeRect = homeEl.getBoundingClientRect()
+      const awayRect = awayEl.getBoundingClientRect()
+      const wrapRect = wrap.getBoundingClientRect()
+      let side: 'home' | 'away' | null = null
+      if (homeRect.top < offset && awayRect.top > offset) side = 'home'
+      else if (awayRect.top < offset && wrapRect.bottom > offset + homeRect.height) side = 'away'
+      setPinnedBanner(side ? { side, left: wrapRect.left, width: wrapRect.width } : null)
+    }
+    measure()
+    window.addEventListener('scroll', measure, { passive: true })
+    window.addEventListener('resize', measure)
+    return () => {
+      window.removeEventListener('scroll', measure)
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
   // of view above the home lineup was otherwise unreadable by the time you
@@ -2817,7 +3002,20 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     (el, key) => React.cloneElement(el, { key }),
   )
   return (
-    <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8 }}>
+    <div ref={wrapRef} style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8, position: 'relative' }}>
+      {pinnedBanner && (
+        <div
+          style={{
+            position: 'fixed', top: 'calc(var(--banner-h, 0px) + var(--topbar-h))',
+            left: pinnedBanner.left, width: pinnedBanner.width, zIndex: 15,
+            background: teamBannerGradient(pinnedBanner.side === 'home' ? game.homeAbbr : game.awayAbbr),
+            padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
+            boxShadow: '0 4px 8px -2px rgba(0,0,0,0.4)',
+          }}
+        >
+          {bannerContent(pinnedBanner.side)}
+        </div>
+      )}
       <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
         <thead>
           <tr>{renderedHeaderCells}</tr>
@@ -2838,131 +3036,19 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 without scrolling right — the actual bug that made this
                 layout look broken earlier was the Children.toArray/colSpan
                 fix above, not this arrangement; safe now that colSpan is
-                correct. */}
+                correct. No position:sticky here — see the big comment above
+                pinnedBanner's useEffect for why that doesn't actually work
+                inside this horizontally-scrolling wrapper; the pinnedBanner
+                overlay above recreates the pinned effect in JS instead. */}
             <td
+              ref={homeBannerRef}
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.homeAbbr), padding: '7px 8px',
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <TeamLogo abbr={game.homeAbbr} size={22} />
-                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
-                  {!game.homeLineupConfirmed && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                      {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
-                    </span>
-                  )}
-                  {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Tooltip content={stickyMode
-                    ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
-                    : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
-                  >
-                    <button
-                      onClick={() => setStickyMode(v => !v)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                        border: `1px solid ${stickyMode ? 'var(--accent)' : 'var(--border)'}`,
-                        background: stickyMode ? 'rgba(180,255,77,0.12)' : 'var(--surface)',
-                        color: stickyMode ? 'var(--accent)' : 'var(--text-2)',
-                      }}
-                    >
-                      📌 Sticky Columns{stickyMode && stickyCols.length > 0 ? ` (${stickyCols.length})` : ''}
-                    </button>
-                  </Tooltip>
-                  {stickyMode && stickyCols.length > 0 && (
-                    <Tooltip content="Clear the sticky sort chain">
-                      <button
-                        onClick={() => setStickyCols([])}
-                        style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
-                      >
-                        ✕ Clear
-                      </button>
-                    </Tooltip>
-                  )}
-                  <div style={{ position: 'relative' }}>
-                    <Tooltip content={highlightMode
-                      ? 'Highlighter is ON — click any cell to paint it with the selected color, click a painted cell again to clear it.'
-                      : 'Turn on to freely highlight any cell in your own color — sticks around (even across a refresh) until you toggle it off or clear it, just for this game.'}
-                    >
-                      <button
-                        onClick={() => setHighlightMode(v => !v)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                          border: `1px solid ${highlightMode ? activeHlColor : 'var(--border)'}`,
-                          background: highlightMode ? `${activeHlColor}22` : 'var(--surface)',
-                          color: highlightMode ? activeHlColor : 'var(--text-2)',
-                        }}
-                      >
-                        🖍️ Highlighter{highlightCount > 0 ? ` (${highlightCount})` : ''}
-                      </button>
-                    </Tooltip>
-                    {highlightMode && (
-                      <div
-                        style={{
-                          position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 20,
-                          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 8,
-                          border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                        }}
-                      >
-                        {HL_SWATCHES.map(c => (
-                          <button
-                            key={c} title={c} onClick={() => setActiveHlColor(c)}
-                            style={{
-                              width: 18, height: 18, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer',
-                              border: activeHlColor === c ? '2px solid var(--text-1)' : '2px solid transparent',
-                            }}
-                          />
-                        ))}
-                        {highlightCount > 0 && (
-                          <Tooltip content="Clear every highlight in this game">
-                            <button
-                              onClick={() => setCellHighlights({})}
-                              style={{ marginLeft: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', background: 'none', color: 'var(--text-3)' }}
-                            >
-                              ✕ Clear
-                            </button>
-                          </Tooltip>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <Tooltip content={eraserMode
-                    ? 'Eraser is ON — click a player row to temporarily remove them from this board (sort/highlight everyone else as usual). Click again to bring them back.'
-                    : 'Turn on to click players off the board while you narrow down who you like — purely visual, nothing is saved, and it resets the moment you leave this page.'}
-                  >
-                    <button
-                      onClick={() => setEraserMode(v => !v)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                        border: `1px solid ${eraserMode ? '#f87171' : 'var(--border)'}`,
-                        background: eraserMode ? 'rgba(248,113,113,0.12)' : 'var(--surface)',
-                        color: eraserMode ? '#f87171' : 'var(--text-2)',
-                      }}
-                    >
-                      🧹 Eraser{erasedIds.size > 0 ? ` (${erasedIds.size})` : ''}
-                    </button>
-                  </Tooltip>
-                  {erasedIds.size > 0 && (
-                    <Tooltip content="Bring every erased player back">
-                      <button
-                        onClick={() => setErasedIds(new Set())}
-                        style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
-                      >
-                        ✕ Restore all
-                      </button>
-                    </Tooltip>
-                  )}
-                  <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
-                </div>
-              </div>
+              {bannerContent('home')}
             </td>
           </tr>
           {displayHome.map((row: BatterRow) => {
@@ -2989,25 +3075,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
             <td
+              ref={awayBannerRef}
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.awayAbbr), padding: '7px 8px',
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <TeamLogo abbr={game.awayAbbr} size={22} />
-                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
-                  {!game.awayLineupConfirmed && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                      {game.awayLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
-                    </span>
-                  )}
-                  {game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
-                </div>
-                <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
-              </div>
+              {bannerContent('away')}
             </td>
           </tr>
           {/* Repeated column header — placed directly under the away team's
