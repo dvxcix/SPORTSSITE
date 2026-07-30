@@ -58,9 +58,16 @@ function blendOnBg(hex: string, alpha: number, bg: [number, number, number] = [6
 // helper the Matrix/Highlighter tints already use, at a low enough alpha to
 // stay a background, not compete with the white text sitting on top of it.
 function teamBannerGradient(abbr?: string | null): string {
-  const primary = blendOnBg(getTeamColor(abbr), 0.16, [18, 21, 25])
-  const secondary = blendOnBg(getTeamSecondaryColor(abbr), 0.16, [18, 21, 25])
+  const primary = blendOnBg(getTeamColor(abbr), 0.3, [18, 21, 25])
+  const secondary = blendOnBg(getTeamSecondaryColor(abbr), 0.3, [18, 21, 25])
   return `linear-gradient(90deg, ${primary}, ${secondary})`
+}
+// Solid continuation color for the plain (non-sticky) remainder of a banner
+// row — a flat fill at the gradient's own end color, so the row reads as one
+// continuous band instead of the gradient visibly resetting back to primary
+// at the seam between the sticky cell and this one.
+function teamBannerFill(abbr?: string | null): string {
+  return blendOnBg(getTeamSecondaryColor(abbr), 0.3, [18, 21, 25])
 }
 
 function toImpl(o: number | null): number | null {
@@ -2770,10 +2777,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   )
   // Team-banner rows: a real sticky <td> (same proven pattern as the sticky
   // Player column — position:sticky directly on the cell, not on a div
-  // inside it) sized to a fixed number of real columns so its content has
-  // actual width to lay out in, plus a second plain <td> that just carries
-  // the gradient background across the remaining columns.
-  const bannerStickySpan = Math.min(16, renderedHeaderCells.length)
+  // inside it) sized wide enough (matches the old COLS_BEFORE_STATCAST=49
+  // this replaced) that the team name + mode buttons + Statcast toggle lay
+  // out on one line on desktop instead of wrapping, plus a second plain
+  // <td> that carries the banner color across the remaining columns so
+  // there's no blank gap next to it.
+  const bannerStickySpan = Math.min(48, renderedHeaderCells.length)
   const bannerRestSpan = renderedHeaderCells.length - bannerStickySpan
 
   return (
@@ -2926,7 +2935,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               <td
                 colSpan={bannerRestSpan}
                 style={{
-                  background: teamBannerGradient(game.homeAbbr), padding: 0,
+                  background: teamBannerFill(game.homeAbbr), padding: 0,
                   borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
                 }}
               />
@@ -2981,7 +2990,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               <td
                 colSpan={bannerRestSpan}
                 style={{
-                  background: teamBannerGradient(game.awayAbbr), padding: 0,
+                  background: teamBannerFill(game.awayAbbr), padding: 0,
                   borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
                 }}
               />
