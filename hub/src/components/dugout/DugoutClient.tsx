@@ -2343,6 +2343,14 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
     }
     return result
   }, [visibleOrder, colByKey])
+  // Reported live: toggling a single column's own switch off removed that
+  // column's entire row — switch included — from the list above (it's built
+  // from visibleOrder, which excludes anything hidden), leaving no way to
+  // turn it back on short of "Reset to default." This lists everything
+  // hidden one-at-a-time (not via a whole-section switch — those already
+  // have their own always-visible toggles at the top of the panel) so its
+  // switch stays reachable to flip back on.
+  const hiddenColumnList = useMemo(() => order.filter(k => hiddenColumns.has(k)), [order, hiddenColumns])
 
   // Splices a reordered visible-subset back into the full `order` array (in
   // whichever positions the visible items previously occupied), leaving
@@ -2453,6 +2461,33 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
               </div>
             </div>
           ))}
+
+          {hiddenColumnList.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', marginBottom: 6 }}>Hidden columns</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {hiddenColumnList.map(key => {
+                  const col = colByKey.get(key)!
+                  return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)', opacity: 0.7 }}>
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--text-3)' }}>
+                        {DUGOUT_COLUMN_LABELS[key] ?? key}
+                        <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
+                      </span>
+                      <Switch
+                        checked={false}
+                        onChange={() => setHiddenColumns(prev => {
+                          const next = new Set(prev)
+                          next.delete(key)
+                          return next
+                        })}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'space-between', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
