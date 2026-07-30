@@ -2210,7 +2210,20 @@ function renderDugoutColumns(
   dividerFactory: (key: string) => React.ReactElement,
   tagCell: (el: React.ReactElement, colKey: string) => React.ReactElement,
 ): React.ReactNode[] {
-  const children = React.Children.toArray(fragment)
+  // `fragment` is always a single <>...</> element (headerCells/rowCells),
+  // not an array — React.Children.toArray on a lone Fragment ELEMENT just
+  // wraps it as one item (Fragments aren't auto-unwrapped by the Children
+  // utilities, only by React's own renderer), so this used to always see
+  // length 1 here. That silently hit the production fallback below on
+  // every render, returning a 1-item array whose one element still
+  // rendered correctly (React unwraps Fragments at real render time) but
+  // whose *.length* (used everywhere for colSpan) was always 1 — the
+  // actual root cause of the team-banner width bugs, not any CSS/sticky
+  // issue. Unwrap the Fragment's real children before flattening.
+  const rawChildren = React.isValidElement(fragment) && fragment.type === React.Fragment
+    ? (fragment.props as { children?: React.ReactNode }).children
+    : fragment
+  const children = React.Children.toArray(rawChildren)
   if (children.length !== DUGOUT_COLUMN_LAYOUT.length) {
     // A column was added/removed in the JSX without updating
     // DUGOUT_COLUMN_LAYOUT above — fail loud in dev instead of silently
