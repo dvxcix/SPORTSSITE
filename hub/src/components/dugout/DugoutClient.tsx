@@ -613,6 +613,16 @@ function PlayerAvatar({ mlbId, size = 24, teamAbbr, name }: { mlbId: number | nu
 }
 
 // ─── table style constants ────────────────────────────────────────────────────
+// position:sticky + top:0 on every header cell (STH, SDIV_H below) — this is
+// the real, native version of what the team-banner rows also need (see the
+// big comment above GameTable's theadRef effect): it only works because the
+// table's wrapping div now genuinely scrolls vertically (a bounded
+// max-height + real overflowY:'auto'), not the earlier free-flowing wrapper
+// where overflow-y computed to 'auto' but never actually had anything to
+// scroll — that's what silently broke position:sticky everywhere in this
+// table before. Background MUST stay fully opaque (var(--bg)) so cells don't
+// go transparent and let rows scroll up visibly through the header, exactly
+// like the existing sticky Player column already documents for itself.
 const STH: React.CSSProperties = {
   padding: '4px 2px', textAlign: 'center',
   fontSize: 9, fontWeight: 700, color: 'var(--text-2)',
@@ -621,6 +631,7 @@ const STH: React.CSSProperties = {
   background: 'var(--bg)', borderBottom: '2px solid var(--border)',
   fontFamily: "'SF Mono',ui-monospace,monospace",
   cursor: 'pointer', userSelect: 'none',
+  position: 'sticky', top: 0, zIndex: 6,
 }
 const STD: React.CSSProperties = {
   padding: '3px 2px', textAlign: 'center',
@@ -630,7 +641,7 @@ const STD: React.CSSProperties = {
   borderBottom: '1px solid rgba(255,255,255,0.04)',
 }
 const SNULL: React.CSSProperties = { ...STD, color: 'var(--text-3)' }
-const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, background: 'var(--bg)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)' }
+const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, background: 'var(--bg)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 6 }
 const SDIV_D: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, borderRight: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.04)' }
 
 type SortState = { col: string; dir: 'desc' | 'asc' } | null
@@ -671,7 +682,10 @@ function TH({
       style={{
         ...sthRest,
         ...(responsiveSticky ? {} : { width: w, minWidth: w, maxWidth: w }),
-        ...(sticky ? { position: 'sticky', left: 0, zIndex: 4 } : {}),
+        // zIndex 7, above the other header cells' 6 — this is the frozen
+        // corner cell (sticky top AND left at once), so it needs to paint
+        // above everything else scrolling underneath it on either axis.
+        ...(sticky ? { position: 'sticky', left: 0, zIndex: 7 } : {}),
         color: active ? 'var(--accent)' : 'var(--text-2)',
       }}
     >
@@ -2839,52 +2853,38 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     </div>
   )
 
-  // position:sticky on the banner <td>s themselves doesn't work — confirmed
-  // live: the table's own horizontal-scroll wrapper (overflowX:'auto' below)
-  // forces its computed overflowY to 'auto' too per the CSS2.1 visible/
-  // non-visible overflow-pairing rule, even though it never actually
-  // overflows vertically (its content is exactly its own height). That makes
-  // this wrapper — not the page — the "nearest scrolling ancestor" any
-  // sticky descendant is constrained to, and since the wrapper's own
-  // scrollTop never moves, a sticky td inside it never visually sticks
-  // either — confirmed with a live getBoundingClientRect probe (the real
-  // banner just scrolled straight past its intended top offset instead of
-  // clamping there). A `position:fixed` element dropped in the same spot
-  // WAS confirmed to track the real viewport correctly through a scroll (no
-  // transform/filter ancestor trapping it, unlike the MatrixButton incident
-  // referenced in RootLayoutShell.tsx), so this recreates "sticky" in JS
-  // instead: track each banner's natural position, and once it's scrolled
-  // above the topbar, swap in a `position:fixed` clone pinned right below
-  // the topbar until the next team's banner (or the end of this game's
-  // table) takes over.
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const homeBannerRef = useRef<HTMLTableCellElement>(null)
-  const awayBannerRef = useRef<HTMLTableCellElement>(null)
-  const [pinnedBanner, setPinnedBanner] = useState<{ side: 'home' | 'away'; left: number; width: number } | null>(null)
-  useEffect(() => {
-    const measure = () => {
-      const wrap = wrapRef.current, homeEl = homeBannerRef.current, awayEl = awayBannerRef.current
-      if (!wrap || !homeEl || !awayEl) return
-      const rootStyle = getComputedStyle(document.documentElement)
-      const bannerH = parseFloat(rootStyle.getPropertyValue('--banner-h')) || 0
-      const topbarH = parseFloat(rootStyle.getPropertyValue('--topbar-h')) || 52
-      const offset = bannerH + topbarH
-      const homeRect = homeEl.getBoundingClientRect()
-      const awayRect = awayEl.getBoundingClientRect()
-      const wrapRect = wrap.getBoundingClientRect()
-      let side: 'home' | 'away' | null = null
-      if (homeRect.top < offset && awayRect.top > offset) side = 'home'
-      else if (awayRect.top < offset && wrapRect.bottom > offset + homeRect.height) side = 'away'
-      setPinnedBanner(side ? { side, left: wrapRect.left, width: wrapRect.width } : null)
-    }
+  // A JS-driven `position:fixed` clone (tracking scroll, swapping banners in
+  // and out) used to live here, because position:sticky on the banner <td>s
+  // didn't work — confirmed live: the table's horizontal-scroll wrapper
+  // (overflowX:'auto') forced its computed overflowY to 'auto' too per the
+  // CSS2.1 visible/non-visible overflow-pairing rule, even though it never
+  // actually overflowed vertically (unbounded height, content-sized). That
+  // made the wrapper — not the page — the "nearest scrolling ancestor" any
+  // sticky descendant was constrained to, and since the wrapper's own
+  // scrollTop never moved, nothing inside it could ever visually stick.
+  // Real fix (below, at the wrapping div and in STH/SDIV_H above): give that
+  // wrapper an actual bounded max-height + genuine overflowY:'auto', so it
+  // becomes a REAL scroll container the same way the sticky Player column
+  // already relies on for horizontal scroll — position:sticky on the header
+  // row and the banner rows now works natively, no JS needed. Only
+  // remaining JS is measuring the real <thead>'s rendered height, so each
+  // banner's own sticky `top` can sit flush right below it rather than at a
+  // guessed pixel value that breaks the moment a column's row height changes.
+  const theadRef = useRef<HTMLTableSectionElement>(null)
+  const [theadHeight, setTheadHeight] = useState(0)
+  useLayoutEffect(() => {
+    const el = theadRef.current
+    if (!el) return
+    // A plain synchronous getBoundingClientRect read, not ResizeObserver —
+    // RO's callback (like requestAnimationFrame) only fires as part of the
+    // browser's active rendering pipeline, so it silently never runs at all
+    // in a backgrounded/non-composited tab; a direct layout read here has no
+    // such dependency and reflects the real height immediately.
+    const measure = () => setTheadHeight(el.getBoundingClientRect().height)
     measure()
-    window.addEventListener('scroll', measure, { passive: true })
     window.addEventListener('resize', measure)
-    return () => {
-      window.removeEventListener('scroll', measure)
-      window.removeEventListener('resize', measure)
-    }
-  }, [])
+    return () => window.removeEventListener('resize', measure)
+  }, [visibleDugoutColumns])
 
   // Shared between the real <thead> and the repeated header row dropped in
   // between the home and away sections — a 50+ column header scrolled out
@@ -3002,22 +3002,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     (el, key) => React.cloneElement(el, { key }),
   )
   return (
-    <div ref={wrapRef} style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8, position: 'relative' }}>
-      {pinnedBanner && (
-        <div
-          style={{
-            position: 'fixed', top: 'calc(var(--banner-h, 0px) + var(--topbar-h))',
-            left: pinnedBanner.left, width: pinnedBanner.width, zIndex: 15,
-            background: teamBannerGradient(pinnedBanner.side === 'home' ? game.homeAbbr : game.awayAbbr),
-            padding: '7px 8px', borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
-            boxShadow: '0 4px 8px -2px rgba(0,0,0,0.4)',
-          }}
-        >
-          {bannerContent(pinnedBanner.side)}
-        </div>
-      )}
+    <div
+      style={{
+        overflow: 'auto', maxHeight: 'calc(100vh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
+        borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
+      }}
+    >
       <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
-        <thead>
+        <thead ref={theadRef}>
           <tr>{renderedHeaderCells}</tr>
         </thead>
         <tbody>
@@ -3036,16 +3028,17 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 without scrolling right — the actual bug that made this
                 layout look broken earlier was the Children.toArray/colSpan
                 fix above, not this arrangement; safe now that colSpan is
-                correct. No position:sticky here — see the big comment above
-                pinnedBanner's useEffect for why that doesn't actually work
-                inside this horizontally-scrolling wrapper; the pinnedBanner
-                overlay above recreates the pinned effect in JS instead. */}
+                correct. position:sticky's top sits at theadHeight (measured
+                above) so this banner pins flush against the bottom edge of
+                the always-visible sticky header row, not a guessed offset —
+                and below the header's own zIndex 6 so the header always
+                paints above it if they ever overlap during a resize. */}
             <td
-              ref={homeBannerRef}
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.homeAbbr), padding: '7px 8px',
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
+                position: 'sticky', top: theadHeight, zIndex: 5,
               }}
             >
               {bannerContent('home')}
@@ -3075,20 +3068,20 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
             <td
-              ref={awayBannerRef}
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.awayAbbr), padding: '7px 8px',
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
+                position: 'sticky', top: theadHeight, zIndex: 5,
               }}
             >
               {bannerContent('away')}
             </td>
           </tr>
-          {/* Repeated column header — placed directly under the away team's
-              own divider bar (not above it) so it visually belongs to the
-              away section, not the tail end of the home team's block. */}
-          <tr>{renderedHeaderCells}</tr>
+          {/* No repeated column header here anymore — the real <thead> above
+              is permanently sticky now (see theadRef effect), so a mid-table
+              copy scrolling past would just be a duplicate, not a fallback
+              for a header that's scrolled out of view. */}
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
             return (
