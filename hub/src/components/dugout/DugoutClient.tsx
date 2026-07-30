@@ -2797,13 +2797,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               flex row instead of a dedicated spanning cell above just its
               own columns. */}
           <tr>
-            {/* Restored verbatim from the last confirmed-working version
-                (justifyContent:'space-between' spreading team-info left /
-                mode-buttons+Statcast-toggle right across the full-width
-                colSpan'd cell) — the earlier "sticky" attempts replaced
-                this spread layout with a tight content-hugging one, which
-                is what actually broke the bar's full-width appearance.
-                Only the background changed (flat grey → team gradient). */}
+            {/* Mode buttons + Statcast toggle sit content-hugging right
+                after the pitcher chip (not spread to the far right via
+                justifyContent:'space-between') so mobile users reach them
+                without scrolling right — the actual bug that made this
+                layout look broken earlier was the Children.toArray/colSpan
+                fix above, not this arrangement; safe now that colSpan is
+                correct. */}
             <td
               colSpan={renderedHeaderCells.length}
               style={{
@@ -2811,7 +2811,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.homeAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
@@ -2822,7 +2822,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                   )}
                   {game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Tooltip content={stickyMode
                     ? 'Sticky Columns is ON — click any column header to add it to the sort chain (rank 1 = primary). Click an active column again to flip its direction, once more to drop it.'
                     : 'Turn on to build a multi-column sort — e.g. most picks, then highest SB, then lowest HR — instead of one column replacing the last.'}
@@ -2960,7 +2960,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.awayAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
