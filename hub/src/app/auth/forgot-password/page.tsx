@@ -56,6 +56,16 @@ export default function ForgotPasswordPage() {
             <Link href="/auth/login" className="block text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
               Back to sign in
             </Link>
+            {/* Not conditional on whether this email actually has a password —
+                doing that lookup here would let this form be used to probe
+                which emails have accounts. Shown unconditionally instead, so
+                it costs nothing for password accounts and saves a support
+                ticket for the (common) case of someone who signed up with
+                Discord/X and has no password to reset in the first place. */}
+            <p className="text-center text-xs text-zinc-600">
+              Signed up with Discord or X? There's no password to reset — just{' '}
+              <Link href="/auth/login" className="text-zinc-400 hover:text-zinc-300 underline">sign in that same way</Link>.
+            </p>
           </div>
         )}
       </div>

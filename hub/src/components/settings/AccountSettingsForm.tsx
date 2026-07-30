@@ -3,9 +3,15 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
+import Link from 'next/link'
 
 export function AccountSettingsForm({ profile }: { profile: any }) {
   const supabase = createClient()
+  // Deleting the SlipSurge account has never touched Whop billing — support
+  // got a real customer report of exactly this confusion, so this warning
+  // has to be impossible to miss before someone deletes their account still
+  // expecting that to also stop charges.
+  const hasPaidTier = !!profile?.tier && profile.tier !== 'free'
   const [email, setEmail] = useState(profile?.email ?? '')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -71,6 +77,13 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
         <p className="text-xs text-zinc-500 mb-3">
           Permanently delete your account and all your data. This cannot be undone. We'll email you to confirm before anything is removed.
         </p>
+        {hasPaidTier && (
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-xs text-yellow-400 mb-3">
+            <strong>Deleting your account does not cancel your subscription or trial.</strong> Billing runs through Whop, separately from your SlipSurge account — you'll keep being charged even after your account is deleted unless you cancel it first. Cancel it from{' '}
+            <Link href="/settings/membership" className="underline hover:text-yellow-300">Membership settings</Link>, or directly on{' '}
+            <a href="https://whop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-yellow-300">whop.com</a>, before deleting your account.
+          </div>
+        )}
         {confirmingDelete ? (
           <div className="flex items-center gap-2">
             <button onClick={requestDeletion} className="bg-red-500 hover:bg-red-400 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
