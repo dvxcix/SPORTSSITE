@@ -2768,6 +2768,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     key => <th key={key} style={SDIV_H} />,
     (el, key) => React.cloneElement(el, { key }),
   )
+  // Team-banner rows: a real sticky <td> (same proven pattern as the sticky
+  // Player column — position:sticky directly on the cell, not on a div
+  // inside it) sized to a fixed number of real columns so its content has
+  // actual width to lay out in, plus a second plain <td> that just carries
+  // the gradient background across the remaining columns.
+  const bannerStickySpan = Math.min(16, renderedHeaderCells.length)
+  const bannerRestSpan = renderedHeaderCells.length - bannerStickySpan
 
   return (
     <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8 }}>
@@ -2785,15 +2792,19 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               flex row instead of a dedicated spanning cell above just its
               own columns. */}
           <tr>
-            <td colSpan={renderedHeaderCells.length} style={{ background: teamBannerGradient(game.homeAbbr), padding: 0, borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)' }}>
-              {/* Sticky, content-hugging (not stretched full row width) —
-                  reported live: the team-info/mode-buttons content used to
-                  scroll away with the rest of this very wide row instead of
-                  staying visible the way the sticky Player column already
-                  does. The <td>'s own background (above) still fills the
-                  full colSpan width behind this regardless of scroll
-                  position — only the CONTENT needs to stay pinned. */}
-              <div style={{ position: 'sticky', left: 0, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '7px 8px' }}>
+            {/* Sticky <td> itself (not a sticky div inside a full-width td)
+                — same pattern as the sticky Player column, sized to a real
+                colSpan so the content has actual room and lays out
+                horizontally instead of wrapping tall. */}
+            <td
+              colSpan={bannerStickySpan}
+              style={{
+                position: 'sticky', left: 0, zIndex: 2,
+                background: teamBannerGradient(game.homeAbbr), padding: '7px 8px',
+                borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.homeAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.homeTeam}</span>
@@ -2911,6 +2922,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 </div>
               </div>
             </td>
+            {bannerRestSpan > 0 && (
+              <td
+                colSpan={bannerRestSpan}
+                style={{
+                  background: teamBannerGradient(game.homeAbbr), padding: 0,
+                  borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
+                }}
+              />
+            )}
           </tr>
           {displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
@@ -2935,8 +2955,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               of the home team's block above it. */}
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
-            <td colSpan={renderedHeaderCells.length} style={{ background: teamBannerGradient(game.awayAbbr), padding: 0, borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)' }}>
-              <div style={{ position: 'sticky', left: 0, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '7px 8px' }}>
+            <td
+              colSpan={bannerStickySpan}
+              style={{
+                position: 'sticky', left: 0, zIndex: 2,
+                background: teamBannerGradient(game.awayAbbr), padding: '7px 8px',
+                borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <TeamLogo abbr={game.awayAbbr} size={22} />
                   <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{game.awayTeam}</span>
@@ -2950,6 +2977,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
               </div>
             </td>
+            {bannerRestSpan > 0 && (
+              <td
+                colSpan={bannerRestSpan}
+                style={{
+                  background: teamBannerGradient(game.awayAbbr), padding: 0,
+                  borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
+                }}
+              />
+            )}
           </tr>
           {/* Repeated column header — placed directly under the away team's
               own divider bar (not above it) so it visually belongs to the
