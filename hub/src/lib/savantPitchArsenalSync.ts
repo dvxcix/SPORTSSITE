@@ -133,14 +133,34 @@ export async function syncPitchArsenalDetailBatch(admin: AdminClient, season: nu
 
   const staleClaimBefore = new Date(Date.now() - STALE_CLAIM_MINUTES * 60_000).toISOString()
   const recheckBefore = new Date(Date.now() - RECHECK_COMPLETE_HOURS * 60 * 60_000).toISOString()
-  const { data: jobs } = await admin
+
+  // Two separate queries, not one combined `.or()` — confirmed live
+  // (2026-07-30): a crashed run left 400 combos stuck in 'claimed' after
+  // 2026-07-27, and they never resurfaced because the ~2,800 'complete'
+  // rows routinely due for their 20h recheck always filled the entire
+  // BATCH_SIZE first (no ordering in the combined query, so a huge
+  // recheck backlog can starve out a much smaller number of genuinely
+  // broken/never-synced rows indefinitely). Priority rows (pending/error/
+  // stale-claimed) are fetched first and always fill the batch before any
+  // routine recheck row is even considered.
+  const { data: priorityJobs } = await admin
     .from('sync_state')
     .select('entity_id')
     .eq('source', SOURCE).eq('entity_type', ENTITY_TYPE).eq('season', season)
-    .or(`status.eq.pending,status.eq.error,and(status.eq.claimed,claimed_at.lt.${staleClaimBefore}),and(status.eq.complete,last_synced_at.lt.${recheckBefore})`)
+    .or(`status.eq.pending,status.eq.error,and(status.eq.claimed,claimed_at.lt.${staleClaimBefore})`)
     .limit(BATCH_SIZE)
 
-  const claimedIds = (jobs ?? []).map(j => j.entity_id)
+  const claimedIds = (priorityJobs ?? []).map(j => j.entity_id)
+  if (claimedIds.length < BATCH_SIZE) {
+    const { data: recheckJobs } = await admin
+      .from('sync_state')
+      .select('entity_id')
+      .eq('source', SOURCE).eq('entity_type', ENTITY_TYPE).eq('season', season)
+      .eq('status', 'complete')
+      .lt('last_synced_at', recheckBefore)
+      .limit(BATCH_SIZE - claimedIds.length)
+    claimedIds.push(...(recheckJobs ?? []).map(j => j.entity_id))
+  }
   if (!claimedIds.length) return { claimed: 0, results: {} }
 
   await admin.from('sync_state').upsert(

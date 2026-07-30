@@ -51,11 +51,26 @@ export async function GET(req: Request) {
     }
 
     try {
-      results[resultKey] = await upsertSavantCategory(admin, category, season)
-      await admin.from('sync_state').upsert({
-        source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season,
-        status: 'statcast_complete', last_synced_at: new Date().toISOString(),
-      }, { onConflict: 'source,entity_type,entity_id,season' })
+      const result = await upsertSavantCategory(admin, category, season)
+      results[resultKey] = result
+      if (result.rows > 0) {
+        await admin.from('sync_state').upsert({
+          source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season,
+          status: 'statcast_complete', last_synced_at: new Date().toISOString(),
+        }, { onConflict: 'source,entity_type,entity_id,season' })
+      } else {
+        // Confirmed live: Savant can return HTTP 200 with an empty CSV for a
+        // category — the same "success-shaped failure" already found and
+        // fixed in the pitch-log sync. Marking this 'statcast_complete'
+        // would silently block the CATEGORY_STALE_HOURS gate from retrying
+        // for a full day even though nothing was actually written — leave
+        // it as 'error' (no last_synced_at stamp) so the very next run
+        // tries again instead of waiting out the staleness window.
+        console.error('[savant-sync-tier-a] empty category response, not marking complete', resultKey)
+        await admin.from('sync_state').upsert({
+          source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
+        }, { onConflict: 'source,entity_type,entity_id,season' })
+      }
     } catch (e: any) {
       console.error('[savant-sync-tier-a] category failed', resultKey, e)
       results[resultKey] = { error: e?.message || String(e) }

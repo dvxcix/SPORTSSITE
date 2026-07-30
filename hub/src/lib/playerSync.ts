@@ -2,6 +2,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const MLB_SPORT_ID = 1
 const STALE_CLAIM_MINUTES = 10
+// Confirmed live (2026-07-30): claimBatch never re-selected a row once it
+// reached 'mlb_complete', regardless of age — nearly the entire league's
+// player_season_stats_*/player_career_stats_*/bio froze mid-July, since a
+// real player's stats obviously keep changing every day they play but
+// nothing here ever asked MLB's API again after the first successful pull.
+// Mirrors the recheck-complete pattern already proven in
+// savantHrDetailsSync.ts/savantPitchArsenalSync.ts — the family name here
+// is 'mlb_complete' rather than 'complete', same idea.
+const RECHECK_COMPLETE_HOURS = 20
 
 // MLB Stats API returns most rate stats (avg/obp/era/whip/etc.) as strings
 // (".248", "3.09", "75.2") and counting stats as plain numbers — this
@@ -22,14 +31,28 @@ type ClaimedRow = { entity_id: string; season: number }
 // Claims up to `batchSize` sync_state rows needing (re)work for one sync
 // family: 'pending', 'error', or 'claimed' rows whose claim went stale (the
 // claiming process died mid-run, e.g. a Vercel invocation that hit the
-// maxDuration cap). Never-seeded players (no sync_state row at all) aren't
-// picked up here — each cron seeds its own family's rows the first time a
-// player's bio syncs successfully (see mlb-sync-bio).
+// maxDuration cap), or 'mlb_complete' rows overdue for a routine recheck.
+// Never-seeded players (no sync_state row at all) aren't picked up here —
+// each cron seeds its own family's rows the first time a player's bio
+// syncs successfully (see mlb-sync-bio).
+//
+// Two separate queries, not one combined `.or()` — priority (pending/
+// error/stale-claimed) rows are fetched FIRST and always fill the batch
+// before any recheck rows are considered. A single combined query with no
+// ordering leaves it to Postgres's scan order which rows land in the
+// LIMIT, and a large recheck backlog (routinely thousands of rows here)
+// can starve out a much smaller number of genuinely broken/never-synced
+// rows indefinitely — confirmed live in the separate
+// savant-sync-pitch-arsenal-details job, where exactly this pattern left
+// 400 rows permanently stuck in 'claimed' after a crashed run, because
+// ~2,800 due-for-recheck rows always filled the batch first.
 export async function claimBatch(
   admin: AdminClient, entityType: string, season: number, batchSize: number
 ): Promise<ClaimedRow[]> {
   const staleBefore = new Date(Date.now() - STALE_CLAIM_MINUTES * 60_000).toISOString()
-  const { data } = await admin
+  const recheckBefore = new Date(Date.now() - RECHECK_COMPLETE_HOURS * 60 * 60_000).toISOString()
+
+  const { data: priorityRows } = await admin
     .from('sync_state')
     .select('entity_id, season')
     .eq('source', 'mlb_stats_api')
@@ -38,7 +61,20 @@ export async function claimBatch(
     .or(`status.eq.pending,status.eq.error,and(status.eq.claimed,claimed_at.lt.${staleBefore})`)
     .limit(batchSize)
 
-  const rows = data ?? []
+  const rows: ClaimedRow[] = [...(priorityRows ?? [])]
+  if (rows.length < batchSize) {
+    const { data: recheckRows } = await admin
+      .from('sync_state')
+      .select('entity_id, season')
+      .eq('source', 'mlb_stats_api')
+      .eq('entity_type', entityType)
+      .eq('season', season)
+      .eq('status', 'mlb_complete')
+      .lt('last_synced_at', recheckBefore)
+      .limit(batchSize - rows.length)
+    rows.push(...(recheckRows ?? []))
+  }
+
   if (!rows.length) return []
 
   await admin.from('sync_state').upsert(
