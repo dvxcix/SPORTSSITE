@@ -613,9 +613,9 @@ function PlayerAvatar({ mlbId, size = 24, teamAbbr, name }: { mlbId: number | nu
 }
 
 // ─── table style constants ────────────────────────────────────────────────────
-// position:sticky + top:0 on every header cell (STH, SDIV_H below) — this is
-// the real, native version of what the team-banner rows also need (see the
-// big comment above GameTable's theadRef effect): it only works because the
+// position:sticky on every header cell (STH, SDIV_H below) — the real,
+// native version of what the team-banner rows also need (see the big
+// comment above GameTable's bannerHeight effect): it only works because the
 // table's wrapping div now genuinely scrolls vertically (a bounded
 // max-height + real overflowY:'auto'), not the earlier free-flowing wrapper
 // where overflow-y computed to 'auto' but never actually had anything to
@@ -623,6 +623,12 @@ function PlayerAvatar({ mlbId, size = 24, teamAbbr, name }: { mlbId: number | nu
 // table before. Background MUST stay fully opaque (var(--bg)) so cells don't
 // go transparent and let rows scroll up visibly through the header, exactly
 // like the existing sticky Player column already documents for itself.
+// `top` reads a CSS custom property (set on the table by GameTable, from the
+// measured team-banner row height) instead of a literal 0 — the banner sits
+// ABOVE the column-label row now (member-requested: the game/pitcher bar
+// with Sticky/Highlighter/Eraser reads first, column labels pin directly
+// beneath it), so the labels' own stuck offset has to start below the
+// banner's height, not at the very top.
 const STH: React.CSSProperties = {
   padding: '4px 2px', textAlign: 'center',
   fontSize: 9, fontWeight: 700, color: 'var(--text-2)',
@@ -631,7 +637,7 @@ const STH: React.CSSProperties = {
   background: 'var(--bg)', borderBottom: '2px solid var(--border)',
   fontFamily: "'SF Mono',ui-monospace,monospace",
   cursor: 'pointer', userSelect: 'none',
-  position: 'sticky', top: 0, zIndex: 6,
+  position: 'sticky', top: 'var(--dugout-header-top, 0px)', zIndex: 6,
 }
 const STD: React.CSSProperties = {
   padding: '3px 2px', textAlign: 'center',
@@ -641,7 +647,7 @@ const STD: React.CSSProperties = {
   borderBottom: '1px solid rgba(255,255,255,0.04)',
 }
 const SNULL: React.CSSProperties = { ...STD, color: 'var(--text-3)' }
-const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, background: 'var(--bg)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 6 }
+const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, background: 'var(--bg)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', top: 'var(--dugout-header-top, 0px)', zIndex: 6 }
 const SDIV_D: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, borderRight: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.04)' }
 
 type SortState = { col: string; dir: 'desc' | 'asc' } | null
@@ -2828,11 +2834,25 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     </div>
   )
 
-  // Team-info + modeButtons content, shared between each team's real in-table
-  // banner row and its pinned-overlay clone rendered in the return below, so
-  // the two never drift out of sync.
+  // Team-info + modeButtons content for each team's banner row. Wrapped in
+  // its own position:sticky;left:0 — the <td> it lives in is colSpan'd across
+  // the whole (very wide, ~90-column) row so the gradient bar visually spans
+  // the table regardless of horizontal scroll, but that left this actual
+  // content (team name, pitcher, Sticky/Highlighter/Eraser, Statcast toggle)
+  // anchored to the LEFT EDGE of that wide cell — scrolled out of view the
+  // instant a member scrolled sideways to see later stat columns, exactly
+  // like the member reported. Sticky-left here uses the same horizontal
+  // scroll container (and the same mechanism) the Player column already
+  // relies on, so it stays glued to the visible left edge no matter how far
+  // right the table is scrolled.
   const bannerContent = (side: 'home' | 'away') => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+        position: 'sticky', left: 0, width: 'fit-content',
+        background: teamBannerGradient(side === 'home' ? game.homeAbbr : game.awayAbbr),
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <TeamLogo abbr={side === 'home' ? game.homeAbbr : game.awayAbbr} size={22} />
         <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
@@ -2867,29 +2887,34 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
   // becomes a REAL scroll container the same way the sticky Player column
   // already relies on for horizontal scroll — position:sticky on the header
   // row and the banner rows now works natively, no JS needed. Only
-  // remaining JS is measuring the real <thead>'s rendered height, so each
-  // banner's own sticky `top` can sit flush right below it rather than at a
-  // guessed pixel value that breaks the moment a column's row height changes.
-  const theadRef = useRef<HTMLTableSectionElement>(null)
-  const [theadHeight, setTheadHeight] = useState(0)
+  // remaining JS is measuring the real banner row's rendered height, so the
+  // column-header row (pinned right below it, per the member's explicit
+  // ordering ask — game bar first, column labels second) can sit flush
+  // against its bottom edge instead of a guessed pixel value that breaks the
+  // moment the banner's own content wraps to an extra line.
+  const bannerRowRef = useRef<HTMLTableCellElement>(null)
+  const [bannerHeight, setBannerHeight] = useState(0)
   useLayoutEffect(() => {
-    const el = theadRef.current
+    const el = bannerRowRef.current
     if (!el) return
     // A plain synchronous getBoundingClientRect read, not ResizeObserver —
     // RO's callback (like requestAnimationFrame) only fires as part of the
     // browser's active rendering pipeline, so it silently never runs at all
     // in a backgrounded/non-composited tab; a direct layout read here has no
     // such dependency and reflects the real height immediately.
-    const measure = () => setTheadHeight(el.getBoundingClientRect().height)
+    const measure = () => setBannerHeight(el.getBoundingClientRect().height)
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
   }, [visibleDugoutColumns])
 
-  // Shared between the real <thead> and the repeated header row dropped in
-  // between the home and away sections — a 50+ column header scrolled out
-  // of view above the home lineup was otherwise unreadable by the time you
-  // reached the away team's rows further down the same table.
+  // Rendered TWICE — once directly under the home banner, once directly
+  // under the away banner (no shared top-level <thead> anymore) — each copy
+  // pins independently right below its own team's banner via STH/SDIV_H's
+  // sticky top:var(--dugout-header-top), so whichever section a member is
+  // currently scrolled through always shows ITS OWN banner+labels pinned
+  // together as a pair, not one home-section thead stuck at the very top
+  // regardless of which team's rows are actually in view.
   const headerCells = (
     <>
       <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
@@ -3006,21 +3031,25 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
       style={{
         overflow: 'auto', maxHeight: 'calc(100vh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
         borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
+        // Read by STH/SDIV_H above, so every column-label cell's own sticky
+        // top offset sits flush below whichever team's banner is currently
+        // pinned (measured off the home banner td via bannerRowRef — home
+        // and away banners share the exact same content/markup shape, so
+        // one measurement covers both).
+        ['--dugout-header-top' as string]: `${bannerHeight}px`,
       }}
     >
       <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
-        <thead ref={theadRef}>
-          <tr>{renderedHeaderCells}</tr>
-        </thead>
         <tbody>
-          {/* Home — a single full-width cell (not two colSpan'd halves) since
-              free-form column reordering means the Statcast columns
-              (batspeed/barrel) are no longer guaranteed to stay one
-              contiguous trailing block an HTML colSpan could target — a
-              member can freely interleave a Statcast column between two
-              odds columns now. The Statcast window toggle sits in this same
-              flex row instead of a dedicated spanning cell above just its
-              own columns. */}
+          {/* Home banner, THEN home's own column-label row directly beneath
+              it (not a single shared <thead> above everything) — the member
+              explicitly asked for the game/pitcher bar with Sticky/
+              Highlighter/Eraser to read ABOVE the column labels, and for the
+              away team to keep its own header copy directly under ITS OWN
+              banner (this is why that copy existed before — restored here,
+              not "redundant"). Each pair pins together and hands off to the
+              other team's pair as you scroll from one section into the
+              other, exactly like the banner-only version already did. */}
           <tr>
             {/* Mode buttons + Statcast toggle sit content-hugging right
                 after the pitcher chip (not spread to the far right via
@@ -3028,22 +3057,24 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
                 without scrolling right — the actual bug that made this
                 layout look broken earlier was the Children.toArray/colSpan
                 fix above, not this arrangement; safe now that colSpan is
-                correct. position:sticky's top sits at theadHeight (measured
-                above) so this banner pins flush against the bottom edge of
-                the always-visible sticky header row, not a guessed offset —
-                and below the header's own zIndex 6 so the header always
-                paints above it if they ever overlap during a resize. */}
+                correct. position:sticky top:0 — this is the TOPMOST pinned
+                element now (member-requested ordering), zIndex above the
+                data rows but below the header row's own 6 only matters if
+                they ever visually overlap, which they shouldn't once
+                bannerHeight is measured correctly. */}
             <td
+              ref={bannerRowRef}
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.homeAbbr), padding: '7px 8px',
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
-                position: 'sticky', top: theadHeight, zIndex: 5,
+                position: 'sticky', top: 0, zIndex: 5,
               }}
             >
               {bannerContent('home')}
             </td>
           </tr>
+          <tr>{renderedHeaderCells}</tr>
           {displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
             return (
@@ -3072,16 +3103,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
               style={{
                 background: teamBannerGradient(game.awayAbbr), padding: '7px 8px',
                 borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)', boxShadow: '0 -4px 8px -4px rgba(0,0,0,0.4)',
-                position: 'sticky', top: theadHeight, zIndex: 5,
+                position: 'sticky', top: 0, zIndex: 5,
               }}
             >
               {bannerContent('away')}
             </td>
           </tr>
-          {/* No repeated column header here anymore — the real <thead> above
-              is permanently sticky now (see theadRef effect), so a mid-table
-              copy scrolling past would just be a duplicate, not a fallback
-              for a header that's scrolled out of view. */}
+          {/* Away's own column-label row, right below away's banner — see
+              the big comment above the home pair for why this copy is back. */}
+          <tr>{renderedHeaderCells}</tr>
           {displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
             return (
