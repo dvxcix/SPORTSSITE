@@ -48,28 +48,37 @@ export async function GET(req: Request) {
 
   let start = latest?.[0]?.game_date ? format(addDays(parseISO(latest[0].game_date), 1), 'yyyy-MM-dd') : seasonStartDate(season)
 
-  // Confirmed live (2026-07-24): `games` gets written unconditionally, one
-  // upsert per date, BEFORE the (much heavier, separately-fetched) pitch
-  // CSV is even requested — so a date where Savant's own search index
-  // simply isn't ready yet for such a recent date (its normal lag; 07-23's
-  // CSV came back genuinely empty same-day, then had real rows the next
-  // day) still gets a `games` row and permanently advances this cursor
-  // past it, since the cursor only ever checked `games`. That date's pitch
-  // log then silently never gets retried by any future run — the exact gap
-  // that let 07-22 AND 07-23 both sit without real per-pitch data despite
-  // `games` looking complete. Re-checking the day immediately before
-  // `start` catches this: if every real game `games` has for that date
-  // isn't matched by at least one `player_pitch_log` row, roll `start`
-  // back to it so the loop below retries it instead of skipping forward.
-  const recheckDate = format(addDays(parseISO(start), -1), 'yyyy-MM-dd')
-  const [{ count: gameCount }, { data: loggedGamePks }] = await Promise.all([
-    admin.from('games').select('game_pk', { count: 'exact', head: true }).eq('season', season).eq('game_date', recheckDate),
-    admin.from(PITCH_LOG_TABLE).select('game_pk').eq('season', season).eq('game_date', recheckDate),
-  ])
-  const loggedCount = new Set((loggedGamePks ?? []).map(r => r.game_pk)).size
-  if ((gameCount ?? 0) > 0 && loggedCount < (gameCount ?? 0)) {
-    start = recheckDate
-  }
+  // Confirmed live (2026-07-24, and again 2026-07-26 through 07-28 as a
+  // 3-day stall): `games` gets written unconditionally, one upsert per
+  // date, BEFORE the (much heavier, separately-fetched) pitch CSV is even
+  // requested — so a date where Savant's own search index simply isn't
+  // ready yet (its normal lag), or returns an empty CSV outright (Savant
+  // returning HTTP 200 with a header-only CSV, not an error — confirmed
+  // live via Vercel logs for 07-26/07-27/07-28), still gets a `games` row
+  // and permanently advances this cursor past it, since the cursor only
+  // ever checked `games`. That date's pitch log then silently never gets
+  // retried by any future run. Checking only the ONE day immediately
+  // before `start` (the original fix) self-heals a single missed day, but
+  // not a multi-day stall — each day's own 1-day recheck caught the day
+  // before it, but by the time a THIRD day passed, the cursor had already
+  // moved on and the earliest failed date was never revisited. Scan a real
+  // window and roll `start` back to the EARLIEST incomplete date found in
+  // it, so the loop below naturally walks forward through the whole gap
+  // instead of only ever re-touching the single newest broken date.
+  const RECHECK_WINDOW_DAYS = 7
+  const seasonStart = seasonStartDate(season)
+  const checkDates = Array.from({ length: RECHECK_WINDOW_DAYS }, (_, i) => format(addDays(parseISO(start), -(i + 1)), 'yyyy-MM-dd'))
+    .filter(d => d >= seasonStart)
+  const checks = await Promise.all(checkDates.map(async checkDate => {
+    const [{ count: gameCount }, { data: loggedGamePks }] = await Promise.all([
+      admin.from('games').select('game_pk', { count: 'exact', head: true }).eq('season', season).eq('game_date', checkDate),
+      admin.from(PITCH_LOG_TABLE).select('game_pk').eq('season', season).eq('game_date', checkDate),
+    ])
+    const loggedCount = new Set((loggedGamePks ?? []).map(r => r.game_pk)).size
+    return { checkDate, incomplete: (gameCount ?? 0) > 0 && loggedCount < (gameCount ?? 0) }
+  }))
+  const incompleteDates = checks.filter(c => c.incomplete).map(c => c.checkDate).sort()
+  if (incompleteDates.length) start = incompleteDates[0]
 
   const dates: string[] = []
   for (let d = start; d <= end && dates.length < MAX_DAYS_PER_RUN; d = format(addDays(parseISO(d), 1), 'yyyy-MM-dd')) {
