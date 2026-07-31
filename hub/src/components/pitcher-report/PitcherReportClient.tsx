@@ -7,7 +7,7 @@ import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { PitchMixTable, BatterVsPitchTable, TeamLogoImg, effectiveBatSide, pct } from './MatchupTables'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { normName } from '@slipsurge/core/nameNorm'
 
 // ─── shapes from /api/dugout/data ──────────────────────────────────────────
 interface PitcherInfo { id: number; name: string; hand: string }
@@ -26,7 +26,7 @@ interface Game {
   homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
 }
 interface DugoutData {
-  date: string; games: Game[]; pitcherPitchRecent: any[]; batterPitchRecent: any[]
+  date: string; games: Game[]
   statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]; pikkit: any[]
 }
 
@@ -40,37 +40,6 @@ interface StarterOption {
   oppAbbr: string; oppName: string
   oppLineup: LineupPlayer[]
   oppLineupConfirmed: boolean
-}
-
-// ─── pitch-type lookup maps — same shape/builders as DugoutClient's, kept
-// local here rather than shared since neither is currently exported and this
-// page's only dependency on them is the raw batterPitchRecent/pitcherPitchRecent
-// arrays already in the /api/dugout/data response. ──────────────────────────
-function buildPitcherPitchMap(rows: any[]) {
-  const map: Record<string, Record<string, Record<string, any>>> = {}
-  for (const r of rows) {
-    const id = String(r.mlb_id || '')
-    const pt = r.pitch_type || ''
-    const hand = r.bat_hand || 'R'
-    if (!id || !pt) continue
-    if (!map[id]) map[id] = {}
-    if (!map[id][pt]) map[id][pt] = {}
-    map[id][pt][hand] = r
-  }
-  return map
-}
-function buildBatterPitchMap(rows: any[]) {
-  const map: Record<string, Record<string, Record<string, any>>> = {}
-  for (const r of rows) {
-    const nn = r.name_norm || ''
-    const pt = r.pitch_type || ''
-    const hand = r.pitcher_hand || 'R'
-    if (!nn || !pt) continue
-    if (!map[nn]) map[nn] = {}
-    if (!map[nn][pt]) map[nn][pt] = {}
-    map[nn][pt][hand] = r
-  }
-  return map
 }
 
 // ─── full Statcast/bat-tracking builders — same shape/logic as DugoutClient's
@@ -136,21 +105,6 @@ function buildPitcherMap(rows: any[]) {
     ;(map[id][hand] as any)[win] = r
   }
   return map
-}
-
-// ─── formatting ─────────────────────────────────────────────────────────────
-// Every rate field on batter_pitch_type_recent/pitcher_pitch_type_recent
-// already comes out of mlb-party on a 0-100 scale (41.3 meaning 41.3%), not
-// a 0-1 fraction — confirmed against real rows, not assumed.
-
-function windowLabel(rows: any[]): string {
-  const r = rows.find(x => x.window_start && x.window_end)
-  if (!r) return ''
-  const start = new Date(r.window_start + 'T12:00:00Z')
-  const end = new Date(r.window_end + 'T12:00:00Z')
-  const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
-  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-  return `Last ${days} days (${fmt(start)} – ${fmt(end)})`
 }
 
 // ─── date strip — same offset-anchored-at-UTC-noon pattern as Weather Lab's,
@@ -244,8 +198,6 @@ export function PitcherReportClient() {
 
   const selected = starters.find(s => s.key === selectedKey) ?? null
 
-  const pitcherPitchMap = useMemo(() => buildPitcherPitchMap(data?.pitcherPitchRecent ?? []), [data?.pitcherPitchRecent])
-  const batterPitchMap = useMemo(() => buildBatterPitchMap(data?.batterPitchRecent ?? []), [data?.batterPitchRecent])
   const splitMap = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
   const timingMap = useMemo(() => buildTimingMap(data?.timingSplits ?? []), [data?.timingSplits])
   const statcastPitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
@@ -276,31 +228,27 @@ export function PitcherReportClient() {
     return m
   }, [data?.pikkit, selected?.gameKey])
 
-  // 14-day pre-aggregated window (mlb-party) — the default, cheap source.
-  const dayWindowRows = useMemo(() => {
-    if (!selected) return { R: [] as any[], L: [] as any[] }
-    const byType = pitcherPitchMap[String(selected.pitcher.id)] ?? {}
-    const R: any[] = [], L: any[] = []
-    for (const pt of Object.keys(byType)) {
-      if (byType[pt].R) R.push(byType[pt].R)
-      if (byType[pt].L) L.push(byType[pt].L)
-    }
-    return { R, L }
-  }, [pitcherPitchMap, selected])
-
-  // True "last N starts" / "last N games" window — computed live from MLB's
-  // free Gumbo feed (src/lib/pitchLog.ts) rather than read from a
-  // pre-aggregated table, since only a single fixed 14-day window exists
-  // there. Heavier (fetches game feeds), so it's opt-in via the toggle below
-  // rather than the default.
-  const [windowMode, setWindowMode] = useState<'14day' | 'live'>('14day')
+  // "Last N starts" / "last N games" window — computed live from MLB's free
+  // Gumbo feed (src/lib/pitchLog.ts) for every request, so it's only ever as
+  // stale as MLB's own play-by-play feed (i.e. never, beyond the game itself
+  // finishing). This used to be one of two modes, toggled against a
+  // pre-aggregated "14-Day Window" read from mlb-party's
+  // batter_pitch_type_recent/pitcher_pitch_type_recent tables — those tables
+  // stopped updating (frozen since early July) and the fields that fed them
+  // (`pitcherPitchRecent`/`batterPitchRecent`) were removed from
+  // /api/dugout/data's response entirely on 2026-07-24 when Paper's
+  // matchup_edge/platoon_ops moved to an in-house precompute, but this page
+  // was never updated to match — so "14-Day Window" silently showed nothing
+  // for every pitcher from that day forward (confirmed via a customer
+  // report). Rather than reconnect a data source the org already moved off
+  // of sitewide in favor of games-played windows, this is now the only mode.
   const [liveN, setLiveN] = useState(3)
   const [liveData, setLiveData] = useState<{ window: { games: number; dateFrom: string | null; dateTo: string | null }; pitcherRows: { R: any[]; L: any[] }; batters: Record<string, Record<string, { R?: any; L?: any }>> } | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
   const [liveError, setLiveError] = useState('')
 
   useEffect(() => {
-    if (windowMode !== 'live' || !selected) { setLiveData(null); return }
+    if (!selected) { setLiveData(null); return }
     let cancelled = false
     setLiveLoading(true); setLiveError(''); setLiveData(null)
     const batterIds = selected.oppLineup.map(p => p.mlb_id).join(',')
@@ -315,16 +263,12 @@ export function PitcherReportClient() {
       .catch(e => { if (!cancelled) setLiveError(e?.message || 'Failed to compute live window') })
       .finally(() => { if (!cancelled) setLiveLoading(false) })
     return () => { cancelled = true }
-  }, [windowMode, liveN, selected, date])
+  }, [liveN, selected, date])
 
-  const activeRows = windowMode === 'live'
-    ? (liveData ? { R: liveData.pitcherRows.R, L: liveData.pitcherRows.L } : { R: [] as any[], L: [] as any[] })
-    : dayWindowRows
+  const activeRows = liveData ? { R: liveData.pitcherRows.R, L: liveData.pitcherRows.L } : { R: [] as any[], L: [] as any[] }
 
   const allRows = [...activeRows.R, ...activeRows.L]
-  const winLabel = windowMode === 'live'
-    ? (liveData ? `Last ${liveData.window.games} starts (${liveData.window.dateFrom} – ${liveData.window.dateTo})` : '')
-    : windowLabel(allRows)
+  const winLabel = liveData ? `Last ${liveData.window.games} starts (${liveData.window.dateFrom} – ${liveData.window.dateTo})` : ''
 
   // "Getting hit lately" — for each hand bucket, the pitcher's own pitches
   // with a real sample (>=10 tracked) ranked by how hard they're being hit,
@@ -350,7 +294,7 @@ export function PitcherReportClient() {
   // pitches) shouldn't be unreachable just because the auto-ranker didn't
   // pick it. Click any pitch-mix row to pin/unpin its breakdown here too.
   const [pinned, setPinned] = useState<{ hand: 'R' | 'L'; pitchType: string }[]>([])
-  useEffect(() => { setPinned([]) }, [selected?.key, windowMode, liveN])
+  useEffect(() => { setPinned([]) }, [selected?.key, liveN])
   const onTogglePin = (hand: 'R' | 'L', pitchType: string) => {
     setPinned(prev => prev.some(p => p.hand === hand && p.pitchType === pitchType)
       ? prev.filter(p => !(p.hand === hand && p.pitchType === pitchType))
@@ -365,7 +309,7 @@ export function PitcherReportClient() {
   // all" actually means: don't make me discover pitches one click at a
   // time, give me the option to just see everything.
   const [showAll, setShowAll] = useState(false)
-  useEffect(() => { setShowAll(false) }, [selected?.key, windowMode, liveN])
+  useEffect(() => { setShowAll(false) }, [selected?.key, liveN])
   // Pinning is exclusive, not additive: as soon as anything is pinned, that
   // becomes the whole view — auto top-2 and "show all" both stand down until
   // every pin is cleared. Pinning is a deliberate "just show me THIS" action,
@@ -474,28 +418,22 @@ export function PitcherReportClient() {
                   </div>
                 </Link>
               </Tooltip>
-              {/* window mode toggle */}
+              {/* recency window — N starts/games, computed live from MLB play-by-play */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-                  <button onClick={() => setWindowMode('14day')} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: windowMode === '14day' ? 'var(--accent)' : 'var(--surface)', color: windowMode === '14day' ? 'var(--accent-fg)' : 'var(--text-2)' }}>14-Day Window</button>
-                  <button onClick={() => setWindowMode('live')} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, border: 'none', borderLeft: '1px solid var(--border)', cursor: 'pointer', background: windowMode === 'live' ? 'var(--accent)' : 'var(--surface)', color: windowMode === 'live' ? 'var(--accent-fg)' : 'var(--text-2)' }}>Last N Starts/Games</button>
+                  {[3, 5, 10].map(n => (
+                    <button key={n} onClick={() => setLiveN(n)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, border: 'none', borderLeft: n !== 3 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: liveN === n ? 'var(--accent-dim)' : 'var(--surface)', color: liveN === n ? 'var(--accent)' : 'var(--text-2)' }}>Last {n} Starts</button>
+                  ))}
                 </div>
-                {windowMode === 'live' && (
-                  <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-                    {[3, 5, 10].map(n => (
-                      <button key={n} onClick={() => setLiveN(n)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, border: 'none', borderLeft: n !== 3 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: liveN === n ? 'var(--accent-dim)' : 'var(--surface)', color: liveN === n ? 'var(--accent)' : 'var(--text-2)' }}>N={n}</button>
-                    ))}
-                  </div>
-                )}
-                {windowMode === 'live' && liveLoading && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Computing from MLB play-by-play…</span>}
+                {liveLoading && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Computing from MLB play-by-play…</span>}
               </div>
 
               <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 16 }}>
-                {windowMode === 'live' && liveError ? (
+                {liveError ? (
                   <span style={{ color: '#f87171' }}>{liveError}</span>
                 ) : allRows.length === 0 ? (
                   liveLoading ? 'Computing…' : 'No recent pitch-type data for this pitcher yet.'
-                ) : windowMode === 'live' ? (
+                ) : (
                   <>
                     {`Sample: ${winLabel} — real starts, computed live from MLB play-by-play (not a rolling calendar window)`}
                     {/* That date range is this pitcher's own — each opposing batter's
@@ -509,8 +447,6 @@ export function PitcherReportClient() {
                       Batter rows below use each hitter's own last {liveN} games vs same-handed pitching (any opponent) — his current form against this pitch, not at-bats vs this specific pitcher.
                     </div>
                   </>
-                ) : (
-                  `Sample: ${winLabel} · rolling window, not a start count`
                 )}
               </div>
 
@@ -592,9 +528,7 @@ export function PitcherReportClient() {
                               pitcherMap={statcastPitcherMap}
                               pikkitMap={pikkitMap}
                               gameInfo={{ sport: 'MLB', game_pk: String(selected.gamePk), game_date: date }}
-                              getRow={b => windowMode === 'live'
-                                ? liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null
-                                : (batterPitchMap[b.name_norm] ?? resolveNameEntry(batterPitchMap, b.name_norm))?.[pitchType]?.[selected.pitcher.hand] ?? null}
+                              getRow={b => liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null}
                             />
                           )}
                         </div>
