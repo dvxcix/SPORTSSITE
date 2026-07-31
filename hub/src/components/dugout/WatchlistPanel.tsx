@@ -7,7 +7,9 @@ import { useWatchlist } from '@/context/WatchlistContext'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PostBetModal } from './PostBetModal'
+import { ShareWatchlistModal } from './ShareWatchlistModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
+import { Share2 } from 'lucide-react'
 
 const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
 
@@ -115,6 +117,7 @@ export function WatchlistButton() {
   const [modalLegs, setModalLegs] = useState<WatchlistItem[] | null>(null)
   const [confirmingClearAll, setConfirmingClearAll] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
+  const [sharing, setSharing] = useState(false)
 
   if (!wl.signedIn) return null
 
@@ -203,6 +206,18 @@ export function WatchlistButton() {
             </div>
             {pendingItems.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                {!selectMode && (
+                  <button
+                    onClick={() => setSharing(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                      background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', cursor: 'pointer',
+                    }}
+                  >
+                    <Share2 size={12} /> Share
+                  </button>
+                )}
                 {pendingItems.length >= 2 && (
                   <button
                     onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
@@ -314,6 +329,8 @@ export function WatchlistButton() {
           onPosted={() => { exitSelectMode() }}
         />
       )}
+
+      {sharing && <ShareWatchlistModal onClose={() => setSharing(false)} />}
     </>
   )
 }
