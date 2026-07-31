@@ -48,7 +48,7 @@ export default async function SlateBreakdownPage({
   const nextDate = offsetDate(date, 1)
 
   return (
-    <TierGate requiredTier="advanced" label="Slate Breakdown">
+    <TierGate requiredTier="free" label="Slate Breakdown">
     <div style={{ padding: '20px 16px', maxWidth: 1400, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <div>

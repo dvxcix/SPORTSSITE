@@ -19,6 +19,8 @@ import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
+import { Lock } from 'lucide-react'
+import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -3369,6 +3371,11 @@ export function DugoutClient({ date }: { date: string }) {
 
   const games: any[] = data.games
   const active = games.find(g => g.gameKey === activeGame) ?? games[0]
+  // `locked` is added server-side by /api/dugout/data for below-Ultimate
+  // members — always `false` on every game for a real Ultimate (or admin/
+  // beta full-access) caller, `false` only on today's one free-preview game
+  // otherwise (see getFeaturedGameKey/ultimateForGame in that route).
+  const featuredGame = games.find(g => !g.locked)
   const hasStats = (data.statSplits?.length ?? 0) > 0
 
   const teamByMlbId: Record<number, { team: string; gameKey: string }> = {}
@@ -3451,6 +3458,7 @@ export function DugoutClient({ date }: { date: string }) {
               background: isAct ? 'var(--accent-dim)' : 'var(--surface)',
               color: isAct ? 'var(--accent)' : 'var(--text-2)',
               fontSize: 11, fontWeight: 700, transition: 'all 120ms',
+              opacity: g.locked ? 0.6 : 1,
             }}>
               <TeamLogo abbr={g.awayAbbr} size={16} />
               <span style={{ color: 'var(--text-3)', fontSize: 9 }}>@</span>
@@ -3464,29 +3472,35 @@ export function DugoutClient({ date }: { date: string }) {
                   {new Date(g.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 </span>
               )}
+              {g.locked && <Lock size={11} color="var(--text-3)" />}
             </button>
           )
         })}
       </div>
 
       {active && (
-        <GameTable
-          key={active.gameKey}
-          game={active}
-          date={date}
-          splitMap={splitMap}
-          pitcherMap={pitcherMap}
-          fhrAvgMap={fhrAvgMap}
-          saAvgMap={saAvgMap}
-          pikkitMap={pikkitMap}
-          openingMap={openingMap}
-          hrMap={hrMap}
-          nearMap={nearMap}
-          highlightMlbId={highlightId}
-          statcastWindow={statcastWindow}
-          onStatcastWindowChange={setStatcastWindow}
-          columnPrefs={columnPrefs}
-        />
+        active.locked
+          ? <GameLockedUpsell
+              label="The Dugout"
+              featuredMatchup={featuredGame ? `${featuredGame.awayAbbr} @ ${featuredGame.homeAbbr}` : undefined}
+            />
+          : <GameTable
+              key={active.gameKey}
+              game={active}
+              date={date}
+              splitMap={splitMap}
+              pitcherMap={pitcherMap}
+              fhrAvgMap={fhrAvgMap}
+              saAvgMap={saAvgMap}
+              pikkitMap={pikkitMap}
+              openingMap={openingMap}
+              hrMap={hrMap}
+              nearMap={nearMap}
+              highlightMlbId={highlightId}
+              statcastWindow={statcastWindow}
+              onStatcastWindowChange={setStatcastWindow}
+              columnPrefs={columnPrefs}
+            />
       )}
 
       <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>

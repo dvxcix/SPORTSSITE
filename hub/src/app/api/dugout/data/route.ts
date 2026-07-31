@@ -4,6 +4,7 @@ import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { getEffectiveTier } from '@/lib/requireTier'
+import { getFeaturedGameKey } from '@/lib/featuredGame'
 import { hasTierAccess } from '@slipsurge/core/tiers'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@slipsurge/core/teamAbbr'
@@ -655,6 +656,32 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+
+  // One full-Ultimate-depth game per day for every below-Ultimate signed-in
+  // member (see lib/featuredGame.ts) — a "sneak peek" so Free/Basic/Advanced
+  // members see what Dugout actually looks like instead of hitting a wall on
+  // every game. Skipped entirely for a real Ultimate (or admin/beta
+  // full-access) caller — this lookup must cost them nothing and change
+  // nothing about their response. Canonicalized through the same
+  // canonGameKey table every other game_key producer in this file already
+  // goes through (see the file-header comment on the ARI/AZ drift) since
+  // getFeaturedGameKey's own gameKey comes from getTodaysMatchups, a
+  // separate schedule-fetch pipeline from this route's own `gameKey` below —
+  // without canonicalizing both sides, the exact same abbreviation drift
+  // that bit gap-odds matching could silently make the featured game never
+  // match here.
+  const rawFeaturedGameKey = isUltimate ? null : await getFeaturedGameKey(date)
+  const featuredGameKey = rawFeaturedGameKey ? canonGameKey(rawFeaturedGameKey) : null
+  // Per-game replacement for a bare `isUltimate` check at every PER-GAME
+  // Ultimate-gating site below (Statcast/matchup-edge windows, season
+  // averages, HR/near-HR feed, opening-price deltas, pitcher props/matchup
+  // edge, the `locked` flag itself). Deliberately NOT used for anything
+  // cross-game/account-level — Custom Matrix (`userMatrices`/`needsMm`/
+  // `needsPitchlog`/`needsPitchlogCustom`/`matrixPitchRowsByBatter`/
+  // `precomputedPitchlogByBatter`) is a signed-in member's own saved rule
+  // set spanning every game, not something that makes sense to unlock "for
+  // one game" — those stay gated on the real `isUltimate` only, unchanged.
+  const ultimateForGame = (gameKey: string) => isUltimate || gameKey === featuredGameKey
   const reqId = Math.random().toString(36).slice(2, 8)
   const reqStart = Date.now()
   console.log(`[dugout/data:${reqId}] start date=${date} isToday=${!isPastDateET(date)} tier=${tier}`)
@@ -776,15 +803,22 @@ export async function GET(req: Request) {
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
     timed(reqId, 'pikkit', mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300)),
-    timed(reqId, 'fhrAvg', isUltimate
+    // Below-Ultimate: still fetched whenever there's a featured game today
+    // (near-always) so that one game's players get real data — the below-
+    // Ultimate response gets POST-FILTERED down to just that game's players
+    // right before it's returned (see the featuredGameKey filter block
+    // ahead of the final NextResponse.json), since these five are date-
+    // scoped fetches, not per-game ones, with no `game_key` column/param to
+    // filter by at the query level.
+    timed(reqId, 'fhrAvg', (isUltimate || featuredGameKey)
       ? (isPastDateET(date) ? fetchSeasonAvgPrecomputed(admin, 'batter_first_home_run', date) : fetchSeasonAvgDirect('batter_first_home_run', date))
       : Promise.resolve([])),
-    timed(reqId, 'saAvg', isUltimate
+    timed(reqId, 'saAvg', (isUltimate || featuredGameKey)
       ? (isPastDateET(date) ? fetchSeasonAvgPrecomputed(admin, 'batter_home_runs', date) : fetchSeasonAvgDirect('batter_home_runs', date))
       : Promise.resolve([])),
-    timed(reqId, 'openingSaRbi', isUltimate ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([])),
-    timed(reqId, 'hrFeed', isUltimate ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> })),
-    timed(reqId, 'nearHr', isUltimate ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([])),
+    timed(reqId, 'openingSaRbi', (isUltimate || featuredGameKey) ? mpRpc('get_opening_sa_rbi', { p_date: date }) : Promise.resolve([])),
+    timed(reqId, 'hrFeed', (isUltimate || featuredGameKey) ? fetchHrFeed(mlbGames) : Promise.resolve({ hrFeed: [] as any[], pitcherIdByName: {} as Record<string, number> })),
+    timed(reqId, 'nearHr', (isUltimate || featuredGameKey) ? mpGet(`/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,home_team,away_team,captured_at&order=parks_hr_count.desc&limit=200`, 30) : Promise.resolve([])),
     timed(reqId, 'boxscoreOutcomes', isAdvancedPlus ? fetchBoxscoreOutcomes(mlbGames) : Promise.resolve({} as Record<number, Record<number, any>>)),
     // Real incident (2026-07-24, confirmed live via runtime logs on a
     // production request that took 40.9s total, dominated by this exact
@@ -827,7 +861,12 @@ export async function GET(req: Request) {
     // for why: aggregating this live, per request, is what caused a real
     // production incident under concurrent load). Just a plain indexed
     // SELECT now, no live aggregation, no per-request MLB calls.
-    timed(reqId, 'precomputedStatcast', isUltimate && admin ? (async () => {
+    // Below-Ultimate: fetched when there's a featured game today so its
+    // players get real Statcast rows (see statcastWindows below, gated per-
+    // game via ultimateForGame); precomputedPitchlog just below stays
+    // isUltimate-only since it's a Custom Matrix-only input (never rendered
+    // as a standalone board field — see ultimateForGame's own comment above).
+    timed(reqId, 'precomputedStatcast', (isUltimate || featuredGameKey) && admin ? (async () => {
       try {
         const { data } = await admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
@@ -857,7 +896,10 @@ export async function GET(req: Request) {
     // dugoutMatchupEdgePrecompute.ts). One row per (batter|pitcher) mlb_id
     // for this date; batter rows carry platoonOps + recentByPitchTypeByHand,
     // pitcher rows carry just recentByPitchTypeByHand (allowed).
-    timed(reqId, 'precomputedMatchupEdge', isUltimate && admin ? (async () => {
+    // Below-Ultimate: same featured-game fetch-gate as precomputedStatcast
+    // above — matchupEdgeByBatter/matchupEdgeByPitcher below are attached
+    // per-game via ultimateForGame.
+    timed(reqId, 'precomputedMatchupEdge', (isUltimate || featuredGameKey) && admin ? (async () => {
       try {
         const { data } = await admin.from(MATCHUP_EDGE_TABLE).select('mlb_id, role, data').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
@@ -887,8 +929,12 @@ export async function GET(req: Request) {
     // fetchGapOdds for the full incident this fixed).
     timed(reqId, 'gapOdds', (admin && isAdvancedPlus) ? getCachedGapOdds(date) : Promise.resolve({ fdRows: [] as any[], mgmRows: [] as any[] })),
     // Opening/early baselines for the gap markets — Ultimate-only, permanent
-    // first-of-the-day snapshots so the client can show open-vs-current deltas.
-    timed(reqId, 'gapOddsOpening', (admin && isUltimate) ? getCachedGapOddsOpening(date) : Promise.resolve({ openingByGameKey: {} as Record<string, Record<string, Record<string, number>>> })),
+    // first-of-the-day snapshots so the client can show open-vs-current
+    // deltas. Below-Ultimate: fetched whenever there's a featured game today
+    // — this comes back already keyed per game_key, so the per-game merge
+    // loop below (openingByName) just gates on ultimateForGame(gameKey)
+    // directly rather than needing any further post-filtering here.
+    timed(reqId, 'gapOddsOpening', (admin && (isUltimate || featuredGameKey)) ? getCachedGapOddsOpening(date) : Promise.resolve({ openingByGameKey: {} as Record<string, Record<string, Record<string, number>>> })),
     // Same silent-gap pattern as batSideById above, for the pitcher's own
     // hand — schedule's hydrate=probablePitcher never returns pitchHand.
     timed(reqId, 'pitcherHandById', (async () => {
@@ -1132,14 +1178,20 @@ export async function GET(req: Request) {
     // price, reshaped through MARKET_BOOK_TO_OPEN_FIELD into the same
     // client-facing field names the app already expects (plus the new
     // hits/hits2/runs/runs2/stolenBases/stolenBases2/saMgm/hr2Mgm fields).
-    for (const [nn, marketBookPrices] of Object.entries(openingByName)) {
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
-      const open = { ...entry.open }
-      for (const [marketBook, price] of Object.entries(marketBookPrices)) {
-        const field = MARKET_BOOK_TO_OPEN_FIELD[marketBook]
-        if (field) open[field] = price
+    // Ultimate-exclusive open-vs-current delta view — gated per-game via
+    // ultimateForGame so a below-Ultimate caller only gets `.open` on the
+    // featured game's players, same as every other Ultimate-only per-game
+    // field below.
+    if (ultimateForGame(gameKey)) {
+      for (const [nn, marketBookPrices] of Object.entries(openingByName)) {
+        const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
+        const open = { ...entry.open }
+        for (const [marketBook, price] of Object.entries(marketBookPrices)) {
+          const field = MARKET_BOOK_TO_OPEN_FIELD[marketBook]
+          if (field) open[field] = price
+        }
+        entry.open = open
       }
-      entry.open = open
     }
 
     // Pitcher odds are a Dugout-only feature (PlayerDrillDown's oppPitcher
@@ -1154,15 +1206,15 @@ export async function GET(req: Request) {
     const homePitcherWithProps = homePitcher
       ? {
           ...homePitcher,
-          props: isUltimate ? (resolveNameEntry(bdlByName, normName(homePitcher.name)) || null) : null,
-          matchupEdge: isUltimate ? (matchupEdgeByPitcher[homePitcher.id] ?? null) : null,
+          props: ultimateForGame(gameKey) ? (resolveNameEntry(bdlByName, normName(homePitcher.name)) || null) : null,
+          matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByPitcher[homePitcher.id] ?? null) : null,
         }
       : null
     const awayPitcherWithProps = awayPitcher
       ? {
           ...awayPitcher,
-          props: isUltimate ? (resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null) : null,
-          matchupEdge: isUltimate ? (matchupEdgeByPitcher[awayPitcher.id] ?? null) : null,
+          props: ultimateForGame(gameKey) ? (resolveNameEntry(bdlByName, normName(awayPitcher.name)) || null) : null,
+          matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByPitcher[awayPitcher.id] ?? null) : null,
         }
       : null
 
@@ -1361,6 +1413,12 @@ export async function GET(req: Request) {
       gamePk: g.gamePk,
       gameKey,
       gameNum,
+      // `false` for every game for a real Ultimate (or admin/beta
+      // full-access) caller; for a below-Ultimate caller, `false` only on
+      // today's one free-preview game (see ultimateForGame above) and `true`
+      // on every other game — same meaning as /api/slate/games' own
+      // `locked` field.
+      locked: !ultimateForGame(gameKey),
       homeTeam, awayTeam, homeAbbr, awayAbbr,
       gameDate: g.gameDate,
       status: g.status?.abstractGameState || 'Preview',
@@ -1406,7 +1464,7 @@ export async function GET(req: Request) {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const pHand = homePHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
-        const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
+        const statcastWindows = ultimateForGame(gameKey) ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
@@ -1417,13 +1475,13 @@ export async function GET(req: Request) {
               mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const pHand = awayPHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
-        const statcastWindows = isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
+        const statcastWindows = ultimateForGame(gameKey) ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
@@ -1434,10 +1492,45 @@ export async function GET(req: Request) {
               mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: isUltimate ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
     }
   }))
+
+  // fhrAvg/saAvg/openingSaRbi/hrFeed/nearHr are fetched DATE-scoped (see the
+  // fetch gates above), not per-game — unlike every other Ultimate-exclusive
+  // field above (attached inline per-game via ultimateForGame while `games`
+  // was being built), these five have no `game_key`/`gameKey` column to
+  // filter by at the query level, so a below-Ultimate response needs an
+  // explicit post-filter down to just the featured game's players right
+  // here, before it's returned. Without this, a below-Ultimate caller's raw
+  // JSON would still carry full season-average/HR-feed/opening-price data
+  // for every OTHER (locked) game's players — invisible in the UI (locked
+  // games render GameLockedUpsell, never the real table), but a real leak of
+  // paid data straight in the network response, and HrLeaderboard/
+  // NearHrLeaderboard render straight off data.hrFeed/data.nearHr for the
+  // WHOLE slate regardless of which game is active, so an unfiltered feed
+  // would leak every other game's home runs through those two boards too.
+  let responseFhrAvg = fhrAvg
+  let responseSaAvg = saAvg
+  let responseOpeningSaRbi = openingSaRbi
+  let responseHrFeed = hrFeed
+  let responseNearHr = nearHr
+  if (!isUltimate) {
+    const featuredGame = featuredGameKey ? games.find(g => g.gameKey === featuredGameKey) : null
+    const featuredNames = new Set<string>()
+    const featuredBatterIds = new Set<number>()
+    for (const p of [...(featuredGame?.homeLineup ?? []), ...(featuredGame?.awayLineup ?? [])]) {
+      if (p.name_norm) featuredNames.add(p.name_norm)
+      if (p.mlb_id) featuredBatterIds.add(p.mlb_id)
+    }
+    const nameOf = (r: any) => normName(r.name_norm || r.player_name || '')
+    responseFhrAvg = (fhrAvg ?? []).filter((r: any) => featuredNames.has(nameOf(r)))
+    responseSaAvg = (saAvg ?? []).filter((r: any) => featuredNames.has(nameOf(r)))
+    responseOpeningSaRbi = (openingSaRbi ?? []).filter((r: any) => featuredNames.has(normName(r.name_norm || '')))
+    responseHrFeed = (hrFeed ?? []).filter((h: any) => featuredGame != null && h.game_pk === featuredGame.gamePk)
+    responseNearHr = (nearHr ?? []).filter((n: any) => featuredBatterIds.has(n.batter_id))
+  }
 
   // The FanDuel gap-merge (fhr/laser/moon/etc.) re-queries fresh every
   // request and has no server-side cache of its own (revalidate=0 above),
@@ -1449,7 +1542,11 @@ export async function GET(req: Request) {
   // no-store headers close that gap.
   console.log(`[dugout/data:${reqId}] total ${Date.now() - reqStart}ms`)
   return NextResponse.json(
-    { date, games, statSplits, timingSplits, pitcherSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeed, nearHr },
+    {
+      date, games, statSplits, timingSplits, pitcherSplits, pikkit,
+      fhrAvg: responseFhrAvg, saAvg: responseSaAvg, openingSaRbi: responseOpeningSaRbi,
+      hrFeed: responseHrFeed, nearHr: responseNearHr,
+    },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
   )
 }

@@ -6,9 +6,16 @@ import { TeamLogo } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import type { TodayGame } from '@slipsurge/core/mlbSchedule'
 import { GameMatchup } from './GameMatchup'
+import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
+import { Lock } from 'lucide-react'
+
+// `locked` is added server-side by /api/slate/games for below-Advanced
+// members — always `false` for Advanced+ (see that route for the exact
+// per-game rule).
+type SlateGame = TodayGame & { locked?: boolean }
 
 export function SlateBreakdownClient({ date }: { date: string }) {
-  const [games, setGames] = useState<TodayGame[] | null>(null)
+  const [games, setGames] = useState<SlateGame[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeGameKey, setActiveGameKeyState] = useState<string | null>(null)
 
@@ -38,7 +45,7 @@ export function SlateBreakdownClient({ date }: { date: string }) {
       .then(d => {
         setGames(d.games ?? [])
         const restored = initialGameParamRef.current
-          ? d.games?.find((g: TodayGame) => g.gameKey === initialGameParamRef.current)
+          ? d.games?.find((g: SlateGame) => g.gameKey === initialGameParamRef.current)
           : null
         setActiveGameKeyState((restored ?? d.games?.[0])?.gameKey ?? null)
       })
@@ -50,6 +57,7 @@ export function SlateBreakdownClient({ date }: { date: string }) {
   if (!games.length) return <div style={{ padding: 24, color: 'var(--text-3)' }}>No games scheduled for this date.</div>
 
   const activeGame = games.find(g => g.gameKey === activeGameKey) ?? games[0]
+  const featuredGame = games.find(g => !g.locked)
 
   return (
     <div>
@@ -66,6 +74,7 @@ export function SlateBreakdownClient({ date }: { date: string }) {
                 background: isActive ? 'var(--accent-dim)' : 'var(--surface)',
                 color: isActive ? 'var(--accent)' : 'var(--text-2)',
                 fontSize: 12, fontWeight: 700,
+                opacity: g.locked ? 0.6 : 1,
               }}
             >
               <TeamLogo logo={getTeamLogoUrl(g.awayAbbr)} name={g.awayAbbr} size={18} />
@@ -74,12 +83,20 @@ export function SlateBreakdownClient({ date }: { date: string }) {
               {!g.homePitcher && !g.awayPitcher && (
                 <span style={{ fontSize: 9, color: 'var(--text-3)' }}>(TBD)</span>
               )}
+              {g.locked && <Lock size={11} color="var(--text-3)" />}
             </button>
           )
         })}
       </div>
 
-      {activeGame && <GameMatchup key={activeGame.gameKey} game={activeGame} />}
+      {activeGame && (
+        activeGame.locked
+          ? <GameLockedUpsell
+              label="Slate Breakdown"
+              featuredMatchup={featuredGame ? `${featuredGame.awayAbbr} @ ${featuredGame.homeAbbr}` : undefined}
+            />
+          : <GameMatchup key={activeGame.gameKey} game={activeGame} />
+      )}
     </div>
   )
 }

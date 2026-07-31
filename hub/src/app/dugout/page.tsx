@@ -36,7 +36,7 @@ export default async function DugoutPage({
   const nextDate = offsetDate(date, 1)
 
   return (
-    <TierGate requiredTier="ultimate" label="The Dugout">
+    <TierGate requiredTier="free" label="The Dugout">
     <div style={{ padding: '20px 16px' }}>
       {/* Header */}
       <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
