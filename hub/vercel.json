@@ -21,6 +21,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/archive-stale-watchlist",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/mlb-sync-bio",
       "schedule": "*/15 * * * *"
     },
