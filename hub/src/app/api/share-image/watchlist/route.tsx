@@ -13,13 +13,44 @@ const C = {
   gold: '#FFB84D',
 }
 
-const BOOK_INITIALS: Record<string, string> = {
-  fanduel: 'FD', draftkings: 'DK', betmgm: 'MGM', caesars: 'CZ',
-  betrivers: 'BR', pinnacle: 'PIN', fanatics: 'FAN',
+// Same vendor map + favicon paths as the client BookLogo.tsx (BookLogo
+// itself isn't importable here — it's a 'use client' module, and every
+// export of a client module becomes an opaque client reference when
+// imported from a server Route Handler, same reason api/share-image/
+// [postId]/route.tsx duplicates it too rather than sharing one file).
+const BOOKS: Record<string, { favicon: string; initials: string; bg: string; color: string }> = {
+  fanduel:    { favicon: '/sportsbooks/fanduel.ico',    initials: 'FD',  bg: '#1493FF', color: '#fff' },
+  draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: '#fff' },
+  betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: '#000' },
+  caesars:    { favicon: '/sportsbooks/caesars.png',    initials: 'CZ',  bg: '#0B4032', color: '#B8960C' },
+  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: '#fff' },
+  pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
+  williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
+  fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: '#fff' },
 }
-function bookInitials(book: string) {
-  const k = (book || '').toLowerCase().replace(/[^a-z]/g, '')
-  return BOOK_INITIALS[k] || book.slice(0, 3).toUpperCase()
+function normalizeVendor(v: string): string {
+  const k = (v || '').toLowerCase().replace(/[^a-z]/g, '')
+  if (k === 'fanduel' || k === 'fd') return 'fanduel'
+  if (k === 'draftkings' || k === 'dk') return 'draftkings'
+  if (k === 'betmgm' || k === 'mgm') return 'betmgm'
+  if (k === 'caesars' || k === 'cz' || k === 'williamhillus' || k === 'williamhill') return 'caesars'
+  if (k === 'fanatics' || k === 'fan') return 'fanatics'
+  if (k === 'betrivers' || k === 'br') return 'betrivers'
+  return k
+}
+function BookIcon({ book, origin, size }: { book: string; origin: string; size: number }) {
+  const info = BOOKS[normalizeVendor(book)]
+  if (!info) {
+    return (
+      <div style={{
+        display: 'flex', width: size, height: size, borderRadius: 3, alignItems: 'center', justifyContent: 'center',
+        background: '#252936', color: '#8891A8', fontSize: size * 0.5, fontWeight: 800,
+      }}>
+        {book.slice(0, 2).toUpperCase()}
+      </div>
+    )
+  }
+  return <img src={origin + info.favicon} width={size} height={size} style={{ borderRadius: 3, objectFit: 'contain' }} />
 }
 function fmtOdds(odds: number) {
   return odds > 0 ? `+${odds}` : String(odds)
@@ -63,7 +94,7 @@ const GRID_GAP = 12
 const STRIP_H = 122
 const MAX_BOOKS_SHOWN = 3
 
-function PlayerCard({ item }: { item: any }) {
+function PlayerCard({ item, origin }: { item: any; origin: string }) {
   const books = Object.entries(item.odds_by_book || {}) as [string, number][]
   const sorted = books.length
     ? books.sort((a, b) => Math.abs(a[1]) - Math.abs(b[1])).slice(0, MAX_BOOKS_SHOWN)
@@ -95,12 +126,13 @@ function PlayerCard({ item }: { item: any }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
           {sorted.map(([book, odds], i) => (
             <div key={book} style={{
-              display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 6,
+              display: 'flex', alignItems: 'center', gap: 5, padding: '2px 7px 2px 4px', borderRadius: 6,
               background: i === 0 ? 'rgba(180,255,77,0.08)' : '#121519',
               border: `1px solid ${i === 0 ? 'rgba(180,255,77,0.4)' : '#252936'}`,
             }}>
+              <BookIcon book={book} origin={origin} size={13} />
               <span style={{ fontSize: 10.5, fontWeight: 800, color: i === 0 ? C.accent : C.text1 }}>
-                {bookInitials(book)} {fmtOdds(odds)}
+                {fmtOdds(odds)}
               </span>
             </div>
           ))}
@@ -146,7 +178,7 @@ export async function GET(req: Request) {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: GRID_GAP, marginTop: HEADER_GAP }}>
-            {items.map((item: any) => <PlayerCard key={item.id} item={item} />)}
+            {items.map((item: any) => <PlayerCard key={item.id} item={item} origin={origin} />)}
           </div>
         </div>
 
