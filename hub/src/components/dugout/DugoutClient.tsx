@@ -85,7 +85,7 @@ function implRatio(a: number | null, b: number | null): number | null {
 }
 
 // ─── lookup map builders ──────────────────────────────────────────────────────
-function buildSplitMap(rows: any[]) {
+export function buildSplitMap(rows: any[]) {
   const byId: Record<string, Record<string, { season?: any; recent?: any }>> = {}
   const byName: Record<string, Record<string, { season?: any; recent?: any }>> = {}
   for (const r of rows) {
@@ -107,11 +107,100 @@ function buildSplitMap(rows: any[]) {
   return { byId, byName }
 }
 
+export function buildFhrAvgMap(data: any): Record<string, { fd?: number; cz?: number }> {
+  const m: Record<string, { fd?: number; cz?: number }> = {}
+  for (const r of (data?.fhrAvg ?? [])) {
+    const nn = normName(r.name_norm || r.player_name || '')
+    if (!nn) continue
+    if (!m[nn]) m[nn] = {}
+    if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
+    if (r.bookmaker === 'williamhill_us') m[nn].cz = Number(r.avg_price)
+  }
+  return m
+}
+
+export function buildSaAvgMap(data: any): Record<string, { fd?: number; cz?: number }> {
+  const m: Record<string, { fd?: number; cz?: number }> = {}
+  for (const r of (data?.saAvg ?? [])) {
+    const nn = normName(r.name_norm || r.player_name || '')
+    if (!nn) continue
+    if (!m[nn]) m[nn] = {}
+    if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
+    if (r.bookmaker === 'williamhill_us') m[nn].cz = Number(r.avg_price)
+  }
+  return m
+}
+
+// A player can have one row per market (home_runs, hits, runs, singles,
+// doubles, hrr...) for the same game — keep every market's row instead
+// of collapsing them down to one, or whichever market wins the collapse
+// silently gets displayed/labeled as if it were the others (e.g. an
+// hrr-only row rendered under the "HR" column and tooltip).
+//
+// Scoped to ONE game's own gameKey — a doubleheader's two legs share every
+// player between them, and pikkit_public_picks carries a real per-leg
+// game_key, so a row stamped for the other leg must not leak into this
+// one. Rows imported before that (or via any other path) have game_key =
+// '' and are still shown — best-effort, just can't CLOBBER a properly-
+// tagged row for the other leg.
+export function buildCommunityPicksMap(data: any, gameKey: string | null) {
+  const m: Record<string, Record<string, any>> = {}
+  for (const r of (data?.communityPicks ?? [])) {
+    if (r.game_key && gameKey && r.game_key !== gameKey) continue
+    const nn = normName(r.player_name || '')
+    const market = r.prop_type || r.market
+    if (!nn || !market) continue
+    if (!m[nn]) m[nn] = {}
+    const existing = m[nn][market]
+    // A row explicitly tagged for THIS game always wins over a legacy/
+    // untagged ('') row for the same player+market, regardless of which
+    // one the API happened to return last.
+    if (!existing || (r.game_key && r.game_key === gameKey && !existing.game_key)) {
+      m[nn][market] = r
+    }
+  }
+  return m
+}
+
+export function buildOpeningMap(data: any): Record<string, { sa_open: number | null; rbi_open: number | null }> {
+  const m: Record<string, { sa_open: number | null; rbi_open: number | null }> = {}
+  for (const r of (data?.openingSaRbi ?? [])) {
+    const nn = normName(r.name_norm || '')
+    if (nn) m[nn] = { sa_open: r.sa_open ?? null, rbi_open: r.rbi_open ?? null }
+  }
+  return m
+}
+
+// Live HR hits — a player can go deep more than once in a game (e.g. a
+// multi-HR day), so this keeps every hit, not just one. Sorted by at-bat
+// order so "1st homer" always renders before "2nd homer" in the popup.
+export function buildHrMap(data: any): Record<string, any[]> {
+  const m: Record<string, any[]> = {}
+  for (const h of (data?.hrFeed ?? [])) {
+    const nn = normName(h.name_norm || h.player_name || '')
+    if (!nn) continue
+    ;(m[nn] ??= []).push(h)
+  }
+  for (const nn in m) m[nn].sort((a, b) => (a.ab_index ?? 0) - (b.ab_index ?? 0))
+  return m
+}
+
+// Near-miss HRs — prefer the biggest "would've left N parks" per player.
+export function buildNearMap(data: any): Record<string, any> {
+  const m: Record<string, any> = {}
+  for (const n of (data?.nearHr ?? [])) {
+    const nn = normName(n.batter_name || '')
+    if (!nn) continue
+    if (!m[nn] || (n.parks_hr_count || 0) > (m[nn].parks_hr_count || 0)) m[nn] = n
+  }
+  return m
+}
+
 // ─── build batter row ─────────────────────────────────────────────────────────
 type SplitMap   = ReturnType<typeof buildSplitMap>
 type PitcherMap = ReturnType<typeof buildPitcherMap>
 
-function buildBatterRow(
+export function buildBatterRow(
   player: any,
   pitcherHand: string,
   pitcherId: number | null,
@@ -525,7 +614,7 @@ function buildBatterRow(
   }
 }
 
-type BatterRow = ReturnType<typeof buildBatterRow>
+export type BatterRow = ReturnType<typeof buildBatterRow>
 
 // ─── paper score ─────────────────────────────────────────────────────────────
 // ─── heat ─────────────────────────────────────────────────────────────────────
@@ -1063,7 +1152,7 @@ function OddsCell({
 }
 
 // ─── batter row ───────────────────────────────────────────────────────────────
-function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow, visibleColumns }: {
+export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow, visibleColumns, extraCells }: {
   row: BatterRow; pool: BatterRow[]; expanded: boolean; onToggle: () => void
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
   onShowHr?: () => void
@@ -1096,6 +1185,11 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
   // above GameTable, which computes it once and passes the SAME reference
   // down to every row so the header and every row always render identically.
   visibleColumns: { key: string; group: string }[]
+  // Optional trailing <td> cells appended after the normal Dugout columns —
+  // used by DailyRecapTable to add its own HR Distance/EV sort columns
+  // without forking this ~350-line row renderer. GameTable never passes
+  // this, so its own rendering is completely unaffected.
+  extraCells?: React.ReactNode
 }) {
   // Sticky column's hover treatment is computed here in JS rather than via
   // the table's generic `tr:hover > td` CSS rule — that rule needed an
@@ -1566,6 +1660,7 @@ function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, hi
         key => <td key={key} style={SDIV_D} />,
         (el, key) => withColKey(el, key),
       )}
+      {extraCells}
     </tr>
   )
 }
@@ -1629,7 +1724,7 @@ function HrEventCard({ hit, ordinal, total }: { hit: any; ordinal: number; total
   )
 }
 
-function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void }) {
+export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void }) {
   const hits = row.hr_hits ?? []
   const near = row.near_hr
   const hasHr = hits.length > 0
@@ -2528,6 +2623,152 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   )
 }
 
+// The full ~90-column Dugout header row, as its own function so any board
+// that reuses the real Dugout rendering (GameTable, DailyRecapTable) gets
+// the exact same columns/tooltips/sort-keys from one source instead of two
+// copies silently drifting apart — see renderDugoutColumns' own comment for
+// why a length-mismatch here throws in dev.
+export function getDugoutHeaderCells(
+  sortInfo: (key?: string) => { active?: boolean; dir?: 'desc' | 'asc'; rank?: number },
+  toggleSort: (col: string) => void,
+  visibleColumns: { key: string; group: string }[],
+): React.ReactNode[] {
+  const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string, pickSortKey?: string) => {
+    const info = sortInfo(sortKey)
+    const pickInfo = sortInfo(pickSortKey)
+    return (
+      <TH
+        label={label} title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
+        pickSortKey={pickSortKey} pickActive={pickInfo.active} pickDir={pickInfo.dir} pickRank={pickInfo.rank} onPickSort={toggleSort}
+      />
+    )
+  }
+
+  const BL = (vendor: string, prop: string, title?: string, w = 50, sortKey?: string, pickSortKey?: string) => {
+    const info = sortInfo(sortKey)
+    const pickInfo = sortInfo(pickSortKey)
+    return (
+      <TH
+        label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><BookLogo vendor={vendor} size={13} />{prop}</span>}
+        title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
+        pickSortKey={pickSortKey} pickActive={pickInfo.active} pickDir={pickInfo.dir} pickRank={pickInfo.rank} onPickSort={toggleSort}
+      />
+    )
+  }
+
+  const headerCells = (
+    <>
+      <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
+      {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
+      <th style={SDIV_H} />
+      {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
+      {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
+      {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
+      {H(<span style={{ filter: 'invert(1)' }}>➗</span>, 'FD−CZ implied diff ×100', 36, 'div')}
+      {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
+      {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
+      {H('HR%', 'Anytime HR historical rate', 36, 'sa_pct')}
+      <th style={SDIV_H} />
+      {BL('fanduel', 'HR', 'FanDuel Anytime HR', 50, 'sa_fd')}
+      {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
+      {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
+      {BL('betrivers', 'HR', 'BetRivers Anytime HR', 50, 'sa_br')}
+      {BL('fanatics', 'HR', 'Fanatics Anytime HR', 50, 'sa_fan')}
+      {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
+      {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
+      {H('🏆', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
+      {H('⚡105+', 'Laser (105+ MPH Home Run) market price', 50, 'laser105_fd')}
+      {H('⚡110+', 'Laser (110+ MPH Home Run) market price', 50, 'laser110_fd')}
+      {H('🌙', 'Moonshot market price', 50, 'moonshot_fd')}
+      {H('🥇', '1st Plate Appearance HR price', 50, 'pa1_fd')}
+      {H('⏰', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
+      {H('RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi', 'pkRbi')}
+      {H('RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
+      {H('RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
+      {H('3HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr', 'pkHrr')}
+      {H('2️⃣', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb', 'pkTb')}
+      {H('3️⃣', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
+      {H('4️⃣', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
+      {H('5️⃣', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
+      {H('2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
+      <th style={SDIV_H} />
+      {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd', 'pkSingles')}
+      {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd', 'pkDoubles')}
+      {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd', 'pkTriples')}
+      {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd', 'pkStolenBases')}
+      {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
+      {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd', 'pkHits')}
+      {BL('fanduel', '2HIT', '2+ Hits (FD)', 44, 'hits2_fd')}
+      {BL('fanduel', '🏃', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
+      {BL('fanduel', '2️⃣🏃', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
+      <th style={SDIV_H} />
+      {H('📊', 'Composite Statcast score', 46, 'paper')}
+      {H('📚', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
+      {H('⚾', 'Statcast rank', 30, 'pp_rk')}
+      {H('❓', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
+      <th style={SDIV_H} />
+      {H('BSpd', 'Season bat speed', 38, 's_spd')}
+      {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
+      {H('ΔSpd', 'Recent−season bat speed', 34, 'd_spd')}
+      {H('Time', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
+      {H('R·Time', 'Recent timing', 36, 'r_timing')}
+      {H('ΔTime', 'Recent−season timing ×100', 34, 'd_timing')}
+      {H('Miss', 'Season miss distance', 34, 's_miss')}
+      {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
+      {H('ΔMiss', 'Recent−season miss distance', 34, 'd_miss')}
+      {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
+      {H('R·Hrd', 'Recent hard swing rate', 34, 'r_hrd')}
+      {H('ΔHrd', 'Recent−season hard swing rate ×100', 34, 'd_hrd')}
+      {H('Sq', 'Squared-up per swing', 36, 's_sq')}
+      {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
+      {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
+      {H('💥', 'Blast per swing', 34, 's_bla')}
+      {H('R 💥', 'Recent blast per swing', 34, 'r_bla')}
+      {H('Δ💥', 'Recent−season blast per swing ×100', 34, 'd_bla')}
+      {H('SwLen', 'Swing length', 36, 's_len')}
+      {H('R·Len', 'Recent swing length', 34, 'r_len')}
+      {H('ΔLen', 'Recent−season swing length', 34, 'd_len')}
+      {H('Atk°', 'Attack angle', 34, 's_atk')}
+      {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
+      {H('ΔAtk', 'Recent−season attack angle', 34, 'd_atk')}
+      {H('IdlAA', 'Ideal attack angle rate', 34, 's_iaa')}
+      {H('R·IAA', 'Recent ideal attack angle rate', 34, 'r_iaa')}
+      {H('ΔIAA', 'Recent−season ideal attack angle rate ×100', 34, 'd_iaa')}
+      {H('Tilt', 'Swing tilt', 32, 's_tlt')}
+      {H('R·Tlt', 'Recent swing tilt', 32, 'r_tlt')}
+      {H('ΔTlt', 'Recent−season swing tilt', 34, 'd_tlt')}
+      <th style={SDIV_H} />
+      {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
+      {H('R·Brl', 'Recent barrel rate', 34, 'r_brl')}
+      {H('ΔBrl', 'Recent−season barrel rate', 34, 'd_brl')}
+      {H('HH%', 'Hard hit rate', 34, 's_hh')}
+      {H('R·HH', 'Recent hard hit rate', 34, 'r_hh')}
+      {H('ΔHH', 'Recent−season hard hit rate', 34, 'd_hh')}
+      {H('SS%', 'Sweet spot rate — batted balls hit 8-32° launch angle', 34, 's_sweetspot')}
+      {H('R·SS', 'Recent sweet spot rate', 34, 'r_sweetspot')}
+      {H('ΔSS', 'Recent−season sweet spot rate', 34, 'd_sweetspot')}
+      {H('PULL%', 'Pull air rate', 36, 's_pa')}
+      {H('R·Pul', 'Recent pull air rate', 34, 'r_pa')}
+      {H('ΔPul', 'Recent−season pull air rate ×100', 34, 'd_pa')}
+      {H('FB%', 'Flyball rate', 34, 's_fb')}
+      {H('R·FB', 'Recent flyball rate', 34, 'r_fb')}
+      {H('ΔFB', 'Recent−season flyball rate ×100', 34, 'd_fb')}
+      {H('EV', 'Exit velocity', 34, 's_ev')}
+      {H('R·EV', 'Recent exit velocity', 34, 'r_ev')}
+      {H('ΔEV', 'Recent−season exit velocity', 34, 'd_ev')}
+      {H('LA', 'Launch angle', 32, 's_la')}
+      {H('R·LA', 'Recent launch angle', 32, 'r_la')}
+      {H('ΔLA', 'Recent−season launch angle', 34, 'd_la')}
+      {H('HR', 'HR — season, vs. tonight\'s opposing pitcher hand only, not every game he\'s played', 30, 's_hr')}
+    </>
+  )
+  return renderDugoutColumns(
+    headerCells, visibleColumns,
+    key => <th key={key} style={SDIV_H} />,
+    (el, key) => React.cloneElement(el, { key }),
+  )
+}
+
 function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
@@ -2693,29 +2934,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const displayAway = sortRowsMulti(awayRows, activeSortKeys).filter(row => !erasedIds.has(`a-${row.mlb_id ?? row.name}`))
 
   const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
-
-  const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string, pickSortKey?: string) => {
-    const info = sortInfo(sortKey)
-    const pickInfo = sortInfo(pickSortKey)
-    return (
-      <TH
-        label={label} title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
-        pickSortKey={pickSortKey} pickActive={pickInfo.active} pickDir={pickInfo.dir} pickRank={pickInfo.rank} onPickSort={toggleSort}
-      />
-    )
-  }
-
-  const BL = (vendor: string, prop: string, title?: string, w = 50, sortKey?: string, pickSortKey?: string) => {
-    const info = sortInfo(sortKey)
-    const pickInfo = sortInfo(pickSortKey)
-    return (
-      <TH
-        label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><BookLogo vendor={vendor} size={13} />{prop}</span>}
-        title={title} w={w} sortKey={sortKey} active={info.active} dir={info.dir} rank={info.rank} onSort={toggleSort}
-        pickSortKey={pickSortKey} pickActive={pickInfo.active} pickDir={pickInfo.dir} pickRank={pickInfo.rank} onPickSort={toggleSort}
-      />
-    )
-  }
 
   // This member's resolved column show/hide/order (null prefs = show
   // everything, default order — see resolveDugoutColumns above GameTable).
@@ -2916,118 +3134,10 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // sticky top:var(--dugout-header-top), so whichever section a member is
   // currently scrolled through always shows ITS OWN banner+labels pinned
   // together as a pair, not one home-section thead stuck at the very top
-  // regardless of which team's rows are actually in view.
-  const headerCells = (
-    <>
-      <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
-      {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
-      <th style={SDIV_H} />
-      {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
-      {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
-      {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
-      {H(<span style={{ filter: 'invert(1)' }}>➗</span>, 'FD−CZ implied diff ×100', 36, 'div')}
-      {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
-      {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
-      {H('HR%', 'Anytime HR historical rate', 36, 'sa_pct')}
-      <th style={SDIV_H} />
-      {BL('fanduel', 'HR', 'FanDuel Anytime HR', 50, 'sa_fd')}
-      {BL('caesars', 'HR', 'Caesars Anytime HR', 50, 'sa_cz')}
-      {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
-      {BL('betrivers', 'HR', 'BetRivers Anytime HR', 50, 'sa_br')}
-      {BL('fanatics', 'HR', 'Fanatics Anytime HR', 50, 'sa_fan')}
-      {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
-      {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
-      {H('🏆', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
-      {H('⚡105+', 'Laser (105+ MPH Home Run) market price', 50, 'laser105_fd')}
-      {H('⚡110+', 'Laser (110+ MPH Home Run) market price', 50, 'laser110_fd')}
-      {H('🌙', 'Moonshot market price', 50, 'moonshot_fd')}
-      {H('🥇', '1st Plate Appearance HR price', 50, 'pa1_fd')}
-      {H('⏰', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-      {H('RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi', 'pkRbi')}
-      {H('RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
-      {H('RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
-      {H('3HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr', 'pkHrr')}
-      {H('2️⃣', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb', 'pkTb')}
-      {H('3️⃣', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
-      {H('4️⃣', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
-      {H('5️⃣', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
-      {H('2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
-      <th style={SDIV_H} />
-      {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd', 'pkSingles')}
-      {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd', 'pkDoubles')}
-      {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd', 'pkTriples')}
-      {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd', 'pkStolenBases')}
-      {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
-      {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd', 'pkHits')}
-      {BL('fanduel', '2HIT', '2+ Hits (FD)', 44, 'hits2_fd')}
-      {BL('fanduel', '🏃', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
-      {BL('fanduel', '2️⃣🏃', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
-      <th style={SDIV_H} />
-      {H('📊', 'Composite Statcast score', 46, 'paper')}
-      {H('📚', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
-      {H('⚾', 'Statcast rank', 30, 'pp_rk')}
-      {H('❓', 'Sportsbook rank vs. Statcast rank — how far the market is from the numbers', 30, 'mm')}
-      <th style={SDIV_H} />
-      {H('BSpd', 'Season bat speed', 38, 's_spd')}
-      {H('R·Spd', 'Recent bat speed', 38, 'r_spd')}
-      {H('ΔSpd', 'Recent−season bat speed', 34, 'd_spd')}
-      {H('Time', 'Season on-time % (pitch-mix weighted)', 36, 's_timing')}
-      {H('R·Time', 'Recent timing', 36, 'r_timing')}
-      {H('ΔTime', 'Recent−season timing ×100', 34, 'd_timing')}
-      {H('Miss', 'Season miss distance', 34, 's_miss')}
-      {H('R·Miss', 'Recent miss distance', 34, 'r_miss')}
-      {H('ΔMiss', 'Recent−season miss distance', 34, 'd_miss')}
-      {H('HardSw', 'Hard swing rate', 36, 's_hrd')}
-      {H('R·Hrd', 'Recent hard swing rate', 34, 'r_hrd')}
-      {H('ΔHrd', 'Recent−season hard swing rate ×100', 34, 'd_hrd')}
-      {H('Sq', 'Squared-up per swing', 36, 's_sq')}
-      {H('R·Sq', 'Recent squared-up', 36, 'r_sq')}
-      {H('ΔSq', 'Squared-up delta ×100', 34, 'd_sq')}
-      {H('💥', 'Blast per swing', 34, 's_bla')}
-      {H('R 💥', 'Recent blast per swing', 34, 'r_bla')}
-      {H('Δ💥', 'Recent−season blast per swing ×100', 34, 'd_bla')}
-      {H('SwLen', 'Swing length', 36, 's_len')}
-      {H('R·Len', 'Recent swing length', 34, 'r_len')}
-      {H('ΔLen', 'Recent−season swing length', 34, 'd_len')}
-      {H('Atk°', 'Attack angle', 34, 's_atk')}
-      {H('R·Atk', 'Recent attack angle', 34, 'r_atk')}
-      {H('ΔAtk', 'Recent−season attack angle', 34, 'd_atk')}
-      {H('IdlAA', 'Ideal attack angle rate', 34, 's_iaa')}
-      {H('R·IAA', 'Recent ideal attack angle rate', 34, 'r_iaa')}
-      {H('ΔIAA', 'Recent−season ideal attack angle rate ×100', 34, 'd_iaa')}
-      {H('Tilt', 'Swing tilt', 32, 's_tlt')}
-      {H('R·Tlt', 'Recent swing tilt', 32, 'r_tlt')}
-      {H('ΔTlt', 'Recent−season swing tilt', 34, 'd_tlt')}
-      <th style={SDIV_H} />
-      {H('Brl%', 'Barrel batted rate', 34, 's_brl')}
-      {H('R·Brl', 'Recent barrel rate', 34, 'r_brl')}
-      {H('ΔBrl', 'Recent−season barrel rate', 34, 'd_brl')}
-      {H('HH%', 'Hard hit rate', 34, 's_hh')}
-      {H('R·HH', 'Recent hard hit rate', 34, 'r_hh')}
-      {H('ΔHH', 'Recent−season hard hit rate', 34, 'd_hh')}
-      {H('SS%', 'Sweet spot rate — batted balls hit 8-32° launch angle', 34, 's_sweetspot')}
-      {H('R·SS', 'Recent sweet spot rate', 34, 'r_sweetspot')}
-      {H('ΔSS', 'Recent−season sweet spot rate', 34, 'd_sweetspot')}
-      {H('PULL%', 'Pull air rate', 36, 's_pa')}
-      {H('R·Pul', 'Recent pull air rate', 34, 'r_pa')}
-      {H('ΔPul', 'Recent−season pull air rate ×100', 34, 'd_pa')}
-      {H('FB%', 'Flyball rate', 34, 's_fb')}
-      {H('R·FB', 'Recent flyball rate', 34, 'r_fb')}
-      {H('ΔFB', 'Recent−season flyball rate ×100', 34, 'd_fb')}
-      {H('EV', 'Exit velocity', 34, 's_ev')}
-      {H('R·EV', 'Recent exit velocity', 34, 'r_ev')}
-      {H('ΔEV', 'Recent−season exit velocity', 34, 'd_ev')}
-      {H('LA', 'Launch angle', 32, 's_la')}
-      {H('R·LA', 'Recent launch angle', 32, 'r_la')}
-      {H('ΔLA', 'Recent−season launch angle', 34, 'd_la')}
-      {H('HR', 'HR — season, vs. tonight\'s opposing pitcher hand only, not every game he\'s played', 30, 's_hr')}
-    </>
-  )
-  const renderedHeaderCells = renderDugoutColumns(
-    headerCells, visibleDugoutColumns,
-    key => <th key={key} style={SDIV_H} />,
-    (el, key) => React.cloneElement(el, { key }),
-  )
+  // regardless of which team's rows are actually in view. Column JSX itself
+  // lives in getDugoutHeaderCells so this board and DailyRecapTable always
+  // render the identical set of columns.
+  const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleDugoutColumns)
   return (
     <div
       style={{
@@ -3126,6 +3236,162 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} /></tr>
+                )}
+              </React.Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+      {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
+    </div>
+  )
+}
+
+// ─── Daily Recap ──────────────────────────────────────────────────────────────
+// The exact same board as GameTable — same buildBatterRow pipeline, same
+// per-game Paper/MM pool (both lineups, computed exactly like the live
+// board), same header columns, same BatterRowEl rows, same HR popup and
+// drilldown — just flattened into ONE list across every one of the day's
+// games instead of grouped game-by-game, and filtered down to players who
+// actually connected on a confirmed HR (row.hr_hits.length > 0). Nothing
+// here is a new rendering path; it's the live Dugout's own functions called
+// against a different slice of the same /api/dugout/data response.
+type DailyRecapRow = {
+  row: BatterRow
+  oppPitcher: any
+  pitcherTeamAbbr: string
+  gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
+  pool: BatterRow[]
+}
+
+export function DailyRecapTable({ data, date }: { data: any; date: string }) {
+  const [statcastWindow, setStatcastWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>('l10')
+  const [sort, setSort] = useState<SortState>({ col: 'hr_dist', dir: 'desc' })
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [hrPopupRow, setHrPopupRow] = useState<BatterRow | null>(null)
+  const toggleExpand = (key: string) => setExpanded(prev => prev === key ? null : key)
+  const toggleSort = (col: string) =>
+    setSort(prev => prev?.col === col ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { col, dir: 'desc' })
+  const sortInfo = (key?: string): { active?: boolean; dir?: 'desc' | 'asc'; rank?: number } => {
+    if (!key || sort?.col !== key) return {}
+    return { active: true, dir: sort.dir }
+  }
+
+  const splitMap   = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
+  const pitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
+  const fhrAvgMap  = useMemo(() => buildFhrAvgMap(data), [data?.fhrAvg])
+  const saAvgMap   = useMemo(() => buildSaAvgMap(data), [data?.saAvg])
+  const openingMap = useMemo(() => buildOpeningMap(data), [data?.openingSaRbi])
+  const hrMap      = useMemo(() => buildHrMap(data), [data?.hrFeed])
+  const nearMap    = useMemo(() => buildNearMap(data), [data?.nearHr])
+
+  // Same per-game buildBatterRow + Paper/MM pool as GameTable's own useMemo
+  // (both lineups pooled together, exactly like the live board), just run
+  // once per game across the whole day and flattened, keeping only rows
+  // that actually connected on a HR. Each survivor carries its own game's
+  // opposing pitcher/pool/gameInfo so the drilldown and HR popup work
+  // identically to clicking that same row on the live Dugout board.
+  const hrRows = useMemo<DailyRecapRow[]>(() => {
+    const games = data?.games ?? []
+    const out: DailyRecapRow[] = []
+    for (const game of games) {
+      const communityPicksMap = buildCommunityPicksMap(data, game.gameKey ?? null)
+      const ap = game.awayPitcher, hp = game.homePitcher
+      const homeRows = (game.homeLineup ?? []).map((p: any) =>
+        buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, ap?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
+      )
+      const awayRows = (game.awayLineup ?? []).map((p: any) =>
+        buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
+      )
+      const pool = [...homeRows, ...awayRows]
+      computePaperScores(pool)
+      computeMmRanks(pool)
+      const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
+      for (const row of homeRows) {
+        const hits = row.hr_hits ?? []
+        if (!hits.length) continue
+        ;(row as any).hr_dist = Math.max(...hits.map((h: any) => h.hit_distance ?? 0))
+        ;(row as any).hr_ev   = Math.max(...hits.map((h: any) => h.exit_velocity ?? 0))
+        out.push({ row, oppPitcher: ap, pitcherTeamAbbr: game.awayAbbr, gameInfo, pool })
+      }
+      for (const row of awayRows) {
+        const hits = row.hr_hits ?? []
+        if (!hits.length) continue
+        ;(row as any).hr_dist = Math.max(...hits.map((h: any) => h.hit_distance ?? 0))
+        ;(row as any).hr_ev   = Math.max(...hits.map((h: any) => h.exit_velocity ?? 0))
+        out.push({ row, oppPitcher: hp, pitcherTeamAbbr: game.homeAbbr, gameInfo, pool })
+      }
+    }
+    return out
+  }, [data, splitMap, pitcherMap, fhrAvgMap, saAvgMap, openingMap, hrMap, nearMap, statcastWindow, date])
+
+  const displayRows = useMemo(() => {
+    if (!sort) return hrRows
+    const order = new Map(sortRowsMulti(hrRows.map(w => w.row), [sort]).map((r, i) => [r, i]))
+    return [...hrRows].sort((a, b) => (order.get(a.row) ?? 0) - (order.get(b.row) ?? 0))
+  }, [hrRows, sort])
+
+  const visibleColumns = useMemo(() => resolveDugoutColumns(null), [])
+  const dugoutHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleColumns)
+  // Real HR outcome detail (not season/recent averages) — the only genuinely
+  // new columns beyond what the live board already shows, since "longest
+  // HR"/"hardest-hit HR" don't exist as sortable board columns anywhere else.
+  const extraHeaderCells = [
+    <TH key="hr_dist" label="Dist" title="Longest home run today" w={44} sortKey="hr_dist" {...sortInfo('hr_dist')} onSort={toggleSort} />,
+    <TH key="hr_ev" label="EV" title="Hardest-hit home run today" w={40} sortKey="hr_ev" {...sortInfo('hr_ev')} onSort={toggleSort} />,
+  ]
+  const renderedHeaderCells = [...dugoutHeaderCells, ...extraHeaderCells]
+
+  if (!hrRows.length) {
+    return (
+      <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>
+        No confirmed home runs {date === new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }) ? 'yet today' : 'that day'}.
+      </div>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        overflow: 'auto', maxHeight: 'calc(100vh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
+        borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
+        ['--dugout-header-top' as string]: '0px',
+      }}
+    >
+      <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
+        <tbody>
+          <tr>
+            <td
+              colSpan={renderedHeaderCells.length}
+              style={{
+                background: 'var(--surface-2)', padding: '7px 8px',
+                borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
+                position: 'sticky', top: 0, zIndex: 5,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>
+                  {hrRows.length} confirmed home run{hrRows.length === 1 ? '' : 's'}
+                </span>
+                <StatcastWindowToggle value={statcastWindow} onChange={setStatcastWindow} />
+              </div>
+            </td>
+          </tr>
+          <tr>{renderedHeaderCells}</tr>
+          {displayRows.map(({ row, oppPitcher, pitcherTeamAbbr, gameInfo, pool }) => {
+            const key = `hr-${row.mlb_id ?? row.name}-${gameInfo.game_pk}`
+            return (
+              <React.Fragment key={key}>
+                <BatterRowEl
+                  row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
+                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} visibleColumns={visibleColumns}
+                  extraCells={[
+                    <td key="hr_dist" style={{ ...STD, width: 44, minWidth: 44 }}>{(row as any).hr_dist ? `${Math.round((row as any).hr_dist)} ft` : '—'}</td>,
+                    <td key="hr_ev" style={{ ...STD, width: 40, minWidth: 40 }}>{(row as any).hr_ev ? `${((row as any).hr_ev).toFixed(1)}` : '—'}</td>,
+                  ]}
+                />
+                {expanded === key && (
+                  <tr><PlayerDrillDown row={row} oppPitcher={oppPitcher} pitcherTeamAbbr={pitcherTeamAbbr} gameInfo={gameInfo} pool={pool} /></tr>
                 )}
               </React.Fragment>
             )
@@ -3264,99 +3530,16 @@ export function DugoutClient({ date }: { date: string }) {
   // bookmaker) with the season-average AMERICAN ODDS PRICE in `avg_price` —
   // not a percentage, and not keyed "fhr_pct"/"pct". Bucket by bookmaker
   // (fanduel -> fd, williamhill_us -> cz) exactly like mlb-party's own map.
-  const fhrAvgMap = useMemo<Record<string, { fd?: number; cz?: number }>>(() => {
-    const m: Record<string, { fd?: number; cz?: number }> = {}
-    for (const r of (data?.fhrAvg ?? [])) {
-      const nn = normName(r.name_norm || r.player_name || '')
-      if (!nn) continue
-      if (!m[nn]) m[nn] = {}
-      if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
-      if (r.bookmaker === 'williamhill_us') m[nn].cz = Number(r.avg_price)
-    }
-    return m
-  }, [data?.fhrAvg])
-
-  const saAvgMap = useMemo<Record<string, { fd?: number; cz?: number }>>(() => {
-    const m: Record<string, { fd?: number; cz?: number }> = {}
-    for (const r of (data?.saAvg ?? [])) {
-      const nn = normName(r.name_norm || r.player_name || '')
-      if (!nn) continue
-      if (!m[nn]) m[nn] = {}
-      if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
-      if (r.bookmaker === 'williamhill_us') m[nn].cz = Number(r.avg_price)
-    }
-    return m
-  }, [data?.saAvg])
-
+  const fhrAvgMap = useMemo(() => buildFhrAvgMap(data), [data?.fhrAvg])
+  const saAvgMap = useMemo(() => buildSaAvgMap(data), [data?.saAvg])
   const communityPicksMap = useMemo(() => {
-    // A player can have one row per market (home_runs, hits, runs, singles,
-    // doubles, hrr...) for the same game — keep every market's row instead
-    // of collapsing them down to one, or whichever market wins the collapse
-    // silently gets displayed/labeled as if it were the others (e.g. an
-    // hrr-only row rendered under the "HR" column and tooltip).
-    //
-    // Also scoped to the ACTIVE game's own gameKey — a doubleheader's two
-    // legs share every player between them, and pikkit_public_picks now
-    // carries a real per-leg game_key (see the admin importer), so a row
-    // stamped for the other leg must not leak into this one. Rows imported
-    // before that fix (or via any other path) have game_key = '' and are
-    // still shown — same best-effort behavior as before this fix, just no
-    // longer able to CLOBBER a properly-tagged row for the other leg.
     const activeGameKey = (data?.games ?? []).find((g: any) => g.gameKey === activeGame)?.gameKey
       ?? (data?.games ?? [])[0]?.gameKey ?? null
-    const m: Record<string, Record<string, any>> = {}
-    for (const r of (data?.communityPicks ?? [])) {
-      if (r.game_key && activeGameKey && r.game_key !== activeGameKey) continue
-      const nn = normName(r.player_name || '')
-      const market = r.prop_type || r.market
-      if (!nn || !market) continue
-      if (!m[nn]) m[nn] = {}
-      const existing = m[nn][market]
-      // A row explicitly tagged for THIS game always wins over a legacy/
-      // untagged ('') row for the same player+market, regardless of which
-      // one the API happened to return last — otherwise a pre-fix import
-      // for the OTHER leg of today's doubleheader can still win this
-      // overwrite and bleed onto this game exactly like before the fix.
-      if (!existing || (r.game_key && r.game_key === activeGameKey && !existing.game_key)) {
-        m[nn][market] = r
-      }
-    }
-    return m
+    return buildCommunityPicksMap(data, activeGameKey)
   }, [data?.communityPicks, data?.games, activeGame])
-
-  const openingMap = useMemo<Record<string, { sa_open: number | null; rbi_open: number | null }>>(() => {
-    const m: Record<string, { sa_open: number | null; rbi_open: number | null }> = {}
-    for (const r of (data?.openingSaRbi ?? [])) {
-      const nn = normName(r.name_norm || '')
-      if (nn) m[nn] = { sa_open: r.sa_open ?? null, rbi_open: r.rbi_open ?? null }
-    }
-    return m
-  }, [data?.openingSaRbi])
-
-  // Live HR hits — a player can go deep more than once in a game (e.g. a
-  // multi-HR day), so this keeps every hit, not just one. Sorted by at-bat
-  // order so "1st homer" always renders before "2nd homer" in the popup.
-  const hrMap = useMemo<Record<string, any[]>>(() => {
-    const m: Record<string, any[]> = {}
-    for (const h of (data?.hrFeed ?? [])) {
-      const nn = normName(h.name_norm || h.player_name || '')
-      if (!nn) continue
-      ;(m[nn] ??= []).push(h)
-    }
-    for (const nn in m) m[nn].sort((a, b) => (a.ab_index ?? 0) - (b.ab_index ?? 0))
-    return m
-  }, [data?.hrFeed])
-
-  // Near-miss HRs — prefer the biggest "would've left N parks" per player.
-  const nearMap = useMemo<Record<string, any>>(() => {
-    const m: Record<string, any> = {}
-    for (const n of (data?.nearHr ?? [])) {
-      const nn = normName(n.batter_name || '')
-      if (!nn) continue
-      if (!m[nn] || (n.parks_hr_count || 0) > (m[nn].parks_hr_count || 0)) m[nn] = n
-    }
-    return m
-  }, [data?.nearHr])
+  const openingMap = useMemo(() => buildOpeningMap(data), [data?.openingSaRbi])
+  const hrMap = useMemo(() => buildHrMap(data), [data?.hrFeed])
+  const nearMap = useMemo(() => buildNearMap(data), [data?.nearHr])
 
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 12 }}>

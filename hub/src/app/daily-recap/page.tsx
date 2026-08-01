@@ -5,11 +5,11 @@ import { DailyRecapClient } from '@/components/daily-recap/DailyRecapClient'
 
 export const revalidate = 0
 
-// One giant Dugout, populated with every real home run across the whole
-// day instead of one game at a time — see dailyRecapPrecompute.ts for the
-// data pipeline (real Statcast pitch-by-pitch source, same Statcast Last-N
-// windows the live board itself reads, backfillable to any past date, and
-// permanently cached once a date is in the past).
+// The exact same Dugout board (DailyRecapTable in DugoutClient.tsx reuses
+// buildBatterRow/Paper-MM/BatterRowEl/HrPopup directly), flattened across
+// every game of the day and filtered to confirmed HR hitters only — see
+// DailyRecapClient.tsx, which just fetches /api/dugout/data like the live
+// board does.
 
 export default function DailyRecapPage() {
   return (
@@ -26,7 +26,7 @@ export default function DailyRecapPage() {
           </Link>
         </div>
         <p style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 18 }}>
-          Every real home run from the day, one card each — same Statcast Last-N windows the live board shows, plus how it actually turned out.
+          The Dugout, filtered to today's confirmed home runs only — same board, same columns, same Last 1/3/5/10 toggle.
         </p>
 
         <Suspense fallback={null}>
