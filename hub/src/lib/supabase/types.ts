@@ -66,7 +66,7 @@ export interface User {
 export interface DiscordConfig {
   id: 1
   guild_id: string | null
-  alert_channels: Partial<Record<'lineup_confirmed' | 'hr' | 'near_hr' | 'slate', string>>
+  alert_channels: Partial<Record<'lineup_confirmed' | 'hr' | 'near_hr' | 'slate' | 'pipeline_health', string>>
   tier_roles: Partial<Record<'free' | 'basic' | 'advanced' | 'ultimate', string>>
   enabled: boolean
   updated_at: string

@@ -6,6 +6,7 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
 import { seasonStartDate, daysAgoET } from '@/lib/savantSplitsSync'
 import { syncStatcastDay, PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
+import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -103,6 +104,19 @@ export async function GET(req: Request) {
   // errored — an unnecessary revalidation just costs one extra recompute
   // on next read, not a correctness issue.
   if (dates.length) revalidateTag('player-pitch-log', 'max')
+
+  // Checked AFTER this run's own attempt at self-healing (the recheck
+  // window above already tried to catch up on anything incomplete) — so an
+  // alert here means the automatic retry genuinely didn't fix it, not just
+  // "today's run hasn't happened yet." See pitchLogAlert.ts for the
+  // debounce (fires once per ongoing gap, not once per cron run).
+  const { data: freshness } = await admin
+    .from(PITCH_LOG_TABLE)
+    .select('game_date')
+    .eq('season', season)
+    .order('game_date', { ascending: false })
+    .limit(1)
+  await checkPitchLogFreshnessAndAlert(admin, freshness?.[0]?.game_date ?? null, end)
 
   return NextResponse.json({ season, table: PITCH_LOG_TABLE, start, end, processed: dates, results })
 }

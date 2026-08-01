@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Switch as Toggle } from '@/components/ui/Switch'
 import type { DiscordConfig } from '@/lib/supabase/types'
 
-const ALERT_TYPES: { key: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate'; label: string; live: boolean }[] = [
+const ALERT_TYPES: { key: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate' | 'pipeline_health'; label: string; live: boolean }[] = [
   { key: 'lineup_confirmed', label: 'Lineup Confirmed / Changed', live: true },
   { key: 'hr', label: 'Home Run Alerts', live: false },
   { key: 'near_hr', label: 'Near-HR Alerts', live: false },
   { key: 'slate', label: "Today's Slate Drop", live: false },
+  { key: 'pipeline_health', label: 'Data Pipeline Health (stale pitch log, etc.)', live: true },
 ]
 
 const TIERS: { key: 'free' | 'basic' | 'advanced' | 'ultimate'; label: string }[] = [

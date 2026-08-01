@@ -37,7 +37,7 @@ export async function postToChannel(channelId: string | null | undefined, payloa
   }
 }
 
-export async function postAlert(admin: SupabaseClient, alertKey: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate', payload: { content?: string; embeds?: any[] }) {
+export async function postAlert(admin: SupabaseClient, alertKey: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate' | 'pipeline_health', payload: { content?: string; embeds?: any[] }) {
   const config = await getDiscordConfig(admin)
   if (!config?.enabled) return
   const channelId = config.alert_channels?.[alertKey]
