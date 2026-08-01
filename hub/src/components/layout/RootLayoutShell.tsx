@@ -41,9 +41,16 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // transform/filter) that traps a `position: fixed` descendant inside its
   // own box instead of the real viewport, the exact trap this top-level
   // spot (proven by the two buttons above, which sit outside <main>
-  // entirely) sidesteps. Custom Matrix is Dugout-only, so it's gated on
-  // path rather than self-hiding — RootLayoutShell already computes `path`.
-  const isDugout = path === '/dugout'
+  // entirely) sidesteps. Gated on path rather than self-hiding —
+  // RootLayoutShell already computes `path`.
+  //
+  // Daily Recap reuses Dugout's own buildBatterRow/matrix_matches pipeline
+  // wholesale (DailyRecapTable in DugoutClient.tsx), so a member's Matrices
+  // already highlight there with zero extra wiring — the same saved
+  // Matrices apply on both pages since they're a per-account resource, not
+  // page-scoped. This just makes the same create/edit panel reachable from
+  // both places too, instead of only the one it happened to be built on.
+  const showMatrixButton = path === '/dugout' || path === '/daily-recap'
 
   return (
     <WatchlistProvider>
@@ -58,7 +65,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
       </div>
       <WatchlistButton />
       <MyPicksButton />
-      {isDugout && <MatrixButton />}
+      {showMatrixButton && <MatrixButton />}
     </WatchlistProvider>
   )
 }

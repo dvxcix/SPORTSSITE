@@ -38,6 +38,22 @@ export function DailyRecapClient() {
     return () => { cancelled = true }
   }, [date])
 
+  // Same soft-refresh-in-place as DugoutClient's own listener — Custom
+  // Matrix is a per-account resource, not page-scoped, so a Matrix saved
+  // from here or from The Dugout applies to both; this just means editing
+  // one while looking at today's real home runs updates the highlights
+  // here without a manual reload, exactly like on the live board.
+  useEffect(() => {
+    const onMatricesUpdated = () => {
+      fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+        .then(d => setData(d))
+        .catch(() => {})
+    }
+    window.addEventListener('ss:matrices-updated', onMatricesUpdated)
+    return () => window.removeEventListener('ss:matrices-updated', onMatricesUpdated)
+  }, [date])
+
   const isToday = date === todayEt()
 
   return (
