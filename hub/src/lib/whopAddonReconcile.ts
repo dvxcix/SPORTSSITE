@@ -2,6 +2,7 @@ import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { syncDiscordRoleForUser } from '@/lib/discord'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
 
@@ -90,6 +91,7 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     }
 
     await syncTierBadge(admin, internalUserId, effectiveTier(planInfo.tier as Tier, updated.discord_advanced_claimed, updated.admin_granted_tier))
+    await syncDiscordRoleForUser(admin, internalUserId)
     // Only a genuine first-time purchase, never a still-active membership
     // this cron already saw on a previous run — same fire-and-forget
     // reasoning as whopWebhook.ts, must never delay this reconcile job.

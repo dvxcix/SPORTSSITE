@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { syncDiscordRoleForUser } from '@/lib/discord'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
     }).eq('id', userId).select('tier, discord_advanced_claimed').single()
     if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
     await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, value as Tier))
+    await syncDiscordRoleForUser(admin, userId)
     return NextResponse.json({ ok: true })
   }
 
@@ -74,6 +76,7 @@ export async function POST(req: Request) {
     }).eq('id', userId).select('tier, discord_advanced_claimed').single()
     if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
     await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, null))
+    await syncDiscordRoleForUser(admin, userId)
     return NextResponse.json({ ok: true })
   }
 

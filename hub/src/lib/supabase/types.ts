@@ -43,6 +43,11 @@ export interface User {
   tier_purchased_at?: string | null
   whop_plan_id?: string | null
   discord_advanced_claimed?: boolean
+  // Real Discord snowflake + cached username, populated by
+  // /api/discord/sync-identity once a user links/logs in with Discord —
+  // this is what the bot uses to grant tier roles and resolve mentions.
+  discord_id?: string | null
+  discord_username?: string | null
   beta_access_active?: boolean
   admin_granted_tier?: 'basic' | 'advanced' | 'ultimate' | null
   admin_granted_tier_by?: string | null
@@ -52,6 +57,19 @@ export interface User {
   // resolveDugoutColumns in DugoutClient.tsx for the shape's real meaning.
   // Null/absent means show every column, default order.
   dugout_column_prefs?: { hiddenGroups?: string[]; hiddenColumns?: string[]; columnOrder?: string[] } | null
+}
+
+// Singleton row (id always 1) — every channel/role mapping the bot needs is
+// editable from /admin/discord instead of hardcoded, so adding a new alert
+// type or renaming a Discord role never requires a redeploy. The bot token
+// itself is NOT stored here — that stays in env vars only.
+export interface DiscordConfig {
+  id: 1
+  guild_id: string | null
+  alert_channels: Partial<Record<'lineup_confirmed' | 'hr' | 'near_hr' | 'slate', string>>
+  tier_roles: Partial<Record<'free' | 'basic' | 'advanced' | 'ultimate', string>>
+  enabled: boolean
+  updated_at: string
 }
 
 export interface Post {

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, effectiveTier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
+import { syncDiscordRoleForUser } from '@/lib/discord'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -128,6 +129,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           tier_cancel_at_period_end: false,
         }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
         await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
+        await syncDiscordRoleForUser(supabase, internalUserId)
         // Only a genuine first-time purchase, never a renewal (see the
         // comment above on tier_purchased_at) — fire-and-forget via after(),
         // same reasoning as the signup call sites: must never delay this
@@ -170,6 +172,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         // back to Advanced (still free via the Discord plan or an admin
         // grant), not to nothing.
         await syncTierBadge(supabase, internalUserId, effectiveTier('free', updated?.discord_advanced_claimed, updated?.admin_granted_tier))
+        await syncDiscordRoleForUser(supabase, internalUserId)
         break
       }
       default:

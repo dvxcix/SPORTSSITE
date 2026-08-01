@@ -1,6 +1,8 @@
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
+import { syncDiscordIdentity, syncDiscordRoleForUser } from '@/lib/discord'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -78,6 +80,17 @@ export async function GET(request: Request) {
           userAgent,
         }))
       }
+      // Covers both a fresh Discord login/register AND an existing account
+      // clicking Verify on Settings > Connected Accounts — both flows funnel
+      // through this same exchange. Harmless no-op for X/email/Whop sign-ins
+      // (syncDiscordIdentity just finds no discord identity and returns).
+      // Runs after the redirect via after() so a slow Discord API can't
+      // delay the user getting into the app.
+      after(async () => {
+        const admin = createAdminClient()
+        await syncDiscordIdentity(admin, data.user.id)
+        await syncDiscordRoleForUser(admin, data.user.id)
+      })
       return NextResponse.redirect(`${origin}${isNewAccount ? '/onboarding' : next}`)
     }
 

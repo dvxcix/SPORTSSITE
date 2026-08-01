@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
+import { postAlert } from '@/lib/discord'
+import { PLATFORM_URL } from '@/lib/stripe'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -124,10 +126,27 @@ export async function GET(req: Request) {
       if (!prev.confirmed && s.confirmed) {
         lineupEvents++
         notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Batting Lineup Confirmed`, `/dugout?date=${date}`, getTeamLogoUrl(s.abbr))
+        await postAlert(admin, 'lineup_confirmed', {
+          embeds: [{
+            title: `${getTeamName(s.abbr)} — Batting Lineup Confirmed`,
+            description: s.lineup.map((p, i) => `${i + 1}. ${p.name} (${p.position})`).join('\n'),
+            url: `${PLATFORM_URL}/dugout?date=${date}`,
+            color: 0xB4FF4D,
+            thumbnail: { url: getTeamLogoUrl(s.abbr) },
+          }],
+        })
       } else if (prev.confirmed && s.confirmed && prev.lineup_signature && signature && prev.lineup_signature !== signature) {
         lineupEvents++
         const change = describeLineupChange(prev.lineup_signature, signature, s.lineup)
         notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Lineup Change${change ? `: ${change}` : ''}`, `/dugout?date=${date}`, getTeamLogoUrl(s.abbr))
+        await postAlert(admin, 'lineup_confirmed', {
+          embeds: [{
+            title: `${getTeamName(s.abbr)} — Lineup Change${change ? `: ${change}` : ''}`,
+            url: `${PLATFORM_URL}/dugout?date=${date}`,
+            color: 0xFFB84D,
+            thumbnail: { url: getTeamLogoUrl(s.abbr) },
+          }],
+        })
         if (isPregame(g.status)) {
           scrapeRequeues.push({ game_pk: g.gamePk, ready_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), dispatched_at: null, retry_count: 0 })
         }

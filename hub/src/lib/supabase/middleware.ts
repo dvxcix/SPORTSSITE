@@ -76,6 +76,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Discord's Interactions endpoint — same bug class as the Whop webhooks
+  // above: a server-to-server POST with no browser session, authenticated
+  // via its own Ed25519 signature headers (see verifyDiscordSignature in
+  // discord.ts), not a session cookie.
+  if (request.nextUrl.pathname === '/api/discord/interactions') {
+    return NextResponse.next({ request })
+  }
+
   // The mobile app carries no browser cookies at all — just an
   // Authorization: Bearer <access_token> header from its own
   // @supabase/supabase-js client. Without this, every /api/* request from
