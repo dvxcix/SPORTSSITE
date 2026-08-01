@@ -27,7 +27,7 @@ interface Game {
 }
 interface DugoutData {
   date: string; games: Game[]
-  statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]; pikkit: any[]
+  statSplits: any[]; timingSplits: any[]; pitcherSplits: any[]; communityPicks: any[]
 }
 
 interface StarterOption {
@@ -212,10 +212,10 @@ export function PitcherReportClient() {
   // wins over a legacy/untagged ('') row for the same player, regardless
   // of array order — otherwise a pre-fix import for the OTHER leg can
   // still win the overwrite and bleed onto this one.
-  const pikkitMap = useMemo(() => {
+  const communityPicksMap = useMemo(() => {
     const gameKey = selected?.gameKey ?? null
     const m: Record<string, any> = {}
-    for (const r of (data?.pikkit ?? [])) {
+    for (const r of (data?.communityPicks ?? [])) {
       if (r.game_key && gameKey && r.game_key !== gameKey) continue
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
@@ -226,7 +226,7 @@ export function PitcherReportClient() {
       }
     }
     return m
-  }, [data?.pikkit, selected?.gameKey])
+  }, [data?.communityPicks, selected?.gameKey])
 
   // "Last N starts" / "last N games" window — computed live from MLB's free
   // Gumbo feed (src/lib/pitchLog.ts) for every request, so it's only ever as
@@ -526,7 +526,7 @@ export function PitcherReportClient() {
                               splitMap={splitMap}
                               timingMap={timingMap}
                               pitcherMap={statcastPitcherMap}
-                              pikkitMap={pikkitMap}
+                              communityPicksMap={communityPicksMap}
                               gameInfo={{ sport: 'MLB', game_pk: String(selected.gamePk), game_date: date }}
                               getRow={b => liveData?.batters[String(b.mlb_id)]?.[pitchType]?.[selected.pitcher.hand as 'R' | 'L'] ?? null}
                             />

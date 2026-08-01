@@ -1543,7 +1543,7 @@ export async function GET(req: Request) {
   console.log(`[dugout/data:${reqId}] total ${Date.now() - reqStart}ms`)
   return NextResponse.json(
     {
-      date, games, statSplits, timingSplits, pitcherSplits, pikkit,
+      date, games, statSplits, timingSplits, pitcherSplits, communityPicks: pikkit,
       fhrAvg: responseFhrAvg, saAvg: responseSaAvg, openingSaRbi: responseOpeningSaRbi,
       hrFeed: responseHrFeed, nearHr: responseNearHr,
     },

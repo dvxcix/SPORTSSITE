@@ -119,7 +119,7 @@ function buildBatterRow(
   pitcherMap: PitcherMap,
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>,
   saAvgMap:  Record<string, { fd?: number; cz?: number }>,
-  pikkitMap: Record<string, any>,
+  communityPicksMap: Record<string, any>,
   openingMap: Record<string, { sa_open: number | null; rbi_open: number | null }>,
   hrMap: Record<string, any[]>,
   nearMap: Record<string, any>,
@@ -153,7 +153,7 @@ function buildBatterRow(
   // derived nn, so an exact-string lookup silently drops a player's picks/
   // averages on the same class of mismatch (Cam/Cameron, Jr./no-Jr., etc.)
   // that was already fixed for FD/MGM.
-  const pikkitEntry  = resolveNameEntry(pikkitMap, nn)
+  const communityPickEntry  = resolveNameEntry(communityPicksMap, nn)
   const openingEntry = resolveNameEntry(openingMap, nn)
   const hrEntry       = resolveNameEntry(hrMap, nn)
   const nearEntry     = resolveNameEntry(nearMap, nn)
@@ -410,7 +410,7 @@ function buildBatterRow(
   // earlier version of this (using sa_fd/rbi_fd directly) over-fired.
   const opening = openingEntry
   const sa_rbi_raw_ratio = rawRatio(opening?.sa_open ?? null, opening?.rbi_open ?? null)
-  const picks_count = (pikkitEntry?.home_runs?.picks as number | undefined) ?? null
+  const picks_count = (communityPickEntry?.home_runs?.picks as number | undefined) ?? null
   const is_money_sa_rbi = sa_rbi_raw_ratio != null && sa_rbi_raw_ratio >= 3.5
                         && picks_count != null && picks_count <= 50
 
@@ -499,16 +499,16 @@ function buildBatterRow(
     // behavior) meant whichever market won the collapse got mislabeled as
     // "HR" everywhere it rendered. `pk` stays HR-specific (matching its
     // column header); the others ride along on their own matching odds cell.
-    pk:      pikkitEntry?.home_runs ?? null,
-    pkHits:  pikkitEntry?.hits ?? null,
-    pkRuns:  pikkitEntry?.runs ?? null,
-    pkStolenBases: pikkitEntry?.stolen_bases ?? null,
-    pkSingles: pikkitEntry?.singles ?? null,
-    pkDoubles: pikkitEntry?.doubles ?? null,
-    pkTriples: pikkitEntry?.triples ?? null,
-    pkRbi:     pikkitEntry?.rbi ?? null,
-    pkHrr:     pikkitEntry?.hits_runs_rbi ?? null,
-    pkTb:      pikkitEntry?.bases ?? null,
+    pk:      communityPickEntry?.home_runs ?? null,
+    pkHits:  communityPickEntry?.hits ?? null,
+    pkRuns:  communityPickEntry?.runs ?? null,
+    pkStolenBases: communityPickEntry?.stolen_bases ?? null,
+    pkSingles: communityPickEntry?.singles ?? null,
+    pkDoubles: communityPickEntry?.doubles ?? null,
+    pkTriples: communityPickEntry?.triples ?? null,
+    pkRbi:     communityPickEntry?.rbi ?? null,
+    pkHrr:     communityPickEntry?.hits_runs_rbi ?? null,
+    pkTb:      communityPickEntry?.bases ?? null,
     hr_hits: hrEntry    ?? [],
     near_hr: nearEntry  ?? null,
     // Every Custom Matrix this batter lit up for tonight's specific matchup
@@ -2528,12 +2528,12 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   )
 }
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs }: {
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
   saAvgMap:  Record<string, { fd?: number; cz?: number }>
-  pikkitMap: Record<string, any>
+  communityPicksMap: Record<string, any>
   openingMap: Record<string, { sa_open: number | null; rbi_open: number | null }>
   hrMap: Record<string, any[]>
   nearMap: Record<string, any>
@@ -2675,16 +2675,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap,
     const ap = game.awayPitcher
     const hp = game.homePitcher
     const homeRows = game.homeLineup.map((p: any) =>
-      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, ap?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
+      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, ap?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
     )
     const awayRows = game.awayLineup.map((p: any) =>
-      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
+      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
     )
     const pool = [...homeRows, ...awayRows]
     computePaperScores(pool)
     computeMmRanks(pool)
     return { homeRows, awayRows, pool }
-  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, pikkitMap, openingMap, hrMap, nearMap, statcastWindow])
+  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, statcastWindow])
 
   // Erased rows are filtered AFTER sorting — order among survivors stays
   // exactly what it would've been with nobody erased, just with the erased
@@ -3288,7 +3288,7 @@ export function DugoutClient({ date }: { date: string }) {
     return m
   }, [data?.saAvg])
 
-  const pikkitMap = useMemo(() => {
+  const communityPicksMap = useMemo(() => {
     // A player can have one row per market (home_runs, hits, runs, singles,
     // doubles, hrr...) for the same game — keep every market's row instead
     // of collapsing them down to one, or whichever market wins the collapse
@@ -3305,7 +3305,7 @@ export function DugoutClient({ date }: { date: string }) {
     const activeGameKey = (data?.games ?? []).find((g: any) => g.gameKey === activeGame)?.gameKey
       ?? (data?.games ?? [])[0]?.gameKey ?? null
     const m: Record<string, Record<string, any>> = {}
-    for (const r of (data?.pikkit ?? [])) {
+    for (const r of (data?.communityPicks ?? [])) {
       if (r.game_key && activeGameKey && r.game_key !== activeGameKey) continue
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
@@ -3322,7 +3322,7 @@ export function DugoutClient({ date }: { date: string }) {
       }
     }
     return m
-  }, [data?.pikkit, data?.games, activeGame])
+  }, [data?.communityPicks, data?.games, activeGame])
 
   const openingMap = useMemo<Record<string, { sa_open: number | null; rbi_open: number | null }>>(() => {
     const m: Record<string, { sa_open: number | null; rbi_open: number | null }> = {}
@@ -3492,7 +3492,7 @@ export function DugoutClient({ date }: { date: string }) {
               pitcherMap={pitcherMap}
               fhrAvgMap={fhrAvgMap}
               saAvgMap={saAvgMap}
-              pikkitMap={pikkitMap}
+              communityPicksMap={communityPicksMap}
               openingMap={openingMap}
               hrMap={hrMap}
               nearMap={nearMap}

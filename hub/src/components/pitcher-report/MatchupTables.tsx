@@ -363,7 +363,7 @@ export function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
 // pre-aggregated table or a live-computed map, and `batters` can be the
 // whole opposing lineup (Pitcher Report) or a single player (Dugout,
 // scoped to just the batter whose row is expanded).
-export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap, pikkitMap, gameInfo }: {
+export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap, communityPicksMap, gameInfo }: {
   pitchType: string
   batters: LineupPlayer[]
   getRow: (batter: LineupPlayer) => any | null
@@ -373,7 +373,7 @@ export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHa
   splitMap: { byId: any; byName: any }
   timingMap: { byId: any; byName: any }
   pitcherMap: Record<string, Record<string, { season?: any; recent?: any }>>
-  pikkitMap: Record<string, any>
+  communityPicksMap: Record<string, any>
   // Real game context for the watchlist star next to each batter's name —
   // optional since not every caller has a real game_pk to offer (falls back
   // to null, same as any other watchlist item missing game context).
@@ -418,7 +418,7 @@ export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHa
           {withRows.map(({ batter, row }) => {
             const isExpanded = expandedId === batter.mlb_id
             const sa = batter.props?.sa
-            const picks = resolveNameEntry(pikkitMap, batter.name_norm)?.picks as number | undefined
+            const picks = resolveNameEntry(communityPicksMap, batter.name_norm)?.picks as number | undefined
             return (
               <Fragment key={batter.mlb_id}>
                 <tr style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)', opacity: row ? 1 : 0.45 }}>

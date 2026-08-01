@@ -21,7 +21,7 @@ const ALL_BOOKS = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'betrivers', 'f
 // anything else (walks, strikeouts, runs) has one or the other but not
 // both, so it's left out rather than showing a leaderboard with no real
 // odds attached to it. `propsKey` indexes into each lineup player's `.props`
-// BDLPropMap object (see balldontlie.ts); `pikkitProp` is the exact
+// BDLPropMap object (see balldontlie.ts); `communityProp` is the exact
 // prop_type string api/admin/pikkit-import/route.ts's MARKET_MAP writes.
 // `books` mirrors BatterCostClient's own MARKET_BOOKS — fhr/sa are the only
 // two markets BDL gives multiple books for, everything else is FanDuel-only.
@@ -42,18 +42,18 @@ type LadderRung = { propsKey: string; threshold: number; label: string }
 // HRR, which only ever has ONE real line per player/book — its actual
 // numeric threshold lives in props.hrr_line, not a fixed ladder.
 type CategoryDef = {
-  key: CategoryKey; label: string; short: string; pikkitProp: string; propsKey: string; books: string[]
+  key: CategoryKey; label: string; short: string; communityProp: string; propsKey: string; books: string[]
   outcomeKey: string; gradeType: 'binary' | 'count'; ladder?: LadderRung[]; dynamicLine?: boolean
 }
 const CATEGORIES: CategoryDef[] = [
-  { key: 'hr', label: 'Home Run', short: 'HR', pikkitProp: 'home_runs', propsKey: 'sa', books: ALL_BOOKS, outcomeKey: 'hr', gradeType: 'binary' },
-  { key: 'hits', label: 'To Record a Hit', short: 'Hits', pikkitProp: 'hits', propsKey: 'hits', books: ALL_BOOKS, outcomeKey: 'h', gradeType: 'binary' },
-  { key: 'singles', label: 'Singles', short: '1B', pikkitProp: 'singles', propsKey: 'singles', books: ALL_BOOKS, outcomeKey: 'singles', gradeType: 'binary' },
-  { key: 'doubles', label: 'Doubles', short: '2B', pikkitProp: 'doubles', propsKey: 'doubles', books: ALL_BOOKS, outcomeKey: 'doubles', gradeType: 'binary' },
-  { key: 'triples', label: 'Triples', short: '3B', pikkitProp: 'triples', propsKey: 'triples', books: ALL_BOOKS, outcomeKey: 'triples', gradeType: 'binary' },
-  { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', pikkitProp: 'stolen_bases', propsKey: 'stolen_bases', books: ALL_BOOKS, outcomeKey: 'sb', gradeType: 'binary' },
+  { key: 'hr', label: 'Home Run', short: 'HR', communityProp: 'home_runs', propsKey: 'sa', books: ALL_BOOKS, outcomeKey: 'hr', gradeType: 'binary' },
+  { key: 'hits', label: 'To Record a Hit', short: 'Hits', communityProp: 'hits', propsKey: 'hits', books: ALL_BOOKS, outcomeKey: 'h', gradeType: 'binary' },
+  { key: 'singles', label: 'Singles', short: '1B', communityProp: 'singles', propsKey: 'singles', books: ALL_BOOKS, outcomeKey: 'singles', gradeType: 'binary' },
+  { key: 'doubles', label: 'Doubles', short: '2B', communityProp: 'doubles', propsKey: 'doubles', books: ALL_BOOKS, outcomeKey: 'doubles', gradeType: 'binary' },
+  { key: 'triples', label: 'Triples', short: '3B', communityProp: 'triples', propsKey: 'triples', books: ALL_BOOKS, outcomeKey: 'triples', gradeType: 'binary' },
+  { key: 'stolen_bases', label: 'Stolen Base', short: 'SB', communityProp: 'stolen_bases', propsKey: 'stolen_bases', books: ALL_BOOKS, outcomeKey: 'sb', gradeType: 'binary' },
   {
-    key: 'tb', label: 'Total Bases', short: 'TB', pikkitProp: 'bases', propsKey: 'tb', books: ALL_BOOKS, outcomeKey: 'tb', gradeType: 'count',
+    key: 'tb', label: 'Total Bases', short: 'TB', communityProp: 'bases', propsKey: 'tb', books: ALL_BOOKS, outcomeKey: 'tb', gradeType: 'count',
     ladder: [
       { propsKey: 'tb', threshold: 2, label: '2+' },
       { propsKey: 'tb3', threshold: 3, label: '3+' },
@@ -62,14 +62,14 @@ const CATEGORIES: CategoryDef[] = [
     ],
   },
   {
-    key: 'rbi', label: 'RBI', short: 'RBI', pikkitProp: 'rbi', propsKey: 'rbi', books: ALL_BOOKS, outcomeKey: 'rbi', gradeType: 'count',
+    key: 'rbi', label: 'RBI', short: 'RBI', communityProp: 'rbi', propsKey: 'rbi', books: ALL_BOOKS, outcomeKey: 'rbi', gradeType: 'count',
     ladder: [
       { propsKey: 'rbi', threshold: 1, label: '1+' },
       { propsKey: 'rbi2', threshold: 2, label: '2+' },
       { propsKey: 'rbi3', threshold: 3, label: '3+' },
     ],
   },
-  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', pikkitProp: 'hits_runs_rbi', propsKey: 'hrr', books: ALL_BOOKS, outcomeKey: 'hrr', gradeType: 'count', dynamicLine: true },
+  { key: 'hrr', label: 'Hits + Runs + RBIs', short: 'HRR', communityProp: 'hits_runs_rbi', propsKey: 'hrr', books: ALL_BOOKS, outcomeKey: 'hrr', gradeType: 'count', dynamicLine: true },
 ]
 
 // TB/RBI: every offered rung the real outcome actually cleared, each with
@@ -311,12 +311,12 @@ export function ThePublicClient({ date }: { date: string }) {
     return () => clearInterval(id)
   }, [anyLive, date])
 
-  // Same shape/matching Batter Cost's own pikkitMap uses — keyed by
+  // Same shape/matching Batter Cost's own communityPicksMap uses — keyed by
   // name -> prop_type -> game_key, with an untagged '' game_key as the
   // legacy fallback a real game_key always wins over at lookup time.
-  const pikkitMap = useMemo(() => {
+  const communityPicksMap = useMemo(() => {
     const m: Record<string, Record<string, Record<string, any>>> = {}
-    for (const r of (data?.pikkit ?? [])) {
+    for (const r of (data?.communityPicks ?? [])) {
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
       if (!nn || !market) continue
@@ -325,7 +325,7 @@ export function ThePublicClient({ date }: { date: string }) {
       m[nn][market][r.game_key || ''] = r
     }
     return m
-  }, [data?.pikkit])
+  }, [data?.communityPicks])
 
   const games: GameOption[] = useMemo(() => (data?.games ?? []).map((g: any) => ({
     gameKey: g.gameKey, awayAbbr: g.awayAbbr, homeAbbr: g.homeAbbr, gameDate: g.gameDate ?? null,
@@ -348,12 +348,12 @@ export function ThePublicClient({ date }: { date: string }) {
     const addSide = (lineup: any[], gameKey: string, gamePk: string | null, gameDate: string | null, gameStatus: string, isVoid: boolean, outcomes: Record<string, any>) => {
       for (const p of lineup ?? []) {
         const nn = p.name_norm || normName(p.name || '')
-        const entry = resolveNameEntry(pikkitMap, nn)
+        const entry = resolveNameEntry(communityPicksMap, nn)
         const outcome = outcomes?.[p.mlb_id] ?? null
         for (const cat of CATEGORIES) {
           const hasOdds = cat.books.some(b => p.props?.[cat.propsKey]?.[b] != null)
           if (!hasOdds) continue
-          const byGame = entry?.[cat.pikkitProp]
+          const byGame = entry?.[cat.communityProp]
           const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
           const picks: number | null = row?.picks ?? null
           if (picks == null || picks <= 0) continue
@@ -374,7 +374,7 @@ export function ThePublicClient({ date }: { date: string }) {
     }
     for (const cat of CATEGORIES) out[cat.key].sort((a, b) => b.picks - a.picks)
     return out
-  }, [data, pikkitMap])
+  }, [data, communityPicksMap])
 
   const activeCat = CATEGORIES.find(c => c.key === activeCategory)!
   const rows = (rowsByCategory[activeCategory] ?? []).filter(r => activeGame === 'all' || r.gameKey === activeGame)

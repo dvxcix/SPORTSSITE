@@ -55,7 +55,7 @@ const booksFor = (key: string) => MARKET_BOOKS[key] ?? ['fanduel']
 // thresholds (fhr, hr2, rbi2/3, tb3/4/5 never get a pick count, same as on
 // Dugout/Pitcher Report). Maps this page's MARKETS key to Pikkit's own
 // prop_type string (see api/admin/pikkit-import/route.ts's MARKET_MAP).
-const MARKET_TO_PIKKIT: Record<string, string> = {
+const MARKET_TO_COMMUNITY_PROP: Record<string, string> = {
   sa: 'home_runs', singles: 'singles', doubles: 'doubles', triples: 'triples',
   rbi: 'rbi', tb: 'bases', hrr: 'hits_runs_rbi',
 }
@@ -72,7 +72,7 @@ type FlatBatter = {
   // `deltas` above so the per-book badge rows below can pull real book
   // prices without re-deriving them from the FanDuel-only delta shape.
   rawProps: any
-  // Community pick count per market (only the 7 keys in MARKET_TO_PIKKIT
+  // Community pick count per market (only the 7 keys in MARKET_TO_COMMUNITY_PROP
   // are ever populated) — same source/matching Dugout's own pk*/pick-count
   // badges use, just flattened across every game instead of scoped to one
   // active game tab.
@@ -244,16 +244,16 @@ export function BatterCostClient({ date }: { date: string }) {
   }, [data?.saAvg])
 
   // Same raw data.pikkit array + normName/resolveNameEntry fuzzy matching
-  // Dugout's own pikkitMap uses — the one difference is Dugout scopes to a
+  // Dugout's own communityPicksMap uses — the one difference is Dugout scopes to a
   // single active game tab (it only ever shows one game at a time), while
   // this page is flat across every game at once, so the map here is keyed
   // by market → game_key too (not just name), and an explicitly-tagged row
   // for a player's real game always wins over an untagged legacy row for
   // that same market at lookup time (same tie-break Dugout applies, just
   // resolved per-row here instead of against one shared active tab).
-  const pikkitMap = useMemo(() => {
+  const communityPicksMap = useMemo(() => {
     const m: Record<string, Record<string, Record<string, any>>> = {}
-    for (const r of (data?.pikkit ?? [])) {
+    for (const r of (data?.communityPicks ?? [])) {
       const nn = normName(r.player_name || '')
       const market = r.prop_type || r.market
       if (!nn || !market) continue
@@ -262,12 +262,12 @@ export function BatterCostClient({ date }: { date: string }) {
       m[nn][market][r.game_key || ''] = r
     }
     return m
-  }, [data?.pikkit])
+  }, [data?.communityPicks])
 
   const picksFor = (nameNorm: string, gameKey: string): Record<string, number | null> => {
-    const entry = resolveNameEntry(pikkitMap, nameNorm)
+    const entry = resolveNameEntry(communityPicksMap, nameNorm)
     const out: Record<string, number | null> = {}
-    for (const [mktKey, prop] of Object.entries(MARKET_TO_PIKKIT)) {
+    for (const [mktKey, prop] of Object.entries(MARKET_TO_COMMUNITY_PROP)) {
       const byGame = entry?.[prop]
       const row = byGame?.[gameKey] ?? byGame?.[''] ?? null
       out[mktKey] = row?.picks ?? null
@@ -327,7 +327,7 @@ export function BatterCostClient({ date }: { date: string }) {
       addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, date)
     }
     return out
-  }, [data, fhrAvgMap, saAvgMap, pikkitMap, date])
+  }, [data, fhrAvgMap, saAvgMap, communityPicksMap, date])
 
   const maxAbsByMarket = useMemo(() => {
     const m: Record<string, number> = {}
