@@ -152,11 +152,40 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
 // a successful call as an instant downgrade. The real tier/tier_status flip
 // still happens later via the existing membership.deactivated/went_invalid
 // webhook branch once Whop actually ends the membership.
+//
+// Real customer-facing bug, confirmed live: a member cancels DURING a free
+// trial, expecting to never be charged — but 'at_period_end' just schedules
+// the cancellation for whenever the CURRENT period closes, and for a
+// trialing membership that's the trial's own conversion-to-paid boundary.
+// Whop still fires that conversion charge before honoring the cancellation,
+// so "I cancelled my trial" silently became "I got charged once anyway."
+// Fetching the live membership first and forcing 'immediate' mode whenever
+// its status looks like a trial (case-insensitive "trial" substring match —
+// deliberately loose since Whop's exact status string isn't confirmed
+// against a real trialing payload yet) skips that boundary entirely: a
+// trial member hasn't been charged yet, so there's no already-paid-for
+// period to honor by waiting.
+async function isTrialingMembership(membershipId: string, apiKey: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!res.ok) return false
+    const data = await res.json().catch(() => null)
+    const status = String(data?.status ?? data?.valid_status ?? '').toLowerCase()
+    return status.includes('trial')
+  } catch {
+    return false
+  }
+}
+
 export async function cancelWhopMembership(membershipId: string, apiKey: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   try {
+    const isTrial = await isTrialingMembership(membershipId, apiKey)
     const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}/cancel`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: isTrial ? JSON.stringify({ cancellation_mode: 'immediate' }) : undefined,
     })
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')

@@ -5,6 +5,7 @@ import { WHOP_PLANS, effectiveTier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
 import { syncDiscordRoleForUser } from '@/lib/discord'
+import { alertUnexpectedChargeAfterCancel } from '@/lib/billingAlert'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -113,8 +114,19 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         // currently unset, so it tracks when the CURRENT subscription
         // started, not the most recent renewal. Cleared on cancellation
         // below, so a later resubscribe gets its own fresh start date.
-        const { data: existing } = await supabase.from('users').select('tier_purchased_at').eq('id', internalUserId).maybeSingle()
+        const { data: existing } = await supabase.from('users').select('tier_purchased_at, tier_cancel_at_period_end, email').eq('id', internalUserId).maybeSingle()
         const isFirstPurchase = !existing?.tier_purchased_at
+        // Real confirmed bug: a payment CAN still land on a membership that
+        // was already marked cancel-at-period-end — Whop's own cancellation
+        // doesn't always take effect before the next charge fires (see
+        // whop.ts's isTrialingMembership fix for the trial-conversion case
+        // of this). The old code here assumed that could never happen and
+        // silently cleared the flag as if the member had just resubscribed
+        // — a real "I cancelled but got charged anyway" complaint with no
+        // record of it ever existing. Still grant the tier (the charge is
+        // real, they paid), but flag it loudly instead of pretending
+        // nothing happened.
+        const wasAlreadyCancelling = existing?.tier_cancel_at_period_end === true
         const { data: updated } = await supabase.from('users').update({
           tier: planInfo.tier,
           whop_plan_id: planId,
@@ -122,14 +134,15 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           tier_current_period_end: periodEnd,
           whop_membership_id: membershipId ?? null,
           tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
-          // A renewal payment on the still-cancelling membership can't reach
-          // here (Whop wouldn't charge it again), but a fresh purchase —
-          // same or new membership — means whatever was scheduled to lapse
-          // no longer applies, so clear it rather than leave a stale flag.
           tier_cancel_at_period_end: false,
         }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
         await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
         await syncDiscordRoleForUser(supabase, internalUserId)
+        if (wasAlreadyCancelling) {
+          await alertUnexpectedChargeAfterCancel(supabase, {
+            userId: internalUserId, email: existing?.email ?? updated?.email ?? null, membershipId: membershipId ?? null, planTier: planInfo.tier,
+          })
+        }
         // Only a genuine first-time purchase, never a renewal (see the
         // comment above on tier_purchased_at) — fire-and-forget via after(),
         // same reasoning as the signup call sites: must never delay this
