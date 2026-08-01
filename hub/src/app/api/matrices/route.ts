@@ -10,7 +10,7 @@ const MAX_FACTORS_PER_MATRIX = 40
 type FactorInput = {
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'mm_trend'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'up_or_flat' | 'down_or_flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'mm_trend'
   value: number | null
   recency: string | null
   recency_start: string | null
@@ -105,7 +105,7 @@ const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank', 'unless']
 // only meaningful on a filter step inside an 'unless' step's
 // condition_steps, but harmless (evaluates to false) anywhere else — see
 // matrixEngine.ts's evaluateFilterStep.
-const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'zero', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor', 'mm_trend']
+const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'up_or_flat', 'down_or_flat', 'positive', 'negative', 'zero', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor', 'mm_trend']
 const MAX_PIPELINE_STEPS = 10
 
 // Only meaningful for operator 'mm_trend' (field_key 'mm') — see
@@ -263,7 +263,7 @@ function validateFactors(factors: unknown): { ok: true; factors: FactorInput[] }
     const { category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = f as Record<string, unknown>
     if (!['odds', 'dugout_specs', 'pitchlog_stat', 'savant_stat', 'picks'].includes(category as string)) return { ok: false, error: 'Invalid Factor category.' }
     if (typeof field_key !== 'string' || !field_key) return { ok: false, error: 'Invalid Factor field.' }
-    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'positive', 'negative', 'zero', 'tied', 'is_null', 'is_not_null', 'mm_trend'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
+    if (!['gte', 'lte', 'eq', 'up', 'down', 'flat', 'up_or_flat', 'down_or_flat', 'positive', 'negative', 'zero', 'tied', 'is_null', 'is_not_null', 'mm_trend'].includes(operator as string)) return { ok: false, error: 'Invalid Factor condition.' }
     const cleanValue = typeof value === 'number' ? value : null
     if (['gte', 'lte', 'eq'].includes(operator as string) && cleanValue == null) {
       return { ok: false, error: `A Factor on ${field_key} needs a value — it can never match anyone left blank.` }

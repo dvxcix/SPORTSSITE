@@ -48,7 +48,7 @@ export type MatrixPipelineStep = {
   book: string | null
   books: string[] | null
   books_min_count: number | null
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'zero' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend' | null
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'up_or_flat' | 'down_or_flat' | 'positive' | 'negative' | 'zero' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend' | null
   value: number | null
   // rank: which extreme to keep — 'closest_zero' (rank-only, not offered by
   // the Group step's own UI) ranks by absolute distance from 0 instead,
@@ -266,6 +266,8 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
                   <option value="up">Moved up since open</option>
                   <option value="down">Moved down since open</option>
                   <option value="flat">Unchanged since open</option>
+                  <option value="up_or_flat">Moved up, or unchanged (not down)</option>
+                  <option value="down_or_flat">Moved down, or unchanged (not up)</option>
                 </>
               )}
               {step.category === 'dugout_specs' && (

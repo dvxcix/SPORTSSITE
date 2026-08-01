@@ -59,7 +59,13 @@ import type { StatcastWindow, StatcastLine } from './dugoutStatcast'
 // way to ask "did this player's MM MOVE between two of the board's own
 // windows" (e.g. "was + on L10 but crossed negative by L1," or "dropped 3+
 // between L5 and L1"). See evaluateMmTrend/MatrixFactor's mm_* fields below.
-export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
+// 'up_or_flat'/'down_or_flat' — real gap, reported live (2026-08-01): 'up'/
+// 'down'/'flat' are mutually exclusive, so "moved up OR stayed flat — just
+// not down" had no way to be expressed as one Factor; a member had to
+// build 'up' and 'flat' as two separate Factors and had no way to OR them
+// together. Same direction-agnostic idea as MmTrendDirection's 'moved'
+// above, just for the plain odds up/down/flat trio instead of MM.
+export type MatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'up_or_flat' | 'down_or_flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'lt_anchor' | 'gt_anchor' | 'mm_trend'
 export type MmWindowKey = 'l1' | 'l3' | 'l5' | 'l10'
 // 'moved' is a real gap, reported live (2026-07-27): 'increased'/'decreased'
 // each only check ONE direction — asking "did this player move AT ALL"
@@ -755,7 +761,8 @@ export function computeOddsRawPrice(fieldKey: string, book: string, props: OddsP
 }
 
 function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, opener: number | null): boolean {
-  if (factor.operator === 'up' || factor.operator === 'down' || factor.operator === 'flat') {
+  if (factor.operator === 'up' || factor.operator === 'down' || factor.operator === 'flat'
+    || factor.operator === 'up_or_flat' || factor.operator === 'down_or_flat') {
     if (current == null || opener == null) return false
     if (factor.operator === 'flat') return current === opener
     // "Up"/"down" mean literal American-price direction, matching the same
@@ -765,7 +772,11 @@ function oddsFactorTrueForPrice(factor: MatrixFactor, current: number | null, op
     // +2500 to +800 is "down," regardless of what that implies about
     // likelihood. Was inverted from this until 2026-07-24 (confirmed live:
     // a "moved up since open" Factor was actually matching price DECREASES).
-    return factor.operator === 'up' ? current > opener : current < opener
+    if (factor.operator === 'up') return current > opener
+    if (factor.operator === 'down') return current < opener
+    // OR-combined pair — "not down"/"not up" respectively.
+    if (factor.operator === 'up_or_flat') return current >= opener
+    return current <= opener
   }
   return compareThreshold(current, factor.operator, factor.value)
 }

@@ -21,7 +21,7 @@ export type MatrixFactor = {
   id?: string
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
-  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'mm_trend'
+  operator: 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'up_or_flat' | 'down_or_flat' | 'positive' | 'negative' | 'zero' | 'tied' | 'is_null' | 'is_not_null' | 'mm_trend'
   value: number | null
   recency: 'game' | 'l3' | 'l5' | 'l10' | 'season' | 'custom' | 'game_delta' | 'l3_delta' | 'l5_delta' | 'l10_delta' | null
   // Only meaningful for the two real multi-book odds fields (fhr, hr) —
@@ -273,6 +273,7 @@ export function recencyOptionsFor(category: MatrixFactor['category'], field_key:
 export const OPERATOR_LABEL: Record<string, string> = {
   gte: 'At least', lte: 'At most', eq: 'Exactly',
   up: 'Moved up since open', down: 'Moved down since open', flat: 'Unchanged since open',
+  up_or_flat: 'Moved up, or unchanged (not down)', down_or_flat: 'Moved down, or unchanged (not up)',
   positive: 'Is positive (+)', negative: 'Is negative (−)', zero: 'Is zero (0)',
   tied: 'Tied w/ a teammate',
   is_null: 'Is blank (no value)', is_not_null: 'Has a value',
@@ -497,7 +498,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
   // doesn't want a number typed in, same shape as "moved up since open"),
   // or 'tied' (a real-time comparison against teammates, not a number a
   // member picks — see evaluateOddsFactor/evaluateDugoutSpecsFactor).
-  const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat'].includes(factor.operator))
+  const hidesValue = (factor.category === 'odds' && ['up', 'down', 'flat', 'up_or_flat', 'down_or_flat'].includes(factor.operator))
     || factor.operator === 'positive' || factor.operator === 'negative' || factor.operator === 'zero' || factor.operator === 'tied'
     || factor.operator === 'is_null' || factor.operator === 'is_not_null' || factor.operator === 'mm_trend'
   // 'mm_trend' spans all 4 windows itself (see MmTrendFields below) — the
@@ -611,6 +612,8 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                 <option value="up">{OPERATOR_LABEL.up}</option>
                 <option value="down">{OPERATOR_LABEL.down}</option>
                 <option value="flat">{OPERATOR_LABEL.flat}</option>
+                <option value="up_or_flat">{OPERATOR_LABEL.up_or_flat}</option>
+                <option value="down_or_flat">{OPERATOR_LABEL.down_or_flat}</option>
                 <option value="tied">{OPERATOR_LABEL.tied}</option>
               </>
             )}
