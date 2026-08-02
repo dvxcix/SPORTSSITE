@@ -32,6 +32,8 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
   const [error, setError] = useState('')
   const [registering, setRegistering] = useState(false)
   const [registerResult, setRegisterResult] = useState('')
+  const [syncingRoles, setSyncingRoles] = useState(false)
+  const [syncRolesResult, setSyncRolesResult] = useState('')
   const router = useRouter()
 
   async function save() {
@@ -68,6 +70,21 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
       setRegisterResult(`Error: ${e?.message ?? 'Registration failed'}`)
     } finally {
       setRegistering(false)
+    }
+  }
+
+  async function syncAllRoles() {
+    setSyncingRoles(true)
+    setSyncRolesResult('')
+    try {
+      const res = await fetch('/api/admin/discord/sync-all-roles', { method: 'POST' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.error || 'Sync failed')
+      setSyncRolesResult(`Synced ${body.synced}/${body.total} linked member(s).`)
+    } catch (e: any) {
+      setSyncRolesResult(`Error: ${e?.message ?? 'Sync failed'}`)
+    } finally {
+      setSyncingRoles(false)
     }
   }
 
@@ -140,6 +157,15 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
           {registering ? 'Registering…' : 'Register Slash Commands'}
         </button>
         {registerResult && <span className="text-xs text-zinc-400">{registerResult}</span>}
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <button onClick={syncAllRoles} disabled={syncingRoles}
+          className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors border border-zinc-700">
+          {syncingRoles ? 'Syncing…' : 'Sync All Member Roles'}
+        </button>
+        <span className="text-xs text-zinc-500">One-time (or run-whenever) backfill for members who linked Discord before role sync went live.</span>
+        {syncRolesResult && <span className="text-xs text-zinc-400">{syncRolesResult}</span>}
       </div>
     </div>
   )
