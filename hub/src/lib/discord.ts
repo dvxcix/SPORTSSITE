@@ -46,6 +46,43 @@ export async function postToChannel(channelId: string | null | undefined, payloa
   }
 }
 
+// Real text/announcement channels the bot can post a message into — used by
+// the admin embed composer's channel picker so an admin chooses a real
+// channel name instead of pasting a raw ID like every other config field on
+// this page requires. Type 0 = GUILD_TEXT, 5 = GUILD_ANNOUNCEMENT; every
+// other channel type (voice, category, forum, etc.) can't receive a plain
+// message.
+export async function getGuildChannels(guildId: string): Promise<{ id: string; name: string }[]> {
+  try {
+    const res = await discordFetch(`/guilds/${guildId}/channels`)
+    if (!res.ok) return []
+    const channels = await res.json()
+    return (Array.isArray(channels) ? channels : [])
+      .filter((c: any) => c.type === 0 || c.type === 5)
+      .map((c: any) => ({ id: c.id, name: c.name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  } catch (e) {
+    console.error('[discord] getGuildChannels error', e)
+    return []
+  }
+}
+
+// Same POST as postToChannel below, but surfaces real success/failure —
+// postToChannel is deliberately fire-and-forget for automated alerts (a
+// Discord hiccup should never fail the caller's real work), but the admin
+// embed composer is a one-off manual action where the admin genuinely needs
+// to know whether their post actually landed.
+export async function postToChannelChecked(channelId: string, payload: { content?: string; embeds?: any[] }): Promise<{ ok: boolean; error?: string }> {
+  if (!channelId) return { ok: false, error: 'No channel selected' }
+  try {
+    const res = await discordFetch(`/channels/${channelId}/messages`, { method: 'POST', body: JSON.stringify(payload) })
+    if (!res.ok) return { ok: false, error: (await res.text().catch(() => '')) || `Discord returned ${res.status}` }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'Request failed' }
+  }
+}
+
 export async function postAlert(admin: SupabaseClient, alertKey: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate' | 'pipeline_health', payload: { content?: string; embeds?: any[] }) {
   const config = await getDiscordConfig(admin)
   if (!config?.enabled) return
