@@ -50,6 +50,22 @@ export function getTeamLogoUrl(abbr?: string | null): string | undefined {
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : undefined
 }
 
+// Discord's embed image/thumbnail/author.icon_url fields silently fail on
+// SVG (confirmed live: a lineup-confirmed alert's team logo rendered as a
+// broken-image placeholder) — MLB's own static host only serves logos as
+// SVG, with no PNG variant at any path. ESPN's team-logo CDN mirrors the
+// same 30 teams as PNG and matches this file's abbreviations exactly except
+// Arizona (ESPN uses "ari", this codebase's canonical abbr is "AZ") —
+// verified against all 30 real team abbreviations, not assumed.
+const ESPN_LOGO_ABBR_OVERRIDES: Record<string, string> = { AZ: 'ari' }
+export function getTeamLogoPngUrl(abbr?: string | null): string | undefined {
+  if (!abbr) return undefined
+  const upper = abbr.toUpperCase()
+  if (!MLB_TEAM_IDS[upper]) return undefined
+  const espnAbbr = ESPN_LOGO_ABBR_OVERRIDES[upper] ?? upper.toLowerCase()
+  return `https://a.espncdn.com/i/teamlogos/mlb/500/${espnAbbr}.png`
+}
+
 // Full team names, keyed by abbreviation — the logo already carries the
 // team identity visually everywhere it's shown next to a name, so full
 // names (not the 2-3 letter code) read better as the accompanying text.

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
-import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
+import { getTeamLogoPngUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { postAlert } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
@@ -72,7 +72,7 @@ export async function GET(req: Request) {
 
       await postAlert(admin, 'near_hr', {
         embeds: [{
-          ...(teamInfo ? { author: { name: getTeamName(teamInfo.team), icon_url: getTeamLogoUrl(teamInfo.team) } } : {}),
+          ...(teamInfo ? { author: { name: getTeamName(teamInfo.team), icon_url: getTeamLogoPngUrl(teamInfo.team) } } : {}),
           title: `${n.batter_name} — Near Home Run`,
           description: details || undefined,
           url: `${PLATFORM_URL}/dugout?date=${date}`,

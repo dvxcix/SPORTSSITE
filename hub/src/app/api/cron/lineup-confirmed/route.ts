@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core/mlbSchedule'
-import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
-import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { getTeamLogoUrl, getTeamLogoPngUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { normName } from '@slipsurge/core/nameNorm'
 import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
@@ -144,24 +143,23 @@ export async function GET(req: Request) {
       if (!prev.confirmed && s.confirmed) {
         lineupEvents++
         notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Batting Lineup Confirmed`, `/dugout?date=${date}`, getTeamLogoUrl(s.abbr))
+        // One single embed, one condensed list — Discord embeds only support
+        // one image each, so a real per-player headshot next to every row
+        // isn't possible without either spamming one embed per batter (tried
+        // that; it's an ugly 9-card wall, not "one embed") or building a
+        // whole separate composite image. Plain rows + the team logo up top
+        // is the version that's actually one clean card.
         await postAlert(admin, 'lineup_confirmed', {
-          embeds: [
-            {
-              author: { name: getTeamName(s.abbr), icon_url: getTeamLogoUrl(s.abbr) },
-              title: 'Batting Lineup Confirmed',
-              url: `${PLATFORM_URL}/dugout?date=${date}`,
-              color: 0xB4FF4D,
-            },
-            // One mini-embed per batter so Discord renders a real headshot next
-            // to each name (embeds only support a single image each — there's
-            // no way to get 9 inline avatars in one embed). 1 header + 9
-            // batters sits right at Discord's 10-embeds-per-message cap.
-            ...s.lineup.map((p, i): { title: string; description?: string; thumbnail: { url: string } } => ({
-              title: `${i + 1}. ${p.name} (${p.position})`,
-              description: anytimeHrOddsLine(bdlByNameByGame.get(g.gamePk) ?? {}, p.name),
-              thumbnail: { url: mlbHeadshot(p.mlb_id) },
-            })),
-          ],
+          embeds: [{
+            author: { name: getTeamName(s.abbr), icon_url: getTeamLogoPngUrl(s.abbr) },
+            title: 'Batting Lineup Confirmed',
+            description: s.lineup.map((p, i) => {
+              const odds = anytimeHrOddsLine(bdlByNameByGame.get(g.gamePk) ?? {}, p.name)
+              return `${i + 1}. ${p.name} (${p.position})${odds ? ` — ${odds.replace('Anytime HR: ', '')}` : ''}`
+            }).join('\n'),
+            url: `${PLATFORM_URL}/dugout?date=${date}`,
+            color: 0xB4FF4D,
+          }],
         })
       } else if (prev.confirmed && s.confirmed && prev.lineup_signature && signature && prev.lineup_signature !== signature) {
         lineupEvents++
@@ -169,7 +167,7 @@ export async function GET(req: Request) {
         notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Lineup Change${change ? `: ${change}` : ''}`, `/dugout?date=${date}`, getTeamLogoUrl(s.abbr))
         await postAlert(admin, 'lineup_confirmed', {
           embeds: [{
-            author: { name: getTeamName(s.abbr), icon_url: getTeamLogoUrl(s.abbr) },
+            author: { name: getTeamName(s.abbr), icon_url: getTeamLogoPngUrl(s.abbr) },
             title: `Lineup Change${change ? `: ${change}` : ''}`,
             url: `${PLATFORM_URL}/dugout?date=${date}`,
             color: 0xFFB84D,
