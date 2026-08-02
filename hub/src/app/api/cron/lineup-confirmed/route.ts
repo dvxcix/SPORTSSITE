@@ -4,8 +4,10 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { postAlert } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
+import type { BDLPropMap } from '@/lib/balldontlie'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -51,7 +53,7 @@ export async function GET(req: Request) {
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ ok: true, games: 0, lineupEvents: 0, statusEvents: 0, notified: 0 })
 
-  const [{ data: lineupStateRows }, { data: statusStateRows }, allUsers] = await Promise.all([
+  const [{ data: lineupStateRows }, { data: statusStateRows }, allUsers, { data: snapRows }] = await Promise.all([
     admin.from('lineup_confirmation_state').select('game_pk, side, confirmed, lineup_signature').in('game_pk', games.map(g => g.gamePk)),
     admin.from('game_status_state').select('game_pk, status').in('game_pk', games.map(g => g.gamePk)),
     // Fetched once per run (not once per event) — anyone who hasn't
@@ -70,10 +72,25 @@ export async function GET(req: Request) {
     // in six days despite 109,856 being sent — same bug class already
     // found and fixed in the dugout opening-price query.
     fetchAllUsers(admin),
+    // Same BDL odds snapshot the Dugout page itself reads (dugout/data's
+    // pregame_odds_snapshots.prop_map) — reused here purely to show each
+    // confirmed batter's live Anytime HR price in Discord. Note this is
+    // genuinely best-effort at this exact moment: a game's FIRST snapshot
+    // row typically doesn't land until a few minutes after both lineups
+    // confirm (see the FHR scrape-queue comment below), so `sa` prices can
+    // still be sparse/missing right when this alert fires for early games.
+    admin.from('pregame_odds_snapshots').select('game_pk, prop_map').in('game_pk', games.map(g => g.gamePk)),
   ])
   const recipientIds = (allUsers ?? [])
     .filter(u => ((u.notification_settings as Record<string, boolean> | null) ?? {}).lineup_confirmed !== false)
     .map(u => u.id)
+  const bdlByNameByGame = new Map<number, Record<string, any>>()
+  for (const row of snapRows ?? []) {
+    const propMap: BDLPropMap = (row.prop_map as BDLPropMap) ?? {}
+    const byName: Record<string, any> = {}
+    for (const entry of Object.values(propMap)) byName[normName((entry as any).name)] = entry
+    bdlByNameByGame.set(row.game_pk, byName)
+  }
   const lineupStateByKey = new Map<string, { confirmed: boolean; lineup_signature: string | null }>()
   for (const r of lineupStateRows ?? []) lineupStateByKey.set(`${r.game_pk}-${r.side}`, { confirmed: r.confirmed, lineup_signature: r.lineup_signature })
   const statusByGamePk = new Map<number, string>()
@@ -139,8 +156,9 @@ export async function GET(req: Request) {
             // to each name (embeds only support a single image each — there's
             // no way to get 9 inline avatars in one embed). 1 header + 9
             // batters sits right at Discord's 10-embeds-per-message cap.
-            ...s.lineup.map((p, i): { title: string; thumbnail: { url: string } } => ({
+            ...s.lineup.map((p, i): { title: string; description?: string; thumbnail: { url: string } } => ({
               title: `${i + 1}. ${p.name} (${p.position})`,
+              description: anytimeHrOddsLine(bdlByNameByGame.get(g.gamePk) ?? {}, p.name),
               thumbnail: { url: mlbHeadshot(p.mlb_id) },
             })),
           ],
@@ -199,6 +217,25 @@ function describeLineupChange(prevSig: string, nextSig: string, nextLineup: Line
     if (inName) return `${inName} added to the lineup`
   }
   return null
+}
+
+const fmtAmericanOdds = (n: number) => (n > 0 ? `+${n}` : `${n}`)
+
+// Anytime HR (not First HR — that market genuinely doesn't exist yet at the
+// instant lineups confirm, see the snapshot-fetch comment above) across the
+// same four books Dugout itself shows for this market. Returns undefined
+// (not an empty string) when nothing's priced yet, so the embed just omits
+// the line entirely instead of showing a blank one.
+function anytimeHrOddsLine(bdlByName: Record<string, any>, playerName: string): string | undefined {
+  const entry = resolveNameEntry(bdlByName, normName(playerName))
+  const sa = entry?.sa ?? {}
+  const parts = [
+    sa.fanduel != null ? `FD ${fmtAmericanOdds(sa.fanduel)}` : null,
+    sa.caesars != null ? `Caesars ${fmtAmericanOdds(sa.caesars)}` : null,
+    sa.betmgm != null ? `MGM ${fmtAmericanOdds(sa.betmgm)}` : null,
+    sa.fanatics != null ? `Fanatics ${fmtAmericanOdds(sa.fanatics)}` : null,
+  ].filter(Boolean)
+  return parts.length ? `Anytime HR: ${parts.join(' • ')}` : undefined
 }
 
 async function broadcast(admin: Admin, recipientIds: string[], message: string, link: string, teamLogo: string | undefined): Promise<number> {
