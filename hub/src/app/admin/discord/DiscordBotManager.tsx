@@ -80,7 +80,7 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
       const res = await fetch('/api/admin/discord/sync-all-roles', { method: 'POST' })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body?.error || 'Sync failed')
-      setSyncRolesResult(`Synced ${body.synced}/${body.total} linked member(s).`)
+      setSyncRolesResult(`Synced ${body.synced}/${body.total} linked member(s).${body.failed ? ` ${body.failed} failed — check server logs.` : ''}`)
     } catch (e: any) {
       setSyncRolesResult(`Error: ${e?.message ?? 'Sync failed'}`)
     } finally {

@@ -11,10 +11,18 @@ const API = 'https://discord.com/api/v10'
 async function discordFetch(path: string, init: RequestInit = {}) {
   const token = process.env.DISCORD_BOT_TOKEN
   if (!token) throw new Error('DISCORD_BOT_TOKEN is not configured')
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
-  })
+  const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json', ...(init.headers || {}) }
+  const res = await fetch(`${API}${path}`, { ...init, headers })
+  // Role add/remove during a bulk sync routinely trips Discord's per-route
+  // rate limit (confirmed: every call in a 5-concurrent-user batch came back
+  // 429) — retry once after the server-specified cooldown instead of just
+  // logging and dropping the call.
+  if (res.status === 429) {
+    const body = await res.clone().json().catch(() => null)
+    const retryAfterMs = Math.min(Number(body?.retry_after) || 1, 15) * 1000 + 100
+    await new Promise(r => setTimeout(r, retryAfterMs))
+    return fetch(`${API}${path}`, { ...init, headers })
+  }
   return res
 }
 
@@ -45,14 +53,18 @@ export async function postAlert(admin: SupabaseClient, alertKey: 'lineup_confirm
   await postToChannel(channelId, payload)
 }
 
-async function addRole(guildId: string, discordUserId: string, roleId: string) {
+async function addRole(guildId: string, discordUserId: string, roleId: string): Promise<boolean> {
   const res = await discordFetch(`/guilds/${guildId}/members/${discordUserId}/roles/${roleId}`, { method: 'PUT' })
-  if (!res.ok && res.status !== 404) console.error('[discord] addRole failed', discordUserId, roleId, res.status, await res.text().catch(() => ''))
+  if (res.ok || res.status === 404) return true
+  console.error('[discord] addRole failed', discordUserId, roleId, res.status, await res.text().catch(() => ''))
+  return false
 }
 
-async function removeRole(guildId: string, discordUserId: string, roleId: string) {
+async function removeRole(guildId: string, discordUserId: string, roleId: string): Promise<boolean> {
   const res = await discordFetch(`/guilds/${guildId}/members/${discordUserId}/roles/${roleId}`, { method: 'DELETE' })
-  if (!res.ok && res.status !== 404) console.error('[discord] removeRole failed', discordUserId, roleId, res.status, await res.text().catch(() => ''))
+  if (res.ok || res.status === 404) return true
+  console.error('[discord] removeRole failed', discordUserId, roleId, res.status, await res.text().catch(() => ''))
+  return false
 }
 
 // Called (best-effort, fire-and-forget) from every place a user's tier can
@@ -60,16 +72,16 @@ async function removeRole(guildId: string, discordUserId: string, roleId: string
 // grant/revoke route. Grants the role for the user's real effective tier
 // and strips every other tier role, so a downgrade actually removes access
 // instead of just adding the new role on top of the old one.
-export async function syncDiscordRoleForUser(admin: SupabaseClient, userId: string) {
+export async function syncDiscordRoleForUser(admin: SupabaseClient, userId: string): Promise<boolean> {
   try {
     const config = await getDiscordConfig(admin)
-    if (!config?.enabled || !config.guild_id) return
+    if (!config?.enabled || !config.guild_id) return true
     const { data: user } = await admin
       .from('users')
       .select('discord_id, tier, discord_advanced_claimed, admin_granted_tier')
       .eq('id', userId)
       .single()
-    if (!user?.discord_id) return
+    if (!user?.discord_id) return true
 
     const tier = effectiveTier((user.tier as Tier | undefined) ?? 'free', user.discord_advanced_claimed, user.admin_granted_tier as Tier | null)
     const wantRoleId = config.tier_roles?.[tier]
@@ -80,9 +92,14 @@ export async function syncDiscordRoleForUser(admin: SupabaseClient, userId: stri
         .filter(roleId => roleId !== wantRoleId)
         .map(roleId => removeRole(config.guild_id as string, user.discord_id as string, roleId))
     )
-    if (wantRoleId) await addRole(config.guild_id, user.discord_id, wantRoleId)
+    // The add is the outcome that actually matters for reporting — removes
+    // are best-effort cleanup of stale roles, but a failed add means this
+    // member did NOT get the role they're supposed to have.
+    if (wantRoleId) return await addRole(config.guild_id, user.discord_id, wantRoleId)
+    return true
   } catch (e) {
     console.error('[discord] syncDiscordRoleForUser error', userId, e)
+    return false
   }
 }
 

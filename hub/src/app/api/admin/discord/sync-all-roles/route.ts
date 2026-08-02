@@ -36,16 +36,19 @@ export async function POST() {
     if (data.length < PAGE) break
   }
 
-  // Bounded concurrency — same reasoning as every other bulk external-API
-  // fan-out in this codebase (matrixMatch.ts, dugout/data/route.ts): each
-  // user can fire several sequential Discord calls (up to 3 role removes +
-  // 1 add), so unbounded parallelism here would slam Discord's per-guild
-  // rate limit across 200+ members at once.
+  // Serialized on purpose (confirmed via runtime logs: concurrency of 5 here
+  // meant 5 users firing up to 4 sequential role calls each at once, well
+  // over Discord's per-route role add/remove rate limit — every call in
+  // that batch came back 429 and was silently dropped, so nothing actually
+  // synced despite a "success" count). One user at a time, combined with
+  // discordFetch's built-in 429 retry, actually gets through.
   let synced = 0
-  await asyncPool(5, userIds, async id => {
-    await syncDiscordRoleForUser(admin, id)
-    synced++
+  let failed = 0
+  await asyncPool(1, userIds, async id => {
+    const ok = await syncDiscordRoleForUser(admin, id)
+    if (ok) synced++
+    else failed++
   })
 
-  return NextResponse.json({ ok: true, total: userIds.length, synced })
+  return NextResponse.json({ ok: true, total: userIds.length, synced, failed })
 }
