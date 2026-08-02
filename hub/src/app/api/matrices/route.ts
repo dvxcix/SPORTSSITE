@@ -106,7 +106,7 @@ const PIPELINE_STEP_KINDS = ['filter', 'group', 'rank', 'unless']
 // condition_steps, but harmless (evaluates to false) anywhere else — see
 // matrixEngine.ts's evaluateFilterStep.
 const PIPELINE_OPERATORS = ['gte', 'lte', 'eq', 'up', 'down', 'flat', 'up_or_flat', 'down_or_flat', 'positive', 'negative', 'zero', 'is_null', 'is_not_null', 'lt_anchor', 'gt_anchor', 'mm_trend']
-const MAX_PIPELINE_STEPS = 10
+const MAX_PIPELINE_STEPS = 50
 
 // Only meaningful for operator 'mm_trend' (field_key 'mm') — see
 // matrixEngine.ts's evaluateMmTrend/MmByWindow.

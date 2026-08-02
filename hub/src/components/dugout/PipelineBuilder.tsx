@@ -88,7 +88,7 @@ const KIND_DESC: Record<MatrixPipelineStep['kind'], string> = {
   rank: 'Narrow to whoever is highest/lowest on a field (add a tolerance to also keep close runners-up)',
   unless: 'Normally leave the pool as-is — unless a different condition is true elsewhere in the game, then replace/add/suppress the result',
 }
-export const MAX_PIPELINE_STEPS = 10
+export const MAX_PIPELINE_STEPS = 50
 
 // `anchorFrom` (only ever used for a new Unless step, and only matters once
 // `uses_anchor` is turned on) copies the category/field/recency/book of
