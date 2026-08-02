@@ -137,7 +137,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
   const isBooksField = step.kind === 'filter' && isBooksFieldKey(step.field_key)
   // 'mm_trend' spans all 4 windows itself (see MmTrendFields below) — the
   // plain recency picker is meaningless once that operator is selected.
-  const needsRecency = (step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && step.field_key === 'mm'))
+  const needsRecency = (step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && ['mm', 'bk_rk', 'pp_rk'].includes(step.field_key)))
     && step.operator !== 'mm_trend'
   const needsValue = step.operator === 'gte' || step.operator === 'lte' || step.operator === 'eq'
   const hidesValue = step.kind === 'filter' && !needsValue
@@ -463,7 +463,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
   onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
 }) {
   const fields = fieldsForCategory(step.category).filter(f => !f.boolean)
-  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && step.field_key === 'mm')
+  const needsRecency = step.category === 'pitchlog_stat' || step.category === 'savant_stat' || (step.category === 'dugout_specs' && ['mm', 'bk_rk', 'pp_rk'].includes(step.field_key))
   const singleBookField = step.category === 'odds' ? MULTI_BOOK_FIELDS[step.field_key] : null
 
   function changeCategory(category: MatrixFactor['category']) {

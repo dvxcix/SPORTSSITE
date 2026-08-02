@@ -339,6 +339,8 @@ export type FieldBundle = {
   statcastWindows: Record<StatcastWindow, StatcastLine> | null
   pikkitEntry: Record<string, { picks?: number | null } | undefined> | null
   mmByWindow?: MmByWindow | null
+  bkRkByWindow?: MmByWindow | null
+  ppRkByWindow?: MmByWindow | null
 }
 
 export type Matrix = {
@@ -911,14 +913,17 @@ export function computeDugoutSpecsValue(
   mmByWindow?: MmByWindow | null,
   mmBaseWindow?: MmWindowKey | null,
   mmCompareWindows?: MmWindowKey[] | null,
+  bkRkByWindow?: MmByWindow | null,
+  ppRkByWindow?: MmByWindow | null,
 ): number | null {
-  if (fieldKey === 'mm') {
-    // 'mm' reuses MatrixRecency's existing 'game' value for "Last 1" (same
-    // convention savant_stat's own 'game' recency already uses — see
-    // RECENCY_TO_SAVANT_WINDOW) rather than inventing a new recency value
-    // just for this one field.
+  if (fieldKey === 'mm' || fieldKey === 'bk_rk' || fieldKey === 'pp_rk') {
+    // 'mm'/'bk_rk'/'pp_rk' reuse MatrixRecency's existing 'game' value for
+    // "Last 1" (same convention savant_stat's own 'game' recency already
+    // uses — see RECENCY_TO_SAVANT_WINDOW) rather than inventing a new
+    // recency value just for these fields.
     const w = recency === 'game' ? 'l1' : recency === 'l3' || recency === 'l5' || recency === 'l10' ? recency : 'l10'
-    return mmByWindow?.[w] ?? null
+    const source = fieldKey === 'mm' ? mmByWindow : fieldKey === 'bk_rk' ? bkRkByWindow : ppRkByWindow
+    return source?.[w] ?? null
   }
   // 'mm_move' — real gap, reported live (2026-07-26): once a member filters
   // down to whoever's MM crossed/moved a certain way (see evaluateMmTrend
@@ -1032,12 +1037,14 @@ export function evaluateDugoutSpecsFactor(
   // dugout_specs Factor.
   isFactorTied?: (factorId: string) => boolean,
   mmByWindow?: MmByWindow | null,
+  bkRkByWindow?: MmByWindow | null,
+  ppRkByWindow?: MmByWindow | null,
 ): boolean {
   if (factor.operator === 'tied') return isFactorTied?.(factor.id) ?? false
   if (factor.operator === 'mm_trend') {
     return evaluateMmTrend(factor.mm_base_window, factor.mm_compare_windows, factor.mm_direction, factor.value, factor.mm_match_mode, mmByWindow, factor.mm_amount_mode)
   }
-  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow, factor.mm_base_window, factor.mm_compare_windows)
+  const current = computeDugoutSpecsValue(factor.field_key, props, fhrAvg, saAvg, factor.recency, mmByWindow, factor.mm_base_window, factor.mm_compare_windows, bkRkByWindow, ppRkByWindow)
   return compareThreshold(current, factor.operator, factor.value, factor.field_key)
 }
 
@@ -1223,7 +1230,7 @@ export function resolveFieldValue(
   mmCompareWindows?: MmWindowKey[] | null,
 ): number | null {
   if (category === 'odds') return computeOddsRawPrice(fieldKey, book ?? 'fanduel', bundle.props)
-  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow, mmBaseWindow, mmCompareWindows)
+  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow, mmBaseWindow, mmCompareWindows, bundle.bkRkByWindow, bundle.ppRkByWindow)
   if (category === 'pitchlog_stat') return computePitchlogStatValue(fieldKey, recency, bundle.pitchlogWindows)
   if (category === 'savant_stat') return computeSavantStatValue(fieldKey, recency, bundle.statcastWindows)
   return computePicksValue(fieldKey, bundle.pikkitEntry, gameTotalPicksByMarket)
@@ -1263,7 +1270,7 @@ export function evaluateFilterStep(
     mm_direction: step.mm_direction, mm_match_mode: step.mm_match_mode, mm_amount_mode: step.mm_amount_mode,
   }
   if (step.category === 'odds') return evaluateOddsFactor(asFactor, bundle.props)
-  if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg, undefined, bundle.mmByWindow)
+  if (step.category === 'dugout_specs') return evaluateDugoutSpecsFactor(asFactor, bundle.props, bundle.fhrAvg, bundle.saAvg, undefined, bundle.mmByWindow, bundle.bkRkByWindow, bundle.ppRkByWindow)
   if (step.category === 'pitchlog_stat') return evaluatePitchlogFactorPrecomputed(asFactor, bundle.pitchlogWindows)
   if (step.category === 'savant_stat') return evaluateSavantFactor(asFactor, bundle.statcastWindows)
   return evaluatePicksFactor(asFactor, bundle.pikkitEntry, gameTotalPicksByMarket)

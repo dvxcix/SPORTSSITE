@@ -185,6 +185,12 @@ const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boole
   // field with a real recency selector, since it changes with whichever
   // Statcast window (Last 1/3/5/10) is behind the "Statcast rank" half.
   { key: 'mm', label: 'MM (Sportsbook Rank − Statcast Rank)', signed: true },
+  // The two raw ranks 'mm' above is the difference of — exposed separately
+  // so a Factor/Pipeline step can filter/rank on either alone (e.g. "top 4
+  // sportsbook favorites in the game," which the difference field can't
+  // express on its own). Same per-game-pool precompute, same 4 windows.
+  { key: 'bk_rk', label: 'Sportsbook Rank (Anytime HR, 1 = game favorite)' },
+  { key: 'pp_rk', label: 'Statcast Rank (Paper Score, 1 = best in game)' },
   // Real gap, reported live (2026-07-26): once a member filters down to
   // whoever's MM moved a certain way (via the 'mm_trend' operator above),
   // there was no way to then pick a WINNER among survivors by "whoever
@@ -263,9 +269,9 @@ const DELTA_DISPLAYED_FIELDS: Partial<Record<MatrixFactor['category'], string[]>
   savant_stat: ['sq', 'hardsw', 'blast', 'idlaa', 'timing', 'miss', 'pullair', 'fb'],
 }
 export function recencyOptionsFor(category: MatrixFactor['category'], field_key: string): string[] {
-  // MM has no "Season" concept of its own (see MmByWindow, matrixEngine.ts)
-  // — it's always one of the board's own 4 windows, never a delta either.
-  if (category === 'dugout_specs' && field_key === 'mm') return ['game', 'l3', 'l5', 'l10']
+  // MM/bk_rk/pp_rk have no "Season" concept of their own (see MmByWindow,
+  // matrixEngine.ts) — always one of the board's own 4 windows, never a delta.
+  if (category === 'dugout_specs' && (field_key === 'mm' || field_key === 'bk_rk' || field_key === 'pp_rk')) return ['game', 'l3', 'l5', 'l10']
   const base = ['game', 'l3', 'l5', 'l10', 'season']
   if (!DELTA_DISPLAYED_FIELDS[category]?.includes(field_key)) return base
   return [...base, 'game_delta', 'l3_delta', 'l5_delta', 'l10_delta']
@@ -503,7 +509,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
     || factor.operator === 'is_null' || factor.operator === 'is_not_null' || factor.operator === 'mm_trend'
   // 'mm_trend' spans all 4 windows itself (see MmTrendFields below) — the
   // plain recency picker is meaningless once that operator is selected.
-  const needsRecency = (factor.category === 'pitchlog_stat' || factor.category === 'savant_stat' || (factor.category === 'dugout_specs' && factor.field_key === 'mm'))
+  const needsRecency = (factor.category === 'pitchlog_stat' || factor.category === 'savant_stat' || (factor.category === 'dugout_specs' && ['mm', 'bk_rk', 'pp_rk'].includes(factor.field_key)))
     && factor.operator !== 'mm_trend'
   // Real gap, reported live (2026-07-27): 'positive'/'negative' was gated to
   // dugout_specs only, but a pitchlog_stat/savant_stat field on a '_delta'
@@ -823,7 +829,7 @@ function FactorListItem({ factor, onChange, onRemove }: { factor: MatrixFactor; 
 // Yes/No" is meaningless.
 function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onChange: (t: MatrixTiebreaker) => void; onRemove: () => void }) {
   const fields = fieldsForCategory(tb.category).filter(f => !f.boolean)
-  const needsRecency = tb.category === 'pitchlog_stat' || tb.category === 'savant_stat' || (tb.category === 'dugout_specs' && tb.field_key === 'mm')
+  const needsRecency = tb.category === 'pitchlog_stat' || tb.category === 'savant_stat' || (tb.category === 'dugout_specs' && ['mm', 'bk_rk', 'pp_rk'].includes(tb.field_key))
   const multiBook = tb.category === 'odds' ? MULTI_BOOK_FIELDS[tb.field_key] : null
 
   return (

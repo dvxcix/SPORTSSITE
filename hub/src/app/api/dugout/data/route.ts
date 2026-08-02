@@ -721,14 +721,16 @@ export async function GET(req: Request) {
   // both the app and DB level), so always fetching it for an eligible caller
   // is cheap.
   const userMatrices = isUltimate && admin && gate.userId ? await timed(reqId, 'userMatrices', fetchUserMatrices(admin, gate.userId)) : []
-  // dugout_specs' 'mm' field (the board's own ❓ column — see MmByWindow,
-  // matrixEngine.ts) is the one dugout_specs field that needs real extra
-  // per-game work (a whole-game pool rank, not a plain per-player lookup),
-  // so it's gated behind whether anyone actually saved a Factor/step on it
-  // — nobody else should pay for this.
+  // dugout_specs' 'mm'/'bk_rk'/'pp_rk' fields (the board's own ❓ column and
+  // its two raw rank ingredients — see MmByWindow, matrixEngine.ts) are the
+  // only dugout_specs fields that need real extra per-game work (a
+  // whole-game pool rank, not a plain per-player lookup), computed together
+  // by the same computeMmByWindowForGame pass — so this one gate covers all
+  // three and nobody else pays for it.
+  const MM_RANK_FIELDS = new Set(['mm', 'bk_rk', 'pp_rk'])
   const needsMm = userMatrices.some(m =>
-    m.factors.some(f => f.category === 'dugout_specs' && f.field_key === 'mm')
-    || m.pipeline_steps.some(s => s.category === 'dugout_specs' && s.field_key === 'mm'))
+    m.factors.some(f => f.category === 'dugout_specs' && MM_RANK_FIELDS.has(f.field_key))
+    || m.pipeline_steps.some(s => s.category === 'dugout_specs' && MM_RANK_FIELDS.has(s.field_key)))
 
   // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry only
   // id/name/position — no batSide at all. Every batter was silently falling
@@ -1282,6 +1284,8 @@ export async function GET(req: Request) {
     // once per game, threaded into both the classic-Factor evaluation
     // context below and each pipeline/tied-Factor FieldBundle further down.
     const mmByWindowByMlbId: Record<number, MmByWindow> = {}
+    const bkRkByWindowByMlbId: Record<number, MmByWindow> = {}
+    const ppRkByWindowByMlbId: Record<number, MmByWindow> = {}
     if (needsMm) {
       const effectiveBatsFor = (bats: string | null | undefined, pHand: 'L' | 'R'): 'L' | 'R' =>
         bats === 'S' ? (pHand === 'L' ? 'R' : 'L') : ((bats as 'L' | 'R') || 'R')
@@ -1305,7 +1309,10 @@ export async function GET(req: Request) {
           batterMatchupData: matchupEdgeByBatter[p.mlb_id] ?? null,
         })),
       ]
-      Object.assign(mmByWindowByMlbId, computeMmByWindowForGame(mmInputs, pitcherMap, matchupEdgeByPitcher))
+      const { mm, bkRk, ppRk } = computeMmByWindowForGame(mmInputs, pitcherMap, matchupEdgeByPitcher)
+      Object.assign(mmByWindowByMlbId, mm)
+      Object.assign(bkRkByWindowByMlbId, bkRk)
+      Object.assign(ppRkByWindowByMlbId, ppRk)
     }
 
     const tiedFactors = userMatrices.flatMap(m => m.factors.filter(f => f.operator === 'tied'))
@@ -1325,6 +1332,8 @@ export async function GET(req: Request) {
         statcastWindows: isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null,
         pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
         mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
+        bkRkByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
+        ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
       })
       const homeBundle = new Map(homeLineup.map(p => [p.name_norm, resolveBundle(p, homePHand)]))
       const awayBundle = new Map(awayLineup.map(p => [p.name_norm, resolveBundle(p, awayPHand)]))
@@ -1473,6 +1482,8 @@ export async function GET(req: Request) {
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
               isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
               mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
+              bkRkByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
+              ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
@@ -1490,6 +1501,8 @@ export async function GET(req: Request) {
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
               isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
               mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
+              bkRkByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
+              ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
         return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }

@@ -285,6 +285,11 @@ export type MatrixMatchContext = {
   // dugout_specs' 'mm' field only — see MmByWindow (matrixEngine.ts) for why
   // this one field needs a whole-game-pool rank the caller must precompute.
   mmByWindow?: MmByWindow | null
+  // dugout_specs' 'bk_rk'/'pp_rk' fields — same per-game-pool rank
+  // precompute as mmByWindow, just the two raw ranks 'mm' is the difference
+  // of, exposed separately so a Pipeline can filter/rank on either alone.
+  bkRkByWindow?: MmByWindow | null
+  ppRkByWindow?: MmByWindow | null
   // Backs the 'tied' operator — "is THIS player one of the final surviving
   // winners of THIS exact Factor's tie group?" (scope, book selection, and
   // any tiebreaker chain already fully resolved by the caller — see
@@ -333,7 +338,7 @@ export function evaluateBatterMatrices(
       ? (context.isPipelineMatrixWinner?.(matrix.id) ?? false)
       : evaluateMatrix(matrix, (factor: MatrixFactor) => {
           if (factor.category === 'odds') return evaluateOddsFactor(factor, props, context.isFactorTied)
-          if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied, context.mmByWindow)
+          if (factor.category === 'dugout_specs') return evaluateDugoutSpecsFactor(factor, props, context.fhrAvg, context.saAvg, context.isFactorTied, context.mmByWindow, context.bkRkByWindow, context.ppRkByWindow)
           // 'custom' recency (an arbitrary exact date range) is the only
           // pitchlog_stat case that can't be precomputed as a fixed bucket —
           // see evaluatePitchlogFactorPrecomputed's own comment. Everything

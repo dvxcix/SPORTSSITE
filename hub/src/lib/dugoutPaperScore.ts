@@ -194,21 +194,34 @@ export type MmPlayerInput = {
   batterMatchupData: MatchupEdgeData
 }
 
-// Computes MM for a WHOLE GAME's worth of players at once, for each of the
-// board's own 4 windows — the live board ranks 'paper'/bk_rk/pp_rk across
-// the entire game (both lineups combined, see DugoutClient.tsx's `pool`),
-// so a Matrix's "MM" must rank across that exact same pool to ever agree
-// with what a member sees in the live column. Returns null for pitcherId
-// == null (no opposing pitcher yet — a projected/incomplete lineup) since
-// computeMatchupEdgeScore needs a real pitch-mix row to say anything.
+// Computes MM (plus its own two raw ingredients, bk_rk/pp_rk) for a WHOLE
+// GAME's worth of players at once, for each of the board's own 4 windows —
+// the live board ranks 'paper'/bk_rk/pp_rk across the entire game (both
+// lineups combined, see DugoutClient.tsx's `pool`), so a Matrix built on
+// any of these three must rank across that exact same pool to ever agree
+// with what a member sees in the live column. bk_rk/pp_rk are exposed
+// alongside mm (not just mm itself) because a plain price/paper threshold
+// is "global" — the same number picks a different-sized slice of players
+// depending on how tightly THIS game's odds happen to be clustered — while
+// a rank is selective by construction (bk_rk<=4 is always exactly the 4
+// shortest prices in whichever game it's evaluated against, tight or wide
+// market). Returns null for pitcherId == null (no opposing pitcher yet — a
+// projected/incomplete lineup) since computeMatchupEdgeScore needs a real
+// pitch-mix row to say anything.
 export function computeMmByWindowForGame(
   players: MmPlayerInput[],
   pitcherMap: PitcherMap,
   matchupEdgeByPitcher: Record<number, MatchupEdgeData>,
-): Record<number, MmByWindow> {
+): { mm: Record<number, MmByWindow>; bkRk: Record<number, MmByWindow>; ppRk: Record<number, MmByWindow> } {
   const windows = ['l1', 'l3', 'l5', 'l10'] as const
-  const out: Record<number, MmByWindow> = {}
-  for (const p of players) out[p.mlbId] = { l1: null, l3: null, l5: null, l10: null }
+  const mm: Record<number, MmByWindow> = {}
+  const bkRk: Record<number, MmByWindow> = {}
+  const ppRk: Record<number, MmByWindow> = {}
+  for (const p of players) {
+    mm[p.mlbId] = { l1: null, l3: null, l5: null, l10: null }
+    bkRk[p.mlbId] = { l1: null, l3: null, l5: null, l10: null }
+    ppRk[p.mlbId] = { l1: null, l3: null, l5: null, l10: null }
+  }
 
   for (const w of windows) {
     const rows: (RankInputRow & { mlbId: number })[] = players.map(p => {
@@ -237,7 +250,11 @@ export function computeMmByWindowForGame(
     })
     computePaperScores(rows)
     computeMmRanks(rows)
-    for (const r of rows) out[r.mlbId][w] = r.mm ?? null
+    for (const r of rows) {
+      mm[r.mlbId][w] = r.mm ?? null
+      bkRk[r.mlbId][w] = r.bk_rk ?? null
+      ppRk[r.mlbId][w] = r.pp_rk ?? null
+    }
   }
-  return out
+  return { mm, bkRk, ppRk }
 }
