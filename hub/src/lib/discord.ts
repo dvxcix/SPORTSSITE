@@ -1,6 +1,7 @@
 import { createPublicKey, verify as cryptoVerify } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import type { DiscordConfig } from '@/lib/supabase/types'
 
 const API = 'https://discord.com/api/v10'
@@ -51,6 +52,27 @@ export async function postAlert(admin: SupabaseClient, alertKey: 'lineup_confirm
   const channelId = config.alert_channels?.[alertKey]
   if (!channelId) return
   await postToChannel(channelId, payload)
+}
+
+export const fmtAmericanOdds = (n: number) => (n > 0 ? `+${n}` : `${n}`)
+
+// Anytime HR odds across the four books Dugout itself shows for this market,
+// looked up from a BDL-shaped `{ name, sa: { fanduel, caesars, betmgm,
+// fanatics } }` map (built by lineup-confirmed's/hr-alerts' own
+// pregame_odds_snapshots read — same normName/resolveNameEntry join every
+// other cross-source player match in this codebase uses). Returns undefined
+// (not an empty string) when nothing's priced, so the caller can omit the
+// line entirely instead of showing a blank one.
+export function anytimeHrOddsLine(bdlByName: Record<string, any>, playerName: string): string | undefined {
+  const entry = resolveNameEntry(bdlByName, normName(playerName))
+  const sa = entry?.sa ?? {}
+  const parts = [
+    sa.fanduel != null ? `FD ${fmtAmericanOdds(sa.fanduel)}` : null,
+    sa.caesars != null ? `Caesars ${fmtAmericanOdds(sa.caesars)}` : null,
+    sa.betmgm != null ? `MGM ${fmtAmericanOdds(sa.betmgm)}` : null,
+    sa.fanatics != null ? `Fanatics ${fmtAmericanOdds(sa.fanatics)}` : null,
+  ].filter(Boolean)
+  return parts.length ? `Anytime HR: ${parts.join(' • ')}` : undefined
 }
 
 async function addRole(guildId: string, discordUserId: string, roleId: string): Promise<boolean> {

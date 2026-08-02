@@ -17,6 +17,18 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/hr-alerts",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/near-hr-alerts",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/slate-drop",
+      "schedule": "0 15 * * *"
+    },
+    {
       "path": "/api/cron/prune-notifications",
       "schedule": "0 8 * * *"
     },

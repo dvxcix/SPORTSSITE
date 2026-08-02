@@ -4,8 +4,8 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
-import { postAlert } from '@/lib/discord'
+import { normName } from '@slipsurge/core/nameNorm'
+import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
 import type { BDLPropMap } from '@/lib/balldontlie'
 
@@ -217,25 +217,6 @@ function describeLineupChange(prevSig: string, nextSig: string, nextLineup: Line
     if (inName) return `${inName} added to the lineup`
   }
   return null
-}
-
-const fmtAmericanOdds = (n: number) => (n > 0 ? `+${n}` : `${n}`)
-
-// Anytime HR (not First HR — that market genuinely doesn't exist yet at the
-// instant lineups confirm, see the snapshot-fetch comment above) across the
-// same four books Dugout itself shows for this market. Returns undefined
-// (not an empty string) when nothing's priced yet, so the embed just omits
-// the line entirely instead of showing a blank one.
-function anytimeHrOddsLine(bdlByName: Record<string, any>, playerName: string): string | undefined {
-  const entry = resolveNameEntry(bdlByName, normName(playerName))
-  const sa = entry?.sa ?? {}
-  const parts = [
-    sa.fanduel != null ? `FD ${fmtAmericanOdds(sa.fanduel)}` : null,
-    sa.caesars != null ? `Caesars ${fmtAmericanOdds(sa.caesars)}` : null,
-    sa.betmgm != null ? `MGM ${fmtAmericanOdds(sa.betmgm)}` : null,
-    sa.fanatics != null ? `Fanatics ${fmtAmericanOdds(sa.fanatics)}` : null,
-  ].filter(Boolean)
-  return parts.length ? `Anytime HR: ${parts.join(' • ')}` : undefined
 }
 
 async function broadcast(admin: Admin, recipientIds: string[], message: string, link: string, teamLogo: string | undefined): Promise<number> {
