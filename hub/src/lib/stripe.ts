@@ -11,4 +11,4 @@ export function getStripe(): Stripe {
   return _stripe
 }
 
-export const PLATFORM_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://hub-umber-seven.vercel.app'
+export const PLATFORM_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.slipsurge.com'
