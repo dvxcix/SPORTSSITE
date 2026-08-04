@@ -64,13 +64,14 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
       .single()
     // Only clear the input once the message actually saved — clearing it
     // unconditionally (the previous behavior) silently ate whatever was
-    // typed if the insert failed. A block (either direction) hits the
-    // messages RLS insert policy, which surfaces as a generic RLS-violation
-    // error — not distinguishable from any other insert failure by code
-    // alone, but this is the only thing that policy actually blocks besides
-    // impersonating another sender, which the UI can't trigger.
+    // typed if the insert failed. A block (either direction) AND being
+    // rate-limited both hit the same messages RLS insert policy and come
+    // back as the identical 42501 error — Postgres RLS gives no way to tell
+    // which WITH CHECK clause actually failed — so this deliberately stays
+    // generic rather than guessing wrong and telling a merely-rate-limited
+    // person they're blocked.
     if (err || !data) {
-      setError(err?.code === '42501' ? "Can't send — you or this member have blocked each other." : 'Message failed to send — please try again.')
+      setError(err?.code === '42501' ? "Couldn't send that message — try again in a moment." : 'Message failed to send — please try again.')
       setSending(false)
       return
     }

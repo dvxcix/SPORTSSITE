@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { fetchFeedPage, type FeedFilter } from '@/lib/feedQuery'
 import { FeedComposer } from '@/components/social/FeedComposer'
-import { PostCardClient } from '@/components/social/PostCardClient'
+import { FeedList } from '@/components/social/FeedList'
 import { StoriesBar } from '@/components/social/StoriesBar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
 import { SuggestedUsers } from '@/components/social/SuggestedUsers'
@@ -12,80 +13,20 @@ import { Zap, TrendingUp, Clock, Users } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
-
-// Reposts previously had zero effect on the feed — nothing here ever
-// queried the `reposts` table, so a repost only ever bumped a counter on
-// the original post and never appeared as its own timeline entry to
-// anyone. Reposts are now fetched alongside authored posts and merged in
-// (annotated with reposted_by/repost_created_at, same shape PostCardClient
-// already understands from the profile page), timeline-sorted by whichever
-// timestamp is relevant. "Following" was also fully non-functional — it had
-// no filter branch at all and silently fell through to showing everyone's
-// posts — now actually filters to people the viewer follows.
-async function getPosts(filter: string, userId: string | null | undefined, blockedIds: string[]) {
-  const supabase = await createClient()
-
-  let followedIds: string[] | null = null
-  if (filter === 'following') {
-    if (!userId) return []
-    const { data } = await supabase.from('follows').select('following_id').eq('follower_id', userId)
-    followedIds = (data ?? []).map((f: any) => f.following_id)
-    if (followedIds.length === 0) return []
-  }
-
-  // No .eq('visibility', 'public') — RLS already resolves exactly which
-  // posts this viewer can see (public from a non-private author, their own,
-  // or anyone they follow); an app-level public-only filter here would hide
-  // followers-only posts from the "following" tab's whole reason to exist.
-  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).limit(30)
-  if (filter === 'picks') postQuery = postQuery.in('post_type', ['pick', 'parlay'])
-  if (followedIds) postQuery = postQuery.in('author_id', followedIds)
-  postQuery = filter === 'top'
-    ? postQuery.order('reaction_count', { ascending: false })
-    : postQuery.order('created_at', { ascending: false })
-
-  let repostQuery = supabase
-    .from('reposts')
-    .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
-    .order('created_at', { ascending: false })
-    .limit(30)
-  if (followedIds) repostQuery = repostQuery.in('user_id', followedIds)
-
-  const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
-
-  let reposted = ((repostRows ?? []) as any[])
-    .filter(r => r.post)
-    .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
-  if (filter === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-
-  // App-level filter (RLS on posts doesn't know about blocks — see the
-  // blocks table's own RLS/policy notes) — excludes both directions so
-  // neither party sees the other's posts or reposts of them, regardless of
-  // who blocked whom.
-  const blockedSet = new Set(blockedIds)
-  const merged = [...(rawPosts ?? []), ...reposted].filter((p: any) =>
-    !blockedSet.has(p.author_id) && !blockedSet.has(p.reposted_by?.id))
-  if (filter === 'top') {
-    merged.sort((a: any, b: any) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0))
-  } else {
-    merged.sort((a: any, b: any) =>
-      new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
-  }
-  return merged.slice(0, 30)
-}
+const VALID_FILTERS: FeedFilter[] = ['latest', 'top', 'picks', 'following']
 
 export default async function FeedPage({
   searchParams,
 }: {
   searchParams: Promise<{ filter?: string }>
 }) {
-  const { filter = 'latest' } = await searchParams
+  const { filter: filterParam = 'latest' } = await searchParams
+  const filter: FeedFilter = VALID_FILTERS.includes(filterParam as FeedFilter) ? (filterParam as FeedFilter) : 'latest'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
-  const [rawPosts, storiesEnabled] = await Promise.all([
-    getPosts(filter, user?.id, blockedIds),
+  const [{ posts: rawPosts, nextCursor, hasMore }, storiesEnabled] = await Promise.all([
+    fetchFeedPage(supabase, { filter, userId: user?.id, blockedIds, pageSize: 20 }),
     isFeatureEnabledServer(FEATURE_FLAGS.stories),
   ])
   const posts = await attachUserReactions(rawPosts, user?.id)
@@ -172,14 +113,7 @@ export default async function FeedPage({
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {posts.map((post, i) => (
-              // A post can appear more than once (the original + someone's
-              // repost of it, or several people's reposts of it) — key on
-              // the repost identity too so React doesn't collide them.
-              <PostCardClient key={post.reposted_by ? `repost-${post.id}-${post.reposted_by.username}` : post.id} post={post} index={i} />
-            ))}
-          </div>
+          <FeedList filter={filter} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} />
         )}
       </div>
 

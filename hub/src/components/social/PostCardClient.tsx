@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useId, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,7 @@ import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
 import { BlockUserButton } from './BlockUserButton'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { usePostLiveUpdates } from '@/context/PostLiveContext'
 import { ShareImageModal } from './ShareImageModal'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
@@ -138,15 +139,6 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     (initialPost.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
   )
   const supabase = createClient()
-  // The Supabase client caches/reuses a RealtimeChannel by its topic string
-  // — two components subscribing with the SAME name collide (the second
-  // .on() call throws "cannot add postgres_changes callbacks... after
-  // subscribe()", crashing the page). The same post can now render more
-  // than once on a page since reposts were merged into feeds/profiles
-  // (original + one repost entry per reposter), so a channel keyed only on
-  // post id was no longer safe — this instance id makes it unique per
-  // mounted card regardless of how many times the same post appears.
-  const instanceId = useId()
 
   // Live-graded pick_data — the grade-live-picks cron flips a leg to
   // win/loss the moment its stat threshold is crossed, mid-game, not just
@@ -170,21 +162,16 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // same as every mainstream social app (X included).
   const canEditPost = isOwnPost && Date.now() - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`post-live:${initialPost.id}:${instanceId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${initialPost.id}` },
-        (payload: any) => {
-          if (payload.new?.pick_data) setPickData(payload.new.pick_data)
-          if (payload.new?.reaction_summary) setReactionSummary(payload.new.reaction_summary)
-          if (typeof payload.new?.repost_count === 'number') setRepostCount(payload.new.repost_count)
-          if (typeof payload.new?.comment_count === 'number') setCommentCount(payload.new.comment_count)
-          if (typeof payload.new?.bookmark_count === 'number') setBookmarkCount(payload.new.bookmark_count)
-        })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPost.id])
+  // Fans out from the single shared channel PostLiveProvider owns (mounted
+  // once in the root layout) instead of opening a connection per rendered
+  // card — see PostLiveContext.tsx for why.
+  usePostLiveUpdates(initialPost.id, (payload: any) => {
+    if (payload.new?.pick_data) setPickData(payload.new.pick_data)
+    if (payload.new?.reaction_summary) setReactionSummary(payload.new.reaction_summary)
+    if (typeof payload.new?.repost_count === 'number') setRepostCount(payload.new.repost_count)
+    if (typeof payload.new?.comment_count === 'number') setCommentCount(payload.new.comment_count)
+    if (typeof payload.new?.bookmark_count === 'number') setBookmarkCount(payload.new.bookmark_count)
+  })
 
   // Mouse-following spotlight glow on hover (adapted from Aceternity's
   // CardSpotlight technique — same mask-follows-cursor idea, without its

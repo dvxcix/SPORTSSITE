@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
+import { PostLiveProvider } from '@/context/PostLiveContext'
 import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
 import { SiteBanner } from '@/components/layout/SiteBanner'
 import { ChangelogPopup } from '@/components/layout/ChangelogPopup'
@@ -34,9 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteBanner />
         <ChangelogPopup />
         <AuthProvider>
-          <RootLayoutShell>
-            {children}
-          </RootLayoutShell>
+          <PostLiveProvider>
+            <RootLayoutShell>
+              {children}
+            </RootLayoutShell>
+          </PostLiveProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
