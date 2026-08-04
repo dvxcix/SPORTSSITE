@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DMRoom } from '@/components/chat/DMRoom'
+import { isBlockedEitherWay } from '@/lib/blocks'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,16 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     .single()
 
   if (!partner) redirect('/messages')
+
+  if (await isBlockedEitherWay(supabase, user.id, partner.id)) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-24 px-4">
+        <p className="text-4xl mb-3">🚫</p>
+        <p className="text-white font-bold">You can't message this person</p>
+        <p className="text-zinc-500 text-sm mt-1">You or @{partner.username} have blocked each other.</p>
+      </div>
+    )
+  }
 
   const { data: history } = await supabase
     .from('messages')

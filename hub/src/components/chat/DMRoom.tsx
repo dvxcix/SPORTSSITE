@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, Send } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
+import { BlockUserButton } from '@/components/social/BlockUserButton'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
@@ -17,6 +18,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   const [messages, setMessages] = useState(initialMessages)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const textInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -54,15 +56,24 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   async function send() {
     if (!text.trim() || sending) return
     setSending(true)
+    setError('')
     const content = text.trim()
-    const { data, error } = await supabase.from('messages')
+    const { data, error: err } = await supabase.from('messages')
       .insert({ sender_id: currentUserId, dm_recipient_id: partner.id, content, message_type: 'text' })
       .select('id, content, created_at, sender_id')
       .single()
     // Only clear the input once the message actually saved — clearing it
     // unconditionally (the previous behavior) silently ate whatever was
-    // typed if the insert failed.
-    if (error || !data) { setSending(false); return }
+    // typed if the insert failed. A block (either direction) hits the
+    // messages RLS insert policy, which surfaces as a generic RLS-violation
+    // error — not distinguishable from any other insert failure by code
+    // alone, but this is the only thing that policy actually blocks besides
+    // impersonating another sender, which the UI can't trigger.
+    if (err || !data) {
+      setError(err?.code === '42501' ? "Can't send — you or this member have blocked each other." : 'Message failed to send — please try again.')
+      setSending(false)
+      return
+    }
     setText('')
     setMessages(m => [...m, { ...data, sender: null }])
     // "Direct messages" has had a notification toggle in Settings since
@@ -85,16 +96,24 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
         <Link href="/messages" className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors">
           <ArrowLeft size={18} />
         </Link>
-        <Link href={`/profile/${partner.username}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-sm font-black text-white">
+        <Link href={`/profile/${partner.username}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-sm font-black text-white shrink-0">
             {partner.avatar_url ? <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" /> : (partner.display_name || partner.username)[0].toUpperCase()}
           </div>
-          <div>
-            <p className="font-bold text-white text-sm">{partner.display_name || partner.username}</p>
-            <p className="text-xs text-zinc-500">@{partner.username}</p>
+          <div className="min-w-0">
+            <p className="font-bold text-white text-sm truncate">{partner.display_name || partner.username}</p>
+            <p className="text-xs text-zinc-500 truncate">@{partner.username}</p>
           </div>
         </Link>
+        <BlockUserButton
+          currentUserId={currentUserId}
+          targetUserId={partner.id}
+          targetUsername={partner.username}
+          initialBlocked={false}
+          variant="button"
+        />
       </div>
+      {error && <p className="text-xs text-red-400 px-4 pt-2">{error}</p>}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">

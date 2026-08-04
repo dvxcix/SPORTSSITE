@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, MessageCircleQuestion } from 'lucide-react'
+import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, MessageCircleQuestion, UserX } from 'lucide-react'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -23,6 +23,7 @@ export default async function SettingsPage() {
       items: [
         { href: '/settings/notifications', icon: Bell, label: 'Notifications', desc: 'Push, email, in-app alerts' },
         { href: '/settings/privacy', icon: Eye, label: 'Privacy', desc: 'Who can see your posts and profile' },
+        { href: '/settings/blocked', icon: UserX, label: 'Blocked Users', desc: 'Manage who you\'ve blocked' },
       ]
     },
     {

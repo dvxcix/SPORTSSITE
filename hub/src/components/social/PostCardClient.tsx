@@ -11,6 +11,8 @@ import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, F
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
+import { BlockUserButton } from './BlockUserButton'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { ShareImageModal } from './ShareImageModal'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
@@ -122,6 +124,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [commentText, setCommentText] = useState('')
   const commentInputRef = useRef<HTMLInputElement>(null)
   const [loadedComments, setLoadedComments] = useState(false)
+  // Comments only load on-demand (click-to-expand, or immediately in
+  // `detail` mode) — fetching this once per actual load, cached in a ref, is
+  // cheap in a way a per-card fetch on every feed render wouldn't be.
+  const blockedIdsRef = useRef<string[] | null>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
@@ -333,6 +339,9 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // there's no separate "load replies" affordance; comment volume per post
   // is small enough that this is cheap.
   async function loadCommentTree() {
+    if (user && blockedIdsRef.current === null) {
+      blockedIdsRef.current = await getBlockedEitherWayIds(supabase, user.id)
+    }
     const [{ data: rows }, { data: myLikes }] = await Promise.all([
       supabase
         .from('comments')
@@ -343,8 +352,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         ? supabase.from('reactions').select('target_id').eq('target_type', 'comment').eq('user_id', user.id)
         : Promise.resolve({ data: [] as any[] }),
     ])
+    const blockedSet = new Set(blockedIdsRef.current ?? [])
+    const visibleRows = (rows ?? []).filter((r: any) => !blockedSet.has(r.author_id))
     const likedIds = new Set((myLikes ?? []).map((r: any) => r.target_id))
-    setCommentTree(buildCommentTree(rows ?? [], likedIds))
+    setCommentTree(buildCommentTree(visibleRows, likedIds))
     setLoadedComments(true)
     setShowComments(true)
   }
@@ -624,6 +635,15 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                           className="ss-dropdown-item danger" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Flag size={12} /> Report post
                         </button>
+                      )}
+                      {!isOwnPost && user && post.author.id && (
+                        <BlockUserButton
+                          currentUserId={user.id}
+                          targetUserId={post.author.id}
+                          targetUsername={post.author.username}
+                          initialBlocked={false}
+                          onDone={() => setShowMenu(false)}
+                        />
                       )}
                       <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
                         className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1102,7 +1122,18 @@ function CommentItem({
                   <button onClick={() => onDelete(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
                 </>
               ) : currentUserId && (
-                <button onClick={() => onReport(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
+                <>
+                  <button onClick={() => onReport(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
+                  {node.author_id && node.author?.username && (
+                    <BlockUserButton
+                      currentUserId={currentUserId}
+                      targetUserId={node.author_id}
+                      targetUsername={node.author.username}
+                      initialBlocked={false}
+                      variant="text"
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>

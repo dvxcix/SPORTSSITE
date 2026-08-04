@@ -13,6 +13,7 @@ import { useCustomEmojis } from '@/lib/emoji'
 import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { Badge } from '@/components/ui/badge'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
@@ -24,7 +25,7 @@ const NOTIF_ICONS: Record<string, any> = {
 
 type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
-  link: string | null; read: boolean; created_at: string
+  link: string | null; read: boolean; created_at: string; actor_id?: string | null
   actor?: { username: string; display_name?: string; avatar_url?: string } | null
   data?: { avatar_url?: string; emoji?: string; team_logo?: string } | null
 }
@@ -52,6 +53,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const supabase = createClient()
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
+  // Read via the ref in both the notification-bell fetch and the quick-
+  // search results below so neither needs to refetch or add this to a
+  // dependency array — same pattern as SearchClient.tsx's own copy.
+  const blockedIdsRef = useRef<string[]>([])
 
   // Live type-ahead preview — same data sources /search itself uses
   // (users/posts by ilike, MLB players/teams via the shared route), just
@@ -70,7 +75,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     let cancelled = false
     setQuickLoading(true)
     const t = setTimeout(async () => {
-      const postCols = 'id, content, pick_data, author:users!posts_author_id_fkey(username, display_name)'
+      const postCols = 'id, content, pick_data, author_id, author:users!posts_author_id_fkey(username, display_name)'
       const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData] = await Promise.all([
         supabase.from('users')
           .select('id, username, display_name, avatar_url')
@@ -100,11 +105,13 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       const q = query.toLowerCase()
       const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
       const seen = new Set<string>()
+      const blockedSet = new Set(blockedIdsRef.current)
       const p = [...(byContent ?? []), ...byPickData]
         .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
+        .filter((post: any) => !blockedSet.has(post.author_id))
         .slice(0, 3)
       setQuickResults({
-        users: u ?? [], posts: p,
+        users: (u ?? []).filter((r: any) => !blockedSet.has(r.id)), posts: p,
         players: (sportsData.players ?? []).slice(0, 3),
         teams: (sportsData.teams ?? []).slice(0, 2),
         nflPlayers: (nflData.players ?? []).slice(0, 3),
@@ -133,16 +140,22 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('notifications').select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id).eq('read', false)
-      .then(({ count }) => setUnread(count ?? 0))
+    getBlockedEitherWayIds(supabase, user.id).then(ids => {
+      blockedIdsRef.current = ids
+      let countQuery = supabase.from('notifications').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('read', false)
+      if (ids.length) countQuery = countQuery.not('actor_id', 'in', `(${ids.join(',')})`)
+      countQuery.then(({ count }) => setUnread(count ?? 0))
+    })
 
     // Live badge — bump the count the instant a new notification lands,
-    // without the user needing to reload anything.
+    // without the user needing to reload anything. A blocked actor's
+    // notification will still insert (blocking doesn't stop the underlying
+    // action, e.g. a like), so it's filtered against the same ref here too.
     const channel = supabase
       .channel(`notifications:${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => setUnread(c => c + 1))
+        (payload: any) => { if (!blockedIdsRef.current.includes(payload.new?.actor_id)) setUnread(c => c + 1) })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user])
@@ -160,11 +173,12 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     if (opening && user) {
       const { data } = await supabase
         .from('notifications')
-        .select('id, type, message, body, link, read, created_at, data, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
+        .select('id, type, message, body, link, read, created_at, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
-      setNotifications((data as any) ?? [])
+      const blockedSet = new Set(blockedIdsRef.current)
+      setNotifications(((data as any) ?? []).filter((n: NotifRow) => !n.actor_id || !blockedSet.has(n.actor_id)))
     }
     if (opening && unread > 0 && user) {
       const prevUnread = unread

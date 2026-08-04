@@ -1,9 +1,11 @@
 import { getUserProfile, getUserPosts, attachUserReactions } from '@/lib/queries'
 import { createClient } from '@/lib/supabase/server'
+import { isBlockedEitherWay } from '@/lib/blocks'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { FollowButton } from '@/components/social/FollowButton'
+import { BlockUserButton } from '@/components/social/BlockUserButton'
 import { ProfileStats } from '@/components/profile/ProfileStats'
 import { UserBadges } from '@/components/social/UserBadges'
 import { AchievementsSection } from '@/components/profile/AchievementsSection'
@@ -62,9 +64,27 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
-  const [posts, { data: { user: authUser } }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const isOwnProfile = authUser?.id === profile.id
+
+  // Checked before any of the heavier posts/achievements/social-platform
+  // fetches below — a block (either direction) means neither party should
+  // see anything of the other's profile at all, not just posts, matching
+  // every mainstream app's "account unavailable" treatment rather than the
+  // private-account behavior (which still shows avatar/bio/follower counts).
+  const isBlocked = !isOwnProfile && !!authUser && await isBlockedEitherWay(supabase, authUser.id, profile.id)
+  if (isBlocked) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-24 px-4">
+        <p className="text-4xl mb-3">🚫</p>
+        <p className="text-white font-bold">This profile isn't available</p>
+        <p className="text-zinc-500 text-sm mt-1">You or @{profile.username} have blocked each other.</p>
+      </div>
+    )
+  }
+
+  const [posts, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
     getUserPosts(profile.id),
-    supabase.auth.getUser(),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     supabase.from('user_badges')
@@ -93,8 +113,6 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       return { ...p, handle: manualHandle, href, isVerified: false }
     })
     .filter(Boolean)
-
-  const isOwnProfile = authUser?.id === profile.id
 
   // Check follow status
   let isFollowing = false
@@ -169,11 +187,20 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               Edit Profile
             </a>
           ) : authUser ? (
-            <FollowButton
-              currentUserId={authUser.id}
-              targetUserId={profile.id}
-              initialFollowing={isFollowing}
-            />
+            <div className="flex items-center gap-2">
+              <FollowButton
+                currentUserId={authUser.id}
+                targetUserId={profile.id}
+                initialFollowing={isFollowing}
+              />
+              <BlockUserButton
+                currentUserId={authUser.id}
+                targetUserId={profile.id}
+                targetUsername={profile.username}
+                initialBlocked={false}
+                variant="button"
+              />
+            </div>
           ) : (
             <a href="/auth/login"
               className="inline-flex items-center h-9 px-4 text-sm rounded-xl bg-green-500 hover:bg-green-400 text-black font-black transition-colors">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -11,6 +11,7 @@ import { UserBadges } from '@/components/social/UserBadges'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb' | 'nfl'
 
@@ -39,12 +40,23 @@ export function SearchClient() {
   const [nflTeams, setNflTeams] = useState<NflTeamResult[]>([])
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
+  // Fetched once on mount rather than inside doSearch (which fires on every
+  // debounced keystroke) — read via the ref so the memoized callback always
+  // sees the latest value without needing blockedIds in its dependency array.
+  const blockedIdsRef = useRef<string[]>([])
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      getBlockedEitherWayIds(supabase, user.id).then(ids => { blockedIdsRef.current = ids })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const doSearch = useCallback(async (query: string) => {
     if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); return }
     setLoading(true)
 
-    const postCols = 'id, content, post_type, pick_data, sport, created_at, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
+    const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url)'
     const [{ data: u }, { data: byContent }, { data: recentPicks }, sportsData, nflData] = await Promise.all([
       supabase.from('users')
         .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
@@ -81,12 +93,14 @@ export function SearchClient() {
     const q = query.toLowerCase()
     const byPickData = (recentPicks ?? []).filter((post: any) => JSON.stringify(post.pick_data ?? {}).toLowerCase().includes(q))
     const seen = new Set<string>()
+    const blockedSet = new Set(blockedIdsRef.current)
     const p = [...(byContent ?? []), ...byPickData]
       .filter(post => (seen.has(post.id) ? false : (seen.add(post.id), true)))
+      .filter((post: any) => !blockedSet.has(post.author?.id) && !blockedSet.has(post.author_id))
       .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
       .slice(0, 15)
 
-    setUsers(u ?? [])
+    setUsers((u ?? []).filter((r: any) => !blockedSet.has(r.id)))
     setPosts(p)
     setPlayers(sportsData.players ?? [])
     setTeams(sportsData.teams ?? [])

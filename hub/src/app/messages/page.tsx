@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { MessageCircle, Search, Plus } from 'lucide-react'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,8 @@ export default async function MessagesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/messages')
+
+  const blockedIds = new Set(await getBlockedEitherWayIds(supabase, user.id))
 
   // Get DM threads (distinct conversations)
   const { data: threads } = await supabase
@@ -29,7 +32,7 @@ export default async function MessagesPage() {
   for (const m of threads ?? []) {
     const partner = (m.sender as any)?.id === user.id ? m.recipient : m.sender
     const pid = (partner as any)?.id
-    if (pid && !seen.has(pid)) {
+    if (pid && !seen.has(pid) && !blockedIds.has(pid)) {
       seen.add(pid)
       convos.push({ ...m, partner })
     }

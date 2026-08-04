@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { StoriesBar } from '@/components/social/StoriesBar'
@@ -22,7 +23,7 @@ const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, dis
 // timestamp is relevant. "Following" was also fully non-functional — it had
 // no filter branch at all and silently fell through to showing everyone's
 // posts — now actually filters to people the viewer follows.
-async function getPosts(filter: string, userId: string | null | undefined) {
+async function getPosts(filter: string, userId: string | null | undefined, blockedIds: string[]) {
   const supabase = await createClient()
 
   let followedIds: string[] | null = null
@@ -46,7 +47,7 @@ async function getPosts(filter: string, userId: string | null | undefined) {
 
   let repostQuery = supabase
     .from('reposts')
-    .select(`created_at, reposted_by:users!reposts_user_id_fkey(username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
+    .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
     .order('created_at', { ascending: false })
     .limit(30)
   if (followedIds) repostQuery = repostQuery.in('user_id', followedIds)
@@ -58,7 +59,13 @@ async function getPosts(filter: string, userId: string | null | undefined) {
     .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
   if (filter === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
 
-  const merged = [...(rawPosts ?? []), ...reposted]
+  // App-level filter (RLS on posts doesn't know about blocks — see the
+  // blocks table's own RLS/policy notes) — excludes both directions so
+  // neither party sees the other's posts or reposts of them, regardless of
+  // who blocked whom.
+  const blockedSet = new Set(blockedIds)
+  const merged = [...(rawPosts ?? []), ...reposted].filter((p: any) =>
+    !blockedSet.has(p.author_id) && !blockedSet.has(p.reposted_by?.id))
   if (filter === 'top') {
     merged.sort((a: any, b: any) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0))
   } else {
@@ -76,8 +83,9 @@ export default async function FeedPage({
   const { filter = 'latest' } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
   const [rawPosts, storiesEnabled] = await Promise.all([
-    getPosts(filter, user?.id),
+    getPosts(filter, user?.id, blockedIds),
     isFeatureEnabledServer(FEATURE_FLAGS.stories),
   ])
   const posts = await attachUserReactions(rawPosts, user?.id)
@@ -90,7 +98,7 @@ export default async function FeedPage({
   let suggested: any[] = []
   if (posts.length === 0 && user) {
     const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', user.id)
-    const exclude = [...(following ?? []).map((f: any) => f.following_id), user.id]
+    const exclude = [...(following ?? []).map((f: any) => f.following_id), user.id, ...blockedIds]
     const { data } = await supabase
       .from('users')
       .select('id, username, display_name, avatar_url, is_verified, account_type')
