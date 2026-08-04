@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserRow } from '@/components/admin/AdminUserRow'
+import { TerminateMembershipTool } from '@/components/admin/TerminateMembershipTool'
 import { Search } from 'lucide-react'
 import { effectiveTier, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
@@ -57,6 +58,8 @@ export default async function AdminUsersPage({
         <h1 className="text-xl font-black text-white">Manage Users</h1>
         <span className="text-sm text-zinc-500">{users.length} results</span>
       </div>
+
+      <TerminateMembershipTool />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">

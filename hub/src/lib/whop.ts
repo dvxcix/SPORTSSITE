@@ -179,13 +179,19 @@ async function isTrialingMembership(membershipId: string, apiKey: string): Promi
   }
 }
 
-export async function cancelWhopMembership(membershipId: string, apiKey: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+// opts.forceImmediate is for an admin explicitly terminating a membership
+// right now (e.g. a ToS violation or chargeback) — skips the trial check
+// above entirely and always sends 'immediate', unlike the member-initiated
+// /api/whop/cancel-membership flow below it, which should keep honoring an
+// already-paid-for period except in the trial case this function already
+// special-cases.
+export async function cancelWhopMembership(membershipId: string, apiKey: string, opts?: { forceImmediate?: boolean }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   try {
-    const isTrial = await isTrialingMembership(membershipId, apiKey)
+    const immediate = opts?.forceImmediate || await isTrialingMembership(membershipId, apiKey)
     const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}/cancel`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: isTrial ? JSON.stringify({ cancellation_mode: 'immediate' }) : undefined,
+      body: immediate ? JSON.stringify({ cancellation_mode: 'immediate' }) : undefined,
     })
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
