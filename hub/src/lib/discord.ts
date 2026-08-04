@@ -162,6 +162,14 @@ export async function syncDiscordRoleForUser(admin: SupabaseClient, userId: stri
   }
 }
 
+function extractDiscordIdentity(identity: any): { discordId: string; discordUsername: string | null } | null {
+  const idData = identity?.identity_data as any
+  const discordId = idData?.provider_id || idData?.sub
+  if (!discordId) return null
+  const discordUsername = idData?.custom_claims?.global_name || idData?.full_name || idData?.name || idData?.preferred_username || null
+  return { discordId, discordUsername }
+}
+
 // Supabase's linkIdentity()/OAuth sign-in never surfaces the provider's raw
 // ID to the client on its own — it's buried in identity_data on the *auth*
 // user record. The admin API's getUserById DOES return identities (with
@@ -174,17 +182,67 @@ export async function syncDiscordIdentity(admin: SupabaseClient, userId: string)
     if (error || !data?.user) return
     const identity = data.user.identities?.find((i: any) => i.provider === 'discord')
     if (!identity) return
-    const idData = identity.identity_data as any
-    const discordId = idData?.provider_id || idData?.sub
-    if (!discordId) {
-      console.error('[discord] syncDiscordIdentity: linked but no provider_id/sub found', userId, Object.keys(idData || {}))
+    const extracted = extractDiscordIdentity(identity)
+    if (!extracted) {
+      console.error('[discord] syncDiscordIdentity: linked but no provider_id/sub found', userId, Object.keys(identity.identity_data || {}))
       return
     }
-    const discordUsername = idData?.custom_claims?.global_name || idData?.full_name || idData?.name || idData?.preferred_username || null
-    await admin.from('users').update({ discord_id: discordId, discord_username: discordUsername }).eq('id', userId)
+    await admin.from('users').update({ discord_id: extracted.discordId, discord_username: extracted.discordUsername }).eq('id', userId)
   } catch (e) {
     console.error('[discord] syncDiscordIdentity error', userId, e)
   }
+}
+
+// The ground truth for "who has Discord linked" is Supabase Auth's own
+// identities, not users.discord_id — that column is only ever written by
+// syncDiscordIdentity above, which only ever ran going forward from a fresh
+// link/login. Anyone who linked Discord before that capture existed has a
+// real identity but a never-backfilled column, and silently fell out of
+// every discord_id-filtered query — including this same bulk sync, before
+// this function replaced its old "just filter users.discord_id" approach
+// (confirmed via direct DB check: 1104 of 1244 real linked accounts had a
+// live Discord identity but a null discord_id, so the old "Sync All Member
+// Roles" button had only ever actually covered ~11% of linked members).
+// listUsers() already returns each user's identities inline, so this never
+// needs a second getUserById round-trip the way syncDiscordIdentity does.
+export async function backfillDiscordIdentitiesAndListLinkedUserIds(admin: SupabaseClient): Promise<string[]> {
+  const existingIds = new Set<string>()
+  {
+    const PAGE = 1000
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await admin.from('users').select('id').range(offset, offset + PAGE - 1)
+      if (!data?.length) break
+      for (const r of data) existingIds.add(r.id as string)
+      if (data.length < PAGE) break
+    }
+  }
+
+  const rows: { id: string; discord_id: string; discord_username: string | null }[] = []
+  const PER_PAGE = 1000
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: PER_PAGE })
+    if (error || !data?.users?.length) break
+    for (const u of data.users) {
+      // Guards against an auth user with no matching users row (an
+      // incomplete signup) — upserting one here would need every NOT NULL
+      // column this route has no business inventing values for.
+      if (!existingIds.has(u.id)) continue
+      const identity = (u.identities || []).find((i: any) => i.provider === 'discord')
+      if (!identity) continue
+      const extracted = extractDiscordIdentity(identity)
+      if (extracted) rows.push({ id: u.id, discord_id: extracted.discordId, discord_username: extracted.discordUsername })
+    }
+    if (data.users.length < PER_PAGE) break
+  }
+
+  // Upsert only ever SETs discord_id/discord_username on a conflicting row —
+  // every one of these ids is already confirmed to exist in `users`, so this
+  // always takes the UPDATE path and never touches any other column.
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    await admin.from('users').upsert(rows.slice(i, i + CHUNK), { onConflict: 'id' })
+  }
+  return rows.map(r => r.id)
 }
 
 // Every Interaction POST from Discord (slash commands, buttons, etc.) is

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { syncDiscordRoleForUser } from '@/lib/discord'
+import { backfillDiscordIdentitiesAndListLinkedUserIds, syncDiscordRoleForUser } from '@/lib/discord'
 import { asyncPool } from '@/lib/matrixMatch'
 
 export const maxDuration = 300
@@ -27,14 +27,7 @@ export async function POST() {
   if (error) return error
 
   const admin = createAdminClient()
-  const userIds: string[] = []
-  const PAGE = 1000
-  for (let offset = 0; ; offset += PAGE) {
-    const { data } = await admin.from('users').select('id').not('discord_id', 'is', null).range(offset, offset + PAGE - 1)
-    if (!data?.length) break
-    userIds.push(...data.map(r => r.id))
-    if (data.length < PAGE) break
-  }
+  const userIds = await backfillDiscordIdentitiesAndListLinkedUserIds(admin)
 
   // Serialized on purpose (confirmed via runtime logs: concurrency of 5 here
   // meant 5 users firing up to 4 sequential role calls each at once, well
