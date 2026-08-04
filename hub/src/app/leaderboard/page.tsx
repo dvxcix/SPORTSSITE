@@ -1,8 +1,19 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { LeaderboardClient } from './LeaderboardClient'
 import { TierGate } from '@/components/layout/TierGate'
 
-export const revalidate = 120
+// The page itself is NOT statically cached anymore — every request needs
+// the real signed-in viewer to filter blocked users out of a shared
+// ranking, and that can't happen behind a page-level ISR cache shared by
+// every viewer. The expensive part (querying + ranking every user) still
+// gets its own cache below via unstable_cache, at the same 120s interval
+// this page used to revalidate at as a whole — so this loses none of the
+// original performance, it just moves the cache boundary to exclude the
+// one genuinely per-viewer step.
+export const revalidate = 0
 
 // Standard Wilson score interval lower bound (95% confidence) — ranks by
 // win rate while accounting for sample size, without letting a bad big
@@ -18,8 +29,16 @@ function wilsonLowerBound(wins: number, total: number): number {
   return (phat + z2 / (2 * total) - z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total)) / (1 + z2 / total)
 }
 
-export default async function LeaderboardPage() {
-  const supabase = await createClient()
+// The shared, expensive part — every user's picks re-aggregated and
+// re-ranked — cached across all viewers at the same 120s interval this
+// whole page used to revalidate at. Uses the admin client (service role,
+// no cookies) rather than the per-request cookie-bound one specifically so
+// this can be safely wrapped in unstable_cache: RLS never restricted this
+// query to begin with (it ran with zero auth context even before this
+// refactor), so bypassing it here changes nothing about what data is
+// exposed, only which client is safe to call inside a cache scope.
+async function fetchRankedLeaderboard() {
+  const admin = createAdminClient()
 
   // Private accounts never appear here — this is a public ranking with no
   // per-viewer follow check (unlike the profile page, which can show a
@@ -28,13 +47,13 @@ export default async function LeaderboardPage() {
   // in JS rather than `.eq('is_private', false)` — is_private predates a
   // default and can be NULL on older rows, which Postgres's `= false` would
   // wrongly exclude.
-  const { data: rawUsers } = await supabase
+  const { data: rawUsers } = await admin
     .from('users')
     .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record, is_private')
     .limit(200)
   const users = (rawUsers ?? []).filter(u => !u.is_private).slice(0, 100)
 
-  const { data: pickStats } = await supabase
+  const { data: pickStats } = await admin
     .from('posts')
     .select('author_id, sport, pick_data, created_at')
     .in('post_type', ['pick', 'parlay'])
@@ -123,9 +142,21 @@ export default async function LeaderboardPage() {
 
   const allSports = Array.from(new Set((pickStats ?? []).map(p => p.sport).filter(Boolean))) as string[]
 
+  return { ranked, allSports }
+}
+
+const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboard'], { revalidate: 120 })
+
+export default async function LeaderboardPage() {
+  const [{ ranked, allSports }, supabase] = await Promise.all([getCachedLeaderboard(), createClient()])
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const blockedIds = user ? new Set(await getBlockedEitherWayIds(supabase, user.id)) : null
+  const users = blockedIds ? ranked.filter(u => !blockedIds.has(u.id)) : ranked
+
   return (
     <TierGate requiredTier="basic" label="Leaderboard">
-      <LeaderboardClient users={ranked} allSports={allSports} />
+      <LeaderboardClient users={users} allSports={allSports} />
     </TierGate>
   )
 }
