@@ -96,3 +96,70 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
 
   return { posts, nextCursor, hasMore }
 }
+
+export type ProfileTab = 'all' | 'picks' | 'reposts'
+
+// Profile pages had the identical no-pagination gap as the feed — getUserPosts
+// fetched two flat .limit(20) queries (authored + this user's own reposts),
+// merged, sliced to 20, with the "Picks"/"Reposts" tabs then filtered out of
+// that same fixed page in JS. Same keyset-cursor approach as fetchFeedPage
+// above, scoped to one author instead of a following graph, plus a
+// reposts-only mode the feed doesn't need (the feed already merges reposts
+// from everyone the viewer follows; a profile's Reposts tab means "things
+// THIS person reposted," a query reposts.user_id already answers directly).
+export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
+  userId: string
+  tab: ProfileTab
+  cursor?: string | null
+  pageSize?: number
+}): Promise<FeedPageResult> {
+  const { userId, tab, cursor, pageSize = 20 } = opts
+
+  if (tab === 'reposts') {
+    let repostQuery = supabase.from('reposts')
+      .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(pageSize)
+    if (cursor) repostQuery = repostQuery.lt('created_at', cursor)
+    const { data } = await repostQuery
+    const posts = ((data ?? []) as any[]).filter(r => r.post).map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
+    const hasMore = (data?.length ?? 0) === pageSize
+    const last = posts[posts.length - 1]
+    return { posts, nextCursor: hasMore ? (last?.repost_created_at ?? null) : null, hasMore }
+  }
+
+  let postQuery = supabase.from('posts').select(POST_WITH_AUTHOR).eq('author_id', userId).order('created_at', { ascending: false }).limit(pageSize)
+  if (tab === 'picks') postQuery = postQuery.in('post_type', ['pick', 'parlay'])
+  if (cursor) postQuery = postQuery.lt('created_at', cursor)
+
+  let repostQuery = supabase.from('reposts')
+    .select(`created_at, reposted_by:users!reposts_user_id_fkey(id, username, display_name, avatar_url), post:posts(${POST_WITH_AUTHOR})`)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(pageSize)
+  if (cursor) repostQuery = repostQuery.lt('created_at', cursor)
+
+  const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
+
+  let reposted = ((repostRows ?? []) as any[])
+    .filter(r => r.post)
+    .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
+  if (tab === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
+
+  const merged = [...(rawPosts ?? []), ...reposted]
+    .sort((a: any, b: any) =>
+      new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
+
+  const posts = merged.slice(0, pageSize)
+
+  const postsExhausted = (rawPosts?.length ?? 0) < pageSize
+  const repostsExhausted = (repostRows?.length ?? 0) < pageSize
+  const postsBoundary = !postsExhausted ? (rawPosts as any[])[rawPosts!.length - 1].created_at : null
+  const repostsBoundary = !repostsExhausted ? (repostRows as any[])[repostRows!.length - 1].created_at : null
+  const hasMore = !postsExhausted || !repostsExhausted
+  const nextCursor = !hasMore ? null : [postsBoundary, repostsBoundary].filter(Boolean)
+    .sort((a, b) => new Date(a as string).getTime() - new Date(b as string).getTime())[0] ?? null
+
+  return { posts, nextCursor, hasMore }
+}

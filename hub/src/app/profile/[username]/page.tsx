@@ -1,9 +1,10 @@
-import { getUserProfile, getUserPosts, attachUserReactions } from '@/lib/queries'
+import { getUserProfile, attachUserReactions } from '@/lib/queries'
 import { createClient } from '@/lib/supabase/server'
 import { isBlockedEitherWay } from '@/lib/blocks'
+import { fetchProfilePostsPage, type ProfileTab } from '@/lib/feedQuery'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { PostCardClient } from '@/components/social/PostCardClient'
+import { ProfilePostList } from '@/components/social/ProfilePostList'
 import { FollowButton } from '@/components/social/FollowButton'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
 import { ProfileStats } from '@/components/profile/ProfileStats'
@@ -60,7 +61,7 @@ const TABS = [
 export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params
   const { tab: tabParam } = await searchParams
-  const tab = TABS.some(t => t.key === tabParam) ? tabParam! : 'all'
+  const tab: ProfileTab = TABS.some(t => t.key === tabParam) ? (tabParam as ProfileTab) : 'all'
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
@@ -83,8 +84,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     )
   }
 
-  const [posts, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
-    getUserPosts(profile.id),
+  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
+    fetchProfilePostsPage(supabase, { userId: profile.id, tab, pageSize: 20 }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     supabase.from('user_badges')
@@ -146,19 +147,18 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const canViewWinRate = isOwnProfile || (canViewContent && !profile.hide_win_rate)
 
   // Map posts to PostCardClient shape. `author` comes straight from the
-  // query now (getUserPosts embeds it per-post) rather than being forced to
-  // this profile's own info — that forcing was wrong for reposts, where the
-  // post's real author is whoever originally posted it, not this profile.
-  const postsWithReactions = await attachUserReactions(posts, authUser?.id)
-  const allMappedPosts = postsWithReactions.map((p: any) => ({
+  // query now (fetchProfilePostsPage embeds it per-post) rather than being
+  // forced to this profile's own info — that forcing was wrong for reposts,
+  // where the post's real author is whoever originally posted it, not this
+  // profile. Tab filtering (picks/reposts) now happens at the query level
+  // inside fetchProfilePostsPage instead of here, so pagination stays
+  // consistent per tab instead of paginating an unfiltered set and filtering
+  // after the fact.
+  const postsWithReactions = await attachUserReactions(rawPosts, authUser?.id)
+  const mappedPosts = postsWithReactions.map((p: any) => ({
     ...p,
     user_bookmarked: false,
   }))
-  const mappedPosts = tab === 'picks'
-    ? allMappedPosts.filter((p: any) => p.post_type === 'pick' || p.post_type === 'parlay')
-    : tab === 'reposts'
-    ? allMappedPosts.filter((p: any) => p.reposted_by)
-    : allMappedPosts
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -313,7 +313,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           </div>
 
           {/* Posts */}
-          <div className="px-4 py-4 space-y-3">
+          <div className="px-4 py-4">
             {mappedPosts.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-4xl mb-3">📭</p>
@@ -325,9 +325,13 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 )}
               </div>
             ) : (
-              mappedPosts.map((p: any, i: number) => (
-                <PostCardClient key={p.reposted_by ? `repost-${p.id}-${p.reposted_by.username}` : p.id} post={p} index={i} />
-              ))
+              <ProfilePostList
+                userId={profile.id}
+                tab={tab}
+                initialPosts={mappedPosts}
+                initialCursor={nextCursor}
+                initialHasMore={hasMore}
+              />
             )}
           </div>
         </>
