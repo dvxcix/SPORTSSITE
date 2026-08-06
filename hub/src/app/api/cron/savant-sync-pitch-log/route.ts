@@ -9,7 +9,18 @@ import { syncStatcastDay, PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
 import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
 
 export const revalidate = 0
-export const maxDuration = 60
+// Was 60s — too tight for MAX_DAYS_PER_RUN=4 dates processed sequentially,
+// each doing a schedule fetch + Savant CSV fetch + several chunked upserts.
+// Confirmed root cause of the 4-day recurring stall (08/03-08/06): Vercel's
+// platform-level timeout kills the whole invocation mid-loop, which is a
+// hard abort the per-date try/catch below can't see or log — and since
+// checkPitchLogFreshnessAndAlert only runs AFTER the loop finishes, the one
+// mechanism meant to catch "this didn't work" never got to run either.
+// Raised to match dugout-pitchlog-stat-precompute's own budget for a
+// lighter version of the same job, and paired with parallelizing the
+// per-date chunk upserts (see statcastPitchLogSync.ts) so the extra budget
+// is real headroom, not just a bigger window for the same slow path.
+export const maxDuration = 300
 
 // Runs daily alongside the other savant-sync-* crons (see vercel.json).
 // Backfills full per-pitch Statcast data (every pitch, every game context —

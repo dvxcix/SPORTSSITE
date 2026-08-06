@@ -135,11 +135,19 @@ export async function syncPitchLogForDate(admin: AdminClient, date: string, seas
     raw: r,
   }))
 
-  for (let i = 0; i < upsertRows.length; i += WRITE_CHUNK_SIZE) {
-    const { error } = await admin.from(PITCH_LOG_TABLE)
-      .upsert(upsertRows.slice(i, i + WRITE_CHUNK_SIZE), { onConflict: 'season,game_pk,at_bat_index,pitch_number' })
-    if (error) throw error
-  }
+  // Chunks target disjoint (game_pk, at_bat_index, pitch_number) keys, so
+  // there's no row-level conflict between them — safe to fire concurrently
+  // instead of one at a time. This was the biggest single contributor to
+  // the cron's 60s-budget timeouts (a full slate is often 8-10 chunks,
+  // each a separate awaited round-trip).
+  const chunkResults = await Promise.all(
+    Array.from({ length: Math.ceil(upsertRows.length / WRITE_CHUNK_SIZE) }, (_, i) =>
+      admin.from(PITCH_LOG_TABLE)
+        .upsert(upsertRows.slice(i * WRITE_CHUNK_SIZE, (i + 1) * WRITE_CHUNK_SIZE), { onConflict: 'season,game_pk,at_bat_index,pitch_number' })
+    )
+  )
+  const failed = chunkResults.find(r => r.error)
+  if (failed?.error) throw failed.error
 
   return { rows: upsertRows.length }
 }
