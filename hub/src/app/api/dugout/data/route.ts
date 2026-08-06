@@ -20,6 +20,7 @@ import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
 import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle, MmByWindow } from '@slipsurge/core/matrixEngine'
 import { computeMmByWindowForGame, buildPitcherMap, type MmPlayerInput } from '@/lib/dugoutPaperScore'
+import { computePrecisionHrScores } from '@/lib/precisionHrModel'
 import {
   computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
   groupTiedCandidates, filterTieGroups, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
@@ -702,7 +703,7 @@ export async function GET(req: Request) {
   // whole-game pool rank, not a plain per-player lookup), computed together
   // by the same computeMmByWindowForGame pass — so this one gate covers all
   // three and nobody else pays for it.
-  const MM_RANK_FIELDS = new Set(['mm', 'bk_rk', 'pp_rk'])
+  const MM_RANK_FIELDS = new Set(['mm', 'bk_rk', 'pp_rk', 'precision_hr_score'])
   const needsMm = userMatrices.some(m =>
     m.factors.some(f => f.category === 'dugout_specs' && MM_RANK_FIELDS.has(f.field_key))
     || m.pipeline_steps.some(s => s.category === 'dugout_specs' && MM_RANK_FIELDS.has(s.field_key)))
@@ -1309,10 +1310,17 @@ export async function GET(req: Request) {
         mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
         bkRkByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
         ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
+        battingOrder: p.batting_order ?? null,
       })
       const homeBundle = new Map(homeLineup.map(p => [p.name_norm, resolveBundle(p, homePHand)]))
       const awayBundle = new Map(awayLineup.map(p => [p.name_norm, resolveBundle(p, awayPHand)]))
       const allBundle = new Map([...homeBundle, ...awayBundle])
+      if (pipelineMatrices.some(m => m.pipeline_steps.some(s => s.category === 'dugout_specs' && s.field_key === 'precision_hr_score'))) {
+        for (const [name, score] of computePrecisionHrScores(allBundle)) {
+          const bundle = allBundle.get(name)
+          if (bundle) bundle.precisionHrScore = score
+        }
+      }
 
       if (tiedFactors.length) {
         function resolveTiebreakerValue(name: string, tb: MatrixTiebreaker, pool: Map<string, FieldBundle>): number | null {

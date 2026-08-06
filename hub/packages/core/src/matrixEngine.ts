@@ -341,6 +341,8 @@ export type FieldBundle = {
   mmByWindow?: MmByWindow | null
   bkRkByWindow?: MmByWindow | null
   ppRkByWindow?: MmByWindow | null
+  battingOrder?: number | null
+  precisionHrScore?: number | null
 }
 
 export type Matrix = {
@@ -1230,7 +1232,10 @@ export function resolveFieldValue(
   mmCompareWindows?: MmWindowKey[] | null,
 ): number | null {
   if (category === 'odds') return computeOddsRawPrice(fieldKey, book ?? 'fanduel', bundle.props)
-  if (category === 'dugout_specs') return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow, mmBaseWindow, mmCompareWindows, bundle.bkRkByWindow, bundle.ppRkByWindow)
+  if (category === 'dugout_specs') {
+    if (fieldKey === 'precision_hr_score') return bundle.precisionHrScore ?? null
+    return computeDugoutSpecsValue(fieldKey, bundle.props, bundle.fhrAvg, bundle.saAvg, recency, bundle.mmByWindow, mmBaseWindow, mmCompareWindows, bundle.bkRkByWindow, bundle.ppRkByWindow)
+  }
   if (category === 'pitchlog_stat') return computePitchlogStatValue(fieldKey, recency, bundle.pitchlogWindows)
   if (category === 'savant_stat') return computeSavantStatValue(fieldKey, recency, bundle.statcastWindows)
   return computePicksValue(fieldKey, bundle.pikkitEntry, gameTotalPicksByMarket)
@@ -1254,6 +1259,9 @@ export function evaluateFilterStep(
   // condition_steps/then_steps — see MatrixPipelineStep's own comment.
   anchorValue?: number | null,
 ): boolean {
+  if (step.category === 'dugout_specs' && step.field_key === 'precision_hr_score') {
+    return compareThreshold(bundle.precisionHrScore ?? null, step.operator ?? 'gte', step.value, step.field_key)
+  }
   if (step.operator === 'lt_anchor' || step.operator === 'gt_anchor') {
     if (anchorValue == null) return false // no anchor in scope — fail safe, not a crash
     const current = resolveFieldValue(step.category, step.field_key, step.recency, step.book, bundle, gameTotalPicksByMarket, step.mm_base_window, step.mm_compare_windows)
