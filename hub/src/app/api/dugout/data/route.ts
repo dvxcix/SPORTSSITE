@@ -60,6 +60,26 @@ function isPastDateET(date: string): boolean {
   return date < todayEt
 }
 const WEEK_SECONDS = 60 * 60 * 24 * 7
+const HOUR_SECONDS = 60 * 60
+
+// Member-reported live incident (2026-08-06): a backtest of the previous
+// day showed a confirmed lineup that didn't match what MLB actually had
+// posted for that game — traced to every WEEK_SECONDS "historical" cache
+// tier below flipping on at the exact instant a date crosses midnight ET
+// (see isPastDateET). MLB's own late-game boxscore/lineup data can still be
+// settling right at that boundary; whichever value the FIRST historical-tier
+// request happened to get — even an incomplete one — then stayed locked in
+// for a full week with no way to self-correct. "Yesterday" specifically now
+// gets its own short-lived tier (same idea as TODAY's) so a bad read heals
+// within an hour instead of a week; only date >2 days past gets the long
+// cache, once MLB's own data has had time to genuinely settle.
+type DateCacheTier = 'today' | 'settling' | 'historical'
+function dateCacheTierET(date: string): DateCacheTier {
+  const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  if (date >= todayEt) return 'today'
+  const yesterdayEt = new Date(Date.now() - 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  return date === yesterdayEt ? 'settling' : 'historical'
+}
 
 // Temporary: real per-step timing for a live "today" request currently
 // reported at ~41s (vs ~15s for a past date, same route) despite every
@@ -104,8 +124,12 @@ async function fetchGapOdds(date: string) {
   return { fdRows: fdRows ?? [], mgmRows: mgmRows ?? [] }
 }
 const getCachedGapOddsRecent = unstable_cache(fetchGapOdds, ['dugout-gap-odds-recent'], { revalidate: 60 })
+const getCachedGapOddsSettling = unstable_cache(fetchGapOdds, ['dugout-gap-odds-settling'], { revalidate: HOUR_SECONDS })
 const getCachedGapOddsHistorical = unstable_cache(fetchGapOdds, ['dugout-gap-odds-historical'], { revalidate: WEEK_SECONDS })
-const getCachedGapOdds = (date: string) => (isPastDateET(date) ? getCachedGapOddsHistorical(date) : getCachedGapOddsRecent(date))
+const getCachedGapOdds = (date: string) => {
+  const tier = dateCacheTierET(date)
+  return tier === 'historical' ? getCachedGapOddsHistorical(date) : tier === 'settling' ? getCachedGapOddsSettling(date) : getCachedGapOddsRecent(date)
+}
 
 // Opening baselines now come from the unified market_opening_prices table
 // (see /api/cron/bdl-odds and /api/admin/fanduel-import) instead of the old
@@ -168,6 +192,7 @@ async function fetchGapOddsOpening(date: string) {
 // captured already and will never gain or change a row again (see
 // isPastDateET above) — no real reason to ever re-fetch that from the DB.
 const getCachedGapOddsOpeningRecent = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-recent'], { revalidate: 60 })
+const getCachedGapOddsOpeningSettling = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-settling'], { revalidate: HOUR_SECONDS })
 // '-v2' (2026-07-24): market_opening_prices only started getting written
 // 2026-07-23 — any past date before that had zero rows here until a one-time
 // backfill from the old fanduel_gap_odds_opening/mgm_gap_odds_opening tables
@@ -176,7 +201,10 @@ const getCachedGapOddsOpeningRecent = unstable_cache(fetchGapOddsOpening, ['dugo
 // empty result under the old key. Bumping the key busts that stale entry;
 // no other reason to ever bump it again after this.
 const getCachedGapOddsOpeningHistorical = unstable_cache(fetchGapOddsOpening, ['dugout-gap-odds-opening-historical-v2'], { revalidate: WEEK_SECONDS })
-const getCachedGapOddsOpening = (date: string) => (isPastDateET(date) ? getCachedGapOddsOpeningHistorical(date) : getCachedGapOddsOpeningRecent(date))
+const getCachedGapOddsOpening = (date: string) => {
+  const tier = dateCacheTierET(date)
+  return tier === 'historical' ? getCachedGapOddsOpeningHistorical(date) : tier === 'settling' ? getCachedGapOddsOpeningSettling(date) : getCachedGapOddsOpeningRecent(date)
+}
 
 // Custom Matrix's own bulk read — full-season pitch-by-pitch rows for every
 // batter in today's lineups, needed only by pitchlog_stat Factors (arbitrary
@@ -267,8 +295,12 @@ async function fetchDateLineupResolution(dateKey: string) {
 // Only TODAY still needs the shorter window (lineups moving from
 // unconfirmed/projected to confirmed as the day goes on); see isPastDateET.
 const getCachedDateLineupResolutionRecent = unstable_cache(fetchDateLineupResolution, ['dugout-date-lineup-resolution-recent'], { revalidate: 300 })
+const getCachedDateLineupResolutionSettling = unstable_cache(fetchDateLineupResolution, ['dugout-date-lineup-resolution-settling'], { revalidate: HOUR_SECONDS })
 const getCachedDateLineupResolutionHistorical = unstable_cache(fetchDateLineupResolution, ['dugout-date-lineup-resolution-historical'], { revalidate: WEEK_SECONDS })
-const getCachedDateLineupResolution = (date: string) => (isPastDateET(date) ? getCachedDateLineupResolutionHistorical(date) : getCachedDateLineupResolutionRecent(date))
+const getCachedDateLineupResolution = (date: string) => {
+  const tier = dateCacheTierET(date)
+  return tier === 'historical' ? getCachedDateLineupResolutionHistorical(date) : tier === 'settling' ? getCachedDateLineupResolutionSettling(date) : getCachedDateLineupResolutionRecent(date)
+}
 
 // Real incident (2026-07-24): this exact same MLB schedule fetch (same
 // date, same hydrate string) was ALSO being requested a second time,
@@ -287,11 +319,18 @@ const getCachedScheduleRecent = unstable_cache(
   (date: string) => fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue'),
   ['dugout-schedule-recent'], { revalidate: 15 }
 )
+const getCachedScheduleSettling = unstable_cache(
+  (date: string) => fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue'),
+  ['dugout-schedule-settling'], { revalidate: HOUR_SECONDS }
+)
 const getCachedScheduleHistorical = unstable_cache(
   (date: string) => fetchScheduleWithRetry(date, 'lineups,probablePitcher,team,linescore,venue'),
   ['dugout-schedule-historical'], { revalidate: WEEK_SECONDS }
 )
-const getCachedSchedule = (date: string) => (isPastDateET(date) ? getCachedScheduleHistorical(date) : getCachedScheduleRecent(date))
+const getCachedSchedule = (date: string) => {
+  const tier = dateCacheTierET(date)
+  return tier === 'historical' ? getCachedScheduleHistorical(date) : tier === 'settling' ? getCachedScheduleSettling(date) : getCachedScheduleRecent(date)
+}
 
 // `${market}:${book}` -> the camelCase field name already used on
 // entry.open.* throughout this route and consumed by BatterCostClient/
