@@ -55,13 +55,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // The native desktop updater checks this endpoint before a user can have
+  // The native desktop updater checks and downloads through these endpoints
+  // before a user can have
   // (or needs) a browser-cookie session. Redirecting it to /auth/login turns
   // the expected Tauri update JSON into HTML, so the installed app silently
   // treats every published release as an invalid update response. The route
   // only exposes the signed public release manifest; installation remains
   // protected by Tauri's embedded updater public key.
-  if (request.nextUrl.pathname.startsWith('/api/desktop/update/')) {
+  if (
+    request.nextUrl.pathname.startsWith('/api/desktop/update/') ||
+    request.nextUrl.pathname.startsWith('/api/desktop/download/')
+  ) {
     return NextResponse.next({ request })
   }
 
