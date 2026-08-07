@@ -8,6 +8,9 @@ import { WatchlistProvider } from '@/context/WatchlistContext'
 import { WatchlistButton } from '@/components/dugout/WatchlistPanel'
 import { MyPicksButton } from '@/components/dugout/MyPicksPanel'
 import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
+import { DesktopCommandBar } from './DesktopCommandBar'
+import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
+import { DesktopExperience } from '@/components/desktop/DesktopExperience'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -18,6 +21,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // below the md breakpoint — this is the shared toggle both the topbar's
   // hamburger button and the sidebar's own backdrop/close button drive.
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const isDesktop = useDesktopPlatform()
 
   if (isAdmin) {
     // Admin pages render their own full layout via admin/layout.tsx
@@ -54,9 +58,10 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WatchlistProvider>
-      <div className="flex min-h-screen">
+      <div className={`flex min-h-screen ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
         <div className="flex-1 min-w-0 flex flex-col">
+          {isDesktop && <DesktopCommandBar />}
           <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />
           <main className="flex-1 min-w-0">
             {children}
@@ -66,6 +71,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
       <WatchlistButton />
       <MyPicksButton />
       {showMatrixButton && <MatrixButton />}
+      {isDesktop && <DesktopExperience />}
     </WatchlistProvider>
   )
 }

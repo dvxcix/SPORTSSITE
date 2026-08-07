@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, MessageCircleQuestion, UserX } from 'lucide-react'
+import { DesktopSettingsPanel } from '@/components/desktop/DesktopSettingsPanel'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -51,21 +52,23 @@ export default async function SettingsPage() {
     <div className="max-w-2xl mx-auto px-4 py-6">
       <h1 className="text-2xl font-black text-white mb-6">Settings</h1>
 
+      <DesktopSettingsPanel />
+
       <div className="space-y-6">
         {sections.map(section => (
           <div key={section.title}>
             <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">{section.title}</h2>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800">
-              {section.items.map((item: any) => {
+              {section.items.map((item) => {
                 const Icon = item.icon
                 return (
                   <Link key={item.href} href={item.href}
                     className="flex items-center gap-4 px-4 py-3.5 hover:bg-zinc-800 transition-colors group">
-                    <div className={`p-2 rounded-lg ${item.danger ? 'bg-red-500/10' : 'bg-zinc-800 group-hover:bg-zinc-700'} transition-colors`}>
-                      <Icon size={16} className={item.danger ? 'text-red-400' : 'text-zinc-400'} />
+                    <div className="p-2 rounded-lg bg-zinc-800 group-hover:bg-zinc-700 transition-colors">
+                      <Icon size={16} className="text-zinc-400" />
                     </div>
                     <div className="flex-1">
-                      <p className={`font-medium text-sm ${item.danger ? 'text-red-400' : 'text-white'}`}>{item.label}</p>
+                      <p className="font-medium text-sm text-white">{item.label}</p>
                       <p className="text-xs text-zinc-500">{item.desc}</p>
                     </div>
                     <ChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />

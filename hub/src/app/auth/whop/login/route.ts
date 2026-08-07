@@ -24,6 +24,7 @@ export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url)
   const next = searchParams.get('next') || '/feed'
   const mode = searchParams.get('mode') === 'link' ? 'link' as const : undefined
+  const desktopState = searchParams.get('desktop_state')
 
   let linkUserId: string | undefined
   if (mode === 'link') {
@@ -41,9 +42,9 @@ export async function GET(request: Request) {
   const authorizeUrl = buildAuthorizeUrl({ redirectUri, state, codeChallenge, nonce })
 
   const cookieStore = await cookies()
-  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId }), {
+  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState }), {
     httpOnly: true,
-    secure: true,
+    secure: new URL(origin).protocol === 'https:',
     sameSite: 'lax',
     path: '/',
     maxAge: 600, // 10 minutes — this is a short redirect round-trip, not a session

@@ -18,8 +18,8 @@ export const dynamic = 'force-dynamic'
 // site; share-image never renders those anyway, animated or not).
 async function normalizeImage(file: File): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
   const input = Buffer.from(await file.arrayBuffer())
-  let img: sharp.Sharp
-  let meta: sharp.Metadata
+  let img: ReturnType<typeof sharp>
+  let meta: Awaited<ReturnType<ReturnType<typeof sharp>['metadata']>>
   try {
     img = sharp(input, { animated: true })
     meta = await img.metadata()

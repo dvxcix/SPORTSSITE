@@ -8,6 +8,8 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/feed'
+  const desktopState = searchParams.get('desktop_state')
+  const isDesktop = !!desktopState && /^[0-9a-f-]{36}$/i.test(desktopState)
 
   if (code) {
     const supabase = await createClient()
@@ -91,6 +93,20 @@ export async function GET(request: Request) {
         await syncDiscordIdentity(admin, data.user.id)
         await syncDiscordRoleForUser(admin, data.user.id)
       })
+      if (isDesktop && data.user.email) {
+        const admin = createAdminClient()
+        const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+          type: 'magiclink',
+          email: data.user.email,
+        })
+        if (!linkError && linkData?.properties?.hashed_token) {
+          const desktopUrl = new URL('slipsurge://auth/complete')
+          desktopUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
+          desktopUrl.searchParams.set('next', isNewAccount ? '/onboarding' : next)
+          desktopUrl.searchParams.set('state', desktopState)
+          return NextResponse.redirect(desktopUrl.toString())
+        }
+      }
       return NextResponse.redirect(`${origin}${isNewAccount ? '/onboarding' : next}`)
     }
 

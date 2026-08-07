@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   if (!code || !state || !rawStateCookie) return loginFailed('whop_auth_failed')
 
-  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string }
+  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string; desktopState?: string }
   try {
     stored = JSON.parse(rawStateCookie)
   } catch {
@@ -239,6 +239,13 @@ export async function GET(request: Request) {
   const completeUrl = new URL(`${origin}/auth/whop/complete`)
   completeUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
   completeUrl.searchParams.set('next', isNewAccount ? '/onboarding' : (stored.next || '/feed'))
+  if (stored.desktopState && /^[0-9a-f-]{36}$/i.test(stored.desktopState)) {
+    const desktopUrl = new URL('slipsurge://auth/complete')
+    desktopUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
+    desktopUrl.searchParams.set('next', isNewAccount ? '/onboarding' : (stored.next || '/feed'))
+    desktopUrl.searchParams.set('state', stored.desktopState)
+    return NextResponse.redirect(desktopUrl.toString())
+  }
   return NextResponse.redirect(completeUrl.toString())
 }
 

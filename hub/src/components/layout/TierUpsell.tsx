@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { Lock } from 'lucide-react'
 import type { Tier } from '@slipsurge/core/tiers'
+import { DesktopUpgradePrompt } from '@/components/desktop/DesktopUpgradePrompt'
 
 const TIER_LABELS: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
 export function TierUpsell({ requiredTier, label }: { requiredTier: Tier; label: string }) {
   return (
+    <>
+    <DesktopUpgradePrompt tier={TIER_LABELS[requiredTier]} feature={label} />
     <div style={{
       minHeight: '60vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24,
@@ -29,5 +32,6 @@ export function TierUpsell({ requiredTier, label }: { requiredTier: Tier; label:
         View Plans
       </Link>
     </div>
+    </>
   )
 }

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/lib/supabase/types'
 import { Send, TrendingUp } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
+import { sendDesktopNotification } from '@/lib/desktopNotifications'
 
 interface ChatRoomProps {
   channelId: string
@@ -13,7 +14,7 @@ interface ChatRoomProps {
   currentUserId?: string
 }
 
-export function ChatRoom({ channelId, initialMessages, currentUserId }: ChatRoomProps) {
+export function ChatRoom({ channelId, channelName, initialMessages, currentUserId }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -50,12 +51,17 @@ export function ChatRoom({ channelId, initialMessages, currentUserId }: ChatRoom
           .select('id,username,display_name,avatar_url,is_verified,account_type')
           .eq('id', newMsg.sender_id)
           .single()
-        setMessages(prev => [...prev, { ...newMsg, sender: sender as Message['sender'] ?? undefined }])
+        const hydrated = { ...newMsg, sender: sender as Message['sender'] ?? undefined }
+        setMessages(prev => [...prev, hydrated])
+        if (newMsg.sender_id !== currentUserId && document.visibilityState !== 'visible') {
+          const senderName = sender?.display_name || sender?.username || 'Someone'
+          void sendDesktopNotification(`# ${channelName} · ${senderName}`, newMsg.content || 'Shared a new pick')
+        }
       })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [channelId, supabase])
+  }, [channelId, channelName, currentUserId, supabase])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

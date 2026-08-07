@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { getChannelMessages } from '@/lib/queries'
+import { getChannelMessages, getChannels } from '@/lib/queries'
 import { ChatRoom } from '@/components/chat/ChatRoom'
+import Link from 'next/link'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -18,10 +19,22 @@ export default async function ChannelPage({ params }: Props) {
   if (!channel) notFound()
 
   const messages = await getChannelMessages(channel.id, 50)
+  const channels = await getChannels()
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="ss-desktop-live-layout">
+      <aside className="ss-desktop-channel-rail">
+        <div className="ss-desktop-channel-brand"><img src="/logo.png" alt="" /><div><strong>SlipSurge Live</strong><span>COMMUNITY</span></div></div>
+        <nav>
+          {channels.map(item => (
+            <Link key={item.id} href={`/channels/${item.slug}`} data-active={item.slug === slug}>
+              <span>{item.icon}</span><div><strong>{item.name}</strong><small>{item.member_count} members</small></div>
+            </Link>
+          ))}
+        </nav>
+      </aside>
+      <div className="flex flex-col min-w-0 min-h-0">
       {/* Channel header */}
       <div className="border-b border-zinc-800 px-6 py-4 flex items-center gap-3 bg-zinc-950 shrink-0">
         <span className="text-2xl">{channel.icon}</span>
@@ -38,6 +51,7 @@ export default async function ChannelPage({ params }: Props) {
         initialMessages={messages}
         currentUserId={user?.id}
       />
+      </div>
     </div>
   )
 }

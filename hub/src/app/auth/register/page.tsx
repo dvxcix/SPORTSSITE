@@ -42,6 +42,12 @@ export default function RegisterPage() {
   // the same Supabase call, so these buttons work for brand-new accounts too.
   function oauthHandler(provider: 'discord' | 'x') {
     return async () => {
+      if (navigator.userAgent.includes('SlipSurgeDesktop/')) {
+        const desktopState = crypto.randomUUID()
+        localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
+        location.href = `/auth/desktop/start?provider=${provider}&next=${encodeURIComponent('/onboarding')}&state=${encodeURIComponent(desktopState)}`
+        return
+      }
       const supabase = createClient()
       await supabase.auth.signInWithOAuth({
         provider,
@@ -54,6 +60,12 @@ export default function RegisterPage() {
   // page's comment on this same fix.
   const handleX = oauthHandler('x')
   function handleWhop() {
+    if (navigator.userAgent.includes('SlipSurgeDesktop/')) {
+      const desktopState = crypto.randomUUID()
+      localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
+      location.href = `/auth/desktop/start?provider=whop&next=${encodeURIComponent('/onboarding')}&state=${encodeURIComponent(desktopState)}`
+      return
+    }
     location.href = `/auth/whop/login?next=${encodeURIComponent('/onboarding')}`
   }
 

@@ -1,0 +1,42 @@
+name: SlipSurge desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: Release notes shown in the desktop update prompt
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: hub
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      DESKTOP_RELEASE_NOTES: ${{ inputs.release_notes }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hub/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm run desktop:build
+      - run: npm run desktop:publish-update
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SlipSurge-Windows
+          path: |
+            hub/desktop/src-tauri/target/release/bundle/nsis/*
+            hub/desktop/src-tauri/target/release/bundle/msi/*

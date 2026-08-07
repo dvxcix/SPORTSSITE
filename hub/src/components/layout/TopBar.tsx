@@ -68,6 +68,17 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickLoading, setQuickLoading] = useState(false)
   const searchRef = useRef<HTMLFormElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const focusSearch = () => {
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+      setQuickOpen(true)
+    }
+    window.addEventListener('slipsurge:focus-search', focusSearch)
+    return () => window.removeEventListener('slipsurge:focus-search', focusSearch)
+  }, [])
 
   useEffect(() => {
     const query = search.trim()
@@ -274,6 +285,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           color: 'var(--text-3)', pointerEvents: 'none',
         }} />
         <input
+          ref={searchInputRef}
           value={search}
           onChange={e => { setSearch(e.target.value); setQuickOpen(true) }}
           onFocus={e => { e.target.style.borderColor = 'var(--accent)'; setQuickOpen(true) }}

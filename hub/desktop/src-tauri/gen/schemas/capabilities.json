@@ -1,0 +1,1 @@
+{"main-capability":{"identifier":"main-capability","description":"Capabilities available to the primary SlipSurge window.","remote":{"urls":["https://www.slipsurge.com/*"]},"local":true,"windows":["main"],"permissions":["core:default","deep-link:default","notification:default","opener:default"]}}

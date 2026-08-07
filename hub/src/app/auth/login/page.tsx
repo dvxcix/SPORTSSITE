@@ -36,6 +36,8 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/feed'
+  const isDesktop = searchParams.get('platform') === 'desktop' ||
+    (typeof navigator !== 'undefined' && navigator.userAgent.includes('SlipSurgeDesktop/'))
   const oauthError = searchParams.get('error')
 
   // Supabase's own OAuth errors (e.g. a provider not returning an email)
@@ -67,6 +69,12 @@ function LoginForm() {
   // with that platform's own app credentials.
   function oauthHandler(provider: 'discord' | 'x') {
     return async () => {
+      if (isDesktop) {
+        const desktopState = crypto.randomUUID()
+        localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
+        location.href = `/auth/desktop/start?provider=${provider}&next=${encodeURIComponent(next)}&state=${encodeURIComponent(desktopState)}`
+        return
+      }
       const supabase = createClient()
       await supabase.auth.signInWithOAuth({
         provider,
@@ -82,6 +90,12 @@ function LoginForm() {
   const handleX = oauthHandler('x')
 
   function handleWhop() {
+    if (isDesktop) {
+      const desktopState = crypto.randomUUID()
+      localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
+      location.href = `/auth/desktop/start?provider=whop&next=${encodeURIComponent(next)}&state=${encodeURIComponent(desktopState)}`
+      return
+    }
     location.href = `/auth/whop/login?next=${encodeURIComponent(next)}`
   }
 
