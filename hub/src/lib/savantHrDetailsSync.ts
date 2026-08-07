@@ -55,10 +55,23 @@ const STALE_CLAIM_MINUTES = 12
 // concurrent requests (the entire batter leaderboard) at concurrency 40
 // completed in 9s with zero errors. The real bottleneck wasn't fetch
 // speed, it was doing one sequential Supabase round-trip per player; fixed
-// by fetching concurrently and writing in one bulk upsert per tick. 300/
-// tick (with real headroom to spare) clears the current ~475-batter
-// backlog in 2 ticks instead of ~19.
-const BATCH_SIZE = 300
+// by fetching concurrently and writing in one bulk upsert per tick.
+// Confirmed live (2026-08-07): 300 was NOT enough headroom once the
+// backlog phase ended and this became a steady-state daily job — with
+// RECHECK_COMPLETE_HOURS=20 < the 24h gap between runs, essentially every
+// 'complete' row is eligible again by the next run, so the real daily
+// candidate pool is close to the FULL qualifying-batter count (497 the day
+// this was found), not just new pending ones. The claim query below had no
+// ORDER BY, so whichever ~300 rows Postgres happened to return first won
+// EVERY single day — confirmed via sync_state.last_synced_at: 185 batters
+// (Endy Rodríguez among them) were frozen on the exact same date, 2026-07-27,
+// for the following 10 days, with only 1-4 stragglers trickling through in
+// between, while a different ~292-row subset refreshed daily. Raised past
+// the current qualifying-batter count for real headroom as the season
+// progresses, and paired with an explicit oldest-first ORDER BY (see the
+// claim query) so even if the pool outgrows this again, it rotates fairly
+// instead of permanently starving whichever rows lose the tiebreak.
+const BATCH_SIZE = 700
 const FETCH_CONCURRENCY = 20
 const WRITE_CHUNK_SIZE = 500
 const RECHECK_COMPLETE_HOURS = 20
@@ -138,11 +151,17 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
 
   const staleClaimBefore = new Date(Date.now() - STALE_CLAIM_MINUTES * 60_000).toISOString()
   const recheckBefore = new Date(Date.now() - RECHECK_COMPLETE_HOURS * 60 * 60_000).toISOString()
+  // Oldest-synced-first (nulls — never-synced pending rows — first) so that
+  // if the eligible pool ever again exceeds BATCH_SIZE in one tick, the
+  // longest-stale batters win the claim instead of losing to the same
+  // subset every single day — see BATCH_SIZE's own comment for the real
+  // starvation incident this fixes.
   const { data: jobs } = await admin
     .from('sync_state')
     .select('entity_id')
     .eq('source', SOURCE).eq('entity_type', ENTITY_TYPE).eq('season', season)
     .or(`status.eq.pending,status.eq.error,and(status.eq.claimed,claimed_at.lt.${staleClaimBefore}),and(status.eq.complete,last_synced_at.lt.${recheckBefore})`)
+    .order('last_synced_at', { ascending: true, nullsFirst: true })
     .limit(BATCH_SIZE)
 
   const claimedIds = (jobs ?? []).map(j => j.entity_id)
