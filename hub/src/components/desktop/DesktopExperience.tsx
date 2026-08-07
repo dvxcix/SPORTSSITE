@@ -3,6 +3,10 @@
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { createClient } from '@/lib/supabase/client'
+import { DESKTOP_NOTIFICATIONS_KEY, ensureDesktopNotificationPermission, sendDesktopNotification } from '@/lib/desktopNotifications'
+import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 import {
   BellRing, ChevronRight, Crown, DatabaseZap, FlaskConical,
   MessageCircle, Settings2, Sparkles, Table2, X, Zap,
@@ -17,29 +21,86 @@ const features = [
   { icon: MessageCircle, name: 'Surge Live', copy: 'Real-time rooms, direct messages and community alerts built into desktop.', tier: 'Basic' },
 ]
 
-async function enableNativeNotifications() {
-  const notifications = await import('@tauri-apps/plugin-notification')
-  let permission = await notifications.isPermissionGranted()
-  if (!permission) permission = (await notifications.requestPermission()) === 'granted'
-  if (!permission) return false
-  notifications.sendNotification({
-    title: 'SlipSurge notifications are live',
-    body: 'Line movement, replies and community alerts can now reach this desktop.',
+type DesktopNotificationRow = {
+  id: string
+  actor_id?: string | null
+  type: NotificationType
+  message?: string | null
+  body?: string | null
+  link?: string | null
+  data?: { avatar_url?: string; team_logo?: string } | null
+}
+
+const NOTIFICATION_TITLES: Partial<Record<NotificationType, string>> = {
+  follow: 'New follower', reaction: 'New reaction', comment: 'New comment', mention: 'You were mentioned',
+  pick_result: 'Pick graded', subscription: 'Subscription update', message: 'New message', repost: 'New repost',
+  group_invite: 'Group invitation', new_pick: 'New pick posted', lineup_confirmed: 'Lineup confirmed',
+}
+
+async function presentAccountNotification(row: DesktopNotificationRow, userId: string) {
+  const supabase = createClient()
+  let actor: { display_name?: string | null; username?: string | null; avatar_url?: string | null } | null = null
+  if (row.actor_id) {
+    const result = await supabase.from('users').select('display_name,username,avatar_url').eq('id', row.actor_id).maybeSingle()
+    actor = result.data
+  }
+  const actorName = actor?.display_name || actor?.username || ''
+  let body = `${actorName ? `${actorName} ` : ''}${row.message || row.body || 'sent you an update'}`.trim()
+  let count = 1
+  if (row.type === 'follow') {
+    const since = new Date(Date.now() - 10 * 60_000).toISOString()
+    const recent = await supabase.from('notifications').select('id').eq('user_id', userId).eq('type', 'follow').gte('created_at', since)
+    count = Math.max(1, recent.data?.length ?? 1)
+    if (count > 1) body = `${actorName || 'Someone'} and ${count - 1} other${count === 2 ? '' : 's'} followed you`
+  }
+  const imageUrl = actor?.avatar_url || row.data?.avatar_url || row.data?.team_logo
+  await sendDesktopNotification(NOTIFICATION_TITLES[row.type] || 'SlipSurge', body, {
+    group: row.type === 'follow' ? 'social-follows' : `slipsurge-${row.type}`,
+    summary: count > 1 ? `${count} recent followers` : undefined,
+    icon: imageUrl || undefined,
+    extra: { link: row.link || '/notifications', imageUrl: imageUrl || null, notificationId: row.id, type: row.type },
   })
-  window.localStorage.setItem('slipsurge.desktop.notifications', '1')
-  return true
 }
 
 export function DesktopExperience() {
+  const { user, profile } = useAuth()
   const [tourOpen, setTourOpen] = useState(false)
   const [notificationState, setNotificationState] = useState<'idle' | 'working' | 'on' | 'denied'>('idle')
+  const [notificationError, setNotificationError] = useState('')
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setTourOpen(window.localStorage.getItem(TOUR_KEY) !== 'complete')
-      if (window.localStorage.getItem('slipsurge.desktop.notifications') === '1') setNotificationState('on')
+      if (window.localStorage.getItem(DESKTOP_NOTIFICATIONS_KEY) === '1') setNotificationState('on')
     }, 0)
     return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!user || window.localStorage.getItem(DESKTOP_NOTIFICATIONS_KEY) !== '1') return
+    const supabase = createClient()
+    const channel = supabase.channel(`desktop-notifications:${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}`,
+      }, payload => {
+        const row = payload.new as DesktopNotificationRow
+        const settingKey = SETTINGS_KEY_BY_TYPE[row.type]
+        if (settingKey && profile?.notification_settings?.[settingKey] === false) return
+        void presentAccountNotification(row, user.id)
+      })
+      .subscribe()
+    return () => { void supabase.removeChannel(channel) }
+  }, [user, profile?.notification_settings])
+
+  useEffect(() => {
+    let listener: { unregister: () => void } | undefined
+    void import('@tauri-apps/plugin-notification').then(async notifications => {
+      listener = await notifications.onAction(notification => {
+        const link = notification.extra?.link
+        if (typeof link === 'string' && link.startsWith('/')) window.location.assign(link)
+      })
+    }).catch(error => console.error('[desktop] notification action listener failed', error))
+    return () => listener?.unregister()
   }, [])
 
   useEffect(() => {
@@ -55,12 +116,16 @@ export function DesktopExperience() {
 
   async function turnOnNotifications() {
     setNotificationState('working')
-    try {
-      setNotificationState(await enableNativeNotifications() ? 'on' : 'denied')
-    } catch (error) {
-      console.error('[desktop] native notifications failed', error)
+    setNotificationError('')
+    const permission = await ensureDesktopNotificationPermission()
+    if (!permission.ok) {
       setNotificationState('denied')
+      setNotificationError(permission.message)
+      return
     }
+    const result = await sendDesktopNotification('SlipSurge notifications are live', 'Line movement, replies and community alerts can now reach this desktop.')
+    setNotificationState(result.ok ? 'on' : 'denied')
+    if (!result.ok) setNotificationError(result.message)
   }
 
   return (
@@ -114,11 +179,12 @@ export function DesktopExperience() {
               <div className="ss-desktop-tour-actions">
                 <button type="button" onClick={turnOnNotifications} disabled={notificationState === 'working' || notificationState === 'on'}>
                   <BellRing size={15} />
-                  {notificationState === 'on' ? 'Notifications enabled' : notificationState === 'working' ? 'Requesting…' : notificationState === 'denied' ? 'Permission blocked' : 'Enable desktop alerts'}
+                  {notificationState === 'on' ? 'Notifications enabled' : notificationState === 'working' ? 'Requesting...' : notificationState === 'denied' ? 'Try desktop alerts again' : 'Enable desktop alerts'}
                 </button>
                 <Link href="/pricing" onClick={finishTour}><Zap size={15} /> Explore plans</Link>
                 <button type="button" className="ss-desktop-tour-primary" onClick={finishTour}>Enter SlipSurge <ChevronRight size={16} /></button>
               </div>
+              {notificationError && <p className="ss-desktop-notification-error" role="alert">{notificationError}</p>}
             </motion.section>
           </motion.div>
         )}

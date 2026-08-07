@@ -1,7 +1,7 @@
 'use client'
 
 import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
-import { sendDesktopNotification } from '@/lib/desktopNotifications'
+import { DESKTOP_NOTIFICATIONS_KEY, sendDesktopNotification } from '@/lib/desktopNotifications'
 import { BellRing, MonitorCog, PlayCircle, Radio } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -12,10 +12,10 @@ export function DesktopSettingsPanel() {
   if (!isDesktop) return null
 
   async function testAlerts() {
-    setStatus('Requesting permission…')
-    const sent = await sendDesktopNotification('SlipSurge desktop alerts are live', 'Line movement, picks, and community alerts can now reach this device.')
-    localStorage.setItem('slipsurge.desktop.notifications', sent ? '1' : '0')
-    setStatus(sent ? 'Enabled — test alert sent.' : 'Permission was not granted.')
+    setStatus('Requesting permission...')
+    const result = await sendDesktopNotification('SlipSurge desktop alerts are live', 'Line movement, picks, and community alerts can now reach this device.')
+    localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, result.ok ? '1' : '0')
+    setStatus(result.ok ? 'Enabled — test alert sent.' : result.message)
   }
 
   function replayTour() {

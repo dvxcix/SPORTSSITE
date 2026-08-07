@@ -588,6 +588,7 @@ html[data-platform='desktop'] body {
 .ss-desktop-tour-actions { display: flex; align-items: center; gap: 9px; margin-top: 20px; }
 .ss-desktop-tour-actions button,.ss-desktop-tour-actions a { min-height: 40px; padding: 0 14px; border: 1px solid var(--border); border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--text-2); background: rgba(255,255,255,.035); font-size: 11px; font-weight: 800; cursor: pointer; }
 .ss-desktop-tour-actions .ss-desktop-tour-primary { margin-left: auto; border-color: transparent; color: var(--accent-fg); background: var(--accent); }
+.ss-desktop-notification-error { margin-top: 10px; padding: 9px 11px; border: 1px solid rgba(255,77,106,.25); border-radius: 10px; color: #ff9aab; background: rgba(255,77,106,.07); font-size: 10px; line-height: 1.45; }
 html[data-platform='desktop'] main { padding-bottom: 78px; }
 html[data-platform='desktop'] .ss-desktop-shell { background: radial-gradient(circle at 75% 0%, rgba(55,255,135,.035), transparent 34%); }
 @media (max-width: 760px) { .ss-desktop-tour-grid { grid-template-columns: 1fr; } .ss-desktop-tour-intro { margin-left: 0; } .ss-desktop-tour-actions { flex-wrap: wrap; } }

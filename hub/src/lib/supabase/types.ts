@@ -57,6 +57,7 @@ export interface User {
   // resolveDugoutColumns in DugoutClient.tsx for the shape's real meaning.
   // Null/absent means show every column, default order.
   dugout_column_prefs?: { hiddenGroups?: string[]; hiddenColumns?: string[]; columnOrder?: string[] } | null
+  notification_settings?: Record<string, boolean> | null
 }
 
 // Singleton row (id always 1) — every channel/role mapping the bot needs is
