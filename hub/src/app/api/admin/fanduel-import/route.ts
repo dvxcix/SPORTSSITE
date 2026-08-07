@@ -98,12 +98,24 @@ const COMBO_SECTION_MAP: Array<{ re: RegExp; minCol: string; countCol: string; p
   { re: /^players to combine for 2\+ home runs$/i, minCol: 'combo2_min', countCol: 'combo2_count', partnersCol: 'combo2_partners', market: 'combo2Min' },
 ]
 
+// The "To Hit First Home Run" market's own field-side outcome — nobody
+// hits the first home run, which is the same thing as no home run
+// happening in the game at all. It's not a player, so it can't be matched
+// to a name_norm the way every other outcome in that section is; it gets
+// its own sentinel row instead, scoped to the game exactly like a real
+// player row is scoped to a game_key. Previously this outcome was just
+// discarded (`if (/^no home run$/i.test(rawName)) continue`) even though
+// it's present in every FHR scrape right alongside the real players.
+const GAME_LEVEL_NAME_NORM = '__game__'
+const GAME_LEVEL_LABEL = 'No Home Run (Game)'
+
 // Reverse lookup used only when building market_opening_prices rows below —
 // maps each fanduel_gap_odds column name back to the bare cross-pipeline
 // market key that owns it.
 const COL_TO_MARKET: Record<string, string> = Object.fromEntries([
   ...SECTION_MAP.map(m => [m.col, m.market]),
   ...COMBO_SECTION_MAP.map(m => [m.minCol, m.market]),
+  ['no_hr_fd', 'noHr'],
 ])
 
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token
@@ -208,9 +220,16 @@ export async function POST(req: Request) {
           // "Home Run / Moneyline Parlay" selections look like "Player Name/Team ML" —
           // take the part before the slash as the player.
           const rawName = (o.selection || '').split('/')[0].trim()
-          if (!rawName || /^no home run$/i.test(rawName)) continue
+          if (!rawName) continue
           const odds = parseOdds(o.odds)
           if (odds == null) continue
+          if (single.market === 'fhr' && /^no home run$/i.test(rawName)) {
+            const gameRow = byPlayer.get(GAME_LEVEL_NAME_NORM) ?? { player_name: GAME_LEVEL_LABEL, cols: {} }
+            gameRow.cols.no_hr_fd = odds
+            byPlayer.set(GAME_LEVEL_NAME_NORM, gameRow)
+            marketSummary.no_hr_fd = (marketSummary.no_hr_fd ?? 0) + 1
+            continue
+          }
           const p = getPlayer(rawName)
           if (!p) continue
           p.cols[single.col] = odds
@@ -254,7 +273,7 @@ export async function POST(req: Request) {
 
   const totalPlayers = [...byGame.values()].reduce((sum, m) => sum + m.size, 0)
   if (!totalPlayers) {
-    return NextResponse.json({ error: 'Parsed the JSON but found none of the target markets (FHR, Laser 105/110, Moonshot, 1st PA HR, HR/ML Parlay, Combine-for-HR) — check you pasted the right tab(s)' }, { status: 400 })
+    return NextResponse.json({ error: 'Parsed the JSON but found none of the target markets (FHR, No HR, Laser 105/110, Moonshot, 1st PA HR, HR/ML Parlay, Combine-for-HR) — check you pasted the right tab(s)' }, { status: 400 })
   }
 
   const admin = createAdminClient()

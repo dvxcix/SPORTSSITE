@@ -114,7 +114,7 @@ async function fetchGapOdds(date: string) {
   const admin = createAdminClient()
   const [{ data: fdRows }, { data: mgmRows }] = await Promise.all([
     admin.from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
+      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
       .eq('game_date', date)
       .range(0, 19999),
     admin.from('mgm_gap_odds')
@@ -350,6 +350,13 @@ const getCachedSchedule = (date: string) => {
 // 2026-07-23). Every other still-unmapped book (draftkings on markets
 // with no current-price cell to attach a delta to) stays captured in the
 // table for future use, just not yet surfaced to a client field.
+// Matches the same sentinel in api/admin/fanduel-import/route.ts — the
+// "No Home Run" outcome from FanDuel's First HR market applies to the
+// whole game, not a player, so it's stored under this name_norm instead
+// of a real one. Excluded from every per-player merge loop below and
+// pulled out separately into each game's own `noHr` field.
+const GAME_LEVEL_NAME_NORM = '__game__'
+
 const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
   'fhr:fanduel': 'fhr', 'sa:fanduel': 'saFd', 'hr2:fanduel': 'hr2Fd',
   'singles:fanduel': 'sngFd', 'doubles:fanduel': 'dblFd', 'triples:fanduel': 'triFd',
@@ -1113,6 +1120,7 @@ export async function GET(req: Request) {
     // player has no BDL props at all (e.g. a bench bat BDL doesn't price)
     // rather than silently dropping their gap-market data.
     for (const [nn, gap] of Object.entries(fanduelGapByName)) {
+      if (nn === GAME_LEVEL_NAME_NORM) continue // handled separately below, into game.noHr — not a player
       const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: gap.player_name ?? nn })
       if (gap.fhr_fd      != null) entry.fhr      = { ...entry.fhr,      fanduel: gap.fhr_fd }
       // SA/HR2-fanduel: BDL is the primary live source for these — only
@@ -1162,6 +1170,7 @@ export async function GET(req: Request) {
     // field below.
     if (ultimateForGame(gameKey)) {
       for (const [nn, marketBookPrices] of Object.entries(openingByName)) {
+        if (nn === GAME_LEVEL_NAME_NORM) continue // handled separately below, into game.noHr — not a player
         const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
         const open = { ...entry.open }
         for (const [marketBook, price] of Object.entries(marketBookPrices)) {
@@ -1171,6 +1180,13 @@ export async function GET(req: Request) {
         entry.open = open
       }
     }
+
+    // Game-level "No Home Run" price — current price is shown to everyone
+    // (same as the HR/near-HR pill buttons above the table aren't gated),
+    // opening/delta only for Ultimate, matching every per-player `.open`
+    // field's own gate above.
+    const noHrCurrent = fanduelGapByName[GAME_LEVEL_NAME_NORM]?.no_hr_fd ?? null
+    const noHrOpen = ultimateForGame(gameKey) ? (openingByName[GAME_LEVEL_NAME_NORM]?.['noHr:fanduel'] ?? null) : null
 
     // Pitcher odds are a Dugout-only feature (PlayerDrillDown's oppPitcher
     // props) — advanced+ already populates bdlByName for the LINEUP's sake,
@@ -1434,6 +1450,10 @@ export async function GET(req: Request) {
       // keyed by mlb_id — empty until the game goes Live, see
       // fetchBoxscoreOutcomes above. Powers The Public's outcome heatmap.
       outcomes: outcomesByGamePk[g.gamePk] ?? {},
+      // Game-level (not per-player) — see GAME_LEVEL_NAME_NORM above. `null`
+      // when FanDuel hasn't posted the First HR market for this game yet,
+      // same "no line yet" meaning as any other odds field being absent.
+      noHr: noHrCurrent != null ? { fanduel: noHrCurrent, openingFanduel: noHrOpen } : null,
       bdlGameId: bdlGameId ?? null,
       _bdlDebug: {
         matchedBdlId: bdlGameId,

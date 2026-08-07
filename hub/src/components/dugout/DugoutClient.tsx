@@ -3578,7 +3578,39 @@ export function DugoutClient({ date }: { date: string }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Game-level (not per-player) — the "No Home Run" side of FanDuel's
+            First HR market, i.e. the price on NOBODY hitting a home run in
+            this game at all. Scoped to `active` (the selected game tab), not
+            the whole slate, since GameTable below is also per-active-game.
+            Deliberately bolder than the HR/near-HR pills (solid fill, bigger
+            type) rather than matching their pill treatment exactly — this is
+            a single live line, not a count to open a panel from. */}
+        {active?.noHr && (
+          <div
+            title={
+              active.noHr.openingFanduel != null && active.noHr.openingFanduel !== active.noHr.fanduel
+                ? `Opened ${oStr(active.noHr.openingFanduel)} → now ${oStr(active.noHr.fanduel)}`
+                : undefined
+            }
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12, padding: '8px 16px', borderRadius: 10,
+              border: '1.5px solid rgba(167,139,250,0.5)', background: 'rgba(167,139,250,0.16)', color: '#c4b5fd',
+              fontSize: 13, fontWeight: 900,
+            }}
+          >
+            🚫 No Home Runs
+            <span style={{ fontSize: 15, fontWeight: 900, color: '#a78bfa' }}>
+              {oStr(active.noHr.fanduel)}
+              {active.noHr.openingFanduel != null && active.noHr.openingFanduel !== active.noHr.fanduel && (
+                <span style={{ marginLeft: 3, fontSize: 10, color: active.noHr.fanduel < active.noHr.openingFanduel ? '#4ade80' : '#f87171' }}>
+                  {active.noHr.fanduel < active.noHr.openingFanduel ? '▼' : '▲'}
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
         {hrCount > 0 && (
           <button onClick={() => setShowHrBoard(true)} style={{
             display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
