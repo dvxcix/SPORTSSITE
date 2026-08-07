@@ -1,4 +1,4 @@
-import { list } from "@vercel/blob";
+import { get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +29,15 @@ export async function GET(
   }
 
   try {
-    const { blobs } = await list({ prefix: "desktop/releases/latest.json", limit: 1 });
-    const latest = blobs.find((blob) => blob.pathname === "desktop/releases/latest.json");
-    if (!latest) return new NextResponse(null, { status: 204 });
+    const latest = await get("desktop/releases/latest.json", {
+      access: "private",
+      useCache: false,
+    });
+    if (!latest || latest.statusCode !== 200) {
+      return new NextResponse(null, { status: 204 });
+    }
 
-    const response = await fetch(latest.downloadUrl, { cache: "no-store" });
-    if (!response.ok) return new NextResponse(null, { status: 204 });
-
-    const manifest = (await response.json()) as UpdateManifest;
+    const manifest = (await new Response(latest.stream).json()) as UpdateManifest;
     if (!/^\d+\.\d+\.\d+$/.test(manifest.version)) {
       return new NextResponse(null, { status: 204 });
     }

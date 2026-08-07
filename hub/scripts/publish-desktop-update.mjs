@@ -13,6 +13,9 @@ const targetRoot = process.env.CARGO_TARGET_DIR
 const installerName = `SlipSurge_${version}_x64-setup.exe`;
 const installerPath = path.join(targetRoot, "release", "bundle", "nsis", installerName);
 const signaturePath = `${installerPath}.sig`;
+const updateBaseUrl = (
+  process.env.DESKTOP_UPDATE_BASE_URL || "https://www.slipsurge.com"
+).replace(/\/$/, "");
 
 if (!process.env.BLOB_READ_WRITE_TOKEN) {
   throw new Error("BLOB_READ_WRITE_TOKEN is required to publish desktop updates.");
@@ -24,7 +27,7 @@ const installerBlob = await put(
   `desktop/releases/${version}/${installerName}`,
   installer,
   {
-    access: "public",
+    access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/vnd.microsoft.portable-executable",
@@ -37,7 +40,7 @@ const manifest = {
   notes: process.env.DESKTOP_RELEASE_NOTES || `SlipSurge desktop ${version}`,
   platforms: {
     "windows-x86_64": {
-      url: installerBlob.downloadUrl,
+      url: `${updateBaseUrl}/api/desktop/download/windows/x86_64/${version}`,
       signature,
     },
   },
@@ -47,7 +50,7 @@ const manifestBlob = await put(
   "desktop/releases/latest.json",
   JSON.stringify(manifest, null, 2),
   {
-    access: "public",
+    access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
@@ -55,5 +58,5 @@ const manifestBlob = await put(
 );
 
 console.log(`Published SlipSurge ${version}`);
-console.log(`Installer: ${installerBlob.downloadUrl}`);
-console.log(`Manifest: ${manifestBlob.downloadUrl}`);
+console.log(`Installer blob: ${installerBlob.pathname}`);
+console.log(`Manifest blob: ${manifestBlob.pathname}`);
