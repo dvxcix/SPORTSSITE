@@ -97,7 +97,7 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [market, setMarket] = useState('fhr')
-  const [book, setBook] = useState('fanduel')
+  const [book, setBook] = useState('fanatics')
   const [mode, setMode] = useState<'odds' | 'probability' | 'delta'>('odds')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -132,6 +132,19 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
     capturedAt: snapshot.captured_at,
     players: new Map(Object.values(snapshot.prop_map ?? {}).map(entry => [norm(entry.name ?? ''), entry])),
   })), [snapshots])
+  const availableBooks = useMemo(() => {
+    const latest = normalizedSnapshots.at(-1)
+    if (!latest) return new Map<string, number>()
+    return new Map(BOOKS.map(([key]) => [key, players.reduce((count, player) => {
+      const prices = latest.players.get(norm(player.name))?.[market] as PriceMap | undefined
+      return count + (typeof prices?.[key] === 'number' ? 1 : 0)
+    }, 0)]))
+  }, [normalizedSnapshots, players, market])
+  useEffect(() => {
+    if (!normalizedSnapshots.length || (availableBooks.get(book) ?? 0) > 0) return
+    const fallback = BOOKS.find(([key]) => (availableBooks.get(key) ?? 0) > 0)?.[0]
+    if (fallback) setBook(fallback)
+  }, [availableBooks, book, normalizedSnapshots.length])
 
   const series = useMemo<Series[]>(() => players.map((player, index) => {
     const points: SeriesPoint[] = []
@@ -183,7 +196,7 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
       <section className={styles.terminal}>
         <div className={styles.toolbar}>
           <label><span>MARKET</span><select value={market} onChange={e=>setMarket(e.target.value)}>{MARKETS.map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
-          <label><span>BOOK</span><select value={book} onChange={e=>setBook(e.target.value)}>{BOOKS.map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
+          <label><span>BOOK</span><select value={book} onChange={e=>setBook(e.target.value)}>{BOOKS.map(([key,label])=><option value={key} key={key} disabled={normalizedSnapshots.length > 0 && (availableBooks.get(key) ?? 0) === 0}>{label}{normalizedSnapshots.length > 0 ? ` (${availableBooks.get(key) ?? 0})` : ''}</option>)}</select></label>
           <div className={styles.segmented}>{(['odds','probability','delta'] as const).map(value=><button key={value} data-active={mode===value} onClick={()=>setMode(value)}>{value === 'probability' ? 'IMPLIED %' : value.toUpperCase()}</button>)}</div>
           <div className={styles.terminalMeta}><Crosshair size={14}/><span>{series.length} SIGNALS</span></div>
         </div>
