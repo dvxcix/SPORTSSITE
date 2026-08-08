@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Activity, Check, ChevronLeft, ChevronRight, Crosshair, Layers3, RefreshCw, Search, Sparkles } from 'lucide-react'
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { BookLogo } from '@/components/BookLogo'
 import styles from './odds-terminal.module.css'
 
 type PriceMap = Record<string, number>
@@ -20,12 +21,14 @@ type Game = {
 }
 
 const MARKETS = [
-  ['fhr', 'First HR'], ['sa', 'Anytime HR'], ['hr2', '2+ HR'], ['hits', 'Hit'], ['hits2', '2+ Hits'],
-  ['singles', 'Single'], ['doubles', 'Double'], ['triples', 'Triple'], ['rbi', 'RBI'], ['rbi2', '2+ RBI'],
+  ['fhr', 'First HR'], ['sa', 'Anytime HR'], ['hr2', '2+ HR'], ['hr3', '3+ HR'],
+  ['hits', '1+ Hit'], ['hits2', '2+ Hits'], ['hits3', '3+ Hits'],
+  ['singles', '1+ Single'], ['singles2', '2+ Singles'], ['doubles', '1+ Double'], ['triples', '1+ Triple'], ['rbi', '1+ RBI'], ['rbi2', '2+ RBI'],
   ['rbi3', '3+ RBI'], ['runs', 'Run'], ['runs2', '2+ Runs'], ['tb', '2+ Bases'], ['tb3', '3+ Bases'],
-  ['tb4', '4+ Bases'], ['stolen_bases', 'Stolen Base'], ['hrr', 'H+R+RBI'],
+  ['tb4', '4+ Bases'], ['tb5', '5+ Bases'], ['stolen_bases', '1+ Stolen Base'], ['stolen_bases2', '2+ Stolen Bases'],
+  ['strikeouts', '1+ Batter K'], ['strikeouts2', '2+ Batter Ks'], ['strikeouts3', '3+ Batter Ks'], ['hrr', 'H+R+RBI'],
 ] as const
-const BOOKS = [['fanduel', 'FanDuel'], ['caesars', 'Caesars'], ['fanatics', 'Fanatics'], ['betmgm', 'BetMGM'], ['betrivers', 'BetRivers']] as const
+const BOOKS = [['fanduel', 'FanDuel'], ['draftkings', 'DraftKings'], ['caesars', 'Caesars'], ['fanatics', 'Fanatics'], ['betmgm', 'BetMGM'], ['betrivers', 'BetRivers']] as const
 const COLORS = ['#6ee7ff', '#ff7a90', '#f9d66d', '#a78bfa', '#67e8a5', '#fb923c', '#60a5fa', '#f472b6', '#c4f06c', '#22d3ee', '#e879f9', '#facc15', '#34d399', '#818cf8', '#fb7185', '#2dd4bf', '#f97316', '#a3e635']
 
 function offsetDate(date: string, amount: number) {
@@ -41,6 +44,14 @@ function oddsLabel(value: number | null) {
 }
 function norm(value: string) {
   return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+}
+function numericPrice(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
 }
 function todayET() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
@@ -137,11 +148,13 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
     players: new Map(Object.values(snapshot.prop_map ?? {}).map(entry => [norm(entry.name ?? ''), entry])),
   })), [snapshots])
   const availableBooks = useMemo(() => {
-    const latest = normalizedSnapshots.at(-1)
-    if (!latest) return new Map<string, number>()
+    if (!normalizedSnapshots.length) return new Map<string, number>()
     return new Map(BOOKS.map(([key]) => [key, players.reduce((count, player) => {
-      const prices = latest.players.get(norm(player.name))?.[market] as PriceMap | undefined
-      return count + (typeof prices?.[key] === 'number' ? 1 : 0)
+      const hasPrice = normalizedSnapshots.some(snapshot => {
+        const prices = snapshot.players.get(norm(player.name))?.[market] as PriceMap | undefined
+        return numericPrice(prices?.[key]) != null
+      })
+      return count + (hasPrice ? 1 : 0)
     }, 0)]))
   }, [normalizedSnapshots, players, market])
   useEffect(() => {
@@ -155,8 +168,8 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
     let opening: number | null = null
     for (const snapshot of normalizedSnapshots) {
       const entry = snapshot.players.get(norm(player.name))
-      const odds = (entry?.[market] as PriceMap | undefined)?.[book]
-      if (typeof odds !== 'number') continue
+      const odds = numericPrice((entry?.[market] as PriceMap | undefined)?.[book])
+      if (odds == null) continue
       opening ??= odds
       const last = points.at(-1)
       if (!last || last.odds !== odds) points.push({ time: new Date(snapshot.capturedAt).getTime(), odds, value: odds - opening })
@@ -201,7 +214,7 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
       <section className={styles.terminal}>
         <div className={styles.toolbar}>
           <label><span>MARKET</span><select value={market} onChange={e=>setMarket(e.target.value)}>{MARKETS.map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
-          <label><span>BOOK</span><select value={book} onChange={e=>setBook(e.target.value)}>{BOOKS.map(([key,label])=><option value={key} key={key} disabled={normalizedSnapshots.length > 0 && (availableBooks.get(key) ?? 0) === 0}>{label}{normalizedSnapshots.length > 0 ? ` (${availableBooks.get(key) ?? 0})` : ''}</option>)}</select></label>
+          <div className={styles.bookControl}><span>BOOK</span><div className={styles.bookPicker}>{BOOKS.map(([key,label])=>{const count=availableBooks.get(key)??0;const disabled=normalizedSnapshots.length>0&&count===0;return <button type="button" key={key} title={`${label}${normalizedSnapshots.length?` · ${count} players`:''}`} aria-label={`${label}${normalizedSnapshots.length?`, ${count} players with prices`:''}`} data-active={book===key} disabled={disabled} onClick={()=>setBook(key)}><BookLogo vendor={key} size={17}/><span>{label}</span>{normalizedSnapshots.length>0&&<b>{count}</b>}</button>})}</div></div>
           <div className={styles.segmented}>{(['odds','probability','delta'] as const).map(value=><button key={value} data-active={mode===value} onClick={()=>setMode(value)}>{value === 'probability' ? 'IMPLIED %' : value.toUpperCase()}</button>)}</div>
           <div className={styles.terminalMeta}><Crosshair size={14}/><span>{series.length} SIGNALS</span></div>
         </div>
