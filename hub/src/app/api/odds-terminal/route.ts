@@ -2,6 +2,8 @@ import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { requireTier } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
+import { canonGameKey } from '@slipsurge/core/teamAbbr'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,9 +72,26 @@ function compactSnapshots(rows: SnapshotRow[]) {
   })
 }
 
-async function readHistory(date: string, gamePk: string, gameKey: string) {
+async function readHistory(date: string, gamePk: string, requestedGameKey?: string) {
   const admin = createAdminClient()
   const rows: SnapshotRow[] = []
+
+  // gamePk is the stable identifier. Derive gameKey from our persisted
+  // snapshot so started/final games and clients cached during a deployment
+  // never fail merely because the presentation payload omitted gameKey.
+  const { data: gameMeta, error: gameMetaError } = await admin
+    .from('pregame_odds_snapshots')
+    .select('home_abbr,away_abbr')
+    .eq('game_pk', gamePk)
+    .maybeSingle()
+  if (gameMetaError) throw gameMetaError
+  const derivedGameKey = gameMeta?.away_abbr && gameMeta?.home_abbr
+    ? canonGameKey(`${gameMeta.away_abbr}@${gameMeta.home_abbr}`)
+    : null
+  const gameKey = requestedGameKey ?? derivedGameKey
+  if (!gameKey) throw new Error(`Could not resolve game key for ${gamePk}`)
+
+  const firstPitchAt = await getFirstPitchAt(gamePk)
 
   for (let from = 0; from < MAX_SNAPSHOTS; from += PAGE_SIZE) {
     const to = Math.min(from + PAGE_SIZE - 1, MAX_SNAPSHOTS - 1)
@@ -86,7 +105,7 @@ async function readHistory(date: string, gamePk: string, gameKey: string) {
 
     if (error) throw error
     const page = (data ?? []) as SnapshotRow[]
-    rows.push(...page)
+    rows.push(...(firstPitchAt ? page.filter(row => row.captured_at <= firstPitchAt) : page))
     if (page.length < PAGE_SIZE) break
   }
 
@@ -113,7 +132,7 @@ async function readHistory(date: string, gamePk: string, gameKey: string) {
     rows.push({ captured_at: openingCapture, prop_map: openerMap })
   }
 
-  const gaps = (gapRows ?? []) as unknown as GapRow[]
+  const gaps = ((gapRows ?? []) as unknown as GapRow[]).filter(row => !firstPitchAt || row.updated_at <= firstPitchAt)
   if (gaps.length) {
     const latestImport = gaps.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, gaps[0].updated_at)
     rows.push({ captured_at: latestImport, prop_map: buildFanDuelMap(gaps) })
@@ -123,8 +142,8 @@ async function readHistory(date: string, gamePk: string, gameKey: string) {
   return { sourceCount: rows.length, snapshots: compactSnapshots(rows) }
 }
 
-const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v3'], { revalidate: 20 })
-const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v3'], { revalidate: 86400 })
+const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v4'], { revalidate: 20 })
+const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v4'], { revalidate: 86400 })
 
 export async function GET(req: Request) {
   const gate = await requireTier('ultimate')
@@ -134,8 +153,8 @@ export async function GET(req: Request) {
   const gamePk = searchParams.get('gamePk')?.trim()
   const gameKey = searchParams.get('gameKey')?.trim().toUpperCase()
   const date = searchParams.get('date')?.trim()
-  if (!gamePk || !/^\d+$/.test(gamePk) || !gameKey || !/^[A-Z0-9]+@[A-Z0-9]+(?:-G\d+)?$/.test(gameKey) || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: 'A valid date, gamePk, and gameKey are required.' }, { status: 400 })
+  if (!gamePk || !/^\d+$/.test(gamePk) || (gameKey && !/^[A-Z0-9]+@[A-Z0-9]+(?:-G\d+)?$/.test(gameKey)) || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return NextResponse.json({ error: 'A valid date and gamePk are required.' }, { status: 400 })
   }
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })

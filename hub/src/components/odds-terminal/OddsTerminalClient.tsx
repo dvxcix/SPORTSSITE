@@ -159,7 +159,8 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
     if (!gamePk || !selectedGame) return
     let cancelled = false
     setHistoryLoading(true); setSnapshots([]); setCaptureCount(0)
-    fetch(`/api/odds-terminal?date=${date}&gamePk=${gamePk}&gameKey=${encodeURIComponent(selectedGame.gameKey)}`).then(async response => {
+    const resolvedGameKey = selectedGame.gameKey || `${selectedGame.awayAbbr}@${selectedGame.homeAbbr}`
+    fetch(`/api/odds-terminal?date=${date}&gamePk=${gamePk}&gameKey=${encodeURIComponent(resolvedGameKey)}`).then(async response => {
       if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Could not load movement history.')
       return response.json()
     }).then(data => { if (!cancelled) { setSnapshots(data.snapshots ?? []); setCaptureCount(data.sourceCount ?? data.snapshots?.length ?? 0) } }).catch(e => !cancelled && setError(e.message)).finally(() => !cancelled && setHistoryLoading(false))
