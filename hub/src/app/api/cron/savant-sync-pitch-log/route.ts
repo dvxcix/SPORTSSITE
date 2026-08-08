@@ -77,16 +77,52 @@ export async function GET(req: Request) {
   // window and roll `start` back to the EARLIEST incomplete date found in
   // it, so the loop below naturally walks forward through the whole gap
   // instead of only ever re-touching the single newest broken date.
+  // Real root cause of this whole cursor's chronic "never reaches today"
+  // failure (confirmed live 2026-08-08, after the maxDuration/parallelize
+  // fix from 08-06 turned out NOT to be the whole story): the unpaginated
+  // `.select('game_pk')` below silently truncates to this project's
+  // PostgREST row cap (1000 — same class of bug already fixed elsewhere in
+  // this codebase, e.g. fetchGapOddsOpening's own PAGE loop, just never
+  // here). Any date with more than ~3-4 games' worth of pitches (i.e.
+  // basically every date, all season) has WAY more than 1000 individual
+  // pitch rows, so this always came back an arbitrary partial slice —
+  // whichever few games' pitches didn't happen to land in that slice
+  // permanently read as "incomplete" even when 100% of the real data was
+  // there. Confirmed directly: 08-07 has 15/15 real games fully logged, but
+  // this exact query returned only 13 distinct game_pks. Since the recheck
+  // window rolls `start` back to the EARLIEST incomplete date, and dates
+  // once flagged this way can never un-flag (refetching changes nothing —
+  // the data was never actually missing), the cursor got permanently stuck
+  // re-processing the same handful of falsely-incomplete old dates every
+  // single day, burning the whole MAX_DAYS_PER_RUN budget before ever
+  // reaching the one date that actually mattered.
+  async function fetchDistinctGamePks(checkDate: string): Promise<Set<string>> {
+    const pks = new Set<string>()
+    const PAGE = 1000
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await admin
+        .from(PITCH_LOG_TABLE)
+        .select('game_pk')
+        .eq('season', season)
+        .eq('game_date', checkDate)
+        .range(offset, offset + PAGE - 1)
+      if (!data?.length) break
+      for (const r of data) pks.add(r.game_pk)
+      if (data.length < PAGE) break
+    }
+    return pks
+  }
+
   const RECHECK_WINDOW_DAYS = 7
   const seasonStart = seasonStartDate(season)
   const checkDates = Array.from({ length: RECHECK_WINDOW_DAYS }, (_, i) => format(addDays(parseISO(start), -(i + 1)), 'yyyy-MM-dd'))
     .filter(d => d >= seasonStart)
   const checks = await Promise.all(checkDates.map(async checkDate => {
-    const [{ count: gameCount }, { data: loggedGamePks }] = await Promise.all([
+    const [{ count: gameCount }, loggedGamePks] = await Promise.all([
       admin.from('games').select('game_pk', { count: 'exact', head: true }).eq('season', season).eq('game_date', checkDate),
-      admin.from(PITCH_LOG_TABLE).select('game_pk').eq('season', season).eq('game_date', checkDate),
+      fetchDistinctGamePks(checkDate),
     ])
-    const loggedCount = new Set((loggedGamePks ?? []).map(r => r.game_pk)).size
+    const loggedCount = loggedGamePks.size
     return { checkDate, incomplete: (gameCount ?? 0) > 0 && loggedCount < (gameCount ?? 0) }
   }))
   const incompleteDates = checks.filter(c => c.incomplete).map(c => c.checkDate).sort()
