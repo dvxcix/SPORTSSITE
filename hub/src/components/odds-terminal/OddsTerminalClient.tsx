@@ -62,7 +62,7 @@ type Series = { id: number; name: string; team: string; color: string; points: S
 
 function MovementChart({ series, mode }: { series: Series[]; mode: 'odds' | 'probability' | 'delta' }) {
   const shellRef = useRef<HTMLDivElement>(null)
-  const [cursor, setCursor] = useState<{ x: number; time: number } | null>(null)
+  const [cursor, setCursor] = useState<{ x: number; y: number; time: number } | null>(null)
   const width = 1120, height = 480, left = 68, right = 26, top = 26, bottom = 52
   const all = series.flatMap(s => s.points)
   if (!series.length || !all.length) return <div className={styles.emptyChart}><Activity size={28} /><strong>Select at least one player with a posted line</strong><span>The terminal will render every captured move here.</span></div>
@@ -79,27 +79,37 @@ function MovementChart({ series, mode }: { series: Series[]; mode: 'odds' | 'pro
   const ticks = Array.from({ length: 6 }, (_, i) => yMin + ((yMax - yMin) * i) / 5)
   const timeTicks = Array.from({ length: 6 }, (_, i) => xMin + ((xMax - xMin) * i) / 5)
   const cursorEntries = cursor ? series.map(s => {
-    const point = s.points.reduce((best, p) => Math.abs(p.time - cursor.time) < Math.abs(best.time - cursor.time) ? p : best, s.points[0])
-    return { ...s, point }
-  }).filter(v => v.point) : []
+    const pointIndex = s.points.reduce((best, p, index) => Math.abs(p.time - cursor.time) < Math.abs(s.points[best].time - cursor.time) ? index : best, 0)
+    const point = s.points[pointIndex]
+    return { ...s, point, previous: pointIndex > 0 ? s.points[pointIndex - 1] : null, distance: Math.abs(y(valueOf(point)) - cursor.y) }
+  }).sort((a, b) => a.distance - b.distance) : []
+  const focusedId = cursorEntries[0]?.id
 
   return <div ref={shellRef} className={styles.chartShell} onMouseLeave={() => setCursor(null)} onMouseMove={event => {
     const box = shellRef.current?.getBoundingClientRect(); if (!box) return
     const px = Math.max(left, Math.min(width - right, ((event.clientX - box.left) / box.width) * width))
-    setCursor({ x: px, time: xMin + ((px - left) / (width - left - right)) * (xMax - xMin) })
+    const py = Math.max(top, Math.min(height - bottom, ((event.clientY - box.top) / box.height) * height))
+    setCursor({ x: px, y: py, time: xMin + ((px - left) / (width - left - right)) * (xMax - xMin) })
   }}>
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Interactive odds movement chart">
       <defs><linearGradient id="terminal-grid-fade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#75e7ff" stopOpacity=".08"/><stop offset=".5" stopColor="#75e7ff" stopOpacity=".22"/><stop offset="1" stopColor="#75e7ff" stopOpacity=".08"/></linearGradient></defs>
       {ticks.map((tick, i) => <g key={tick}><line x1={left} x2={width-right} y1={y(tick)} y2={y(tick)} stroke="url(#terminal-grid-fade)" strokeWidth="1"/><text x={left-12} y={y(tick)+4} textAnchor="end" className={styles.axisText}>{mode === 'odds' ? oddsLabel(tick) : `${tick.toFixed(1)}${mode === 'probability' ? '%' : ''}`}</text></g>)}
       {timeTicks.map(tick => <g key={tick}><line x1={x(tick)} x2={x(tick)} y1={top} y2={height-bottom} stroke="rgba(255,255,255,.045)"/><text x={x(tick)} y={height-20} textAnchor="middle" className={styles.axisText}>{new Date(tick).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</text></g>)}
       {mode === 'delta' && yMin < 0 && yMax > 0 && <line x1={left} x2={width-right} y1={y(0)} y2={y(0)} stroke="rgba(255,255,255,.32)" strokeDasharray="5 6"/>}
-      {series.map(s => <g key={s.id}><polyline points={s.points.map(p => `${x(p.time)},${y(valueOf(p))}`).join(' ')} fill="none" stroke={s.color} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" opacity=".9"/><circle cx={x(s.points.at(-1)!.time)} cy={y(valueOf(s.points.at(-1)!))} r="4" fill={s.color} stroke="#071016" strokeWidth="2"/></g>)}
+      {series.map(s => <g key={s.id} opacity={cursor && focusedId !== s.id ? .22 : .95}><polyline points={s.points.map(p => `${x(p.time)},${y(valueOf(p))}`).join(' ')} fill="none" stroke={s.color} strokeWidth={focusedId === s.id ? 4.5 : 2.6} strokeLinejoin="round" strokeLinecap="round"/><circle cx={x(s.points.at(-1)!.time)} cy={y(valueOf(s.points.at(-1)!))} r={focusedId === s.id ? 5.5 : 4} fill={s.color} stroke="#071016" strokeWidth="2"/></g>)}
       {cursor && <line x1={cursor.x} x2={cursor.x} y1={top} y2={height-bottom} stroke="#dffaff" strokeOpacity=".7" strokeDasharray="3 4"/>}
+      {cursorEntries.slice(0, 4).map(s => <circle key={`cursor-${s.id}`} cx={x(s.point.time)} cy={y(valueOf(s.point))} r={s.id === focusedId ? 6 : 4} fill={s.color} stroke="#071016" strokeWidth="2.5"/>)}
     </svg>
-    {cursor && <div className={styles.chartTooltip} style={{ left: `${Math.min(78, Math.max(8, (cursor.x / width) * 100))}%` }}>
-      <time>{new Date(cursor.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</time>
-      {cursorEntries.slice(0, 8).map(s => <div key={s.id}><i style={{ background: s.color }}/><span>{s.name}</span><b>{mode === 'odds' ? oddsLabel(s.point.odds) : mode === 'probability' ? `${(americanToProbability(s.point.odds) * 100).toFixed(1)}%` : `${s.point.value > 0 ? '+' : ''}${Math.round(s.point.value)}`}</b></div>)}
-      {cursorEntries.length > 8 && <small>+{cursorEntries.length - 8} more selected</small>}
+    {cursor && <div className={styles.chartTooltip} data-side={cursor.x > width * .62 ? 'left' : 'right'} style={{ left: `${(cursor.x / width) * 100}%`, top: `${Math.max(4, Math.min(68, (cursor.y / height) * 100))}%` }}>
+      <header><span>CAPTURE INSPECTOR</span><time>{new Date(cursorEntries[0]?.point.time ?? cursor.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</time></header>
+      {cursorEntries.slice(0, 4).map((s, index) => { const step=s.previous?s.point.odds-s.previous.odds:0;const fromOpen=s.point.odds-s.open;return <div className={styles.inspectCard} data-focus={index===0} key={s.id} style={{'--signal':s.color} as CSSProperties}>
+        <span className={styles.inspectAvatar}><img src={mlbHeadshot(s.id)} alt=""/><img src={getTeamLogoUrl(s.team)} alt=""/></span>
+        <span className={styles.inspectIdentity}><strong>{s.name}</strong><small>{s.team} · captured {new Date(s.point.time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></span>
+        <span className={styles.inspectPrice}><strong>{oddsLabel(s.point.odds)}</strong><small>{(americanToProbability(s.point.odds)*100).toFixed(1)}% implied</small></span>
+        <span className={styles.inspectMove}><small>LAST MOVE</small><b data-direction={step<0?'shorter':step>0?'longer':'flat'}>{step>0?'+':''}{Math.round(step)}</b></span>
+        <span className={styles.inspectMove}><small>FROM OPEN</small><b data-direction={fromOpen<0?'shorter':fromOpen>0?'longer':'flat'}>{fromOpen>0?'+':''}{Math.round(fromOpen)}</b></span>
+      </div>})}
+      {cursorEntries.length > 4 && <footer>4 nearest signals · +{cursorEntries.length-4} active</footer>}
     </div>}
   </div>
 }
