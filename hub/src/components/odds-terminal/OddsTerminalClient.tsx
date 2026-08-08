@@ -1,0 +1,202 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useRouter } from 'next/navigation'
+import { Activity, Check, ChevronLeft, ChevronRight, Crosshair, Layers3, RefreshCw, Search, Sparkles } from 'lucide-react'
+import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import styles from './odds-terminal.module.css'
+
+type PriceMap = Record<string, number>
+type PropEntry = { name: string; [market: string]: string | PriceMap | undefined }
+type Snapshot = { captured_at: string; prop_map: Record<string, PropEntry> }
+type LineupPlayer = { mlb_id: number; name: string; name_norm: string; team: string; position?: string; batting_order?: number }
+type Pitcher = { id: number; name: string; hand: string }
+type Game = {
+  gamePk: number; gameKey: string; gameDate: string; status: string; detailedStatus: string
+  homeAbbr: string; awayAbbr: string; homePitcher?: Pitcher; awayPitcher?: Pitcher
+  homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
+}
+
+const MARKETS = [
+  ['fhr', 'First HR'], ['sa', 'Anytime HR'], ['hr2', '2+ HR'], ['hits', 'Hit'], ['hits2', '2+ Hits'],
+  ['singles', 'Single'], ['doubles', 'Double'], ['triples', 'Triple'], ['rbi', 'RBI'], ['rbi2', '2+ RBI'],
+  ['rbi3', '3+ RBI'], ['runs', 'Run'], ['runs2', '2+ Runs'], ['tb', '2+ Bases'], ['tb3', '3+ Bases'],
+  ['tb4', '4+ Bases'], ['stolen_bases', 'Stolen Base'], ['hrr', 'H+R+RBI'],
+] as const
+const BOOKS = [['fanduel', 'FanDuel'], ['caesars', 'Caesars'], ['fanatics', 'Fanatics'], ['betmgm', 'BetMGM'], ['betrivers', 'BetRivers']] as const
+const COLORS = ['#6ee7ff', '#ff7a90', '#f9d66d', '#a78bfa', '#67e8a5', '#fb923c', '#60a5fa', '#f472b6', '#c4f06c', '#22d3ee', '#e879f9', '#facc15', '#34d399', '#818cf8', '#fb7185', '#2dd4bf', '#f97316', '#a3e635']
+
+function offsetDate(date: string, amount: number) {
+  const value = new Date(`${date}T12:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + amount)
+  return value.toISOString().slice(0, 10)
+}
+function americanToProbability(odds: number) {
+  return odds > 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100)
+}
+function oddsLabel(value: number | null) {
+  return value == null ? '—' : `${value > 0 ? '+' : ''}${Math.round(value)}`
+}
+function norm(value: string) {
+  return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+}
+
+type SeriesPoint = { time: number; odds: number; value: number }
+type Series = { id: number; name: string; team: string; color: string; points: SeriesPoint[]; open: number; current: number; move: number }
+
+function MovementChart({ series, mode }: { series: Series[]; mode: 'odds' | 'probability' | 'delta' }) {
+  const shellRef = useRef<HTMLDivElement>(null)
+  const [cursor, setCursor] = useState<{ x: number; time: number } | null>(null)
+  const width = 1120, height = 480, left = 68, right = 26, top = 26, bottom = 52
+  const all = series.flatMap(s => s.points)
+  if (!series.length || !all.length) return <div className={styles.emptyChart}><Activity size={28} /><strong>Select at least one player with a posted line</strong><span>The terminal will render every captured move here.</span></div>
+  const xMin = Math.min(...all.map(p => p.time)), xMaxRaw = Math.max(...all.map(p => p.time))
+  const xMax = xMaxRaw === xMin ? xMin + 1 : xMaxRaw
+  const values = all.map(p => mode === 'odds' ? p.odds : mode === 'probability' ? americanToProbability(p.odds) * 100 : p.value)
+  let yMin = Math.min(...values), yMax = Math.max(...values)
+  if (yMax === yMin) { yMin -= 1; yMax += 1 }
+  const pad = Math.max((yMax - yMin) * .12, mode === 'odds' ? 20 : .4)
+  yMin -= pad; yMax += pad
+  const x = (v: number) => left + ((v - xMin) / (xMax - xMin)) * (width - left - right)
+  const y = (v: number) => top + (1 - (v - yMin) / (yMax - yMin)) * (height - top - bottom)
+  const valueOf = (p: SeriesPoint) => mode === 'odds' ? p.odds : mode === 'probability' ? americanToProbability(p.odds) * 100 : p.value
+  const ticks = Array.from({ length: 6 }, (_, i) => yMin + ((yMax - yMin) * i) / 5)
+  const timeTicks = Array.from({ length: 6 }, (_, i) => xMin + ((xMax - xMin) * i) / 5)
+  const cursorEntries = cursor ? series.map(s => {
+    const point = s.points.reduce((best, p) => Math.abs(p.time - cursor.time) < Math.abs(best.time - cursor.time) ? p : best, s.points[0])
+    return { ...s, point }
+  }).filter(v => v.point) : []
+
+  return <div ref={shellRef} className={styles.chartShell} onMouseLeave={() => setCursor(null)} onMouseMove={event => {
+    const box = shellRef.current?.getBoundingClientRect(); if (!box) return
+    const px = Math.max(left, Math.min(width - right, ((event.clientX - box.left) / box.width) * width))
+    setCursor({ x: px, time: xMin + ((px - left) / (width - left - right)) * (xMax - xMin) })
+  }}>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Interactive odds movement chart">
+      <defs><linearGradient id="terminal-grid-fade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#75e7ff" stopOpacity=".08"/><stop offset=".5" stopColor="#75e7ff" stopOpacity=".22"/><stop offset="1" stopColor="#75e7ff" stopOpacity=".08"/></linearGradient></defs>
+      {ticks.map((tick, i) => <g key={tick}><line x1={left} x2={width-right} y1={y(tick)} y2={y(tick)} stroke="url(#terminal-grid-fade)" strokeWidth="1"/><text x={left-12} y={y(tick)+4} textAnchor="end" className={styles.axisText}>{mode === 'odds' ? oddsLabel(tick) : `${tick.toFixed(1)}${mode === 'probability' ? '%' : ''}`}</text></g>)}
+      {timeTicks.map(tick => <g key={tick}><line x1={x(tick)} x2={x(tick)} y1={top} y2={height-bottom} stroke="rgba(255,255,255,.045)"/><text x={x(tick)} y={height-20} textAnchor="middle" className={styles.axisText}>{new Date(tick).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</text></g>)}
+      {mode === 'delta' && yMin < 0 && yMax > 0 && <line x1={left} x2={width-right} y1={y(0)} y2={y(0)} stroke="rgba(255,255,255,.32)" strokeDasharray="5 6"/>}
+      {series.map(s => <g key={s.id}><polyline points={s.points.map(p => `${x(p.time)},${y(valueOf(p))}`).join(' ')} fill="none" stroke={s.color} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" opacity=".9"/><circle cx={x(s.points.at(-1)!.time)} cy={y(valueOf(s.points.at(-1)!))} r="4" fill={s.color} stroke="#071016" strokeWidth="2"/></g>)}
+      {cursor && <line x1={cursor.x} x2={cursor.x} y1={top} y2={height-bottom} stroke="#dffaff" strokeOpacity=".7" strokeDasharray="3 4"/>}
+    </svg>
+    {cursor && <div className={styles.chartTooltip} style={{ left: `${Math.min(78, Math.max(8, (cursor.x / width) * 100))}%` }}>
+      <time>{new Date(cursor.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</time>
+      {cursorEntries.slice(0, 8).map(s => <div key={s.id}><i style={{ background: s.color }}/><span>{s.name}</span><b>{mode === 'odds' ? oddsLabel(s.point.odds) : mode === 'probability' ? `${(americanToProbability(s.point.odds) * 100).toFixed(1)}%` : `${s.point.value > 0 ? '+' : ''}${Math.round(s.point.value)}`}</b></div>)}
+      {cursorEntries.length > 8 && <small>+{cursorEntries.length - 8} more selected</small>}
+    </div>}
+  </div>
+}
+
+export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
+  const router = useRouter()
+  const [date, setDate] = useState(initialDate)
+  const [games, setGames] = useState<Game[]>([])
+  const [gamePk, setGamePk] = useState<number | null>(null)
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([])
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [market, setMarket] = useState('fhr')
+  const [book, setBook] = useState('fanduel')
+  const [mode, setMode] = useState<'odds' | 'probability' | 'delta'>('odds')
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setError(null); setGames([]); setGamePk(null); setSnapshots([])
+    fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Could not load the slate.')
+      return response.json()
+    }).then(data => { if (!cancelled) { const next = data.games ?? []; setGames(next); setGamePk(next[0]?.gamePk ?? null) } }).catch(e => !cancelled && setError(e.message)).finally(() => !cancelled && setLoading(false))
+    return () => { cancelled = true }
+  }, [date])
+
+  useEffect(() => {
+    if (!gamePk) return
+    let cancelled = false
+    setHistoryLoading(true); setSnapshots([])
+    fetch(`/api/odds-terminal?date=${date}&gamePk=${gamePk}`).then(async response => {
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Could not load movement history.')
+      return response.json()
+    }).then(data => { if (!cancelled) setSnapshots(data.snapshots ?? []) }).catch(e => !cancelled && setError(e.message)).finally(() => !cancelled && setHistoryLoading(false))
+    return () => { cancelled = true }
+  }, [date, gamePk])
+
+  const game = games.find(g => g.gamePk === gamePk) ?? null
+  const players = useMemo(() => game ? [...game.awayLineup, ...game.homeLineup] : [], [game])
+  useEffect(() => { setSelected(new Set(players.map(p => p.mlb_id))) }, [gamePk, players])
+  const normalizedSnapshots = useMemo(() => snapshots.map(snapshot => ({
+    capturedAt: snapshot.captured_at,
+    players: new Map(Object.values(snapshot.prop_map ?? {}).map(entry => [norm(entry.name ?? ''), entry])),
+  })), [snapshots])
+
+  const series = useMemo<Series[]>(() => players.map((player, index) => {
+    const points: SeriesPoint[] = []
+    let opening: number | null = null
+    for (const snapshot of normalizedSnapshots) {
+      const entry = snapshot.players.get(norm(player.name))
+      const odds = (entry?.[market] as PriceMap | undefined)?.[book]
+      if (typeof odds !== 'number') continue
+      opening ??= odds
+      const last = points.at(-1)
+      if (!last || last.odds !== odds) points.push({ time: new Date(snapshot.capturedAt).getTime(), odds, value: odds - opening })
+    }
+    if (!points.length || opening == null) return null
+    const current = points.at(-1)!.odds
+    return { id: player.mlb_id, name: player.name, team: player.team, color: COLORS[index % COLORS.length], points, open: opening, current, move: current - opening }
+  }).filter((s): s is Series => s != null && selected.has(s.id)), [players, normalizedSnapshots, market, book, selected])
+
+  const ranked = [...series].sort((a, b) => a.move - b.move)
+  const dateStrip = [-3,-2,-1,0,1,2,3].map(n => offsetDate(date, n))
+  const chooseDate = (next: string) => { setDate(next); router.replace(`/odds-terminal?date=${next}`) }
+
+  return <div className={styles.page}>
+    <header className={styles.hero}>
+      <div className={styles.heroIcon}><Activity size={22}/><span/></div>
+      <div><div className={styles.eyebrow}><span>ULTIMATE</span> MARKET INTELLIGENCE</div><h1>Odds Movement Terminal</h1><p>Replay every captured price move. Compare the full game, isolate the signal, find where the board diverged.</p></div>
+      <div className={styles.liveBadge}><i/>{historyLoading ? 'SYNCING' : 'LIVE HISTORY'}</div>
+    </header>
+
+    <div className={styles.dateStrip}>
+      <button onClick={() => chooseDate(offsetDate(date,-1))} aria-label="Previous date"><ChevronLeft size={17}/></button>
+      {dateStrip.map(value => <button key={value} data-active={value===date} onClick={() => chooseDate(value)}><small>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'})}</small><strong>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})}</strong></button>)}
+      <button onClick={() => chooseDate(offsetDate(date,1))} aria-label="Next date"><ChevronRight size={17}/></button>
+    </div>
+
+    {error && <div className={styles.error}>{error}</div>}
+    <section className={styles.gameRail} aria-label="Select game">
+      {loading ? Array.from({length:6},(_,i)=><div className={styles.gameSkeleton} key={i}/>) : games.map(g => <button key={g.gamePk} data-active={g.gamePk===gamePk} onClick={() => setGamePk(g.gamePk)} aria-label={`${g.awayAbbr} at ${g.homeAbbr}`}>
+        <span style={{'--team':getTeamColor(g.awayAbbr)} as CSSProperties}><img src={getTeamLogoUrl(g.awayAbbr)} alt=""/></span><b>VS</b><span style={{'--team':getTeamColor(g.homeAbbr)} as CSSProperties}><img src={getTeamLogoUrl(g.homeAbbr)} alt=""/></span><small>{g.status === 'Final' ? 'FINAL' : new Date(g.gameDate).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small>
+      </button>)}
+    </section>
+
+    {game && <>
+      <section className={styles.matchupHeader}>
+        <div><span className={styles.pitcherAvatar} style={{'--team':getTeamColor(game.awayAbbr)} as CSSProperties}>{game.awayPitcher?.id ? <img src={mlbHeadshot(game.awayPitcher.id)} alt=""/> : null}<img className={styles.pitcherTeamLogo} src={getTeamLogoUrl(game.awayAbbr)} alt=""/></span><div><small>PROJECTED STARTER</small><strong>{game.awayPitcher?.name ?? 'TBD'}</strong><span>{game.awayPitcher?.hand ?? '—'}HP</span></div></div>
+        <div className={styles.matchupPulse}><span/><b>{snapshots.length.toLocaleString()}</b><small>SNAPSHOTS</small></div>
+        <div><div><small>PROJECTED STARTER</small><strong>{game.homePitcher?.name ?? 'TBD'}</strong><span>{game.homePitcher?.hand ?? '—'}HP</span></div><span className={styles.pitcherAvatar} style={{'--team':getTeamColor(game.homeAbbr)} as CSSProperties}>{game.homePitcher?.id ? <img src={mlbHeadshot(game.homePitcher.id)} alt=""/> : null}<img className={styles.pitcherTeamLogo} src={getTeamLogoUrl(game.homeAbbr)} alt=""/></span></div>
+      </section>
+
+      <section className={styles.terminal}>
+        <div className={styles.toolbar}>
+          <label><span>MARKET</span><select value={market} onChange={e=>setMarket(e.target.value)}>{MARKETS.map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
+          <label><span>BOOK</span><select value={book} onChange={e=>setBook(e.target.value)}>{BOOKS.map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
+          <div className={styles.segmented}>{(['odds','probability','delta'] as const).map(value=><button key={value} data-active={mode===value} onClick={()=>setMode(value)}>{value === 'probability' ? 'IMPLIED %' : value.toUpperCase()}</button>)}</div>
+          <div className={styles.terminalMeta}><Crosshair size={14}/><span>{series.length} SIGNALS</span></div>
+        </div>
+        <div className={styles.chartGrid}>
+          <div className={styles.chartPanel}><div className={styles.chartTitle}><div><span>{MARKETS.find(v=>v[0]===market)?.[1]}</span><strong>{BOOKS.find(v=>v[0]===book)?.[1]} movement</strong></div><div><i className={styles.shorter}/>SHORTER <i className={styles.longer}/>LONGER</div></div>{historyLoading ? <div className={styles.loadingChart}><RefreshCw size={24}/><span>Loading every captured move…</span></div> : <MovementChart series={series} mode={mode}/>}</div>
+          <aside className={styles.leaderboard}><header><div><Sparkles size={15}/>MOVE BOARD</div><span>OPEN → NOW</span></header>{ranked.length ? ranked.map((s,i)=><div key={s.id}><em>{i+1}</em><i style={{background:s.color}}/><span><strong>{s.name}</strong><small>{oddsLabel(s.open)} → {oddsLabel(s.current)}</small></span><b data-direction={s.move<0?'shorter':s.move>0?'longer':'flat'}>{s.move>0?'+':''}{Math.round(s.move)}</b></div>) : <p>No selected players have this market/book combination.</p>}</aside>
+        </div>
+      </section>
+
+      <section className={styles.rosterPanel}>
+        <header><div><Layers3 size={17}/><span>PLAYER LAYERS</span><b>{selected.size}/{players.length}</b></div><div className={styles.search}><Search size={14}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find player"/></div><button onClick={()=>setSelected(selected.size===players.length?new Set():new Set(players.map(p=>p.mlb_id)))}>{selected.size===players.length?'CLEAR ALL':'SELECT ALL'}</button></header>
+        <div className={styles.rosters}>{[game.awayLineup,game.homeLineup].map((lineup,side)=><div key={side}><div className={styles.teamMarker}><img src={getTeamLogoUrl(side===0?game.awayAbbr:game.homeAbbr)} alt=""/><span>{side===0?'AWAY LAYERS':'HOME LAYERS'}</span></div>{lineup.filter(p=>norm(p.name).includes(norm(query))).map((p,index)=>{const active=selected.has(p.mlb_id);const color=COLORS[players.findIndex(x=>x.mlb_id===p.mlb_id)%COLORS.length];return <button key={p.mlb_id} data-active={active} onClick={()=>setSelected(current=>{const next=new Set(current);next.has(p.mlb_id)?next.delete(p.mlb_id):next.add(p.mlb_id);return next})}><em>{index+1}</em><span className={styles.avatar} style={{'--team':getTeamColor(p.team)} as CSSProperties}><img src={mlbHeadshot(p.mlb_id)} alt=""/></span><span><strong>{p.name}</strong><small>{p.position??'—'}</small></span><i style={{background:active?color:'transparent'}}>{active&&<Check size={11}/>}</i></button>})}</div>)}</div>
+      </section>
+    </>}
+  </div>
+}

@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
-  Settings2, Table2, TrendingUp, Users, Zap, type LucideIcon,
+  Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, type LucideIcon,
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string }
@@ -22,6 +22,7 @@ const intelligence: NavItem[] = [
   { href: '/sports', label: 'Live Scores', icon: Activity, badge: 'LIVE' },
   { href: '/dugout', label: 'The Dugout', icon: FlaskConical },
   { href: '/batter-cost', label: 'Batter Cost', icon: Coins },
+  { href: '/odds-terminal', label: 'Odds Terminal', icon: ChartSpline, badge: 'ULT' },
   { href: '/slate-breakdown', label: 'Slate Breakdown', icon: Table2 },
   { href: '/pitcher-report', label: 'Pitcher Report', icon: Compass },
   { href: '/weather-lab', label: 'Weather Lab', icon: CloudSun },
