@@ -110,19 +110,34 @@ function timed<T>(reqId: string, label: string, p: Promise<T>): Promise<T> {
 // every request) — safe to share across every caller regardless of tier.
 // A real admin paste can land any time TODAY, so that window stays short;
 // a past date is finalized (see isPastDateET above).
+// A single `.range(0, 19999)` call here was, despite the huge upper bound,
+// STILL only ever returning this project's PostgREST-capped 1000 rows —
+// the exact same "generous range, but not actually looped" bug confirmed
+// live in pitchLogFetch.ts/dugoutMatchupEdgePrecompute.ts/odds-terminal's
+// route. Real daily row counts here (~300-400, one row per rostered
+// batter per game) rarely hit that cap in normal usage, unlike those
+// other confirmed-truncating call sites — but there's no real filter
+// bounding it either, so a busy slate or noisy name_norm variants could
+// silently drop rows with zero visible symptom. Paginated defensively,
+// same PAGE=1000-loop shape fetchGapOddsOpening below already uses.
 async function fetchGapOdds(date: string) {
   const admin = createAdminClient()
-  const [{ data: fdRows }, { data: mgmRows }] = await Promise.all([
-    admin.from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
-      .eq('game_date', date)
-      .range(0, 19999),
-    admin.from('mgm_gap_odds')
-      .select('game_key, name_norm, sa_mgm, hr2_mgm')
-      .eq('game_date', date)
-      .range(0, 19999),
+  const PAGE = 1000
+  async function fetchAll(table: string, cols: string) {
+    const rows: any[] = []
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await admin.from(table).select(cols).eq('game_date', date).range(offset, offset + PAGE - 1)
+      if (!data?.length) break
+      rows.push(...data)
+      if (data.length < PAGE) break
+    }
+    return rows
+  }
+  const [fdRows, mgmRows] = await Promise.all([
+    fetchAll('fanduel_gap_odds', 'game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners'),
+    fetchAll('mgm_gap_odds', 'game_key, name_norm, sa_mgm, hr2_mgm'),
   ])
-  return { fdRows: fdRows ?? [], mgmRows: mgmRows ?? [] }
+  return { fdRows, mgmRows }
 }
 const getCachedGapOddsRecent = unstable_cache(fetchGapOdds, ['dugout-gap-odds-recent'], { revalidate: 60 })
 const getCachedGapOddsSettling = unstable_cache(fetchGapOdds, ['dugout-gap-odds-settling'], { revalidate: HOUR_SECONDS })

@@ -15,27 +15,43 @@ export const PITCH_LOG_SELECT_COLS = [
 // confirmed elsewhere in this codebase to blow Postgres's statement_timeout
 // under concurrent load (Postgres can't skip N already-matched rows
 // without first finding and discarding all of them; cost scales with page
-// depth, not row count). This route was believed safe because it only
-// fetches ONE player at a time, but under real concurrent traffic — many
-// different viewers loading many different players' pages at once, each a
-// cache miss — enough of those OFFSET-paginated queries overlap to
-// contend the same way a single bulk multi-player fetch already proved it
-// would. A real player's full-season pitch count (as batter or pitcher)
-// never approaches even half of MAX_ROWS — one ranged fetch with no
-// looping returns the complete season in a single Index Scan, same fix
-// already applied to the bulk per-batter/per-pitcher fetches.
+// depth, not row count). The single-ranged-fetch "fix" that replaced it
+// (a lone `.range(0, MAX_ROWS-1)`) turned out to be wrong on a second,
+// separate axis: confirmed live 2026-08-08 (member report — Slate
+// Breakdown showing a suspicious flat "1000 pitches" for most real
+// starters) that this project's PostgREST caps ANY single request at 1000
+// rows regardless of what `.range()` upper bound is requested — the exact
+// same cap already hit and fixed in fetchGapOddsOpening and the
+// savant-sync-pitch-log recheck query. A real starter throws 1800-2500+
+// pitches a season, so the single-range fetch was silently truncating to
+// the first 1000 for nearly every qualified starter.
+// Reconciling both incidents: page in bounded PAGE_SIZE=1000 chunks (same
+// pattern fetchPlayerGameDates below already uses successfully) capped at
+// MAX_ROWS total — at most ~4-6 requests for even the heaviest real
+// workload, nothing like the unbounded/concurrent-bulk scenario that
+// caused the original statement timeout (this route fetches ONE player,
+// cached 24h with tag-based invalidation, so a real cache miss — and
+// therefore this loop actually running — happens roughly once per player
+// per day, not per pageview).
 const MAX_ROWS = 6000
+const PAGE_SIZE = 1000
 
 export async function fetchPlayerPitchRows(admin: AdminClient, mlbId: number, role: 'pitcher' | 'batter'): Promise<Record<string, any>[]> {
   const col = role === 'pitcher' ? 'pitcher_id' : 'batter_id'
-  const { data, error } = await admin
-    .from('player_pitch_log')
-    .select(PITCH_LOG_SELECT_COLS)
-    .eq(col, mlbId)
-    .order('game_pk', { ascending: true }).order('at_bat_index', { ascending: true }).order('pitch_number', { ascending: true })
-    .range(0, MAX_ROWS - 1)
-  if (error) throw error
-  return data ?? []
+  const rows: Record<string, any>[] = []
+  for (let from = 0; from < MAX_ROWS; from += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from('player_pitch_log')
+      .select(PITCH_LOG_SELECT_COLS)
+      .eq(col, mlbId)
+      .order('game_pk', { ascending: true }).order('at_bat_index', { ascending: true }).order('pitch_number', { ascending: true })
+      .range(from, Math.min(from + PAGE_SIZE, MAX_ROWS) - 1)
+    if (error) throw error
+    if (!data?.length) break
+    rows.push(...data)
+    if (data.length < PAGE_SIZE) break
+  }
+  return rows
 }
 
 // Every home run a player has hit/allowed this season — a small subset by

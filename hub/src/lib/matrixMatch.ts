@@ -236,23 +236,39 @@ export async function fetchBulkBatterPitchRows(admin: AdminClient, batterIds: nu
 // gone wrong. Fetching per mlb_id instead (same fix as the pitch-log bulk
 // read) uses the real (mlb_id, role, category, window_type, dims_key)
 // index directly — ~209 rows/batter on average across all 4 categories,
-// comfortably under any row cap, no pagination needed per player at all.
+// comfortably under any row cap on average. That average masks the tail
+// though (confirmed elsewhere, same file class: pitchLogFetch.ts's single
+// unlooped `.range()` looked safe by the same kind of average-case
+// reasoning and wasn't) — the per-id `.range(0, MAX_ROWS_PER_BATTER-1)`
+// below is still a single non-looped call, so any batter whose real row
+// count for these categories crosses 1000 would silently truncate the
+// exact same way. Paginated defensively even though live row counts
+// checked 2026-08-08 topped out around 734/batter (not yet truncating in
+// practice) — no reason to leave a batter's data one busy split-category
+// away from silently going blank again.
 export async function fetchBulkSavantSplits(admin: AdminClient, mlbIds: number[], categories: string[]): Promise<Record<number, any[]>> {
   const byId: Record<number, any[]> = {}
   if (!mlbIds.length || !categories.length) return byId
   const CONCURRENCY = 15
   const MAX_ROWS_PER_BATTER = 2000
+  const PAGE_SIZE = 1000
 
   await asyncPool(CONCURRENCY, mlbIds, async id => {
-    const { data, error } = await admin
-      .from('player_statcast_splits')
-      .select('mlb_id, category, window_type, dims, metrics')
-      .eq('role', 'batter')
-      .eq('mlb_id', id)
-      .in('category', categories)
-      .range(0, MAX_ROWS_PER_BATTER - 1)
-    if (error) throw error
-    for (const r of data ?? []) {
+    const rows: any[] = []
+    for (let from = 0; from < MAX_ROWS_PER_BATTER; from += PAGE_SIZE) {
+      const { data, error } = await admin
+        .from('player_statcast_splits')
+        .select('mlb_id, category, window_type, dims, metrics')
+        .eq('role', 'batter')
+        .eq('mlb_id', id)
+        .in('category', categories)
+        .range(from, Math.min(from + PAGE_SIZE, MAX_ROWS_PER_BATTER) - 1)
+      if (error) throw error
+      if (!data?.length) break
+      rows.push(...data)
+      if (data.length < PAGE_SIZE) break
+    }
+    for (const r of rows) {
       (byId[r.mlb_id as number] ??= []).push(r)
     }
   })

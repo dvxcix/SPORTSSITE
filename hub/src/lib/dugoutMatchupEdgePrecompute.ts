@@ -55,20 +55,43 @@ function toPitchLogRow(r: any): PitchLogRow {
 // Same per-entity-fetch shape already proven necessary at this scale (see
 // fetchBulkBatterPitchRows in matrixMatch.ts — OFFSET pagination over a
 // combined IN-list blew Postgres's statement_timeout; per-id Index Scans
-// don't). A generous per-id range guards PostgREST's own default row cap.
+// don't). A single `.range(0, MAX_ROWS_PER_ID - 1)` here USED to be treated
+// as "a generous per-id range guards PostgREST's own default row cap" — that
+// was wrong, and it's the exact same wrong assumption that caused
+// pitchLogFetch.ts's confirmed 2026-08-08 bug: this project's PostgREST caps
+// ANY single request at 1000 rows no matter what `.range()` upper bound is
+// requested. Confirmed live: real batters/pitchers this season have well
+// over 1000 player_pitch_log rows (up to ~2300+), so a single unlooped
+// range here was silently truncating matchup_edge's input data for every
+// heavy-workload player — on Paper's single heaviest-weighted feature (26%
+// of its blend). Paginate per id in PAGE_SIZE=1000 chunks instead, still
+// batched CONCURRENCY-at-a-time across ids so this doesn't regress back
+// into the OFFSET-over-combined-IN-list timeout the per-id shape itself was
+// built to avoid.
 async function fetchBulkRows(admin: AdminClient, ids: number[], idCol: 'batter_id' | 'pitcher_id'): Promise<Record<number, PitchLogRow[]>> {
   const byId: Record<number, PitchLogRow[]> = {}
   if (!ids.length) return byId
   const CONCURRENCY = 15
   const MAX_ROWS_PER_ID = 5000
+  const PAGE_SIZE = 1000
+  async function fetchOneId(id: number): Promise<any[]> {
+    const rows: any[] = []
+    for (let from = 0; from < MAX_ROWS_PER_ID; from += PAGE_SIZE) {
+      const { data, error } = await admin
+        .from('player_pitch_log').select(MATCHUP_EDGE_SELECT).eq(idCol, id)
+        .range(from, Math.min(from + PAGE_SIZE, MAX_ROWS_PER_ID) - 1)
+      if (error) throw error
+      if (!data?.length) break
+      rows.push(...data)
+      if (data.length < PAGE_SIZE) break
+    }
+    return rows
+  }
   for (let i = 0; i < ids.length; i += CONCURRENCY) {
     const chunk = ids.slice(i, i + CONCURRENCY)
-    const results = await Promise.all(chunk.map(id =>
-      admin.from('player_pitch_log').select(MATCHUP_EDGE_SELECT).eq(idCol, id).range(0, MAX_ROWS_PER_ID - 1)
-    ))
-    for (const { data, error } of results) {
-      if (error) throw error
-      for (const r of (data ?? []) as any[]) {
+    const results = await Promise.all(chunk.map(fetchOneId))
+    for (const data of results) {
+      for (const r of data as any[]) {
         const key = idCol === 'batter_id' ? r.batter_id : r.pitcher_id
         ;(byId[key] ??= []).push(toPitchLogRow(r))
       }

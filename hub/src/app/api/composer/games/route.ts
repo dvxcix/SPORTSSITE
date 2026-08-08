@@ -51,12 +51,27 @@ export async function GET(req: Request) {
 
   const gamePks = rawGames.map(g => String(g.gamePk))
 
-  const [{ data: snapRows }, { data: fdRows }, { data: mgmRows }] = await Promise.all([
+  // A single `.range(0, 19999)` here was, despite the huge upper bound,
+  // still only ever returning this project's PostgREST-capped 1000 rows —
+  // same "generous range, but not actually looped" bug confirmed live
+  // elsewhere (pitchLogFetch.ts/dugoutMatchupEdgePrecompute.ts/odds-terminal).
+  // Paginated defensively; pregame_odds_snapshots stays as-is since it's
+  // genuinely bounded by gamePks.length (one row per game, ~15/day).
+  const PAGE = 1000
+  async function fetchAllGapOdds(table: string, cols: string) {
+    const rows: any[] = []
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await admin!.from(table).select(cols).eq('game_date', date).range(offset, offset + PAGE - 1)
+      if (!data?.length) break
+      rows.push(...data)
+      if (data.length < PAGE) break
+    }
+    return rows
+  }
+  const [{ data: snapRows }, fdRows, mgmRows] = await Promise.all([
     admin.from('pregame_odds_snapshots').select('game_pk, prop_map').in('game_pk', gamePks),
-    admin.from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd')
-      .eq('game_date', date).range(0, 19999),
-    admin.from('mgm_gap_odds').select('game_key, name_norm, sa_mgm, hr2_mgm').eq('game_date', date).range(0, 19999),
+    fetchAllGapOdds('fanduel_gap_odds', 'game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd'),
+    fetchAllGapOdds('mgm_gap_odds', 'game_key, name_norm, sa_mgm, hr2_mgm'),
   ])
 
   const propMapByGamePk = new Map<string, Record<string, any>>()
