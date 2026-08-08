@@ -11,6 +11,33 @@ const PAGE_SIZE = 1000
 type PriceBook = Record<string, number | string>
 type PropEntry = { name?: string; [market: string]: string | PriceBook | undefined }
 type SnapshotRow = { captured_at: string; prop_map: Record<string, PropEntry> | null }
+type GapRow = { name_norm: string; player_name: string | null; updated_at: string; [column: string]: string | number | null }
+
+const FANDUEL_GAP_MARKETS: Record<string, string> = {
+  fhr_fd: 'fhr', sa_fd: 'sa', hr2_fd: 'hr2', sng_fd: 'singles', dbl_fd: 'doubles', tri_fd: 'triples',
+  rbi_fd: 'rbi', rbi2_fd: 'rbi2', rbi3_fd: 'rbi3', tb_fd: 'tb', tb3_fd: 'tb3', tb4_fd: 'tb4',
+  tb5_fd: 'tb5', hrr_fd: 'hrr', laser105_fd: 'laser105', laser110_fd: 'laser110', moonshot_fd: 'moonshot',
+  pa1_fd: 'pa1', hr_ml_fd: 'hrMl',
+}
+
+function buildFanDuelMap(rows: Array<GapRow | { name_norm: string; market: string; opening_price: number }>) {
+  const propMap: Record<string, PropEntry> = {}
+  for (const row of rows) {
+    if (row.name_norm === '__game__') continue
+    const key = row.name_norm
+    const entry = propMap[key] ??= { name: 'player_name' in row && row.player_name ? row.player_name : key }
+    if ('market' in row && typeof row.market === 'string' && typeof row.opening_price === 'number') {
+      entry[row.market] = { fanduel: row.opening_price }
+      continue
+    }
+    const gap = row as GapRow
+    for (const [column, market] of Object.entries(FANDUEL_GAP_MARKETS)) {
+      const price = gap[column]
+      if (typeof price === 'number') entry[market] = { fanduel: price }
+    }
+  }
+  return propMap
+}
 
 function compactSnapshots(rows: SnapshotRow[]) {
   const previous = new Map<string, number | string>()
@@ -43,7 +70,7 @@ function compactSnapshots(rows: SnapshotRow[]) {
   })
 }
 
-async function readHistory(date: string, gamePk: string) {
+async function readHistory(date: string, gamePk: string, gameKey: string) {
   const admin = createAdminClient()
   const rows: SnapshotRow[] = []
 
@@ -63,11 +90,41 @@ async function readHistory(date: string, gamePk: string) {
     if (page.length < PAGE_SIZE) break
   }
 
+  // Browserbase imports FanDuel-only markets (FHR, Laser, Moonshot, PA1,
+  // HR/ML) into the gap table, not BDL's generic snapshot history. Overlay
+  // the permanent opener and latest imported board so the terminal exposes
+  // the same FanDuel data as The Dugout without pretending intermediate
+  // movement captures exist.
+  const [{ data: gapRows, error: gapError }, { data: openingRows, error: openingError }] = await Promise.all([
+    admin.from('fanduel_gap_odds')
+      .select(`game_key,name_norm,player_name,updated_at,${Object.keys(FANDUEL_GAP_MARKETS).join(',')}`)
+      .eq('game_date', date).eq('game_key', gameKey).range(0, 19999),
+    admin.from('market_opening_prices')
+      .select('name_norm,market,opening_price,captured_at')
+      .eq('game_date', date).eq('game_key', gameKey).eq('book', 'fanduel').range(0, 19999),
+  ])
+  if (gapError) throw gapError
+  if (openingError) throw openingError
+
+  const openers = (openingRows ?? []) as Array<{ name_norm: string; market: string; opening_price: number; captured_at: string }>
+  const openerMap = buildFanDuelMap(openers)
+  if (Object.keys(openerMap).length) {
+    const openingCapture = openers.reduce((earliest, row) => row.captured_at < earliest ? row.captured_at : earliest, openers[0].captured_at)
+    rows.push({ captured_at: openingCapture, prop_map: openerMap })
+  }
+
+  const gaps = (gapRows ?? []) as unknown as GapRow[]
+  if (gaps.length) {
+    const latestImport = gaps.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, gaps[0].updated_at)
+    rows.push({ captured_at: latestImport, prop_map: buildFanDuelMap(gaps) })
+  }
+  rows.sort((a, b) => a.captured_at.localeCompare(b.captured_at))
+
   return { sourceCount: rows.length, snapshots: compactSnapshots(rows) }
 }
 
-const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v2'], { revalidate: 20 })
-const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v2'], { revalidate: 86400 })
+const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v3'], { revalidate: 20 })
+const readArchivedHistory = unstable_cache(readHistory, ['odds-terminal-history-archive-v3'], { revalidate: 86400 })
 
 export async function GET(req: Request) {
   const gate = await requireTier('ultimate')
@@ -75,14 +132,15 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const gamePk = searchParams.get('gamePk')?.trim()
+  const gameKey = searchParams.get('gameKey')?.trim().toUpperCase()
   const date = searchParams.get('date')?.trim()
-  if (!gamePk || !/^\d+$/.test(gamePk) || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: 'A valid date and gamePk are required.' }, { status: 400 })
+  if (!gamePk || !/^\d+$/.test(gamePk) || !gameKey || !/^[A-Z0-9]+@[A-Z0-9]+(?:-G\d+)?$/.test(gameKey) || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return NextResponse.json({ error: 'A valid date, gamePk, and gameKey are required.' }, { status: 400 })
   }
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   try {
-    const history = date === today ? await readLiveHistory(date, gamePk) : await readArchivedHistory(date, gamePk)
+    const history = date === today ? await readLiveHistory(date, gamePk, gameKey) : await readArchivedHistory(date, gamePk, gameKey)
     return NextResponse.json(
       { date, gamePk, snapshots: history.snapshots, sourceCount: history.sourceCount },
       { headers: { 'Cache-Control': date === today ? 'private, max-age=20' : 'private, max-age=86400, immutable' } },
