@@ -8,6 +8,7 @@ import {
 } from '@/lib/balldontlie'
 import { canonGameKey } from '@slipsurge/core/teamAbbr'
 import { normName } from '@slipsurge/core/nameNorm'
+import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 
 // Bare market keys shared with fanduel-import's own OPENING_MARKET list —
 // whichever pipeline sees a real price for a given (game, player, market)
@@ -86,7 +87,14 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
   // freeze-on-first-observation logic can permanently lock whatever was
   // last captured here, unchanged. See isEffectivelyPregame above for why
   // this isn't a plain abstractGameState check.
-  const pendingGames = mlbGames.filter((g: any) => isEffectivelyPregame(g))
+  const pendingFlags = await Promise.all(mlbGames.map(async (g: any) => {
+    if (isEffectivelyPregame(g)) return true
+    if (/final|postpon|cancel/i.test(g.status?.detailedState ?? '')) return false
+    // "In Progress" can lead the physical first pitch. Keep polling until
+    // MLB records the first real pitch event; that timestamp is the lock.
+    return !(await getFirstPitchAt(String(g.gamePk)))
+  }))
+  const pendingGames = mlbGames.filter((_: any, index: number) => pendingFlags[index])
   if (!pendingGames.length) {
     return { date, matched: 0, totalGames: mlbGames.length, note: 'No pending (pregame) games right now' }
   }

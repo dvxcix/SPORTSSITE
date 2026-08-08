@@ -8,6 +8,7 @@ import { getFeaturedGameKey } from '@/lib/featuredGame'
 import { hasTierAccess } from '@slipsurge/core/tiers'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@slipsurge/core/teamAbbr'
+import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows,
@@ -970,21 +971,19 @@ export async function GET(req: Request) {
       // so this froze boards a full 20-30 minutes before any pitch was
       // thrown, for every book/market on the game. See the matching
       // isEffectivelyPregame() in api/cron/bdl-odds/route.ts for the same fix.
-      const PREGAME_DETAILED_STATES = new Set(['Scheduled', 'Pre-Game', 'Warmup', 'Delayed Start', 'Delayed'])
-      const toFreeze = mlbGames
-        .filter((g: any) => {
-          const abstract = g.status?.abstractGameState ?? 'Preview'
-          if (abstract === 'Preview') return false
-          return !PREGAME_DETAILED_STATES.has(g.status?.detailedState ?? '')
-        })
-        .map((g: any) => String(g.gamePk))
-        .filter((pk: string) => map.get(pk)?.is_frozen === false)
-      if (toFreeze.length) {
-        await admin
-          .from('pregame_odds_snapshots')
-          .update({ is_frozen: true, frozen_at: new Date().toISOString() })
-          .in('game_pk', toFreeze)
-      }
+      const pregameStates = new Set(['Scheduled', 'Pre-Game', 'Warmup', 'Delayed Start', 'Delayed'])
+      const candidates = mlbGames.filter((g: any) => {
+        const detailed = g.status?.detailedState ?? ''
+        return !pregameStates.has(detailed) && !/postpon|cancel/i.test(detailed) && map.get(String(g.gamePk))?.is_frozen === false
+      })
+      const firstPitches = await Promise.all(candidates.map(async (g: any) => ({
+        gamePk: String(g.gamePk),
+        firstPitchAt: await getFirstPitchAt(String(g.gamePk)),
+      })))
+      await Promise.all(firstPitches.filter(item => item.firstPitchAt).map(item => admin
+        .from('pregame_odds_snapshots')
+        .update({ is_frozen: true, frozen_at: item.firstPitchAt })
+        .eq('game_pk', item.gamePk)))
       return map
     })()),
   ])
