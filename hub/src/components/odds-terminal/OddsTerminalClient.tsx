@@ -30,6 +30,11 @@ const MARKETS = [
   ['strikeouts', '1+ Batter K'], ['strikeouts2', '2+ Batter Ks'], ['strikeouts3', '3+ Batter Ks'], ['hrr', 'H+R+RBI'],
 ] as const
 const BOOKS = [['fanduel', 'FanDuel'], ['draftkings', 'DraftKings'], ['caesars', 'Caesars'], ['fanatics', 'Fanatics'], ['betmgm', 'BetMGM'], ['betrivers', 'BetRivers']] as const
+type BookKey = typeof BOOKS[number][0]
+const BOOK_COLORS: Record<BookKey, string> = {
+  fanduel: '#1493ff', draftkings: '#53d337', caesars: '#0b6b50',
+  fanatics: '#f04444', betmgm: '#b88a45', betrivers: '#ffd43b',
+}
 const COLORS = ['#6ee7ff', '#ff7a90', '#f9d66d', '#a78bfa', '#67e8a5', '#fb923c', '#60a5fa', '#f472b6', '#c4f06c', '#22d3ee', '#e879f9', '#facc15', '#34d399', '#818cf8', '#fb7185', '#2dd4bf', '#f97316', '#a3e635']
 
 function offsetDate(date: string, amount: number) {
@@ -59,7 +64,7 @@ function todayET() {
 }
 
 type SeriesPoint = { time: number; odds: number; value: number }
-type Series = { id: number; name: string; team: string; color: string; points: SeriesPoint[]; open: number; current: number; move: number }
+type Series = { id: string; playerId: number; name: string; team: string; book: BookKey; bookLabel: string; color: string; points: SeriesPoint[]; open: number; current: number; move: number }
 
 const TIME_WINDOWS = [null, 12, 6, 2, 1] as const
 
@@ -116,8 +121,8 @@ function MovementChart({ series, mode, windowHours }: { series: Series[]; mode: 
     {cursor && typeof document !== 'undefined' && createPortal(<div className={styles.chartTooltip} data-side={cursor.clientX > window.innerWidth * .62 ? 'left' : 'right'} style={{ left: cursor.clientX, top: Math.max(76, Math.min(window.innerHeight - 300, cursor.clientY)) }}>
       <header><span>CAPTURE INSPECTOR</span><time>{new Date(cursorEntries[0]?.point.time ?? cursor.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</time></header>
       {cursorEntries.slice(0, 4).map((s, index) => { const step=s.previous?s.point.odds-s.previous.odds:0;const fromOpen=s.point.odds-s.open;return <div className={styles.inspectCard} data-focus={index===0} key={s.id} style={{'--signal':s.color} as CSSProperties}>
-        <span className={styles.inspectAvatar}><img src={mlbHeadshot(s.id)} alt=""/><img src={getTeamLogoUrl(s.team)} alt=""/></span>
-        <span className={styles.inspectIdentity}><strong>{s.name}</strong><small>{s.team} · captured {new Date(s.point.time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></span>
+        <span className={styles.inspectAvatar}><img src={mlbHeadshot(s.playerId)} alt=""/><img src={getTeamLogoUrl(s.team)} alt=""/></span>
+        <span className={styles.inspectIdentity}><strong>{s.name}</strong><small className={styles.inspectBook}><BookLogo vendor={s.book} size={11}/>{s.bookLabel} · {new Date(s.point.time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></span>
         <span className={styles.inspectPrice}><strong>{oddsLabel(s.point.odds)}</strong><small>{(americanToProbability(s.point.odds)*100).toFixed(1)}% implied</small></span>
         <span className={styles.inspectMove}><small>LAST MOVE</small><b data-direction={step<0?'shorter':step>0?'longer':'flat'}>{step>0?'+':''}{Math.round(step)}</b></span>
         <span className={styles.inspectMove}><small>FROM OPEN</small><b data-direction={fromOpen<0?'shorter':fromOpen>0?'longer':'flat'}>{fromOpen>0?'+':''}{Math.round(fromOpen)}</b></span>
@@ -136,7 +141,7 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
   const [captureCount, setCaptureCount] = useState(0)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [market, setMarket] = useState('fhr')
-  const [book, setBook] = useState('fanatics')
+  const [selectedBooks, setSelectedBooks] = useState<Set<BookKey>>(() => new Set(BOOKS.map(([key]) => key)))
   const [mode, setMode] = useState<'odds' | 'probability' | 'delta'>('odds')
   const [windowHours, setWindowHours] = useState<number | null>(null)
   const [query, setQuery] = useState('')
@@ -184,27 +189,27 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
       return count + (hasPrice ? 1 : 0)
     }, 0)]))
   }, [normalizedSnapshots, players, market])
-  useEffect(() => {
-    if (!normalizedSnapshots.length || (availableBooks.get(book) ?? 0) > 0) return
-    const fallback = BOOKS.find(([key]) => (availableBooks.get(key) ?? 0) > 0)?.[0]
-    if (fallback) setBook(fallback)
-  }, [availableBooks, book, normalizedSnapshots.length])
+  const availableBookKeys = useMemo(() => BOOKS.filter(([key]) => (availableBooks.get(key) ?? 0) > 0).map(([key]) => key), [availableBooks])
 
-  const series = useMemo<Series[]>(() => players.map((player, index) => {
-    const points: SeriesPoint[] = []
-    let opening: number | null = null
-    for (const snapshot of normalizedSnapshots) {
-      const entry = snapshot.players.get(norm(player.name))
-      const odds = numericPrice((entry?.[market] as PriceMap | undefined)?.[book])
-      if (odds == null) continue
-      opening ??= odds
-      const last = points.at(-1)
-      if (!last || last.odds !== odds) points.push({ time: new Date(snapshot.capturedAt).getTime(), odds, value: odds - opening })
-    }
-    if (!points.length || opening == null) return null
-    const current = points.at(-1)!.odds
-    return { id: player.mlb_id, name: player.name, team: player.team, color: COLORS[index % COLORS.length], points, open: opening, current, move: current - opening }
-  }).filter((s): s is Series => s != null && selected.has(s.id)), [players, normalizedSnapshots, market, book, selected])
+  const series = useMemo<Series[]>(() => players.flatMap(player => {
+    if (!selected.has(player.mlb_id)) return []
+    return BOOKS.flatMap(([book, bookLabel]) => {
+      if (!selectedBooks.has(book)) return []
+      const points: SeriesPoint[] = []
+      let opening: number | null = null
+      for (const snapshot of normalizedSnapshots) {
+        const entry = snapshot.players.get(norm(player.name))
+        const odds = numericPrice((entry?.[market] as PriceMap | undefined)?.[book])
+        if (odds == null) continue
+        opening ??= odds
+        const last = points.at(-1)
+        if (!last || last.odds !== odds) points.push({ time: new Date(snapshot.capturedAt).getTime(), odds, value: odds - opening })
+      }
+      if (!points.length || opening == null) return []
+      const current = points.at(-1)!.odds
+      return [{ id: `${player.mlb_id}:${book}`, playerId: player.mlb_id, name: player.name, team: player.team, book, bookLabel, color: BOOK_COLORS[book], points, open: opening, current, move: current - opening }]
+    })
+  }), [players, normalizedSnapshots, market, selectedBooks, selected])
 
   const ranked = [...series].sort((a, b) => a.move - b.move)
   const dateStrip = [-3,-2,-1,0,1,2,3].map(n => offsetDate(date, n))
@@ -241,13 +246,13 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
       <section className={styles.terminal}>
         <div className={styles.toolbar}>
           <label><span>MARKET</span><select value={market} onChange={e=>setMarket(e.target.value)}>{MARKETS.map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
-          <div className={styles.bookControl}><span>BOOK</span><div className={styles.bookPicker}>{BOOKS.map(([key,label])=>{const count=availableBooks.get(key)??0;const disabled=normalizedSnapshots.length>0&&count===0;return <button type="button" key={key} title={`${label}${normalizedSnapshots.length?` · ${count} players`:''}`} aria-label={`${label}${normalizedSnapshots.length?`, ${count} players with prices`:''}`} data-active={book===key} disabled={disabled} onClick={()=>setBook(key)}><BookLogo vendor={key} size={17}/><span>{label}</span>{normalizedSnapshots.length>0&&<b>{count}</b>}</button>})}</div></div>
+          <div className={styles.bookControl}><div className={styles.bookLabel}><span>BOOK LAYERS</span><div><button type="button" disabled={!availableBookKeys.length||availableBookKeys.every(key=>selectedBooks.has(key))} onClick={()=>setSelectedBooks(new Set(availableBookKeys))}>ALL</button><button type="button" disabled={!selectedBooks.size} onClick={()=>setSelectedBooks(new Set())}>CLEAR</button></div></div><div className={styles.bookPicker}>{BOOKS.map(([key,label])=>{const count=availableBooks.get(key)??0;const disabled=normalizedSnapshots.length>0&&count===0;const active=selectedBooks.has(key)&&!disabled;return <button type="button" key={key} title={`${active?'Hide':'Show'} ${label}${normalizedSnapshots.length?` · ${count} players`:''}`} aria-label={`${active?'Hide':'Show'} ${label}${normalizedSnapshots.length?`, ${count} players with prices`:''}`} aria-pressed={active} data-active={active} disabled={disabled} style={{'--book-color':BOOK_COLORS[key]} as CSSProperties} onClick={()=>setSelectedBooks(current=>{const next=new Set(current);next.has(key)?next.delete(key):next.add(key);return next})}><i/><BookLogo vendor={key} size={17}/><span>{label}</span>{normalizedSnapshots.length>0&&<b>{count}</b>}<Check className={styles.bookCheck} size={11}/></button>})}</div></div>
           <div className={styles.segmented}>{(['odds','probability','delta'] as const).map(value=><button key={value} data-active={mode===value} onClick={()=>setMode(value)}>{value === 'probability' ? 'IMPLIED %' : value.toUpperCase()}</button>)}</div>
           <div className={styles.terminalMeta}><Crosshair size={14}/><span>{series.length} SIGNALS</span></div>
         </div>
         <div className={styles.chartGrid}>
-          <div className={styles.chartPanel}><div className={styles.chartTitle}><div><span>{MARKETS.find(v=>v[0]===market)?.[1]}</span><strong>{BOOKS.find(v=>v[0]===book)?.[1]} movement</strong></div><div className={styles.chartControls}><div className={styles.timeWindows} aria-label="Timeline window">{TIME_WINDOWS.map(value=><button type="button" key={value??'all'} data-active={windowHours===value} onClick={()=>setWindowHours(value)}>{value==null?'ALL':`${value}H`}</button>)}</div><button type="button" aria-label="Zoom out" title="Show more time" onClick={()=>{const index=TIME_WINDOWS.indexOf(windowHours as never);setWindowHours(TIME_WINDOWS[Math.max(0,index-1)]??null)}}><ZoomOut size={14}/></button><button type="button" aria-label="Zoom in" title="Show less time" onClick={()=>{const index=TIME_WINDOWS.indexOf(windowHours as never);setWindowHours(TIME_WINDOWS[Math.min(TIME_WINDOWS.length-1,index+1)]??1)}}><ZoomIn size={14}/></button><span className={styles.moveLegend}><i className={styles.shorter}/>SHORTER <i className={styles.longer}/>LONGER</span></div></div>{historyLoading ? <div className={styles.loadingChart}><RefreshCw size={24}/><span>Loading every captured move…</span></div> : <MovementChart series={series} mode={mode} windowHours={windowHours}/>}</div>
-          <aside className={styles.leaderboard}><header><div><Sparkles size={15}/>MOVE BOARD</div><span>OPEN → NOW</span></header>{ranked.length ? ranked.map((s,i)=><div key={s.id}><em>{i+1}</em><i style={{background:s.color}}/><span><strong>{s.name}</strong><small>{oddsLabel(s.open)} → {oddsLabel(s.current)}</small></span><b data-direction={s.move<0?'shorter':s.move>0?'longer':'flat'}>{s.move>0?'+':''}{Math.round(s.move)}</b></div>) : <p>No selected players have this market/book combination.</p>}</aside>
+          <div className={styles.chartPanel}><div className={styles.chartTitle}><div><span>{MARKETS.find(v=>v[0]===market)?.[1]}</span><strong>{selectedBooks.size ? `${selectedBooks.size} book${selectedBooks.size===1?'':'s'} compared` : 'Select a book layer'}</strong></div><div className={styles.chartControls}><div className={styles.timeWindows} aria-label="Timeline window">{TIME_WINDOWS.map(value=><button type="button" key={value??'all'} data-active={windowHours===value} onClick={()=>setWindowHours(value)}>{value==null?'ALL':`${value}H`}</button>)}</div><button type="button" aria-label="Zoom out" title="Show more time" onClick={()=>{const index=TIME_WINDOWS.indexOf(windowHours as never);setWindowHours(TIME_WINDOWS[Math.max(0,index-1)]??null)}}><ZoomOut size={14}/></button><button type="button" aria-label="Zoom in" title="Show less time" onClick={()=>{const index=TIME_WINDOWS.indexOf(windowHours as never);setWindowHours(TIME_WINDOWS[Math.min(TIME_WINDOWS.length-1,index+1)]??1)}}><ZoomIn size={14}/></button><span className={styles.moveLegend}><i className={styles.shorter}/>SHORTER <i className={styles.longer}/>LONGER</span></div></div>{historyLoading ? <div className={styles.loadingChart}><RefreshCw size={24}/><span>Loading every captured move…</span></div> : <MovementChart series={series} mode={mode} windowHours={windowHours}/>}</div>
+          <aside className={styles.leaderboard}><header><div><Sparkles size={15}/>MOVE BOARD</div><span>OPEN → NOW</span></header>{ranked.length ? ranked.map((s,i)=><div key={s.id}><em>{i+1}</em><i style={{background:s.color}}/><span><strong>{s.name}</strong><small><BookLogo vendor={s.book} size={10}/>{s.bookLabel} · {oddsLabel(s.open)} → {oddsLabel(s.current)}</small></span><b data-direction={s.move<0?'shorter':s.move>0?'longer':'flat'}>{s.move>0?'+':''}{Math.round(s.move)}</b></div>) : <p>No selected players have this market/book combination.</p>}</aside>
         </div>
       </section>
 
