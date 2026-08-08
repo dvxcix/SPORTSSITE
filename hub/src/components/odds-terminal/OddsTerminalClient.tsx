@@ -15,6 +15,7 @@ type Pitcher = { id: number; name: string; hand: string }
 type Game = {
   gamePk: number; gameKey: string; gameDate: string; status: string; detailedStatus: string
   homeAbbr: string; awayAbbr: string; homePitcher?: Pitcher; awayPitcher?: Pitcher
+  homeLineupConfirmed?: boolean; awayLineupConfirmed?: boolean
   homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
 }
 
@@ -40,6 +41,9 @@ function oddsLabel(value: number | null) {
 }
 function norm(value: string) {
   return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+}
+function todayET() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 }
 
 type SeriesPoint = { time: number; odds: number; value: number }
@@ -165,12 +169,13 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
   const ranked = [...series].sort((a, b) => a.move - b.move)
   const dateStrip = [-3,-2,-1,0,1,2,3].map(n => offsetDate(date, n))
   const chooseDate = (next: string) => { setDate(next); router.replace(`/odds-terminal?date=${next}`) }
+  const historical = date < todayET()
 
   return <div className={styles.page}>
     <header className={styles.hero}>
       <div className={styles.heroIcon}><Activity size={22}/><span/></div>
       <div><div className={styles.eyebrow}><span>ULTIMATE</span> MARKET INTELLIGENCE</div><h1>Odds Movement Terminal</h1><p>Replay every captured price move. Compare the full game, isolate the signal, find where the board diverged.</p></div>
-      <div className={styles.liveBadge}><i/>{historyLoading ? 'SYNCING' : 'LIVE HISTORY'}</div>
+      <div className={styles.liveBadge}><i/>{historyLoading ? 'SYNCING' : historical ? 'ARCHIVED HISTORY' : 'LIVE HISTORY'}</div>
     </header>
 
     <div className={styles.dateStrip}>
@@ -188,9 +193,9 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
 
     {game && <>
       <section className={styles.matchupHeader}>
-        <div><span className={styles.pitcherAvatar} style={{'--team':getTeamColor(game.awayAbbr)} as CSSProperties}>{game.awayPitcher?.id ? <img src={mlbHeadshot(game.awayPitcher.id)} alt=""/> : null}<img className={styles.pitcherTeamLogo} src={getTeamLogoUrl(game.awayAbbr)} alt=""/></span><div><small>PROJECTED STARTER</small><strong>{game.awayPitcher?.name ?? 'TBD'}</strong><span>{game.awayPitcher?.hand ?? '—'}HP</span></div></div>
+        <div><span className={styles.pitcherAvatar} style={{'--team':getTeamColor(game.awayAbbr)} as CSSProperties}>{game.awayPitcher?.id ? <img src={mlbHeadshot(game.awayPitcher.id)} alt=""/> : null}<img className={styles.pitcherTeamLogo} src={getTeamLogoUrl(game.awayAbbr)} alt=""/></span><div><small>{historical ? 'FINAL STARTER' : 'PROJECTED STARTER'}</small><strong>{game.awayPitcher?.name ?? 'TBD'}</strong><span>{game.awayPitcher?.hand ?? '—'}HP</span></div></div>
         <div className={styles.matchupPulse}><span/><b>{snapshots.length.toLocaleString()}</b><small>SNAPSHOTS</small></div>
-        <div><div><small>PROJECTED STARTER</small><strong>{game.homePitcher?.name ?? 'TBD'}</strong><span>{game.homePitcher?.hand ?? '—'}HP</span></div><span className={styles.pitcherAvatar} style={{'--team':getTeamColor(game.homeAbbr)} as CSSProperties}>{game.homePitcher?.id ? <img src={mlbHeadshot(game.homePitcher.id)} alt=""/> : null}<img className={styles.pitcherTeamLogo} src={getTeamLogoUrl(game.homeAbbr)} alt=""/></span></div>
+        <div><div><small>{historical ? 'FINAL STARTER' : 'PROJECTED STARTER'}</small><strong>{game.homePitcher?.name ?? 'TBD'}</strong><span>{game.homePitcher?.hand ?? '—'}HP</span></div><span className={styles.pitcherAvatar} style={{'--team':getTeamColor(game.homeAbbr)} as CSSProperties}>{game.homePitcher?.id ? <img src={mlbHeadshot(game.homePitcher.id)} alt=""/> : null}<img className={styles.pitcherTeamLogo} src={getTeamLogoUrl(game.homeAbbr)} alt=""/></span></div>
       </section>
 
       <section className={styles.terminal}>
@@ -208,7 +213,7 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
 
       <section className={styles.rosterPanel}>
         <header><div><Layers3 size={17}/><span>PLAYER LAYERS</span><b>{selected.size}/{players.length}</b></div><div className={styles.search}><Search size={14}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find player"/></div><button onClick={()=>setSelected(selected.size===players.length?new Set():new Set(players.map(p=>p.mlb_id)))}>{selected.size===players.length?'CLEAR ALL':'SELECT ALL'}</button></header>
-        <div className={styles.rosters}>{[game.awayLineup,game.homeLineup].map((lineup,side)=><div key={side}><div className={styles.teamMarker}><img src={getTeamLogoUrl(side===0?game.awayAbbr:game.homeAbbr)} alt=""/><span>{side===0?'AWAY LAYERS':'HOME LAYERS'}</span></div>{lineup.filter(p=>norm(p.name).includes(norm(query))).map((p,index)=>{const active=selected.has(p.mlb_id);const color=COLORS[players.findIndex(x=>x.mlb_id===p.mlb_id)%COLORS.length];return <button key={p.mlb_id} data-active={active} onClick={()=>setSelected(current=>{const next=new Set(current);next.has(p.mlb_id)?next.delete(p.mlb_id):next.add(p.mlb_id);return next})}><em>{index+1}</em><span className={styles.avatar} style={{'--team':getTeamColor(p.team)} as CSSProperties}><img src={mlbHeadshot(p.mlb_id)} alt=""/></span><span><strong>{p.name}</strong><small>{p.position??'—'}</small></span><i style={{background:active?color:'transparent'}}>{active&&<Check size={11}/>}</i></button>})}</div>)}</div>
+        <div className={styles.rosters}>{[game.awayLineup,game.homeLineup].map((lineup,side)=>{const confirmed = side === 0 ? game.awayLineupConfirmed : game.homeLineupConfirmed;return <div key={side}><div className={styles.teamMarker}><img src={getTeamLogoUrl(side===0?game.awayAbbr:game.homeAbbr)} alt=""/><span>{historical ? 'FINAL LINEUP' : confirmed ? 'CONFIRMED LINEUP' : 'PROJECTED LINEUP'}</span></div>{lineup.filter(p=>norm(p.name).includes(norm(query))).map((p,index)=>{const active=selected.has(p.mlb_id);const color=COLORS[players.findIndex(x=>x.mlb_id===p.mlb_id)%COLORS.length];return <button key={p.mlb_id} data-active={active} onClick={()=>setSelected(current=>{const next=new Set(current);next.has(p.mlb_id)?next.delete(p.mlb_id):next.add(p.mlb_id);return next})}><em>{p.batting_order ?? index+1}</em><span className={styles.avatar} style={{'--team':getTeamColor(p.team)} as CSSProperties}><img src={mlbHeadshot(p.mlb_id)} alt=""/></span><span><strong>{p.name}</strong><small>{p.position??'—'}</small></span><i style={{background:active?color:'transparent'}}>{active&&<Check size={11}/>}</i></button>})}</div>})}</div>
       </section>
     </>}
   </div>
