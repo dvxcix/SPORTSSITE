@@ -25,10 +25,9 @@ const workspaces = [
 export function DesktopCommandBar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [online, setOnline] = useState(true)
+  const [online, setOnline] = useState(() => navigator.onLine)
 
   useEffect(() => {
-    setOnline(navigator.onLine)
     const markOnline = () => setOnline(true)
     const markOffline = () => setOnline(false)
     window.addEventListener('online', markOnline)

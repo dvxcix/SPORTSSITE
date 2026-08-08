@@ -8,8 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { DESKTOP_NOTIFICATIONS_KEY, ensureDesktopNotificationPermission, sendDesktopNotification } from '@/lib/desktopNotifications'
 import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 import {
-  BellRing, ChevronRight, Crown, DatabaseZap, FlaskConical,
-  MessageCircle, Settings2, Sparkles, Table2, X, Zap,
+  BellRing, ChevronRight, DatabaseZap, FlaskConical,
+  MessageCircle, Table2, X, Zap,
 } from 'lucide-react'
 
 const TOUR_KEY = 'slipsurge.desktop.tour.v1'
@@ -130,14 +130,6 @@ export function DesktopExperience() {
 
   return (
     <>
-      <nav className="ss-desktop-dock" aria-label="SlipSurge desktop tools">
-        <Link href="/channels" title="Surge Live"><MessageCircle size={17} /><span>Live</span></Link>
-        <Link href="/notifications" title="Notifications"><BellRing size={17} /><span>Alerts</span></Link>
-        <button type="button" onClick={() => setTourOpen(true)} title="Feature guide"><Sparkles size={17} /><span>Guide</span></button>
-        <Link href="/pricing" className="ss-desktop-dock-upgrade" title="Upgrade SlipSurge"><Crown size={17} /><span>Upgrade</span></Link>
-        <Link href="/settings" title="Desktop settings"><Settings2 size={17} /><span>Settings</span></Link>
-      </nav>
-
       <AnimatePresence>
         {tourOpen && (
           <motion.div className="ss-desktop-tour-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

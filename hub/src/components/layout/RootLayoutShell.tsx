@@ -11,6 +11,7 @@ import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
 import { DesktopCommandBar } from './DesktopCommandBar'
 import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
 import { DesktopExperience } from '@/components/desktop/DesktopExperience'
+import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -59,10 +60,12 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   return (
     <WatchlistProvider>
       <div className={`flex min-h-screen ${isDesktop ? 'ss-desktop-shell' : ''}`}>
-        <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+        {isDesktop
+          ? <DesktopNavigation />
+          : <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />}
         <div className="flex-1 min-w-0 flex flex-col">
           {isDesktop && <DesktopCommandBar />}
-          <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />
+          {!isDesktop && <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />}
           <main className="flex-1 min-w-0">
             {children}
           </main>
