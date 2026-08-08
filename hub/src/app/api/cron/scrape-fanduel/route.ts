@@ -115,17 +115,54 @@ export async function GET(req: Request) {
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ date, games: 0, results: [] })
 
+  // Real incident (2026-08-07/08): findAndClickGame matches purely on team
+  // NAME, with zero date awareness — legIndexFor only disambiguates a same-
+  // day doubleheader (game 1 vs game 2), never "which day" for a team pair
+  // that's simply playing on consecutive days (an ordinary continuing
+  // series, extremely common in MLB). For a future-dated scrape (this route
+  // called with a date past real "today," whether via ?dayAhead=1 at the
+  // top or the resolved ?date= on a fanned-out per-game sub-request), if the
+  // SAME two teams also have a game listed for TODAY, FanDuel's own GAMES
+  // tab can show both under matching team names — legIndex 0 (the default
+  // for a non-doubleheader) then has no way to tell which listing is
+  // actually tomorrow's, and a click can land on today's already-live/
+  // confirmed game instead. That produces real, correctly-priced FanDuel
+  // odds that get imported and stamped with TOMORROW's date anyway —
+  // confirmed live: ATL@NYY's "tomorrow" FHR odds turned out to be today's
+  // real game's odds, re-scraped a bit later than the same-day pass and
+  // showing normal in-market line movement, not literally identical numbers
+  // (which is what made it look plausible instead of obviously wrong).
+  // Skipping any ambiguous team-pair here — rather than trying to guess
+  // which listing is which without ever having inspected FanDuel's real DOM
+  // for this case — costs one day's early line for that specific matchup;
+  // the regular same-day scrape still covers it correctly once it's
+  // actually "today."
+  const isFutureDate = date > todayEt
+  let skippedAmbiguous: string[] = []
+  let effectiveGames = games
+  if (isFutureDate) {
+    const todaysGames = await getTodaysMatchups(todayEt)
+    const todaysPairs = new Set(todaysGames.map(g => `${g.awayTeamId}@${g.homeTeamId}`))
+    const ambiguous = games.filter(g => todaysPairs.has(`${g.awayTeamId}@${g.homeTeamId}`))
+    skippedAmbiguous = ambiguous.map(g => g.gameKey)
+    effectiveGames = games.filter(g => !todaysPairs.has(`${g.awayTeamId}@${g.homeTeamId}`))
+  }
+
   const gamePkParam = url.searchParams.get('gamePk')
   const dryRun = url.searchParams.get('dryRun') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in ${date}'s matchups` }, { status: 404 })
+    if (!effectiveGames.includes(g)) {
+      return NextResponse.json({ date, gamePk, skipped: 'ambiguous team pair also plays today — see route.ts comment' })
+    }
     const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
+  if (!effectiveGames.length) return NextResponse.json({ date, games: games.length, skippedAmbiguous, results: [] })
   const extraQuery = `&date=${date}${dryRun ? '&dryRun=1' : ''}`
-  const results = await fanOutToSelf('/api/cron/scrape-fanduel', games.map(g => g.gamePk), extraQuery)
-  return NextResponse.json({ date, games: games.length, results })
+  const results = await fanOutToSelf('/api/cron/scrape-fanduel', effectiveGames.map(g => g.gamePk), extraQuery)
+  return NextResponse.json({ date, games: games.length, skippedAmbiguous, results })
 }
