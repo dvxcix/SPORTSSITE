@@ -7,7 +7,7 @@ import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, ChartSpline,
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
@@ -51,6 +51,7 @@ const nav: NavItem[] = [
   { href: '/pitcher-report', icon: Crosshair,  label: 'Pitcher Report' },
   { href: '/slate-breakdown', icon: Table2,    label: 'Slate Breakdown' },
   { href: '/batter-cost', icon: Coins,         label: 'Batter Cost' },
+  { href: '/odds-terminal', icon: ChartSpline, label: 'Odds Terminal', badge: 'ULT' },
   { href: '/synergy',     icon: Link2,         label: 'Synergy' },
   { href: '/daily-recap', icon: Flame,         label: 'Daily Recap' },
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },

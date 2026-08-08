@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   DatabaseZap,
+  ChartSpline,
   FlaskConical,
   Home,
   RefreshCw,
@@ -19,6 +20,7 @@ import {
 const workspaces = [
   { href: '/dugout', label: 'Dugout', icon: FlaskConical },
   { href: '/batter-cost', label: 'Batter Cost', icon: DatabaseZap },
+  { href: '/odds-terminal', label: 'Terminal', icon: ChartSpline },
   { href: '/slate-breakdown', label: 'Slate', icon: Table2 },
 ]
 
