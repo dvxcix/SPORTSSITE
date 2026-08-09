@@ -25,11 +25,23 @@ export async function notifyMentions(
   link: string,
   targetId: string,
   contextLabel: string,
+  excludeUserIds: string[] = [],
 ) {
   const usernames = extractMentionedUsernames(text)
   if (!usernames.length) return
-  const { data: mentionedUsers } = await supabase.from('users').select('id, username').in('username', usernames)
+  const { data: mentionedUsers, error } = await supabase.from('users')
+    .select('id, username')
+    .or(usernames.map(username => `username.ilike.${username}`).join(','))
+    .limit(usernames.length)
+  if (error) {
+    console.error('[mentions] failed to resolve mentioned users', error)
+    return
+  }
+  const excluded = new Set([actorId, ...excludeUserIds])
+  const notified = new Set<string>()
   for (const mu of mentionedUsers ?? []) {
+    if (excluded.has(mu.id) || notified.has(mu.id)) continue
+    notified.add(mu.id)
     await notify(supabase, {
       userId: mu.id, actorId, type: 'mention',
       message: `mentioned you in ${contextLabel}`, link, targetId, targetType: 'post',

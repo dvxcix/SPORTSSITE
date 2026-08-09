@@ -395,7 +395,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
       userId: parentAuthorId, actorId: user.id, type: 'comment',
       message: 'replied to your comment', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
-    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a reply')
+    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a reply', [parentAuthorId])
   }
 
   function insertCommentEmoji(insertion: string) {
@@ -428,7 +428,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
       userId: post.author_id, actorId: user.id, type: 'comment',
       message: 'commented on your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
     })
-    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a comment')
+    await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a comment', [post.author_id])
   }
 
   function startEditComment(c: CommentNode) {
