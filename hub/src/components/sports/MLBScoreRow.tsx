@@ -39,8 +39,9 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
   const homeWin = isFinal && (home.score ?? 0) > (away.score ?? 0)
 
   return (
-    <Link href={`/sports/mlb/${game.gamePk}`} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href={`/sports/mlb/${game.gamePk}`} className="ss-mlb-score-link" style={{ textDecoration: 'none', display: 'block' }}>
       <div
+        className="ss-mlb-score-row"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -54,14 +55,14 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
         }}
       >
         {/* Live pulse */}
-        <div style={{ width: 14, flexShrink: 0 }}>
+        <div className="ss-score-live-rail" style={{ width: 14, flexShrink: 0 }}>
           {isLive && (
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} />
           )}
         </div>
 
         {/* Away team */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div className="ss-score-team ss-score-team-away" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           <Logo id={away.team.id} name={away.team.name} size={28} />
           <div style={{ minWidth: 0 }}>
             <p style={{ fontSize: 13, fontWeight: awayWin ? 900 : 700, color: awayWin ? 'var(--text-1)' : isPre ? 'var(--text-2)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -77,7 +78,7 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
         </div>
 
         {/* Status center */}
-        <div className="w-[64px] sm:w-[100px]" style={{ flexShrink: 0, textAlign: 'center', padding: '0 8px' }}>
+        <div className="ss-score-status w-[64px] sm:w-[100px]" style={{ flexShrink: 0, textAlign: 'center', padding: '0 8px' }}>
           <p style={{ fontSize: 11, fontWeight: 800, color: isLive ? 'var(--red)' : isFinal ? 'var(--text-3)' : 'var(--text-2)', letterSpacing: '0.02em' }}>
             {isFinal ? 'Final' : isLive ? label : label}
           </p>
@@ -89,7 +90,7 @@ export function MLBScoreRow({ game }: { game: MLBGame }) {
         </div>
 
         {/* Home team */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end', minWidth: 0 }}>
+        <div className="ss-score-team ss-score-team-home" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end', minWidth: 0 }}>
           {!isPre && (
             <span style={{ fontSize: 22, fontWeight: 900, color: homeWin ? 'var(--text-1)' : 'var(--text-3)', fontVariantNumeric: 'tabular-nums', paddingLeft: 8, minWidth: 28, textAlign: 'left' }}>
               {home.score ?? 0}

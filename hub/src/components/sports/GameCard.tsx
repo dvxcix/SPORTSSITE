@@ -12,8 +12,9 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
   const comp = game.competitions?.[0]
 
   return (
-    <Link href={`/sports/${sport}/${game.id}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/sports/${sport}/${game.id}`} className="ss-score-card-link" style={{ textDecoration: 'none' }}>
       <div
+        className="ss-score-card"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -36,7 +37,7 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[away, home].map((team, i) => team && (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div key={i} className="ss-score-card-team" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {team.team.logo && (
                 <img src={team.team.logo} alt="" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
               )}
