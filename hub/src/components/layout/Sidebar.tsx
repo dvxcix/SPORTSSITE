@@ -96,6 +96,14 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // screen until you notice and dismiss it yourself.
   useEffect(() => { onClose() }, [path]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep the page behind the mobile drawer stationary while it is open.
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [open])
+
   const visibleNav = nav.filter(item => !item || !('flagKey' in item) || !item.flagKey || flags[item.flagKey] !== false)
 
   function active(href: string) {
@@ -107,7 +115,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     <>
       {/* Backdrop — mobile only, dismisses the drawer on tap outside it */}
       {open && (
-        <div onClick={onClose} className="md:hidden fixed inset-0 z-40 bg-black/60" aria-hidden="true" />
+        <div onClick={onClose} className="ss-mobile-sidebar-backdrop md:hidden fixed inset-0 bg-black/60" aria-hidden="true" />
       )}
       <aside
         // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
@@ -145,7 +153,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         }}
       >
       {/* Logo */}
-      <Link href="/feed" style={{
+      <Link href="/feed" className="ss-sidebar-brand" style={{
         display: 'flex', alignItems: 'center', gap: 10,
         justifyContent: isCollapsed ? 'center' : 'flex-start',
         padding: isCollapsed ? '20px 8px 18px' : '20px 16px 18px',
