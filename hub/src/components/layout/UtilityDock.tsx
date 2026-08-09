@@ -15,16 +15,16 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
       <style>{`
         .ss-utility-dock {
           position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-          z-index: 50; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+          z-index: 80; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
           pointer-events: none;
         }
         .ss-utility-dock-items {
           display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-          opacity: 0; transform: translateY(12px) scale(.96); transform-origin: bottom right;
-          pointer-events: none; transition: opacity 160ms ease, transform 200ms cubic-bezier(.2,.8,.2,1);
+          opacity: 0; visibility: hidden; pointer-events: none;
+          transition: opacity 160ms ease, visibility 0s linear 160ms;
         }
         .ss-utility-dock.is-expanded .ss-utility-dock-items {
-          opacity: 1; transform: translateY(0) scale(1); pointer-events: auto;
+          opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s;
         }
         .ss-utility-dock .wl-fab, .ss-utility-dock .mp-fab, .ss-utility-dock .matrix-fab {
           position: static !important; right: auto !important; bottom: auto !important;
