@@ -1,0 +1,13 @@
+.state { position: relative; isolation: isolate; display: grid; place-items: center; align-content: center; gap: 12px; min-height: min(440px, 55vh); margin: 18px 16px; padding: 40px 24px; overflow: hidden; text-align: center; border: 1px solid var(--border-2); border-radius: 18px; background: linear-gradient(145deg, rgba(18, 21, 25, .96), rgba(8, 10, 14, .98)); }
+.state[data-compact] { min-height: 150px; margin: 0; padding: 28px 20px; }
+.glow { position: absolute; z-index: -1; width: 240px; height: 140px; border-radius: 50%; background: var(--accent); opacity: .06; filter: blur(55px); }
+.icon { display: grid; place-items: center; width: 46px; height: 46px; color: var(--accent); border: 1px solid rgba(180, 255, 77, .22); border-radius: 14px; background: rgba(180, 255, 77, .07); }
+.state[data-kind='error'] .icon { color: var(--red); border-color: rgba(255, 77, 106, .24); background: var(--red-dim); }
+.state[data-kind='loading'] .icon svg { animation: page-state-spin 1s linear infinite; }
+.copy { display: grid; gap: 5px; max-width: 480px; }
+.copy strong { color: var(--text-1); font-size: 16px; letter-spacing: -.01em; }
+.copy span { color: var(--text-3); font-size: 13px; line-height: 1.5; }
+.action { margin-top: 4px; padding: 9px 15px; color: var(--accent-fg); font: inherit; font-size: 12px; font-weight: 800; text-decoration: none; border: 0; border-radius: 9px; background: var(--accent); cursor: pointer; }
+.action:focus-visible { outline: 2px solid var(--text-1); outline-offset: 3px; }
+@keyframes page-state-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .state[data-kind='loading'] .icon svg { animation: none; } }

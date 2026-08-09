@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { BatterCostClient } from '@/components/batter-cost/BatterCostClient'
 import Link from 'next/link'
 import { TierGate } from '@/components/layout/TierGate'
+import { PageState } from '@/components/layout/PageState'
 
 export const revalidate = 0
 
@@ -104,7 +105,7 @@ export default async function BatterCostPage({
       </div>
 
       {/* Client component (fetches own data) */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<PageState compact kind="loading" title="Loading batter markets" message="Preparing the opening and current prices." />}>
         <BatterCostClient date={date} />
       </Suspense>
     </div>

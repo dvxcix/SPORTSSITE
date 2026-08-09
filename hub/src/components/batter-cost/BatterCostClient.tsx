@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip-card'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { PickBadge, BookBadges, oStr } from '@/components/shared/OddsBadges'
+import { PageState } from '@/components/layout/PageState'
 
 // Every market that carries an opening-line baseline (see dugout/data/
 // route.ts's entry.open merge) — current value lives on the vendor-keyed
@@ -370,7 +371,7 @@ export function BatterCostClient({ date }: { date: string }) {
     })
   }, [filtered, sort])
 
-  if (error) return <div style={{ padding: 24, color: 'var(--red)', fontSize: 13 }}>{error}</div>
+  if (error) return <PageState compact kind="error" title="Batter markets could not load" message={error} />
   if (!data) return <div style={{ padding: 24, color: 'var(--text-3)', fontSize: 13 }}>Loading today&apos;s odds…</div>
 
   return (
