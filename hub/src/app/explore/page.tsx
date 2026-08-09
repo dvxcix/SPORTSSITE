@@ -6,7 +6,9 @@ import {
 } from 'lucide-react'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { attachUserReactions } from '@/lib/queries'
+import { fetchHrFeed } from '@/lib/hrFeed'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { UserBadges } from '@/components/social/UserBadges'
@@ -15,12 +17,21 @@ import { TierGate } from '@/components/layout/TierGate'
 
 export const revalidate = 60
 
-const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
-const getSchedule = unstable_cache(
-  (date: string) => fetchScheduleWithRetry(date, 'probablePitcher,team,linescore,venue'),
-  ['explore-mlb-schedule'],
-  { revalidate: 30 },
-)
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)`
+const getSlateActivity = unstable_cache(async (date: string) => {
+  const schedule = await fetchScheduleWithRetry(date, 'probablePitcher,team,linescore,venue')
+  const [{ hrFeed }, nearResult] = await Promise.all([
+    fetchHrFeed(schedule),
+    createAdminClient().from('near_hrs')
+      .select('batter_id, batter_name, pitcher_name, result, exit_velocity, hit_distance, parks_hr_count, home_team, away_team, captured_at')
+      .eq('game_date', date).order('parks_hr_count', { ascending: false }).limit(200),
+  ])
+  return {
+    schedule,
+    homeRuns: hrFeed.sort((a, b) => (b.hr_time || '').localeCompare(a.hr_time || '')),
+    nearHomeRuns: nearResult.data ?? [],
+  }
+}, ['explore-slate-activity-v2'], { revalidate: 30 })
 
 type ExploreUser = {
   id: string
@@ -52,8 +63,7 @@ export default async function ExplorePage() {
 
   const [
     { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
-    { data: rawTrendingPicks }, { data: pages }, { data: groups },
-    { data: homeRuns }, { data: nearHomeRuns }, schedule,
+    { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity,
   ] = await Promise.all([
     supabase.from('users').select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
       .eq('is_active_member', true).eq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
@@ -67,11 +77,7 @@ export default async function ExplorePage() {
       .eq('is_published', true).order('follower_count', { ascending: false }).limit(4),
     supabase.from('groups').select('id, slug, name, description, avatar_url, emoji, sport, member_count')
       .eq('is_public', true).order('member_count', { ascending: false }).limit(4),
-    supabase.from('player_home_run_events').select('game_pk, batter_id, batter_name, pitcher_name, exit_velocity, hr_distance')
-      .eq('game_date', date).eq('result', 'home_run').order('exit_velocity', { ascending: false }).limit(6),
-    supabase.from('near_hrs').select('batter_id, batter_name, pitcher_name, result, exit_velocity, hit_distance, parks_hr_count, home_team, away_team')
-      .eq('game_date', date).order('parks_hr_count', { ascending: false }).limit(6),
-    getSchedule(date).catch(() => []),
+    getSlateActivity(date).catch(() => ({ schedule: [], homeRuns: [], nearHomeRuns: [] })),
   ])
 
   const [topPosts, trendingPicks] = await Promise.all([
@@ -87,7 +93,9 @@ export default async function ExplorePage() {
     followingIds = new Set((data ?? []).map(row => row.following_id))
   }
 
-  const allGames = schedule ?? []
+  const allGames = slateActivity.schedule ?? []
+  const homeRuns = slateActivity.homeRuns ?? []
+  const nearHomeRuns = slateActivity.nearHomeRuns ?? []
   const games = allGames.slice(0, 8)
   const liveGames = allGames.filter((game: any) => game.status?.abstractGameState === 'Live').length
   const finalGames = allGames.filter((game: any) => game.status?.abstractGameState === 'Final').length
@@ -106,8 +114,8 @@ export default async function ExplorePage() {
           <div className="ss-explore-pulse" aria-label="Today's activity summary">
             <Metric value={allGames.length} label="MLB games" />
             <Metric value={liveGames} label="Live now" live={liveGames > 0} />
-            <Metric value={(homeRuns ?? []).length} label="Home runs" />
-            <Metric value={(nearHomeRuns ?? []).length} label="Near home runs" />
+            <Metric value={homeRuns.length} label="Home runs" />
+            <Metric value={nearHomeRuns.length} label="Near home runs" />
           </div>
         </header>
 
@@ -134,16 +142,16 @@ export default async function ExplorePage() {
               <EventBoard
                 className="is-hot" icon={<Flame size={17} />} title="Home runs today" href="/daily-recap"
                 empty="No confirmed home runs yet."
-                items={(homeRuns ?? []).map((hr: any) => ({
-                  id: `${hr.game_pk}-${hr.batter_id}`, playerId: hr.batter_id, name: hr.batter_name,
+                items={homeRuns.slice(0, 6).map((hr: any) => ({
+                  id: `${hr.game_pk}-${hr.mlb_id}`, playerId: hr.mlb_id, name: hr.player_name,
                   meta: `off ${hr.pitcher_name || 'opposing pitcher'}`,
-                  value: hr.exit_velocity ? `${hr.exit_velocity} mph` : hr.hr_distance ? `${hr.hr_distance} ft` : 'HR',
+                  value: hr.exit_velocity ? `${hr.exit_velocity} mph` : hr.hit_distance ? `${hr.hit_distance} ft` : 'HR',
                 }))}
               />
               <EventBoard
                 className="is-near" icon={<Gauge size={17} />} title="Near home runs" href="/dugout"
                 empty="No near home runs recorded yet."
-                items={(nearHomeRuns ?? []).map((near: any, index: number) => ({
+                items={nearHomeRuns.slice(0, 6).map((near: any, index: number) => ({
                   id: `${near.batter_id}-${index}`, playerId: near.batter_id, name: near.batter_name,
                   meta: `${near.result || 'In play'} · ${near.away_team || ''}${near.away_team && near.home_team ? ' at ' : ''}${near.home_team || ''}`,
                   value: near.parks_hr_count != null ? `${near.parks_hr_count}/30 parks` : near.hit_distance ? `${near.hit_distance} ft` : 'Near HR',
@@ -214,7 +222,7 @@ function EventBoard({ className, icon, title, href, items, empty }: { className:
 }
 
 function ToolCard() {
-  return <section className="ss-explore-tool"><p><Zap size={13} /> ULTIMATE TOOLKIT</p><h2>Go beyond the surface.</h2><span>Track market movement, compare the full board, and open advanced daily research.</span><div><Link href="/odds-terminal"><BarChart3 size={14} /> Odds Terminal</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
+  return <section className="ss-explore-tool"><p><Zap size={13} /> RESEARCH TOOLKIT</p><h2>Go beyond the surface.</h2><span>Track market movement, compare the full board, and open advanced daily research.</span><div><Link href="/odds-terminal"><BarChart3 size={14} /> Odds Terminal</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
 }
 
 function Directory({ title, icon, href, rows }: { title: string; icon: React.ReactNode; href: string; rows: { id: string; href: string; name: string; detail: string; image: string | null; fallback: string }[] }) {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { FollowButton } from './FollowButton'
+import { UserBadges } from './UserBadges'
 
 export type SuggestedUser = {
   id: string
@@ -43,15 +44,9 @@ export function SuggestedUsers({ users, currentUserId }: {
                 {u.display_name || u.username}
               </Link>
               {u.is_verified && <span className="text-green-400 text-xs shrink-0">✓</span>}
-              {u.account_type === 'creator' && (
-                <span className="ss-member-chip is-creator">CREATOR</span>
-              )}
+              <UserBadges userId={u.id} size={16} maxVisible={2} />
             </div>
             <p>@{u.username}{typeof u.follower_count === 'number' ? ` · ${u.follower_count.toLocaleString()} followers` : ''}</p>
-            <div className="ss-suggested-status">
-              {u.tier && u.tier !== 'free' && <span className={`ss-member-chip is-${u.tier}`}>{u.tier}</span>}
-              {u.beta_access_active && <span className="ss-member-chip is-beta">BETA</span>}
-            </div>
           </div>
           {currentUserId ? (
             <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={false} />

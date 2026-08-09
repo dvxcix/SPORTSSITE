@@ -26,7 +26,7 @@ const SPORT_LABEL: Record<string, string> = { nfl: 'NFL', nba: 'NBA', mlb: 'MLB'
 async function fetchCommunityPicksForGame(supabase: any, gameId: string) {
   const { data } = await supabase
     .from('posts')
-    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)')
     .in('post_type', ['pick', 'parlay'])
     .order('created_at', { ascending: false })
     .limit(300)
