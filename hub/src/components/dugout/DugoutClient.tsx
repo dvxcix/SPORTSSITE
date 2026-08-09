@@ -3216,6 +3216,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                 bannerHeight is measured correctly. */}
             <td
               ref={bannerRowRef}
+              className="dg-team-banner"
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.homeAbbr), padding: '7px 8px',
@@ -3251,6 +3252,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
           <tr>
             <td
+              className="dg-team-banner"
               colSpan={renderedHeaderCells.length}
               style={{
                 background: teamBannerGradient(game.awayAbbr), padding: '7px 8px',
@@ -3797,7 +3799,7 @@ export function DugoutClient({ date }: { date: string }) {
            BatterRowEl) instead of this rule, since a CSS !important war
            here previously reintroduced the exact bleed-through bug it was
            meant to fix (see BatterRowEl's comment on that state for why). */
-        .dugout-dense-table > tbody > tr:hover > td:not(.dg-sticky-col){background:rgba(255,255,255,0.025)!important}
+        .dugout-dense-table > tbody > tr:hover > td:not(.dg-sticky-col):not(.dg-team-banner){background:rgba(255,255,255,0.025)!important}
       `}</style>
     </div>
   )

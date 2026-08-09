@@ -13,6 +13,7 @@ import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
 import { DesktopExperience } from '@/components/desktop/DesktopExperience'
 import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
 import { NetworkStatus } from './NetworkStatus'
+import { UtilityDock } from './UtilityDock'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -74,9 +75,11 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
-      <WatchlistButton />
-      <MyPicksButton />
-      {showMatrixButton && <MatrixButton />}
+      <UtilityDock>
+        {showMatrixButton && <MatrixButton />}
+        <MyPicksButton />
+        <WatchlistButton />
+      </UtilityDock>
       {isDesktop && <DesktopExperience />}
     </WatchlistProvider>
   )
