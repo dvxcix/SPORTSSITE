@@ -70,7 +70,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
   if (!user || !profile) {
     return (
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', textAlign: 'center' }}>
+      <div className="ss-feed-composer" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', textAlign: 'center' }}>
         <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
           <a href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</a>
           {' '}to post picks and join the conversation
@@ -164,7 +164,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const initials = (profile.display_name || profile.username || '?')[0].toUpperCase()
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
+    <div className="ss-feed-composer" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
       <div style={{ display: 'flex', gap: 12 }}>
         {/* Avatar */}
         <div style={{
