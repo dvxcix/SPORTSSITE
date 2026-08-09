@@ -19,7 +19,7 @@ import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { ChevronLeft, ChevronRight, Lock, Search } from 'lucide-react'
+import { Ban, ChevronLeft, ChevronRight, Flame, Lock, Search, Settings2, Sparkles } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -2539,11 +2539,11 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--surface)', zIndex: 1 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Hide a whole section below, or reorder/hide individual columns freely — any column can move anywhere</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Show, hide, and reorder the data that matters to you.</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
@@ -3756,7 +3756,7 @@ export function DugoutClient({ date }: { date: string }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="dugout-summary-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         {/* Game-level (not per-player) — the "No Home Run" side of FanDuel's
             First HR market, i.e. the price on NOBODY hitting a home run in
             this game at all. Scoped to `active` (the selected game tab), not
@@ -3772,13 +3772,13 @@ export function DugoutClient({ date }: { date: string }) {
                 : undefined
             }
             style={{
-              display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12, padding: '8px 16px', borderRadius: 10,
+              minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
               border: '1.5px solid rgba(167,139,250,0.5)', background: 'rgba(167,139,250,0.16)', color: '#c4b5fd',
-              fontSize: 13, fontWeight: 900,
+              fontSize: 12, fontWeight: 850,
             }}
           >
-            🚫 No Home Runs
-            <span style={{ fontSize: 15, fontWeight: 900, color: '#a78bfa' }}>
+            <Ban size={14} aria-hidden="true" /> No Home Run
+            <span style={{ fontSize: 13, fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>
               {oStr(active.noHr.fanduel)}
               {active.noHr.openingFanduel != null && active.noHr.openingFanduel !== active.noHr.fanduel && (
                 <span style={{ marginLeft: 3, fontSize: 10, color: active.noHr.fanduel < active.noHr.openingFanduel ? '#4ade80' : '#f87171' }}>
@@ -3791,22 +3791,22 @@ export function DugoutClient({ date }: { date: string }) {
 
         {hrCount > 0 && (
           <button onClick={() => setShowHrBoard(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
+            minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
             border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
           }}>
-            🔥 Today's Home Runs
+            <Flame size={14} aria-hidden="true" /> Today's Home Runs
             <span style={{ background: 'rgba(74,222,128,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{hrCount}</span>
           </button>
         )}
 
         {nearHrCount > 0 && (
           <button onClick={() => setShowNearHrBoard(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
+            minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
             border: '1px solid rgba(251,146,60,0.35)', background: 'rgba(251,146,60,0.1)', color: '#fb923c',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
           }}>
-            😮 Today's Near Home Runs
+            <Sparkles size={14} aria-hidden="true" /> Near Home Runs
             <span style={{ background: 'rgba(251,146,60,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{nearHrCount}</span>
           </button>
         )}
@@ -3815,11 +3815,11 @@ export function DugoutClient({ date }: { date: string }) {
             table below, not just the active one, so it lives up here at
             the page level rather than inside GameTable's per-game toolbar. */}
         <button onClick={() => setShowColumnPanel(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '7px 14px', borderRadius: 999,
+          minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9, marginLeft: 'auto',
           border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)',
           fontSize: 12, fontWeight: 800, cursor: 'pointer',
         }}>
-          ⚙️ Columns
+          <Settings2 size={14} aria-hidden="true" /> Columns
         </button>
       </div>
 
@@ -3836,13 +3836,12 @@ export function DugoutClient({ date }: { date: string }) {
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 7 }}>
             <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}>Games</span>
             <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
-            <span className="hidden md:inline" style={{ fontSize: 9, color: 'var(--text-4)' }}>Alt + ←/→</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button type="button" disabled={activeGameIndex === 0} onClick={() => setActiveGame(games[activeGameIndex - 1]?.gameKey ?? active.gameKey)} aria-label="Previous game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === 0 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === 0 ? 'default' : 'pointer' }}>
+            <button type="button" title="Previous game (Alt + Left Arrow)" disabled={activeGameIndex === 0} onClick={() => setActiveGame(games[activeGameIndex - 1]?.gameKey ?? active.gameKey)} aria-label="Previous game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === 0 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === 0 ? 'default' : 'pointer' }}>
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <button type="button" disabled={activeGameIndex === games.length - 1} onClick={() => setActiveGame(games[activeGameIndex + 1]?.gameKey ?? active.gameKey)} aria-label="Next game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === games.length - 1 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === games.length - 1 ? 'default' : 'pointer' }}>
+            <button type="button" title="Next game (Alt + Right Arrow)" disabled={activeGameIndex === games.length - 1} onClick={() => setActiveGame(games[activeGameIndex + 1]?.gameKey ?? active.gameKey)} aria-label="Next game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === games.length - 1 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === games.length - 1 ? 'default' : 'pointer' }}>
               <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
