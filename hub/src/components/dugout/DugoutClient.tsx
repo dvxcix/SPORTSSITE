@@ -4061,7 +4061,14 @@ export function DugoutClient({ date }: { date: string }) {
       <section className="dugout-game-selector" aria-label="Game selector" style={{ marginBottom: 16, border: '1px solid var(--border)', borderRadius: 13, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{ minHeight: 38, padding: '7px 9px 7px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)' }}>
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 7 }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}><span className="dugout-games-label">Games</span><span className="dugout-active-matchup">{active.awayAbbr} @ {active.homeAbbr}</span></span>
+            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}>
+              <span className="dugout-games-label">Games</span>
+              <span className="dugout-active-matchup" aria-label={`${active.awayAbbr} at ${active.homeAbbr}`}>
+                <TeamLogo abbr={active.awayAbbr} size={22} />
+                <span>vs</span>
+                <TeamLogo abbr={active.homeAbbr} size={22} />
+              </span>
+            </span>
             <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -4149,13 +4156,13 @@ export function DugoutClient({ date }: { date: string }) {
               <div><div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
               <button type="button" onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
             </div>
-            <div style={{ display: 'grid', gap: 7, padding: 10 }}>
+            <div className="dugout-game-picker-list" style={{ display: 'grid', gap: 7, padding: 10 }}>
               {games.map(game => {
                 const selected = game.gameKey === active.gameKey
                 const time = game.gameDate ? new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
                 return (
                   <button key={game.gameKey} type="button" onClick={() => { setActiveGame(game.gameKey); setShowGamePicker(false) }} aria-pressed={selected} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center', padding: '11px 12px', borderRadius: 11, border: selected ? '1px solid var(--accent)' : '1px solid var(--border)', background: selected ? 'var(--accent-dim)' : 'var(--surface-2)', color: 'var(--text-1)', cursor: 'pointer', textAlign: 'left' }}>
-                    <span style={{ display: 'grid', gap: 7 }}><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.awayAbbr} size={22} /><strong>{game.awayAbbr}</strong></span><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.homeAbbr} size={22} /><strong>{game.homeAbbr}</strong></span></span>
+                    <span className="dugout-picker-matchup" style={{ display: 'grid', gap: 7 }}><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.awayAbbr} size={22} /><strong>{game.awayAbbr}</strong></span><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.homeAbbr} size={22} /><strong>{game.homeAbbr}</strong></span></span>
                     <span style={{ display: 'grid', justifyItems: 'end', gap: 4, fontSize: 10, color: 'var(--text-3)' }}><span>{game.status === 'Live' ? 'LIVE' : game.status === 'Final' ? 'FINAL' : time}</span>{(game.status === 'Live' || game.status === 'Final') && <strong style={{ color: 'var(--text-1)', fontFamily: 'monospace', fontSize: 13 }}>{game.awayScore}–{game.homeScore}</strong>}</span>
                   </button>
                 )
@@ -4202,7 +4209,8 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-dense-table > tbody > tr:hover > td:not(.dg-sticky-col):not(.dg-team-banner){background:rgba(255,255,255,0.025)!important}
         .dugout-dense-table.density-comfortable > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
         .dugout-redundant-sort-summary,.dugout-jump-menu{display:none!important}
-        .dugout-active-matchup{display:none}
+        .dugout-active-matchup{display:none;align-items:center;gap:6px}
+        .dugout-active-matchup > span{color:var(--text-4);font-size:8px;font-weight:900;text-transform:uppercase}
         .dugout-board-enter{animation:dugout-board-in 180ms ease-out both}
         @keyframes dugout-board-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
         .dugout-dense-table [data-tutorial-active=true]{position:relative;z-index:8;box-shadow:inset 0 0 0 1px var(--accent),0 0 13px color-mix(in srgb,var(--accent) 38%,transparent)!important;filter:brightness(1.22);animation:dugout-tour-glow 1.25s ease-in-out infinite alternate}
@@ -4217,7 +4225,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-game-selector{margin-bottom:7px!important}
           .dugout-game-rail{display:none!important}
           .dugout-games-label{display:none}
-          .dugout-active-matchup{display:inline}
+          .dugout-active-matchup{display:inline-flex}
           .dugout-board-nav{min-height:38px;margin-bottom:5px!important;padding:4px 7px!important;gap:7px!important}
           .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:auto!important;border-radius:8px!important;scroll-padding-top:36px}
           .dg-team-banner{position:static!important}
@@ -4248,7 +4256,12 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-columns-sheet button{min-height:36px}
           .dugout-columns-sheet input{height:42px!important;font-size:16px!important}
           .dugout-leaderboard-sheet{height:min(78dvh,720px)!important}
-          .dugout-game-picker-sheet{max-height:calc(100dvh - 52px)!important;padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
+          .dugout-game-picker-sheet{max-height:calc(100dvh - 52px)!important;padding-bottom:0!important}
+          .dugout-game-picker-list{padding-bottom:var(--mobile-dock-clearance)!important;scroll-padding-bottom:var(--mobile-dock-clearance)}
+          .dugout-picker-matchup{display:flex!important;align-items:center;justify-content:start;gap:7px!important}
+          .dugout-picker-matchup > span{display:flex!important;align-items:center;gap:0!important}
+          .dugout-picker-matchup strong{font-size:0}
+          .dugout-picker-matchup > span:first-child::after{content:"vs";margin-left:7px;color:var(--text-4);font-size:8px;font-weight:900;text-transform:uppercase}
           .dugout-game-picker-sheet button{min-height:58px}
           .dugout-return-player,.dugout-header-help{display:none!important}
           .dugout-table-tour{right:12px!important;bottom:96px!important}

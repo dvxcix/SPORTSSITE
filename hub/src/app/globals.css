@@ -114,6 +114,7 @@
   --layer-modal: 500;
   --layer-tour: 700;
   --layer-critical: 900;
+  --mobile-dock-clearance: calc(104px + env(safe-area-inset-bottom, 0px));
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
@@ -560,7 +561,9 @@ img { max-width: 100%; }
 .ss-mobile-dock-item:hover .ss-mobile-dock-icon { transform: translateY(-2px) scale(1.08); }
 
 @media (max-width: 767px) {
-  .ss-site-main { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+  html { scroll-padding-bottom: var(--mobile-dock-clearance); }
+  .ss-site-main { padding-bottom: var(--mobile-dock-clearance); }
+  .ss-mobile-scroll-clearance { padding-bottom: var(--mobile-dock-clearance) !important; scroll-padding-bottom: var(--mobile-dock-clearance); }
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-mobile-dock, .ss-mobile-dock-item, .ss-mobile-dock-icon, .ss-skip-link,
