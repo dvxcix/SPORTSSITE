@@ -1822,6 +1822,11 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
   onClose: () => void
 }) {
   const [sortBy, setSortBy] = useState<'ev' | 'dist' | 'time'>('ev')
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
 
   const sorted = useMemo(() => {
     const withMeta = hits.map(h => ({ ...h, _team: teamByMlbId[h.mlb_id]?.team ?? null, _gameKey: teamByMlbId[h.mlb_id]?.gameKey ?? null }))
@@ -1838,13 +1843,13 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
   }, [hits, teamByMlbId, sortBy])
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <div role="dialog" aria-modal="true" aria-label="Today's home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(74,222,128,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>🔥</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Home Runs</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{hits.length} HR{hits.length === 1 ? '' : 's'} across the slate so far</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{hits.length} HR{hits.length === 1 ? '' : 's'} across the slate. Select a player to open that game.</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
@@ -1949,6 +1954,11 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
   onClose: () => void
 }) {
   const [sortBy, setSortBy] = useState<'ev' | 'dist' | 'time'>('dist')
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
 
   const sorted = useMemo(() => {
     const withMeta = nearHrs.map(n => ({ ...n, _team: teamByMlbId[n.batter_id]?.team ?? null, _gameKey: teamByMlbId[n.batter_id]?.gameKey ?? null }))
@@ -1964,13 +1974,13 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
   }, [nearHrs, teamByMlbId, sortBy])
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <div role="dialog" aria-modal="true" aria-label="Today's near home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(251,146,60,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>😮</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Near Home Runs</div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{nearHrs.length} ball{nearHrs.length === 1 ? '' : 's'} that would've left at least one real park</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{nearHrs.length} ball{nearHrs.length === 1 ? '' : 's'} that would've left another park. Select a player to open that game.</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
@@ -2427,6 +2437,11 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   onSave: (next: DugoutColumnPrefs) => void
   onClose: () => void
 }) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set(prefs?.hiddenGroups ?? []))
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set(prefs?.hiddenColumns ?? []))
   const [columnQuery, setColumnQuery] = useState('')
@@ -2438,6 +2453,18 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
     const rest = DUGOUT_ALL_COLUMNS.map(c => c.key).filter(k => !resolved.has(k))
     return [...resolved, ...rest]
   })
+  const applyPreset = (preset: 'compact' | 'markets' | 'power' | 'statcast') => {
+    const presetColumns: Record<typeof preset, string[]> = {
+      compact: ['pk', 'fhr_fd', 'fhr_cz', 'div', 'sa_fd', 'sa_cz', 'paper', 'bk_rk', 'pp_rk', 'mm'],
+      markets: DUGOUT_ALL_COLUMNS.filter(col => ['picks', 'fhr', 'hr', 'props', 'ranks'].includes(col.group)).map(col => col.key),
+      power: ['pk', 'fhr_fd', 'sa_fd', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'paper', 'bk_rk', 'pp_rk', 'mm', 's_spd', 'r_spd', 'd_spd', 's_brl', 'r_brl', 'd_brl', 's_hh', 'r_hh', 'd_hh', 's_ev', 'r_ev', 'd_ev', 's_la', 'r_la', 'd_la', 's_hr'],
+      statcast: DUGOUT_ALL_COLUMNS.filter(col => ['ranks', 'batspeed', 'barrel'].includes(col.group)).map(col => col.key),
+    }
+    const visible = new Set(presetColumns[preset])
+    setHiddenGroups(new Set())
+    setHiddenColumns(new Set(DUGOUT_ALL_COLUMNS.map(col => col.key).filter(key => !visible.has(key))))
+    setOrder([...presetColumns[preset], ...DUGOUT_ALL_COLUMNS.map(col => col.key).filter(key => !visible.has(key))])
+  }
   const colByKey = useMemo(() => new Map(DUGOUT_ALL_COLUMNS.map(c => [c.key, c])), [])
 
   const visibleOrder = useMemo(
@@ -2549,6 +2576,12 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
         </div>
 
         <div style={{ padding: '14px 16px 4px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Quick layouts</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+            {([['compact', 'Compact'], ['markets', 'Markets'], ['power', 'Power'], ['statcast', 'Statcast']] as const).map(([key, label]) => (
+              <button key={key} type="button" onClick={() => applyPreset(key)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>{label}</button>
+            ))}
+          </div>
           <label style={{ position: 'relative', display: 'block', marginBottom: 14 }}>
             <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
             <input
@@ -2819,7 +2852,7 @@ export function getDugoutHeaderCells(
   )
 }
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs }: {
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -2835,6 +2868,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // This member's saved Dugout column show/hide/order — null/undefined
   // means "show everything, default order" (see resolveDugoutColumns).
   columnPrefs?: DugoutColumnPrefs | null
+  density: 'compact' | 'comfortable'
+  onDensityChange: (density: 'compact' | 'comfortable') => void
 }) {
   const [sort, setSort] = useState<SortState>(null)
   // Sticky multi-column sort — when on, each header click ADDS that column
@@ -3112,6 +3147,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         </Tooltip>
       )}
       <StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} />
+      <Tooltip content={density === 'compact' ? 'Use roomier rows and text' : 'Fit more data on screen'}>
+        <button
+          type="button"
+          onClick={() => onDensityChange(density === 'compact' ? 'comfortable' : 'compact')}
+          aria-label={`Use ${density === 'compact' ? 'comfortable' : 'compact'} table density`}
+          style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+        >
+          {density === 'compact' ? 'Compact' : 'Comfort'}
+        </button>
+      </Tooltip>
     </div>
   )
 
@@ -3175,6 +3220,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // moment the banner's own content wraps to an extra line.
   const bannerRowRef = useRef<HTMLTableCellElement>(null)
   const tableScrollRef = useRef<HTMLDivElement>(null)
+  const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [bannerHeight, setBannerHeight] = useState(0)
   const [tableViewportHeight, setTableViewportHeight] = useState<number | null>(null)
   const [horizontalState, setHorizontalState] = useState({ hasOverflow: false, canGoLeft: false, canGoRight: false, progress: 0 })
@@ -3194,6 +3240,26 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     if (!el) return
     el.scrollTo({ left: edge === 'start' ? 0 : el.scrollWidth, behavior: 'smooth' })
   }
+  const tableScrollStorageKey = `ss:dugout-scroll:${date}:${game.gameKey}`
+  const onBoardScroll = () => {
+    updateHorizontalState()
+    if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current)
+    scrollSaveTimer.current = setTimeout(() => {
+      const el = tableScrollRef.current
+      if (!el) return
+      try { window.localStorage.setItem(tableScrollStorageKey, JSON.stringify({ left: el.scrollLeft, top: el.scrollTop })) } catch {}
+    }, 120)
+  }
+  useLayoutEffect(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(tableScrollStorageKey) ?? 'null')
+      if (saved) el.scrollTo({ left: Number(saved.left) || 0, top: Number(saved.top) || 0 })
+    } catch {}
+    updateHorizontalState()
+    return () => { if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current) }
+  }, [tableScrollStorageKey, updateHorizontalState])
   useLayoutEffect(() => {
     const el = bannerRowRef.current
     if (!el) return
@@ -3238,7 +3304,18 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // render the identical set of columns.
   const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleDugoutColumns)
   return (
-    <div style={{ minWidth: 0, marginBottom: 8 }}>
+    <div className="dugout-board-enter" style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
+      {activeSortKeys.length > 0 && (
+        <div aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
+          <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
+          {activeSortKeys.map((entry, index) => (
+            <button key={entry.col} type="button" onClick={() => toggleSort(entry.col)} title="Click to change or remove this sort" style={{ border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>
+              {activeSortKeys.length > 1 ? `${index + 1}. ` : ''}{DUGOUT_COLUMN_LABELS[entry.col] ?? entry.col} {entry.dir === 'desc' ? '↓' : '↑'}
+            </button>
+          ))}
+          <button type="button" onClick={() => { setSort(null); setStickyCols([]) }} style={{ marginLeft: 'auto', border: 0, background: 'none', color: 'var(--text-3)', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>Clear</button>
+        </div>
+      )}
       {horizontalState.hasOverflow && (
         <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <button type="button" onClick={() => scrollBoardTo('start')} disabled={!horizontalState.canGoLeft} aria-label="Go to the first Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoLeft ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoLeft ? 'pointer' : 'default', padding: '3px 4px' }}>
@@ -3254,7 +3331,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       )}
     <div
       ref={tableScrollRef}
-      onScroll={updateHorizontalState}
+      onScroll={onBoardScroll}
       tabIndex={0}
       role="region"
       aria-label={`${game.awayAbbr} at ${game.homeAbbr} betting table`}
@@ -3274,7 +3351,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         ['--dugout-header-top' as string]: `${bannerHeight}px`,
       }}
     >
-      <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
+      <table className={`dugout-dense-table density-${density}`} style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: density === 'compact' ? 10 : 11, width: 'max-content', minWidth: '100%' }}>
         <tbody>
           {/* Home banner, THEN home's own column-label row directly beneath
               it (not a single shared <thead> above everything) — the member
@@ -3369,6 +3446,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       </table>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
     </div>
+    {horizontalState.canGoLeft && (
+      <button type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 10, fontWeight: 850, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
+        <ChevronLeft size={13} aria-hidden="true" /> Player
+      </button>
+    )}
     </div>
   )
 }
@@ -3538,6 +3620,18 @@ export function DugoutClient({ date }: { date: string }) {
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
+  const [showGamePicker, setShowGamePicker] = useState(false)
+  const [density, setDensity] = useState<'compact' | 'comfortable'>(() => {
+    if (typeof window === 'undefined') return 'compact'
+    return window.localStorage.getItem('ss:dugout-density') === 'comfortable' ? 'comfortable' : 'compact'
+  })
+  useEffect(() => {
+    try {
+      const panel = window.sessionStorage.getItem('ss:dugout-open-panel')
+      setShowHrBoard(panel === 'home-runs')
+      setShowNearHrBoard(panel === 'near-home-runs')
+    } catch {}
+  }, [])
   const gameButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   // Which real recency window the Statcast section's "R"/Δ columns read —
   // server precomputes all 5 (season + l1/l3/l5/l10) per batter, so this is
@@ -3551,6 +3645,22 @@ export function DugoutClient({ date }: { date: string }) {
   useEffect(() => {
     try { window.localStorage.setItem('ss:dugout-statcast-window', statcastWindow) } catch { /* session-only when storage is unavailable */ }
   }, [statcastWindow])
+  useEffect(() => {
+    try { window.localStorage.setItem('ss:dugout-density', density) } catch {}
+  }, [density])
+  useEffect(() => {
+    try {
+      if (showHrBoard) window.sessionStorage.setItem('ss:dugout-open-panel', 'home-runs')
+      else if (showNearHrBoard) window.sessionStorage.setItem('ss:dugout-open-panel', 'near-home-runs')
+      else window.sessionStorage.removeItem('ss:dugout-open-panel')
+    } catch {}
+  }, [showHrBoard, showNearHrBoard])
+  useEffect(() => {
+    if (!showGamePicker) return
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowGamePicker(false) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [showGamePicker])
 
   // Per-member Dugout column show/hide/reorder — fetched once on mount
   // (null while loading behaves identically to "no prefs saved," i.e. show
@@ -3790,7 +3900,7 @@ export function DugoutClient({ date }: { date: string }) {
         )}
 
         {hrCount > 0 && (
-          <button onClick={() => setShowHrBoard(true)} style={{
+          <button onClick={() => { setShowNearHrBoard(false); setShowHrBoard(true) }} style={{
             minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
             border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
@@ -3801,7 +3911,7 @@ export function DugoutClient({ date }: { date: string }) {
         )}
 
         {nearHrCount > 0 && (
-          <button onClick={() => setShowNearHrBoard(true)} style={{
+          <button onClick={() => { setShowHrBoard(false); setShowNearHrBoard(true) }} style={{
             minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
             border: '1px solid rgba(251,146,60,0.35)', background: 'rgba(251,146,60,0.1)', color: '#fb923c',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
@@ -3838,6 +3948,7 @@ export function DugoutClient({ date }: { date: string }) {
             <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
+            <button type="button" className="md:hidden" onClick={() => setShowGamePicker(true)} aria-label="Open all games" style={{ height: 25, padding: '0 9px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 9, fontWeight: 850, cursor: 'pointer' }}>All games</button>
             <button type="button" title="Previous game (Alt + Left Arrow)" disabled={activeGameIndex === 0} onClick={() => setActiveGame(games[activeGameIndex - 1]?.gameKey ?? active.gameKey)} aria-label="Previous game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === 0 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === 0 ? 'default' : 'pointer' }}>
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
@@ -3909,7 +4020,32 @@ export function DugoutClient({ date }: { date: string }) {
               statcastWindow={statcastWindow}
               onStatcastWindowChange={setStatcastWindow}
               columnPrefs={columnPrefs}
+              density={density}
+              onDensityChange={setDensity}
             />
+      )}
+
+      {showGamePicker && (
+        <div onClick={() => setShowGamePicker(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,.68)', padding: 10 }}>
+          <div onClick={event => event.stopPropagation()} style={{ width: '100%', maxHeight: '82dvh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', boxShadow: '0 -18px 60px rgba(0,0,0,.5)' }}>
+            <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+              <div><div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
+              <button type="button" onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ display: 'grid', gap: 7, padding: 10 }}>
+              {games.map(game => {
+                const selected = game.gameKey === active.gameKey
+                const time = game.gameDate ? new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
+                return (
+                  <button key={game.gameKey} type="button" onClick={() => { setActiveGame(game.gameKey); setShowGamePicker(false) }} aria-pressed={selected} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center', padding: '11px 12px', borderRadius: 11, border: selected ? '1px solid var(--accent)' : '1px solid var(--border)', background: selected ? 'var(--accent-dim)' : 'var(--surface-2)', color: 'var(--text-1)', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ display: 'grid', gap: 7 }}><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.awayAbbr} size={22} /><strong>{game.awayAbbr}</strong></span><span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><TeamLogo abbr={game.homeAbbr} size={22} /><strong>{game.homeAbbr}</strong></span></span>
+                    <span style={{ display: 'grid', justifyItems: 'end', gap: 4, fontSize: 10, color: 'var(--text-3)' }}><span>{game.status === 'Live' ? 'LIVE' : game.status === 'Final' ? 'FINAL' : time}</span>{(game.status === 'Live' || game.status === 'Final') && <strong style={{ color: 'var(--text-1)', fontFamily: 'monospace', fontSize: 13 }}>{game.awayScore}–{game.homeScore}</strong>}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
       <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
@@ -3947,6 +4083,10 @@ export function DugoutClient({ date }: { date: string }) {
            here previously reintroduced the exact bleed-through bug it was
            meant to fix (see BatterRowEl's comment on that state for why). */
         .dugout-dense-table > tbody > tr:hover > td:not(.dg-sticky-col):not(.dg-team-banner){background:rgba(255,255,255,0.025)!important}
+        .dugout-dense-table.density-comfortable > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
+        .dugout-board-enter{animation:dugout-board-in 180ms ease-out both}
+        @keyframes dugout-board-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+        @media (prefers-reduced-motion:reduce){.dugout-board-enter{animation:none}}
       `}</style>
     </div>
   )
