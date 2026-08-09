@@ -70,6 +70,24 @@
   --purple:  #A855F7;
   --purple-dim:rgba(168,85,247,0.12);
 
+  /* Semantic feedback */
+  --status-success: var(--green);
+  --status-success-bg: var(--green-dim);
+  --status-warning: var(--gold);
+  --status-warning-bg: var(--gold-dim);
+  --status-danger: var(--red);
+  --status-danger-bg: var(--red-dim);
+  --status-info: var(--blue);
+  --status-info-bg: var(--blue-dim);
+
+  /* Sportsbook identity across charts, filters, and inspectors */
+  --book-fanduel: #1493ff;
+  --book-draftkings: #53d337;
+  --book-caesars: #0b7a53;
+  --book-fanatics: #ef3340;
+  --book-betmgm: #b89a62;
+  --book-betrivers: #f4c430;
+
   /* Layout */
   --sidebar-w: 220px;
   --sidebar-w-collapsed: 64px;
@@ -78,10 +96,35 @@
   --radius-sm: 8px;
   --radius-xs: 6px;
 
+  /* Spacing and control scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --control-sm: 30px;
+  --control-md: 36px;
+  --control-lg: 44px;
+
+  /* Shared layering contract */
+  --layer-sticky: 20;
+  --layer-floating: 100;
+  --layer-popover: 300;
+  --layer-modal: 500;
+  --layer-tour: 700;
+  --layer-critical: 900;
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
   --shadow:    0 4px 16px rgba(0,0,0,0.6);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.7);
+  --shadow-overlay: 0 24px 80px rgba(0,0,0,0.78);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
 }
 
 /* ── Reset & base ───────────────────────────── */
