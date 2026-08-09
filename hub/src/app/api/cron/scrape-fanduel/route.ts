@@ -8,9 +8,11 @@ import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/stripe'
 import { addDaysToDateStr } from '@/lib/balldontlie'
 import { missingMarkets } from '@/lib/scrapers/retryMarkets'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 300
+export const GET = withPipelineHealth('scrape-fanduel', run)
 
 // Automates the exact manual workflow: sportsbook.fanduel.com/navigation/mlb
 // -> "GAMES" tab -> click into a specific game -> run the all-tabs scraper
@@ -95,7 +97,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
   return { ...retry, retriedFor: missing, stillMissing: stillMissing.length ? stillMissing : undefined }
 }
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 

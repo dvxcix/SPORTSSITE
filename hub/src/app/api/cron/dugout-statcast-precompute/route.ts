@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeDugoutStatcastForDate } from '@/lib/dugoutStatcastPrecompute'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 300
+export const GET = withPipelineHealth('dugout-statcast-precompute', run)
 
 // Runs daily after the savant-sync-* crons (see vercel.json) finish writing
 // today's player_pitch_log/player_statcast_splits rows. Precomputes the
@@ -27,7 +29,7 @@ export const maxDuration = 300
 // season debut) still needs the admin backfill route once.
 const PAST_DAYS = 2
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

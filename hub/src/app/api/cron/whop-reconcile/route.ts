@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { reconcileWhopMain } from '@/lib/whopMainReconcile'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
+export const GET = withPipelineHealth('whop-reconcile', run)
 
 // Safety net for the MAIN tier-payments Whop business's webhook
 // (/api/webhooks/whop) — now confirmed working (signature bug fixed, real
@@ -11,7 +13,7 @@ export const revalidate = 0
 // /api/cron/whop-addon-reconcile, across all 5 real Basic/Advanced/
 // Ultimate plans instead of the one add-on plan. Runs every 15 minutes
 // (vercel.json).
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

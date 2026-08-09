@@ -38,6 +38,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run test:production
       - run: npm run desktop:doctor
       - run: npm run desktop:build
       - run: npm run desktop:verify-release

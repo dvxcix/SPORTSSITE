@@ -6,9 +6,11 @@ import { getTeamLogoPngUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { postAlert } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 60
+export const GET = withPipelineHealth('near-hr-alerts', run)
 
 // mlb-party Supabase — same external scraper source Dugout's own "Today's
 // Near Home Runs" panel reads (near_hrs), fetched the same minimal way every
@@ -33,7 +35,7 @@ async function mpGet(path: string): Promise<any[]> {
 // The FIRST run seen for a given date only establishes the cursor and posts
 // nothing — otherwise every near-HR already sitting in the table from
 // earlier today would flood Discord the moment this cron first deploys.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

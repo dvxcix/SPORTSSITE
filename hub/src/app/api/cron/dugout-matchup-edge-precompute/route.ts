@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeMatchupEdgeForDate } from '@/lib/dugoutMatchupEdgePrecompute'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 300
+export const GET = withPipelineHealth('dugout-matchup-edge-precompute', run)
 
 // Runs daily after the savant-sync-pitch-log cron (see vercel.json) writes
 // today's player_pitch_log rows. Precomputes Paper's matchup_edge/
@@ -20,7 +22,7 @@ export const maxDuration = 300
 // cached forever.
 const PAST_DAYS = 2
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

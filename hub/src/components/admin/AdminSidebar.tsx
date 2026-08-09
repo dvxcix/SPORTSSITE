@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare, Flag,
   Settings, CreditCard, Megaphone, Star, Calendar,
   ShoppingBag, Briefcase, BookOpen, Zap, Radio,
-  Bell, Shield, ChevronDown, ChevronRight, Upload, Smile, Award, AtSign, AlertTriangle, Sparkles, Bot
+  Bell, Shield, ChevronDown, ChevronRight, Upload, Smile, Award, AtSign, AlertTriangle, Sparkles, Bot, Activity
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -42,6 +42,7 @@ const nav = [
   { href: '/admin/ads', icon: Megaphone, label: 'Ads' },
   { href: '/admin/live', icon: Radio, label: 'Live Streaming' },
   { href: '/admin/notifications', icon: Bell, label: 'Notifications' },
+  { href: '/admin/pipeline-health', icon: Activity, label: 'Pipeline Health' },
   { href: '/admin/reports', icon: Flag, label: 'Reports' },
   { href: '/admin/emojis', icon: Smile, label: 'Custom Emojis' },
   { href: '/admin/badges', icon: Award, label: 'Badges' },
