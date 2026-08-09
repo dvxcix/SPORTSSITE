@@ -3538,6 +3538,7 @@ export function DugoutClient({ date }: { date: string }) {
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
+  const gameButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   // Which real recency window the Statcast section's "R"/Δ columns read —
   // server precomputes all 5 (season + l1/l3/l5/l10) per batter, so this is
   // just picking which one to render, not a re-fetch. Lives here (not in
@@ -3658,6 +3659,14 @@ export function DugoutClient({ date }: { date: string }) {
   }, [pathname, router, searchParams])
 
   useEffect(() => {
+    if (!activeGame) return
+    const frame = window.requestAnimationFrame(() => {
+      gameButtonRefs.current.get(activeGame)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeGame])
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return
       const target = event.target as HTMLElement | null
@@ -3722,6 +3731,7 @@ export function DugoutClient({ date }: { date: string }) {
 
   const games: any[] = data.games
   const active = games.find(g => g.gameKey === activeGame) ?? games[0]
+  const activeGameIndex = Math.max(0, games.findIndex(g => g.gameKey === active.gameKey))
   // `locked` is added server-side by /api/dugout/data for below-Ultimate
   // members — always `false` on every game for a real Ultimate (or admin/
   // beta full-access) caller, `false` only on today's one free-preview game
@@ -3821,50 +3831,62 @@ export function DugoutClient({ date }: { date: string }) {
         />
       )}
 
-      {/* Game tabs — a CSS grid (not flex-wrap) so every row has the same
-          column count and every chip fills its cell at equal width. Chip
-          content length varies a lot (a bare "@" matchup vs. a live score
-          vs. a doubleheader G2 badge), which under the old flex-wrap made
-          rows wrap raggedly/unevenly, especially on mobile (~90% of
-          traffic) where only 2 columns fit. Grid removes that: content
-          length no longer drives chip width, so rows always align. */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6" style={{ gap: 6, marginBottom: 16 }}>
-        {games.map(g => {
-          const isAct = g.gameKey === activeGame
-          const isLive = g.status === 'Live'
-          const isFin  = g.status === 'Final'
-          return (
-            <button
-              key={g.gameKey}
-              onClick={() => setActiveGame(g.gameKey)}
-              aria-label={`${g.awayAbbr} at ${g.homeAbbr}${isLive ? ', live' : isFin ? ', final' : ''}`}
-              aria-pressed={isAct}
-              style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              width: '100%', minWidth: 0, padding: '7px 8px', borderRadius: 8, cursor: 'pointer',
-              border: isAct ? '1px solid var(--accent)' : '1px solid var(--border)',
-              background: isAct ? 'var(--accent-dim)' : 'var(--surface)',
-              color: isAct ? 'var(--accent)' : 'var(--text-2)',
-              fontSize: 11, fontWeight: 700, transition: 'all 120ms',
-              opacity: g.locked ? 0.6 : 1,
-              }}>
-              <TeamLogo abbr={g.awayAbbr} size={16} />
-              <span style={{ color: 'var(--text-3)', fontSize: 9 }}>@</span>
-              <TeamLogo abbr={g.homeAbbr} size={16} />
-              {g.gameNum > 1 && <span style={{ fontSize: 9, fontWeight: 900, color: '#f59e0b' }}>G{g.gameNum}</span>}
-              {isLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />}
-              {(isLive || isFin) && <span style={{ fontSize: 10, fontFamily: 'monospace' }}>{g.awayScore}–{g.homeScore}</span>}
-              {!isLive && !isFin && g.gameDate && (
-                <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'monospace' }}>
-                  {/* No explicit timeZone — this game-tab time chip should read in whichever timezone the viewer's own browser is set to, not a hardcoded Eastern label */}
-                  {new Date(g.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                </span>
-              )}
-              {g.locked && <Lock size={11} color="var(--text-3)" />}
+      <section aria-label="Game selector" style={{ marginBottom: 16, border: '1px solid var(--border)', borderRadius: 13, background: 'var(--surface)', overflow: 'hidden' }}>
+        <div style={{ minHeight: 38, padding: '7px 9px 7px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 7 }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}>Games</span>
+            <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
+            <span className="hidden md:inline" style={{ fontSize: 9, color: 'var(--text-4)' }}>Alt + ←/→</span>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button type="button" disabled={activeGameIndex === 0} onClick={() => setActiveGame(games[activeGameIndex - 1]?.gameKey ?? active.gameKey)} aria-label="Previous game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === 0 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === 0 ? 'default' : 'pointer' }}>
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-          )
-        })}
-      </div>
+            <button type="button" disabled={activeGameIndex === games.length - 1} onClick={() => setActiveGame(games[activeGameIndex + 1]?.gameKey ?? active.gameKey)} aria-label="Next game" style={{ width: 28, height: 25, display: 'grid', placeItems: 'center', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: activeGameIndex === games.length - 1 ? 'var(--text-4)' : 'var(--text-2)', cursor: activeGameIndex === games.length - 1 ? 'default' : 'pointer' }}>
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div className="dugout-game-rail" style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(142px, 1fr)', gap: 7, padding: 8, overflowX: 'auto', overscrollBehaviorX: 'contain', scrollSnapType: 'x proximity', scrollbarWidth: 'thin' }}>
+          {games.map(g => {
+            const isAct = g.gameKey === active.gameKey
+            const isLive = g.status === 'Live'
+            const isFin = g.status === 'Final'
+            const gameTime = g.gameDate ? new Date(g.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null
+            return (
+              <button
+                key={g.gameKey}
+                ref={node => { if (node) gameButtonRefs.current.set(g.gameKey, node); else gameButtonRefs.current.delete(g.gameKey) }}
+                type="button"
+                onClick={() => setActiveGame(g.gameKey)}
+                aria-label={`${g.awayAbbr} at ${g.homeAbbr}${isLive ? ', live' : isFin ? ', final' : gameTime ? `, ${gameTime}` : ''}`}
+                aria-pressed={isAct}
+                style={{
+                  position: 'relative', scrollSnapAlign: 'start', minWidth: 0, minHeight: 66, padding: '9px 10px',
+                  display: 'grid', gridTemplateColumns: '1fr auto', gridTemplateRows: '1fr 1fr', alignItems: 'center', gap: '3px 8px',
+                  borderRadius: 10, cursor: 'pointer', textAlign: 'left', overflow: 'hidden',
+                  border: isAct ? '1px solid color-mix(in srgb, var(--accent) 75%, white)' : '1px solid var(--border)',
+                  background: isAct ? 'linear-gradient(145deg, var(--accent-dim), var(--surface-2) 72%)' : 'var(--surface-2)',
+                  boxShadow: isAct ? '0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent), 0 8px 22px rgba(0,0,0,0.22)' : 'none',
+                  opacity: g.locked ? 0.68 : 1, transition: 'border-color 140ms, background 140ms, transform 140ms, box-shadow 140ms',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}><TeamLogo abbr={g.awayAbbr} size={20} /><span style={{ fontSize: 10, fontWeight: 850, color: 'var(--text-2)' }}>{g.awayAbbr}</span></span>
+                <span style={{ gridRow: '1 / span 2', gridColumn: 2, minWidth: 36, display: 'grid', justifyItems: 'end', alignContent: 'center', gap: 3 }}>
+                  {isLive && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 8, fontWeight: 900, color: '#fb7185', letterSpacing: '0.05em' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />LIVE</span>}
+                  {isFin && <span style={{ fontSize: 8, fontWeight: 850, color: 'var(--text-3)', letterSpacing: '0.04em' }}>FINAL</span>}
+                  {!isLive && !isFin && gameTime && <span style={{ fontSize: 9, fontWeight: 800, color: isAct ? 'var(--accent)' : 'var(--text-3)', whiteSpace: 'nowrap' }}>{gameTime}</span>}
+                  {(isLive || isFin) && <span style={{ fontSize: 13, fontWeight: 900, fontFamily: 'monospace', color: isAct ? 'var(--text-1)' : 'var(--text-2)' }}>{g.awayScore}<span style={{ padding: '0 3px', color: 'var(--text-4)' }}>–</span>{g.homeScore}</span>}
+                  {g.gameNum > 1 && <span style={{ fontSize: 8, fontWeight: 900, color: '#f59e0b' }}>G{g.gameNum}</span>}
+                  {g.locked && <Lock size={10} color="var(--text-3)" />}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}><TeamLogo abbr={g.homeAbbr} size={20} /><span style={{ fontSize: 10, fontWeight: 850, color: 'var(--text-2)' }}>{g.homeAbbr}</span></span>
+                {isAct && <span aria-hidden="true" style={{ position: 'absolute', left: 10, right: 10, bottom: 0, height: 2, borderRadius: '2px 2px 0 0', background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)' }} />}
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
       {active && (
         active.locked
