@@ -4192,15 +4192,16 @@ export function DugoutClient({ date }: { date: string }) {
         @keyframes dugout-tour-glow{from{box-shadow:inset 0 0 0 1px var(--accent),0 0 7px color-mix(in srgb,var(--accent) 24%,transparent)}to{box-shadow:inset 0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 58%,transparent)}}
         @keyframes dugout-tour-icon{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
         @media(max-width:640px){
-          .dugout-summary-actions{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:5px!important;margin-bottom:7px!important}
-          .dugout-summary-action{min-height:34px!important;margin-left:0!important;padding:5px 7px!important;justify-content:center!important;gap:4px!important;font-size:10px!important;white-space:nowrap;overflow:hidden}
+          .dugout-summary-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;margin-bottom:7px!important}
+          .dugout-summary-action{width:100%!important;min-width:0!important;min-height:34px!important;margin-left:0!important;padding:5px 8px!important;justify-content:center!important;gap:5px!important;font-size:10px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis}
+          .dugout-summary-action > span{min-width:0;flex-shrink:1;padding-left:5px!important;padding-right:5px!important}
           .dugout-summary-action svg{width:13px;height:13px;flex:0 0 13px}
           .dugout-game-selector{margin-bottom:7px!important}
           .dugout-game-rail{display:none!important}
           .dugout-games-label{display:none}
           .dugout-active-matchup{display:inline}
           .dugout-board-nav{min-height:38px;margin-bottom:5px!important;padding:4px 7px!important;gap:7px!important}
-          .dugout-board-scroll{--dugout-header-top:0px!important;border-radius:8px!important;scroll-padding-top:36px}
+          .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:visible!important;border-radius:8px!important;scroll-padding-top:36px}
           .dg-team-banner{position:static!important}
           .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:max-content!important;min-height:38px}
           .dugout-dense-table{font-size:12px!important}
