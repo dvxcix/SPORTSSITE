@@ -12,6 +12,7 @@ import { DesktopCommandBar } from './DesktopCommandBar'
 import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
 import { DesktopExperience } from '@/components/desktop/DesktopExperience'
 import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
+import { NetworkStatus } from './NetworkStatus'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -26,11 +27,11 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 
   if (isAdmin) {
     // Admin pages render their own full layout via admin/layout.tsx
-    return <>{children}</>
+    return <><NetworkStatus />{children}</>
   }
 
   if (isAuthPage || isLandingPage) {
-    return <>{children}</>
+    return <><NetworkStatus /><main id="main-content">{children}</main></>
   }
 
   // WatchlistProvider (and its two FABs) used to live inside dugout/page.tsx
@@ -59,6 +60,8 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WatchlistProvider>
+      <a className="ss-skip-link" href="#main-content">Skip to content</a>
+      <NetworkStatus />
       <div className={`flex min-h-screen ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         {isDesktop
           ? <DesktopNavigation />
@@ -66,7 +69,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 min-w-0 flex flex-col">
           {isDesktop && <DesktopCommandBar />}
           {!isDesktop && <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />}
-          <main className="flex-1 min-w-0">
+          <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
             {children}
           </main>
         </div>

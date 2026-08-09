@@ -10,6 +10,7 @@ import { SuggestedUsers } from '@/components/social/SuggestedUsers'
 import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
 import { FEATURE_FLAGS } from '@/lib/featureFlags'
 import { Zap, TrendingUp, Clock, Users } from 'lucide-react'
+import { PageState } from '@/components/layout/PageState'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,17 +94,15 @@ export default async function FeedPage({
         {/* Posts */}
         {posts.length === 0 ? (
           <div className="py-10">
-            <div className="text-center mb-6">
-              <p className="text-4xl mb-3">🏟️</p>
-              <p className="text-zinc-400 font-medium">
-                {filter === 'following' ? "No posts from people you follow yet" : filter === 'picks' ? 'No picks posted yet' : 'No posts yet'}
-              </p>
-              <p className="text-zinc-600 text-sm mt-1">
-                {filter === 'following' ? 'Follow some bettors to see their picks here' : 'Be the first to drop a pick'}
-              </p>
-            </div>
+            <PageState
+              compact
+              title={filter === 'following' ? 'No posts from people you follow yet' : filter === 'picks' ? 'No picks posted yet' : 'No posts yet'}
+              message={filter === 'following' ? 'Follow some bettors to build your feed.' : 'Start the conversation with a new post.'}
+              actionLabel={filter === 'following' ? 'Explore members' : undefined}
+              actionHref={filter === 'following' ? '/explore' : undefined}
+            />
             {suggested.length > 0 && (
-              <div className="max-w-sm mx-auto bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="max-w-sm mx-auto mt-6 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Users size={14} className="text-blue-400" />
                   <span className="text-sm font-black text-white">Who to follow</span>
