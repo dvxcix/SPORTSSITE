@@ -14,6 +14,7 @@ import { DesktopExperience } from '@/components/desktop/DesktopExperience'
 import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
 import { NetworkStatus } from './NetworkStatus'
 import { UtilityDock } from './UtilityDock'
+import { MobileDock } from './MobileDock'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -63,18 +64,19 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
     <WatchlistProvider>
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
-      <div className={`flex min-h-screen ${isDesktop ? 'ss-desktop-shell' : ''}`}>
+      <div className={`flex min-h-screen ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         {isDesktop
           ? <DesktopNavigation />
           : <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />}
         <div className="flex-1 min-w-0 flex flex-col">
           {isDesktop && <DesktopCommandBar />}
           {!isDesktop && <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />}
-          <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
+          <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 ss-site-main">
             {children}
           </main>
         </div>
       </div>
+      {!isDesktop && <MobileDock hidden={mobileNavOpen} onMenuClick={() => setMobileNavOpen(true)} />}
       <UtilityDock>
         {showMatrixButton && <MatrixButton />}
         <MyPicksButton />

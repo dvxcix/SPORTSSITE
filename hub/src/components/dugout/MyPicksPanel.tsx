@@ -62,6 +62,7 @@ export function MyPicksButton() {
     <>
       <style>{`
         .mp-fab { position: fixed; right: 20px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
+        @media (max-width: 767px) { .mp-fab { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); } }
       `}</style>
       <button
         ref={fab.ref}
