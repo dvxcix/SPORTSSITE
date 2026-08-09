@@ -19,7 +19,7 @@ import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { Ban, ChevronLeft, ChevronRight, Flame, Info, Lock, Search, Settings2, Sparkles } from 'lucide-react'
+import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -749,9 +749,10 @@ type MultiSortEntry = { col: string; dir: 'desc' | 'asc' }
 
 function TH({
   label, title, w = 40, sticky = false, sortKey, active = false, dir, rank, onSort,
-  pickSortKey, pickActive = false, pickDir, pickRank, onPickSort,
+  pickSortKey, pickActive = false, pickDir, pickRank, onPickSort, 'data-col-key': dataColKey,
 }: {
   label: React.ReactNode; title?: string; w?: number; sticky?: boolean
+  'data-col-key'?: string
   sortKey?: string; active?: boolean; dir?: 'desc' | 'asc'; rank?: number; onSort?: (key: string) => void
   // Independent second sort control for whichever column this stat's real
   // community pick count lives on — same sticky multi-sort chain as the
@@ -774,6 +775,7 @@ function TH({
   const { overflow: _thOverflow, textOverflow: _thTextOverflow, whiteSpace: _thWhiteSpace, ...sthRest } = STH
   return (
     <th
+      data-col-key={dataColKey}
       onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}
       className={responsiveSticky ? 'w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]' : undefined}
       style={{
@@ -2741,7 +2743,7 @@ export function getDugoutHeaderCells(
 
   const headerCells = (
     <>
-      <TH label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
+      <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
       {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
       {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
@@ -2872,7 +2874,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   onDensityChange: (density: 'compact' | 'comfortable') => void
 }) {
   const [sort, setSort] = useState<SortState>(null)
-  const [showTableGuide, setShowTableGuide] = useState(false)
+  const [tourStep, setTourStep] = useState<number | null>(null)
   // Sticky multi-column sort — when on, each header click ADDS that column
   // to the chain instead of replacing the sort outright (rank 1 = primary
   // key, rank 2 = tiebreaker, ...). Clicking a column already in the chain
@@ -3249,6 +3251,19 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       return true
     })
   }, [visibleDugoutColumns])
+  const tableTourSteps = useMemo(() => {
+    const visible = new Set(visibleDugoutColumns.map(column => column.key))
+    return [
+      { key: 'player', label: 'Player context', title: 'Start with the lineup', body: 'The frozen column keeps the player, batting order, handedness, position, and team in view while you move across the board.', icon: 'pointer' },
+      { key: 'fhr_fd', label: 'Sportsbook source', title: 'Know which market you are reading', body: 'Book logos identify the source. FHR means First Home Run. HR means an Anytime Home Run.', icon: 'book' },
+      { key: 'sa_fd', label: 'Price and movement', title: 'Read the current market price', body: 'The main value is American odds. A movement arrow means the price changed from its opening value. Hover to compare opening and current prices.', icon: 'market' },
+      { key: 'sng_fd', label: 'Public picks', title: 'Separate price from public action', body: 'A small P badge is the public pick count for that exact market. Use the PICKS control in the header to sort by public activity.', icon: 'users' },
+      { key: 'sa_div_rbi', label: 'Related markets', title: 'Compare connected markets', body: 'RBI, total-base, and Hits + Runs + RBIs columns compare their implied probability with the Anytime HR market. These are comparisons, not raw odds.', icon: 'activity' },
+      { key: 'paper', label: 'Board ranks', title: 'Use rankings as orientation', body: 'Rank and composite columns help organize a crowded board. Hover a header whenever you need its exact definition.', icon: 'chart' },
+      { key: 's_spd', label: 'Recent form', title: 'Compare season and recent form', body: 'S is season, R is the selected recent window, and Δ is the change from season to recent form. Change the recent window from the team toolbar.', icon: 'activity' },
+      { key: 's_brl', label: 'Statcast', title: 'Finish with batted-ball context', body: 'The final section covers barrel rate, hard-hit rate, sweet spot, pull air, fly balls, exit velocity, launch angle, and related Statcast measures.', icon: 'chart' },
+    ].filter(step => step.key === 'player' || visible.has(step.key))
+  }, [visibleDugoutColumns])
   const scrollToMarketSection = (columnKey: string) => {
     const el = tableScrollRef.current
     if (!el) return
@@ -3256,6 +3271,23 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     if (!target) return
     el.scrollTo({ left: Math.max(0, target.offsetLeft - 190), behavior: 'smooth' })
   }
+  useEffect(() => {
+    const el = tableScrollRef.current
+    if (!el || tourStep == null || !tableTourSteps[tourStep]) return
+    const key = tableTourSteps[tourStep].key
+    const targets = Array.from(el.querySelectorAll<HTMLElement>(`[data-col-key="${key}"]`))
+    const header = targets.find(target => target.tagName === 'TH') ?? targets[0]
+    if (header && key !== 'player') el.scrollTo({ left: Math.max(0, header.offsetLeft - 190), behavior: 'smooth' })
+    if (key === 'player') el.scrollTo({ left: 0, behavior: 'smooth' })
+    targets.forEach(target => target.setAttribute('data-tutorial-active', 'true'))
+    return () => targets.forEach(target => target.removeAttribute('data-tutorial-active'))
+  }, [tableTourSteps, tourStep])
+  useEffect(() => {
+    if (tourStep == null) return
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setTourStep(null) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [tourStep])
   const tableScrollStorageKey = `ss:dugout-scroll:${date}:${game.gameKey}`
   const onBoardScroll = () => {
     updateHorizontalState()
@@ -3319,6 +3351,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // lives in getDugoutHeaderCells so this board and DailyRecapTable always
   // render the identical set of columns.
   const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleDugoutColumns)
+  const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className="dugout-board-enter" style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
       {activeSortKeys.length > 0 && (
@@ -3346,20 +3379,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         ))}
         <button
           type="button"
-          onClick={() => setShowTableGuide(value => !value)}
-          aria-expanded={showTableGuide}
-          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, border: '1px solid var(--border)', borderRadius: 7, background: showTableGuide ? 'var(--accent-dim)' : 'transparent', color: showTableGuide ? 'var(--accent)' : 'var(--text-3)', padding: '3px 7px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+          onClick={() => setTourStep(0)}
+          aria-label="Start the Dugout table walkthrough"
+          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 7, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '4px 8px', fontSize: 9, fontWeight: 850, cursor: 'pointer' }}
         >
-          <Info size={11} aria-hidden="true" /> How to read
+          <BookOpen size={12} aria-hidden="true" /> Take the table tour
         </button>
-        {showTableGuide && (
-          <div style={{ flexBasis: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--text-1)' }}>Market</strong> shows the current American odds. A book logo identifies the source.</div>
-            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--accent)' }}>P count</strong> is the public pick count for that exact market. Click PICKS in a header to sort it.</div>
-            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--text-1)' }}>Arrow</strong> shows movement from the opening price. Hover for the opening and current values.</div>
-            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--text-1)' }}>S / R / Δ</strong> means season, selected recent window, and the difference between them.</div>
-          </div>
-        )}
       </div>
       {horizontalState.hasOverflow && (
         <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
@@ -3495,6 +3520,32 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       <button type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 10, fontWeight: 850, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
         <ChevronLeft size={13} aria-hidden="true" /> Player
       </button>
+    )}
+    {activeTourStep && tourStep != null && (
+      <aside className="dugout-table-tour" role="dialog" aria-modal="false" aria-label="Dugout table walkthrough" style={{ position: 'fixed', right: 22, bottom: 22, zIndex: 1200, width: 'min(390px, calc(100vw - 24px))', overflow: 'hidden', border: '1px solid color-mix(in srgb, var(--accent) 52%, var(--border))', borderRadius: 16, background: 'color-mix(in srgb, var(--surface) 96%, transparent)', backdropFilter: 'blur(18px)', boxShadow: '0 24px 70px rgba(0,0,0,.58), 0 0 30px color-mix(in srgb, var(--accent) 12%, transparent)' }}>
+        <div style={{ height: 3, background: 'var(--surface-2)' }}>
+          <div style={{ width: `${((tourStep + 1) / tableTourSteps.length) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), #38bdf8)', transition: 'width 220ms ease' }} />
+        </div>
+        <div style={{ padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div className="dugout-tour-icon" style={{ width: 42, height: 42, flex: '0 0 42px', display: 'grid', placeItems: 'center', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--accent) 45%, transparent)', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+              {activeTourStep.icon === 'pointer' ? <MousePointerClick size={21} /> : activeTourStep.icon === 'book' ? <BookOpen size={21} /> : activeTourStep.icon === 'users' ? <Users size={21} /> : activeTourStep.icon === 'market' ? <BarChart3 size={21} /> : activeTourStep.icon === 'activity' ? <Activity size={21} /> : <BarChart3 size={21} />}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 9, fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{activeTourStep.label}</div>
+              <div style={{ marginTop: 3, fontSize: 15, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.2 }}>{activeTourStep.title}</div>
+            </div>
+            <button type="button" onClick={() => setTourStep(null)} aria-label="Close table walkthrough" style={{ width: 28, height: 28, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)', color: 'var(--text-3)', cursor: 'pointer' }}><X size={14} /></button>
+          </div>
+          <p style={{ margin: '12px 0 0', fontSize: 11, lineHeight: 1.65, color: 'var(--text-2)' }}>{activeTourStep.body}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 14 }}>
+            {tableTourSteps.map((step, index) => <span key={step.key} aria-hidden="true" style={{ width: index === tourStep ? 18 : 5, height: 5, borderRadius: 999, background: index <= tourStep ? 'var(--accent)' : 'var(--border)', transition: 'all 180ms ease' }} />)}
+            <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{tourStep + 1} of {tableTourSteps.length}</span>
+            <button type="button" disabled={tourStep === 0} onClick={() => setTourStep(step => step == null ? 0 : Math.max(0, step - 1))} style={{ marginLeft: 'auto', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: tourStep === 0 ? 'var(--text-4)' : 'var(--text-2)', padding: '6px 10px', fontSize: 10, fontWeight: 800, cursor: tourStep === 0 ? 'default' : 'pointer' }}>Back</button>
+            <button type="button" onClick={() => tourStep === tableTourSteps.length - 1 ? setTourStep(null) : setTourStep(tourStep + 1)} style={{ border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--accent)', color: '#06100a', padding: '6px 12px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>{tourStep === tableTourSteps.length - 1 ? 'Finish' : 'Next'}</button>
+          </div>
+        </div>
+      </aside>
     )}
     </div>
   )
@@ -4131,7 +4182,12 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-dense-table.density-comfortable > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
         .dugout-board-enter{animation:dugout-board-in 180ms ease-out both}
         @keyframes dugout-board-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-        @media (prefers-reduced-motion:reduce){.dugout-board-enter{animation:none}}
+        .dugout-dense-table [data-tutorial-active=true]{position:relative;z-index:8;box-shadow:inset 0 0 0 1px var(--accent),0 0 13px color-mix(in srgb,var(--accent) 38%,transparent)!important;filter:brightness(1.22);animation:dugout-tour-glow 1.25s ease-in-out infinite alternate}
+        .dugout-tour-icon{animation:dugout-tour-icon 1.5s ease-in-out infinite}
+        @keyframes dugout-tour-glow{from{box-shadow:inset 0 0 0 1px var(--accent),0 0 7px color-mix(in srgb,var(--accent) 24%,transparent)}to{box-shadow:inset 0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 58%,transparent)}}
+        @keyframes dugout-tour-icon{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+        @media(max-width:640px){.dugout-table-tour{right:12px!important;bottom:12px!important}}
+        @media (prefers-reduced-motion:reduce){.dugout-board-enter,.dugout-dense-table [data-tutorial-active=true],.dugout-tour-icon{animation:none}}
       `}</style>
     </div>
   )
