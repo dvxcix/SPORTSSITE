@@ -1,20 +1,26 @@
+import { unstable_cache } from 'next/cache'
+import Link from 'next/link'
+import {
+  Activity, ArrowRight, BarChart3, Compass, Flame, Gauge, Hash,
+  Radar, Search, Sparkles, Star, TrendingUp, Users, Zap,
+} from 'lucide-react'
+import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
-import Link from 'next/link'
-import { TrendingUp, Flame, Users, Hash } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { UserBadges } from '@/components/social/UserBadges'
 import { FollowButton } from '@/components/social/FollowButton'
 import { TierGate } from '@/components/layout/TierGate'
 
-export const revalidate = 300
+export const revalidate = 60
 
-// Same shape every other real post listing (Feed/Hashtag/Bookmarks/Picks)
-// queries with — Explore previously hand-rolled its own thin post cards
-// (plain hearts, no real reactions/comments/badges, no click-through),
-// which is why it looked and behaved nothing like the rest of the site.
 const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)`
+const getSchedule = unstable_cache(
+  (date: string) => fetchScheduleWithRetry(date, 'probablePitcher,team,linescore,venue'),
+  ['explore-mlb-schedule'],
+  { revalidate: 30 },
+)
 
 type ExploreUser = {
   id: string
@@ -27,41 +33,45 @@ type ExploreUser = {
   pick_record: { wins: number; losses: number } | null
 }
 
+function todayET() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const get = (type: string) => parts.find(part => part.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
+function mlbLogo(teamId: number | undefined) {
+  return teamId ? `https://www.mlbstatic.com/team-logos/${teamId}.svg` : null
+}
+
 export default async function ExplorePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const date = todayET()
 
-  const [{ data: topCappers }, { data: topBettors }, { data: rawTopPosts }, { data: rawTrendingPicks }] = await Promise.all([
-    // "Capper" is this site's term for a creator account specifically (see
-    // register/onboarding) — filtered by account_type so this section can
-    // only ever show real cappers, never a mislabeled regular member.
-    supabase.from('users')
-      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
-      .eq('is_active_member', true)
-      .eq('account_type', 'creator')
-      .order('follower_count', { ascending: false })
-      .limit(6),
-    // Everyone else — the site's actual "bettor" role — shown as its own,
-    // correctly-labeled section instead of being lumped in under "Cappers".
-    supabase.from('users')
-      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
-      .eq('is_active_member', true)
-      .neq('account_type', 'creator')
-      .order('follower_count', { ascending: false })
-      .limit(6),
-    supabase.from('posts')
-      .select(POST_WITH_AUTHOR)
-      .eq('visibility', 'public')
-      .gte('created_at', new Date(Date.now() - 86400000).toISOString())
-      .order('reaction_count', { ascending: false })
-      .limit(5),
-    supabase.from('posts')
-      .select(POST_WITH_AUTHOR)
-      .eq('post_type', 'pick')
-      .eq('visibility', 'public')
-      .gte('created_at', new Date(Date.now() - 86400000).toISOString())
-      .order('reaction_count', { ascending: false })
-      .limit(5),
+  const [
+    { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
+    { data: rawTrendingPicks }, { data: pages }, { data: groups },
+    { data: homeRuns }, { data: nearHomeRuns }, schedule,
+  ] = await Promise.all([
+    supabase.from('users').select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
+      .eq('is_active_member', true).eq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
+    supabase.from('users').select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
+      .eq('is_active_member', true).neq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
+    supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
+      .gte('created_at', new Date(Date.now() - 86400000).toISOString()).order('reaction_count', { ascending: false }).limit(3),
+    supabase.from('posts').select(POST_WITH_AUTHOR).eq('post_type', 'pick').eq('visibility', 'public')
+      .gte('created_at', new Date(Date.now() - 86400000).toISOString()).order('reaction_count', { ascending: false }).limit(3),
+    supabase.from('pages').select('id, slug, name, description, avatar_url, emoji, category, follower_count, is_verified')
+      .eq('is_published', true).order('follower_count', { ascending: false }).limit(4),
+    supabase.from('groups').select('id, slug, name, description, avatar_url, emoji, sport, member_count')
+      .eq('is_public', true).order('member_count', { ascending: false }).limit(4),
+    supabase.from('player_home_run_events').select('game_pk, batter_id, batter_name, pitcher_name, exit_velocity, hr_distance')
+      .eq('game_date', date).eq('result', 'home_run').order('exit_velocity', { ascending: false }).limit(6),
+    supabase.from('near_hrs').select('batter_id, batter_name, pitcher_name, result, exit_velocity, hit_distance, parks_hr_count, home_team, away_team')
+      .eq('game_date', date).order('parks_hr_count', { ascending: false }).limit(6),
+    getSchedule(date).catch(() => []),
   ])
 
   const [topPosts, trendingPicks] = await Promise.all([
@@ -72,128 +82,150 @@ export default async function ExplorePage() {
   const spotlightUsers = [...(topCappers ?? []), ...(topBettors ?? [])] as ExploreUser[]
   let followingIds = new Set<string>()
   if (user && spotlightUsers.length) {
-    const { data: followingRows } = await supabase.from('follows')
-      .select('following_id')
-      .eq('follower_id', user.id)
-      .in('following_id', spotlightUsers.map(u => u.id))
-    followingIds = new Set((followingRows ?? []).map((r: any) => r.following_id))
+    const { data } = await supabase.from('follows').select('following_id').eq('follower_id', user.id)
+      .in('following_id', spotlightUsers.map(person => person.id))
+    followingIds = new Set((data ?? []).map(row => row.following_id))
   }
 
-  const SPORTS = [
-    { label: 'MLB', emoji: '⚾', href: '/hashtag/mlb' },
-    { label: 'NFL', emoji: '🏈', href: '/hashtag/nfl' },
-    { label: 'NBA', emoji: '🏀', href: '/hashtag/nba' },
-    { label: 'NHL', emoji: '🏒', href: '/hashtag/nhl' },
-    { label: 'Soccer', emoji: '⚽', href: '/hashtag/soccer' },
-    { label: 'MMA', emoji: '🥊', href: '/hashtag/mma' },
-  ]
+  const allGames = schedule ?? []
+  const games = allGames.slice(0, 8)
+  const liveGames = allGames.filter((game: any) => game.status?.abstractGameState === 'Live').length
+  const finalGames = allGames.filter((game: any) => game.status?.abstractGameState === 'Final').length
+  const sports = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
 
   return (
     <TierGate requiredTier="basic" label="Explore">
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
-      {/* Sport categories */}
-      <section>
-        <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
-          <Hash size={14} /> Browse by Sport
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {SPORTS.map(s => {
-            const logo = sportLogoUrl(s.label)
-            return (
-              <Link key={s.label} href={s.href}
-                className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all">
-                {logo ? <img src={logo} alt={s.label} className="w-6 h-6 object-contain shrink-0" /> : <span className="text-xl">{s.emoji}</span>}
-                <span className="font-bold text-white text-sm">{s.label}</span>
-              </Link>
-            )
-          })}
+      <main className="ss-explore-page">
+        <header className="ss-explore-hero">
+          <div className="ss-explore-hero-copy">
+            <p className="ss-explore-eyebrow"><Radar size={13} /> DISCOVERY DESK</p>
+            <h1>Explore SlipSurge</h1>
+            <p>Follow today&apos;s action, find new voices, and open the tools shaping the conversation.</p>
+          </div>
+          <Link href="/search" className="ss-explore-search"><Search size={16} /> Search SlipSurge</Link>
+          <div className="ss-explore-pulse" aria-label="Today's activity summary">
+            <Metric value={allGames.length} label="MLB games" />
+            <Metric value={liveGames} label="Live now" live={liveGames > 0} />
+            <Metric value={(homeRuns ?? []).length} label="Home runs" />
+            <Metric value={(nearHomeRuns ?? []).length} label="Near home runs" />
+          </div>
+        </header>
+
+        <nav className="ss-explore-sports" aria-label="Browse by sport">
+          {sports.map(sport => (
+            <Link key={sport} href={`/hashtag/${sport.toLowerCase()}`} className="ss-explore-sport">
+              {sportLogoUrl(sport) ? <img src={sportLogoUrl(sport)!} alt="" /> : <Hash size={18} />}
+              <span>{sport}</span>
+              <ArrowRight size={13} />
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ss-explore-layout">
+          <div className="ss-explore-main">
+            <SectionHeader icon={<Activity size={16} />} eyebrow="TODAY" title="Around the slate" href="/dugout" linkLabel="Open The Dugout" />
+            <div className="ss-explore-games">
+              {games.length ? games.map((game: any) => <GameDiscoveryCard key={game.gamePk} game={game} />) : (
+                <EmptyCard title="No MLB games scheduled" detail="The next slate will appear here when it is available." />
+              )}
+            </div>
+
+            <div className="ss-explore-event-grid">
+              <EventBoard
+                className="is-hot" icon={<Flame size={17} />} title="Home runs today" href="/daily-recap"
+                empty="No confirmed home runs yet."
+                items={(homeRuns ?? []).map((hr: any) => ({
+                  id: `${hr.game_pk}-${hr.batter_id}`, playerId: hr.batter_id, name: hr.batter_name,
+                  meta: `off ${hr.pitcher_name || 'opposing pitcher'}`,
+                  value: hr.exit_velocity ? `${hr.exit_velocity} mph` : hr.hr_distance ? `${hr.hr_distance} ft` : 'HR',
+                }))}
+              />
+              <EventBoard
+                className="is-near" icon={<Gauge size={17} />} title="Near home runs" href="/dugout"
+                empty="No near home runs recorded yet."
+                items={(nearHomeRuns ?? []).map((near: any, index: number) => ({
+                  id: `${near.batter_id}-${index}`, playerId: near.batter_id, name: near.batter_name,
+                  meta: `${near.result || 'In play'} · ${near.away_team || ''}${near.away_team && near.home_team ? ' at ' : ''}${near.home_team || ''}`,
+                  value: near.parks_hr_count != null ? `${near.parks_hr_count}/30 parks` : near.hit_distance ? `${near.hit_distance} ft` : 'Near HR',
+                }))}
+              />
+            </div>
+
+            {trendingPicks.length > 0 && (
+              <section className="ss-explore-section">
+                <SectionHeader icon={<TrendingUp size={16} />} eyebrow="COMMUNITY" title="Picks gaining attention" href="/feed?filter=picks" linkLabel="View all picks" />
+                <div className="ss-explore-posts">{trendingPicks.map((post: any, index: number) => <PostCardClient key={post.id} post={post} index={index} />)}</div>
+              </section>
+            )}
+
+            {topPosts.length > 0 && (
+              <section className="ss-explore-section">
+                <SectionHeader icon={<Sparkles size={16} />} eyebrow="TRENDING" title="Worth opening" href="/feed?filter=top" linkLabel="See the feed" />
+                <div className="ss-explore-posts">{topPosts.map((post: any, index: number) => <PostCardClient key={post.id} post={post} index={index} />)}</div>
+              </section>
+            )}
+          </div>
+
+          <aside className="ss-explore-rail">
+            <ToolCard />
+            <Directory title="Pages to follow" icon={<Star size={15} />} href="/pages" rows={(pages ?? []).map((page: any) => ({
+              id: page.id, href: `/pages/${page.slug}`, name: page.name, detail: page.category || `${page.follower_count ?? 0} followers`, image: page.avatar_url, fallback: page.emoji || '★',
+            }))} />
+            <Directory title="Groups to discover" icon={<Users size={15} />} href="/groups" rows={(groups ?? []).map((group: any) => ({
+              id: group.id, href: `/groups/${group.slug}`, name: group.name, detail: group.sport || `${group.member_count ?? 0} members`, image: group.avatar_url, fallback: group.emoji || 'G',
+            }))} />
+            {(topCappers?.length ?? 0) > 0 && <PeopleSection title="Creators to watch" users={topCappers as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />}
+            {(topBettors?.length ?? 0) > 0 && <PeopleSection title="Community standouts" users={topBettors as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />}
+            <p className="ss-explore-rail-note">{finalGames ? `${finalGames} game${finalGames === 1 ? '' : 's'} final today.` : 'Live activity updates throughout the slate.'}</p>
+          </aside>
         </div>
-      </section>
-
-      {/* Trending picks — real post cards, same component Feed uses */}
-      {trendingPicks.length > 0 && (
-        <section>
-          <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
-            <TrendingUp size={14} /> Hot Picks Today
-          </h2>
-          <div className="space-y-3">
-            {trendingPicks.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)}
-          </div>
-        </section>
-      )}
-
-      {/* Top posts — real post cards, same component Feed uses */}
-      {topPosts.length > 0 && (
-        <section>
-          <h2 className="text-sm font-bold text-zinc-400 mb-3 flex items-center gap-2">
-            <Flame size={14} /> Top Posts (24h)
-          </h2>
-          <div className="space-y-3">
-            {topPosts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)}
-          </div>
-        </section>
-      )}
-
-      {/* Top cappers — real creator accounts only; hidden entirely once
-          none exist yet rather than padding it out with regular members */}
-      {(topCappers?.length ?? 0) > 0 && (
-        <PeopleSection title="Top Cappers" icon={<Users size={14} />} users={topCappers as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />
-      )}
-
-      {/* Top bettors — everyone else, i.e. the vast majority of members */}
-      {(topBettors?.length ?? 0) > 0 && (
-        <PeopleSection title="Top Bettors" icon={<Users size={14} />} users={topBettors as ExploreUser[]} currentUserId={user?.id ?? null} followingIds={followingIds} />
-      )}
-    </div>
+      </main>
     </TierGate>
   )
 }
 
-function PeopleSection({ title, icon, users, currentUserId, followingIds }: {
-  title: string
-  icon: React.ReactNode
-  users: ExploreUser[]
-  currentUserId: string | null
-  followingIds: Set<string>
-}) {
+function Metric({ value, label, live = false }: { value: number; label: string; live?: boolean }) {
+  return <div className="ss-explore-metric"><strong>{live ? <span className="ss-live-dot" /> : null}{value}</strong><span>{label}</span></div>
+}
+
+function SectionHeader({ icon, eyebrow, title, href, linkLabel }: { icon: React.ReactNode; eyebrow: string; title: string; href: string; linkLabel: string }) {
+  return <div className="ss-explore-section-head"><div><p>{icon}{eyebrow}</p><h2>{title}</h2></div><Link href={href}>{linkLabel}<ArrowRight size={13} /></Link></div>
+}
+
+function GameDiscoveryCard({ game }: { game: any }) {
+  const away = game.teams?.away
+  const home = game.teams?.home
+  const state = game.status?.abstractGameState
+  const live = state === 'Live'
+  const final = state === 'Final'
+  const time = game.gameDate ? new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'TBD'
   return (
-    <section>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-zinc-400 flex items-center gap-2">{icon} {title}</h2>
-        <Link href="/leaderboard" className="text-xs text-green-400 hover:text-green-300">See all →</Link>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {users.map(u => (
-          <div key={u.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-            <Link href={`/profile/${u.username}`} className="shrink-0">
-              <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-black text-white overflow-hidden">
-                {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
-              </div>
-            </Link>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1 flex-wrap">
-                <Link href={`/profile/${u.username}`} className="font-bold text-white text-xs truncate hover:underline">
-                  {u.display_name || u.username}
-                </Link>
-                <UserBadges userId={u.id} size={12} />
-                {u.is_verified && <span className="text-green-400 text-[10px] shrink-0">✓</span>}
-              </div>
-              <Link href={`/profile/${u.username}`} className="text-[10px] text-zinc-500 hover:text-zinc-300 block truncate">@{u.username}</Link>
-              <p className="text-[10px] text-zinc-500">{u.follower_count ?? 0} followers</p>
-              {u.pick_record && (
-                <p className="text-[10px] font-bold text-green-400">{u.pick_record.wins}W-{u.pick_record.losses}L</p>
-              )}
-            </div>
-            {currentUserId && currentUserId !== u.id ? (
-              <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={followingIds.has(u.id)} />
-            ) : !currentUserId ? (
-              <Link href="/auth/login" className="text-xs font-bold text-white bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-xl transition-colors shrink-0">
-                Follow
-              </Link>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </section>
+    <Link href="/dugout" className={`ss-explore-game ${live ? 'is-live' : ''}`}>
+      <div className="ss-explore-game-state">{live ? <><span className="ss-live-dot" /> LIVE</> : final ? 'FINAL' : time}</div>
+      <div className="ss-explore-team"><img src={mlbLogo(away?.team?.id) || ''} alt="" /><span>{away?.team?.name || 'Away'}</span>{(live || final) && <b>{away?.score ?? 0}</b>}</div>
+      <div className="ss-explore-team"><img src={mlbLogo(home?.team?.id) || ''} alt="" /><span>{home?.team?.name || 'Home'}</span>{(live || final) && <b>{home?.score ?? 0}</b>}</div>
+      <div className="ss-explore-game-foot"><span>{game.venue?.name || 'MLB'}</span><ArrowRight size={13} /></div>
+    </Link>
   )
+}
+
+function EventBoard({ className, icon, title, href, items, empty }: { className: string; icon: React.ReactNode; title: string; href: string; items: { id: string; playerId: number; name: string; meta: string; value: string }[]; empty: string }) {
+  return <section className={`ss-explore-events ${className}`}><div className="ss-explore-events-head"><span>{icon}{title}</span><Link href={href}>Open <ArrowRight size={12} /></Link></div><div className="ss-explore-event-list">{items.length ? items.map(item => <Link href={`/players/${item.playerId}`} key={item.id} className="ss-explore-event"><img src={`https://img.mlbstatic.com/mlb-photos/image/upload/w_80,q_auto:best/v1/people/${item.playerId}/headshot/67/current`} alt="" /><div><strong>{item.name}</strong><span>{item.meta}</span></div><b>{item.value}</b></Link>) : <p className="ss-explore-event-empty">{empty}</p>}</div></section>
+}
+
+function ToolCard() {
+  return <section className="ss-explore-tool"><p><Zap size={13} /> ULTIMATE TOOLKIT</p><h2>Go beyond the surface.</h2><span>Track market movement, compare the full board, and open advanced daily research.</span><div><Link href="/odds-terminal"><BarChart3 size={14} /> Odds Terminal</Link><Link href="/pricing">Compare plans <ArrowRight size={13} /></Link></div></section>
+}
+
+function Directory({ title, icon, href, rows }: { title: string; icon: React.ReactNode; href: string; rows: { id: string; href: string; name: string; detail: string; image: string | null; fallback: string }[] }) {
+  if (!rows.length) return null
+  return <section className="ss-explore-directory"><div className="ss-explore-directory-head"><span>{icon}{title}</span><Link href={href}>See all</Link></div>{rows.map(row => <Link href={row.href} key={row.id} className="ss-explore-directory-row"><div>{row.image ? <img src={row.image} alt="" /> : row.fallback}</div><span><strong>{row.name}</strong><small>{row.detail}</small></span><ArrowRight size={12} /></Link>)}</section>
+}
+
+function EmptyCard({ title, detail }: { title: string; detail: string }) {
+  return <div className="ss-explore-empty"><Compass size={22} /><strong>{title}</strong><span>{detail}</span></div>
+}
+
+function PeopleSection({ title, users, currentUserId, followingIds }: { title: string; users: ExploreUser[]; currentUserId: string | null; followingIds: Set<string> }) {
+  return <section className="ss-explore-people"><div className="ss-explore-directory-head"><span><Users size={15} />{title}</span><Link href="/leaderboard">See all</Link></div>{users.map(person => <div key={person.id} className="ss-explore-person"><Link href={`/profile/${person.username}`} className="ss-explore-person-avatar">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : (person.display_name || person.username)[0].toUpperCase()}</Link><div><span><Link href={`/profile/${person.username}`}>{person.display_name || person.username}</Link><UserBadges userId={person.id} size={12} maxVisible={2} /></span><small>@{person.username} · {person.follower_count ?? 0} followers</small></div>{currentUserId && currentUserId !== person.id ? <FollowButton currentUserId={currentUserId} targetUserId={person.id} initialFollowing={followingIds.has(person.id)} /> : null}</div>)}</section>
 }
