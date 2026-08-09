@@ -19,7 +19,7 @@ import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { Ban, ChevronLeft, ChevronRight, Flame, Lock, Search, Settings2, Sparkles } from 'lucide-react'
+import { Ban, ChevronLeft, ChevronRight, Flame, Info, Lock, Search, Settings2, Sparkles } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -1042,8 +1042,8 @@ function OddsCell({
       <td style={style} data-col-key={dataColKey}>
         —
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
-          <div style={{ fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1, marginTop: 1 }}>
-            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
+          <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
+            <span aria-hidden="true">P</span>{pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
           </div>
         </Tooltip>
       </td>
@@ -1122,8 +1122,8 @@ function OddsCell({
       {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
       {pickCount != null && (
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
-          <div style={{ fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
-            {pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
+          <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
+            <span aria-hidden="true">P</span>{pickCount >= 1000 ? `${(pickCount / 1000).toFixed(1)}k` : pickCount}
           </div>
         </Tooltip>
       )}
@@ -2282,7 +2282,7 @@ const DUGOUT_ALL_COLUMNS = DUGOUT_COLUMN_LAYOUT.filter((s): s is Extract<DugoutC
 // Human labels for the customize panel's group toggles — the terse internal
 // group keys above (fhr/hr/props/...) aren't fit to show a member.
 export const DUGOUT_GROUP_LABELS: Record<string, string> = {
-  picks: 'Community Picks', fhr: 'First HR Odds', hr: 'Anytime HR Odds', props: 'Other Props',
+  picks: 'Community Picks', fhr: 'First HR', hr: 'HR & Related', props: 'Hits, Runs & Bases',
   ranks: 'Rank / Composite Scores', batspeed: 'Bat Tracking', barrel: 'Batted Ball (Statcast)',
 }
 
@@ -2392,12 +2392,12 @@ const DUGOUT_COLUMN_LABELS: Record<string, string> = {
   laser105_fd: 'Laser 105+ MPH HR price', laser110_fd: 'Laser 110+ MPH HR price',
   moonshot_fd: 'Moonshot market price', pa1_fd: '1st Plate Appearance HR price',
   pa1_div_sa: '1st PA HR ÷ Anytime HR ratio',
-  sa_div_rbi: 'Anytime HR÷RBI implied', sa_div_rbi2: 'Anytime HR÷2+RBI implied', sa_div_rbi3: 'Anytime HR÷3+RBI implied',
-  sa_div_hrr: 'Anytime HR÷Hits+Runs+RBIs implied',
-  sa_div_tb: 'Anytime HR÷2+ total bases implied', sa_div_tb3: 'Anytime HR÷3+ total bases implied',
-  sa_div_tb4: 'Anytime HR÷4+ total bases implied', sa_div_tb5: 'Anytime HR÷5+ total bases implied',
-  sa_div_hr2: 'Anytime HR÷2+ HR implied',
-  sng_fd: 'Singles', dbl_fd: 'Doubles', tri_fd: 'Triples', sb_fd: 'Stolen Base', sb2_fd: '2+ Stolen Bases',
+  sa_div_rbi: 'HR vs. 1+ RBI implied', sa_div_rbi2: 'HR vs. 2+ RBI implied', sa_div_rbi3: 'HR vs. 3+ RBI implied',
+  sa_div_hrr: 'HR vs. Hits + Runs + RBIs implied',
+  sa_div_tb: 'HR vs. 2+ total bases implied', sa_div_tb3: 'HR vs. 3+ total bases implied',
+  sa_div_tb4: 'HR vs. 4+ total bases implied', sa_div_tb5: 'HR vs. 5+ total bases implied',
+  sa_div_hr2: 'HR vs. 2+ home runs implied',
+  sng_fd: 'To Hit a Single', dbl_fd: 'To Hit a Double', tri_fd: 'To Hit a Triple', sb_fd: '1+ Stolen Base', sb2_fd: '2+ Stolen Bases',
   hits_fd: '1+ Hit', hits2_fd: '2+ Hits', runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
   paper: 'Composite Statcast score', bk_rk: 'Sportsbook rank', pp_rk: 'Statcast rank', mm: 'Market vs. Statcast gap',
   s_spd: 'Season bat speed', r_spd: 'Recent bat speed', d_spd: 'Recent−season bat speed',
@@ -2741,7 +2741,7 @@ export function getDugoutHeaderCells(
 
   const headerCells = (
     <>
-      <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
+      <TH label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
       {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
       {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
@@ -2765,25 +2765,25 @@ export function getDugoutHeaderCells(
       {H('🌙', 'Moonshot market price', 50, 'moonshot_fd')}
       {H('🥇', '1st Plate Appearance HR price', 50, 'pa1_fd')}
       {H('⏰', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-      {H('RBI', 'Anytime HR÷RBI implied (FD)', 38, 'sa_div_rbi', 'pkRbi')}
-      {H('RBI2', 'Anytime HR÷2+RBI implied (FD)', 40, 'sa_div_rbi2')}
-      {H('RBI3', 'Anytime HR÷3+RBI implied (FD)', 40, 'sa_div_rbi3')}
-      {H('3HRR', 'Anytime HR÷Hits+Runs+RBIs implied (FD)', 40, 'sa_div_hrr', 'pkHrr')}
-      {H('2️⃣', 'Anytime HR÷2+ total bases implied (FD)', 40, 'sa_div_tb', 'pkTb')}
-      {H('3️⃣', 'Anytime HR÷3+ total bases implied (FD)', 40, 'sa_div_tb3')}
-      {H('4️⃣', 'Anytime HR÷4+ total bases implied (FD)', 40, 'sa_div_tb4')}
-      {H('5️⃣', 'Anytime HR÷5+ total bases implied (FD)', 40, 'sa_div_tb5')}
-      {H('2HR', 'Anytime HR÷2+ HR implied (FD)', 40, 'sa_div_hr2')}
+      {H('1+ RBI', 'Anytime HR divided by 1+ RBI implied probability (FanDuel)', 44, 'sa_div_rbi', 'pkRbi')}
+      {H('2+ RBI', 'Anytime HR divided by 2+ RBI implied probability (FanDuel)', 44, 'sa_div_rbi2')}
+      {H('3+ RBI', 'Anytime HR divided by 3+ RBI implied probability (FanDuel)', 44, 'sa_div_rbi3')}
+      {H('H+R+RBI', 'Anytime HR divided by Hits + Runs + RBIs implied probability (FanDuel)', 52, 'sa_div_hrr', 'pkHrr')}
+      {H('2+ TB', 'Anytime HR divided by 2+ total bases implied probability (FanDuel)', 44, 'sa_div_tb', 'pkTb')}
+      {H('3+ TB', 'Anytime HR divided by 3+ total bases implied probability (FanDuel)', 44, 'sa_div_tb3')}
+      {H('4+ TB', 'Anytime HR divided by 4+ total bases implied probability (FanDuel)', 44, 'sa_div_tb4')}
+      {H('5+ TB', 'Anytime HR divided by 5+ total bases implied probability (FanDuel)', 44, 'sa_div_tb5')}
+      {H('2+ HR', 'Anytime HR divided by 2+ home runs implied probability (FanDuel)', 44, 'sa_div_hr2')}
       <th style={SDIV_H} />
-      {BL('fanduel', 'SNG', 'Singles (FD)', 50, 'sng_fd', 'pkSingles')}
-      {BL('fanduel', 'DBL', 'Doubles (FD)', 50, 'dbl_fd', 'pkDoubles')}
-      {BL('fanduel', 'TRI', 'Triples (FD)', 50, 'tri_fd', 'pkTriples')}
-      {BL('fanduel', 'SB', 'Stolen Base (FD)', 44, 'sb_fd', 'pkStolenBases')}
-      {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
-      {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd', 'pkHits')}
-      {BL('fanduel', '2HIT', '2+ Hits (FD)', 44, 'hits2_fd')}
-      {BL('fanduel', '🏃', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
-      {BL('fanduel', '2️⃣🏃', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
+      {BL('fanduel', '1B', 'To hit a single (FanDuel)', 50, 'sng_fd', 'pkSingles')}
+      {BL('fanduel', '2B', 'To hit a double (FanDuel)', 50, 'dbl_fd', 'pkDoubles')}
+      {BL('fanduel', '3B', 'To hit a triple (FanDuel)', 50, 'tri_fd', 'pkTriples')}
+      {BL('fanduel', '1+ SB', '1+ stolen base (FanDuel)', 50, 'sb_fd', 'pkStolenBases')}
+      {BL('fanduel', '2+ SB', '2+ stolen bases (FanDuel)', 50, 'sb2_fd')}
+      {BL('fanduel', '1+ H', '1+ hit (FanDuel)', 46, 'hits_fd', 'pkHits')}
+      {BL('fanduel', '2+ H', '2+ hits (FanDuel)', 46, 'hits2_fd')}
+      {BL('fanduel', '1+ R', '1+ run scored (FanDuel)', 46, 'runs_fd', 'pkRuns')}
+      {BL('fanduel', '2+ R', '2+ runs scored (FanDuel)', 46, 'runs2_fd')}
       <th style={SDIV_H} />
       {H('📊', 'Composite Statcast score', 46, 'paper')}
       {H('📚', 'Sportsbook rank (FanDuel Anytime HR)', 30, 'bk_rk')}
@@ -2848,7 +2848,7 @@ export function getDugoutHeaderCells(
   return renderDugoutColumns(
     headerCells, visibleColumns,
     key => <th key={key} style={SDIV_H} />,
-    (el, key) => React.cloneElement(el, { key }),
+    (el, key) => React.cloneElement(el as React.ReactElement<any>, { key, 'data-col-key': key }),
   )
 }
 
@@ -2872,6 +2872,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   onDensityChange: (density: 'compact' | 'comfortable') => void
 }) {
   const [sort, setSort] = useState<SortState>(null)
+  const [showTableGuide, setShowTableGuide] = useState(false)
   // Sticky multi-column sort — when on, each header click ADDS that column
   // to the chain instead of replacing the sort outright (rank 1 = primary
   // key, rank 2 = tiebreaker, ...). Clicking a column already in the chain
@@ -3240,6 +3241,21 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     if (!el) return
     el.scrollTo({ left: edge === 'start' ? 0 : el.scrollWidth, behavior: 'smooth' })
   }
+  const marketSectionJumps = useMemo(() => {
+    const seen = new Set<string>()
+    return visibleDugoutColumns.filter(column => {
+      if (seen.has(column.group)) return false
+      seen.add(column.group)
+      return true
+    })
+  }, [visibleDugoutColumns])
+  const scrollToMarketSection = (columnKey: string) => {
+    const el = tableScrollRef.current
+    if (!el) return
+    const target = el.querySelector<HTMLElement>(`th[data-col-key="${columnKey}"]`)
+    if (!target) return
+    el.scrollTo({ left: Math.max(0, target.offsetLeft - 190), behavior: 'smooth' })
+  }
   const tableScrollStorageKey = `ss:dugout-scroll:${date}:${game.gameKey}`
   const onBoardScroll = () => {
     updateHorizontalState()
@@ -3316,6 +3332,35 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <button type="button" onClick={() => { setSort(null); setStickyCols([]) }} style={{ marginLeft: 'auto', border: 0, background: 'none', color: 'var(--text-3)', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>Clear</button>
         </div>
       )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
+        <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Jump to</span>
+        {marketSectionJumps.map(section => (
+          <button
+            key={`${section.group}-${section.key}`}
+            type="button"
+            onClick={() => scrollToMarketSection(section.key)}
+            style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+          >
+            {DUGOUT_GROUP_LABELS[section.group] ?? section.group}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setShowTableGuide(value => !value)}
+          aria-expanded={showTableGuide}
+          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, border: '1px solid var(--border)', borderRadius: 7, background: showTableGuide ? 'var(--accent-dim)' : 'transparent', color: showTableGuide ? 'var(--accent)' : 'var(--text-3)', padding: '3px 7px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+        >
+          <Info size={11} aria-hidden="true" /> How to read
+        </button>
+        {showTableGuide && (
+          <div style={{ flexBasis: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--text-1)' }}>Market</strong> shows the current American odds. A book logo identifies the source.</div>
+            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--accent)' }}>P count</strong> is the public pick count for that exact market. Click PICKS in a header to sort it.</div>
+            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--text-1)' }}>Arrow</strong> shows movement from the opening price. Hover for the opening and current values.</div>
+            <div style={{ fontSize: 9, color: 'var(--text-3)' }}><strong style={{ color: 'var(--text-1)' }}>S / R / Δ</strong> means season, selected recent window, and the difference between them.</div>
+          </div>
+        )}
+      </div>
       {horizontalState.hasOverflow && (
         <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <button type="button" onClick={() => scrollBoardTo('start')} disabled={!horizontalState.canGoLeft} aria-label="Go to the first Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoLeft ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoLeft ? 'pointer' : 'default', padding: '3px 4px' }}>
