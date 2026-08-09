@@ -61,7 +61,7 @@ export async function RightSidebar() {
 
     const { data } = await supabase
       .from('users')
-      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count')
+      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, tier, beta_access_active')
       .not('id', 'in', `(${exclude.join(',') || user.id})`)
       .order('follower_count', { ascending: false })
       .limit(5)
@@ -69,25 +69,25 @@ export async function RightSidebar() {
   } else {
     const { data } = await supabase
       .from('users')
-      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count')
+      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, tier, beta_access_active')
       .order('follower_count', { ascending: false })
       .limit(5)
     suggested = (data as any[]) ?? []
   }
 
   return (
-    <aside className="ss-feed-rail w-72 shrink-0 sticky h-screen overflow-y-auto hidden xl:flex flex-col gap-4">
+    <aside className="ss-feed-rail shrink-0 sticky h-screen overflow-y-auto hidden xl:flex flex-col gap-4">
       {/* Trending */}
       {trending.length > 0 && (
-        <div className="ss-feed-rail-card p-4">
+        <div className="ss-feed-rail-card ss-trending-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={14} className="text-green-400" />
             <span className="text-sm font-black text-white">Trending</span>
           </div>
-          <div className="space-y-1">
+          <div className="ss-trending-list space-y-1">
             {trending.map((t, i) => (
               <Link key={t.tag} href={`/hashtag/${t.tag.toLowerCase()}`}
-                className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-zinc-800 transition-colors group">
+                className="ss-trending-item flex items-center justify-between px-2 py-2 rounded-lg transition-colors group">
                 <div>
                   <p className="text-xs text-zinc-500 group-hover:text-zinc-400">#{i + 1} · Trending</p>
                   <p className="text-sm font-bold text-white group-hover:text-green-400 transition-colors">#{t.tag}</p>
@@ -104,7 +104,7 @@ export async function RightSidebar() {
 
       {/* Suggested Users */}
       {suggested.length > 0 && (
-        <div className="ss-feed-rail-card p-4">
+        <div className="ss-feed-rail-card ss-follow-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Users size={14} className="text-blue-400" />
             <span className="text-sm font-black text-white">Who to follow</span>

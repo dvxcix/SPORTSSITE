@@ -10,6 +10,9 @@ export type SuggestedUser = {
   avatar_url: string | null
   is_verified?: boolean
   account_type?: string
+  tier?: 'free' | 'basic' | 'advanced' | 'ultimate'
+  beta_access_active?: boolean
+  follower_count?: number
 }
 
 // Shared "who to follow" list — used in RightSidebar, onboarding's Follow
@@ -23,28 +26,32 @@ export function SuggestedUsers({ users, currentUserId }: {
   if (!users.length) return null
 
   return (
-    <div className="space-y-3">
+    <div className="ss-suggested-users">
       {users.map(u => (
-        <div key={u.id} className="flex items-center gap-3">
+        <div key={u.id} className="ss-suggested-user">
           <Link href={`/profile/${u.username}`} className="shrink-0">
-            <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-sm font-black text-white">
+            <div className="ss-suggested-avatar">
               {u.avatar_url
                 ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
                 : (u.display_name || u.username)[0]?.toUpperCase()
               }
             </div>
           </Link>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
+          <div className="ss-suggested-copy">
+            <div className="ss-suggested-name">
               <Link href={`/profile/${u.username}`} className="text-sm font-bold text-white hover:underline truncate">
                 {u.display_name || u.username}
               </Link>
               {u.is_verified && <span className="text-green-400 text-xs shrink-0">✓</span>}
               {u.account_type === 'creator' && (
-                <span className="text-[9px] font-black text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full shrink-0">CAPPER</span>
+                <span className="ss-member-chip is-creator">CREATOR</span>
               )}
             </div>
-            <p className="text-xs text-zinc-500 truncate">@{u.username}</p>
+            <p>@{u.username}{typeof u.follower_count === 'number' ? ` · ${u.follower_count.toLocaleString()} followers` : ''}</p>
+            <div className="ss-suggested-status">
+              {u.tier && u.tier !== 'free' && <span className={`ss-member-chip is-${u.tier}`}>{u.tier}</span>}
+              {u.beta_access_active && <span className="ss-member-chip is-beta">BETA</span>}
+            </div>
           </div>
           {currentUserId ? (
             <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={false} />
