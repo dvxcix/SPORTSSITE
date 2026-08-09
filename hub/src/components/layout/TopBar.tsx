@@ -259,7 +259,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       // --banner-h is set by SiteBanner (0px when it's not showing) so this
       // sticks right below the banner instead of both pinning to literal
       // y:0 and overlapping once you scroll past the banner.
-      position: 'sticky', top: 'var(--banner-h, 0px)', zIndex: 20,
+      position: 'sticky', top: 'var(--banner-h, 0px)', zIndex: 'var(--layer-popover)',
     }}>
       {/* Hamburger — mobile only, opens the off-canvas sidebar drawer.
           display must live in the className (flex / md:hidden), not inline
@@ -279,7 +279,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       )}
 
       {/* Search */}
-      <form ref={searchRef} onSubmit={handleSearch} style={{ flex: 1, maxWidth: 400, position: 'relative' }}>
+      <form ref={searchRef} onSubmit={handleSearch} className="ss-topbar-search">
         <Search size={14} style={{
           position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
           color: 'var(--text-3)', pointerEvents: 'none',
@@ -288,23 +288,25 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           ref={searchInputRef}
           value={search}
           onChange={e => { setSearch(e.target.value); setQuickOpen(true) }}
-          onFocus={e => { e.target.style.borderColor = 'var(--accent)'; setQuickOpen(true) }}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          onFocus={() => setQuickOpen(true)}
           placeholder="Search picks, users, teams…"
-          style={{
-            width: '100%', paddingLeft: 32, paddingRight: 12,
-            paddingTop: 7, paddingBottom: 7,
-            background: 'var(--surface-2)', border: '1px solid var(--border)',
-            borderRadius: 999, fontSize: 13, color: 'var(--text-1)',
-            outline: 'none', transition: 'border-color 150ms',
-          }}
+          className="ss-topbar-search-input"
+          aria-label="Search SlipSurge"
         />
 
+        {search && (
+          <button type="button" className="ss-topbar-search-clear" aria-label="Clear search"
+            onClick={() => { setSearch(''); setQuickResults(EMPTY_RESULTS); searchInputRef.current?.focus() }}>
+            <X size={12} />
+          </button>
+        )}
+
         {quickOpen && search.trim().length >= 2 && (
-          <div className="ss-dropdown" style={{
+          <div className="ss-dropdown ss-topbar-search-results" role="dialog" aria-label="Search suggestions" style={{
             position: 'absolute', left: 0, right: 0, top: 'calc(100% + 6px)',
-            maxHeight: 420, overflowY: 'auto', zIndex: 50,
+            maxHeight: 420, overflowY: 'auto',
           }}>
+            <div className="ss-topbar-panel-heading"><Search size={13} /><span>Search results</span></div>
             {quickLoading && !hasQuickResults ? (
               <div style={{ padding: '16px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>Searching…</div>
             ) : !hasQuickResults ? (
@@ -391,19 +393,17 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       </form>
 
       {/* Right controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+      <div className="ss-topbar-actions">
         {user ? (
           <>
             {/* Notifications */}
-            <div ref={notifRef} style={{ position: 'relative' }}>
-              <button onClick={openNotifications} style={{
+            <div ref={notifRef} className="ss-topbar-control-wrap">
+              <button onClick={openNotifications} className="ss-topbar-icon-button" aria-label="Notifications" aria-expanded={notifOpen} style={{
                 position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 36, height: 36, borderRadius: 8,
                 background: 'transparent', border: '1px solid var(--border)',
                 color: 'var(--text-2)', cursor: 'pointer', transition: 'all 130ms',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}>
+              }}>
                 <Bell size={15} />
                 {unread > 0 && (
                   <span style={{
@@ -419,12 +419,13 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               </button>
 
               {notifOpen && (
-                <div className="ss-dropdown" style={{
+                <div className="ss-dropdown ss-topbar-notifications" role="dialog" aria-label="Notifications" style={{
                   position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                  width: 340, maxHeight: 420, overflowY: 'auto', zIndex: 50,
+                  width: 360, maxHeight: 480, overflowY: 'auto',
                 }}>
-                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>
-                    Notifications
+                  <div className="ss-topbar-notification-heading">
+                    <div><Bell size={14} /><span>Notifications</span></div>
+                    <span>{notifications.length ? `${notifications.length} recent` : 'All clear'}</span>
                   </div>
                   {notifications.length === 0 ? (
                     <div style={{ padding: '28px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>
@@ -528,15 +529,13 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             </div>
 
             {/* Avatar + menu */}
-            <div ref={menuRef} style={{ position: 'relative' }}>
-              <button onClick={() => setMenuOpen(v => !v)} style={{
+            <div ref={menuRef} className="ss-topbar-control-wrap">
+              <button onClick={() => { setMenuOpen(v => !v); setNotifOpen(false) }} className="ss-topbar-profile-trigger" aria-label="Open account menu" aria-expanded={menuOpen} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '5px 8px 5px 5px', borderRadius: 8,
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 130ms',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: '50%',
                   background: 'var(--accent-dim)', overflow: 'hidden',
@@ -548,18 +547,19 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     : (profile?.display_name || profile?.username || '?')[0].toUpperCase()
                   }
                 </div>
-                <span className="hidden sm:inline" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {profile?.display_name || profile?.username || 'Me'}
+                <span className="ss-topbar-profile-copy hidden sm:flex">
+                  <strong>{profile?.display_name || profile?.username || 'Me'}</strong>
+                  <small>{tierLabel}</small>
                 </span>
                 <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
               </button>
 
               {menuOpen && (
-                <div className="ss-dropdown" style={{
+                <div className="ss-dropdown ss-topbar-profile-menu" role="menu" style={{
                   position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                  minWidth: 180, zIndex: 50,
+                  minWidth: 230,
                 }}>
-                  <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border)' }}>
+                  <div className="ss-topbar-account-card">
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
                       {profile?.display_name || profile?.username}
                     </div>
