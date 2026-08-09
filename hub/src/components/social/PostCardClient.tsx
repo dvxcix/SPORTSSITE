@@ -518,7 +518,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   return (
     <>
       <motion.article
-        className="ss-feed-post"
+        className={`ss-feed-post${post.author.tier === 'ultimate' ? ' ss-feed-post--ultimate' : post.author.tier === 'advanced' ? ' ss-feed-post--advanced' : ''}`}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.04 }}
@@ -530,8 +530,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         }}
         onClick={handleCardClick}
         onMouseMove={handleCardMouseMove}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-2)'; setIsHovering(true) }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; setIsHovering(false) }}>
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}>
         <motion.div
           style={{
             position: 'absolute', inset: 0, zIndex: 0, borderRadius: 'var(--radius)',
@@ -581,13 +581,6 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   {post.author.is_verified && (
                     <span style={{ fontSize: 11, color: 'var(--green)' }}>✓</span>
                   )}
-                  {post.author.account_type === 'creator' && (
-                    <span className="ss-member-chip is-creator">CREATOR</span>
-                  )}
-                  {post.author.tier && post.author.tier !== 'free' && (
-                    <span className={`ss-member-chip is-${post.author.tier}`}>{post.author.tier}</span>
-                  )}
-                  {post.author.beta_access_active && <span className="ss-member-chip is-beta">BETA</span>}
                   <Link href={`/profile/${post.author.username}`} style={{ color: 'var(--text-3)', fontSize: 12, textDecoration: 'none' }}>
                     @{post.author.username}
                   </Link>

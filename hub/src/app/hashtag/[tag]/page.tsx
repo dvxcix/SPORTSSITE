@@ -13,7 +13,7 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
 
   const { data: rawPosts } = await supabase
     .from('posts')
-    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record)')
+    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)')
     .eq('visibility', 'public')
     .or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`)
     .order('created_at', { ascending: false })
