@@ -26,7 +26,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
           const Icon = item.icon
           const active = isActive(pathname, item.href)
           return (
-            <Link key={item.href} href={item.href} className={cn('ss-mobile-dock-item', active && 'is-active')} aria-current={active ? 'page' : undefined}>
+            <Link key={item.href} href={item.href} className={cn('ss-mobile-dock-item', active && 'is-active')} aria-current={active ? 'page' : undefined} data-label={item.label}>
               <span className="ss-mobile-dock-icon"><Icon size={18} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" /></span>
               <span>{item.label}</span>
             </Link>

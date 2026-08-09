@@ -6,8 +6,10 @@ import { useAuth } from '@/context/AuthContext'
 import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
-  Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, type LucideIcon,
+  Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft,
+  ChevronRight, type LucideIcon,
 } from 'lucide-react'
+import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string }
 
@@ -46,7 +48,9 @@ function isActive(pathname: string, href: string) {
 export function DesktopNavigation() {
   const pathname = usePathname()
   const { profile } = useAuth()
+  const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
+  const contextCollapsed = collapsed && !channelsWorkspace
   const currentSection = pathname.startsWith('/messages') || pathname.startsWith('/groups') || pathname.startsWith('/notifications')
     ? 'Community'
     : 'Intelligence'
@@ -55,7 +59,7 @@ export function DesktopNavigation() {
   const initials = displayName.slice(0, 2).toUpperCase()
 
   return (
-    <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace}>
+    <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
       <div className="ss-desktop-app-rail">
         <Link className="ss-desktop-rail-logo" href="/feed" aria-label="SlipSurge home">
           <img src="/logo.png" alt="" />
@@ -85,6 +89,9 @@ export function DesktopNavigation() {
             <div><span>SLIPSURGE DESKTOP</span><strong>{currentSection}</strong></div>
             <Link href="/pricing" title="Upgrade"><Crown size={15} /></Link>
           </header>
+          <button className="ss-desktop-context-toggle" type="button" onClick={toggle} aria-label={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'}>
+            {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
+          </button>
           <div className="ss-desktop-context-label">WORKSPACE</div>
           <nav aria-label={`${currentSection} navigation`}>
             {items.map(item => {
