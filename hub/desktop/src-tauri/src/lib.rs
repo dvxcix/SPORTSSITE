@@ -122,13 +122,18 @@ pub fn run() {
                 .resizable(true)
                 .user_agent("SlipSurgeDesktop/0.1")
                 .on_navigation(move |url| {
-                    if url.origin().ascii_serialization() == allowed_origin
-                        && url.path() == "/auth/desktop/start"
-                    {
-                        let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
-                        return false;
+                    let is_allowed_origin = url.origin().ascii_serialization() == allowed_origin;
+                    if is_allowed_origin {
+                        if url.path() == "/auth/desktop/start" {
+                            let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
+                            return false;
+                        }
+                        return true;
                     }
-                    true
+                    if matches!(url.scheme(), "http" | "https") {
+                        let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
+                    }
+                    false
                 })
                 .build()?;
 

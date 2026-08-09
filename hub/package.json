@@ -12,10 +12,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "desktop:dev": "npm run dev --workspace @slipsurge/desktop",
     "desktop:build": "npm run build --workspace @slipsurge/desktop",
     "desktop:publish-update": "node scripts/publish-desktop-update.mjs",
-    "desktop:doctor": "npm run doctor --workspace @slipsurge/desktop"
+    "desktop:doctor": "npm run doctor --workspace @slipsurge/desktop",
+    "desktop:verify-release": "node scripts/verify-desktop-release.mjs"
   },
   "dependencies": {
     "@browserbasehq/sdk": "^2.16.0",
