@@ -518,6 +518,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   return (
     <>
       <motion.article
+        className="ss-feed-post"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.04 }}
@@ -525,7 +526,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
           background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
-          transition: 'border-color 150ms',
+          transition: 'border-color 150ms, transform 150ms, box-shadow 150ms',
           position: 'relative',
           cursor: detail ? 'default' : 'pointer',
         }}

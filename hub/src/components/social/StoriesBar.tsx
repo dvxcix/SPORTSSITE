@@ -36,7 +36,7 @@ export function StoriesBar() {
 
   return (
     <>
-      <div className="mb-4 -mx-4 px-4 overflow-x-auto">
+      <div className="ss-stories-bar mb-4 overflow-x-auto">
         <div className="flex gap-3 pb-1" style={{ minWidth: 'max-content' }}>
           {/* Add story */}
           {userId && (

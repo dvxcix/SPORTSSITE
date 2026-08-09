@@ -69,7 +69,7 @@ export function FeedList({ filter, initialPosts, initialCursor, initialHasMore }
   }, [loadMore])
 
   return (
-    <div className="space-y-3">
+    <div className="ss-feed-list space-y-3">
       {posts.map((post, i) => (
         <PostCardClient key={keyFor(post)} post={post} index={i} />
       ))}

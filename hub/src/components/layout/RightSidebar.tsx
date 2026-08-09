@@ -76,10 +76,10 @@ export async function RightSidebar() {
   }
 
   return (
-    <aside className="w-72 shrink-0 sticky top-0 h-screen overflow-y-auto hidden xl:flex flex-col gap-4 py-4 pr-4">
+    <aside className="ss-feed-rail w-72 shrink-0 sticky h-screen overflow-y-auto hidden xl:flex flex-col gap-4">
       {/* Trending */}
       {trending.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="ss-feed-rail-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={14} className="text-green-400" />
             <span className="text-sm font-black text-white">Trending</span>
@@ -104,7 +104,7 @@ export async function RightSidebar() {
 
       {/* Suggested Users */}
       {suggested.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="ss-feed-rail-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Users size={14} className="text-blue-400" />
             <span className="text-sm font-black text-white">Who to follow</span>

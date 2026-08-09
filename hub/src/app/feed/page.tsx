@@ -9,7 +9,8 @@ import { RightSidebar } from '@/components/layout/RightSidebar'
 import { SuggestedUsers } from '@/components/social/SuggestedUsers'
 import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
 import { FEATURE_FLAGS } from '@/lib/featureFlags'
-import { Zap, TrendingUp, Clock, Users } from 'lucide-react'
+import Link from 'next/link'
+import { Zap, TrendingUp, Clock, Users, Activity, Compass } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,42 +58,49 @@ export default async function FeedPage({
   ]
 
   return (
-    <div className="flex gap-6 px-4 py-6 max-w-5xl mx-auto">
-      <div className="flex-1 min-w-0">
+    <div className="ss-feed-page">
+      <div className="ss-feed-layout">
+      <section className="ss-feed-primary" aria-labelledby="feed-title">
+        <header className="ss-feed-hero">
+          <div className="ss-feed-hero-icon" aria-hidden="true"><Activity size={22} /></div>
+          <div className="ss-feed-hero-copy">
+            <p className="ss-feed-eyebrow"><span>LIVE</span> COMMUNITY PULSE</p>
+            <h1 id="feed-title">The Feed</h1>
+            <p>Fresh picks, sharp discussion, and market talk from the SlipSurge community.</p>
+          </div>
+          <Link href="/explore" className="ss-feed-explore"><Compass size={15} /> Explore</Link>
+        </header>
         {/* Stories — admin's Feature Flags toggle saved to site_settings but
             nothing ever read it back out, so turning "Stories" off there had
             zero effect on this bar. */}
         {storiesEnabled && <StoriesBar />}
 
         {/* Filter tabs */}
-        <div className="flex gap-1 mb-4 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+        <nav className="ss-feed-filters" aria-label="Feed filters">
           {filters.map(f => {
             const Icon = f.icon
             return (
-              <a
+              <Link
                 key={f.key}
                 href={`/feed?filter=${f.key}`}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                  filter === f.key
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
+                className={`ss-feed-filter ${filter === f.key ? 'is-active' : ''}`}
+                aria-current={filter === f.key ? 'page' : undefined}
               >
-                <Icon size={12} />
+                <Icon size={14} />
                 {f.label}
-              </a>
+              </Link>
             )
           })}
-        </div>
+        </nav>
 
         {/* Post composer */}
-        <div className="mb-4">
+        <div className="ss-feed-composer-wrap">
           <FeedComposer />
         </div>
 
         {/* Posts */}
         {posts.length === 0 ? (
-          <div className="py-10">
+          <div className="ss-feed-empty">
             <div className="text-center mb-6">
               <p className="text-4xl mb-3">🏟️</p>
               <p className="text-zinc-400 font-medium">
@@ -115,9 +123,10 @@ export default async function FeedPage({
         ) : (
           <FeedList filter={filter} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} />
         )}
-      </div>
+      </section>
 
       <RightSidebar />
+      </div>
     </div>
   )
 }
