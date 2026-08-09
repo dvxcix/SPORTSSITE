@@ -4201,7 +4201,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-games-label{display:none}
           .dugout-active-matchup{display:inline}
           .dugout-board-nav{min-height:38px;margin-bottom:5px!important;padding:4px 7px!important;gap:7px!important}
-          .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:visible!important;border-radius:8px!important;scroll-padding-top:36px}
+          .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:auto!important;border-radius:8px!important;scroll-padding-top:36px}
           .dg-team-banner{position:static!important}
           .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:max-content!important;min-height:38px}
           .dugout-dense-table{font-size:12px!important}
