@@ -141,7 +141,7 @@ async function readHistory(date: string, gamePk: string, requestedGameKey?: stri
   }
   rows.sort((a, b) => a.captured_at.localeCompare(b.captured_at))
 
-  return { sourceCount: rows.length, snapshots: compactSnapshots(rows) }
+  return { sourceCount: rows.length, snapshots: compactSnapshots(rows), firstPitchAt }
 }
 
 const readLiveHistory = unstable_cache(readHistory, ['odds-terminal-history-live-v4'], { revalidate: 20 })
@@ -163,7 +163,7 @@ export async function GET(req: Request) {
   try {
     const history = date === today ? await readLiveHistory(date, gamePk, gameKey) : await readArchivedHistory(date, gamePk, gameKey)
     return NextResponse.json(
-      { date, gamePk, snapshots: history.snapshots, sourceCount: history.sourceCount },
+      { date, gamePk, snapshots: history.snapshots, sourceCount: history.sourceCount, firstPitchAt: history.firstPitchAt, frozen: Boolean(history.firstPitchAt) },
       { headers: { 'Cache-Control': date === today ? 'private, max-age=20' : 'private, max-age=86400, immutable' } },
     )
   } catch (error) {
