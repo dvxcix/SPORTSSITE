@@ -1230,7 +1230,7 @@ export function MatrixButton() {
 
   return (
     <>
-      <style>{`.matrix-fab { position: fixed; right: 20px; bottom: calc(136px + env(safe-area-inset-bottom, 0px)); z-index: 50; }`}</style>
+      <style>{`.matrix-fab { position: fixed; right: 20px; bottom: calc(136px + env(safe-area-inset-bottom, 0px)); z-index: 50; } @media (max-width: 767px) { .matrix-fab { bottom: calc(204px + env(safe-area-inset-bottom, 0px)); } }`}</style>
       <button
         ref={fab.ref} className="matrix-fab" title="Drag to move" onClick={() => setOpen(true)} {...fab.handlers}
         style={{

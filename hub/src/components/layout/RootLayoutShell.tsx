@@ -12,6 +12,7 @@ import { DesktopCommandBar } from './DesktopCommandBar'
 import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
 import { DesktopExperience } from '@/components/desktop/DesktopExperience'
 import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
+import { MobileDock } from './MobileDock'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -59,18 +60,20 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WatchlistProvider>
-      <div className={`flex min-h-screen ${isDesktop ? 'ss-desktop-shell' : ''}`}>
+      <a href="#main-content" className="ss-skip-link">Skip to content</a>
+      <div className={`flex min-h-screen ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         {isDesktop
           ? <DesktopNavigation />
           : <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />}
         <div className="flex-1 min-w-0 flex flex-col">
           {isDesktop && <DesktopCommandBar />}
           {!isDesktop && <TopBar onMenuClick={() => setMobileNavOpen(v => !v)} />}
-          <main className="flex-1 min-w-0">
+          <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 ss-site-main">
             {children}
           </main>
         </div>
       </div>
+      {!isDesktop && <MobileDock hidden={mobileNavOpen} onMenuClick={() => setMobileNavOpen(true)} />}
       <WatchlistButton />
       <MyPicksButton />
       {showMatrixButton && <MatrixButton />}

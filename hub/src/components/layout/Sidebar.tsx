@@ -113,7 +113,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         // md:top-[var(--banner-h,0px)] instead of md:top-0 — SiteBanner sets
         // that custom property (0px when it's not showing) so this sticks
         // right below the banner instead of overlapping it once scrolled.
-        className={`fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`ss-site-sidebar fixed inset-y-0 left-0 z-50 md:sticky md:top-[var(--banner-h,0px)] md:z-30 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
           // Confirmed live: a `width` transition on this element never
           // resolves — it commits the inline style and the DOM value

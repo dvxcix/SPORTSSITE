@@ -250,7 +250,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   }
 
   return (
-    <header style={{
+    <header className="ss-site-topbar" style={{
       height: 'var(--topbar-h)',
       background: 'var(--surface)',
       borderBottom: '1px solid var(--border)',
