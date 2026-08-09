@@ -19,9 +19,9 @@ export default async function NewDMPage() {
   const { data: users } = await usersQuery
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-black text-white mb-6">New Message</h1>
-      <NewDMForm users={users ?? []} />
+    <div className="ss-new-message-page">
+      <div className="ss-new-message-heading"><span>New conversation</span><h1>Who do you want to message?</h1><p>Search members by display name or username.</p></div>
+      <div className="ss-new-message-shell"><NewDMForm users={users ?? []} /></div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { MessageCircle, Plus } from 'lucide-react'
+import { MessageCircle, Plus, ShieldCheck, Zap } from 'lucide-react'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
 
@@ -55,24 +55,31 @@ export default async function MessagesPage() {
   })
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-zinc-800 rounded-lg">
-            <MessageCircle size={20} className="text-blue-400" />
+    <div className="ss-messages-page">
+      <section className="ss-messages-hero">
+        <div className="ss-messages-hero-copy">
+          <div className="ss-messages-hero-icon">
+            <MessageCircle size={21} />
           </div>
           <div>
-            <h1 className="text-xl font-black text-white">Messages</h1>
-            <p className="text-xs text-zinc-500">Direct messages</p>
+            <span className="ss-eyebrow"><Zap size={10} /> Member network</span>
+            <h1>Messages</h1>
+            <p>Private conversations with the people you follow across SlipSurge.</p>
           </div>
         </div>
         <Link href="/messages/new"
-          className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-black px-3 py-2 rounded-lg transition-colors">
-          <Plus size={14} /> New DM
+          className="ss-messages-new-button">
+          <Plus size={15} /> New message
         </Link>
-      </div>
+      </section>
 
-      <MessageInbox conversations={conversations} />
+      <section className="ss-messages-inbox-shell">
+        <div className="ss-messages-section-heading">
+          <div><strong>Inbox</strong><span>{conversations.length} conversation{conversations.length === 1 ? '' : 's'}</span></div>
+          <span><ShieldCheck size={12} /> Private</span>
+        </div>
+        <MessageInbox conversations={conversations} />
+      </section>
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowLeft, Send } from 'lucide-react'
+import { ArrowLeft, LockKeyhole, Send, Sparkles } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
@@ -91,21 +91,22 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)]">
+    <div className="ss-dm-room">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-sm sticky top-0 z-10">
-        <Link href="/messages" className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors">
+      <div className="ss-dm-header">
+        <Link href="/messages" className="ss-dm-back" aria-label="Back to messages">
           <ArrowLeft size={18} />
         </Link>
-        <Link href={`/profile/${partner.username}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-sm font-black text-white shrink-0">
+        <Link href={`/profile/${partner.username}`} className="ss-dm-partner">
+          <div className="ss-dm-partner-avatar">
             {partner.avatar_url ? <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" /> : (partner.display_name || partner.username)[0].toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <p className="font-bold text-white text-sm truncate">{partner.display_name || partner.username}</p>
-            <p className="text-xs text-zinc-500 truncate">@{partner.username}</p>
+          <div>
+            <p>{partner.display_name || partner.username}</p>
+            <span>@{partner.username}</span>
           </div>
         </Link>
+        <span className="ss-dm-private"><LockKeyhole size={11} /> Private</span>
         <BlockUserButton
           currentUserId={currentUserId}
           targetUserId={partner.id}
@@ -114,23 +115,23 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           variant="button"
         />
       </div>
-      {error && <p className="text-xs text-red-400 px-4 pt-2">{error}</p>}
+      {error && <p className="ss-dm-error">{error}</p>}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="ss-dm-messages">
+        <div className="ss-dm-thread-start"><Sparkles size={13} /><span>Your conversation with @{partner.username}</span></div>
         {messages.map(m => {
           const isMe = m.sender_id === currentUserId
           return (
-            <div key={m.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
+            <div key={m.id} className={`ss-dm-message ${isMe ? 'is-mine' : ''}`}>
               {!isMe && (
-                <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 flex items-center justify-center text-xs font-black text-white overflow-hidden">
+                <div className="ss-dm-message-avatar">
                   {partner.avatar_url ? <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" /> : partner.username[0].toUpperCase()}
                 </div>
               )}
-              <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-                isMe ? 'bg-green-500 text-black rounded-br-sm' : 'bg-zinc-800 text-white rounded-bl-sm'
-              }`}>
-                {m.content}
+              <div className="ss-dm-bubble-wrap">
+                <div className="ss-dm-bubble">{m.content}</div>
+                <time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>
               </div>
             </div>
           )
@@ -139,19 +140,19 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950">
-        <div className="flex gap-2 items-center">
+      <div className="ss-dm-composer">
+        <div className="ss-dm-composer-row">
           <input
             ref={textInputRef}
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
             placeholder={`Message @${partner.username}…`}
-            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+            className="ss-dm-input"
           />
           <EmojiPicker onSelect={insertAtCursor} />
           <button onClick={send} disabled={!text.trim() || sending}
-            className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black p-2.5 rounded-xl transition-colors">
+            className="ss-dm-send" aria-label="Send message">
             <Send size={16} />
           </button>
         </div>

@@ -15,7 +15,7 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
       <style>{`
         .ss-utility-dock {
           position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-          z-index: 80; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+          z-index: var(--layer-floating); display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
           pointer-events: none;
         }
         .ss-utility-dock-items {
@@ -40,6 +40,28 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
         }
         .ss-utility-dock-toggle:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,0,0,.48), 0 0 30px rgba(180,255,77,.25); }
         .ss-utility-dock.is-expanded .ss-utility-dock-toggle { border-radius: 999px; }
+        @media (max-width: 767px) {
+          .ss-utility-dock {
+            right: 14px;
+            bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+          }
+          .ss-utility-dock-items { gap: 7px; }
+          .ss-utility-dock-toggle {
+            width: 50px; height: 50px; border-radius: 18px;
+            box-shadow: 0 12px 38px rgba(0,0,0,.52), 0 0 30px rgba(180,255,77,.22);
+          }
+          .ss-utility-dock.is-expanded::before {
+            content: ''; position: absolute; right: -7px; bottom: -7px;
+            width: 64px; height: calc(100% + 14px); z-index: -1;
+            border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+            border-radius: 22px; background: color-mix(in srgb, var(--surface) 82%, transparent);
+            box-shadow: 0 18px 52px rgba(0,0,0,.42); backdrop-filter: blur(18px);
+          }
+          .ss-utility-dock .wl-fab, .ss-utility-dock .mp-fab, .ss-utility-dock .matrix-fab {
+            max-width: min(76vw, 270px); min-height: 44px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.38) !important;
+          }
+        }
         @media (prefers-reduced-motion: reduce) {
           .ss-utility-dock-items, .ss-utility-dock-toggle { transition: none; }
         }
