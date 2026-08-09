@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export type Badge = { id: string; name: string; icon_url: string; description: string }
+export type Badge = { id: string; name: string; icon_url: string; description: string; card_image_url?: string | null }
 
 // Whole assignment table fetched once and cached module-level (same
 // pattern as emoji.ts's custom-emoji cache) — badges show up next to a
@@ -21,7 +21,7 @@ async function fetchAllUserBadges(): Promise<Map<string, Badge[]>> {
       const supabase = createClient()
       const { data } = await supabase
         .from('user_badges')
-        .select('user_id, badge:badges(id, name, icon_url, description)')
+        .select('user_id, badge:badges(id, name, icon_url, description, card_image_url)')
       const map = new Map<string, Badge[]>()
       for (const row of (data ?? []) as any[]) {
         if (!row.badge) continue

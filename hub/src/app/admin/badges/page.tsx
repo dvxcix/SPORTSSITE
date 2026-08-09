@@ -20,9 +20,9 @@ export default async function AdminBadgesPage() {
   ])
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-1">Badges</h1>
-      <p className="text-sm text-zinc-500 mb-6">
+    <div className="ss-admin-badges-page">
+      <h1>Badge studio</h1>
+      <p className="ss-admin-badges-intro">
         Create a badge (icon + name + what it means), then assign it to whichever members earned it — like assigning
         a role on Discord. It shows next to their name on posts, comments, their profile, the leaderboard, and search,
         and hovering it shows the description you set here.
