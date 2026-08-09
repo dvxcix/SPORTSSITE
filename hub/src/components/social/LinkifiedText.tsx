@@ -1,7 +1,33 @@
 'use client'
 
-import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 import { useCustomEmojis, parseEmojiShortcodes } from '@/lib/emoji'
+import { createClient } from '@/lib/supabase/client'
+import { extractMentionedUsernames } from '@/lib/mentions'
+import { MentionHoverLink, type MentionProfile } from './MentionProfileCard'
+
+const mentionProfileCache = new Map<string, MentionProfile | null>()
+
+async function resolveProfiles(usernames: string[]) {
+  const missing = usernames.filter(username => !mentionProfileCache.has(username))
+  if (missing.length) {
+    const { data, error } = await createClient().from('users')
+      .select('id, username, display_name, avatar_url, bio, is_verified, follower_count, pick_record')
+      .or(missing.map(username => `username.ilike.${username}`).join(','))
+      .limit(missing.length)
+    if (!error) {
+      const found = new Map(((data ?? []) as MentionProfile[]).map(profile => [profile.username.toLowerCase(), profile]))
+      for (const username of missing) mentionProfileCache.set(username, found.get(username) ?? null)
+    }
+  }
+
+  const resolved = new Map<string, MentionProfile>()
+  for (const username of usernames) {
+    const profile = mentionProfileCache.get(username)
+    if (profile) resolved.set(username, profile)
+  }
+  return resolved
+}
 
 // Post/comment content rendered as flat text with zero parsing — an
 // "@username" mention was inert: unclickable (separately, see
@@ -12,21 +38,24 @@ import { useCustomEmojis, parseEmojiShortcodes } from '@/lib/emoji'
 export function LinkifiedText({ text }: { text: string }) {
   const customEmojis = useCustomEmojis()
   const mentionParts = text.split(/(@[a-zA-Z0-9_.]{1,30})/g)
+  const usernameKey = useMemo(() => extractMentionedUsernames(text).join('|'), [text])
+  const [profiles, setProfiles] = useState<Map<string, MentionProfile>>(() => new Map())
+
+  useEffect(() => {
+    const usernames = usernameKey.split('|').filter(Boolean)
+    if (!usernames.length) return
+    let cancelled = false
+    resolveProfiles(usernames).then(resolved => { if (!cancelled) setProfiles(resolved) })
+    return () => { cancelled = true }
+  }, [usernameKey])
 
   return (
     <>
       {mentionParts.map((part, i) => {
         if (part.startsWith('@') && part.length > 1) {
-          return (
-            <Link
-              key={i}
-              href={`/profile/${part.slice(1)}`}
-              onClick={e => e.stopPropagation()}
-              style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
-            >
-              {part}
-            </Link>
-          )
+          const profile = profiles.get(part.slice(1).toLowerCase())
+          if (!profile) return <span key={i}>{part}</span>
+          return <MentionHoverLink key={i} profile={profile} />
         }
         const emojiParts = parseEmojiShortcodes(part, customEmojis)
         return (

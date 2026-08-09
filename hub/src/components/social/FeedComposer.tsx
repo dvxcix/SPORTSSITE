@@ -11,6 +11,7 @@ import { Tooltip } from '@/components/ui/tooltip-card'
 import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from './EmojiPicker'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import { MentionInput } from './MentionInput'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -180,10 +181,11 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <textarea
+          <MentionInput
             ref={textareaRef}
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onValueChange={setContent}
+            currentUserId={user.id}
             placeholder="Drop a pick, share data, or make a post…"
             maxLength={charLimit}
             rows={content.length > 80 ? 3 : 2}
