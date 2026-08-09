@@ -130,7 +130,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       {/* Create */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+      <div className="ss-badge-create-panel">
         <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">New Badge</p>
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[160px]">
@@ -156,7 +156,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
       </div>
 
       {/* List */}
-      <div className="space-y-2">
+      <div className="ss-badge-admin-grid">
         {badges.length === 0 ? (
           <p className="text-sm text-zinc-600">No badges yet.</p>
         ) : (
@@ -165,9 +165,9 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
             const isOpen = expanded === b.id
             const isEditing = editing === b.id
             return (
-              <div key={b.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                <div className="flex items-center gap-3 p-3">
-                  <img src={b.icon_url} alt={b.name} className="w-9 h-9 object-contain rounded shrink-0" />
+              <div key={b.id} className="ss-badge-admin-card">
+                <div className="ss-badge-admin-summary">
+                  <span className="ss-badge-admin-icon"><img src={b.icon_url} alt={b.name} /></span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate flex items-center gap-1.5">
                       {b.name}

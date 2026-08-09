@@ -89,13 +89,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     supabase.from('user_badges')
-      .select('badge:badges(id, name, description, card_image_url)')
+      .select('badge:badges(id, name, description, icon_url, card_image_url)')
       .eq('user_id', profile.id),
     supabase.from('social_platforms').select('*'),
   ])
-  const achievements = (achievementRows ?? [])
-    .map((r: any) => r.badge)
-    .filter((b: any) => b?.card_image_url)
+  const achievements = (achievementRows ?? []).map((r: any) => r.badge).filter(Boolean)
 
   // Only the platforms this profile actually connected — a real OAuth-linked
   // identity (verified_identities) takes priority over a manually-typed
@@ -213,7 +211,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-black text-white">{profile.display_name || profile.username}</h1>
-            <UserBadges userId={profile.id} size={18} />
+            <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
             {profile.is_verified && <span className="text-green-400 text-sm">✓</span>}
             {profile.account_type === 'creator' && (
               <span className="text-xs font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>

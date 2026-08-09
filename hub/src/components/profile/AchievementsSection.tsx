@@ -6,30 +6,40 @@ export interface AchievementCard {
   id: string
   name: string
   description: string
-  card_image_url: string
+  icon_url: string
+  card_image_url: string | null
 }
 
-// Only rendered for badges an admin opted into having a card for (see
-// badges.card_image_url) — most badges stay just the small name-badge icon,
-// this is the "collectors card" upgrade for the ones worth showing off.
 export function AchievementsSection({ achievements }: { achievements: AchievementCard[] }) {
   if (achievements.length === 0) return null
 
   return (
-    <div className="px-4 py-5 border-t border-zinc-800">
-      <h2 className="text-xs font-black text-zinc-400 uppercase tracking-wider mb-3">Achievements</h2>
-      <div className="flex flex-wrap gap-4">
-        {achievements.map(a => (
-          <CometCard key={a.id}>
-            <img
-              src={a.card_image_url}
-              alt={a.name}
-              title={a.description}
-              className="w-[220px] h-auto block"
-            />
+    <section className="ss-profile-achievements">
+      <div className="ss-profile-achievements-heading">
+        <div>
+          <p>COLLECTION</p>
+          <h2>Badges and achievements</h2>
+        </div>
+        <span>{achievements.length} earned</span>
+      </div>
+      <div className="ss-achievement-grid">
+        {achievements.map(achievement => (
+          <CometCard key={achievement.id} className="ss-achievement-comet">
+            <article className={`ss-achievement-card${achievement.card_image_url ? ' has-art' : ''}`}>
+              {achievement.card_image_url && (
+                <img src={achievement.card_image_url} alt="" className="ss-achievement-card-art" />
+              )}
+              <div className="ss-achievement-card-content">
+                <span className="ss-achievement-icon"><img src={achievement.icon_url} alt="" /></span>
+                <div>
+                  <h3>{achievement.name}</h3>
+                  <p>{achievement.description}</p>
+                </div>
+              </div>
+            </article>
           </CometCard>
         ))}
       </div>
-    </div>
+    </section>
   )
 }
