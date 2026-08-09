@@ -64,19 +64,29 @@ export async function POST(request: Request) {
     .eq('user_id', notification.user_id)
   if (!subscriptions?.length) return NextResponse.json({ ok: true, skipped: 'no push subscriptions' })
 
-  const actor = notification.actor as any
+  const actor = notification.actor as { display_name?: string | null; username?: string | null } | null
   const actorName = actor?.display_name || actor?.username
   // Notifications that carry a rich image (a player headshot, a team logo —
   // see notifications.data across the various insert sites) show it as the
   // OS push icon too — the same image NotificationsList already renders as
   // the main circle in-app. Falls back to the static app icon exactly as
   // before for every notification type that doesn't set data.avatar_url.
-  const richImage = (notification.data as any)?.avatar_url
+  const notificationData = (notification.data ?? {}) as Record<string, unknown>
+  const richImage = typeof notificationData.avatar_url === 'string' ? notificationData.avatar_url : undefined
+  const groupingKey = notification.type === 'lineup_confirmed'
+    ? `lineup:${notificationData.game_pk || notification.link || notification.user_id}`
+    : `${notification.type}:${notification.link || notification.user_id}`
   const payload = JSON.stringify({
     title: 'SlipSurge',
     body: (actorName ? `${actorName} ` : '') + (notification.message || 'sent you a notification'),
     icon: richImage || '/icon-192.png',
+    image: typeof notificationData.image_url === 'string' ? notificationData.image_url : undefined,
     url: notification.link || '/notifications',
+    type: notification.type,
+    tag: groupingKey,
+    renotify: true,
+    notificationId: notification.id,
+    timestamp: Date.now(),
   })
 
   const results = await Promise.allSettled(
@@ -84,11 +94,14 @@ export async function POST(request: Request) {
       webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         payload
-      ).catch(err => {
+      ).catch((err: unknown) => {
         // 404/410 means the browser revoked or expired this subscription —
         // stale rows would otherwise accumulate forever and get retried on
         // every future notification.
-        if (err?.statusCode === 404 || err?.statusCode === 410) {
+        const statusCode = typeof err === 'object' && err !== null && 'statusCode' in err
+          ? Number((err as { statusCode?: unknown }).statusCode)
+          : undefined
+        if (statusCode === 404 || statusCode === 410) {
           return admin.from('push_subscriptions').delete().eq('id', sub.id)
         }
         throw err

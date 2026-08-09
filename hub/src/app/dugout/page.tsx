@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { DugoutClient } from '@/components/dugout/DugoutClient'
 import Link from 'next/link'
 import { TierGate } from '@/components/layout/TierGate'
+import { PageState } from '@/components/layout/PageState'
 
 export const revalidate = 0
 
@@ -106,7 +107,7 @@ export default async function DugoutPage({
       </div>
 
       {/* Client component (fetches own data) */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<PageState compact kind="loading" title="Loading The Dugout" message="Preparing the games, players, and market data." />}>
         <DugoutClient date={date} />
       </Suspense>
     </div>

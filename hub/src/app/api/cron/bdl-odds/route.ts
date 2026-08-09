@@ -9,6 +9,7 @@ import {
 import { canonGameKey } from '@slipsurge/core/teamAbbr'
 import { normName } from '@slipsurge/core/nameNorm'
 import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 // Bare market keys shared with fanduel-import's own OPENING_MARKET list —
 // whichever pipeline sees a real price for a given (game, player, market)
@@ -43,6 +44,7 @@ function isEffectivelyPregame(g: any): boolean {
 
 export const revalidate = 0
 export const maxDuration = 60
+export const GET = withPipelineHealth('bdl-odds', run)
 
 // Runs every minute (see vercel.json) and is now the ONLY thing that ever
 // calls BDL live. Previously dugout/data/route.ts hit BDL fresh on every
@@ -203,7 +205,7 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
   return { date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, openingRowAttempts: openingRows.length }
 }
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

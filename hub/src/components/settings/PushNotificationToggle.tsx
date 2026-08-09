@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { Bell, BellOff, BellRing } from 'lucide-react'
+import {
+  DESKTOP_NOTIFICATIONS_KEY,
+  ensureDesktopNotificationPermission,
+  isSlipSurgeDesktop,
+  sendDesktopNotification,
+} from '@/lib/desktopNotifications'
 
 // VAPID public keys are delivered base64url-encoded; PushManager.subscribe
 // needs a raw Uint8Array applicationServerKey — same conversion every
@@ -15,6 +21,10 @@ function urlBase64ToUint8Array(base64String: string) {
 
 type Status = 'checking' | 'unsupported' | 'denied' | 'off' | 'on' | 'working'
 
+function messageFrom(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function PushNotificationToggle() {
   const [status, setStatus] = useState<Status>('checking')
   const [error, setError] = useState('')
@@ -22,6 +32,10 @@ export function PushNotificationToggle() {
   useEffect(() => {
     let cancelled = false
     async function check() {
+      if (isSlipSurgeDesktop()) {
+        if (!cancelled) setStatus(localStorage.getItem(DESKTOP_NOTIFICATIONS_KEY) === '1' ? 'on' : 'off')
+        return
+      }
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         setStatus('unsupported'); return
       }
@@ -44,16 +58,22 @@ export function PushNotificationToggle() {
     setError('')
     setStatus('working')
     try {
+      if (isSlipSurgeDesktop()) {
+        const result = await ensureDesktopNotificationPermission()
+        if (!result.ok) {
+          setError(result.message)
+          setStatus(result.reason === 'denied' ? 'denied' : 'off')
+          return
+        }
+        setStatus('on')
+        await sendDesktopNotification('SlipSurge notifications enabled', 'You will receive native alerts on this device.')
+        return
+      }
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') { setStatus(permission === 'denied' ? 'denied' : 'off'); return }
 
       const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
       if (!publicKey) throw new Error('Push isn\'t configured on this server yet.')
-      // VAPID public key is not sensitive (it's shipped to every browser by
-      // design) — logged here only to make a bad/missing build-time env var
-      // visible in the console instead of surfacing as an opaque browser error.
-      console.log('[push] public key from build:', publicKey, `(length ${publicKey.length})`)
-
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -67,9 +87,9 @@ export function PushNotificationToggle() {
       })
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Could not save subscription.')
       setStatus('on')
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[push] enable failed', e)
-      setError(e?.message || 'Could not enable push notifications — please try again.')
+      setError(messageFrom(e, 'Could not enable push notifications. Please try again.'))
       setStatus('off')
     }
   }
@@ -78,6 +98,11 @@ export function PushNotificationToggle() {
     setError('')
     setStatus('working')
     try {
+      if (isSlipSurgeDesktop()) {
+        localStorage.removeItem(DESKTOP_NOTIFICATIONS_KEY)
+        setStatus('off')
+        return
+      }
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
       if (sub) {
@@ -89,9 +114,9 @@ export function PushNotificationToggle() {
         await sub.unsubscribe()
       }
       setStatus('off')
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[push] disable failed', e)
-      setError(e?.message || 'Could not disable push notifications.')
+      setError(messageFrom(e, 'Could not disable push notifications.'))
       setStatus('on')
     }
   }
@@ -107,10 +132,14 @@ export function PushNotificationToggle() {
       {status === 'on' ? <BellRing size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
         : <Bell size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>Push notifications</p>
+        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
+          {isSlipSurgeDesktop() ? 'Desktop notifications' : 'Push notifications'}
+        </p>
         <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
           {status === 'denied'
-            ? 'Blocked in your browser — enable notifications for this site in your browser settings to turn this on.'
+            ? isSlipSurgeDesktop()
+              ? 'Blocked by Windows. Enable SlipSurge in Settings > System > Notifications.'
+              : 'Blocked in your browser. Enable notifications for this site in your browser settings.'
             : status === 'on'
             ? 'Enabled on this device/browser.'
             : 'Get notified on this device even when SlipSurge isn\'t open.'}

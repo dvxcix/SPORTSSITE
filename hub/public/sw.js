@@ -22,7 +22,12 @@ self.addEventListener('push', event => {
       body: payload.body,
       icon: payload.icon || '/icon-192.png',
       badge: '/icon-192.png',
-      data: { url: payload.url || '/notifications' },
+      image: payload.image,
+      tag: payload.tag || payload.type || undefined,
+      renotify: Boolean(payload.renotify),
+      requireInteraction: Boolean(payload.requireInteraction),
+      timestamp: payload.timestamp || Date.now(),
+      data: { url: payload.url || '/notifications', notificationId: payload.notificationId },
     })
   )
 })
@@ -32,10 +37,11 @@ self.addEventListener('notificationclick', event => {
   const url = event.notification.data?.url || '/notifications'
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      const destination = new URL(url, self.location.origin).href
       for (const client of clientList) {
-        if (client.url.includes(url) && 'focus' in client) return client.focus()
+        if (client.url === destination && 'focus' in client) return client.focus()
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url)
+      if (self.clients.openWindow) return self.clients.openWindow(destination)
     })
   )
 })

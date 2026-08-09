@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()' },
+        { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+      ],
+    }]
+  },
   // @slipsurge/core is a workspace package (packages/core) holding the
   // matrixEngine/batterStatsEngine/etc. logic shared with the mobile app —
   // it ships raw .ts source (no build step of its own), so Next needs to

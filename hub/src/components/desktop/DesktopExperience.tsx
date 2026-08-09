@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 const TOUR_KEY = 'slipsurge.desktop.tour.v1'
+const NOTIFICATION_CURSOR_PREFIX = 'slipsurge.desktop.notifications.cursor.'
 
 const features = [
   { icon: FlaskConical, name: 'The Dugout', copy: 'Live matchup intelligence, matrices and watchlists in one workspace.', tier: 'Ultimate' },
@@ -29,6 +30,7 @@ type DesktopNotificationRow = {
   body?: string | null
   link?: string | null
   data?: { avatar_url?: string; team_logo?: string } | null
+  created_at: string
 }
 
 const NOTIFICATION_TITLES: Partial<Record<NotificationType, string>> = {
@@ -79,17 +81,53 @@ export function DesktopExperience() {
   useEffect(() => {
     if (!user || window.localStorage.getItem(DESKTOP_NOTIFICATIONS_KEY) !== '1') return
     const supabase = createClient()
+    const cursorKey = `${NOTIFICATION_CURSOR_PREFIX}${user.id}`
+    let catchingUp = false
+
+    const deliver = async (row: DesktopNotificationRow) => {
+      const settingKey = SETTINGS_KEY_BY_TYPE[row.type]
+      if (!settingKey || profile?.notification_settings?.[settingKey] !== false) await presentAccountNotification(row, user.id)
+      window.localStorage.setItem(cursorKey, row.created_at || new Date().toISOString())
+    }
+
+    const catchUp = async () => {
+      if (catchingUp) return
+      const cursor = window.localStorage.getItem(cursorKey)
+      if (!cursor) {
+        window.localStorage.setItem(cursorKey, new Date().toISOString())
+        return
+      }
+      catchingUp = true
+      try {
+        const { data, error } = await supabase.from('notifications')
+          .select('id,actor_id,type,message,body,link,data,created_at')
+          .eq('user_id', user.id).gt('created_at', cursor)
+          .order('created_at', { ascending: true }).limit(20)
+        if (error) throw error
+        for (const row of (data ?? []) as DesktopNotificationRow[]) await deliver(row)
+      } catch (error) {
+        console.error('[desktop] notification catch-up failed', error)
+      } finally {
+        catchingUp = false
+      }
+    }
+
     const channel = supabase.channel(`desktop-notifications:${user.id}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}`,
       }, payload => {
         const row = payload.new as DesktopNotificationRow
-        const settingKey = SETTINGS_KEY_BY_TYPE[row.type]
-        if (settingKey && profile?.notification_settings?.[settingKey] === false) return
-        void presentAccountNotification(row, user.id)
+        void deliver(row)
       })
-      .subscribe()
-    return () => { void supabase.removeChannel(channel) }
+      .subscribe(status => { if (status === 'SUBSCRIBED') void catchUp() })
+    const resume = () => { if (document.visibilityState === 'visible') void catchUp() }
+    document.addEventListener('visibilitychange', resume)
+    window.addEventListener('focus', resume)
+    return () => {
+      document.removeEventListener('visibilitychange', resume)
+      window.removeEventListener('focus', resume)
+      void supabase.removeChannel(channel)
+    }
   }, [user, profile?.notification_settings])
 
   useEffect(() => {

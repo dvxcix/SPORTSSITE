@@ -7,9 +7,11 @@ import { normName } from '@slipsurge/core/nameNorm'
 import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
 import type { BDLPropMap } from '@/lib/balldontlie'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 60
+export const GET = withPipelineHealth('lineup-confirmed', run)
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -43,7 +45,7 @@ async function fetchAllUsers(admin: Admin): Promise<{ id: string; notification_s
 // user's team — every MLB game today is in scope for every user who has
 // this notification type enabled (default on, same as every other type;
 // see users.notification_settings), not just teams they favorited.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

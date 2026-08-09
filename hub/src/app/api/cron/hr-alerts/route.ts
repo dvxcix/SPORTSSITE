@@ -9,16 +9,18 @@ import { fetchHrFeed } from '@/lib/hrFeed'
 import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/stripe'
 import type { BDLPropMap } from '@/lib/balldontlie'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 60
+export const GET = withPipelineHealth('hr-alerts', run)
 
 // Every minute (see vercel.json) while games are live — pulls the exact same
 // HR feed the Dugout page itself reads (fetchHrFeed, @/lib/hrFeed) and posts
 // any home run this run hasn't seen before to Discord. Diffed against
 // hr_alert_state (game_pk, ab_index) so a HR only ever posts once, same
 // diff-against-last-run-state pattern as lineup-confirmed.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 

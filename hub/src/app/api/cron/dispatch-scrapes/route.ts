@@ -4,9 +4,11 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/stripe'
 import { missingMarkets } from '@/lib/scrapers/retryMarkets'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 280
+export const GET = withPipelineHealth('dispatch-scrapes', run)
 
 // Runs every ~2 minutes (see vercel.json). Watches scrape_dispatch_queue —
 // rows the lineup-confirmed cron writes the moment a game's home+away
@@ -54,7 +56,7 @@ export const maxDuration = 280
 // not-ready page again. Capped at one retry (retry_count) so a game that
 // genuinely never gets a market (or one already past its window) doesn't
 // loop forever.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
