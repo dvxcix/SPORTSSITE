@@ -3113,7 +3113,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // against its bottom edge instead of a guessed pixel value that breaks the
   // moment the banner's own content wraps to an extra line.
   const bannerRowRef = useRef<HTMLTableCellElement>(null)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
   const [bannerHeight, setBannerHeight] = useState(0)
+  const [tableViewportHeight, setTableViewportHeight] = useState<number | null>(null)
   useLayoutEffect(() => {
     const el = bannerRowRef.current
     if (!el) return
@@ -3128,6 +3130,24 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     return () => window.removeEventListener('resize', measure)
   }, [visibleDugoutColumns])
 
+  useLayoutEffect(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+
+    // Keep the horizontal scrollbar inside the visible browser viewport.
+    // A viewport-only max-height ignored the controls and game summary above
+    // the table, which could place the scrollbar hundreds of pixels below the
+    // screen and make the final columns appear unreachable.
+    const measure = () => {
+      const available = window.innerHeight - el.getBoundingClientRect().top - 12
+      setTableViewportHeight(Math.max(240, Math.floor(available)))
+    }
+
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [game.gamePk, visibleDugoutColumns])
+
   // Rendered TWICE — once directly under the home banner, once directly
   // under the away banner (no shared top-level <thead> anymore) — each copy
   // pins independently right below its own team's banner via STH/SDIV_H's
@@ -3140,8 +3160,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleDugoutColumns)
   return (
     <div
+      ref={tableScrollRef}
+      tabIndex={0}
+      role="region"
+      aria-label={`${game.awayAbbr} at ${game.homeAbbr} betting table`}
       style={{
-        overflow: 'auto', maxHeight: 'calc(100vh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
+        overflow: 'auto',
+        maxHeight: tableViewportHeight == null
+          ? 'calc(100dvh - var(--banner-h, 0px) - var(--topbar-h) - 24px)'
+          : `${tableViewportHeight}px`,
+        maxWidth: '100%', minWidth: 0, overscrollBehavior: 'contain',
         borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
         // Read by STH/SDIV_H above, so every column-label cell's own sticky
         // top offset sits flush below whichever team's banner is currently
