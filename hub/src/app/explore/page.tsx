@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { attachUserReactions } from '@/lib/queries'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { sportLogoUrl } from '@/lib/sportLogos'
@@ -18,20 +17,45 @@ import { TierGate } from '@/components/layout/TierGate'
 export const revalidate = 60
 
 const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)`
+
+// Near-HR events live in the external MLB data project, not SlipSurge's
+// primary application database. Keep Explore on the same source and date
+// contract as TheDugout so both surfaces always report the same slate.
+const MLB_PARTY_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
+async function fetchNearHomeRuns(date: string) {
+  const key = process.env.MLB_PARTY_SERVICE_ROLE_KEY
+  if (!key) return []
+  const params = new URLSearchParams({
+    game_date: `eq.${date}`,
+    select: 'batter_id,batter_name,pitcher_name,result,exit_velocity,hit_distance,parks_hr_count,home_team,away_team,captured_at',
+    order: 'parks_hr_count.desc',
+    limit: '200',
+  })
+  try {
+    const response = await fetch(`${MLB_PARTY_URL}/rest/v1/near_hrs?${params}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      next: { revalidate: 30 },
+    })
+    if (!response.ok) return []
+    const rows = await response.json()
+    return Array.isArray(rows) ? rows : []
+  } catch {
+    return []
+  }
+}
+
 const getSlateActivity = unstable_cache(async (date: string) => {
   const schedule = await fetchScheduleWithRetry(date, 'probablePitcher,team,linescore,venue')
-  const [{ hrFeed }, nearResult] = await Promise.all([
+  const [{ hrFeed }, nearHomeRuns] = await Promise.all([
     fetchHrFeed(schedule),
-    createAdminClient().from('near_hrs')
-      .select('batter_id, batter_name, pitcher_name, result, exit_velocity, hit_distance, parks_hr_count, home_team, away_team, captured_at')
-      .eq('game_date', date).order('parks_hr_count', { ascending: false }).limit(200),
+    fetchNearHomeRuns(date),
   ])
   return {
     schedule,
     homeRuns: hrFeed.sort((a, b) => (b.hr_time || '').localeCompare(a.hr_time || '')),
-    nearHomeRuns: nearResult.data ?? [],
+    nearHomeRuns,
   }
-}, ['explore-slate-activity-v2'], { revalidate: 30 })
+}, ['explore-slate-activity-v3'], { revalidate: 30 })
 
 type ExploreUser = {
   id: string
