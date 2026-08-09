@@ -1312,7 +1312,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           always beat responsive Tailwind classes for the same property. */}
       <td
         onClick={onToggle}
-        className="dg-sticky-col w-[140px] min-w-[140px] max-w-[140px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
+        className="dg-sticky-col w-[172px] min-w-[172px] max-w-[172px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
         style={{
           ...STD, position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
           // Reported live (mobile): odds-column values from further right in
@@ -1331,7 +1331,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
+        <div className="dg-player-cell-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
           {/* Order#/hand-circle rail — achievement badges (FHR/HR/near-miss)
               moved off this rail entirely, onto the actual FD FHR/SA odds
               cells they're each about (see the OddsCell `badge` prop calls
@@ -3176,6 +3176,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // right the table is scrolled.
   const bannerContent = (side: 'home' | 'away') => (
     <div
+      className="dg-team-banner-content"
       style={{
         display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
         position: 'sticky', left: 0, width: 'fit-content',
@@ -3331,8 +3332,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     // the table, which could place the scrollbar hundreds of pixels below the
     // screen and make the final columns appear unreachable.
     const measure = () => {
-      const available = window.innerHeight - el.getBoundingClientRect().top - 12
-      setTableViewportHeight(Math.max(240, Math.floor(available)))
+      const mobileReserve = window.matchMedia('(max-width: 640px)').matches ? 92 : 12
+      const available = window.innerHeight - el.getBoundingClientRect().top - mobileReserve
+      setTableViewportHeight(Math.max(220, Math.floor(available)))
       updateHorizontalState()
     }
 
@@ -3355,7 +3357,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   return (
     <div className="dugout-board-enter" style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
       {activeSortKeys.length > 0 && (
-        <div aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
+        <div className="dugout-redundant-sort-summary" aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
           {activeSortKeys.map((entry, index) => (
             <button key={entry.col} type="button" onClick={() => toggleSort(entry.col)} title="Click to change or remove this sort" style={{ border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--border))', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>
@@ -3365,7 +3367,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <button type="button" onClick={() => { setSort(null); setStickyCols([]) }} style={{ marginLeft: 'auto', border: 0, background: 'none', color: 'var(--text-3)', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>Clear</button>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
+      <div className="dugout-jump-menu" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
         <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Jump to</span>
         {marketSectionJumps.map(section => (
           <button
@@ -3387,7 +3389,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         </button>
       </div>
       {horizontalState.hasOverflow && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
+        <div className="dugout-board-nav" style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <button type="button" onClick={() => scrollBoardTo('start')} disabled={!horizontalState.canGoLeft} aria-label="Go to the first Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoLeft ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoLeft ? 'pointer' : 'default', padding: '3px 4px' }}>
             <ChevronLeft size={13} aria-hidden="true" /> Start
           </button>
@@ -3401,6 +3403,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       )}
     <div
       ref={tableScrollRef}
+      className="dugout-board-scroll"
       onScroll={onBoardScroll}
       tabIndex={0}
       role="region"
@@ -3517,7 +3520,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
     </div>
     {horizontalState.canGoLeft && (
-      <button type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 10, fontWeight: 850, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
+      <button className="dugout-return-player" type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 10, fontWeight: 850, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
         <ChevronLeft size={13} aria-hidden="true" /> Player
       </button>
     )}
@@ -3971,7 +3974,7 @@ export function DugoutClient({ date }: { date: string }) {
             type) rather than matching their pill treatment exactly — this is
             a single live line, not a count to open a panel from. */}
         {active?.noHr && (
-          <div
+          <div className="dugout-summary-action"
             title={
               active.noHr.openingFanduel != null && active.noHr.openingFanduel !== active.noHr.fanduel
                 ? `Opened ${oStr(active.noHr.openingFanduel)} → now ${oStr(active.noHr.fanduel)}`
@@ -3996,23 +3999,23 @@ export function DugoutClient({ date }: { date: string }) {
         )}
 
         {hrCount > 0 && (
-          <button onClick={() => { setShowNearHrBoard(false); setShowHrBoard(true) }} style={{
+          <button className="dugout-summary-action" aria-label={`Open today's ${hrCount} home runs`} onClick={() => { setShowNearHrBoard(false); setShowHrBoard(true) }} style={{
             minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
             border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.1)', color: '#4ade80',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
           }}>
-            <Flame size={14} aria-hidden="true" /> Today's Home Runs
+            <Flame size={14} aria-hidden="true" /> Home Runs
             <span style={{ background: 'rgba(74,222,128,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{hrCount}</span>
           </button>
         )}
 
         {nearHrCount > 0 && (
-          <button onClick={() => { setShowHrBoard(false); setShowNearHrBoard(true) }} style={{
+          <button className="dugout-summary-action" aria-label={`Open today's ${nearHrCount} near home runs`} onClick={() => { setShowHrBoard(false); setShowNearHrBoard(true) }} style={{
             minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9,
             border: '1px solid rgba(251,146,60,0.35)', background: 'rgba(251,146,60,0.1)', color: '#fb923c',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
           }}>
-            <Sparkles size={14} aria-hidden="true" /> Near Home Runs
+            <Sparkles size={14} aria-hidden="true" /> Near HRs
             <span style={{ background: 'rgba(251,146,60,0.25)', borderRadius: 999, padding: '1px 7px', fontSize: 11 }}>{nearHrCount}</span>
           </button>
         )}
@@ -4020,7 +4023,7 @@ export function DugoutClient({ date }: { date: string }) {
         {/* Per-account column customization — applies across every game's
             table below, not just the active one, so it lives up here at
             the page level rather than inside GameTable's per-game toolbar. */}
-        <button onClick={() => setShowColumnPanel(true)} style={{
+        <button className="dugout-summary-action" onClick={() => setShowColumnPanel(true)} style={{
           minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9, marginLeft: 'auto',
           border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)',
           fontSize: 12, fontWeight: 800, cursor: 'pointer',
@@ -4037,10 +4040,10 @@ export function DugoutClient({ date }: { date: string }) {
         />
       )}
 
-      <section aria-label="Game selector" style={{ marginBottom: 16, border: '1px solid var(--border)', borderRadius: 13, background: 'var(--surface)', overflow: 'hidden' }}>
+      <section className="dugout-game-selector" aria-label="Game selector" style={{ marginBottom: 16, border: '1px solid var(--border)', borderRadius: 13, background: 'var(--surface)', overflow: 'hidden' }}>
         <div style={{ minHeight: 38, padding: '7px 9px 7px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--border)' }}>
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 7 }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}>Games</span>
+            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '0.02em' }}><span className="dugout-games-label">Games</span><span className="dugout-active-matchup">{active.awayAbbr} @ {active.homeAbbr}</span></span>
             <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{activeGameIndex + 1} of {games.length}</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -4144,8 +4147,8 @@ export function DugoutClient({ date }: { date: string }) {
         </div>
       )}
 
-      <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
-        Hover any column header for details.
+      <div className="dugout-header-help" style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
+        Select any column header for details.
       </div>
 
       {showHrBoard && (
@@ -4180,13 +4183,34 @@ export function DugoutClient({ date }: { date: string }) {
            meant to fix (see BatterRowEl's comment on that state for why). */
         .dugout-dense-table > tbody > tr:hover > td:not(.dg-sticky-col):not(.dg-team-banner){background:rgba(255,255,255,0.025)!important}
         .dugout-dense-table.density-comfortable > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
+        .dugout-redundant-sort-summary,.dugout-jump-menu{display:none!important}
+        .dugout-active-matchup{display:none}
         .dugout-board-enter{animation:dugout-board-in 180ms ease-out both}
         @keyframes dugout-board-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
         .dugout-dense-table [data-tutorial-active=true]{position:relative;z-index:8;box-shadow:inset 0 0 0 1px var(--accent),0 0 13px color-mix(in srgb,var(--accent) 38%,transparent)!important;filter:brightness(1.22);animation:dugout-tour-glow 1.25s ease-in-out infinite alternate}
         .dugout-tour-icon{animation:dugout-tour-icon 1.5s ease-in-out infinite}
         @keyframes dugout-tour-glow{from{box-shadow:inset 0 0 0 1px var(--accent),0 0 7px color-mix(in srgb,var(--accent) 24%,transparent)}to{box-shadow:inset 0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 58%,transparent)}}
         @keyframes dugout-tour-icon{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-        @media(max-width:640px){.dugout-table-tour{right:12px!important;bottom:12px!important}}
+        @media(max-width:640px){
+          .dugout-summary-actions{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:5px!important;margin-bottom:7px!important}
+          .dugout-summary-action{min-height:34px!important;margin-left:0!important;padding:5px 7px!important;justify-content:center!important;gap:4px!important;font-size:10px!important;white-space:nowrap;overflow:hidden}
+          .dugout-summary-action svg{width:13px;height:13px;flex:0 0 13px}
+          .dugout-game-selector{margin-bottom:7px!important}
+          .dugout-game-rail{display:none!important}
+          .dugout-games-label{display:none}
+          .dugout-active-matchup{display:inline}
+          .dugout-board-nav{min-height:38px;margin-bottom:5px!important;padding:4px 7px!important;gap:7px!important}
+          .dugout-board-scroll{--dugout-header-top:0px!important;border-radius:8px!important;scroll-padding-top:36px}
+          .dg-team-banner{position:static!important}
+          .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:max-content!important;min-height:38px}
+          .dugout-dense-table{font-size:12px!important}
+          .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
+          .dg-sticky-col{width:172px!important;min-width:172px!important;max-width:172px!important}
+          .dg-player-cell-inner{gap:7px!important;padding:6px 5px!important;min-height:48px}
+          .dg-player-copy{font-size:11px!important}
+          .dugout-return-player,.dugout-header-help{display:none!important}
+          .dugout-table-tour{right:12px!important;bottom:96px!important}
+        }
         @media (prefers-reduced-motion:reduce){.dugout-board-enter,.dugout-dense-table [data-tutorial-active=true],.dugout-tour-icon{animation:none}}
       `}</style>
     </div>
