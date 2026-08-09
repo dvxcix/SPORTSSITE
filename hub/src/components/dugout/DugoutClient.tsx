@@ -19,7 +19,7 @@ import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock, Search } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -2429,6 +2429,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
 }) {
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set(prefs?.hiddenGroups ?? []))
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set(prefs?.hiddenColumns ?? []))
+  const [columnQuery, setColumnQuery] = useState('')
   // Full flat order of every column (hidden or not) — hiding/showing a
   // column mid-edit doesn't lose its last position, it's just skipped over
   // by visibleOrder below until re-shown.
@@ -2468,6 +2469,30 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   // have their own always-visible toggles at the top of the panel) so its
   // switch stays reachable to flip back on.
   const hiddenColumnList = useMemo(() => order.filter(k => hiddenColumns.has(k)), [order, hiddenColumns])
+  const searchResults = useMemo(() => {
+    const query = columnQuery.trim().toLowerCase()
+    if (!query) return []
+    return DUGOUT_ALL_COLUMNS.filter(col =>
+      (DUGOUT_COLUMN_LABELS[col.key] ?? col.key).toLowerCase().includes(query) ||
+      (DUGOUT_GROUP_LABELS[col.group] ?? col.group).toLowerCase().includes(query),
+    )
+  }, [columnQuery])
+
+  const setColumnVisible = (key: string, visible: boolean) => {
+    const col = colByKey.get(key)
+    setHiddenColumns(prev => {
+      const next = new Set(prev)
+      if (visible) next.delete(key); else next.add(key)
+      return next
+    })
+    if (visible && col) {
+      setHiddenGroups(prev => {
+        const next = new Set(prev)
+        next.delete(col.group)
+        return next
+      })
+    }
+  }
 
   // Splices a reordered visible-subset back into the full `order` array (in
   // whichever positions the visible items previously occupied), leaving
@@ -2524,6 +2549,16 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
         </div>
 
         <div style={{ padding: '14px 16px 4px', borderBottom: '1px solid var(--border)' }}>
+          <label style={{ position: 'relative', display: 'block', marginBottom: 14 }}>
+            <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+            <input
+              value={columnQuery}
+              onChange={event => setColumnQuery(event.target.value)}
+              placeholder="Find a column"
+              aria-label="Find a Dugout column"
+              style={{ width: '100%', height: 34, padding: '0 10px 0 32px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-1)', fontSize: 12, outline: 'none' }}
+            />
+          </label>
           <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Hide a whole section</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {DUGOUT_GROUP_ORDER.map(group => (
@@ -2543,7 +2578,26 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
         </div>
 
         <div style={{ padding: 16 }}>
-          {runs.map((run, runIndex) => (
+          {columnQuery.trim() ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 4 }}>{searchResults.length} matching {searchResults.length === 1 ? 'column' : 'columns'}</div>
+              {searchResults.map(col => {
+                const visible = !hiddenGroups.has(col.group) && !hiddenColumns.has(col.key)
+                return (
+                  <div key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 7, background: 'var(--surface-2)' }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--text-2)' }}>
+                      {DUGOUT_COLUMN_LABELS[col.key] ?? col.key}
+                      <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
+                    </span>
+                    <Switch checked={visible} onChange={value => setColumnVisible(col.key, value)} />
+                  </div>
+                )
+              })}
+              {searchResults.length === 0 && (
+                <div style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>No columns match that search.</div>
+              )}
+            </div>
+          ) : runs.map((run, runIndex) => (
             <div key={`${run.group}-${runIndex}`} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)' }}>{DUGOUT_GROUP_LABELS[run.group]}</span>
@@ -2566,11 +2620,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
                       <span style={{ flex: 1, fontSize: 11, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
                       <Switch
                         checked={!hiddenColumns.has(key)}
-                        onChange={v => setHiddenColumns(prev => {
-                          const next = new Set(prev)
-                          if (v) next.delete(key); else next.add(key)
-                          return next
-                        })}
+                        onChange={v => setColumnVisible(key, v)}
                       />
                     </div>
                   )
@@ -2579,7 +2629,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
             </div>
           ))}
 
-          {hiddenColumnList.length > 0 && (
+          {!columnQuery.trim() && hiddenColumnList.length > 0 && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', marginBottom: 6 }}>Hidden columns</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -3127,6 +3177,23 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const [bannerHeight, setBannerHeight] = useState(0)
   const [tableViewportHeight, setTableViewportHeight] = useState<number | null>(null)
+  const [horizontalState, setHorizontalState] = useState({ hasOverflow: false, canGoLeft: false, canGoRight: false, progress: 0 })
+  const updateHorizontalState = useCallback(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+    setHorizontalState({
+      hasOverflow: maxScroll > 2,
+      canGoLeft: el.scrollLeft > 2,
+      canGoRight: el.scrollLeft < maxScroll - 2,
+      progress: maxScroll > 0 ? Math.min(100, Math.max(0, (el.scrollLeft / maxScroll) * 100)) : 0,
+    })
+  }, [])
+  const scrollBoardTo = (edge: 'start' | 'end') => {
+    const el = tableScrollRef.current
+    if (!el) return
+    el.scrollTo({ left: edge === 'start' ? 0 : el.scrollWidth, behavior: 'smooth' })
+  }
   useLayoutEffect(() => {
     const el = bannerRowRef.current
     if (!el) return
@@ -3152,12 +3219,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     const measure = () => {
       const available = window.innerHeight - el.getBoundingClientRect().top - 12
       setTableViewportHeight(Math.max(240, Math.floor(available)))
+      updateHorizontalState()
     }
 
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [game.gamePk, visibleDugoutColumns])
+  }, [game.gamePk, visibleDugoutColumns, updateHorizontalState])
 
   // Rendered TWICE — once directly under the home banner, once directly
   // under the away banner (no shared top-level <thead> anymore) — each copy
@@ -3170,8 +3238,23 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // render the identical set of columns.
   const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleDugoutColumns)
   return (
+    <div style={{ minWidth: 0, marginBottom: 8 }}>
+      {horizontalState.hasOverflow && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
+          <button type="button" onClick={() => scrollBoardTo('start')} disabled={!horizontalState.canGoLeft} aria-label="Go to the first Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoLeft ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoLeft ? 'pointer' : 'default', padding: '3px 4px' }}>
+            <ChevronLeft size={13} aria-hidden="true" /> Start
+          </button>
+          <div aria-label={`Board position ${Math.round(horizontalState.progress)} percent`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(horizontalState.progress)} style={{ height: 4, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden' }}>
+            <div style={{ width: `${Math.max(3, horizontalState.progress)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--accent), #38bdf8)', transition: 'width 100ms ease-out' }} />
+          </div>
+          <button type="button" onClick={() => scrollBoardTo('end')} disabled={!horizontalState.canGoRight} aria-label="Go to the last Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoRight ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoRight ? 'pointer' : 'default', padding: '3px 4px' }}>
+            End <ChevronRight size={13} aria-hidden="true" />
+          </button>
+        </div>
+      )}
     <div
       ref={tableScrollRef}
+      onScroll={updateHorizontalState}
       tabIndex={0}
       role="region"
       aria-label={`${game.awayAbbr} at ${game.homeAbbr} betting table`}
@@ -3182,7 +3265,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           : `${tableViewportHeight}px`,
         maxWidth: '100%', minWidth: 0, overscrollBehavior: 'contain',
         scrollbarGutter: 'stable', WebkitOverflowScrolling: 'touch',
-        borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
+        borderRadius: 10, border: '1px solid var(--border)',
         // Read by STH/SDIV_H above, so every column-label cell's own sticky
         // top offset sits flush below whichever team's banner is currently
         // pinned (measured off the home banner td via bannerRowRef — home
@@ -3285,6 +3368,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         </tbody>
       </table>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
+    </div>
     </div>
   )
 }
@@ -3450,6 +3534,7 @@ export function DugoutClient({ date }: { date: string }) {
   const [data, setData]         = useState<any | null>(null)
   const [loading, setLoading]   = useState(true)
   const [err, setErr]           = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
@@ -3457,7 +3542,14 @@ export function DugoutClient({ date }: { date: string }) {
   // server precomputes all 5 (season + l1/l3/l5/l10) per batter, so this is
   // just picking which one to render, not a re-fetch. Lives here (not in
   // GameTable) so it survives switching between today's games.
-  const [statcastWindow, setStatcastWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>('l10')
+  const [statcastWindow, setStatcastWindow] = useState<'l1' | 'l3' | 'l5' | 'l10'>(() => {
+    if (typeof window === 'undefined') return 'l10'
+    const saved = window.localStorage.getItem('ss:dugout-statcast-window')
+    return saved === 'l1' || saved === 'l3' || saved === 'l5' || saved === 'l10' ? saved : 'l10'
+  })
+  useEffect(() => {
+    try { window.localStorage.setItem('ss:dugout-statcast-window', statcastWindow) } catch { /* session-only when storage is unavailable */ }
+  }, [statcastWindow])
 
   // Per-member Dugout column show/hide/reorder — fetched once on mount
   // (null while loading behaves identically to "no prefs saved," i.e. show
@@ -3527,7 +3619,7 @@ export function DugoutClient({ date }: { date: string }) {
         setLoading(false)
       })
       .catch(e => { setErr(String(e)); setLoading(false) })
-  }, [date, highlightId])
+  }, [date, highlightId, reloadToken])
 
   // Real gap (2026-07-24): saving/importing/deleting a Matrix elsewhere in
   // the app (the Matrix panel is mounted globally — see CustomMatrixPanel.tsx
@@ -3565,6 +3657,25 @@ export function DugoutClient({ date }: { date: string }) {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [pathname, router, searchParams])
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return
+      const target = event.target as HTMLElement | null
+      if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) return
+      const games: any[] = data?.games ?? []
+      if (games.length < 2) return
+      const currentIndex = Math.max(0, games.findIndex(game => game.gameKey === activeGame))
+      const nextIndex = event.key === 'ArrowRight'
+        ? Math.min(games.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex - 1)
+      if (nextIndex === currentIndex) return
+      event.preventDefault()
+      setActiveGame(games[nextIndex].gameKey)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [activeGame, data?.games, setActiveGame])
+
   const splitMap   = useMemo(() => buildSplitMap(data?.statSplits    ?? []), [data?.statSplits])
   const pitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
 
@@ -3584,15 +3695,30 @@ export function DugoutClient({ date }: { date: string }) {
   const nearMap = useMemo(() => buildNearMap(data), [data?.nearHr])
 
   if (loading) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 12 }}>
-      <div style={{ width: 30, height: 30, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Loading lineups &amp; Statcast…</span>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div aria-live="polite" aria-busy="true" style={{ display: 'grid', gap: 10, minHeight: 280 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}>
+        <div style={{ width: 24, height: 24, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+        <div><div style={{ fontSize: 13, fontWeight: 850, color: 'var(--text-1)' }}>Loading The Dugout</div><div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Preparing games, lineups, markets, and Statcast.</div></div>
+      </div>
+      {[0, 1, 2].map(index => <div key={index} style={{ height: index === 0 ? 46 : 62, borderRadius: 10, border: '1px solid var(--border)', background: 'linear-gradient(100deg, var(--surface) 25%, var(--surface-2) 45%, var(--surface) 65%)', backgroundSize: '220% 100%', animation: 'dugout-skeleton 1.4s ease-in-out infinite' }} />)}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes dugout-skeleton{0%{background-position:100% 0}100%{background-position:-100% 0}}`}</style>
     </div>
   )
 
-  if (err) return <div style={{ textAlign: 'center', padding: 40, color: '#ef4444', fontSize: 13 }}>Error: {err}</div>
-  if (!data?.games?.length) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)', fontSize: 13 }}>No games for {date}</div>
+  if (err) return (
+    <div role="alert" style={{ display: 'grid', justifyItems: 'center', gap: 10, textAlign: 'center', padding: '44px 20px', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 12, background: 'rgba(248,113,113,0.06)' }}>
+      <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>The Dugout could not load</div>
+      <div style={{ maxWidth: 520, fontSize: 11, color: 'var(--text-3)' }}>{err}</div>
+      <button type="button" onClick={() => setReloadToken(value => value + 1)} style={{ border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '7px 14px', fontSize: 11, fontWeight: 850, cursor: 'pointer' }}>Try again</button>
+    </div>
+  )
+  if (!data?.games?.length) return (
+    <div style={{ display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', padding: '52px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}>
+      <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>No games on this slate</div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>There are no Dugout games available for {date}.</div>
+      <Link href="/scores" style={{ marginTop: 4, color: 'var(--accent)', fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>View scores</Link>
+    </div>
+  )
 
   const games: any[] = data.games
   const active = games.find(g => g.gameKey === activeGame) ?? games[0]
