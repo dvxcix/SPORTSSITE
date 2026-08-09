@@ -19,7 +19,7 @@ import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
+import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -878,7 +878,7 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 }
 
 function PlayerDrillDown({
-  row, oppPitcher, pitcherTeamAbbr, gameInfo, pool,
+  row, oppPitcher, pitcherTeamAbbr, gameInfo, pool, onClose,
 }: {
   row: BatterRow
   oppPitcher?: any
@@ -888,13 +888,19 @@ function PlayerDrillDown({
   // same "heat-mapped vs the rest of this lineup" convention as Pitcher
   // Report's PlayerStatcastDetail.
   pool: BatterRow[]
+  onClose?: () => void
 }) {
   const pitcherHand: 'R' | 'L' = oppPitcher?.hand === 'L' ? 'L' : 'R'
   const noBatSplits = !row.s_spd && !row.s_brl
 
   return (
-    <td colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+    <td className="dg-player-drilldown-cell" colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
+      <div className="dg-player-drilldown">
+        <div className="dg-player-drilldown-head">
+          <span><strong>{row.name}</strong><small>{row.team} · {row.position} · {row.bats}HB</small></span>
+          {onClose && <button type="button" onClick={onClose} aria-label={`Collapse ${row.name}`}>Collapse <ChevronUp size={14} /></button>}
+        </div>
+      <div className="dg-player-drilldown-grid" style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
 
         {/* Real pitch-by-pitch matchup — genuine Statcast rows off
             player_pitch_log via batterStatsEngine.ts, the same engine and
@@ -903,7 +909,7 @@ function PlayerDrillDown({
             only ever offered a fixed 14-day rolling window or a capped
             ~20-pitch event popup. */}
         {oppPitcher && row.mlb_id != null ? (
-          <div style={{ minWidth: 460 }}>
+          <div className="dg-drilldown-section dg-matchup-section" style={{ minWidth: 460 }}>
             <MatchupPitchBreakdown
               batterId={row.mlb_id}
               batterName={row.name}
@@ -928,7 +934,7 @@ function PlayerDrillDown({
         {!noBatSplits && (() => {
           const g = (k: keyof BatterRow) => pool.map(p => p[k] as number | null)
           return (
-          <div style={{ minWidth: 320 }}>
+          <div className="dg-drilldown-section dg-tracking-section" style={{ minWidth: 320 }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
               BAT TRACKING
             </div>
@@ -994,6 +1000,7 @@ function PlayerDrillDown({
           </div>
           )
         })()}
+      </div>
       </div>
     </td>
   )
@@ -1312,6 +1319,16 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           always beat responsive Tailwind classes for the same property. */}
       <td
         onClick={onToggle}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onToggle()
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? 'Collapse' : 'Open'} ${row.name} matchup details`}
         className="dg-sticky-col w-[172px] min-w-[172px] max-w-[172px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]"
         style={{
           ...STD, position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
@@ -1357,14 +1374,14 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           ) : (
             <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
           )}
-          <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+          <div className="dg-player-copy" style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
             {/* Name line's width is now fixed regardless of how many flags
                 are active — every badge moved off it (achievement flags to
                 the rail above, signal flags to the position/hand line
                 below), so a long name or a player with several flags at
                 once no longer squeezes it down to almost nothing. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
+              <span className="dg-player-name" style={{ fontSize: 10, fontWeight: 700, color: expanded ? 'var(--accent)' : 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 32 }}>
                 {row.name}
               </span>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flexShrink: 0 }}>
@@ -1424,7 +1441,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
               )}
             </div>
           </div>
-          <span style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
+          <span className="dg-expand-indicator" style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
       </td>
 
@@ -1739,10 +1756,11 @@ export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void 
 
   return (
     <div
+      className="dugout-modal-backdrop"
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
     >
-      <div
+      <div className="dugout-mobile-sheet"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 360, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)',
@@ -1845,8 +1863,8 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
   }, [hits, teamByMlbId, sortBy])
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Today's home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <div className="dugout-modal-backdrop" role="dialog" aria-modal="true" aria-label="Today's home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="dugout-mobile-sheet dugout-leaderboard-sheet" onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(74,222,128,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>🔥</span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1976,8 +1994,8 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
   }, [nearHrs, teamByMlbId, sortBy])
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Today's near home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <div className="dugout-modal-backdrop" role="dialog" aria-modal="true" aria-label="Today's near home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="dugout-mobile-sheet dugout-leaderboard-sheet" onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(251,146,60,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>😮</span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -2567,8 +2585,8 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   })
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <div className="dugout-modal-backdrop" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="dugout-mobile-sheet dugout-columns-sheet" onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--surface)', zIndex: 1 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
@@ -3472,7 +3490,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                   eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={visibleDugoutColumns}
                 />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} /></tr>
                 )}
               </React.Fragment>
             )
@@ -3510,7 +3528,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                   eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={visibleDugoutColumns}
                 />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} /></tr>
                 )}
               </React.Fragment>
             )
@@ -4125,8 +4143,8 @@ export function DugoutClient({ date }: { date: string }) {
       )}
 
       {showGamePicker && (
-        <div onClick={() => setShowGamePicker(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,.68)', padding: 10 }}>
-          <div onClick={event => event.stopPropagation()} style={{ width: '100%', maxHeight: '82dvh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', boxShadow: '0 -18px 60px rgba(0,0,0,.5)' }}>
+        <div className="dugout-modal-backdrop" onClick={() => setShowGamePicker(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,.68)', padding: 10 }}>
+          <div className="dugout-mobile-sheet dugout-game-picker-sheet" onClick={event => event.stopPropagation()} style={{ width: '100%', maxHeight: '82dvh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', boxShadow: '0 -18px 60px rgba(0,0,0,.5)' }}>
             <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
               <div><div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
               <button type="button" onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
@@ -4208,7 +4226,30 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
           .dg-sticky-col{width:172px!important;min-width:172px!important;max-width:172px!important}
           .dg-player-cell-inner{gap:7px!important;padding:6px 5px!important;min-height:48px}
-          .dg-player-copy{font-size:11px!important}
+          .dg-player-copy{font-size:11px!important;overflow:hidden}
+          .dg-player-name{font-size:12px!important;line-height:1.25!important}
+          .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
+          .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
+          .dg-player-drilldown{position:sticky;left:0;width:calc(100vw - 28px);max-width:calc(100vw - 28px);padding:10px;background:color-mix(in srgb,var(--surface) 97%,transparent);border-top:1px solid var(--accent);box-sizing:border-box}
+          .dg-player-drilldown-head{display:flex!important;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+          .dg-player-drilldown-head > span{display:grid;gap:2px;min-width:0;color:var(--text-1);font-size:12px}
+          .dg-player-drilldown-head small{color:var(--text-3);font-size:9px;font-weight:650}
+          .dg-player-drilldown-head button{min-height:34px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--accent);font-size:10px;font-weight:850}
+          .dg-player-drilldown-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important;width:100%!important}
+          .dg-drilldown-section{width:100%!important;min-width:0!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain}
+          .dg-drilldown-section > *{max-width:100%}
+          .dg-team-banner-content button{min-height:34px!important;min-width:34px}
+          .dg-team-banner-content a{min-height:34px;display:inline-flex!important;align-items:center}
+          .dugout-modal-backdrop{align-items:flex-end!important;padding:0!important;overscroll-behavior:contain}
+          .dugout-mobile-sheet{position:relative;width:100%!important;min-width:0!important;max-width:100%!important;max-height:calc(100dvh - 72px)!important;resize:none!important;border-radius:18px 18px 0 0!important;border-bottom:0!important;padding-bottom:max(12px,env(safe-area-inset-bottom));box-shadow:0 -18px 60px rgba(0,0,0,.58)!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+          .dugout-mobile-sheet::before{content:"";display:block;position:absolute;top:7px;left:50%;z-index:5;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.65}
+          .dugout-mobile-sheet > :first-child{padding-top:18px!important}
+          .dugout-columns-sheet{max-height:calc(100dvh - 32px)!important}
+          .dugout-columns-sheet button{min-height:36px}
+          .dugout-columns-sheet input{height:42px!important;font-size:16px!important}
+          .dugout-leaderboard-sheet{height:min(78dvh,720px)!important}
+          .dugout-game-picker-sheet{max-height:calc(100dvh - 52px)!important;padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
+          .dugout-game-picker-sheet button{min-height:58px}
           .dugout-return-player,.dugout-header-help{display:none!important}
           .dugout-table-tour{right:12px!important;bottom:96px!important}
         }
