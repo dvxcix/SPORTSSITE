@@ -2954,6 +2954,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       >
         <button
           onClick={() => setStickyMode(v => !v)}
+          aria-label={`Sticky column sorting ${stickyMode ? 'on' : 'off'}`}
+          aria-pressed={stickyMode}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
@@ -2969,6 +2971,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         <Tooltip content="Clear the sticky sort chain">
           <button
             onClick={() => setStickyCols([])}
+            aria-label="Clear sticky column sorting"
             style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
           >
             ✕
@@ -2982,6 +2985,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         >
           <button
             onClick={() => setHighlightMode(v => !v)}
+            aria-label={`Cell highlighter ${highlightMode ? 'on' : 'off'}`}
+            aria-pressed={highlightMode}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
               padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
@@ -3004,6 +3009,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
             {HL_SWATCHES.map(c => (
               <button
                 key={c} title={c} onClick={() => setActiveHlColor(c)}
+                aria-label={`Use ${c} highlight color`}
+                aria-pressed={activeHlColor === c}
                 style={{
                   width: 18, height: 18, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer',
                   border: activeHlColor === c ? '2px solid var(--text-1)' : '2px solid transparent',
@@ -3014,6 +3021,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               <Tooltip content="Clear every highlight in this game">
                 <button
                   onClick={() => setCellHighlights({})}
+                  aria-label="Clear all cell highlights"
                   style={{ marginLeft: 2, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 6px', background: 'none', color: 'var(--text-3)' }}
                 >
                   ✕
@@ -3029,6 +3037,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       >
         <button
           onClick={() => setEraserMode(v => !v)}
+          aria-label={`Player row eraser ${eraserMode ? 'on' : 'off'}`}
+          aria-pressed={eraserMode}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
@@ -3044,6 +3054,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         <Tooltip content="Bring every erased player back">
           <button
             onClick={() => setErasedIds(new Set())}
+            aria-label="Restore all erased player rows"
             style={{ padding: '3px 6px', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-3)' }}
           >
             ✕
@@ -3170,6 +3181,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           ? 'calc(100dvh - var(--banner-h, 0px) - var(--topbar-h) - 24px)'
           : `${tableViewportHeight}px`,
         maxWidth: '100%', minWidth: 0, overscrollBehavior: 'contain',
+        scrollbarGutter: 'stable', WebkitOverflowScrolling: 'touch',
         borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
         // Read by STH/SDIV_H above, so every column-label cell's own sticky
         // top offset sits flush below whichever team's banner is currently
@@ -3694,7 +3706,12 @@ export function DugoutClient({ date }: { date: string }) {
           const isLive = g.status === 'Live'
           const isFin  = g.status === 'Final'
           return (
-            <button key={g.gameKey} onClick={() => setActiveGame(g.gameKey)} style={{
+            <button
+              key={g.gameKey}
+              onClick={() => setActiveGame(g.gameKey)}
+              aria-label={`${g.awayAbbr} at ${g.homeAbbr}${isLive ? ', live' : isFin ? ', final' : ''}`}
+              aria-pressed={isAct}
+              style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               width: '100%', minWidth: 0, padding: '7px 8px', borderRadius: 8, cursor: 'pointer',
               border: isAct ? '1px solid var(--accent)' : '1px solid var(--border)',
@@ -3702,7 +3719,7 @@ export function DugoutClient({ date }: { date: string }) {
               color: isAct ? 'var(--accent)' : 'var(--text-2)',
               fontSize: 11, fontWeight: 700, transition: 'all 120ms',
               opacity: g.locked ? 0.6 : 1,
-            }}>
+              }}>
               <TeamLogo abbr={g.awayAbbr} size={16} />
               <span style={{ color: 'var(--text-3)', fontSize: 9 }}>@</span>
               <TeamLogo abbr={g.homeAbbr} size={16} />
