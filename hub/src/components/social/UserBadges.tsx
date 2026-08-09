@@ -12,10 +12,11 @@ export function UserBadges({ userId, size = 14 }: { userId: string | null | unde
   if (!userId || badges.length === 0) return null
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+    <span className="ss-user-badges">
       {badges.map(b => (
-        <Tooltip key={b.id} content={<span><strong>{b.name}</strong> — {b.description}</span>}>
+        <Tooltip key={b.id} content={<span><strong>{b.name}</strong>: {b.description}</span>}>
           <img
+            className="ss-user-badge-icon"
             src={b.icon_url}
             alt={b.name}
             style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block', verticalAlign: 'middle', cursor: 'help' }}

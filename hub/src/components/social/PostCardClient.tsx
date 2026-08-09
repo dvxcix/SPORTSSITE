@@ -27,7 +27,7 @@ import { useCustomEmojis } from '@/lib/emoji'
 import { UserBadges } from './UserBadges'
 
 interface PostCardClientProps {
-  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; pick_record?: { wins: number; losses: number } } }
+  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
   index?: number
   // Set only by the dedicated /posts/[id] page — that's the one place the
   // card shouldn't navigate to itself on click, and where comments should
@@ -523,8 +523,6 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.04 }}
         style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
           transition: 'border-color 150ms, transform 150ms, box-shadow 150ms',
           position: 'relative',
@@ -558,8 +556,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Avatar */}
             <Link href={`/profile/${post.author.username}`} style={{ flexShrink: 0 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%',
+              <div className="ss-post-avatar" style={{
+                width: 46, height: 46, borderRadius: '50%',
                 background: 'var(--surface-3)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 14, fontWeight: 900, color: 'var(--text-2)',
@@ -576,16 +574,20 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
-                  <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 800, color: 'var(--text-1)', fontSize: 14, textDecoration: 'none' }}>
+                  <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 850, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
-                  <UserBadges userId={post.author.id} />
+                  <UserBadges userId={post.author.id} size={18} />
                   {post.author.is_verified && (
                     <span style={{ fontSize: 11, color: 'var(--green)' }}>✓</span>
                   )}
                   {post.author.account_type === 'creator' && (
-                    <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99, background: 'rgba(255,184,77,0.12)', color: 'var(--gold)', border: '1px solid rgba(255,184,77,0.25)' }}>PRO</span>
+                    <span className="ss-member-chip is-creator">CREATOR</span>
                   )}
+                  {post.author.tier && post.author.tier !== 'free' && (
+                    <span className={`ss-member-chip is-${post.author.tier}`}>{post.author.tier}</span>
+                  )}
+                  {post.author.beta_access_active && <span className="ss-member-chip is-beta">BETA</span>}
                   <Link href={`/profile/${post.author.username}`} style={{ color: 'var(--text-3)', fontSize: 12, textDecoration: 'none' }}>
                     @{post.author.username}
                   </Link>
@@ -686,7 +688,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   </div>
                 </div>
               ) : post.content && (
-                <p style={{ marginTop: 8, fontSize: 14, color: 'var(--text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                <p className="ss-post-copy" style={{ marginTop: 9, color: 'var(--text-1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                   <LinkifiedText text={post.content} />
                 </p>
               )}
@@ -865,7 +867,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
                     return (
                       <Tooltip key={emoji} content={<ReactionNames postId={post.id} emoji={emoji} />}>
-                        <button
+                        <button className="ss-reaction-pill"
                           onClick={() => toggleReaction(emoji)}
                           disabled={!user}
                           style={{
@@ -888,17 +890,17 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               )}
 
               {/* Action bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 8, marginLeft: -6 }}>
+              <div className="ss-post-actions">
                 <ActionBtn
                   icon={<MessageCircle size={15} />}
-                  label={commentCount > 0 ? String(commentCount) : ''}
+                  label={commentCount > 0 ? `${commentCount} Comment${commentCount === 1 ? '' : 's'}` : 'Comment'}
                   hoverBg="rgba(77,158,255,0.08)"
                   hoverColor="var(--blue)"
                   onClick={toggleComments}
                 />
                 <ActionBtn
                   icon={<Repeat2 size={15} />}
-                  label={repostCount > 0 ? String(repostCount) : ''}
+                  label={repostCount > 0 ? `${repostCount} Repost${repostCount === 1 ? '' : 's'}` : 'Repost'}
                   active={reposted}
                   activeColor="var(--green)"
                   hoverBg="rgba(46,213,115,0.08)"
@@ -908,7 +910,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                   <ActionBtn
                     icon={<Bookmark size={15} fill={bookmarked ? 'currentColor' : 'none'} />}
-                    label={bookmarkCount > 0 ? String(bookmarkCount) : ''}
+                    label={bookmarkCount > 0 ? `${bookmarkCount} Saved` : 'Save'}
                     active={bookmarked}
                     activeColor="var(--gold)"
                     hoverBg="rgba(255,184,77,0.08)"
@@ -917,6 +919,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   />
                   <ActionBtn
                     icon={<Share2 size={15} />}
+                    label="Share"
                     hoverBg="var(--surface-3)"
                     onClick={share}
                   />
@@ -1233,7 +1236,7 @@ function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onCl
 }) {
   const [hovered, setHovered] = useState(false)
   return (
-    <button onClick={onClick}
+    <button className="ss-post-action" onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
