@@ -12,7 +12,7 @@ import {
 type CreatorPayoutProfile = { whop_connected_company_id: string | null }
 type CommerceEvent = { id: string; event_type: string; created_at: string; amount: number | null; currency: string | null; status: string | null }
 
-export function PayoutSetupClient({ profile, recentPayouts }: { profile: CreatorPayoutProfile; recentPayouts: CommerceEvent[] }) {
+export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = false }: { profile: CreatorPayoutProfile; recentPayouts: CommerceEvent[]; isTestAccount?: boolean }) {
   const companyId = profile.whop_connected_company_id
   const connected = Boolean(companyId)
   const [loading, setLoading] = useState(false)
@@ -20,7 +20,7 @@ export function PayoutSetupClient({ profile, recentPayouts }: { profile: Creator
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!connected) return
+    if (!connected || isTestAccount) return
     fetch('/api/creator/payout-token', { method: 'POST' })
       .then(async response => {
         const payload = await response.json()
@@ -28,9 +28,10 @@ export function PayoutSetupClient({ profile, recentPayouts }: { profile: Creator
         setToken(payload.token)
       })
       .catch(reason => setError(reason.message))
-  }, [connected])
+  }, [connected, isTestAccount])
 
   async function startOnboarding() {
+    if (isTestAccount) return
     setLoading(true)
     setError(null)
     try {
@@ -51,14 +52,28 @@ export function PayoutSetupClient({ profile, recentPayouts }: { profile: Creator
         Complete verification, add a payout method, review your balance, and withdraw earnings without leaving SlipSurge.
       </p>
 
+      {isTestAccount && (
+        <div className="creator-studio-error" style={{ marginBottom: 18 }}>
+          Test workspace. This account cannot connect a payout method, receive funds, or withdraw money.
+        </div>
+      )}
+
       <div className="creator-payout-status">
         <span className={`creator-payout-dot ${connected ? 'is-ready' : ''}`} />
         <div style={{ flex: 1 }}>
-          <strong>{connected ? 'Whop account connected' : 'Setup required'}</strong>
-          <p>{connected ? 'Your creator balance and payout tools are secured and operated by Whop.' : 'Create and verify your connected Whop account before publishing paid access.'}</p>
+          <strong>{isTestAccount ? 'Payout sandbox' : connected ? 'Whop account connected' : 'Setup required'}</strong>
+          <p>{isTestAccount ? 'Preview the creator payout experience with a fixed zero balance and no money movement.' : connected ? 'Your creator balance and payout tools are secured and operated by Whop.' : 'Create and verify your connected Whop account before publishing paid access.'}</p>
         </div>
-        {!connected && <button className="creator-studio-primary" onClick={startOnboarding} disabled={loading}>{loading ? 'Opening Whop...' : 'Set up creator payments'}</button>}
+        {!connected && !isTestAccount && <button className="creator-studio-primary" onClick={startOnboarding} disabled={loading}>{loading ? 'Opening Whop...' : 'Set up creator payments'}</button>}
       </div>
+
+      {isTestAccount && (
+        <div className="creator-payout-grid">
+          <section className="creator-payout-card"><small>AVAILABLE BALANCE</small><h2>$0.00</h2><p>Test balance</p></section>
+          <section className="creator-payout-card"><small>PAYOUT METHOD</small><h2>Not connected</h2><p>Disabled for this test account</p></section>
+          <section className="creator-payout-card creator-payout-wide"><small>WITHDRAWALS</small><p>No test withdrawals. Real approved creators receive Whop&apos;s secure embedded payout portal here.</p></section>
+        </div>
+      )}
 
       {error && <div className="creator-studio-error">{error}</div>}
       {connected && !token && !error && <div className="creator-studio-empty">Loading secure payout tools...</div>}

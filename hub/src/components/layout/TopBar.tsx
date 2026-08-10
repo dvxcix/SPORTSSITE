@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X } from 'lucide-react'
+import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, Sparkles, WalletCards } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
@@ -574,6 +574,17 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <Link href="/settings" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
                     <Settings size={14} /> Settings
                   </Link>
+                  {(profile?.account_type === 'creator' || profile?.username?.toLowerCase() === 'slipsurge') && (
+                    <>
+                      <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                      <Link href="/creators/studio" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
+                        <Sparkles size={14} /> Creator Studio
+                      </Link>
+                      <Link href="/creators/payouts" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
+                        <WalletCards size={14} /> Payouts
+                      </Link>
+                    </>
+                  )}
                   {profile?.account_type === 'admin' && (
                     <Link href="/admin" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
                       <Shield size={14} /> Admin Panel

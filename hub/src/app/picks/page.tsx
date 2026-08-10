@@ -54,9 +54,9 @@ export default async function PicksPage({
   const SPORTS = ['All', 'MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '24px 16px' }}>
+    <div className="mx-auto max-w-5xl px-3 pb-24 pt-4 sm:px-5 sm:pt-7">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="mb-5 flex items-center justify-between overflow-hidden rounded-2xl border border-lime-400/20 bg-gradient-to-br from-lime-400/[0.09] via-zinc-950 to-zinc-950 p-4 shadow-2xl sm:p-5">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(180,255,77,0.08)', border: '1px solid rgba(180,255,77,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <TrendingUp size={18} style={{ color: 'var(--accent)' }} />
@@ -171,7 +171,7 @@ export default async function PicksPage({
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="mx-auto flex max-w-3xl flex-col gap-3">
           {(picks ?? []).map((p: any) => <PostCardClient key={p.id} post={p} />)}
         </div>
       )}

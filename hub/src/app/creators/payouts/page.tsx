@@ -13,7 +13,7 @@ export default async function CreatorPayoutsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('id, account_type, whop_connected_company_id, creator_commerce_status')
+    .select('id, username, account_type, whop_connected_company_id, creator_commerce_status')
     .eq('id', user.id)
     .single()
 
@@ -36,6 +36,7 @@ export default async function CreatorPayoutsPage() {
   return (
     <PayoutSetupClient
       profile={profile}
+      isTestAccount={profile.username.toLowerCase() === 'slipsurge'}
       recentPayouts={recentPayouts ?? []}
     />
   )

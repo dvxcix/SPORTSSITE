@@ -141,7 +141,6 @@ export function collapseConsecutiveFollows(items: NotifRow[]): (NotifRow | Notif
 }
 
 function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void }) {
-  const [hovered, setHovered] = useState(false)
   const customEmojis = useCustomEmojis()
   const Icon = NOTIF_ICONS[n.type] ?? Bell
   const actorName = n.actor?.display_name || n.actor?.username
@@ -204,8 +203,6 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
         borderRadius: 'var(--radius)', border: n.read ? '1px solid transparent' : '1px solid var(--border)',
@@ -218,7 +215,7 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
       ) : (
         <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>{inner}</div>
       )}
-      {hovered && (
+      {(
         <button
           onClick={onDelete}
           aria-label="Dismiss notification"
@@ -242,7 +239,6 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
 // many others. Clicking still goes to that most-recent follower's profile;
 // dismissing removes every underlying notification in the group at once.
 function GroupedFollowRow({ items, onDelete }: { items: NotifRow[]; onDelete: () => void }) {
-  const [hovered, setHovered] = useState(false)
   const latest = items[0]
   const actorName = latest.actor?.display_name || latest.actor?.username
   const othersCount = items.length - 1
@@ -278,8 +274,6 @@ function GroupedFollowRow({ items, onDelete }: { items: NotifRow[]; onDelete: ()
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
         borderRadius: 'var(--radius)', border: anyUnread ? '1px solid var(--border)' : '1px solid transparent',
@@ -292,7 +286,7 @@ function GroupedFollowRow({ items, onDelete }: { items: NotifRow[]; onDelete: ()
       ) : (
         <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>{inner}</div>
       )}
-      {hovered && (
+      {(
         <button
           onClick={onDelete}
           aria-label="Dismiss notifications"

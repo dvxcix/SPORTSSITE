@@ -14,8 +14,8 @@ export const revalidate = 0
 export default function DailyRecapPage() {
   return (
     <TierGate requiredTier="ultimate" label="Daily Recap">
-      <div style={{ padding: '20px 16px' }}>
-        <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+      <div className="px-2 pb-24 pt-3 sm:px-4 sm:pt-5">
+        <div className="fade-in mb-4 rounded-2xl border border-lime-400/20 bg-gradient-to-r from-lime-400/[0.08] via-zinc-950 to-zinc-950 p-4 sm:p-5" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Daily Recap</h1>
           <Link href="/dugout" style={{
             marginLeft: 'auto', padding: '7px 14px', borderRadius: 8,
@@ -25,7 +25,7 @@ export default function DailyRecapPage() {
             ← Dugout
           </Link>
         </div>
-        <p style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 18 }}>
+        <p className="mb-4 px-1 text-xs leading-5 text-zinc-400 sm:text-sm">
           The Dugout, filtered to today's confirmed home runs only — same board, same columns, same Last 1/3/5/10 toggle.
         </p>
 

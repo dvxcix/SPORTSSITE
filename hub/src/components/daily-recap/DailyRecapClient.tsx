@@ -57,9 +57,9 @@ export function DailyRecapClient() {
   const isToday = date === todayEt()
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="min-w-0">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-2.5 sm:p-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
           <button onClick={() => setDate(d => addDays(d, -1))} style={navBtnStyle}>←</button>
           <input
             type="date" value={date} max={todayEt()}
@@ -73,7 +73,7 @@ export function DailyRecapClient() {
 
       {error && <div style={{ color: '#f87171', fontSize: 13 }}>{error}</div>}
       {!error && data === null && <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>}
-      {!error && data !== null && <DailyRecapTable data={data} date={date} />}
+      {!error && data !== null && <div className="min-w-0 overflow-x-auto overscroll-x-contain"><DailyRecapTable data={data} date={date} /></div>}
     </div>
   )
 }

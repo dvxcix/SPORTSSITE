@@ -18,5 +18,5 @@ export default async function CreatorStudioPage() {
   if (!profile || !hasCreatorAccess(profile.account_type, Boolean(approval))) redirect('/creators/apply')
   const activeMembers = (entitlements ?? []).filter(item => ['active', 'trialing'].includes(item.status)).length
   const revenue = (events ?? []).filter(item => item.amount && !['failed', 'refunded'].includes(item.status || '')).reduce((sum, item) => sum + Number(item.amount), 0)
-  return <CreatorStudioClient profile={profile} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} events={events ?? []} />
+  return <CreatorStudioClient profile={profile} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} events={events ?? []} />
 }

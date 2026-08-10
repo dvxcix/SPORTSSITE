@@ -13,8 +13,9 @@ import { AchievementsSection } from '@/components/profile/AchievementsSection'
 import { FavoritesSection } from '@/components/profile/FavoritesSection'
 import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Link as LinkIcon, AtSign, Calendar, TrendingUp, BadgeCheck } from 'lucide-react'
+import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight } from 'lucide-react'
 import { PROVIDER_BY_PLATFORM_KEY } from '@/lib/verifiedIdentity'
+import { hasCreatorAccess } from '@/lib/creator'
 import type { Metadata } from 'next'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
@@ -84,7 +85,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     )
   }
 
-  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }] = await Promise.all([
+  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }, { data: creatorApproval }, { data: creatorGroups }, { data: creatorProducts }] = await Promise.all([
     fetchProfilePostsPage(supabase, { userId: profile.id, tab, pageSize: 20 }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
@@ -92,7 +93,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       .select('badge:badges(id, name, description, icon_url, card_image_url)')
       .eq('user_id', profile.id),
     supabase.from('social_platforms').select('*'),
+    supabase.from('creator_applications').select('id').eq('user_id', profile.id).eq('status', 'approved').maybeSingle(),
+    supabase.from('groups').select('id,name,slug,emoji,member_count,access_type').eq('owner_id', profile.id).eq('is_public', true).order('created_at', { ascending: false }).limit(6),
+    supabase.from('creator_products').select('id,title,description,price,product_type,status').eq('creator_id', profile.id).eq('status', 'active').order('created_at', { ascending: false }).limit(6),
   ])
+  const isCreatorProfile = hasCreatorAccess(profile.account_type, Boolean(creatorApproval))
   const achievements = (achievementRows ?? []).map((r: any) => r.badge).filter(Boolean)
 
   // Only the platforms this profile actually connected — a real OAuth-linked
@@ -213,7 +218,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <h1 className="text-xl font-black text-white">{profile.display_name || profile.username}</h1>
             <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
             {profile.is_verified && <span className="text-green-400 text-sm">✓</span>}
-            {profile.account_type === 'creator' && (
+            {isCreatorProfile && (
               <span className="text-xs font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>
             )}
           </div>
@@ -287,6 +292,20 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           )}
         </div>
       </div>
+
+      {isCreatorProfile && (
+        <section className="mx-4 mb-5 overflow-hidden rounded-2xl border border-lime-400/20 bg-gradient-to-br from-lime-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+          <div className="flex flex-col gap-4 border-b border-white/[0.07] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Store size={18} /></span><div><p className="text-[10px] font-black tracking-[0.18em] text-lime-300">CREATOR COMMUNITY</p><h2 className="text-base font-black text-white">Join {profile.display_name || profile.username}</h2></div></div>
+            <div className="flex gap-2">{isOwnProfile && <Link href="/creators/studio" className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-lime-400/40 hover:text-white"><Sparkles size={14} /> Creator Studio</Link>}<Link href={`/creators/${profile.username}`} className="inline-flex items-center gap-1.5 rounded-xl bg-lime-400 px-3 py-2 text-xs font-black text-zinc-950 hover:bg-lime-300">View storefront <ArrowRight size={14} /></Link></div>
+          </div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            {(creatorProducts ?? []).map(product => <Link href={`/creators/offers/${product.id}`} key={product.id} className="rounded-xl border border-white/[0.08] bg-black/25 p-3 hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-white">{product.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{product.description || 'Premium creator access on SlipSurge.'}</p></div><strong className="whitespace-nowrap text-sm text-lime-300">${Number(product.price).toFixed(2)}</strong></div></Link>)}
+            {(creatorGroups ?? []).map(group => <Link href={`/groups/${group.slug}`} key={group.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-3 hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-zinc-900 text-lg">{group.emoji || <Users size={16} />}</span><div className="min-w-0"><p className="truncate text-sm font-black text-white">{group.name}</p><p className="text-xs text-zinc-500">{group.member_count ?? 0} members · {group.access_type === 'paid' ? 'Member access' : 'Open community'}</p></div></Link>)}
+            {(creatorProducts?.length ?? 0) === 0 && (creatorGroups?.length ?? 0) === 0 && <div className="sm:col-span-2 rounded-xl border border-dashed border-zinc-800 p-5 text-center text-xs text-zinc-500">This creator is setting up their first community and membership.</div>}
+          </div>
+        </section>
+      )}
 
       <AchievementsSection achievements={achievements} />
       <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} />

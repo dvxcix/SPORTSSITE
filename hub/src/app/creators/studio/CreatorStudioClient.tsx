@@ -17,19 +17,21 @@ const BENEFITS = [
   ['community', MessageSquareText, 'Private groups and channels'],
 ] as const
 
-export function CreatorStudioClient({ profile, products, groups, stats, events }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; events: Event[] }) {
+export function CreatorStudioClient({ profile, products, groups, stats, events, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; events: Event[]; isTestAccount?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({ title: '', description: '', price: '19.99', productType: 'membership' })
   const [benefits, setBenefits] = useState<Record<string, boolean>>({ premiumContent: true, research: true, alerts: true, community: true })
 
   async function onboard() {
+    if (isTestAccount) return setError('Test mode is active. Payment onboarding and money movement are disabled for this account.')
     setBusy(true); setError('')
     const res = await fetch('/api/creator/whop-onboard', { method: 'POST' }); const data = await res.json()
     setBusy(false); if (!res.ok) return setError(data.error || 'Could not start onboarding'); window.location.href = data.url
   }
 
   async function createProduct() {
+    if (isTestAccount) return setError('Test mode is active. Use this workspace to review the creator experience without publishing a paid offer.')
     setBusy(true); setError('')
     const included = BENEFITS.filter(([key]) => benefits[key]).map(([, , label]) => label)
     const description = [form.description.trim(), included.length ? `Includes: ${included.join(', ')}.` : ''].filter(Boolean).join(' ')
@@ -88,8 +90,9 @@ export function CreatorStudioClient({ profile, products, groups, stats, events }
           <header><div><span>LAUNCH READINESS</span><h2>{setupCount}/4 complete</h2></div><ShieldCheck size={21} /></header>
           <div className={styles.progress}><i style={{ width: `${setupCount * 25}%` }} /></div>
           <div className={styles.checklist}><span className={styles.done}><Check size={13} /><b>Creator approved</b></span><span className={profile.whop_connected_company_id ? styles.done : ''}>{profile.whop_connected_company_id ? <Check size={13} /> : '2'}<b>Connect payments</b></span><span className={products.length ? styles.done : ''}>{products.length ? <Check size={13} /> : '3'}<b>Publish membership</b></span><span className={groups.length ? styles.done : ''}>{groups.length ? <Check size={13} /> : '4'}<b>Create community</b></span></div>
-          <button className={styles.whopButton} onClick={onboard} disabled={busy}><Building2 size={15} /> {profile.whop_connected_company_id ? 'Continue Whop setup' : 'Connect with Whop'}</button>
-          {profile.whop_connected_company_id && <Link className={styles.textLink} href="/creators/payouts">Open payouts <ArrowRight size={14} /></Link>}
+          {isTestAccount && <div className={styles.alert}>Test workspace. Payment setup, publishing, withdrawals, and money movement are disabled.</div>}
+          <button className={styles.whopButton} onClick={onboard} disabled={busy || isTestAccount}><Building2 size={15} /> {isTestAccount ? 'Whop connection disabled in test mode' : profile.whop_connected_company_id ? 'Continue Whop setup' : 'Connect with Whop'}</button>
+          <Link className={styles.textLink} href="/creators/payouts">Open payouts <ArrowRight size={14} /></Link>
         </article>
 
         <article className={`${styles.panel} ${styles.migration}`}><Rocket size={22} /><span>BRING YOUR AUDIENCE</span><h2>Move without losing momentum.</h2><p>Recreate your current tiers, publish a storefront, invite existing members, and launch private channels before announcing the move.</p><ol><li>Match your current pricing</li><li>Build the member destination</li><li>Share your storefront link</li><li>Welcome and retain members</li></ol></article>
