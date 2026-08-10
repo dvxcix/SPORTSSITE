@@ -17,6 +17,27 @@ type Run = {
   error: string | null
 }
 
+type DataEvidence = {
+  observedAt: string | null
+  detail: string
+  currentOutput?: boolean
+}
+
+function easternDateOffset(days: number) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]))
+  const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + days))
+  return date.toISOString().slice(0, 10)
+}
+
+function firstTimestamp(data: unknown, field: string) {
+  if (!Array.isArray(data) || data.length === 0) return null
+  const value = (data[0] as Record<string, unknown>)[field]
+  return typeof value === 'string' ? value : null
+}
+
 function ageLabel(date: string) {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 60_000))
   if (minutes < 1) return 'just now'
@@ -37,8 +58,12 @@ function durationLabel(ms: number | null) {
 export default async function PipelineHealthPage() {
   const admin = createAdminClient()
   const sinceYesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const completedMlbDate = easternDateOffset(-1)
+  const currentMlbDate = easternDateOffset(0)
+  const dailyPipelineNames = TRACKED_PIPELINES.filter(pipeline => pipeline.schedule === 'Daily').map(pipeline => pipeline.name)
   const [
     { data, error },
+    { data: dailyData },
     { count: failedWebhooks },
     { count: processingWebhooks },
     { count: failedPushes },
@@ -48,6 +73,7 @@ export default async function PipelineHealthPage() {
     { count: failedExports },
   ] = await Promise.all([
     admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').order('started_at', { ascending: false }).limit(250),
+    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').in('job_name', dailyPipelineNames).order('started_at', { ascending: false }).limit(500),
     admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
     admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'processing').lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString()),
     admin.from('notification_delivery_attempts').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('attempted_at', sinceYesterday),
@@ -56,17 +82,61 @@ export default async function PipelineHealthPage() {
     admin.from('data_export_requests').select('id', { count: 'exact', head: true }).in('status', ['queued', 'processing', 'ready']),
     admin.from('data_export_requests').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
   ])
-  const runs = (data ?? []) as Run[]
+  const runs = [...((data ?? []) as Run[]), ...((dailyData ?? []) as Run[])]
   const latest = new Map<string, Run>()
-  for (const run of runs) if (!latest.has(run.job_name)) latest.set(run.job_name, run)
+  for (const run of runs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())) {
+    if (!latest.has(run.job_name)) latest.set(run.job_name, run)
+  }
+
+  // Execution telemetry and data freshness are separate signals. Verify the
+  // actual production outputs before reporting that a daily MLB job has not run.
+  const freshnessSources = [
+    { job: 'savant-sync-tier-a', field: 'last_synced_at', detail: 'Core Savant season tables', query: admin.from('player_statcast_hitting_season').select('last_synced_at').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-bat-tracking', field: 'last_synced_at', detail: 'Bat-tracking splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'bat_tracking').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-batted-ball', field: 'last_synced_at', detail: 'Batted-ball splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'batted_ball_splits').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-swing-take', field: 'last_synced_at', detail: 'Swing-and-take splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'swing_take').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-swing-timing', field: 'last_synced_at', detail: 'Swing-timing splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'swing_timing_miss_distance').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-batting-stance', field: 'last_synced_at', detail: 'Batting-stance splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'batting_stance').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-swing-path', field: 'last_synced_at', detail: 'Swing-path splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'swing_path_attack_angle').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-hr-details', field: 'last_synced_at', detail: 'HR and near-HR detail', query: admin.from('player_home_run_events').select('last_synced_at').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-pitch-arsenal-stats', field: 'last_synced_at', detail: 'Pitch-arsenal splits', query: admin.from('player_statcast_splits').select('last_synced_at').eq('category', 'pitch_arsenal_stats').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-pitch-arsenal-details', field: 'last_synced_at', detail: 'Pitch-arsenal events', query: admin.from('player_pitch_arsenal_events').select('last_synced_at').order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-pitch-log', field: 'last_synced_at', detail: `${completedMlbDate} game pitch logs`, query: admin.from('games').select('last_synced_at').eq('game_date', completedMlbDate).order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'pitch-log-freshness-check', field: 'last_synced_at', detail: `${completedMlbDate} game pitch logs`, query: admin.from('games').select('last_synced_at').eq('game_date', completedMlbDate).order('last_synced_at', { ascending: false }).limit(1) },
+    { job: 'savant-sync-affinity', field: 'updated_at', detail: 'Pitcher affinity profiles', query: admin.from('pitcher_affinity_profiles').select('updated_at').order('updated_at', { ascending: false }).limit(1) },
+    { job: 'dugout-statcast-precompute', field: 'computed_at', detail: 'Dugout Statcast cache', query: admin.from('dugout_statcast_precomputed').select('computed_at').eq('game_date', currentMlbDate).order('computed_at', { ascending: false }).limit(1) },
+    { job: 'dugout-matchup-edge-precompute', field: 'computed_at', detail: 'Dugout matchup cache', query: admin.from('dugout_matchup_edge_precomputed').select('computed_at').eq('game_date', currentMlbDate).order('computed_at', { ascending: false }).limit(1) },
+    { job: 'dugout-pitchlog-stat-precompute', field: 'updated_at', detail: 'Dugout pitch-log cache', query: admin.from('dugout_pitchlog_stat_precomputed').select('updated_at').eq('game_date', currentMlbDate).order('updated_at', { ascending: false }).limit(1) },
+  ]
+  const freshnessResults = await Promise.all(freshnessSources.map(async source => ({ source, result: await source.query })))
+  const dataEvidence = new Map<string, DataEvidence>()
+  for (const { source, result } of freshnessResults) {
+    const observedAt = result.error ? null : firstTimestamp(result.data, source.field)
+    if (observedAt) dataEvidence.set(source.job, { observedAt, detail: source.detail })
+  }
+  const { data: seasonAverageOutput } = await admin.from('dugout_season_avg_precomputed').select('game_date').eq('game_date', currentMlbDate).limit(1)
+  if (seasonAverageOutput?.length) {
+    dataEvidence.set('dugout-season-avg-precompute', { observedAt: null, detail: `${currentMlbDate} season-average cache`, currentOutput: true })
+  }
 
   const rows = TRACKED_PIPELINES.map(pipeline => {
     const run = latest.get(pipeline.name)
+    const evidence = dataEvidence.get(pipeline.name)
     const ageMinutes = run ? (currentTimestamp() - new Date(run.started_at).getTime()) / 60_000 : Infinity
-    const state = !run ? 'waiting' : run.status === 'failed' ? 'failed' : ageMinutes > pipeline.staleAfterMinutes ? 'stale' : run.status
-    return { pipeline, run, state }
+    const evidenceAgeMinutes = evidence?.observedAt ? (currentTimestamp() - new Date(evidence.observedAt).getTime()) / 60_000 : Infinity
+    const evidenceIsCurrent = Boolean(evidence?.currentOutput || (evidence?.observedAt && evidenceAgeMinutes <= pipeline.staleAfterMinutes))
+    const state = run?.status === 'failed'
+      ? 'failed'
+      : run && ageMinutes <= pipeline.staleAfterMinutes
+        ? run.status
+        : evidenceIsCurrent
+          ? 'verified'
+          : run
+            ? 'stale'
+            : 'waiting'
+    return { pipeline, run, evidence, state }
   })
-  const healthy = rows.filter(row => row.state === 'succeeded').length
+  const healthy = rows.filter(row => row.state === 'succeeded' || row.state === 'verified').length
   const problems = rows.filter(row => row.state === 'failed' || row.state === 'stale').length
 
   return (
@@ -97,17 +167,19 @@ export default async function PipelineHealthPage() {
 
       <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60">
         <div className="grid grid-cols-[minmax(220px,1fr)_120px_130px_100px] gap-4 border-b border-zinc-800 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-          <span>Pipeline</span><span>Status</span><span>Last run</span><span>Duration</span>
+          <span>Pipeline</span><span>Status</span><span>Last signal</span><span>Duration</span>
         </div>
-        {rows.map(({ pipeline, run, state }) => {
-          const Icon = state === 'succeeded' ? CheckCircle2 : state === 'running' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
-          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'running' ? 'text-cyan-400' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' ? 'text-red-400' : 'text-amber-400'
+        {rows.map(({ pipeline, run, evidence, state }) => {
+          const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
+          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' ? 'text-red-400' : 'text-amber-400'
+          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state
+          const signalAt = state === 'verified' ? evidence?.observedAt : run?.started_at ?? evidence?.observedAt
           return (
             <div key={pipeline.name} className="grid grid-cols-[minmax(220px,1fr)_120px_130px_100px] gap-4 border-b border-zinc-800/70 px-5 py-4 text-sm last:border-0">
               <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className="mt-1 truncate text-xs text-red-300" title={run.error}>{run.error}</div>}</div>
-              <div className={`flex items-center gap-1.5 capitalize ${tone}`}><Icon size={14} />{state}</div>
-              <div className="text-zinc-300">{run ? ageLabel(run.started_at) : 'Awaiting run'}</div>
-              <div className="text-zinc-400">{durationLabel(run?.duration_ms ?? null)}</div>
+              <div className={`flex items-center gap-1.5 ${tone}`} title={state === 'verified' ? `Verified from ${evidence?.detail}` : undefined}><Icon size={14} />{statusLabel}</div>
+              <div className="text-zinc-300">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
+              <div className="text-zinc-400">{run ? durationLabel(run.duration_ms) : '—'}</div>
             </div>
           )
         })}
