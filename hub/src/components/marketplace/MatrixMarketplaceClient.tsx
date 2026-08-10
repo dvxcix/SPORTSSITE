@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine,
+  BookOpen,
   Boxes,
   Check,
   ChevronRight,
@@ -25,7 +26,7 @@ import { UserBadges } from "@/components/social/UserBadges";
 import type { Badge } from "@/lib/badges";
 import styles from "./MatrixMarketplace.module.css";
 
-type Snapshot = {
+export type Snapshot = {
   version: 1;
   name: string;
   color: string;
@@ -38,7 +39,7 @@ type Snapshot = {
   pipeline_steps: Record<string, unknown>[];
 };
 
-type Author = {
+export type Author = {
   id: string;
   username: string;
   display_name: string | null;
@@ -46,7 +47,7 @@ type Author = {
   is_verified: boolean;
   follower_count: number;
 };
-type Listing = {
+export type Listing = {
   id: string;
   author_id: string;
   title: string;
@@ -65,7 +66,7 @@ type Listing = {
 
 type Matrix = Snapshot & { id: string; enabled: boolean };
 
-function humanize(value: unknown) {
+export function humanize(value: unknown) {
   return String(value ?? "Configured step")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -74,7 +75,7 @@ function humanize(value: unknown) {
     .replace(/Rbi/g, "RBI");
 }
 
-function nodeLabel(row: Record<string, unknown>) {
+export function nodeLabel(row: Record<string, unknown>) {
   const key = humanize(row.field_key);
   if (row.kind && row.kind !== "filter")
     return `${humanize(row.kind)} · ${key}`;
@@ -95,7 +96,7 @@ export function MatrixBlueprint({
     snapshot.matrix_type === "pipeline"
       ? snapshot.pipeline_steps
       : snapshot.factors;
-  const visible = rows.slice(0, compact ? 5 : 8);
+  const visible = compact ? rows.slice(0, 5) : rows;
   return (
     <div
       className={styles.blueprint}
@@ -407,11 +408,22 @@ export function MatrixMarketplaceClient({
                         ? "PIPELINE"
                         : "CLASSIC"}
                     </span>
-                    <h2>{listing.title}</h2>
+                    <h2>
+                      <Link href={`/marketplace/${listing.id}`}>
+                        {listing.title}
+                      </Link>
+                    </h2>
                   </div>
                   <i style={{ background: listing.color }} />
                 </div>
                 {listing.description && <p>{listing.description}</p>}
+                <Link
+                  className={styles.detailsLink}
+                  href={`/marketplace/${listing.id}`}
+                >
+                  <BookOpen size={13} /> View full Matrix
+                  <ChevronRight size={13} />
+                </Link>
                 {listing.tags.length > 0 && (
                   <div className={styles.tags}>
                     {listing.tags.map((tag) => (
