@@ -60,10 +60,15 @@ export default async function PipelineHealthPage() {
   const sinceYesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const completedMlbDate = easternDateOffset(-1)
   const currentMlbDate = easternDateOffset(0)
-  const dailyPipelineNames = TRACKED_PIPELINES.filter(pipeline => pipeline.schedule === 'Daily').map(pipeline => pipeline.name)
+  // Minute-level jobs can fill the global history window before lower-frequency
+  // jobs appear. Fetch those slower jobs in a second bounded query so their
+  // most recent run is always represented without loading the full run ledger.
+  const lowerFrequencyPipelineNames = TRACKED_PIPELINES
+    .filter(pipeline => pipeline.staleAfterMinutes > 12)
+    .map(pipeline => pipeline.name)
   const [
     { data, error },
-    { data: dailyData },
+    { data: lowerFrequencyData },
     { count: failedWebhooks },
     { count: processingWebhooks },
     { count: failedPushes },
@@ -73,7 +78,7 @@ export default async function PipelineHealthPage() {
     { count: failedExports },
   ] = await Promise.all([
     admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').order('started_at', { ascending: false }).limit(250),
-    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').in('job_name', dailyPipelineNames).order('started_at', { ascending: false }).limit(500),
+    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').in('job_name', lowerFrequencyPipelineNames).order('started_at', { ascending: false }).limit(2_000),
     admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
     admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'processing').lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString()),
     admin.from('notification_delivery_attempts').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('attempted_at', sinceYesterday),
@@ -82,7 +87,7 @@ export default async function PipelineHealthPage() {
     admin.from('data_export_requests').select('id', { count: 'exact', head: true }).in('status', ['queued', 'processing', 'ready']),
     admin.from('data_export_requests').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
   ])
-  const runs = [...((data ?? []) as Run[]), ...((dailyData ?? []) as Run[])]
+  const runs = [...((data ?? []) as Run[]), ...((lowerFrequencyData ?? []) as Run[])]
   const latest = new Map<string, Run>()
   for (const run of runs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())) {
     if (!latest.has(run.job_name)) latest.set(run.job_name, run)
@@ -117,6 +122,24 @@ export default async function PipelineHealthPage() {
   const { data: seasonAverageOutput } = await admin.from('dugout_season_avg_precomputed').select('game_date').eq('game_date', currentMlbDate).limit(1)
   if (seasonAverageOutput?.length) {
     dataEvidence.set('dugout-season-avg-precompute', { observedAt: null, detail: `${currentMlbDate} season-average cache`, currentOutput: true })
+  }
+
+  const now = new Date()
+  const lineupCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  const readCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const absoluteCutoff = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).toISOString()
+  const telemetryCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const webhookCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const retentionChecks = await Promise.all([
+    admin.from('notifications').select('id', { count: 'exact', head: true }).eq('type', 'lineup_confirmed').lt('created_at', lineupCutoff),
+    admin.from('notifications').select('id', { count: 'exact', head: true }).eq('read', true).neq('type', 'lineup_confirmed').gte('created_at', absoluteCutoff).lt('created_at', readCutoff),
+    admin.from('notifications').select('id', { count: 'exact', head: true }).lt('created_at', absoluteCutoff),
+    admin.from('notification_delivery_attempts').select('id', { count: 'exact', head: true }).lt('attempted_at', telemetryCutoff),
+    admin.from('pipeline_runs').select('id', { count: 'exact', head: true }).lt('started_at', telemetryCutoff),
+    admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).lt('received_at', webhookCutoff),
+  ])
+  if (retentionChecks.every(check => !check.error && (check.count ?? 0) === 0)) {
+    dataEvidence.set('prune-notifications', { observedAt: null, detail: 'All retention windows are clear', currentOutput: true })
   }
 
   const rows = TRACKED_PIPELINES.map(pipeline => {
