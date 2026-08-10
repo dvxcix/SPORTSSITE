@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 
 export const revalidate = 0
 export const maxDuration = 280

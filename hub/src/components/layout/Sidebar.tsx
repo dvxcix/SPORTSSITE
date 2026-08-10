@@ -37,7 +37,7 @@ const nav: NavItem[] = [
   { href: '/explore',     icon: Compass,       label: 'Explore' },
   { href: '/search',      icon: Search,        label: 'Search' },
   { href: '/picks',       icon: TrendingUp,    label: 'Picks' },
-  { href: '/pro',         icon: Sparkles,      label: 'Go Pro', flagKey: 'feature_pro_plan' },
+  { href: '/pricing',     icon: Sparkles,      label: 'Memberships' },
   { href: '/messages',    icon: MessageCircle, label: 'Messages' },
   { href: '/notifications',icon: Bell,         label: 'Notifications' },
   null, // divider
@@ -82,7 +82,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // the site_settings rows we ship disabled by default.
   const [flags, setFlags] = useState<Record<string, boolean>>({
     feature_blog: false, feature_forum: false, feature_marketplace: false,
-    feature_pages: false, feature_pro_plan: false, feature_events: false,
+    feature_pages: false, feature_events: false,
   })
 
   useEffect(() => {

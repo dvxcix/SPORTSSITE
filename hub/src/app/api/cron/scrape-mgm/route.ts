@@ -5,7 +5,7 @@ import { openSession } from '@/lib/browserbase'
 import { scrapeMgmGame } from '@/lib/scrapers/mgmScraper'
 import { findAndClickGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 
 export const revalidate = 0
 export const maxDuration = 300

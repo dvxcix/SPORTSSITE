@@ -1,7 +1,6 @@
 import 'server-only'
 import Whop from '@whop/sdk'
-
-export const PLATFORM_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.slipsurge.com'
+export { PLATFORM_URL } from '@/lib/platform'
 
 export function getWhopPlatform() {
   const apiKey = process.env.WHOP_PLATFORM_API_KEY || process.env.WHOP_API_KEY

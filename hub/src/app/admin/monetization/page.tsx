@@ -1,219 +1,70 @@
+import Link from 'next/link'
+import { BadgeDollarSign, ExternalLink, Layers3, Users, WalletCards } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DollarSign } from 'lucide-react'
 import { MonetizationSettingsForm } from '@/components/admin/MonetizationSettingsForm'
-import { BookLogo } from '@/components/BookLogo'
-import { fmtUsd, formatOdds } from '@slipsurge/core/parlayCalc'
 
 export const dynamic = 'force-dynamic'
 
+const activeStatuses = ['active', 'trialing']
+
 export default async function AdminMonetizationPage() {
-  const supabase = createAdminClient()
+  const admin = createAdminClient()
+  const [creatorsResult, productsResult, entitlementsResult, eventsResult, settingResult] = await Promise.all([
+    admin.from('users').select('id,username,display_name,whop_connected_company_id,creator_commerce_status').eq('account_type', 'creator').order('display_name'),
+    admin.from('creator_products').select('id,creator_id,title,price,currency,product_type,status,updated_at').order('updated_at', { ascending: false }),
+    admin.from('creator_entitlements').select('id,creator_id,product_id,status').in('status', activeStatuses),
+    admin.from('creator_commerce_events').select('id,creator_id,product_id,event_type,amount,currency,status,created_at').order('created_at', { ascending: false }).limit(100),
+    admin.from('platform_settings').select('value').eq('key', 'fee_independent_creator_pct').maybeSingle(),
+  ])
 
-  const { data: creators } = await supabase
-    .from('users')
-    .select('id, username, display_name, avatar_url, is_verified, follower_count, subscription_price, created_at, stripe_connect_onboarded, stripe_connect_charges_enabled')
-    .eq('account_type', 'creator')
-    .order('follower_count', { ascending: false })
-
-  const { count: totalCreators } = await supabase
-    .from('users')
-    .select('id', { count: 'exact', head: true })
-    .eq('account_type', 'creator')
-
-  const { data: settingsRows } = await supabase.from('platform_settings').select('key, value')
-  const settingsMap: Record<string, any> = {}
-  for (const r of settingsRows ?? []) settingsMap[r.key] = r.value
-
-  const { data: proPlanRoster } = await supabase
-    .from('pro_plan_members')
-    .select('creator_id, is_active, joined_at, users:creator_id(username, display_name, avatar_url)')
-    .eq('is_active', true)
-
-  const { data: payouts } = await supabase
-    .from('creator_payouts')
-    .select('id, creator_id, source, gross_amount, platform_fee_amount, creator_amount, status, created_at, users:creator_id(username, display_name)')
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  const totalPlatformRevenue = (payouts ?? []).reduce((s, p: any) => s + (p.platform_fee_amount ?? 0), 0)
-
-  // User-posted picks/parlays — self-reported bets for social display, not
-  // money that flows through the platform. Kept separate from the Stripe
-  // payout numbers above so the two aren't confused with each other.
-  const { data: recentBets } = await supabase
-    .from('posts')
-    .select('id, post_type, book, wager_amount, potential_payout, combined_odds, pick_data, created_at, author:users!posts_author_id_fkey(username, display_name)')
-    .in('post_type', ['pick', 'parlay'])
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  const { count: totalPicks } = await supabase.from('posts').select('id', { count: 'exact', head: true }).eq('post_type', 'pick')
-  const { count: totalParlays } = await supabase.from('posts').select('id', { count: 'exact', head: true }).eq('post_type', 'parlay')
-  const totalWagered = (recentBets ?? []).reduce((s, b: any) => s + (b.wager_amount ?? 0), 0)
+  const creators = creatorsResult.data ?? []
+  const products = productsResult.data ?? []
+  const entitlements = entitlementsResult.data ?? []
+  const events = eventsResult.data ?? []
+  const recordedGmv = events
+    .filter(event => event.event_type === 'payment.succeeded' && event.amount != null)
+    .reduce((sum, event) => sum + Number(event.amount), 0)
+  const creatorsById = new Map(creators.map(creator => [creator.id, creator]))
+  const productsById = new Map(products.map(product => [product.id, product]))
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="flex items-center gap-3 mb-6">
-        <DollarSign size={20} className="text-green-400" />
-        <h1 className="text-xl font-black text-white">Monetization</h1>
-      </div>
+    <div className="mx-auto max-w-6xl p-6">
+      <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-lime-300"><BadgeDollarSign size={14} /> Whop commerce</span>
+          <h1 className="text-2xl font-black text-white">Monetization</h1>
+          <p className="mt-1 max-w-2xl text-sm text-zinc-400">Whop is the only payment system used for SlipSurge memberships, creator checkout, balances, and payouts.</p>
+        </div>
+        <Link href="/admin/creators" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-xs font-bold text-zinc-200 transition-colors hover:border-lime-400/40 hover:text-lime-300">Creator Control Center <ExternalLink size={14} /></Link>
+      </header>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: 'Total Creators', value: totalCreators ?? 0, color: 'text-purple-400' },
-          { label: 'With Subscription', value: (creators ?? []).filter((c: any) => c.subscription_price).length, color: 'text-green-400' },
-          { label: 'Pro Plan Roster', value: proPlanRoster?.length ?? 0, color: 'text-blue-400' },
-          { label: 'Platform Fees Collected', value: `$${totalPlatformRevenue.toFixed(2)}`, color: 'text-green-400' },
-        ].map(s => (
-          <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className={`text-2xl font-black ${s.color}`}>{typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</p>
-            <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
-          </div>
-        ))}
+          { label: 'Connected creators', value: creators.filter(row => row.whop_connected_company_id).length, icon: WalletCards },
+          { label: 'Live offers', value: products.filter(row => row.status === 'active').length, icon: Layers3 },
+          { label: 'Active members', value: entitlements.length, icon: Users },
+          { label: 'Recorded GMV', value: `$${recordedGmv.toFixed(2)}`, icon: BadgeDollarSign },
+        ].map(({ label, value, icon: Icon }) => <article key={label} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4"><Icon size={18} className="mb-3 text-lime-300" /><strong className="block text-2xl font-black text-white">{typeof value === 'number' ? value.toLocaleString() : value}</strong><span className="mt-1 block text-xs text-zinc-500">{label}</span></article>)}
       </div>
 
-      <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">Platform Settings</h2>
-      <div className="mb-8">
-        <MonetizationSettingsForm
-          initial={{
-            fee_independent_creator_pct: settingsMap.fee_independent_creator_pct ?? 10,
-            fee_pro_plan_creator_pct: settingsMap.fee_pro_plan_creator_pct ?? 5,
-            pro_plan_price_monthly: settingsMap.pro_plan_price_monthly ?? 9.99,
-            pro_plan_stripe_price_id: settingsMap.pro_plan_stripe_price_id ?? '',
-          }}
-        />
-      </div>
+      <section className="mb-8">
+        <div className="mb-3"><h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">Platform fee</h2><p className="mt-1 text-xs text-zinc-500">Applied when a creator publishes a new Whop offer.</p></div>
+        <MonetizationSettingsForm initial={{ fee_independent_creator_pct: Number(settingResult.data?.value ?? 15) }} />
+      </section>
 
-      <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">Creators</h2>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
-        <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800">
-            <tr>
-              {['Creator', 'Followers', 'Sub Price', 'Payouts Setup', 'Joined', 'Actions'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {(creators ?? []).map((c: any) => (
-              <tr key={c.id} className="hover:bg-zinc-800/50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-zinc-700 overflow-hidden">
-                      {c.avatar_url && <img src={c.avatar_url} alt="" className="w-full h-full object-cover" />}
-                    </div>
-                    <div>
-                      <p className="font-bold text-white">{c.display_name || c.username}</p>
-                      <p className="text-xs text-zinc-500">@{c.username}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-zinc-300">{(c.follower_count ?? 0).toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  {c.subscription_price
-                    ? <span className="text-green-400 font-bold">${c.subscription_price}/mo</span>
-                    : <span className="text-zinc-600">Free</span>}
-                </td>
-                <td className="px-4 py-3">
-                  {c.stripe_connect_charges_enabled
-                    ? <span className="text-green-400 text-xs font-bold">Ready</span>
-                    : c.stripe_connect_onboarded
-                      ? <span className="text-amber-400 text-xs font-bold">Pending review</span>
-                      : <span className="text-zinc-600 text-xs">Not started</span>}
-                </td>
-                <td className="px-4 py-3 text-zinc-500">{new Date(c.created_at).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <a href={`/profile/${c.username}`} target="_blank"
-                    className="text-xs text-blue-400 hover:underline">View</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">Picks &amp; Parlays</h2>
-      <p className="text-xs text-zinc-500 mb-3">
-        Self-reported bets users post to the feed — not money that flows through the platform. Wager/payout figures come from what the user typed in, unverified against any real sportsbook slip.
-      </p>
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        {[
-          { label: 'Straight Picks Posted', value: totalPicks ?? 0, color: 'text-blue-400' },
-          { label: 'Parlays Posted', value: totalParlays ?? 0, color: 'text-purple-400' },
-          { label: 'Wagered (last 50, self-reported)', value: fmtUsd(totalWagered), color: 'text-green-400' },
-        ].map(s => (
-          <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className={`text-2xl font-black ${s.color}`}>{typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</p>
-            <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
-        <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800">
-            <tr>
-              {['User', 'Type', 'Book', 'Odds', 'Wager', 'To Win', 'Result', 'Date'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {(recentBets ?? []).length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-zinc-600 text-sm">No picks or parlays posted yet</td></tr>
-            ) : (recentBets ?? []).map((b: any) => {
-              const result = b.pick_data?.result
-              return (
-                <tr key={b.id} className="hover:bg-zinc-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white font-bold">{b.author?.display_name || b.author?.username || '—'}</td>
-                  <td className="px-4 py-3 text-zinc-400 text-xs">{b.post_type === 'parlay' ? `Parlay (${b.pick_data?.legs?.length ?? '?'} legs)` : 'Straight'}</td>
-                  <td className="px-4 py-3">{b.book ? <BookLogo vendor={b.book} size={16} /> : <span className="text-zinc-600">—</span>}</td>
-                  <td className="px-4 py-3 text-zinc-300 font-mono text-xs">{formatOdds(b.combined_odds)}</td>
-                  <td className="px-4 py-3 text-zinc-300">{b.wager_amount != null ? fmtUsd(Number(b.wager_amount)) : '—'}</td>
-                  <td className="px-4 py-3 text-green-400 font-bold">{b.potential_payout != null && b.wager_amount != null ? fmtUsd(Number(b.potential_payout) - Number(b.wager_amount)) : '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-bold ${result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : result === 'push' ? 'text-zinc-500' : 'text-amber-400'}`}>
-                      {result === 'win' ? 'WIN' : result === 'loss' ? 'LOSS' : result === 'push' ? 'PUSH' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-500 text-xs">{new Date(b.created_at).toLocaleDateString()}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">Recent Payouts</h2>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b border-zinc-800">
-            <tr>
-              {['Creator', 'Source', 'Gross', 'Platform Fee', 'Creator Gets', 'Status', 'Date'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {(payouts ?? []).length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-zinc-600 text-sm">No payouts yet</td></tr>
-            ) : (payouts ?? []).map((p: any) => (
-              <tr key={p.id} className="hover:bg-zinc-800/50 transition-colors">
-                <td className="px-4 py-3 text-white font-bold">{p.users?.display_name || p.users?.username || '—'}</td>
-                <td className="px-4 py-3 text-zinc-400 text-xs">{p.source === 'pro_plan_pool' ? 'Pro Plan Pool' : 'Independent'}</td>
-                <td className="px-4 py-3 text-zinc-300">${Number(p.gross_amount).toFixed(2)}</td>
-                <td className="px-4 py-3 text-zinc-500">${Number(p.platform_fee_amount).toFixed(2)}</td>
-                <td className="px-4 py-3 text-green-400 font-bold">${Number(p.creator_amount).toFixed(2)}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-bold ${p.status === 'paid' ? 'text-green-400' : p.status === 'failed' ? 'text-red-400' : 'text-amber-400'}`}>
-                    {p.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-zinc-500 text-xs">{new Date(p.created_at).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+        <header className="border-b border-zinc-800 px-4 py-3"><h2 className="text-sm font-bold text-white">Recent Whop commerce</h2><p className="mt-1 text-xs text-zinc-500">Provider events recorded for creator products. Creator withdrawals remain in each connected Whop payout portal.</p></header>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead className="border-b border-zinc-800"><tr>{['Creator', 'Offer', 'Event', 'Amount', 'Status', 'Time'].map(label => <th key={label} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-zinc-500">{label}</th>)}</tr></thead>
+            <tbody className="divide-y divide-zinc-800">{events.length ? events.map(event => {
+              const creator = event.creator_id ? creatorsById.get(event.creator_id) : undefined
+              const product = event.product_id ? productsById.get(event.product_id) : undefined
+              return <tr key={event.id} className="transition-colors hover:bg-zinc-800/50"><td className="px-4 py-3 font-bold text-white">{creator?.display_name || creator?.username || 'Unknown creator'}</td><td className="px-4 py-3 text-zinc-300">{product?.title || 'Platform event'}</td><td className="px-4 py-3 text-xs text-zinc-400">{String(event.event_type).replaceAll('_', ' ')}</td><td className="px-4 py-3 font-bold text-lime-300">{event.amount == null ? 'Recorded' : `${String(event.currency || 'usd').toUpperCase()} ${Number(event.amount).toFixed(2)}`}</td><td className="px-4 py-3 text-xs font-bold text-zinc-300">{event.status || 'recorded'}</td><td className="px-4 py-3 text-xs text-zinc-500">{new Date(event.created_at).toLocaleString()}</td></tr>
+            }) : <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-600">No Whop commerce events yet.</td></tr>}</tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
 }

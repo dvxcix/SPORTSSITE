@@ -5,7 +5,7 @@ import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core
 import { getTeamLogoUrl, getTeamLogoPngUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { normName } from '@slipsurge/core/nameNorm'
 import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 import type { BDLPropMap } from '@/lib/balldontlie'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 

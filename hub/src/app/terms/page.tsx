@@ -60,8 +60,8 @@ export default function TermsPage() {
       </Section>
 
       <Section id="billing" title="5. Subscriptions & Billing">
-        Paid tiers (Basic, Advanced, Ultimate) are billed on a recurring basis through a third-party billing
-        partner. Subscribing unlocks platform features (research tools, feed features, higher-tier content)
+        Paid tiers (Basic, Advanced, Ultimate) are billed on a recurring basis through Whop. Subscribing unlocks
+        platform features (research tools, feed features, higher-tier content)
         only — it does not grant any betting product, wagering credit, or guarantee of any outcome. Your
         subscription renews automatically until you cancel; you can cancel any time from{' '}
         <a href="/settings/membership" style={{ color: 'var(--accent)' }}>Settings → Membership</a>, and

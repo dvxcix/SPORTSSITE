@@ -1,34 +1,56 @@
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, WalletCards, XCircle } from 'lucide-react'
 
-// Server component so we can check env var PRESENCE without ever shipping
-// key values to the client. Never handle/display raw Stripe keys in a form.
+// Server component so configuration values never reach the browser.
 export default function AdminPaymentsSettingsPage() {
-  const checks = [
-    { label: 'Stripe Secret Key', envVar: 'STRIPE_SECRET_KEY', present: !!process.env.STRIPE_SECRET_KEY },
-    { label: 'Stripe Webhook Secret', envVar: 'STRIPE_WEBHOOK_SECRET', present: !!process.env.STRIPE_WEBHOOK_SECRET },
+  const groups = [
+    {
+      title: 'SlipSurge memberships',
+      description: 'Checkout, renewals, cancellations, and tier entitlements.',
+      checks: [
+        { label: 'Whop API key', envVar: 'WHOP_API_KEY', present: !!process.env.WHOP_API_KEY },
+        { label: 'Whop webhook key', envVar: 'WHOP_WEBHOOK_KEY', present: !!process.env.WHOP_WEBHOOK_KEY },
+      ],
+    },
+    {
+      title: 'Creator platform',
+      description: 'Connected creator companies, marketplace checkout, balances, and payouts.',
+      checks: [
+        { label: 'Whop platform API key', envVar: 'WHOP_PLATFORM_API_KEY', present: !!process.env.WHOP_PLATFORM_API_KEY },
+        { label: 'Whop platform company ID', envVar: 'WHOP_PLATFORM_COMPANY_ID', present: !!process.env.WHOP_PLATFORM_COMPANY_ID },
+      ],
+    },
+    {
+      title: 'Ultimate add-on',
+      description: 'The separate Whop business used for the Discord community add-on.',
+      checks: [
+        { label: 'Add-on Whop API key', envVar: 'ADDON_WHOP_KEY', present: !!process.env.ADDON_WHOP_KEY },
+        { label: 'Add-on Whop webhook key', envVar: 'ADDON_WHOP_WEBHOOK', present: !!process.env.ADDON_WHOP_WEBHOOK },
+      ],
+    },
   ]
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-xl font-black text-white mb-1">Payments</h1>
-      <p className="text-xs text-zinc-500 mb-6">
-        Stripe keys are set as Vercel project env vars, not here — this page only shows whether each is configured. Editable pricing/plan config isn't wired to any UI yet; check hub/src/lib/stripe.ts and hub/src/app/api/stripe/webhook/route.ts directly for behavior.
-      </p>
+    <div className="mx-auto max-w-4xl p-6">
+      <div className="mb-6 flex items-start gap-3">
+        <span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><WalletCards size={19} /></span>
+        <div><h1 className="text-xl font-black text-white">Whop payments</h1><p className="mt-1 text-sm text-zinc-400">SlipSurge uses Whop exclusively for platform memberships, creator checkout, billing, and payouts.</p></div>
+      </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
-        {checks.map(c => (
-          <div key={c.envVar} className="flex items-center justify-between px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-white">{c.label}</p>
-              <p className="text-xs text-zinc-500 mt-0.5 font-mono">{c.envVar}</p>
+      <div className="grid gap-4">
+        {groups.map(group => <section key={group.title} className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+          <header className="border-b border-zinc-800 px-4 py-3"><h2 className="text-sm font-bold text-white">{group.title}</h2><p className="mt-1 text-xs text-zinc-500">{group.description}</p></header>
+          <div className="divide-y divide-zinc-800">{group.checks.map(check => <div key={check.envVar} className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white">{check.label}</p>
+              <p className="mt-0.5 truncate font-mono text-xs text-zinc-500">{check.envVar}</p>
             </div>
-            {c.present ? (
+            {check.present ? (
               <span className="flex items-center gap-1.5 text-xs font-bold text-green-400"><CheckCircle2 size={14} /> Configured</span>
             ) : (
               <span className="flex items-center gap-1.5 text-xs font-bold text-red-400"><XCircle size={14} /> Missing</span>
             )}
-          </div>
-        ))}
+          </div>)}</div>
+        </section>)}
       </div>
     </div>
   )

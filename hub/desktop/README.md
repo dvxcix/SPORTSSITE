@@ -2,7 +2,7 @@
 
 The Windows/macOS client is a Tauri 2 shell around the deployed SlipSurge
 Next.js application. It intentionally does not bundle server routes, cron jobs,
-scrapers, service-role credentials, Whop secrets, or Stripe secrets.
+scrapers, service-role credentials, or Whop secrets.
 
 ## Architecture boundary
 

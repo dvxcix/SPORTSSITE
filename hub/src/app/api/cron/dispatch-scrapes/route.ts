@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 import { missingMarkets } from '@/lib/scrapers/retryMarkets'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 

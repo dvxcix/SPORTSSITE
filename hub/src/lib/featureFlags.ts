@@ -8,7 +8,6 @@ export const FEATURE_FLAGS = {
   forum: 'feature_forum',
   marketplace: 'feature_marketplace',
   pages: 'feature_pages',
-  pro_plan: 'feature_pro_plan',
   stories: 'feature_stories',
   events: 'feature_events',
 } as const

@@ -1,6 +1,6 @@
 # Billing and webhook recovery
 
-The `provider_webhook_events` ledger makes Stripe and Whop event handling retry-safe. A succeeded event must not be processed again.
+The `provider_webhook_events` ledger makes Whop event handling retry-safe. A succeeded event must not be processed again.
 
 ## Triage
 

@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { verifyDiscordSignature, editDeferredReply } from '@/lib/discord'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 
 export const revalidate = 0
 

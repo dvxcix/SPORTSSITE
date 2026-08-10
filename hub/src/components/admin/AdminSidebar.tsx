@@ -32,7 +32,7 @@ const NAV: NavItem[] = [
   { href: '/admin/marketplace', icon: ShoppingBag, label: 'Marketplace' },
   { href: '/admin/jobs', icon: Briefcase, label: 'Jobs' },
   { href: '/admin/forum', icon: BookOpen, label: 'Forum' },
-  { href: '/admin/creators', icon: Zap, label: 'Creator applications' },
+  { href: '/admin/creators', icon: Zap, label: 'Creator operations' },
   { href: '/admin/monetization', icon: CreditCard, label: 'Monetization' },
   { href: '/admin/pikkit-import', icon: Upload, label: 'Pikkit import' },
   { href: '/admin/fanduel-import', icon: Upload, label: 'FanDuel markets' },
@@ -53,7 +53,7 @@ const NAV: NavItem[] = [
   { label: 'Settings', icon: Settings, children: [
     { href: '/admin/settings/general', label: 'General' }, { href: '/admin/settings/features', label: 'Features' },
     { href: '/admin/settings/email', label: 'Email templates' }, { href: '/admin/settings/social-login', label: 'Social login' },
-    { href: '/admin/settings/payments', label: 'Payment gateways' }, { href: '/admin/settings/ai', label: 'AI settings' },
+    { href: '/admin/settings/payments', label: 'Whop payments' }, { href: '/admin/settings/ai', label: 'AI settings' },
     { href: '/admin/settings/custom-code', label: 'Custom CSS and JS' },
   ] },
 ]

@@ -45,7 +45,7 @@ test('private account fields are not exposed through public profile reads', asyn
   const columns = await read('src/lib/supabase/userColumns.ts')
   const auth = await read('src/context/AuthContext.tsx')
   const accountRoute = await read('src/app/api/account/me/route.ts')
-  for (const privateField of ['email', 'stripe_customer_id', 'whop_membership_id', 'notification_settings']) {
+  for (const privateField of ['email', 'whop_connected_company_id', 'whop_membership_id', 'notification_settings']) {
     const publicSection = columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[0]
     assert.ok(!publicSection.includes(`'${privateField}'`), `${privateField} leaked into public user columns`)
   }
@@ -72,14 +72,29 @@ test('sensitive admin surfaces require enrolled MFA at aal2', async () => {
   assert.ok(layout.includes("redirect('/settings/security?next=/admin')"))
 })
 
-test('billing webhooks are retry-safe and deliveries are observable', async () => {
-  const stripe = await read('src/app/api/stripe/webhook/route.ts')
+test('Whop billing is retry-safe, exclusive, and deliveries are observable', async () => {
   const whop = await read('src/lib/whopWebhook.ts')
+  const onboarding = await read('src/app/api/creator/whop-onboard/route.ts')
+  const products = await read('src/app/api/creator/products/route.ts')
+  const payouts = await read('src/app/api/creator/payout-token/route.ts')
+  const pkg = JSON.parse(await read('package.json'))
   const push = await read('src/app/api/push/send/route.ts')
   const email = await read('src/app/api/email/send-notification/route.ts')
-  for (const source of [stripe, whop]) {
-    assert.ok(source.includes("from('provider_webhook_events')"))
-    assert.ok(source.includes("status: 'succeeded'"))
+  assert.ok(whop.includes("from('provider_webhook_events')"))
+  assert.ok(whop.includes("status: 'succeeded'"))
+  assert.ok(onboarding.includes('accountLinks.create'))
+  assert.ok(products.includes('checkoutConfigurations.create'))
+  assert.ok(payouts.includes('accessTokens.create'))
+  assert.equal(pkg.dependencies?.stripe, undefined)
+  assert.equal(pkg.dependencies?.['@stripe/stripe-js'], undefined)
+  for (const removedFile of [
+    'src/lib/stripe.ts',
+    'src/app/api/stripe/webhook/route.ts',
+    'src/app/api/checkout/pro-plan/route.ts',
+    'src/app/api/checkout/creator/route.ts',
+    'src/app/api/creator/connect-onboard/route.ts',
+  ]) {
+    await assert.rejects(read(removedFile), `${removedFile} should not exist`)
   }
   assert.ok(push.includes("from('notification_delivery_attempts')"))
   assert.ok(push.includes("skipped: 'push already delivered'"))

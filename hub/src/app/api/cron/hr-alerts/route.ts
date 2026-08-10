@@ -7,7 +7,7 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { normName } from '@slipsurge/core/nameNorm'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 import type { BDLPropMap } from '@/lib/balldontlie'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 

@@ -1,4 +1,4 @@
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 
 // Fires one request per game concurrently at this same route (passing
 // gamePk) instead of looping through every game sequentially in-process —

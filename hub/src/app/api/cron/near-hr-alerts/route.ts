@@ -5,7 +5,7 @@ import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoPngUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { postAlert } from '@/lib/discord'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0

@@ -217,7 +217,7 @@ export interface CreatorTier {
   price_monthly: number
   price_yearly?: number
   features: string[]
-  stripe_price_id?: string
+  whop_product_id?: string
   color: string
   max_subscribers?: number
   is_active: boolean

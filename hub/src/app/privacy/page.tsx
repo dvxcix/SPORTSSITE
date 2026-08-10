@@ -42,9 +42,9 @@ export default function PrivacyPage() {
         you explicitly connect.</p>
         <p style={{ marginBottom: 12 }}><strong>Content you create.</strong> Posts, comments, picks, parlays,
         Custom Matrices, watchlist entries, and any other content you submit.</p>
-        <p style={{ marginBottom: 12 }}><strong>Billing information.</strong> Subscriptions are processed by a
-        third-party payment and subscription platform. We receive your tier, subscription status, and renewal
-        dates from that processor — we never see or store your full card number.</p>
+        <p style={{ marginBottom: 12 }}><strong>Billing information.</strong> Subscriptions and creator payments
+        are processed by Whop. We receive your tier, subscription status, and renewal dates from Whop. We never
+        see or store your full card number.</p>
         <p style={{ marginBottom: 12 }}><strong>Device & usage data.</strong> IP address, browser/device type,
         pages viewed, and general usage patterns, collected automatically to keep the Service working and secure.
         If you enable push notifications, we store the device token needed to deliver them.</p>
@@ -95,8 +95,8 @@ export default function PrivacyPage() {
         <ul style={{ margin: '0 0 12px', paddingLeft: 20, lineHeight: 1.8 }}>
           <li><strong>Authentication, database, and file storage</strong> — a third-party provider handles account
           authentication and stores your account and content data on our behalf.</li>
-          <li><strong>Subscription billing and membership management</strong> — a third-party payment and
-          subscription platform.</li>
+          <li><strong>Subscription billing, creator payments, and membership management</strong> are provided by
+          Whop.</li>
           <li><strong>Application hosting and delivery</strong> — a third-party cloud hosting provider.</li>
           <li><strong>Official league data</strong> — game schedules, box scores, player bios, and official player
           headshots/team logos are pulled from a public sports-league data source to power research tools like the

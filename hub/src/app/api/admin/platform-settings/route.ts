@@ -21,11 +21,18 @@ export async function PATCH(req: Request) {
   if (!body || typeof body.key !== 'string' || body.value === undefined) {
     return NextResponse.json({ error: 'key and value are required' }, { status: 400 })
   }
+  if (body.key !== 'fee_independent_creator_pct') {
+    return NextResponse.json({ error: 'Unsupported platform setting' }, { status: 400 })
+  }
+  const value = Number(body.value)
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    return NextResponse.json({ error: 'Creator platform fee must be between 0 and 100' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
   const { error } = await admin
     .from('platform_settings')
-    .upsert({ key: body.key, value: body.value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .upsert({ key: body.key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })

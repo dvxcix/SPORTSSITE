@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { postAlert } from '@/lib/discord'
-import { PLATFORM_URL } from '@/lib/stripe'
+import { PLATFORM_URL } from '@/lib/platform'
 
 export const revalidate = 0
 export const maxDuration = 30
