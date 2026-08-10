@@ -34,6 +34,15 @@ function verifyWhopSignature(rawBody: string, id: string, timestamp: string, sig
   })
 }
 
+function stringValue(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function objectId(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  return stringValue((value as Record<string, unknown>).id)
+}
+
 // Field names below (event.action vs event.type, data.plan_id vs
 // data.plan?.id, etc.) are read defensively across a few plausible shapes —
 // Whop's public docs don't expose a full payload schema for these events.
@@ -53,9 +62,9 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 })
   }
 
-  let event: any
+  let event: Record<string, unknown>
   try {
-    event = JSON.parse(rawBody)
+    event = JSON.parse(rawBody) as Record<string, unknown>
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
@@ -63,11 +72,13 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
   const supabase = createAdminClient()
 
   try {
-    const type: string | undefined = event?.action ?? event?.type ?? event?.event
-    const data = event?.data ?? event
-    const metadata = data?.metadata ?? {}
-    const internalUserId: string | undefined = metadata?.internal_user_id
-    const planId: string | undefined = data?.plan_id ?? data?.plan?.id
+    const type = [event.action, event.type, event.event].find((value): value is string => typeof value === 'string')
+    const data = (event.data && typeof event.data === 'object' ? event.data : event) as Record<string, unknown>
+    const metadata = (data.metadata && typeof data.metadata === 'object' ? data.metadata : {}) as Record<string, unknown>
+    const internalUserId = stringValue(metadata.internal_user_id)
+    const creatorProductId = stringValue(metadata.slipsurge_product_id)
+    const creatorId = stringValue(metadata.slipsurge_creator_id)
+    const planId = stringValue(data.plan_id) ?? objectId(data.plan)
     // Real bug (confirmed via Whop's actual payment.succeeded schema): on a
     // payment event, `data` is the PAYMENT object, and its own real
     // membership reference lives at `data.membership` (a plain "mem_..."
@@ -80,8 +91,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     // membership.* event `data` genuinely IS the membership resource (no
     // `.membership` field on itself), so this still correctly falls through
     // to `data.id` there — unchanged for that case.
-    const membershipId: string | undefined =
-      (typeof data?.membership === 'string' ? data.membership : data?.membership?.id) ?? data?.membership_id ?? data?.id
+    const membershipId = stringValue(data.membership) ?? objectId(data.membership) ?? stringValue(data.membership_id) ?? stringValue(data.id)
     const periodEndRaw = data?.renewal_period_end ?? data?.period_end ?? data?.expires_at
     const periodEnd = typeof periodEndRaw === 'number'
       ? new Date(periodEndRaw * 1000).toISOString()
@@ -93,6 +103,32 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     // payload either. One line, no payload contents, removed once confirmed.
     if (!['payment.succeeded', 'membership.activated', 'membership.went_valid', 'payment.failed', 'membership.deactivated', 'membership.went_invalid'].includes(type ?? '')) {
       console.error('[whop-webhook] unrecognized event type', { type })
+    }
+
+    if (creatorProductId && creatorId) {
+      await supabase.from('creator_commerce_events').upsert({
+        creator_id: creatorId,
+        product_id: creatorProductId,
+        event_type: type || 'unknown',
+        provider_event_id: id,
+        provider_object_id: data?.id || null,
+        amount: data?.subtotal ?? data?.amount ?? data?.total ?? null,
+        currency: data?.currency || 'usd',
+        status: data?.status || null,
+        metadata: { membership_id: membershipId || null },
+      }, { onConflict: 'provider_event_id' })
+
+      if (internalUserId && ['payment.succeeded', 'membership.activated', 'membership.went_valid'].includes(type || '')) {
+        await supabase.from('creator_entitlements').upsert({ user_id: internalUserId, creator_id: creatorId, product_id: creatorProductId, whop_membership_id: membershipId || null, status: 'active', current_period_end: periodEnd, updated_at: new Date().toISOString() }, { onConflict: 'user_id,product_id' })
+        const { data: entitledGroups } = await supabase.from('groups').select('id,channel_id').eq('creator_product_id', creatorProductId)
+        for (const group of entitledGroups || []) {
+          await supabase.from('group_members').upsert({ group_id: group.id, user_id: internalUserId, role: 'member' }, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
+          if (group.channel_id) await supabase.from('channel_members').upsert({ channel_id: group.channel_id, user_id: internalUserId }, { onConflict: 'channel_id,user_id', ignoreDuplicates: true })
+        }
+      } else if (internalUserId && ['payment.failed', 'membership.deactivated', 'membership.went_invalid'].includes(type || '')) {
+        await supabase.from('creator_entitlements').update({ status: type === 'payment.failed' ? 'past_due' : 'expired', updated_at: new Date().toISOString() }).eq('user_id', internalUserId).eq('product_id', creatorProductId)
+      }
+      return NextResponse.json({ received: true })
     }
 
     switch (type) {
@@ -191,8 +227,8 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
       default:
         break
     }
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Webhook processing failed' }, { status: 500 })
   }
 
   return NextResponse.json({ received: true })

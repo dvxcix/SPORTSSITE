@@ -11,7 +11,7 @@ export default async function CreatorPayoutsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('id, account_type, stripe_account_id, stripe_connect_onboarded, stripe_connect_charges_enabled, stripe_connect_payouts_enabled')
+    .select('id, account_type, whop_connected_company_id, creator_commerce_status')
     .eq('id', user.id)
     .single()
 
@@ -25,8 +25,8 @@ export default async function CreatorPayoutsPage() {
   }
 
   const { data: recentPayouts } = await supabase
-    .from('creator_payouts')
-    .select('id, source, gross_amount, platform_fee_amount, creator_amount, status, created_at')
+    .from('creator_commerce_events')
+    .select('id, event_type, amount, currency, status, created_at')
     .eq('creator_id', user.id)
     .order('created_at', { ascending: false })
     .limit(20)

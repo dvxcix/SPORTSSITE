@@ -8,10 +8,13 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '⚾', '🏀', '🏒', '⚽', '🥊', '🎉', '💎', '🚀', '👑', '🦁', '🎰']
 
-export function CreateGroupForm({ userId }: { userId: string }) {
+type CreatorProduct = { id: string; title: string; price: number; currency: string }
+
+export function CreateGroupForm({ userId, products = [] }: { userId: string; products?: CreatorProduct[] }) {
   const router = useRouter()
   const supabase = createClient()
   const [form, setForm] = useState({ name: '', description: '', sport: '', emoji: '👥', is_public: true })
+  const [creatorProductId, setCreatorProductId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -32,6 +35,8 @@ export function CreateGroupForm({ userId }: { userId: string }) {
       emoji: form.emoji,
       is_public: form.is_public,
       owner_id: userId,
+      access_type: creatorProductId ? 'paid' : 'free',
+      creator_product_id: creatorProductId || null,
       // Not member_count: 1 here — the group_members insert right below
       // fires the count-sync trigger, which would double it to 2.
     }).select('id, slug').single()
@@ -59,6 +64,8 @@ export function CreateGroupForm({ userId }: { userId: string }) {
         channel_type: form.is_public ? 'public' : 'members_only',
         owner_id: userId,
         member_count: 1,
+        group_id: data.id,
+        creator_product_id: creatorProductId || null,
       }).select('id').single()
       if (channel?.id) {
         await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: userId })
@@ -118,6 +125,14 @@ export function CreateGroupForm({ userId }: { userId: string }) {
             })}
           </div>
         </div>
+        {products.length > 0 && <div>
+          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Member access</label>
+          <select value={creatorProductId} onChange={event => setCreatorProductId(event.target.value)} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-green-500/50">
+            <option value="">Free group</option>
+            {products.map(product => <option key={product.id} value={product.id}>{product.title} · {product.currency.toUpperCase()} {Number(product.price).toFixed(2)}</option>)}
+          </select>
+          <p className="text-xs text-zinc-500 mt-1.5">Paid groups are available only to members with an active entitlement.</p>
+        </div>}
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white">Public group</p>
