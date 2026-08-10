@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasApprovedCreatorAccess } from '@/lib/creator'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { creatorFee, getWhopPlatform, PLATFORM_URL } from '@/lib/whopPlatform'
 
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   const admin = createAdminClient()
   const { data: profile } = await admin.from('users').select('account_type,whop_connected_company_id').eq('id', user.id).single()
-  if (profile?.account_type !== 'creator' || !profile.whop_connected_company_id) return NextResponse.json({ error: 'Finish creator onboarding first' }, { status: 403 })
+  if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type) || !profile.whop_connected_company_id) return NextResponse.json({ error: 'Finish creator onboarding first' }, { status: 403 })
   const body = await request.json().catch(() => null) as { title?: string; description?: string; price?: number; productType?: 'membership' | 'one_time' } | null
   const title = body?.title?.trim(); const price = Number(body?.price); const recurring = body?.productType !== 'one_time'
   if (!title || title.length > 80 || !Number.isFinite(price) || price < 1) return NextResponse.json({ error: 'Enter a valid title and price' }, { status: 400 })

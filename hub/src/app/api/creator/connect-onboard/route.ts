@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasApprovedCreatorAccess } from '@/lib/creator'
 import { getStripe, PLATFORM_URL } from '@/lib/stripe'
 
 // Creates (or resumes) a Stripe Connect Express account for the signed-in creator
@@ -16,7 +17,7 @@ export async function POST() {
     .single()
 
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-  if (profile.account_type !== 'creator') {
+  if (!await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) {
     return NextResponse.json({ error: 'Only approved creators can set up payouts' }, { status: 403 })
   }
 

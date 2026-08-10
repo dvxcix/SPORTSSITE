@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasApprovedCreatorAccess } from '@/lib/creator'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWhopPlatform, getWhopPlatformCompanyId, PLATFORM_URL } from '@/lib/whopPlatform'
 
@@ -9,7 +10,7 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   const admin = createAdminClient()
   const { data: profile } = await admin.from('users').select('id,email,username,display_name,account_type,whop_connected_company_id').eq('id', user.id).single()
-  if (!profile || profile.account_type !== 'creator') return NextResponse.json({ error: 'Creator approval is required' }, { status: 403 })
+  if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) return NextResponse.json({ error: 'Creator approval is required' }, { status: 403 })
   try {
     const whop = getWhopPlatform()
     let companyId = profile.whop_connected_company_id as string | null
@@ -27,4 +28,3 @@ export async function POST() {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Whop onboarding failed' }, { status: 500 })
   }
 }
-

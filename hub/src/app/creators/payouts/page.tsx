@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { PayoutSetupClient } from './PayoutSetupClient'
+import { hasApprovedCreatorAccess } from '@/lib/creator'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,11 +17,11 @@ export default async function CreatorPayoutsPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.account_type !== 'creator') {
+  if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)' }}>
         Payouts are available once your creator application is approved. See{' '}
-        <a href="/creators/apply" style={{ color: 'var(--accent)' }}>Apply to become a creator</a>.
+        <Link href="/creators/apply" style={{ color: 'var(--accent)' }}>Apply to become a creator</Link>.
       </div>
     )
   }

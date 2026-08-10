@@ -1,79 +1,33 @@
-import { getChannels } from '@/lib/queries'
+import { createClient } from '@/lib/supabase/server'
+import { hasCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
-import { MessageSquare, Users, Pin } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { sportLogoUrl } from '@/lib/sportLogos'
+import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Radio, Users } from 'lucide-react'
 
-export const revalidate = 60
+type ChannelCardData = { id: string; slug: string; name: string; description?: string | null; icon?: string | null; channel_type?: string | null; member_count?: number | null }
+
+export const dynamic = 'force-dynamic'
 
 export default async function ChannelsPage() {
-  const channels = await getChannels()
-  const pinned = channels.filter(c => c.is_pinned)
-  const rest = channels.filter(c => !c.is_pinned)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const [{ data: profile }, { data: approval }, { data: channels }] = await Promise.all([
+    user ? supabase.from('users').select('account_type').eq('id', user.id).single() : Promise.resolve({ data: null }),
+    user ? supabase.from('creator_applications').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from('channels').select('*').order('is_pinned', { ascending: false }).order('member_count', { ascending: false }),
+  ])
+  const creator = hasCreatorAccess(profile?.account_type, Boolean(approval))
+  const owned = (channels ?? []).filter(channel => channel.owner_id === user?.id)
+  const community = (channels ?? []).filter(channel => channel.owner_id !== user?.id)
 
-  return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-zinc-800 rounded-lg">
-          <MessageSquare size={20} className="text-green-400" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black text-white">Channels</h1>
-          <p className="text-sm text-zinc-500">Join the conversation</p>
-        </div>
-      </div>
-
-      {pinned.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Pin size={12} /> Featured
-          </h2>
-          <div className="space-y-2">
-            {pinned.map(ch => <ChannelRow key={ch.id} channel={ch} />)}
-          </div>
-        </section>
-      )}
-
-      {rest.length > 0 && (
-        <section>
-          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">All Channels</h2>
-          <div className="space-y-2">
-            {rest.map(ch => <ChannelRow key={ch.id} channel={ch} />)}
-          </div>
-        </section>
-      )}
-    </div>
-  )
+  return <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+    <header className="flex flex-col gap-5 rounded-3xl border border-lime-400/20 bg-[radial-gradient(circle_at_top_right,rgba(74,222,128,.14),transparent_35%),#0c0f0d] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-9"><div><p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.18em] text-lime-300"><Radio size={14}/> Live community</p><h1 className="mt-2 text-3xl font-black text-white sm:text-5xl">Channels</h1><p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">Real-time rooms for creator communities, members, and live sports discussion.</p></div>{creator && <Link href="/groups/create" className="inline-flex items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-sm font-black text-black"><Plus size={16}/> New group and channel</Link>}</header>
+    {creator && (
+      <ChannelSection title="Your channels" eyebrow="Creator workspace" channels={owned} empty={<div className="rounded-2xl border border-dashed border-lime-400/25 bg-lime-400/[.04] p-6"><h3 className="font-black text-white">No creator channel yet</h3><p className="mt-1 text-sm text-zinc-400">Create a group and its channel will be created, connected, and ready for members automatically.</p><Link href="/groups/create" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-lime-300">Create your first group <ArrowRight size={14}/></Link></div>}/>
+    )}
+    <ChannelSection title="Available channels" eyebrow="Conversations" channels={community} empty={<div className="rounded-2xl border border-white/8 bg-white/[.025] p-10 text-center text-sm text-zinc-500">No channels are available yet.</div>}/>
+  </main>
 }
 
-function ChannelRow({ channel }: { channel: Awaited<ReturnType<typeof getChannels>>[0] }) {
-  return (
-    <Link href={`/channels/${channel.slug}`}>
-      <div className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-600 transition-all group">
-        <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl shrink-0">
-          {channel.icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-white">{channel.name}</span>
-            {channel.sport && (
-              sportLogoUrl(channel.sport)
-                ? <img src={sportLogoUrl(channel.sport)} alt={channel.sport} className="w-4 h-4 object-contain" />
-                : <Badge>{channel.sport}</Badge>
-            )}
-            {channel.channel_type !== 'public' && (
-              <Badge variant="pick">{channel.channel_type === 'vip' ? 'VIP' : 'Members'}</Badge>
-            )}
-          </div>
-          {channel.description && (
-            <p className="text-sm text-zinc-500 mt-0.5 truncate">{channel.description}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-4 text-xs text-zinc-600 shrink-0">
-          <span className="flex items-center gap-1"><Users size={12} />{channel.member_count}</span>
-          <span className="text-green-500 opacity-0 group-hover:opacity-100 transition-opacity">Join →</span>
-        </div>
-      </div>
-    </Link>
-  )
+function ChannelSection({ title, eyebrow, channels, empty }: { title: string; eyebrow: string; channels: ChannelCardData[]; empty: React.ReactNode }) {
+  return <section className="mt-9"><p className="text-xs font-bold uppercase tracking-widest text-zinc-500">{eyebrow}</p><div className="mb-4 mt-1 flex items-center justify-between"><h2 className="text-xl font-black text-white">{title}</h2><span className="text-xs text-zinc-600">{channels.length}</span></div>{channels.length ? <div className="grid gap-3 md:grid-cols-2">{channels.map(channel => <Link key={channel.id} href={`/channels/${channel.slug}`} className="group flex items-center gap-4 rounded-2xl border border-white/8 bg-[#101311] p-4 hover:border-lime-400/30"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xl">{channel.icon || <Hash/>}</div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><h3 className="truncate font-black text-white">{channel.name}</h3>{channel.channel_type !== 'public' && <LockKeyhole size={12} className="text-amber-300"/>}</div><p className="mt-1 truncate text-sm text-zinc-500">{channel.description || 'Community conversation'}</p><span className="mt-2 flex items-center gap-1 text-xs text-zinc-600"><Users size={12}/>{channel.member_count ?? 0} members</span></div><MessageSquareText size={17} className="text-zinc-700 group-hover:text-lime-300"/></Link>)}</div> : empty}</section>
 }

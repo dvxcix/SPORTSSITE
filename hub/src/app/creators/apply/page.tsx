@@ -29,6 +29,7 @@ import { useAuth } from '@/context/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import styles from './CreatorApply.module.css'
+import { hasCreatorAccess } from '@/lib/creator'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Tennis', 'Golf', 'Boxing', 'CFB', 'CBB']
 
@@ -111,7 +112,7 @@ export default function CreatorApplyPage() {
     setSubmitting(false)
   }
 
-  const isCreator = profile?.account_type === 'creator'
+  const isCreator = hasCreatorAccess(profile?.account_type)
 
   return (
     <main className={styles.page}>
