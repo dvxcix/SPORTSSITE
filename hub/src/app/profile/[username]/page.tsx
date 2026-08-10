@@ -164,19 +164,20 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   }))
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <main className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
+      <div className="overflow-hidden rounded-[28px] border border-white/[.08] bg-[#0b0d10] shadow-[0_30px_100px_rgba(0,0,0,.4)]">
       {/* Banner */}
-      <div className="h-40 bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 relative overflow-hidden">
+      <div className="h-44 sm:h-60 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 relative overflow-hidden">
         {profile.banner_url && <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />}
         {!profile.banner_url && (
-          <div className="absolute inset-0 bg-gradient-to-br from-green-900/30 to-zinc-900" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(163,230,53,.22),transparent_42%),linear-gradient(135deg,#172015,#090b0e_65%)]" />
         )}
       </div>
 
       {/* Profile header */}
-      <div className="px-4 pb-4">
-        <div className="relative z-10 flex items-end justify-between -mt-12 mb-4">
-          <div className="relative avatar-glow-ring w-24 h-24 rounded-full">
+      <div className="px-4 pb-5 sm:px-7 sm:pb-7">
+        <div className="relative z-10 flex items-end justify-between -mt-12 sm:-mt-16 mb-5">
+          <div className="relative avatar-glow-ring w-24 h-24 sm:h-32 sm:w-32 rounded-full">
             <div className="w-full h-full rounded-full bg-zinc-700 border-4 border-zinc-950 flex items-center justify-center text-3xl font-black text-white overflow-hidden shadow-xl">
               {profile.avatar_url
                 ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -212,10 +213,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-black text-white">{profile.display_name || profile.username}</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{profile.display_name || profile.username}</h1>
             <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
             {profile.is_verified && <span className="text-green-400 text-sm">✓</span>}
             {isCreatorProfile && (
@@ -224,10 +225,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           </div>
           <p className="text-sm text-zinc-500">@{profile.username}</p>
 
-          {profile.bio && <p className="text-sm text-zinc-300 leading-relaxed">{profile.bio}</p>}
+          {profile.bio && <p className="max-w-2xl text-[15px] text-zinc-300 leading-7">{profile.bio}</p>}
 
           {/* Meta */}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-zinc-400">
             {profile.location && (
               <span className="flex items-center gap-1"><MapPin size={12} />{profile.location}</span>
             )}
@@ -310,12 +311,12 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       <AchievementsSection achievements={achievements} />
       <FavoritesSection teams={profile.favorite_teams ?? []} players={profile.favorite_players ?? []} />
 
-      <div className="border-t border-zinc-800" />
+      <div className="border-t border-white/[.07]" />
 
       {canViewContent ? (
         <>
           {/* Tabs */}
-          <div className="flex px-2">
+          <div className="flex px-2 sm:px-5">
             {TABS.map(t => (
               <Link
                 key={t.key}
@@ -330,7 +331,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           </div>
 
           {/* Posts */}
-          <div className="px-4 py-4">
+          <div className="px-3 py-4 sm:px-6 sm:py-6">
             {mappedPosts.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-4xl mb-3">📭</p>
@@ -359,6 +360,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <p className="text-zinc-500 text-sm mt-1">Follow @{profile.username} to see their posts and picks.</p>
         </div>
       )}
-    </div>
+      </div>
+    </main>
   )
 }

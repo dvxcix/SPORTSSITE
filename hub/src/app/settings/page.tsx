@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, MessageCircleQuestion, UserX } from 'lucide-react'
 import { DesktopSettingsPanel } from '@/components/desktop/DesktopSettingsPanel'
+import { SettingsShell } from '@/components/settings/SettingsShell'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -48,24 +49,20 @@ export default async function SettingsPage() {
     },
   ]
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-black text-white mb-6">Settings</h1>
-
+  return <SettingsShell active="/settings" title="Make SlipSurge yours" description="Your identity, membership, alerts, privacy, and account controls in one place.">
       <DesktopSettingsPanel />
-
-      <div className="space-y-6">
+      <div className="grid gap-5 lg:grid-cols-2">
         {sections.map(section => (
-          <div key={section.title}>
-            <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">{section.title}</h2>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden divide-y divide-zinc-800">
+          <section key={section.title} className="ss-settings-card !p-2">
+            <h2 className="px-3 pb-2 pt-3 text-[10px] font-black text-lime-300 uppercase tracking-[.18em]">{section.title}</h2>
+            <div className="divide-y divide-white/[.06]">
               {section.items.map((item) => {
                 const Icon = item.icon
                 return (
                   <Link key={item.href} href={item.href}
-                    className="flex items-center gap-4 px-4 py-3.5 hover:bg-zinc-800 transition-colors group">
-                    <div className="p-2 rounded-lg bg-zinc-800 group-hover:bg-zinc-700 transition-colors">
-                      <Icon size={16} className="text-zinc-400" />
+                    className="flex items-center gap-4 rounded-xl px-3 py-3.5 hover:bg-white/[.045] transition-colors group">
+                    <div className="p-2.5 rounded-xl border border-white/[.07] bg-black/30 group-hover:border-lime-400/25 transition-colors">
+                      <Icon size={16} className="text-lime-300" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm text-white">{item.label}</p>
@@ -76,9 +73,8 @@ export default async function SettingsPage() {
                 )
               })}
             </div>
-          </div>
+          </section>
         ))}
       </div>
-    </div>
-  )
+  </SettingsShell>
 }

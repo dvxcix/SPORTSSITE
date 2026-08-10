@@ -5,6 +5,7 @@ import { WHOP_PLANS, effectiveTier, hasTierAccess, type Tier } from '@slipsurge/
 import { PricingCheckoutButton } from '@/app/pricing/PricingCheckoutButton'
 import { CancelMembershipButton } from './CancelMembershipButton'
 import { CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { SettingsShell } from '@/components/settings/SettingsShell'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 const DISCORD_ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
@@ -61,8 +62,7 @@ export default async function MembershipSettingsPage({
   const showDiscordAddon = !fullAccess && !!profile?.discord_advanced_claimed && !hasTierAccess(tier, 'ultimate')
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-black text-white mb-6">Membership</h1>
+    <SettingsShell active="/settings/membership" eyebrow="PLAN AND BILLING" title="Your SlipSurge membership" description="Review access, renewal details, connected billing, and available plan options.">
 
       {whop_linked && (
         <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400 mb-4">
@@ -160,6 +160,6 @@ export default async function MembershipSettingsPage({
           )}
         </div>
       )}
-    </div>
+    </SettingsShell>
   )
 }

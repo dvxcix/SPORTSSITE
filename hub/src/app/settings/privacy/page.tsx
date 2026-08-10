@@ -3,15 +3,14 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { UserX, ChevronRight } from 'lucide-react'
 import { PrivacySettingsForm } from '@/components/settings/PrivacySettingsForm'
+import { SettingsShell } from '@/components/settings/SettingsShell'
 
 export default async function PrivacySettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/settings/privacy')
   const { data: profile } = await supabase.from('users').select('is_private, allow_dms, hide_win_rate').eq('id', user.id).single()
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-black text-white mb-6">Privacy Settings</h1>
+  return <SettingsShell active="/settings/privacy" title="Privacy and visibility" description="Control who can view your activity, contact you, and see performance details.">
       <PrivacySettingsForm settings={{ is_private: profile?.is_private ?? false, allow_dms: profile?.allow_dms ?? true, hide_win_rate: profile?.hide_win_rate ?? false }} />
       <Link href="/settings/blocked"
         className="flex items-center gap-4 px-4 py-3.5 mt-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors group">
@@ -24,6 +23,5 @@ export default async function PrivacySettingsPage() {
         </div>
         <ChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
       </Link>
-    </div>
-  )
+  </SettingsShell>
 }

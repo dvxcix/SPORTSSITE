@@ -13,16 +13,16 @@ export function FavoritesSection({ teams, players }: { teams: string[]; players:
   if (teams.length === 0 && players.length === 0) return null
 
   return (
-    <div className="px-4 py-4 border-t border-zinc-800 space-y-3">
+    <section className="mx-4 my-4 space-y-5 rounded-2xl border border-white/[.08] bg-gradient-to-br from-white/[.035] to-transparent p-4 sm:p-5">
       {teams.length > 0 && (
         <div>
-          <h2 className="text-xs font-black text-zinc-400 uppercase tracking-wider mb-2">Favorite Teams</h2>
+          <h2 className="text-[10px] font-black text-lime-300 uppercase tracking-[.18em] mb-3">Favorite Teams</h2>
           <div className="flex flex-wrap gap-2">
             {teams.map(abbr => {
               const logo = getTeamLogoUrl(abbr)
               return (
-                <span key={abbr} className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-full pl-1.5 pr-3 py-1">
-                  {logo && <img src={logo} alt={abbr} className="w-5 h-5 object-contain" />}
+                <span key={abbr} className="flex items-center gap-2 bg-black/30 border border-white/[.08] rounded-xl pl-2 pr-3 py-2">
+                  {logo && <img src={logo} alt={abbr} className="w-7 h-7 object-contain" />}
                   <span className="text-xs font-bold text-white">{abbr}</span>
                 </span>
               )
@@ -32,11 +32,11 @@ export function FavoritesSection({ teams, players }: { teams: string[]; players:
       )}
       {players.length > 0 && (
         <div>
-          <h2 className="text-xs font-black text-zinc-400 uppercase tracking-wider mb-2">Favorite Players</h2>
+          <h2 className="text-[10px] font-black text-lime-300 uppercase tracking-[.18em] mb-3">Favorite Players</h2>
           <div className="flex flex-wrap gap-3">
             {players.map(p => (
               <Link key={p.mlb_id} href={`/players/${p.mlb_id}`}
-                className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-2.5 py-2 hover:border-zinc-600 transition-colors">
+                className="flex items-center gap-2.5 bg-black/30 border border-white/[.08] rounded-xl px-3 py-2.5 hover:border-lime-400/35 hover:bg-lime-400/[.04] transition-colors">
                 <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={32} />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-white truncate">{p.name}</p>
@@ -47,6 +47,6 @@ export function FavoritesSection({ teams, players }: { teams: string[]; players:
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }
