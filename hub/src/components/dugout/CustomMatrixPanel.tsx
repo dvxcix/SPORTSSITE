@@ -962,6 +962,23 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.classList.add('ss-modal-open')
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.classList.remove('ss-modal-open')
+      document.body.style.overflow = previousOverflow
+    }
+  }, [onClose])
+
   const save = useCallback(async () => {
     if (!name.trim()) { setError('Give this Matrix a name.'); return }
     if (matrixType === 'pipeline') {
@@ -982,11 +999,56 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
   }, [name, color, matrixType, matchMode, matchAnyCount, factors, pipelineScope, pipelineSteps, initial, onSaved])
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: matrixType === 'pipeline' ? 'min(640px, 100%)' : 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border-2)', borderRadius: 14, padding: 18 }}>
+    <>
+      <style>{`
+        .matrix-editor-backdrop {
+          align-items: center;
+          background: rgba(0, 0, 0, 0.72);
+          display: flex;
+          inset: 0;
+          justify-content: center;
+          overscroll-behavior: contain;
+          padding: 16px;
+          position: fixed;
+          z-index: var(--layer-critical, 900);
+        }
+        .matrix-editor-dialog {
+          -webkit-overflow-scrolling: touch;
+          background: var(--bg);
+          border: 1px solid var(--border-2);
+          border-radius: 16px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+          max-height: min(88dvh, 900px);
+          overscroll-behavior: contain;
+          overflow-y: auto;
+          padding: 18px;
+        }
+        @media (max-width: 767px) {
+          .matrix-editor-backdrop {
+            align-items: flex-end;
+            padding: max(8px, env(safe-area-inset-top, 0px)) 0 0;
+          }
+          .matrix-editor-dialog {
+            border-bottom: 0;
+            border-radius: 22px 22px 0 0;
+            max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)));
+            padding: 16px 14px max(20px, env(safe-area-inset-bottom, 0px));
+            width: 100% !important;
+          }
+        }
+      `}</style>
+      <div className="matrix-editor-backdrop" onClick={onClose}>
+        <div
+          aria-labelledby="matrix-editor-title"
+          aria-modal="true"
+          className="matrix-editor-dialog"
+          onClick={e => e.stopPropagation()}
+          role="dialog"
+          style={{ width: matrixType === 'pipeline' ? 'min(640px, 100%)' : 'min(520px, 100%)' }}
+        >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{initial ? 'Edit Matrix' : 'New Matrix'}</span>
-          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+          <span id="matrix-editor-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{initial ? 'Edit Matrix' : 'New Matrix'}</span>
+          <button aria-label="Close Matrix editor" onClick={onClose} type="button" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
         </div>
 
         {!initial && (
@@ -1102,8 +1164,9 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
             {saving ? 'Saving…' : 'Save Matrix'}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -1218,6 +1281,13 @@ export function MatrixButton() {
     window.dispatchEvent(new Event('ss:matrices-updated'))
   }, [])
 
+  const closeEditor = useCallback(() => setEditing(undefined), [])
+  const handleEditorSaved = useCallback(() => {
+    setEditing(undefined)
+    refresh()
+    notifyMatricesChanged()
+  }, [refresh, notifyMatricesChanged])
+
   useEffect(() => { if (user) refresh() }, [user, refresh])
 
   const doImport = useCallback(async () => {
@@ -1250,7 +1320,7 @@ export function MatrixButton() {
         )}
       </button>
 
-      {open && (
+      {open && editing === undefined && (
         <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}>
           <div onClick={e => e.stopPropagation()} style={{
             width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)',
@@ -1324,8 +1394,8 @@ export function MatrixButton() {
       {editing !== undefined && (
         <MatrixEditor
           initial={editing}
-          onClose={() => setEditing(undefined)}
-          onSaved={() => { setEditing(undefined); refresh(); notifyMatricesChanged() }}
+          onClose={closeEditor}
+          onSaved={handleEditorSaved}
         />
       )}
     </>
