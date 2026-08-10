@@ -3677,6 +3677,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
 
   return (
     <div
+      className="daily-recap-board-scroll"
       style={{
         overflow: 'auto', maxHeight: 'calc(100vh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
         borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
@@ -3716,7 +3717,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
                   ]}
                 />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={oppPitcher} pitcherTeamAbbr={pitcherTeamAbbr} gameInfo={gameInfo} pool={pool} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={oppPitcher} pitcherTeamAbbr={pitcherTeamAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} /></tr>
                 )}
               </React.Fragment>
             )
@@ -3724,6 +3725,27 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
         </tbody>
       </table>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
+      <style>{`
+        @media(max-width:640px){
+          .daily-recap-board-scroll{max-height:none!important;height:auto!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;border-radius:8px!important;-webkit-overflow-scrolling:touch}
+          .daily-recap-board-scroll .dugout-dense-table{font-size:12px!important}
+          .daily-recap-board-scroll .dugout-dense-table > tbody > tr > td{padding-top:8px!important;padding-bottom:8px!important}
+          .daily-recap-board-scroll .dg-sticky-col{width:172px!important;min-width:172px!important;max-width:172px!important}
+          .daily-recap-board-scroll .dg-player-cell-inner{gap:7px!important;padding:6px 5px!important;min-height:48px}
+          .daily-recap-board-scroll .dg-player-copy{font-size:11px!important;overflow:hidden}
+          .daily-recap-board-scroll .dg-player-name{font-size:12px!important;line-height:1.25!important}
+          .daily-recap-board-scroll .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
+          .daily-recap-board-scroll .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
+          .daily-recap-board-scroll .dg-player-drilldown{position:sticky;left:0;width:calc(100vw - 28px);max-width:calc(100vw - 28px);padding:10px;background:color-mix(in srgb,var(--surface) 97%,transparent);border-top:1px solid var(--accent);box-sizing:border-box}
+          .daily-recap-board-scroll .dg-player-drilldown-head{display:flex!important;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+          .daily-recap-board-scroll .dg-player-drilldown-head > span{display:grid;gap:2px;min-width:0;color:var(--text-1);font-size:12px}
+          .daily-recap-board-scroll .dg-player-drilldown-head small{color:var(--text-3);font-size:9px;font-weight:650}
+          .daily-recap-board-scroll .dg-player-drilldown-head button{min-height:34px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--accent);font-size:10px;font-weight:850}
+          .daily-recap-board-scroll .dg-player-drilldown-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important;width:100%!important}
+          .daily-recap-board-scroll .dg-drilldown-section{width:100%!important;min-width:0!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain}
+          .daily-recap-board-scroll .dg-drilldown-section > *{max-width:100%}
+        }
+      `}</style>
     </div>
   )
 }
