@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { BadgeCheck } from 'lucide-react'
 import { FollowButton } from './FollowButton'
 import { UserBadges } from './UserBadges'
 
@@ -43,16 +44,16 @@ export function SuggestedUsers({ users, currentUserId }: {
               <Link href={`/profile/${u.username}`} className="text-sm font-bold text-white hover:underline truncate">
                 {u.display_name || u.username}
               </Link>
-              {u.is_verified && <span className="text-green-400 text-xs shrink-0">✓</span>}
+              {u.is_verified && <BadgeCheck size={14} aria-label="Verified" className="ss-suggested-verified" />}
               <UserBadges userId={u.id} size={16} maxVisible={2} />
             </div>
             <p>@{u.username}{typeof u.follower_count === 'number' ? ` · ${u.follower_count.toLocaleString()} followers` : ''}</p>
           </div>
           {currentUserId ? (
-            <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={false} />
+            <FollowButton currentUserId={currentUserId} targetUserId={u.id} initialFollowing={false} compact />
           ) : (
             <Link href="/auth/login"
-              className="text-xs font-bold text-white bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-xl transition-colors shrink-0">
+              className="ss-follow-button is-compact is-follow">
               Follow
             </Link>
           )}

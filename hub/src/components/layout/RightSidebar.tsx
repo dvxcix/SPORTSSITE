@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TrendingUp, Users } from 'lucide-react'
-import { SuggestedUsers } from '@/components/social/SuggestedUsers'
+import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
 
 const HASHTAG_RE = /#(\w{2,})/g
 
@@ -27,7 +27,7 @@ async function getTrendingTags(supabase: Awaited<ReturnType<typeof createClient>
     .limit(500)
 
   const counts = new Map<string, number>()
-  for (const post of (data as any[]) ?? []) {
+  for (const post of (data ?? []) as Array<{ content: string | null; sport: string | null }>) {
     if (post.sport) {
       const tag = String(post.sport).toUpperCase()
       counts.set(tag, (counts.get(tag) ?? 0) + 1)
@@ -49,14 +49,14 @@ export async function RightSidebar() {
   const { data: { user } } = await supabase.auth.getUser()
   const trending = await getTrendingTags(supabase)
 
-  let suggested: any[] = []
+  let suggested: SuggestedUser[] = []
   if (user) {
     const { data: following } = await supabase
       .from('follows')
       .select('following_id')
       .eq('follower_id', user.id)
 
-    const followingIds = (following ?? []).map((f: any) => f.following_id)
+    const followingIds = (following ?? []).map(f => f.following_id)
     const exclude = [...followingIds, user.id]
 
     const { data } = await supabase
@@ -65,14 +65,14 @@ export async function RightSidebar() {
       .not('id', 'in', `(${exclude.join(',') || user.id})`)
       .order('follower_count', { ascending: false })
       .limit(5)
-    suggested = (data as any[]) ?? []
+    suggested = (data ?? []) as SuggestedUser[]
   } else {
     const { data } = await supabase
       .from('users')
       .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, tier, beta_access_active')
       .order('follower_count', { ascending: false })
       .limit(5)
-    suggested = (data as any[]) ?? []
+    suggested = (data ?? []) as SuggestedUser[]
   }
 
   return (
@@ -123,7 +123,7 @@ export async function RightSidebar() {
           <Link href="/settings/privacy" className="hover:text-zinc-500">Privacy</Link>{' '}·{' '}
           <Link href="/settings" className="hover:text-zinc-500">Settings</Link>
         </p>
-        <p className="text-[10px] text-zinc-800 mt-1">© 2026 SlipSurge</p>
+        <p className="text-[10px] text-zinc-600 mt-1">© 2026 SlipSurge</p>
       </div>
     </aside>
   )

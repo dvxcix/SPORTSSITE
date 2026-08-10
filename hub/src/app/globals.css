@@ -151,6 +151,14 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 img { max-width: 100%; }
 
+/* Shared interaction polish for native and feature-local controls. */
+:where(button, [role="button"], a):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 82%, white);
+  outline-offset: 3px;
+}
+:where(button, input, select, textarea) { font: inherit; }
+:where(input, select, textarea)::placeholder { color: var(--text-3); opacity: .86; }
+
 .ss-skip-link {
   position: fixed;
   z-index: 10000;
@@ -723,21 +731,58 @@ img { max-width: 100%; }
 .ss-post-action { min-height: 34px; padding-inline: 10px !important; border: 1px solid transparent !important; }
 .ss-post-action:hover { border-color: color-mix(in srgb, currentColor 18%, transparent) !important; transform: translateY(-1px); }
 .ss-feed-empty { padding: 56px 20px; border: 1px dashed var(--border-2); border-radius: 16px; background: color-mix(in srgb, var(--surface) 72%, transparent); }
-.ss-feed-rail { width: 340px; flex-basis: 340px; top: calc(var(--banner-h, 0px) + 12px); padding: 4px 0 20px; }
+.ss-feed-rail { width: min(340px, 24vw); min-width: 300px; flex-basis: 340px; top: calc(var(--banner-h, 0px) + 12px); padding: 4px 0 20px; scrollbar-width: thin; scrollbar-color: var(--border-3) transparent; }
 .ss-feed-rail-card { overflow: hidden; border: 1px solid color-mix(in srgb, var(--border-2) 82%, transparent); border-radius: 18px; background: linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 70%, var(--surface)), var(--surface)); box-shadow: inset 0 1px rgba(255,255,255,.035), 0 14px 40px rgba(0,0,0,.18); }
 .ss-feed-rail-card > div:first-child { min-height: 32px; padding-bottom: 9px; border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent); }
 .ss-trending-list { counter-reset: feed-trend; }
 .ss-trending-item { position: relative; min-height: 70px; margin-top: 4px; padding: 10px 10px 10px 43px !important; border: 1px solid transparent; background: transparent; }
 .ss-trending-item::before { counter-increment: feed-trend; content: counter(feed-trend, decimal-leading-zero); position: absolute; left: 10px; top: 12px; color: color-mix(in srgb, var(--accent) 70%, var(--text-3)); font: 900 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .ss-trending-item:hover { border-color: color-mix(in srgb, var(--accent) 16%, var(--border)); background: color-mix(in srgb, var(--surface-3) 76%, transparent); transform: translateX(2px); }
-.ss-suggested-users { display: grid; gap: 5px; }
-.ss-suggested-user { display: flex; align-items: center; gap: 10px; min-height: 68px; padding: 9px 7px; border: 1px solid transparent; border-radius: 12px; transition: background var(--duration-fast), border-color var(--duration-fast); }
+.ss-follow-card { padding-inline: 12px !important; }
+.ss-suggested-users { display: grid; gap: 5px; min-width: 0; }
+.ss-suggested-user { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 68px; min-width: 0; padding: 9px 6px; border: 1px solid transparent; border-radius: 12px; transition: background var(--duration-fast), border-color var(--duration-fast), transform var(--duration-fast); }
 .ss-suggested-user:hover { border-color: color-mix(in srgb, var(--blue) 15%, var(--border)); background: color-mix(in srgb, var(--surface-3) 72%, transparent); }
 .ss-suggested-avatar { width: 42px; height: 42px; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--border-2); border-radius: 50%; color: var(--text-2); background: var(--surface-3); font-size: 13px; font-weight: 900; box-shadow: 0 6px 16px rgba(0,0,0,.2); }
 .ss-suggested-copy { min-width: 0; flex: 1; }
-.ss-suggested-name { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.ss-suggested-name { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; }
+.ss-suggested-name > a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-suggested-verified { flex: 0 0 auto; color: var(--accent); filter: drop-shadow(0 0 6px var(--accent-glow)); }
 .ss-suggested-copy > p { margin-top: 2px; overflow: hidden; color: var(--text-3); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .ss-suggested-status { display: flex; flex-wrap: wrap; gap: 4px; min-height: 18px; margin-top: 5px; }
+.ss-follow-button {
+  min-width: 96px;
+  height: var(--control-md);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: var(--accent-fg);
+  background: linear-gradient(135deg, var(--accent), #4cf58e);
+  box-shadow: 0 6px 18px rgba(97,255,111,.12), inset 0 1px rgba(255,255,255,.34);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform var(--duration-fast), filter var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast), background var(--duration-fast), box-shadow var(--duration-fast);
+}
+.ss-follow-button:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 8px 24px rgba(97,255,111,.18), inset 0 1px rgba(255,255,255,.34); }
+.ss-follow-button:active { transform: translateY(0); }
+.ss-follow-button:disabled { opacity: .55; transform: none; }
+.ss-follow-button.is-compact { min-width: 76px; height: 34px; gap: 5px; padding-inline: 10px; font-size: 11px; }
+.ss-follow-button.is-following { color: var(--text-2); border-color: var(--border-2); background: color-mix(in srgb, var(--surface-3) 82%, transparent); box-shadow: inset 0 1px rgba(255,255,255,.035); }
+.ss-follow-button.is-following:hover { color: var(--red); border-color: color-mix(in srgb, var(--red) 42%, var(--border-2)); background: var(--red-dim); box-shadow: 0 8px 20px rgba(255,77,106,.08); }
+
+@media (max-width: 1399px) {
+  .ss-feed-layout { gap: 20px; }
+  .ss-feed-rail { width: 310px; min-width: 310px; flex-basis: 310px; }
+  .ss-suggested-avatar { width: 38px; height: 38px; }
+  .ss-suggested-user { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 7px; }
+  .ss-follow-button.is-compact { min-width: 68px; padding-inline: 8px; }
+}
 
 @media (min-width: 1280px) { .ss-feed-primary { max-width: 900px; } }
 @media (max-width: 767px) {

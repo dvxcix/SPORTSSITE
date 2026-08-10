@@ -9,9 +9,10 @@ interface FollowButtonProps {
   currentUserId: string
   targetUserId: string
   initialFollowing: boolean
+  compact?: boolean
 }
 
-export function FollowButton({ currentUserId, targetUserId, initialFollowing }: FollowButtonProps) {
+export function FollowButton({ currentUserId, targetUserId, initialFollowing, compact = false }: FollowButtonProps) {
   const [following, setFollowing] = useState(initialFollowing)
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
@@ -49,12 +50,14 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing }: 
   }
 
   return (
-    <button onClick={toggle} disabled={loading}
-      className={`flex items-center gap-1.5 h-9 px-4 text-sm rounded-xl font-black transition-all disabled:opacity-60 ${
-        following
-          ? 'border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400'
-          : 'bg-green-500 hover:bg-green-400 text-black'
-      }`}>
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={loading}
+      aria-pressed={following}
+      aria-label={`${following ? 'Unfollow' : 'Follow'} this member`}
+      className={`ss-follow-button ${compact ? 'is-compact' : ''} ${following ? 'is-following' : 'is-follow'}`}
+    >
       {following ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
     </button>
   )
