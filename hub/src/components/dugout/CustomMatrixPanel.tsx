@@ -1,5 +1,6 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X, GripVertical, Share2, ShoppingBag } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -948,6 +949,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
 }
 
 function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null; onClose: () => void; onSaved: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null)
   const [name, setName] = useState(initial?.name ?? '')
   const [color, setColor] = useState(initial?.color ?? SWATCHES[0])
   const [matchMode, setMatchMode] = useState<'all' | 'any'>(initial?.match_mode ?? 'all')
@@ -963,9 +965,22 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow
+    const body = document.body
+    const scrollY = window.scrollY
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousStyles = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+    }
+
     document.body.classList.add('ss-modal-open')
-    document.body.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.width = '100%'
+    dialogRef.current?.focus({ preventScroll: true })
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -974,8 +989,13 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
     window.addEventListener('keydown', handleKeyDown)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      document.body.classList.remove('ss-modal-open')
-      document.body.style.overflow = previousOverflow
+      body.classList.remove('ss-modal-open')
+      body.style.overflow = previousStyles.overflow
+      body.style.position = previousStyles.position
+      body.style.top = previousStyles.top
+      body.style.width = previousStyles.width
+      window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' })
+      trigger?.focus({ preventScroll: true })
     }
   }, [onClose])
 
@@ -998,7 +1018,9 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
     onSaved()
   }, [name, color, matrixType, matchMode, matchAnyCount, factors, pipelineScope, pipelineSteps, initial, onSaved])
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <>
       <style>{`
         .matrix-editor-backdrop {
@@ -1010,7 +1032,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           overscroll-behavior: contain;
           padding: 16px;
           position: fixed;
-          z-index: var(--layer-critical, 900);
+          z-index: calc(var(--layer-critical, 900) + 100);
         }
         .matrix-editor-dialog {
           -webkit-overflow-scrolling: touch;
@@ -1043,8 +1065,10 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           aria-modal="true"
           className="matrix-editor-dialog"
           onClick={e => e.stopPropagation()}
+          ref={dialogRef}
           role="dialog"
           style={{ width: matrixType === 'pipeline' ? 'min(640px, 100%)' : 'min(520px, 100%)' }}
+          tabIndex={-1}
         >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <span id="matrix-editor-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{initial ? 'Edit Matrix' : 'New Matrix'}</span>
@@ -1166,7 +1190,8 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
         </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 
@@ -1320,7 +1345,7 @@ export function MatrixButton() {
         )}
       </button>
 
-      {open && editing === undefined && (
+      {open && (
         <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}>
           <div onClick={e => e.stopPropagation()} style={{
             width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)',
