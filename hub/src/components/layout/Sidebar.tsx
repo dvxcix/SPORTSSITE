@@ -13,6 +13,8 @@ import {
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { MovingBorderGlow } from './MovingBorderGlow'
+import { useAuth } from '@/context/AuthContext'
+import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
@@ -28,7 +30,7 @@ const SIDEBAR_W_COLLAPSED = 64
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
-  flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean
+  flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean; ultimateOnly?: boolean
 }
 type NavItem = NavLink | { section: string; logo: string } | null
 
@@ -61,7 +63,7 @@ const nav: NavItem[] = [
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
   { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
   { href: '/forum',       icon: MessageSquare, label: 'Forum', flagKey: 'feature_forum' },
-  { href: '/marketplace', icon: ShoppingBag,   label: 'Marketplace', flagKey: 'feature_marketplace' },
+  { href: '/marketplace', icon: ShoppingBag,   label: 'Matrix Marketplace', badge: 'ULT', ultimateOnly: true },
   { href: '/channels',    icon: Zap,           label: 'Channels' },
   null,
   { href: '/leaderboard', icon: Trophy,        label: 'Leaderboard' },
@@ -71,6 +73,7 @@ const nav: NavItem[] = [
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePathname()
+  const { profile } = useAuth()
   const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
   // The persisted collapse preference is desktop/tablet-only — if it's on
   // and the user then opens the mobile drawer (e.g. after resizing down),
@@ -104,7 +107,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     return () => { document.body.style.overflow = previousOverflow }
   }, [open])
 
-  const visibleNav = nav.filter(item => !item || !('flagKey' in item) || !item.flagKey || flags[item.flagKey] !== false)
+  const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
+  const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
+  const visibleNav = nav.filter(item => {
+    if (!item || !('href' in item)) return true
+    if (item.ultimateOnly && !hasUltimate) return false
+    return !item.flagKey || flags[item.flagKey] !== false
+  })
 
   function active(href: string) {
     if (href === '/feed') return path === '/feed'

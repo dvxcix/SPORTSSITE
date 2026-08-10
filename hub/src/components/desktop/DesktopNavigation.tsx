@@ -7,11 +7,12 @@ import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
   Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft,
-  ChevronRight, type LucideIcon,
+  ChevronRight, ShoppingBag, type LucideIcon,
 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
+import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
-type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string }
+type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string; ultimateOnly?: boolean }
 
 const rail: NavItem[] = [
   { href: '/feed', label: 'Home', icon: Home },
@@ -25,6 +26,7 @@ const intelligence: NavItem[] = [
   { href: '/dugout', label: 'The Dugout', icon: FlaskConical },
   { href: '/batter-cost', label: 'Batter Cost', icon: Coins },
   { href: '/odds-terminal', label: 'Odds Terminal', icon: ChartSpline, badge: 'ULT' },
+  { href: '/marketplace', label: 'Matrix Marketplace', icon: ShoppingBag, badge: 'ULT', ultimateOnly: true },
   { href: '/slate-breakdown', label: 'Slate Breakdown', icon: Table2 },
   { href: '/pitcher-report', label: 'Pitcher Report', icon: Compass },
   { href: '/weather-lab', label: 'Weather Lab', icon: CloudSun },
@@ -54,7 +56,9 @@ export function DesktopNavigation() {
   const currentSection = pathname.startsWith('/messages') || pathname.startsWith('/groups') || pathname.startsWith('/notifications')
     ? 'Community'
     : 'Intelligence'
-  const items = currentSection === 'Community' ? community : intelligence
+  const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
+  const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
+  const items = (currentSection === 'Community' ? community : intelligence).filter(item => !item.ultimateOnly || hasUltimate)
   const displayName = profile?.display_name || profile?.username || 'SlipSurge member'
   const initials = displayName.slice(0, 2).toUpperCase()
 

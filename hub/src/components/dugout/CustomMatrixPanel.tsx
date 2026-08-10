@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Reorder, useDragControls, type DragControls } from 'motion/react'
-import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X, GripVertical } from 'lucide-react'
+import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X, GripVertical, Share2, ShoppingBag } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 import { BookLogo } from '@/components/BookLogo'
 import { PipelineBuilder, type MatrixPipelineStep } from './PipelineBuilder'
 import { PipelineSummary } from './PipelineSummary'
+import { useRouter } from 'next/navigation'
 
 // "Custom Matrix" — a member's own saved highlight rules for The Dugout's
 // batter table. Terminology is deliberately its own: a saved rule is a
@@ -1106,7 +1107,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
   )
 }
 
-function MatrixCard({ matrix, onEdit, onDeleted, onToggled }: { matrix: MatrixDef; onEdit: () => void; onDeleted: () => void; onToggled: () => void }) {
+function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix: MatrixDef; onEdit: () => void; onDeleted: () => void; onToggled: () => void; onShare: () => void }) {
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -1176,6 +1177,9 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled }: { matrix: MatrixDe
         <button onClick={copyCode} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
           {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? 'Copied' : 'Copy'}
         </button>
+        <button onClick={onShare} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px' }}>
+          <Share2 size={11} /> Share
+        </button>
       </div>
     </div>
   )
@@ -1183,6 +1187,7 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled }: { matrix: MatrixDe
 
 export function MatrixButton() {
   const { user } = useAuth()
+  const router = useRouter()
   const fab = useDraggableFab('matrix-fab-pos')
   const [open, setOpen] = useState(false)
   const [matrices, setMatrices] = useState<MatrixDef[]>([])
@@ -1288,12 +1293,16 @@ export function MatrixButton() {
                       key={m.id} matrix={m} onEdit={() => setEditing(m)}
                       onDeleted={() => { refresh(); notifyMatricesChanged() }}
                       onToggled={() => { refresh(); notifyMatricesChanged() }}
+                      onShare={() => router.push(`/marketplace?share=${encodeURIComponent(m.id)}`)}
                     />
                   ))}
                 </div>
               )}
 
               <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                <button onClick={() => router.push('/marketplace')} className="ss-btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11, padding: '8px 12px', marginBottom: 12, color: 'var(--accent)' }}>
+                  <ShoppingBag size={13} /> Browse Matrix Marketplace
+                </button>
                 <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6 }}>Import a shared Element Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input
