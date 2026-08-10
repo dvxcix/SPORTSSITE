@@ -33,3 +33,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: cause instanceof Error ? cause.message : 'Whop product creation failed' }, { status: 500 })
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+  const body = await request.json().catch(() => null) as { productId?: string; status?: 'active' | 'paused' } | null
+  if (!body?.productId || !['active', 'paused'].includes(body.status || '')) return NextResponse.json({ error: 'Invalid product update' }, { status: 400 })
+  const admin = createAdminClient()
+  const { data: product } = await admin.from('creator_products').select('id,creator_id,whop_plan_id').eq('id', body.productId).single()
+  if (!product || product.creator_id !== user.id) return NextResponse.json({ error: 'Membership not found' }, { status: 404 })
+  if (body.status === 'active' && !product.whop_plan_id) return NextResponse.json({ error: 'Complete Whop setup before publishing' }, { status: 409 })
+  const { error } = await admin.from('creator_products').update({ status: body.status, updated_at: new Date().toISOString() }).eq('id', product.id).eq('creator_id', user.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true, status: body.status })
+}

@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminCreatorActions } from '@/components/admin/AdminCreatorActions'
-import { Clock, CheckCircle, XCircle, Users } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, Users, BadgeDollarSign, Layers3, ShieldCheck } from 'lucide-react'
+import styles from './AdminCreators.module.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,27 +16,31 @@ export default async function AdminCreatorsPage() {
   const { data: me } = await supabase.from('users').select('account_type').eq('id', user.id).single()
   if (me?.account_type !== 'admin') redirect('/feed')
 
-  const { data: apps } = await supabase
-    .from('creator_applications')
-    .select('*, applicant:users!creator_applications_user_id_fkey(id, username, display_name, avatar_url, follower_count, email)')
-    .order('created_at', { ascending: false })
+  const [{ data: apps }, { data: products }, { data: entitlements }, { data: events }] = await Promise.all([
+    supabase.from('creator_applications').select('*, applicant:users!creator_applications_user_id_fkey(id, username, display_name, avatar_url, follower_count, email, creator_commerce_status, whop_connected_company_id)').order('created_at', { ascending: false }),
+    supabase.from('creator_products').select('id,status,creator_id'),
+    supabase.from('creator_entitlements').select('id,status,creator_id'),
+    supabase.from('creator_commerce_events').select('id,amount,status,creator_id'),
+  ])
 
   const pending = (apps ?? []).filter((a: any) => a.status === 'pending')
   const reviewed = (apps ?? []).filter((a: any) => a.status !== 'pending')
 
   return (
-    <div>
-      <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 6 }}>Creator Applications</h1>
-      <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 24 }}>{pending.length} pending review</p>
+    <div className={styles.page}>
+      <section className={styles.hero}><div><span><ShieldCheck size={14} /> CREATOR OPERATIONS</span><h1>Creator Control Center</h1><p>Review applicants, monitor activation, and oversee marketplace access.</p></div><Link href="/creators">View marketplace</Link></section>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+      <div className={styles.stats}>
         {[
           { label: 'Pending', value: pending.length, icon: Clock, color: 'var(--gold)' },
           { label: 'Approved', value: (apps ?? []).filter((a: any) => a.status === 'approved').length, icon: CheckCircle, color: 'var(--green)' },
           { label: 'Rejected', value: (apps ?? []).filter((a: any) => a.status === 'rejected').length, icon: XCircle, color: 'var(--red)' },
+          { label: 'Live Offers', value: (products ?? []).filter(item => item.status === 'active').length, icon: Layers3, color: 'var(--accent)' },
+          { label: 'Active Members', value: (entitlements ?? []).filter(item => ['active', 'trialing'].includes(item.status)).length, icon: Users, color: 'var(--blue)' },
+          { label: 'Recorded GMV', value: `$${(events ?? []).filter(item => item.amount && item.status !== 'failed').reduce((sum, item) => sum + Number(item.amount), 0).toFixed(2)}`, icon: BadgeDollarSign, color: 'var(--accent)' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div key={label} className={styles.stat}>
             <Icon size={20} style={{ color }} />
             <div>
               <p style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>{value}</p>
@@ -45,11 +52,11 @@ export default async function AdminCreatorsPage() {
 
       {/* Pending */}
       {pending.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <div className={styles.section}>
+          <h2>
             Pending Review
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className={styles.list}>
             {pending.map((app: any) => (
               <ApplicationCard key={app.id} app={app} />
             ))}
@@ -58,7 +65,7 @@ export default async function AdminCreatorsPage() {
       )}
 
       {pending.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-3)' }}>
+        <div className={styles.empty}>
           <Users size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
           <p style={{ fontSize: 15, fontWeight: 700 }}>No pending applications</p>
         </div>
@@ -66,11 +73,11 @@ export default async function AdminCreatorsPage() {
 
       {/* Reviewed */}
       {reviewed.length > 0 && (
-        <div>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <div className={styles.section}>
+          <h2>
             Previously Reviewed
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className={styles.list}>
             {reviewed.map((app: any) => (
               <ApplicationCard key={app.id} app={app} compact />
             ))}
