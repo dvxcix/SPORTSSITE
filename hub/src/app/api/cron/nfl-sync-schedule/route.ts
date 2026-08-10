@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflSchedule } from '@/lib/nflverseSync'
@@ -19,7 +20,7 @@ function currentNflSeason(): number {
 // 25+ years of history on every run (that's what the one-time historical
 // backfill is for). During the season this picks up final scores as games
 // complete, since nflverse republishes the whole file nightly.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -32,3 +33,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
   }
 }
+
+export const GET = withPipelineHealth('nfl-sync-schedule', run)

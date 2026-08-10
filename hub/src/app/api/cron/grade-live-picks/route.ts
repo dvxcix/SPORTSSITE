@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
@@ -25,7 +26,7 @@ const FINAL_MESSAGES: Record<string, string> = {
   push: 'Your pick pushed (voided) — stake refunded',
 }
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -131,3 +132,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ won, settled, checked, notified })
 }
+
+export const GET = withPipelineHealth('grade-live-picks', run)

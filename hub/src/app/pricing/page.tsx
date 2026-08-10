@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { PricingClient } from './PricingClient'
 
@@ -28,7 +29,7 @@ export default async function PricingPage({
   // per-card state.
   let fullAccessReason: 'admin' | 'beta' | null = null
   if (user) {
-    const { data } = await supabase.from('users').select('tier, discord_advanced_claimed, admin_granted_tier, account_type, beta_access_active').eq('id', user.id).maybeSingle()
+    const { data } = await createAdminClient().from('users').select('tier, discord_advanced_claimed, admin_granted_tier, account_type, beta_access_active').eq('id', user.id).maybeSingle()
     rawTier = (data?.tier as Tier | undefined) ?? 'free'
     discordAdvancedClaimed = !!data?.discord_advanced_claimed
     adminGrantedTier = (data?.admin_granted_tier as Tier | null) ?? null

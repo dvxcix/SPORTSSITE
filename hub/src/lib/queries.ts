@@ -1,4 +1,6 @@
 import { createClient } from './supabase/server'
+import { createAdminClient } from './supabase/admin'
+import { PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
 import type { Post, Channel, Message, Notification, User } from './supabase/types'
 
 // No post query anywhere checked whether the CURRENT viewer already reacted
@@ -43,8 +45,9 @@ export async function getCurrentUser(): Promise<User | null> {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
   if (!authUser) return null
-  const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
-  return data
+  const admin = createAdminClient()
+  const { data } = await admin.from('users').select(PRIVATE_ACCOUNT_COLUMNS).eq('id', authUser.id).single()
+  return data as unknown as User | null
 }
 
 export async function getFeedPosts(limit = 20, offset = 0): Promise<Post[]> {
@@ -98,8 +101,8 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
 
 export async function getUserProfile(username: string): Promise<User | null> {
   const supabase = await createClient()
-  const { data } = await supabase.from('users').select('*').eq('username', username).single()
-  return data
+  const { data } = await supabase.from('users').select(PUBLIC_USER_COLUMNS).eq('username', username).single()
+  return data as unknown as User | null
 }
 
 const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id,username,display_name,avatar_url,is_verified,account_type,pick_record,tier,beta_access_active)`

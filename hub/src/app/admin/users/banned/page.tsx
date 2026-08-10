@@ -1,5 +1,4 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
 import { AdminUserActions } from '@/components/admin/AdminUserActions'
 import { Ban } from 'lucide-react'
 
@@ -7,7 +6,6 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminBannedUsersPage() {
   const admin = createAdminClient()
-  const supabase = await createClient()
 
   // banned_until lives on auth.users, not public.users — has to come from
   // the Admin Auth API, not a normal table query.
@@ -18,7 +16,7 @@ export default async function AdminBannedUsersPage() {
 
   let profiles: any[] = []
   if (bannedAuthUsers.length) {
-    const { data } = await supabase
+    const { data } = await admin
       .from('users')
       .select('id, username, display_name, avatar_url, email, account_type, is_verified')
       .in('id', bannedAuthUsers.map(u => u.id))

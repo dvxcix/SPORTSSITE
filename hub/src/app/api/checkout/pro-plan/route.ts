@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe, PLATFORM_URL } from '@/lib/stripe'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // SlipSurge Pro — direct platform subscription, 100% to platform (minus Stripe fees).
 export async function POST() {
@@ -19,7 +20,8 @@ export async function POST() {
     return NextResponse.json({ error: 'Pro Plan price is not configured yet — set it in Admin → Monetization' }, { status: 400 })
   }
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('users')
     .select('id, email, stripe_customer_id')
     .eq('id', user.id)
@@ -34,7 +36,7 @@ export async function POST() {
       metadata: { slipsurge_user_id: profile.id },
     })
     customerId = customer.id
-    const { error: backfillErr } = await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
+    const { error: backfillErr } = await admin.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
     if (backfillErr) console.error('[checkout/pro-plan] failed to backfill stripe_customer_id', backfillErr)
   }
 

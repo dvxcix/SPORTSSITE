@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { DollarSign } from 'lucide-react'
 import { MonetizationSettingsForm } from '@/components/admin/MonetizationSettingsForm'
 import { BookLogo } from '@/components/BookLogo'
@@ -7,7 +7,7 @@ import { fmtUsd, formatOdds } from '@slipsurge/core/parlayCalc'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminMonetizationPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: creators } = await supabase
     .from('users')

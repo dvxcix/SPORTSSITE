@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -13,7 +14,7 @@ export const maxDuration = 150
 // on-time/late, under/lined-up/over, whiff rate, and miss distance, split
 // by pitch type x bat side x pitch hand x contact type, both season and
 // recency. Same shape class + engine as bat tracking/batted ball.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -21,3 +22,5 @@ export async function GET(req: Request) {
   const result = await syncBothWindows(admin, SWING_TIMING_MISS_DISTANCE, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-swing-timing', run)

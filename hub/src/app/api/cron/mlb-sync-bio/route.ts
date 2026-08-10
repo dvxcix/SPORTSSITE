@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { MLB_SPORT_ID, currentSeason, claimBatch, markSyncState, seedPending, fetchMlbJson } from '@/lib/playerSync'
@@ -20,7 +21,7 @@ const ROSTER_SEED_STALE_HOURS = 20
 //    player's season_stats/career_stats jobs so mlb-sync-season-stats and
 //    mlb-sync-career-stats have something to claim without their own
 //    separate seeding step.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -80,6 +81,8 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ season, rosterSeeded, claimed: claimed.length, synced, failed })
 }
+
+export const GET = withPipelineHealth('mlb-sync-bio', run)
 
 async function seedRosterIfStale(admin: ReturnType<typeof createAdminClient>, season: number): Promise<boolean> {
   const { data: job } = await admin

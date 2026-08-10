@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -12,7 +13,7 @@ export const maxDuration = 60
 // Batting Stance — batter-only, no pitcher/team variant on Savant's own
 // page. Average stance position/foot separation/stance angle/plate
 // intercept, split vs LHP/RHP/all, both season-to-date and recency.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -20,3 +21,5 @@ export async function GET(req: Request) {
   const result = await syncBattingStance(admin, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-batting-stance', run)

@@ -6,7 +6,7 @@ import {
   Activity, AlertTriangle, AtSign, Award, Bell, BookOpen, Bot, Briefcase,
   Calendar, ChevronDown, ChevronRight, CreditCard, FileText, Flag,
   LayoutDashboard, Megaphone, MessageSquare, Palette, Radio, Settings,
-  Shield, ShoppingBag, Smile, Sparkles, Upload, Users, X, Zap,
+  ScrollText, Shield, ShoppingBag, Smile, Sparkles, Upload, Users, X, Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { label: 'Users', icon: Users, children: [
     { href: '/admin/users', label: 'All users' }, { href: '/admin/users/banned', label: 'Banned' },
     { href: '/admin/users/verify', label: 'Verification requests' }, { href: '/admin/users/online', label: 'Online users' },
+    { href: '/admin/users/deletions', label: 'Deletion requests' },
   ] },
   { label: 'Content', icon: FileText, children: [
     { href: '/admin/content/posts', label: 'Posts' }, { href: '/admin/content/stories', label: 'Stories' },
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { href: '/admin/live', icon: Radio, label: 'Live streaming' },
   { href: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { href: '/admin/pipeline-health', icon: Activity, label: 'Pipeline health' },
+  { href: '/admin/audit', icon: ScrollText, label: 'Audit log' },
   { href: '/admin/reports', icon: Flag, label: 'Reports' },
   { href: '/admin/emojis', icon: Smile, label: 'Custom emojis' },
   { href: '/admin/badges', icon: Award, label: 'Badges' },

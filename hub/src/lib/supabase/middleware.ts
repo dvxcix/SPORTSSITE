@@ -2,6 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // Public liveness/readiness endpoint for external uptime monitoring. Its
+  // response contains no user or infrastructure details.
+  if (request.nextUrl.pathname === '/api/health') {
+    return NextResponse.next({ request })
+  }
+
   // Cron routes carry no browser session (Vercel invokes them directly with
   // a CRON_SECRET bearer header, which each route checks itself) — without
   // this, every cron hit got redirected to /auth/login before its handler
@@ -22,7 +28,10 @@ export async function updateSession(request: NextRequest) {
   // route still requires either that bearer token or a real signed-in
   // admin session internally — this only skips the proxy's own cookie-only
   // check for these three exact paths, not auth itself.
-  if (['/api/admin/fanduel-import', '/api/admin/mgm-import', '/api/admin/pikkit-import', '/api/admin/browserbase-sessions', '/api/admin/pikkit-context-check', '/api/admin/whop-addon-reconcile', '/api/admin/whop-reconcile'].includes(request.nextUrl.pathname)) {
+  if (
+    ['/api/admin/fanduel-import', '/api/admin/mgm-import', '/api/admin/pikkit-import', '/api/admin/browserbase-sessions', '/api/admin/pikkit-context-check', '/api/admin/whop-addon-reconcile', '/api/admin/whop-reconcile'].includes(request.nextUrl.pathname) &&
+    /^Bearer\s+/i.test(request.headers.get('authorization') ?? '')
+  ) {
     return NextResponse.next({ request })
   }
 
@@ -156,6 +165,19 @@ export async function updateSession(request: NextRequest) {
   // redirect — not silently treated as logged in.
   if (authError && (authError.code === 'refresh_token_already_used' || authError.code === 'refresh_token_not_found')) {
     return supabaseResponse
+  }
+
+  if (user && request.nextUrl.pathname.startsWith('/api/admin/')) {
+    const [{ data: profile }, { data: assurance }] = await Promise.all([
+      supabase.from('users').select('account_type').eq('id', user.id).maybeSingle(),
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    ])
+    if (profile?.account_type !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (assurance?.nextLevel === 'aal2' && assurance.currentLevel !== 'aal2') {
+      return NextResponse.json({ error: 'Two-factor verification required', code: 'MFA_REQUIRED' }, { status: 403 })
+    }
   }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')

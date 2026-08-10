@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe, PLATFORM_URL } from '@/lib/stripe'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Independent creator subscription — Stripe Connect destination charge.
 // Platform keeps `fee_independent_creator_pct` (default 10%) via application_fee_percent;
@@ -12,6 +13,7 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+  const admin = createAdminClient()
 
   const { data: tier } = await supabase
     .from('creator_tiers')
@@ -21,7 +23,7 @@ export async function POST(req: Request) {
   if (!tier || !tier.is_active) return NextResponse.json({ error: 'Tier not found or inactive' }, { status: 404 })
   if (!tier.stripe_price_id) return NextResponse.json({ error: 'This tier has no Stripe price configured' }, { status: 400 })
 
-  const { data: creator } = await supabase
+  const { data: creator } = await admin
     .from('users')
     .select('id, username, stripe_account_id, stripe_connect_charges_enabled')
     .eq('id', tier.creator_id)
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
     .single()
   const feePct = Number(settingRow?.value ?? 10)
 
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from('users')
     .select('id, email, stripe_customer_id')
     .eq('id', user.id)
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
       metadata: { slipsurge_user_id: profile.id },
     })
     customerId = customer.id
-    const { error: backfillErr } = await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
+    const { error: backfillErr } = await admin.from('users').update({ stripe_customer_id: customerId }).eq('id', profile.id)
     // Checkout still proceeds fine with the customer we just created either
     // way — a failure here just means we'll create a second Stripe customer
     // for this user next time instead of reusing this one.

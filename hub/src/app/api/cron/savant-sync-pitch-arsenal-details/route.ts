@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -17,7 +18,7 @@ export const maxDuration = 60
 // savantPitchArsenalSync.ts). The initial backlog (~3,170 combos) needs a
 // few manual triggers to fully catch up; after that, one daily run covers
 // each day's new plate appearances.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -25,3 +26,5 @@ export async function GET(req: Request) {
   const result = await syncPitchArsenalDetailBatch(admin, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-pitch-arsenal-details', run)

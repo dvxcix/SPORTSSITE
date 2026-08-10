@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflNgsPassing, syncNflNgsReceiving, syncNflNgsRushing } from '@/lib/nflverseSync'
@@ -10,7 +11,7 @@ export const maxDuration = 60
 // small (well under 15k rows), so there's no real benefit to splitting
 // these into three separate routes the way the much bigger player_stats/
 // pbp syncs might eventually warrant.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -27,3 +28,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
   }
 }
+
+export const GET = withPipelineHealth('nfl-sync-ngs', run)

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
+import { writeAdminAudit } from '@/lib/adminAudit'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
   if (action === 'verify') {
     const { error } = await admin.from('users').update({ is_verified: !!value }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.verification_changed', targetType: 'user', targetId: userId, details: { verified: !!value }, request: req })
     return NextResponse.json({ ok: true })
   }
 
@@ -42,6 +44,7 @@ export async function POST(req: Request) {
     }
     const { error } = await admin.from('users').update({ account_type: value }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.account_type_changed', targetType: 'user', targetId: userId, details: { account_type: value }, request: req })
     return NextResponse.json({ ok: true })
   }
 
@@ -64,6 +67,7 @@ export async function POST(req: Request) {
     if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
     await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, value as Tier))
     await syncDiscordRoleForUser(admin, userId)
+    await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.tier_granted', targetType: 'user', targetId: userId, details: { tier: value }, request: req })
     return NextResponse.json({ ok: true })
   }
 
@@ -77,6 +81,7 @@ export async function POST(req: Request) {
     if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
     await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, null))
     await syncDiscordRoleForUser(admin, userId)
+    await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.tier_grant_revoked', targetType: 'user', targetId: userId, request: req })
     return NextResponse.json({ ok: true })
   }
 
@@ -86,6 +91,7 @@ export async function POST(req: Request) {
     }
     const { error } = await admin.from('users').delete().eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.deleted', targetType: 'user', targetId: userId, request: req })
     return NextResponse.json({ ok: true })
   }
 

@@ -64,6 +64,17 @@ export async function POST(request: Request) {
     .eq('user_id', notification.user_id)
   if (!subscriptions?.length) return NextResponse.json({ ok: true, skipped: 'no push subscriptions' })
 
+  const { data: deliveredAttempts } = await admin
+    .from('notification_delivery_attempts')
+    .select('subscription_id')
+    .eq('notification_id', notification.id)
+    .eq('channel', 'web_push')
+    .eq('status', 'sent')
+    .in('subscription_id', subscriptions.map(subscription => subscription.id))
+  const deliveredSubscriptionIds = new Set((deliveredAttempts ?? []).map(attempt => attempt.subscription_id).filter(Boolean))
+  const pendingSubscriptions = subscriptions.filter(subscription => !deliveredSubscriptionIds.has(subscription.id))
+  if (!pendingSubscriptions.length) return NextResponse.json({ ok: true, skipped: 'push already delivered', sent: 0, failed: 0 })
+
   const actor = notification.actor as { display_name?: string | null; username?: string | null } | null
   const actorName = actor?.display_name || actor?.username
   // Notifications that carry a rich image (a player headshot, a team logo —
@@ -90,11 +101,12 @@ export async function POST(request: Request) {
   })
 
   const results = await Promise.allSettled(
-    subscriptions.map(sub =>
+    pendingSubscriptions.map(sub =>
       webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         payload
-      ).catch((err: unknown) => {
+      ).then(response => ({ status: 'sent' as const, providerStatus: response.statusCode }))
+      .catch(async (err: unknown) => {
         // 404/410 means the browser revoked or expired this subscription —
         // stale rows would otherwise accumulate forever and get retried on
         // every future notification.
@@ -102,12 +114,42 @@ export async function POST(request: Request) {
           ? Number((err as { statusCode?: unknown }).statusCode)
           : undefined
         if (statusCode === 404 || statusCode === 410) {
-          return admin.from('push_subscriptions').delete().eq('id', sub.id)
+          await admin.from('push_subscriptions').delete().eq('id', sub.id)
+          return { status: 'stale_removed' as const, providerStatus: statusCode }
         }
         throw err
       })
     )
   )
 
-  return NextResponse.json({ ok: true, sent: results.filter(r => r.status === 'fulfilled').length })
+  await admin.from('notification_delivery_attempts').upsert(results.map((result, index) => {
+    const subscription = pendingSubscriptions[index]
+    if (result.status === 'fulfilled') {
+      return {
+        notification_id: notification.id,
+        user_id: notification.user_id,
+        subscription_id: subscription.id,
+        status: result.value.status,
+        provider_status: result.value.providerStatus ?? null,
+      }
+    }
+    const reason = result.reason
+    const providerStatus = typeof reason === 'object' && reason !== null && 'statusCode' in reason
+      ? Number((reason as { statusCode?: unknown }).statusCode)
+      : null
+    return {
+      notification_id: notification.id,
+      user_id: notification.user_id,
+      subscription_id: subscription.id,
+      status: 'failed',
+      provider_status: providerStatus,
+      error: reason instanceof Error ? reason.message.slice(0, 1000) : 'Unknown push delivery error',
+    }
+  }), { ignoreDuplicates: true })
+
+  return NextResponse.json({
+    ok: true,
+    sent: results.filter(result => result.status === 'fulfilled' && result.value.status === 'sent').length,
+    failed: results.filter(result => result.status === 'rejected').length,
+  })
 }

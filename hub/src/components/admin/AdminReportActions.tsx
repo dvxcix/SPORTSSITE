@@ -1,19 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export function AdminReportActions({ reportId, currentStatus }: { reportId: string; currentStatus: string }) {
-  const supabase = createClient()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   async function update(status: string) {
+    const resolutionNote = window.prompt(status === 'actioned' ? 'What action was taken? (optional)' : 'Dismissal note (optional)')
+    if (resolutionNote === null) return
     setLoading(true)
-    const { error } = await supabase.from('reports').update({ status }).eq('id', reportId)
+    const response = await fetch(`/api/admin/reports/${reportId}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status, resolutionNote }),
+    })
+    const result = await response.json().catch(() => ({}))
     setLoading(false)
-    if (error) { alert(`Could not update: ${error.message}`); return }
+    if (!response.ok) { alert(`Could not update: ${result.error || 'Unknown error'}`); return }
     router.refresh()
   }
 

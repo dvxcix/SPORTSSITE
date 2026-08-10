@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -13,7 +14,7 @@ export const maxDuration = 150
 // own page). Avg bat speed, swing tilt, attack angle/direction, ideal-
 // attack-angle rate, split by pitch type x bat side x pitch hand, both
 // season-to-date and recency.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -21,3 +22,5 @@ export async function GET(req: Request) {
   const result = await syncBothWindows(admin, SWING_PATH_ATTACK_ANGLE, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-swing-path', run)

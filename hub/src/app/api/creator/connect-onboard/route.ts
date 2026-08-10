@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { hasApprovedCreatorAccess } from '@/lib/creator'
 import { getStripe, PLATFORM_URL } from '@/lib/stripe'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Creates (or resumes) a Stripe Connect Express account for the signed-in creator
 // and returns a hosted onboarding link.
@@ -10,7 +11,8 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('users')
     .select('id, email, username, stripe_account_id, account_type')
     .eq('id', user.id)
@@ -33,7 +35,7 @@ export async function POST() {
     })
     accountId = account.id
 
-    const { error: updErr } = await supabase
+    const { error: updErr } = await admin
       .from('users')
       .update({ stripe_account_id: accountId })
       .eq('id', profile.id)

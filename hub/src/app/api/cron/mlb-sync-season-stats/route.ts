@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason, claimBatch, markSyncState, toNum, fetchMlbJson } from '@/lib/playerSync'
@@ -15,7 +16,7 @@ const BATCH_SIZE = 25
 // players. A player can have multiple splits within one season (traded
 // mid-year), each becoming its own row keyed by (mlb_id, season, game_type,
 // team_id).
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -87,3 +88,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ season, claimed: claimed.length, synced, failed })
 }
+
+export const GET = withPipelineHealth('mlb-sync-season-stats', run)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { writeAdminAudit } from '@/lib/adminAudit'
 
 export async function POST(request: Request, context: { params: Promise<{ applicationId: string }> }) {
   const supabase = await createClient()
@@ -24,5 +25,13 @@ export async function POST(request: Request, context: { params: Promise<{ applic
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
   }
+  await writeAdminAudit(admin, {
+    actorUserId: user.id,
+    action: `creator.application_${body.decision}`,
+    targetType: 'creator_application',
+    targetId: applicationId,
+    details: { applicant_user_id: application.user_id, reason: body.decision === 'rejected' ? String(body.reason || '').slice(0, 500) : null },
+    request,
+  })
   return NextResponse.json({ ok: true })
 }

@@ -1,4 +1,6 @@
-import { Activity, AlertTriangle, CheckCircle2, Clock3, Gauge, XCircle } from 'lucide-react'
+/* eslint-disable react-hooks/purity -- This dynamic server page intentionally calculates request-time pipeline freshness. */
+import Link from 'next/link'
+import { Activity, AlertTriangle, Bell, CheckCircle2, Clock3, Download, Gauge, Webhook, XCircle, type LucideIcon } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
 
@@ -34,9 +36,26 @@ function durationLabel(ms: number | null) {
 
 export default async function PipelineHealthPage() {
   const admin = createAdminClient()
-  const { data, error } = await admin.from('pipeline_runs')
-    .select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error')
-    .order('started_at', { ascending: false }).limit(250)
+  const sinceYesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const [
+    { data, error },
+    { count: failedWebhooks },
+    { count: processingWebhooks },
+    { count: failedPushes },
+    { count: pendingReports },
+    { count: pendingCreatorApplications },
+    { count: openExports },
+    { count: failedExports },
+  ] = await Promise.all([
+    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').order('started_at', { ascending: false }).limit(250),
+    admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+    admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'processing').lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString()),
+    admin.from('notification_delivery_attempts').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('attempted_at', sinceYesterday),
+    admin.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    admin.from('creator_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    admin.from('data_export_requests').select('id', { count: 'exact', head: true }).in('status', ['queued', 'processing', 'ready']),
+    admin.from('data_export_requests').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+  ])
   const runs = (data ?? []) as Run[]
   const latest = new Map<string, Run>()
   for (const run of runs) if (!latest.has(run.job_name)) latest.set(run.job_name, run)
@@ -69,7 +88,14 @@ export default async function PipelineHealthPage() {
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Instrumented</p><p className="mt-1 text-2xl font-black text-white">{TRACKED_PIPELINES.length}</p></div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
+      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Operational queues">
+        <QueueCard icon={Webhook} label="Webhook failures" value={(failedWebhooks ?? 0) + (processingWebhooks ?? 0)} detail={`${processingWebhooks ?? 0} stalled · ${failedWebhooks ?? 0} failed`} tone={(failedWebhooks ?? 0) + (processingWebhooks ?? 0) > 0 ? 'danger' : 'success'} />
+        <QueueCard icon={Bell} label="Push failures, 24h" value={failedPushes ?? 0} detail="Per-device delivery attempts" tone={(failedPushes ?? 0) > 0 ? 'warning' : 'success'} />
+        <QueueCard icon={AlertTriangle} label="Review queues" value={(pendingReports ?? 0) + (pendingCreatorApplications ?? 0)} detail={`${pendingReports ?? 0} reports · ${pendingCreatorApplications ?? 0} creators`} href="/admin/reports" tone={(pendingReports ?? 0) > 0 ? 'warning' : 'neutral'} />
+        <QueueCard icon={Download} label="Data exports" value={(openExports ?? 0) + (failedExports ?? 0)} detail={`${openExports ?? 0} open · ${failedExports ?? 0} failed`} tone={(failedExports ?? 0) > 0 ? 'danger' : 'neutral'} />
+      </section>
+
+      <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60">
         <div className="grid grid-cols-[minmax(220px,1fr)_120px_130px_100px] gap-4 border-b border-zinc-800 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
           <span>Pipeline</span><span>Status</span><span>Last run</span><span>Duration</span>
         </div>
@@ -88,4 +114,17 @@ export default async function PipelineHealthPage() {
       </div>
     </div>
   )
+}
+
+function QueueCard({ icon: Icon, label, value, detail, tone, href }: {
+  icon: LucideIcon
+  label: string
+  value: number
+  detail: string
+  tone: 'success' | 'warning' | 'danger' | 'neutral'
+  href?: string
+}) {
+  const color = tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-400' : tone === 'danger' ? 'text-red-400' : 'text-zinc-300'
+  const content = <><div className="flex items-center justify-between"><p className="text-xs font-bold text-zinc-500">{label}</p><Icon size={16} className={color} /></div><p className={`mt-2 text-2xl font-black ${color}`}>{value}</p><p className="mt-1 text-xs text-zinc-500">{detail}</p></>
+  return href ? <Link href={href} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900">{content}</Link> : <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">{content}</div>
 }

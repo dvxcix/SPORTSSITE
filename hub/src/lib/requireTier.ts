@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 
 // Every API route's auth used to assume a browser cookie session
@@ -36,10 +37,10 @@ async function resolveAuthedClient(): Promise<{ supabase: SupabaseClient; userId
 // hub/src/app/api/admin/*/route.ts — call site pattern:
 //   const gate = await requireTier('basic'); if (gate.error) return gate.error
 export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse; userId?: string }> {
-  const { supabase, userId } = await resolveAuthedClient()
+  const { userId } = await resolveAuthedClient()
   if (!userId) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
 
-  const { data } = await supabase.from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
+  const { data } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
   const userTier = effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)
 
   if (hasFullAccessOverride(data?.account_type, data?.beta_access_active) || hasTierAccess(userTier, minTier)) {
@@ -56,10 +57,10 @@ export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse
 // subset that tier is actually entitled to. A full-access override
 // (admin/beta) always resolves to 'ultimate' — same as requireTier.
 export async function getEffectiveTier(): Promise<{ error?: NextResponse; userId?: string; tier?: Tier }> {
-  const { supabase, userId } = await resolveAuthedClient()
+  const { userId } = await resolveAuthedClient()
   if (!userId) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
 
-  const { data } = await supabase.from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
+  const { data } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
   const tier: Tier = hasFullAccessOverride(data?.account_type, data?.beta_access_active)
     ? 'ultimate'
     : effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)

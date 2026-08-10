@@ -15,6 +15,7 @@ import { DesktopNavigation } from '@/components/desktop/DesktopNavigation'
 import { NetworkStatus } from './NetworkStatus'
 import { UtilityDock } from './UtilityDock'
 import { MobileDock } from './MobileDock'
+import { MfaGate } from '@/components/security/MfaGate'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -62,6 +63,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WatchlistProvider>
+      <MfaGate />
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
       <div className={`flex min-h-screen ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>

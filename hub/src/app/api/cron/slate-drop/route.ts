@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
@@ -14,7 +15,7 @@ export const maxDuration = 30
 // probable starters — a plain daily digest, not a diff-against-state alert
 // like lineup-confirmed/hr-alerts, so there's no "already posted" tracking
 // needed: it only ever runs once a day.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -44,3 +45,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ ok: true, games: games.length })
 }
+
+export const GET = withPipelineHealth('slate-drop', run)

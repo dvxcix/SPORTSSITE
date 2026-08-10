@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 
@@ -17,7 +18,7 @@ export const maxDuration = 30
 // other date-strip/cutover in this app already keys off) so a late-night
 // item for tonight's game doesn't get archived prematurely around midnight
 // UTC.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -33,3 +34,5 @@ export async function GET(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, archived: count ?? 0, today })
 }
+
+export const GET = withPipelineHealth('archive-stale-watchlist', run)

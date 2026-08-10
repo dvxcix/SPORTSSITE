@@ -70,9 +70,46 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
   }
 
   const supabase = createAdminClient()
+  const type = [event.action, event.type, event.event].find((value): value is string => typeof value === 'string')
+
+  const { data: existingReceipt } = await supabase
+    .from('provider_webhook_events')
+    .select('id,status,updated_at,attempt_count')
+    .eq('provider', 'whop')
+    .eq('provider_event_id', id)
+    .maybeSingle()
+  if (existingReceipt?.status === 'succeeded' || existingReceipt?.status === 'ignored') {
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+  if (existingReceipt?.status === 'processing' && Date.now() - new Date(existingReceipt.updated_at).getTime() < 10 * 60_000) {
+    return NextResponse.json({ received: true, processing: true })
+  }
+  if (existingReceipt) {
+    await supabase.from('provider_webhook_events').update({
+      event_type: type ?? null,
+      status: 'processing',
+      attempt_count: Number(existingReceipt.attempt_count || 1) + 1,
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', existingReceipt.id)
+  } else {
+    const { error: receiptError } = await supabase.from('provider_webhook_events').insert({
+      provider: 'whop', provider_event_id: id, event_type: type ?? null,
+    })
+    if (receiptError?.code === '23505') return NextResponse.json({ received: true, duplicate: true })
+    if (receiptError) return NextResponse.json({ error: 'Webhook receipt could not be recorded' }, { status: 500 })
+  }
+
+  async function finalizeReceipt(status: 'succeeded' | 'failed' | 'ignored', error?: string) {
+    await supabase.from('provider_webhook_events').update({
+      status,
+      last_error: error?.slice(0, 2000) ?? null,
+      processed_at: status === 'failed' ? null : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('provider', 'whop').eq('provider_event_id', id)
+  }
 
   try {
-    const type = [event.action, event.type, event.event].find((value): value is string => typeof value === 'string')
     const data = (event.data && typeof event.data === 'object' ? event.data : event) as Record<string, unknown>
     const metadata = (data.metadata && typeof data.metadata === 'object' ? data.metadata : {}) as Record<string, unknown>
     const internalUserId = stringValue(metadata.internal_user_id)
@@ -128,6 +165,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
       } else if (internalUserId && ['payment.failed', 'membership.deactivated', 'membership.went_invalid'].includes(type || '')) {
         await supabase.from('creator_entitlements').update({ status: type === 'payment.failed' ? 'past_due' : 'expired', updated_at: new Date().toISOString() }).eq('user_id', internalUserId).eq('product_id', creatorProductId)
       }
+      await finalizeReceipt('succeeded')
       return NextResponse.json({ received: true })
     }
 
@@ -228,8 +266,11 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         break
     }
   } catch (err: unknown) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Webhook processing failed' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Webhook processing failed'
+    await finalizeReceipt('failed', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 
+  await finalizeReceipt(type ? 'succeeded' : 'ignored')
   return NextResponse.json({ received: true })
 }

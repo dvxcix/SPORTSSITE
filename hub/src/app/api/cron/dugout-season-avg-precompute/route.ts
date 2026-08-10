@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { precomputeDugoutSeasonAvgForDate } from '@/lib/dugoutSeasonAvgPrecompute'
 
@@ -18,7 +19,7 @@ export const maxDuration = 300
 // on a later run instead of staying silently wrong.
 const PAST_DAYS = 2
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -43,3 +44,5 @@ export async function GET(req: Request) {
   }
   return NextResponse.json({ dates, results })
 }
+
+export const GET = withPipelineHealth('dugout-season-avg-precompute', run)

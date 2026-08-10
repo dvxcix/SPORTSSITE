@@ -46,14 +46,18 @@ export async function GET(request: Request) {
       // the generic email-derived fallback (which stays as the fallback for
       // OAuth providers that never set these fields).
       const meta = data.user.user_metadata ?? {}
-      const { error: upsertErr } = await supabase.from('users').upsert({
+      // Profile bootstrap is a server-owned operation. Keeping it on the
+      // service-role client lets the public users table expose only the
+      // harmless profile columns while role, billing, and provider fields
+      // remain impossible to write from a browser session.
+      const admin = createAdminClient()
+      const { error: upsertErr } = await admin.from('users').upsert({
         id: data.user.id,
         email: data.user.email,
         username: meta.username || data.user.email?.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase(),
         display_name: meta.display_name || meta.full_name || data.user.email?.split('@')[0],
         avatar_url: meta.avatar_url,
         sport_preferences: meta.sport_preferences,
-        account_type: meta.account_type || 'user',
       }, { onConflict: 'id', ignoreDuplicates: true })
       // For an existing account this upsert is a no-op by design
       // (ignoreDuplicates) — only a brand-new account actually depends on it
@@ -89,12 +93,10 @@ export async function GET(request: Request) {
       // Runs after the redirect via after() so a slow Discord API can't
       // delay the user getting into the app.
       after(async () => {
-        const admin = createAdminClient()
         await syncDiscordIdentity(admin, data.user.id)
         await syncDiscordRoleForUser(admin, data.user.id)
       })
       if (isDesktop && data.user.email) {
-        const admin = createAdminClient()
         const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
           type: 'magiclink',
           email: data.user.email,

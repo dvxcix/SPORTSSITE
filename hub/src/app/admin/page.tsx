@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, FileText, Flag, LayoutDashboard, MessageSquare, Users } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { AdminStatCard } from '@/components/admin/AdminStatCard'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,7 @@ type RecentPost = {
 const sectionClass = 'overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] shadow-[var(--shadow-card)]'
 
 export default async function AdminDashboard() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const [
     { count: userCount },
     { count: postCount },

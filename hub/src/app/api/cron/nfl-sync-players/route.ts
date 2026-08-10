@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflPlayers } from '@/lib/nflverseSync'
@@ -10,7 +11,7 @@ export const maxDuration = 120
 // file — a full daily re-upsert is simpler and more reliable than tracking
 // which specific players changed, and nflverse republishes the whole file
 // nightly anyway so there's no way to fetch just a delta.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -23,3 +24,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
   }
 }
+
+export const GET = withPipelineHealth('nfl-sync-players', run)

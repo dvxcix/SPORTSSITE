@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/stripe'
@@ -14,7 +15,7 @@ export const maxDuration = 280
 // run, for as long as it stays pregame. Fans out one concurrent request
 // per game to scrape-pikkit?gamePk=... (see fanOutToSelf's reasoning in
 // that route) rather than looping — bounded by the slowest single game.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
@@ -39,3 +40,5 @@ export async function GET(req: Request) {
     results: results.map((r, i) => r.status === 'fulfilled' ? r.value : { gamePk: pregame[i].gamePk, error: r.reason?.message ?? String(r.reason) }),
   })
 }
+
+export const GET = withPipelineHealth('poll-pikkit-picks', run)

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -25,7 +26,7 @@ export const maxDuration = 180
 // ordering and the same under-sized batch won every day). Re-checks
 // 'complete' rows after 20h so batters keep accumulating new home runs
 // instead of going stale.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -33,3 +34,5 @@ export async function GET(req: Request) {
   const result = await syncHrDetailBatch(admin, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-hr-details', run)

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -15,7 +16,7 @@ export const maxDuration = 60
 // than folding into an existing one — a slow or failing batch here
 // shouldn't risk timing out sibling categories. Season-only, no recency
 // window (this leaderboard has no date-range params).
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -23,3 +24,5 @@ export async function GET(req: Request) {
   const result = await syncSwingTake(admin, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-swing-take', run)

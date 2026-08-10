@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { revalidateTag } from 'next/cache'
 import { addDays, format, parseISO } from 'date-fns'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -32,7 +33,7 @@ export const maxDuration = 300
 // backfill runs separately via scripts/backfill-statcast-pitch-log.mjs.
 const MAX_DAYS_PER_RUN = 4
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -167,3 +168,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ season, table: PITCH_LOG_TABLE, start, end, processed: dates, results })
 }
+
+export const GET = withPipelineHealth('savant-sync-pitch-log', run)

@@ -114,15 +114,11 @@ export function ProfileForm({ profile }: { profile: any }) {
         const extracted = extractIdentityHandle(identity.provider, identity.identity_data ?? {})
         if (extracted) next[identity.provider] = extracted
       }
-      const changed = JSON.stringify(next) !== JSON.stringify(profile?.verified_identities ?? {})
       setVerified(next)
-      if (changed) {
-        // Best-effort cache of the real identity data for display elsewhere
-        // (public profile page) — the identities themselves are already
-        // correct via Supabase Auth regardless of whether this persists.
-        const { error: syncErr } = await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
-        if (syncErr) setConnectedError('Verified, but your public profile may not reflect it yet — refresh to retry.')
-      }
+      const response = await fetch('/api/account/verified-identities', { method: 'POST' })
+      const body = await response.json().catch(() => ({}))
+      if (response.ok && body.identities) setVerified(body.identities)
+      else setConnectedError(body.error || 'Verified, but your public profile may not reflect it yet. Refresh to retry.')
     }).catch((e: any) => { if (!cancelled) setConnectedError(e?.message || 'Could not check connected accounts.') })
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -192,11 +188,10 @@ export function ProfileForm({ profile }: { profile: any }) {
       err = e
     }
     if (err) { setConnectedError(err.message || 'Unlink failed — please try again.'); return }
-    const next = { ...verified }
-    delete next[provider]
-    setVerified(next)
-    const { error: syncErr } = await supabase.from('users').update({ verified_identities: next }).eq('id', profile.id)
-    if (syncErr) setConnectedError('Unlinked, but your public profile may still show it — refresh to retry.')
+    const response = await fetch('/api/account/verified-identities', { method: 'POST' })
+    const body = await response.json().catch(() => ({}))
+    if (response.ok && body.identities) setVerified(body.identities)
+    else setConnectedError(body.error || 'Unlinked, but your public profile may still show it. Refresh to retry.')
   }
 
   const [playerQuery, setPlayerQuery] = useState('')

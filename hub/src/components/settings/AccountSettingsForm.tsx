@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check, Database, KeyRound, Mail, ShieldCheck } from 'lucide-react'
-import Link from 'next/link'
+import { DataExportControl } from './DataExportControl'
+import { AccountDeletionControl } from './AccountDeletionControl'
 
 export function AccountSettingsForm({ profile }: { profile: any }) {
   const supabase = createClient()
@@ -18,16 +19,6 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState('')
   const [error, setError] = useState('')
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
-
-  // No self-serve cascading delete yet (would need to unwind picks, posts,
-  // active Stripe subscriptions, etc. safely) — routes the request to
-  // support instead, matching what the Privacy Policy promises today.
-  function requestDeletion() {
-    const subject = encodeURIComponent('Account deletion request')
-    const body = encodeURIComponent(`Please delete my SlipSurge account.\n\nAccount email: ${profile?.email ?? ''}`)
-    window.location.href = `mailto:support@slipsurge.com?subject=${subject}&body=${body}`
-  }
 
   async function updateEmail() {
     setSaving(true); setError('')
@@ -68,7 +59,7 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
         </button>
       </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-black/25 text-lime-300"><Database size={17} /></span><div><h3 className="font-bold text-white">Your data</h3><p className="mt-1 text-xs leading-5 text-zinc-500">Request a portable copy of your profile and account data. Our support team verifies requests before sending an export.</p><a href={`mailto:support@slipsurge.com?subject=${encodeURIComponent('Account data export request')}&body=${encodeURIComponent(`Please send me a copy of my SlipSurge account data.\n\nAccount email: ${profile?.email ?? ''}`)}`} className="mt-3 inline-flex rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-lime-400/35 hover:text-white">Request data export</a></div></div>
+        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-black/25 text-lime-300"><Database size={17} /></span><div><h3 className="font-bold text-white">Your data</h3><p className="mt-1 text-xs leading-5 text-zinc-500">Create a portable JSON copy of your profile, posts, picks, social activity, memberships, and account records. Downloads are private and expire after seven days.</p><DataExportControl /></div></div>
       </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
         <h3 className="font-bold text-white mb-3">Change Password</h3>
@@ -85,27 +76,7 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
         <p className="text-xs text-zinc-500 mb-3">
           Permanently delete your account and all your data. This cannot be undone. We'll email you to confirm before anything is removed.
         </p>
-        {hasPaidTier && (
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-xs text-yellow-400 mb-3">
-            <strong>Deleting your account does not cancel your subscription or trial.</strong> Billing runs through Whop, separately from your SlipSurge account — you'll keep being charged even after your account is deleted unless you cancel it first. Cancel it from{' '}
-            <Link href="/settings/membership" className="underline hover:text-yellow-300">Membership settings</Link>, or directly on{' '}
-            <a href="https://whop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-yellow-300">whop.com</a>, before deleting your account.
-          </div>
-        )}
-        {confirmingDelete ? (
-          <div className="flex items-center gap-2">
-            <button onClick={requestDeletion} className="bg-red-500 hover:bg-red-400 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
-              Yes, email support to delete my account
-            </button>
-            <button onClick={() => setConfirmingDelete(false)} className="text-zinc-400 hover:text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setConfirmingDelete(true)} className="border border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
-            Delete Account
-          </button>
-        )}
+        <AccountDeletionControl hasPaidTier={hasPaidTier} />
       </div>
     </div>
   )

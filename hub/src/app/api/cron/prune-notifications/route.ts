@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 
@@ -13,18 +14,41 @@ export const maxDuration = 30
 // one type, going back 12 days, in a 45MB table. Runs once daily; a
 // 3-day window (not 1) is a deliberate buffer against timezone edges and
 // anyone who hasn't opened the app in a day or two.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
   const admin = createAdminClient()
-  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-  const { error, count } = await admin
-    .from('notifications')
-    .delete({ count: 'exact' })
-    .eq('type', 'lineup_confirmed')
-    .lt('created_at', cutoff)
+  const now = Date.now()
+  const lineupCutoff = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString()
+  const readCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const absoluteCutoff = new Date(now - 180 * 24 * 60 * 60 * 1000).toISOString()
+  const telemetryCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const webhookCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, deleted: count ?? 0, cutoff })
+  const results = await Promise.all([
+    admin.from('notifications').delete({ count: 'exact' }).eq('type', 'lineup_confirmed').lt('created_at', lineupCutoff),
+    admin.from('notifications').delete({ count: 'exact' }).eq('read', true).neq('type', 'lineup_confirmed').gte('created_at', absoluteCutoff).lt('created_at', readCutoff),
+    admin.from('notifications').delete({ count: 'exact' }).lt('created_at', absoluteCutoff),
+    admin.from('notification_delivery_attempts').delete({ count: 'exact' }).lt('attempted_at', telemetryCutoff),
+    admin.from('pipeline_runs').delete({ count: 'exact' }).lt('started_at', telemetryCutoff),
+    admin.from('provider_webhook_events').delete({ count: 'exact' }).lt('received_at', webhookCutoff),
+  ])
+  const failure = results.find(result => result.error)
+  if (failure?.error) return NextResponse.json({ error: failure.error.message }, { status: 500 })
+
+  return NextResponse.json({
+    ok: true,
+    deleted: {
+      staleLineups: results[0].count ?? 0,
+      oldRead: results[1].count ?? 0,
+      expired: results[2].count ?? 0,
+      deliveryAttempts: results[3].count ?? 0,
+      pipelineRuns: results[4].count ?? 0,
+      webhookReceipts: results[5].count ?? 0,
+    },
+    cutoffs: { lineupCutoff, readCutoff, absoluteCutoff, telemetryCutoff, webhookCutoff },
+  })
 }
+
+export const GET = withPipelineHealth('prune-notifications', run)

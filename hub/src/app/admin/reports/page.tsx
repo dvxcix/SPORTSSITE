@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AdminReportActions } from '@/components/admin/AdminReportActions'
 import { Flag, Search } from 'lucide-react'
 import Link from 'next/link'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,10 @@ export default async function AdminReportsPage({
   searchParams,
 }: { searchParams: Promise<{ status?: string; target_type?: string; q?: string }> }) {
   const { status, target_type, q } = await searchParams
-  const supabase = await createClient()
+  const sessionClient = await createClient()
+  const { data: { user } } = await sessionClient.auth.getUser()
+  if (!user) return null
+  const supabase = createAdminClient()
 
   let reporterIds: string[] | null = null
   if (q) {

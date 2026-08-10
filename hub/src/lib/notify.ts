@@ -65,10 +65,9 @@ export async function notify(supabase: SupabaseClient, {
   if (error) console.error('[notify] failed to insert notification', { type, userId, error })
 }
 
-// Fans a notification out to everyone following `actorId` — e.g. "so-and-so
-// posted a new pick" for each of their followers. Reuses notify() per
-// recipient (not a bulk insert) so each follower's own notification
-// preference is still respected individually.
+// Fans a notification out to everyone following `actorId`. In-app rows are
+// inserted in bounded batches; push/email preference checks still happen in
+// their delivery workers for each recipient.
 export async function notifyFollowers(supabase: SupabaseClient, {
   actorId, type, message, link, targetId, targetType,
 }: {
@@ -80,7 +79,17 @@ export async function notifyFollowers(supabase: SupabaseClient, {
   targetType?: string | null
 }) {
   const { data: followers } = await supabase.from('follows').select('follower_id').eq('following_id', actorId)
-  for (const f of followers ?? []) {
-    await notify(supabase, { userId: (f as any).follower_id, actorId, type, message, link, targetId, targetType })
+  const rows = (followers ?? []).map(f => ({
+    user_id: (f as { follower_id: string }).follower_id,
+    actor_id: actorId,
+    type,
+    message,
+    link: link ?? null,
+    target_id: targetId ?? null,
+    target_type: targetType ?? null,
+  })).filter(row => row.user_id && row.user_id !== actorId)
+  for (let index = 0; index < rows.length; index += 500) {
+    const { error } = await supabase.from('notifications').insert(rows.slice(index, index + 500))
+    if (error) console.error('[notifyFollowers] failed to insert notification batch', { type, actorId, index, error })
   }
 }

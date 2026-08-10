@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -17,7 +18,7 @@ export const maxDuration = 30
 // alert can fire even when the sync route never reaches the end of its own
 // invocation. Scheduled ~80min after savant-sync-pitch-log (vercel.json),
 // giving that route's own recheck-window self-heal a real shot first.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -38,3 +39,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ season, latestDate, expected: end })
 }
+
+export const GET = withPipelineHealth('pitch-log-freshness-check', run)

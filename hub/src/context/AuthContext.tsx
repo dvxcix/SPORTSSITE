@@ -27,8 +27,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase.from('users').select('*').eq('id', userId).single()
-    setProfile(data)
+    const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
+    if (!response.ok) {
+      setProfile(null)
+      return
+    }
+    const { profile } = await response.json()
+    if (profile?.id === userId) setProfile(profile)
   }
 
   async function refreshProfile() {

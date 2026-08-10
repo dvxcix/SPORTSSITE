@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { PayoutSetupClient } from './PayoutSetupClient'
 import { hasApprovedCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,8 @@ export default async function CreatorPayoutsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('users')
     .select('id, username, account_type, whop_connected_company_id, creator_commerce_status')
     .eq('id', user.id)

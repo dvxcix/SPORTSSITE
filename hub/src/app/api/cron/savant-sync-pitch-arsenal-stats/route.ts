@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -13,7 +14,7 @@ export const maxDuration = 60
 // put-away%, xBA/xSLG/xwOBA, hard-hit% per (player, pitch_type), both
 // batter and pitcher roles. Season-only aggregate; the per-pitch drill-down
 // behind each row is the separate savant-sync-pitch-arsenal-details cron.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -21,3 +22,5 @@ export async function GET(req: Request) {
   const result = await syncPitchArsenalStats(admin, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-pitch-arsenal-stats', run)

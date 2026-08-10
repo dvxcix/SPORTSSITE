@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { computeNflDvp, computeNflDvpFromPbp } from '@/lib/nflverseSync'
@@ -21,7 +22,7 @@ function currentNflSeason(): number {
 // weekly rows exist; PBP only fills the gap while player_stats.csv lags
 // behind pbp/nextgen_stats' own release (a real, recurring lag, not a
 // one-off).
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -42,3 +43,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
   }
 }
+
+export const GET = withPipelineHealth('nfl-compute-dvp', run)

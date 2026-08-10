@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflTeams } from '@/lib/nflverseSync'
@@ -9,7 +10,7 @@ export const maxDuration = 30
 // 32 teams, static reference data (colors/logos/division) — cheap enough to
 // just re-fetch and re-upsert the whole file daily rather than tracking
 // staleness like MLB's per-player job queue does.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -22,3 +23,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
   }
 }
+
+export const GET = withPipelineHealth('nfl-sync-teams', run)

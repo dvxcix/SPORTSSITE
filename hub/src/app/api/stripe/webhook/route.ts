@@ -27,6 +27,43 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient()
 
+  const { data: existingReceipt } = await supabase
+    .from('provider_webhook_events')
+    .select('id,status,updated_at,attempt_count')
+    .eq('provider', 'stripe')
+    .eq('provider_event_id', event.id)
+    .maybeSingle()
+  if (existingReceipt?.status === 'succeeded' || existingReceipt?.status === 'ignored') {
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+  if (existingReceipt?.status === 'processing' && Date.now() - new Date(existingReceipt.updated_at).getTime() < 10 * 60_000) {
+    return NextResponse.json({ received: true, processing: true })
+  }
+  if (existingReceipt) {
+    await supabase.from('provider_webhook_events').update({
+      event_type: event.type,
+      status: 'processing',
+      attempt_count: Number(existingReceipt.attempt_count || 1) + 1,
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', existingReceipt.id)
+  } else {
+    const { error: receiptError } = await supabase.from('provider_webhook_events').insert({
+      provider: 'stripe', provider_event_id: event.id, event_type: event.type,
+    })
+    if (receiptError?.code === '23505') return NextResponse.json({ received: true, duplicate: true })
+    if (receiptError) return NextResponse.json({ error: 'Webhook receipt could not be recorded' }, { status: 500 })
+  }
+
+  async function finalizeReceipt(status: 'succeeded' | 'failed' | 'ignored', error?: string) {
+    await supabase.from('provider_webhook_events').update({
+      status,
+      last_error: error?.slice(0, 2000) ?? null,
+      processed_at: status === 'failed' ? null : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('provider', 'stripe').eq('provider_event_id', event.id)
+  }
+
   try {
     switch (event.type) {
       case 'account.updated': {
@@ -110,7 +147,7 @@ export async function POST(req: Request) {
           const feePct = sub.application_fee_percent ?? 10
           const gross = (invoice.total ?? 0) / 100
           const platformFeeAmount = Math.round(gross * feePct) / 100
-          await supabase.from('creator_payouts').insert({
+          await supabase.from('creator_payouts').upsert({
             creator_id: sub.metadata.creator_id,
             source: 'independent_subscription',
             gross_amount: gross,
@@ -120,7 +157,7 @@ export async function POST(req: Request) {
             stripe_invoice_id: invoice.id ?? null,
             status: 'paid',
             paid_at: new Date().toISOString(),
-          })
+          }, { onConflict: 'stripe_invoice_id' })
         }
         break
       }
@@ -185,8 +222,10 @@ export async function POST(req: Request) {
     }
   } catch (err: any) {
     console.error('Stripe webhook handler error', event.type, err)
+    await finalizeReceipt('failed', err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 
+  await finalizeReceipt('succeeded')
   return NextResponse.json({ received: true })
 }

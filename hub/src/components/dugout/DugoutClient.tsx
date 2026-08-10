@@ -3815,8 +3815,12 @@ export function DugoutClient({ date }: { date: string }) {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
-      const { data } = await supabase.from('users').select('dugout_column_prefs').eq('id', user.id).single()
-      if (!cancelled && data?.dugout_column_prefs) setColumnPrefsState(data.dugout_column_prefs as DugoutColumnPrefs)
+      const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
+      if (!response.ok || cancelled) return
+      const { profile } = await response.json()
+      if (!cancelled && profile?.id === user.id && profile?.dugout_column_prefs) {
+        setColumnPrefsState(profile.dugout_column_prefs as DugoutColumnPrefs)
+      }
     })()
     return () => { cancelled = true }
   }, [])

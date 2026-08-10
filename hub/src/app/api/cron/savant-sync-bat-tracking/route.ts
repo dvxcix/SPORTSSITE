@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -15,7 +16,7 @@ export const maxDuration = 150
 // competitive-edge data, not just season aggregates. See syncBothWindows
 // for the shared batter/pitcher x season/recency loop every split-based
 // category uses.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -23,3 +24,5 @@ export async function GET(req: Request) {
   const result = await syncBothWindows(admin, BAT_TRACKING, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-bat-tracking', run)

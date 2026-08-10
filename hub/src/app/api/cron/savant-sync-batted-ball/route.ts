@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -12,7 +13,7 @@ export const maxDuration = 150
 // Ground/fly/line-drive/popup + pull/straight/oppo rates, split by pitch
 // type x bat side x pitch hand, both season-to-date and rolling recency —
 // second category on the same shared engine bat tracking uses.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -20,3 +21,5 @@ export async function GET(req: Request) {
   const result = await syncBothWindows(admin, BATTED_BALL_PROFILE, currentSeason())
   return NextResponse.json(result)
 }
+
+export const GET = withPipelineHealth('savant-sync-batted-ball', run)

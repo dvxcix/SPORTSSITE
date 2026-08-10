@@ -27,7 +27,6 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [sports, setSports] = useState<string[]>(['MLB'])
-  const [accountType, setAccountType] = useState<'user' | 'creator'>('user')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmationSent, setConfirmationSent] = useState(false)
@@ -100,21 +99,15 @@ export default function RegisterPage() {
         // profile upsert below) so /auth/callback can pull the real chosen
         // values once confirmation completes, instead of falling back to a
         // generic email-derived username/display name.
-        data: { username, display_name: displayName || username, sport_preferences: sports, account_type: accountType },
+        data: { username, display_name: displayName || username, sport_preferences: sports },
       },
     })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }
-    if (data.user) {
-      // Only succeeds here when email confirmation is off and signUp()
-      // already returned a live session (auth.uid() satisfies the users
-      // table's RLS insert check). When confirmation is required, there's no
-      // session yet, this silently fails RLS, and /auth/callback's metadata
-      // fallback (above) is what actually creates the profile.
-      await supabase.from('users').upsert({
-        id: data.user.id, email, username,
-        display_name: displayName || username,
-        sport_preferences: sports, account_type: accountType,
-      })
+    if (data.user && data.session) {
+      // The server derives all profile fields from the authenticated Auth
+      // user and signup metadata. Browser sessions never receive INSERT
+      // access to the users table.
+      await fetch('/api/account/bootstrap', { method: 'POST' })
     }
     setLoading(false)
     if (data.session) {
@@ -304,26 +297,9 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 10, letterSpacing: '0.02em' }}>ACCOUNT TYPE</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {([
-                    { type: 'user' as const, emoji: '👤', title: 'Fan', desc: 'Follow picks & engage' },
-                    { type: 'creator' as const, emoji: '⚡', title: 'Capper', desc: 'Share picks & earn' },
-                  ]).map(({ type, emoji, title, desc }) => (
-                    <button key={type} type="button" onClick={() => setAccountType(type)} style={{
-                      padding: '14px 12px', borderRadius: 10, textAlign: 'left',
-                      border: `1px solid ${accountType === type ? 'var(--accent)' : 'var(--border-2)'}`,
-                      background: accountType === type ? 'var(--accent-dim)' : 'var(--surface-2)',
-                      cursor: 'pointer', transition: 'all 130ms',
-                    }}>
-                      <div style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</div>
-                      <p style={{ fontSize: 13, fontWeight: 800, color: accountType === type ? 'var(--accent)' : 'var(--text-1)', marginBottom: 2 }}>{title}</p>
-                      <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                Want to sell picks or build a paid community? Create your account first, then apply through the Creator program.
+              </p>
             </>
           )}
 

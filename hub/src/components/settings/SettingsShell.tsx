@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { Bell, CreditCard, LayoutDashboard, LockKeyhole, Shield, Sparkles, UserRound, UserX } from 'lucide-react'
+import { Bell, CreditCard, KeyRound, LayoutDashboard, LockKeyhole, Shield, Sparkles, UserRound, UserX } from 'lucide-react'
 
 const items = [
   { href: '/settings', label: 'Overview', icon: LayoutDashboard },
   { href: '/settings/profile', label: 'Profile', icon: UserRound },
   { href: '/settings/account', label: 'Account', icon: Shield },
+  { href: '/settings/security', label: 'Security', icon: KeyRound },
   { href: '/settings/notifications', label: 'Notifications', icon: Bell },
   { href: '/settings/privacy', label: 'Privacy', icon: LockKeyhole },
   { href: '/settings/blocked', label: 'Blocked', icon: UserX },

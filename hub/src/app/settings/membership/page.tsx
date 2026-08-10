@@ -6,6 +6,7 @@ import { PricingCheckoutButton } from '@/app/pricing/PricingCheckoutButton'
 import { CancelMembershipButton } from './CancelMembershipButton'
 import { CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { SettingsShell } from '@/components/settings/SettingsShell'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 const DISCORD_ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
@@ -26,7 +27,8 @@ export default async function MembershipSettingsPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/settings/membership')
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('users')
     .select('tier, tier_status, tier_current_period_end, whop_plan_id, whop_membership_id, tier_cancel_at_period_end, beta_access_active, account_type, discord_advanced_claimed, admin_granted_tier, whop_user_id')
     .eq('id', user.id)

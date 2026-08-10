@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
 import { Spotlight } from '@/components/ui/spotlight'
@@ -8,7 +9,7 @@ export default async function OnboardingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
+  const { data: profile } = await createAdminClient()
     .from('users')
     .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, onboarding_completed_at, is_private, hide_win_rate')
     .eq('id', user.id)

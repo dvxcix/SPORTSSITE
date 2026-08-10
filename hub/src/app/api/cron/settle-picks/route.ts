@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
@@ -7,7 +8,7 @@ import { fetchLiveFeed, settleFinalPick } from '@/lib/pickGrading'
 export const revalidate = 0
 export const maxDuration = 60
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -61,3 +62,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ graded, skipped, skipped_reasons, graded_ids })
 }
+
+export const GET = withPipelineHealth('settle-picks', run)

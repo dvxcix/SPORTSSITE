@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncAffinityData } from '@/lib/affinitySync'
@@ -10,7 +11,7 @@ export const maxDuration = 60
 // Small, fast full-replace sync — Savant's affinity CSVs are ~400 players
 // and ~150-160k match-score rows per side, well within one invocation,
 // unlike the pitch-log sync which has to page across a full season.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -22,3 +23,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
   }
 }
+
+export const GET = withPipelineHealth('savant-sync-affinity', run)

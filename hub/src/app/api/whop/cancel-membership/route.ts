@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
 import { cancelWhopMembership } from '@/lib/whop'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const revalidate = 0
 
@@ -20,7 +21,8 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('users')
     .select('whop_membership_id, whop_plan_id, tier')
     .eq('id', user.id)
@@ -39,6 +41,6 @@ export async function POST() {
     return NextResponse.json({ error: `Whop cancellation failed: ${result.status} ${result.error}` }, { status: 502 })
   }
 
-  await supabase.from('users').update({ tier_cancel_at_period_end: true }).eq('id', user.id)
+  await admin.from('users').update({ tier_cancel_at_period_end: true }).eq('id', user.id)
   return NextResponse.json({ ok: true })
 }

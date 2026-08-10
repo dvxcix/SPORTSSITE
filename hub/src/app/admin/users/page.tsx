@@ -23,7 +23,7 @@ export default async function AdminUsersPage({
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  let query = supabase.from('users')
+  let query = admin.from('users')
     .select('id, username, display_name, avatar_url, email, account_type, is_verified, is_active_member, follower_count, created_at, tier, discord_advanced_claimed, admin_granted_tier, admin_granted_tier_at, beta_access_active, verified_identities, whop_user_id, whop_plan_id, tier_status, tier_current_period_end, tier_purchased_at, whop_membership_id')
     .order('created_at', { ascending: false })
 

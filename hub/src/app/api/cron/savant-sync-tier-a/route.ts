@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { currentSeason } from '@/lib/playerSync'
@@ -18,7 +19,7 @@ const CATEGORY_STALE_HOURS = 20
 // that category/season at once — unlike the per-player MLB Stats API
 // crons, there's no per-player claiming here. The staleness check still
 // guards against a manual + scheduled run landing the same day.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -82,3 +83,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ season, results })
 }
+
+export const GET = withPipelineHealth('savant-sync-tier-a', run)

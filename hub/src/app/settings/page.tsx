@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, MessageCircleQuestion, UserX } from 'lucide-react'
+import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, KeyRound, MessageCircleQuestion, UserX } from 'lucide-react'
 import { DesktopSettingsPanel } from '@/components/desktop/DesktopSettingsPanel'
 import { SettingsShell } from '@/components/settings/SettingsShell'
 
@@ -18,6 +18,7 @@ export default async function SettingsPage() {
         // Email, password, and account deletion all live on this one page —
         // there's no separate /settings/security or /settings/delete route.
         { href: '/settings/account', icon: Shield, label: 'Account Settings', desc: 'Email, password, delete account' },
+        { href: '/settings/security', icon: KeyRound, label: 'Security', desc: 'Two-factor authentication and sessions' },
       ]
     },
     {

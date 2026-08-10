@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { claimBatch, markSyncState, toNum, fetchMlbJson } from '@/lib/playerSync'
@@ -13,7 +14,7 @@ const BATCH_SIZE = 25
 // `stats=career` endpoint returns one aggregated split regardless of how
 // many teams a player has been on, so this is a straight upsert keyed on
 // mlb_id alone, no per-team rows.
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
@@ -70,3 +71,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ claimed: claimed.length, synced, failed })
 }
+
+export const GET = withPipelineHealth('mlb-sync-career-stats', run)
