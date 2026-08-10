@@ -536,10 +536,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 130ms',
               }}>
-                <div style={{
+                <div className="ss-topbar-profile-avatar" style={{
                   width: 26, height: 26, borderRadius: '50%',
                   background: 'var(--accent-dim)', overflow: 'hidden',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flex: '0 0 26px', aspectRatio: '1 / 1',
                   fontSize: 11, fontWeight: 900, color: 'var(--accent)',
                 }}>
                   {profile?.avatar_url

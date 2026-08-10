@@ -460,6 +460,8 @@ img { max-width: 100%; }
 .ss-topbar-icon-button, .ss-topbar-profile-trigger { min-height: 36px; border: 1px solid color-mix(in srgb, var(--border-2) 82%, transparent) !important; border-radius: 10px !important; color: var(--text-2); background: color-mix(in srgb, var(--surface-2) 76%, transparent) !important; box-shadow: inset 0 1px rgba(255,255,255,.025); cursor: pointer; transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast), transform var(--duration-fast); }
 .ss-topbar-icon-button { width: 38px !important; height: 38px !important; }
 .ss-topbar-profile-trigger { padding: 5px 9px 5px 5px !important; }
+.ss-topbar-profile-avatar { width: 26px !important; min-width: 26px; height: 26px !important; flex: 0 0 26px !important; aspect-ratio: 1 / 1; }
+.ss-topbar-profile-avatar img { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
 .ss-topbar-icon-button:hover, .ss-topbar-profile-trigger:hover, .ss-topbar-icon-button[aria-expanded='true'], .ss-topbar-profile-trigger[aria-expanded='true'] { color: var(--text-1); border-color: color-mix(in srgb, var(--accent) 32%, var(--border)) !important; background: color-mix(in srgb, var(--surface-3) 86%, var(--accent-dim)) !important; transform: translateY(-1px); }
 .ss-topbar-profile-copy { min-width: 0; max-width: 112px; flex-direction: column; align-items: flex-start; line-height: 1.05; }
 .ss-topbar-profile-copy strong { max-width: 100%; overflow: hidden; color: var(--text-1); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
@@ -572,6 +574,18 @@ img { max-width: 100%; }
   html { scroll-padding-bottom: var(--mobile-dock-clearance); }
   .ss-site-main { padding-bottom: var(--mobile-dock-clearance); }
   .ss-mobile-scroll-clearance { padding-bottom: var(--mobile-dock-clearance) !important; scroll-padding-bottom: var(--mobile-dock-clearance); }
+}
+
+/* Foldables and compact tablets have desktop-class viewport widths without
+   enough header room for account copy. Keep the control icon-sized until the
+   full desktop header can render without compressing the avatar. */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .ss-site-topbar { gap: 9px !important; padding-inline: 12px !important; }
+  .ss-topbar-search { min-width: 0; }
+  .ss-topbar-actions { flex: 0 0 auto; gap: 6px; }
+  .ss-topbar-profile-trigger { width: 40px; min-width: 40px; padding: 5px !important; justify-content: center; }
+  .ss-topbar-profile-trigger .ss-topbar-profile-copy,
+  .ss-topbar-profile-trigger > svg { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-mobile-dock, .ss-mobile-dock-item, .ss-mobile-dock-icon, .ss-skip-link,
