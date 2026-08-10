@@ -5,17 +5,24 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
+  Activity,
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  BellRing,
   Check,
   CheckCircle2,
   CircleDollarSign,
   CreditCard,
+  Layers3,
+  LineChart,
   LockKeyhole,
   MessageSquareText,
+  Radio,
+  Rocket,
   ShieldCheck,
   Sparkles,
+  Target,
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -39,6 +46,20 @@ const STEPS = [
   ['02', 'Get approved', 'Our team reviews your application for quality, clarity, and community fit.'],
   ['03', 'Build your offer', 'Create your group, member access, premium content, and pricing.'],
   ['04', 'Launch', 'Invite your audience, publish consistently, and grow your creator business.'],
+]
+
+const MEMBERSHIP_LAYERS = [
+  { icon: Target, title: 'Your picks and analysis', copy: 'Free previews, premium cards, write-ups, recaps, and tracked content.' },
+  { icon: LineChart, title: 'SlipSurge research tools', copy: 'Bundle eligible analytics, market movement, and research access into your tiers.' },
+  { icon: BellRing, title: 'Real-time member alerts', copy: 'Keep members close to new posts, lineup news, live events, and community activity.' },
+  { icon: MessageSquareText, title: 'Private community access', copy: 'Create member-only groups and channels around your creator brand.' },
+]
+
+const PLATFORM_ADVANTAGES = [
+  ['Research built in', 'Your members can move from your content into the same live data, odds, and analysis environment.'],
+  ['More value per tier', 'Combine content, tools, alerts, and community access instead of selling a feed by itself.'],
+  ['One connected identity', 'Profiles, memberships, posts, groups, channels, and access live in one product.'],
+  ['Room to expand', 'Launch multiple tiers, one-time offers, premium experiences, and new sports as your audience grows.'],
 ]
 
 export default function CreatorApplyPage() {
@@ -98,8 +119,8 @@ export default function CreatorApplyPage() {
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className={styles.heroCopy}>
           <div className={styles.eyebrow}><Sparkles size={14} /> SlipSurge Creator Program</div>
-          <h1>Turn your sports insight into a business.</h1>
-          <p className={styles.lede}>Sell premium picks, build a member community, and create private channels around the content your audience values.</p>
+          <h1>Give your audience more than a picks feed.</h1>
+          <p className={styles.lede}>Bring your brand, content, and community into a membership powered by SlipSurge research, analytics, live data, and creator tools.</p>
           <div className={styles.heroActions}>
             <a className={styles.primaryButton} href="#creator-application">Start your application <ArrowRight size={17} /></a>
             <a className={styles.secondaryButton} href="#how-it-works">See how it works</a>
@@ -124,10 +145,69 @@ export default function CreatorApplyPage() {
           </div>
           <div className={styles.previewList}>
             <span><CheckCircle2 size={16} /> Premium posts and picks</span>
-            <span><CheckCircle2 size={16} /> Private group channels</span>
-            <span><CheckCircle2 size={16} /> Direct member access</span>
+            <span><CheckCircle2 size={16} /> SlipSurge analytics access</span>
+            <span><CheckCircle2 size={16} /> Private groups and alerts</span>
           </div>
           <div className={styles.previewFooter}><span>Built on SlipSurge</span><span className={styles.liveDot}>Ready to launch</span></div>
+        </div>
+      </section>
+
+      <section className={styles.valueSection}>
+        <div className={styles.valueIntro}>
+          <div>
+            <span className={styles.kicker}>A better membership product</span>
+            <h2>Your expertise is the brand. SlipSurge is the platform behind it.</h2>
+          </div>
+          <p>Stop stitching together a paywall, a chat room, screenshots, and disconnected research links. Build one destination your members can use every day.</p>
+        </div>
+        <div className={styles.valueGrid}>
+          <article className={styles.valueMainCard}>
+            <div className={styles.valueCardTop}><div className={styles.toolIcon}><Layers3 size={20} /></div><span>Membership builder</span></div>
+            <h3>Package the full SlipSurge experience into your offer.</h3>
+            <p>Your tiers can combine your premium content with eligible platform access, research experiences, groups, channels, and alerts.</p>
+            <div className={styles.bundleStack}>
+              {MEMBERSHIP_LAYERS.map(({ icon: Icon, title }) => <div key={title}><Icon size={16} /><span>{title}</span><Check size={14} /></div>)}
+            </div>
+          </article>
+          <article className={styles.valueSideCard}>
+            <div className={styles.valueCardTop}><div className={styles.toolIcon}><Activity size={20} /></div><span>Research access</span></div>
+            <div className={styles.miniTerminal}>
+              <div><span>ODDS MOVEMENT</span><Radio size={14} /></div>
+              <div className={styles.chartLines} aria-hidden="true"><i /><i /><i /></div>
+              <footer><span>Live markets</span><strong>Inside their membership</strong></footer>
+            </div>
+          </article>
+          <article className={styles.valueSideCard}>
+            <div className={styles.valueCardTop}><div className={styles.toolIcon}><Rocket size={20} /></div><span>Bring your audience</span></div>
+            <h3>Move forward without rebuilding your business from zero.</h3>
+            <p>Keep your creator identity, set your offers, invite your existing audience, and give them a stronger reason to stay.</p>
+            <a href="#creator-application">Apply to move your brand <ArrowRight size={15} /></a>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.membershipSection}>
+        <div className={styles.sectionHeading}>
+          <span>What members can receive</span>
+          <h2>Build tiers people can feel.</h2>
+          <p>Every membership can be a complete experience, not a recurring charge for access to a single chat.</p>
+        </div>
+        <div className={styles.membershipGrid}>
+          {MEMBERSHIP_LAYERS.map(({ icon: Icon, title, copy }, index) => (
+            <article key={title}><span className={styles.layerNumber}>0{index + 1}</span><Icon size={22} /><h3>{title}</h3><p>{copy}</p></article>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.advantageSection}>
+        <div className={styles.advantageLead}>
+          <span className={styles.kicker}>Built for the next stage</span>
+          <h2>Your current audience is the start, not the ceiling.</h2>
+          <p>SlipSurge connects creator commerce to a sports platform members already have a reason to open before, during, and after games.</p>
+          <a className={styles.primaryButton} href="#creator-application">Build on SlipSurge <ArrowRight size={17} /></a>
+        </div>
+        <div className={styles.advantageList}>
+          {PLATFORM_ADVANTAGES.map(([title, copy]) => <div key={title}><CheckCircle2 size={20} /><span><strong>{title}</strong><small>{copy}</small></span></div>)}
         </div>
       </section>
 
