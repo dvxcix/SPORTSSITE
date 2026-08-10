@@ -1,6 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { ExternalLink, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
+import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
@@ -183,6 +188,7 @@ export function BatterCostClient({ date }: { date: string }) {
   // two distinct rows sharing an mlb_id, and hover should only ever
   // highlight the one actually under the cursor.
   const [hovered, setHovered] = useState<string | null>(null)
+  const [expandedPlayerKey, setExpandedPlayerKey] = useState<string | null>(null)
   // Default: biggest HR% drop vs. this player's own season-average price
   // first — the "who's the biggest opening-day mover" view the page exists
   // for. Click any column to re-sort by it instead.
@@ -212,6 +218,15 @@ export function BatterCostClient({ date }: { date: string }) {
       .catch(() => { if (!cancelled) setError('Failed to load today\'s odds') })
     return () => { cancelled = true }
   }, [date])
+
+  useEffect(() => {
+    if (!expandedPlayerKey) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpandedPlayerKey(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [expandedPlayerKey])
 
   // Same source, same map-building, and the exact same fhr_pct/sa_pct math
   // DugoutClient.tsx's buildBatterRow already uses (today's FanDuel price
@@ -371,6 +386,11 @@ export function BatterCostClient({ date }: { date: string }) {
     })
   }, [filtered, sort])
 
+  const expandedPlayer = useMemo(
+    () => flatBatters.find(b => `${b.mlb_id}_${b.gameKey}` === expandedPlayerKey) ?? null,
+    [flatBatters, expandedPlayerKey],
+  )
+
   if (error) return <PageState compact kind="error" title="Batter markets could not load" message={error} />
   if (!data) return <div style={{ padding: 24, color: 'var(--text-3)', fontSize: 13 }}>Loading today&apos;s odds…</div>
 
@@ -404,8 +424,8 @@ export function BatterCostClient({ date }: { date: string }) {
           </button>
         )}
       </div>
-      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+      <div className="batter-cost-table-scroll" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
+        <table className="batter-cost-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
             <tr>
               <SortableTH label="Batter" colKey="name" sort={sort} onSort={onSort} align="left" />
@@ -418,13 +438,25 @@ export function BatterCostClient({ date }: { date: string }) {
             {sorted.map(b => (
               <tr
                 key={`${b.mlb_id}_${b.gameKey}`}
+                className="batter-cost-row"
                 onMouseEnter={() => setHovered(`${b.mlb_id}_${b.gameKey}`)}
                 onMouseLeave={() => setHovered(null)}
               >
                 <td
-                  className="w-[130px] min-w-[130px] max-w-[130px] sm:w-[156px] sm:min-w-[156px] sm:max-w-[156px]"
+                  className="batter-cost-player-cell w-[172px] min-w-[172px] max-w-[172px] sm:w-[156px] sm:min-w-[156px] sm:max-w-[156px]"
+                  onClick={() => setExpandedPlayerKey(`${b.mlb_id}_${b.gameKey}`)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setExpandedPlayerKey(`${b.mlb_id}_${b.gameKey}`)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-haspopup="dialog"
+                  aria-label={`Open ${b.name} market details`}
                   style={{
-                    padding: '6px 6px', position: 'sticky', left: 0, zIndex: 2,
+                    padding: '6px 6px', position: 'sticky', left: 0, zIndex: 2, cursor: 'pointer',
                     backgroundColor: 'var(--bg)',
                     backgroundImage: hovered === `${b.mlb_id}_${b.gameKey}` ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
                     // inset box-shadow instead of a real border — doesn't
@@ -440,7 +472,7 @@ export function BatterCostClient({ date }: { date: string }) {
                       next column instead of being clipped, since this cell
                       never had overflow:hidden to begin with. Wrapping
                       keeps everything inside the column's own width. */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', rowGap: 2 }}>
+                  <div className="batter-cost-player-desktop" style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', rowGap: 2 }} onClick={event => event.stopPropagation()}>
                     <HandBadge hand={b.bats} />
                     <PlayerLink mlbId={b.mlb_id} name={b.name} teamAbbr={b.team} size={22} />
                     {b.is_pwr && (
@@ -458,13 +490,25 @@ export function BatterCostClient({ date }: { date: string }) {
                       odds={b.deltas.sa?.current ?? null}
                     />
                   </div>
+                  <div className="batter-cost-player-mobile">
+                    <HandBadge hand={b.bats} />
+                    <Link href={`/players/${b.mlb_id}`} onClick={event => event.stopPropagation()} aria-label={`Open ${b.name} profile`}>
+                      <PlayerAvatar headshot={mlbHeadshot(b.mlb_id)} teamLogo={getTeamLogoUrl(b.team)} size={28} teamAbbr={b.team} name={b.name} />
+                    </Link>
+                    <div className="batter-cost-player-copy">
+                      <span>{b.name}</span>
+                      <small>{b.position} · {b.team}</small>
+                    </div>
+                    {b.is_pwr ? <span className="batter-cost-pwr-mobile">PWR</span> : null}
+                    <span className="batter-cost-expand-indicator" aria-hidden="true">›</span>
+                  </div>
                   {/* Opposing-pitcher info (name/hand/avatar) was dropped
                       from this card — this page is about batters, and that
                       extra content made an already-tall row taller and more
                       variable-height still, worsening the sticky-column
                       row-desync issue on mobile. Pitcher matchup detail
                       still lives on Dugout/Pitcher Report. */}
-                  <div style={{ marginTop: 3, marginLeft: 27, fontSize: 9, color: 'var(--text-3)' }}>
+                  <div className="batter-cost-player-position" style={{ marginTop: 3, marginLeft: 27, fontSize: 9, color: 'var(--text-3)' }}>
                     {b.position}
                   </div>
                 </td>
@@ -505,6 +549,89 @@ export function BatterCostClient({ date }: { date: string }) {
           </tbody>
         </table>
       </div>
+      {expandedPlayer ? (
+        <div className="batter-cost-mobile-backdrop" role="presentation" onMouseDown={event => {
+          if (event.target === event.currentTarget) setExpandedPlayerKey(null)
+        }}>
+          <section className="batter-cost-mobile-sheet" role="dialog" aria-modal="true" aria-label={`${expandedPlayer.name} market details`}>
+            <header className="batter-cost-sheet-header">
+              <PlayerAvatar headshot={mlbHeadshot(expandedPlayer.mlb_id)} teamLogo={getTeamLogoUrl(expandedPlayer.team)} size={42} teamAbbr={expandedPlayer.team} name={expandedPlayer.name} />
+              <div>
+                <strong>{expandedPlayer.name}</strong>
+                <span>{expandedPlayer.position} · {expandedPlayer.team} vs. {expandedPlayer.opponentName || expandedPlayer.opponentTeam}</span>
+              </div>
+              <button type="button" onClick={() => setExpandedPlayerKey(null)} aria-label="Close player details"><X size={17} /></button>
+            </header>
+            <div className="batter-cost-sheet-summary">
+              <div><span>FHR vs. average</span><strong style={pctColor(expandedPlayer.fhr_pct, maxAbsFhrPct)}>{pctStr(expandedPlayer.fhr_pct)}</strong></div>
+              <div><span>HR vs. average</span><strong style={pctColor(expandedPlayer.sa_pct, maxAbsSaPct)}>{pctStr(expandedPlayer.sa_pct)}</strong></div>
+            </div>
+            <div className="batter-cost-sheet-markets">
+              {MARKETS.map(market => {
+                const movement = expandedPlayer.deltas[market.key]
+                const delta = movement?.delta ?? null
+                return (
+                  <div className="batter-cost-sheet-market" key={market.key}>
+                    <span>{market.label}</span>
+                    <div><small>Open</small><strong>{oStr(movement?.open ?? null)}</strong></div>
+                    <div><small>Current</small><strong>{oStr(movement?.current ?? null)}</strong></div>
+                    <div className={delta == null ? '' : delta < 0 ? 'is-shorter' : delta > 0 ? 'is-longer' : 'is-flat'}>
+                      {delta == null ? null : delta < 0 ? <TrendingDown size={13} /> : delta > 0 ? <TrendingUp size={13} /> : null}
+                      <strong>{delta == null ? '—' : oStr(delta)}</strong>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <Link className="batter-cost-profile-link" href={`/players/${expandedPlayer.mlb_id}`}>
+              Open full player profile <ExternalLink size={14} />
+            </Link>
+          </section>
+        </div>
+      ) : null}
+      <style>{`
+        .batter-cost-player-mobile,.batter-cost-mobile-backdrop{display:none}
+        @media(max-width:640px){
+          .batter-cost-table-scroll{overscroll-behavior-x:contain;border-radius:8px!important}
+          .batter-cost-table{font-size:12px!important;width:max-content!important;min-width:100%}
+          .batter-cost-row>td{padding-top:8px!important;padding-bottom:8px!important}
+          .batter-cost-player-cell{width:172px!important;min-width:172px!important;max-width:172px!important;background:var(--bg)!important;outline:none}
+          .batter-cost-player-cell:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)!important}
+          .batter-cost-player-desktop,.batter-cost-player-position{display:none!important}
+          .batter-cost-player-mobile{display:flex;align-items:center;gap:7px;min-height:48px;padding:5px 3px}
+          .batter-cost-player-mobile>a{display:flex;flex:0 0 auto}
+          .batter-cost-player-copy{display:grid;gap:2px;min-width:0;flex:1;text-align:left}
+          .batter-cost-player-copy>span{overflow:hidden;color:var(--text-1);font-size:12px;font-weight:800;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+          .batter-cost-player-copy>small{overflow:hidden;color:var(--text-3);font-size:9px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+          .batter-cost-pwr-mobile{flex:0 0 auto;padding:2px 4px;border:1px solid rgba(245,158,11,.4);border-radius:4px;background:rgba(245,158,11,.14);color:#f59e0b;font-size:8px;font-weight:900}
+          .batter-cost-expand-indicator{display:grid;place-items:center;width:24px;height:24px;flex:0 0 24px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--accent);font-size:17px;font-weight:700}
+          .batter-cost-mobile-backdrop{position:fixed;inset:0;z-index:1400;display:flex;align-items:flex-end;background:rgba(0,0,0,.68);backdrop-filter:blur(5px);overscroll-behavior:contain}
+          .batter-cost-mobile-sheet{position:relative;display:flex;flex-direction:column;width:100%;max-height:calc(100dvh - 72px);overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-bottom:0;border-radius:18px 18px 0 0;background:color-mix(in srgb,var(--surface) 98%,transparent);box-shadow:0 -18px 60px rgba(0,0,0,.62);padding-bottom:max(14px,env(safe-area-inset-bottom));animation:batter-cost-sheet-in 180ms ease-out}
+          .batter-cost-mobile-sheet::before{content:"";position:absolute;top:7px;left:50%;z-index:2;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.7}
+          .batter-cost-sheet-header{display:flex;align-items:center;gap:10px;padding:20px 14px 12px;border-bottom:1px solid var(--border)}
+          .batter-cost-sheet-header>div{display:grid;gap:3px;min-width:0;flex:1}
+          .batter-cost-sheet-header strong{overflow:hidden;color:var(--text-1);font-size:15px;text-overflow:ellipsis;white-space:nowrap}
+          .batter-cost-sheet-header span{overflow:hidden;color:var(--text-3);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+          .batter-cost-sheet-header button{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text-2)}
+          .batter-cost-sheet-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 14px}
+          .batter-cost-sheet-summary>div{display:grid;gap:5px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+          .batter-cost-sheet-summary span{color:var(--text-3);font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.04em}
+          .batter-cost-sheet-summary strong{font-size:16px}
+          .batter-cost-sheet-markets{min-height:0;overflow-y:auto;padding:0 14px 12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+          .batter-cost-sheet-market{display:grid;grid-template-columns:minmax(58px,1fr) repeat(3,minmax(55px,.72fr));align-items:center;gap:7px;padding:9px 2px;border-bottom:1px solid var(--border)}
+          .batter-cost-sheet-market>span{color:var(--text-1);font-size:11px;font-weight:850}
+          .batter-cost-sheet-market>div{display:grid;gap:2px;text-align:right}
+          .batter-cost-sheet-market small{color:var(--text-4);font-size:8px;font-weight:700;text-transform:uppercase}
+          .batter-cost-sheet-market strong{color:var(--text-2);font-size:11px}
+          .batter-cost-sheet-market>div:last-child{display:flex;align-items:center;justify-content:flex-end;gap:3px}
+          .batter-cost-sheet-market .is-shorter,.batter-cost-sheet-market .is-shorter strong{color:#4ade80}
+          .batter-cost-sheet-market .is-longer,.batter-cost-sheet-market .is-longer strong{color:#f87171}
+          .batter-cost-sheet-market .is-flat,.batter-cost-sheet-market .is-flat strong{color:var(--text-3)}
+          .batter-cost-profile-link{display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;margin:0 14px;border:1px solid var(--accent);border-radius:11px;background:var(--accent-dim);color:var(--accent);font-size:11px;font-weight:900;text-decoration:none}
+          @keyframes batter-cost-sheet-in{from{opacity:.5;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+        }
+        @media(prefers-reduced-motion:reduce){.batter-cost-mobile-sheet{animation:none}}
+      `}</style>
     </div>
   )
 }
