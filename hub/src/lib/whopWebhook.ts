@@ -43,6 +43,23 @@ function objectId(value: unknown): string | undefined {
   return stringValue((value as Record<string, unknown>).id)
 }
 
+const ACTIONABLE_EVENT_TYPES = new Set([
+  'payment.succeeded',
+  'membership.activated',
+  'membership.went_valid',
+  'payment.failed',
+  'membership.deactivated',
+  'membership.went_invalid',
+])
+
+// Whop also delivers lifecycle events that are useful for its own audit
+// trail but do not change a SlipSurge membership or creator entitlement.
+// Acknowledge them normally so they do not become false production errors.
+const PASSIVE_EVENT_TYPES = new Set([
+  'payment.created',
+  'withdrawal.updated',
+])
+
 // Field names below (event.action vs event.type, data.plan_id vs
 // data.plan?.id, etc.) are read defensively across a few plausible shapes —
 // Whop's public docs don't expose a full payload schema for these events.
@@ -138,7 +155,7 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     // event-type strings this switch matches against (dot-separated,
     // e.g. "membership.activated") were never confirmed against a real
     // payload either. One line, no payload contents, removed once confirmed.
-    if (!['payment.succeeded', 'membership.activated', 'membership.went_valid', 'payment.failed', 'membership.deactivated', 'membership.went_invalid'].includes(type ?? '')) {
+    if (type && !ACTIONABLE_EVENT_TYPES.has(type) && !PASSIVE_EVENT_TYPES.has(type)) {
       console.error('[whop-webhook] unrecognized event type', { type })
     }
 

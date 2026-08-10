@@ -82,6 +82,8 @@ test('Whop billing is retry-safe, exclusive, and deliveries are observable', asy
   const email = await read('src/app/api/email/send-notification/route.ts')
   assert.ok(whop.includes("from('provider_webhook_events')"))
   assert.ok(whop.includes("status: 'succeeded'"))
+  assert.ok(whop.includes("'payment.created'"))
+  assert.ok(whop.includes("'withdrawal.updated'"))
   assert.ok(onboarding.includes('accountLinks.create'))
   assert.ok(products.includes('checkoutConfigurations.create'))
   assert.ok(payouts.includes('accessTokens.create'))
