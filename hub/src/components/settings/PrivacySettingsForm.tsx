@@ -40,7 +40,7 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
               <p className="text-sm font-bold text-white">{s.label}</p>
               <p className="text-xs text-zinc-500">{s.desc}</p>
             </div>
-            <button onClick={() => s.set(!s.value)}
+            <button type="button" role="switch" aria-checked={s.value} aria-label={s.label} onClick={() => s.set(!s.value)}
               className={`relative w-11 h-6 rounded-full transition-colors ${s.value ? 'bg-green-500' : 'bg-zinc-700'}`}>
               <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${s.value ? 'translate-x-5' : ''}`} />
             </button>
@@ -48,7 +48,7 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
         ))}
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
-      <button onClick={save} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
+      <button type="button" onClick={save} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
         {saved ? <><Check size={13} /> Saved!</> : 'Save Privacy Settings'}
       </button>
     </div>

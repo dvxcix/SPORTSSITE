@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, Upload, X, Search, BadgeCheck, Link2, Unlink } from 'lucide-react'
+import { Check, Loader2, Upload, X, Search, BadgeCheck, Link2, Unlink, Sparkles } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
@@ -308,10 +308,18 @@ export function ProfileForm({ profile }: { profile: any }) {
   }
 
   const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const completionItems = [form.avatar_url, form.banner_url, form.display_name, form.bio, form.location, form.website, form.favorite_teams.length, form.favorite_players.length]
+  const completion = Math.round((completionItems.filter(Boolean).length / completionItems.length) * 100)
 
   return (
     <div className="space-y-6">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+
+      <section className="rounded-2xl border border-lime-400/20 bg-lime-400/[.055] p-4">
+        <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-black text-white"><Sparkles size={16} className="text-lime-300" /> Profile strength</div><strong className="text-sm text-lime-300">{completion}%</strong></div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/40" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion}><div className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-300 transition-all" style={{ width: `${completion}%` }} /></div>
+        <p className="mt-2 text-xs leading-5 text-zinc-400">Add a photo, banner, bio, links, teams, and players to make your profile easier to recognize and discover.</p>
+      </section>
 
       <div className="flex items-center gap-5">
         <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"

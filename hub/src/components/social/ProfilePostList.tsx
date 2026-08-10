@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { PostCardClient } from './PostCardClient'
+import { SkeletonBlock } from '@/components/ui/feedback-state'
 
 interface ProfilePostListProps {
   userId: string
@@ -73,9 +74,7 @@ export function ProfilePostList({ userId, tab, initialPosts, initialCursor, init
       ))}
       <div ref={sentinelRef} className="h-4" />
       {loading && (
-        <div className="flex justify-center py-6">
-          <div className="w-5 h-5 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin" />
-        </div>
+        <div className="space-y-3 rounded-2xl border border-white/[.06] bg-white/[.02] p-4" aria-label="Loading more posts"><div className="flex items-center gap-3"><SkeletonBlock className="h-9 w-9 rounded-full" /><div className="flex-1 space-y-2"><SkeletonBlock className="w-32" /><SkeletonBlock className="w-20" /></div></div><SkeletonBlock className="w-full" /><SkeletonBlock className="w-3/4" /></div>
       )}
       {!hasMore && posts.length > 0 && (
         <p className="text-center text-zinc-600 text-sm py-6">End of posts</p>

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Bell, CreditCard, LayoutDashboard, LockKeyhole, Shield, UserRound, UserX } from 'lucide-react'
+import { Bell, CreditCard, LayoutDashboard, LockKeyhole, Shield, Sparkles, UserRound, UserX } from 'lucide-react'
 
 const items = [
   { href: '/settings', label: 'Overview', icon: LayoutDashboard },
@@ -9,6 +9,7 @@ const items = [
   { href: '/settings/privacy', label: 'Privacy', icon: LockKeyhole },
   { href: '/settings/blocked', label: 'Blocked', icon: UserX },
   { href: '/settings/membership', label: 'Membership', icon: CreditCard },
+  { href: '/creators/studio', label: 'Creator Studio', icon: Sparkles },
 ]
 
 export function SettingsShell({ active, eyebrow = 'MEMBER CONTROL CENTER', title, description, children }: {

@@ -11,6 +11,7 @@ import { ProfileStats } from '@/components/profile/ProfileStats'
 import { UserBadges } from '@/components/social/UserBadges'
 import { AchievementsSection } from '@/components/profile/AchievementsSection'
 import { FavoritesSection } from '@/components/profile/FavoritesSection'
+import { ProfileActions } from '@/components/profile/ProfileActions'
 import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight } from 'lucide-react'
@@ -185,7 +186,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               }
             </div>
           </div>
-          {isOwnProfile ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ProfileActions username={profile.username} />
+            {isOwnProfile ? (
             <a href="/settings/profile"
               className="inline-flex items-center h-9 px-4 text-sm rounded-xl border border-zinc-700 text-white hover:bg-zinc-800 font-bold transition-colors">
               Edit Profile
@@ -210,7 +213,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               className="inline-flex items-center h-9 px-4 text-sm rounded-xl bg-green-500 hover:bg-green-400 text-black font-black transition-colors">
               Follow
             </a>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -226,6 +230,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <p className="text-sm text-zinc-500">@{profile.username}</p>
 
           {profile.bio && <p className="max-w-2xl text-[15px] text-zinc-300 leading-7">{profile.bio}</p>}
+          {isOwnProfile && !profile.bio && <Link href="/settings/profile" className="inline-flex max-w-xl items-center gap-2 rounded-xl border border-dashed border-lime-400/25 bg-lime-400/[.04] px-3 py-2 text-xs font-bold text-zinc-400 hover:text-lime-300"><Sparkles size={14} /> Add a bio so people know what you cover</Link>}
 
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-zinc-400">

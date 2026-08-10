@@ -23,7 +23,7 @@ function Toggle({ on, onClick, size = 'md' }: { on: boolean; onClick: () => void
   const knob = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'
   const travel = size === 'sm' ? 'translate-x-4' : 'translate-x-5'
   return (
-    <button onClick={onClick} className={`relative ${w} rounded-full transition-colors shrink-0 ${on ? 'bg-green-500' : 'bg-zinc-700'}`}>
+    <button type="button" role="switch" aria-checked={on} aria-label={on ? 'Disable notification' : 'Enable notification'} onClick={onClick} className={`relative ${w} rounded-full transition-colors shrink-0 ${on ? 'bg-green-500' : 'bg-zinc-700'}`}>
       <span className={`absolute top-0.5 left-0.5 ${knob} bg-white rounded-full shadow transition-transform ${on ? travel : ''}`} />
     </button>
   )

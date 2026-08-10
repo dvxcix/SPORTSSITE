@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Check } from 'lucide-react'
+import { Check, Database, KeyRound, Mail, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 
 export function AccountSettingsForm({ profile }: { profile: any }) {
@@ -55,12 +55,20 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
   return (
     <div className="space-y-6">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><Mail size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Verified identity</p><p className="mt-1 truncate text-[11px] text-zinc-500">{profile?.email || 'Account email'}</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><KeyRound size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Password access</p><p className="mt-1 text-[11px] text-zinc-500">Change it securely below</p></div>
+        <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><ShieldCheck size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Privacy controls</p><p className="mt-1 text-[11px] text-zinc-500">Manage visibility and messages</p></div>
+      </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
         <h3 className="font-bold text-white mb-3">Email Address</h3>
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass + ' mb-3'} />
         <button onClick={updateEmail} disabled={saving} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
           {saved === 'email' ? <><Check size={13} /> Saved!</> : 'Update Email'}
         </button>
+      </div>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-black/25 text-lime-300"><Database size={17} /></span><div><h3 className="font-bold text-white">Your data</h3><p className="mt-1 text-xs leading-5 text-zinc-500">Request a portable copy of your profile and account data. Our support team verifies requests before sending an export.</p><a href={`mailto:support@slipsurge.com?subject=${encodeURIComponent('Account data export request')}&body=${encodeURIComponent(`Please send me a copy of my SlipSurge account data.\n\nAccount email: ${profile?.email ?? ''}`)}`} className="mt-3 inline-flex rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-lime-400/35 hover:text-white">Request data export</a></div></div>
       </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
         <h3 className="font-bold text-white mb-3">Change Password</h3>
