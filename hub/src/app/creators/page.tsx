@@ -25,21 +25,14 @@ export default async function CreatorsPage() {
     .order('follower_count', { ascending: false })
     .limit(48)
   const creators = (data ?? []) as unknown as Creator[]
-  const activeOffers = creators.reduce((total, creator) => total + (creator.creator_products?.length ?? 0), 0)
-
   return <main className={styles.page}>
-    <section className={styles.hero}>
+    <section className={styles.hero} style={{ gridTemplateColumns: '1fr' }}>
       <div className={styles.heroGlow} />
       <div>
         <span className={styles.eyebrow}><Compass size={15} /> CREATOR MARKETPLACE</span>
         <h1>Find the people behind the edge.</h1>
         <p>Discover trusted sports creators, compare memberships, preview their work, and unlock content, research, alerts, and private communities in one place.</p>
         <div className={styles.actions}><a href="#marketplace">Explore creators <ArrowRight size={16} /></a><Link href="/creators/apply">Build your membership</Link></div>
-      </div>
-      <div className={styles.heroStats}>
-        <div><strong>{creators.length}</strong><span>Approved creators</span></div>
-        <div><strong>{activeOffers}</strong><span>Live memberships</span></div>
-        <div><strong>1</strong><span>Connected platform</span></div>
       </div>
     </section>
 
