@@ -7,11 +7,12 @@
 // real ChangelogPopup (live, DB-backed dismissal) and the admin preview
 // (fake data, no DB writes) render this same component inside the same
 // Modal shell — what an admin previews is pixel-identical to what ships.
-export function ChangelogPopupBody({ title, description, how_to_use, screenshot_urls, queuePosition, dismissLabel = "Got it — Don't show again", onDismiss }: {
+export function ChangelogPopupBody({ title, description, how_to_use, screenshot_urls, audienceLabel, queuePosition, dismissLabel = "Got it. Don't show again", onDismiss }: {
   title: string
   description: string
   how_to_use: string | null
   screenshot_urls: string[]
+  audienceLabel?: string
   queuePosition?: string
   dismissLabel?: string
   onDismiss: () => void
@@ -19,8 +20,9 @@ export function ChangelogPopupBody({ title, description, how_to_use, screenshot_
   return (
     <>
       <div style={{ position: 'sticky', top: 0, padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 2 }}>
-          What's New
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent)', textTransform: 'uppercase' }}>{'What’s New'}</span>
+          {audienceLabel && <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.05em', color: 'var(--accent)', textTransform: 'uppercase', border: '1px solid color-mix(in srgb, var(--accent) 42%, transparent)', borderRadius: 999, padding: '2px 6px', background: 'var(--accent-dim)' }}>{audienceLabel}</span>}
         </div>
         <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{title || 'Untitled entry'}</div>
       </div>

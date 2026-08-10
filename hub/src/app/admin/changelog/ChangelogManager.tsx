@@ -8,9 +8,9 @@ import { Switch as Toggle } from '@/components/ui/Switch'
 import { Modal } from '@/components/ui/Modal'
 import { ChangelogPopupBody } from '@/components/layout/ChangelogPopupBody'
 import { X } from 'lucide-react'
-import type { ChangelogEntry } from '@/lib/changelog'
+import type { ChangelogAudience, ChangelogEntry } from '@/lib/changelog'
 
-const EMPTY_DRAFT = { id: null as string | null, title: '', description: '', how_to_use: '', screenshot_urls: [] as string[], is_active: false }
+const EMPTY_DRAFT = { id: null as string | null, title: '', description: '', how_to_use: '', screenshot_urls: [] as string[], audience_tier: 'all' as ChangelogAudience, is_active: false }
 type Draft = typeof EMPTY_DRAFT
 
 export function ChangelogManager({ initialEntries }: { initialEntries: ChangelogEntry[] }) {
@@ -29,7 +29,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
 
   function startNew() { setDraft({ ...EMPTY_DRAFT }); setError('') }
   function startEdit(entry: ChangelogEntry) {
-    setDraft({ id: entry.id, title: entry.title, description: entry.description, how_to_use: entry.how_to_use ?? '', screenshot_urls: entry.screenshot_urls, is_active: entry.is_active })
+    setDraft({ id: entry.id, title: entry.title, description: entry.description, how_to_use: entry.how_to_use ?? '', screenshot_urls: entry.screenshot_urls, audience_tier: entry.audience_tier ?? 'all', is_active: entry.is_active })
     setError('')
   }
 
@@ -59,6 +59,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
       description: draft.description.trim(),
       how_to_use: draft.how_to_use.trim() || null,
       screenshot_urls: draft.screenshot_urls,
+      audience_tier: draft.audience_tier,
       is_active: draft.is_active,
       updated_at: new Date().toISOString(),
     }
@@ -107,7 +108,8 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
                 description={draft.description}
                 how_to_use={draft.how_to_use.trim() || null}
                 screenshot_urls={draft.screenshot_urls}
-                dismissLabel="Got it — Don't show again"
+                audienceLabel={draft.audience_tier === 'ultimate' ? 'Ultimate release' : undefined}
+                dismissLabel="Got it. Don't show again"
                 onDismiss={() => {}}
               />
             </div>
@@ -160,6 +162,30 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
             {uploading && <p className="text-xs text-zinc-500 mt-1">Uploading…</p>}
           </div>
 
+          <fieldset>
+            <legend className="block text-xs font-bold text-zinc-400 mb-1.5">Audience</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                ['all', 'All members', 'Visible to every signed-in member'],
+                ['ultimate', 'Ultimate only', 'Visible only to Ultimate, admin, and beta accounts'],
+              ] as const).map(([value, label, detail]) => {
+                const selected = draft.audience_tier === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setDraft({ ...draft, audience_tier: value })}
+                    className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${selected ? 'border-green-500/60 bg-green-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}
+                  >
+                    <span className={`block text-xs font-black ${selected ? 'text-green-400' : 'text-white'}`}>{label}</span>
+                    <span className="mt-0.5 block text-[10px] leading-4 text-zinc-500">{detail}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
+
           <Toggle checked={draft.is_active} onChange={v => setDraft({ ...draft, is_active: v })} label="Active" />
 
           <div className="flex gap-2">
@@ -181,7 +207,8 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
             description={draft.description}
             how_to_use={draft.how_to_use.trim() || null}
             screenshot_urls={draft.screenshot_urls}
-            dismissLabel="Got it — Don't show again"
+            audienceLabel={draft.audience_tier === 'ultimate' ? 'Ultimate release' : undefined}
+            dismissLabel="Got it. Don't show again"
             onDismiss={() => setShowFullPreview(false)}
           />
         </Modal>
@@ -194,7 +221,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{entry.title}</p>
               <p className="text-xs text-zinc-500 truncate">{entry.description}</p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">{new Date(entry.created_at).toLocaleDateString()} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">{new Date(entry.created_at).toLocaleDateString()} · {entry.audience_tier === 'ultimate' ? 'Ultimate only' : 'All members'} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <Toggle checked={entry.is_active} onChange={() => toggleActive(entry)} />

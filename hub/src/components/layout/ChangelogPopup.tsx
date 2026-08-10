@@ -50,6 +50,7 @@ export function ChangelogPopup() {
         description={current.description}
         how_to_use={current.how_to_use}
         screenshot_urls={current.screenshot_urls}
+        audienceLabel={current.audience_tier === 'ultimate' ? 'Ultimate release' : undefined}
         queuePosition={queue.length > 1 ? `1 of ${queue.length}` : ''}
         onDismiss={dismiss}
       />
