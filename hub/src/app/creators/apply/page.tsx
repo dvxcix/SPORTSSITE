@@ -1,20 +1,50 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/context/AuthContext'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, CheckCircle, ArrowLeft } from 'lucide-react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import {
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  CircleDollarSign,
+  CreditCard,
+  LockKeyhole,
+  MessageSquareText,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import { createClient } from '@/lib/supabase/client'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import styles from './CreatorApply.module.css'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Tennis', 'Golf', 'Boxing', 'CFB', 'CBB']
+
+const CREATOR_TOOLS = [
+  { icon: LockKeyhole, title: 'Sell premium picks', copy: 'Publish free previews and reserve premium posts or picks for paying members.' },
+  { icon: Users, title: 'Build your community', copy: 'Create a branded group where members can follow your work and connect.' },
+  { icon: MessageSquareText, title: 'Open private channels', copy: 'Give members dedicated discussion channels and real-time access to your content.' },
+  { icon: CreditCard, title: 'Choose how you sell', copy: 'Offer recurring memberships or one-time access without building your own checkout.' },
+  { icon: BarChart3, title: 'Grow your reputation', copy: 'Build a public creator profile around your content, community, and track record.' },
+  { icon: CircleDollarSign, title: 'Get paid through Whop', copy: 'Use Whop-powered commerce, balance tools, and creator payout experiences.' },
+]
+
+const STEPS = [
+  ['01', 'Apply', 'Tell us what you cover and show us how you create value for sports fans.'],
+  ['02', 'Get approved', 'Our team reviews your application for quality, clarity, and community fit.'],
+  ['03', 'Build your offer', 'Create your group, member access, premium content, and pricing.'],
+  ['04', 'Launch', 'Invite your audience, publish consistently, and grow your creator business.'],
+]
 
 export default function CreatorApplyPage() {
   const { user, profile } = useAuth()
   const router = useRouter()
   const supabase = createClient()
-
   const [sports, setSports] = useState<string[]>([])
   const [whyCreator, setWhyCreator] = useState('')
   const [samplePicks, setSamplePicks] = useState('')
@@ -24,207 +54,195 @@ export default function CreatorApplyPage() {
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
 
-  function toggleSport(s: string) {
-    setSports(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+  function toggleSport(sport: string) {
+    setSports((current) => current.includes(sport) ? current.filter((item) => item !== sport) : [...current, sport])
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user) { router.push('/auth/login?next=/creators/apply'); return }
-    if (!whyCreator.trim() || sports.length === 0) {
-      setError('Please fill in all required fields and select at least one sport.')
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!user) {
+      router.push('/auth/login?next=/creators/apply')
       return
     }
+    if (!whyCreator.trim() || sports.length === 0) {
+      setError('Select at least one sport and tell us why you want to create on SlipSurge.')
+      return
+    }
+
     setSubmitting(true)
     setError('')
-
-    const { error: err } = await supabase.from('creator_applications').insert({
+    const { error: submitError } = await supabase.from('creator_applications').insert({
       user_id: user.id,
       sports,
       why_creator: whyCreator.trim(),
       sample_picks: samplePicks.trim() || null,
-      social_links: {
-        twitter: twitter.trim() || null,
-        instagram: instagram.trim() || null,
-      },
+      social_links: { twitter: twitter.trim() || null, instagram: instagram.trim() || null },
       follower_count_at_apply: profile?.follower_count ?? 0,
     })
 
-    if (err) {
-      if (err.code === '23505') {
-        setError('You already have an application submitted. Check back for updates.')
-      } else {
-        setError(err.message)
-      }
+    if (submitError) {
+      setError(submitError.code === '23505' ? 'You already have an application under review.' : submitError.message)
       setSubmitting(false)
       return
     }
 
     setDone(true)
+    setSubmitting(false)
   }
 
-  if (!user) {
-    return (
-      <div style={{ maxWidth: 560, margin: '60px auto', padding: '0 24px', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Become a Creator</h1>
-        <p style={{ color: 'var(--text-2)', marginBottom: 24 }}>Sign in first to apply for creator status.</p>
-        <Link href="/auth/login?next=/creators/apply" style={{ display: 'inline-block', padding: '10px 24px', background: 'var(--accent)', color: 'var(--accent-fg)', borderRadius: 10, fontWeight: 800, textDecoration: 'none' }}>Sign in</Link>
-      </div>
-    )
-  }
-
-  if (profile?.account_type === 'creator') {
-    return (
-      <div style={{ maxWidth: 560, margin: '60px auto', padding: '0 24px', textAlign: 'center' }}>
-        <CheckCircle size={48} style={{ color: 'var(--accent)', margin: '0 auto 16px' }} />
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>You&apos;re already a Creator!</h1>
-        <p style={{ color: 'var(--text-2)', marginBottom: 24 }}>Head to your profile to set up your tiers and start earning.</p>
-        <Link href={`/profile/${profile.username}`} style={{ display: 'inline-block', padding: '10px 24px', background: 'var(--accent)', color: 'var(--accent-fg)', borderRadius: 10, fontWeight: 800, textDecoration: 'none' }}>View Profile</Link>
-      </div>
-    )
-  }
-
-  if (done) {
-    return (
-      <div style={{ maxWidth: 560, margin: '60px auto', padding: '0 24px', textAlign: 'center' }}>
-        <CheckCircle size={48} style={{ color: 'var(--accent)', margin: '0 auto 16px' }} />
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Application submitted!</h1>
-        <p style={{ color: 'var(--text-2)', marginBottom: 8 }}>We&apos;ll review your application and get back to you within 24–48 hours.</p>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 28 }}>In the meantime, keep posting picks — great track records help approvals.</p>
-        <Link href="/feed" style={{ display: 'inline-block', padding: '10px 24px', background: 'var(--accent)', color: 'var(--accent-fg)', borderRadius: 10, fontWeight: 800, textDecoration: 'none' }}>Back to Feed</Link>
-      </div>
-    )
-  }
+  const isCreator = profile?.account_type === 'creator'
 
   return (
-    <div style={{ maxWidth: 620, margin: '0 auto', padding: '32px 24px' }}>
-      <Link href="/creators" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 13, textDecoration: 'none', marginBottom: 24 }}>
-        <ArrowLeft size={14} /> Back to Creators
-      </Link>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Zap size={24} style={{ color: 'var(--accent)' }} />
-        </div>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Apply to be a Creator</h1>
-          <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 2 }}>Share picks, build a following, earn money</p>
-        </div>
-      </div>
-
-      {/* Perks */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, margin: '24px 0', padding: '16px', background: 'var(--surface-2)', borderRadius: 12, border: '1px solid var(--border)' }}>
-        {[['⚡', 'Verified Badge', 'Stand out from the crowd'], ['💰', 'Earn Money', 'Paid tiers & subscriptions'], ['📊', 'Analytics', 'Track your pick record']].map(([icon, title, desc]) => (
-          <div key={title} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
-            <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>{title}</p>
-            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{desc}</p>
+    <main className={styles.page}>
+      <section className={styles.hero}>
+        <div className={styles.heroGlow} aria-hidden="true" />
+        <div className={styles.heroCopy}>
+          <div className={styles.eyebrow}><Sparkles size={14} /> SlipSurge Creator Program</div>
+          <h1>Turn your sports insight into a business.</h1>
+          <p className={styles.lede}>Sell premium picks, build a member community, and create private channels around the content your audience values.</p>
+          <div className={styles.heroActions}>
+            <a className={styles.primaryButton} href="#creator-application">Start your application <ArrowRight size={17} /></a>
+            <a className={styles.secondaryButton} href="#how-it-works">See how it works</a>
           </div>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Sports */}
-        <div>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8, letterSpacing: '0.02em' }}>
-            SPORTS YOU COVER <span style={{ color: 'var(--red)' }}>*</span>
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {SPORTS.map(s => {
-              const logo = sportLogoUrl(s)
-              return (
-                <button key={s} type="button" onClick={() => toggleSport(s)} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-                  border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
-                  background: sports.includes(s) ? 'var(--accent-dim)' : 'transparent',
-                  color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
-                  cursor: 'pointer', transition: 'all 130ms',
-                }}>
-                  {logo && <img src={logo} alt={s} style={{ width: 14, height: 14, objectFit: 'contain' }} />}
-                  {s}
-                </button>
-              )
-            })}
+          <div className={styles.heroFacts}>
+            <span><Check size={14} /> Free to apply</span>
+            <span><Check size={14} /> Reviewed by our team</span>
+            <span><Check size={14} /> Commerce powered by Whop</span>
           </div>
         </div>
 
-        {/* Why creator */}
-        <div>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8, letterSpacing: '0.02em' }}>
-            WHY DO YOU WANT TO BE A CREATOR? <span style={{ color: 'var(--red)' }}>*</span>
-          </label>
-          <textarea
-            value={whyCreator}
-            onChange={e => setWhyCreator(e.target.value)}
-            placeholder="Tell us about your betting experience, your track record, what makes you stand out…"
-            rows={4}
-            required
-            className="ss-input"
-            style={{ resize: 'vertical', minHeight: 100 }}
-          />
-          <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{whyCreator.length}/500 characters</p>
-        </div>
-
-        {/* Sample picks */}
-        <div>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8, letterSpacing: '0.02em' }}>
-            SAMPLE PICKS / TRACK RECORD <span style={{ color: 'var(--text-3)' }}>(optional)</span>
-          </label>
-          <textarea
-            value={samplePicks}
-            onChange={e => setSamplePicks(e.target.value)}
-            placeholder="Share some recent picks with results, or a link to your record…"
-            rows={3}
-            className="ss-input"
-            style={{ resize: 'vertical', minHeight: 80 }}
-          />
-        </div>
-
-        {/* Social links */}
-        <div>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8, letterSpacing: '0.02em' }}>
-            SOCIAL LINKS <span style={{ color: 'var(--text-3)' }}>(optional)</span>
-          </label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input
-              type="text"
-              value={twitter}
-              onChange={e => setTwitter(e.target.value)}
-              placeholder="Twitter / X handle (@username)"
-              className="ss-input"
-            />
-            <input
-              type="text"
-              value={instagram}
-              onChange={e => setInstagram(e.target.value)}
-              placeholder="Instagram handle (@username)"
-              className="ss-input"
-            />
+        <div className={styles.previewShell} aria-label="Example SlipSurge creator membership">
+          <div className={styles.previewTop}><span>Creator storefront</span><BadgeCheck size={17} /></div>
+          <div className={styles.previewIdentity}>
+            <div className={styles.previewAvatar}>SS</div>
+            <div><strong>Your Creator Brand</strong><span>Premium sports community</span></div>
           </div>
-        </div>
-
-        {error && (
-          <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(255,77,106,0.08)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
-            {error}
+          <div className={styles.previewOffer}>
+            <span>All-access membership</span>
+            <strong>Your price</strong>
+            <small>Recurring or one-time access</small>
           </div>
-        )}
+          <div className={styles.previewList}>
+            <span><CheckCircle2 size={16} /> Premium posts and picks</span>
+            <span><CheckCircle2 size={16} /> Private group channels</span>
+            <span><CheckCircle2 size={16} /> Direct member access</span>
+          </div>
+          <div className={styles.previewFooter}><span>Built on SlipSurge</span><span className={styles.liveDot}>Ready to launch</span></div>
+        </div>
+      </section>
 
-        <button type="submit" disabled={submitting || !whyCreator.trim() || sports.length === 0} style={{
-          padding: '13px 24px', borderRadius: 10, fontSize: 14, fontWeight: 800,
-          background: submitting || !whyCreator.trim() || sports.length === 0 ? 'var(--surface-3)' : 'var(--accent)',
-          color: submitting || !whyCreator.trim() || sports.length === 0 ? 'var(--text-3)' : 'var(--accent-fg)',
-          border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', transition: 'all 150ms',
-        }}>
-          {submitting ? 'Submitting…' : 'Submit Application'}
-        </button>
+      <section className={styles.section}>
+        <div className={styles.sectionHeading}>
+          <span>Everything in one place</span>
+          <h2>Create content. Build access. Grow your community.</h2>
+          <p>SlipSurge gives approved creators the tools to turn trusted sports content into a real member experience.</p>
+        </div>
+        <div className={styles.toolGrid}>
+          {CREATOR_TOOLS.map(({ icon: Icon, title, copy }) => (
+            <article className={styles.toolCard} key={title}>
+              <div className={styles.toolIcon}><Icon size={20} /></div>
+              <h3>{title}</h3><p>{copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
-        <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
-          Applications are reviewed within 24–48 hours. You&apos;ll be notified by email.
-        </p>
-      </form>
-    </div>
+      <section className={styles.whopSection}>
+        <div className={styles.whopMark} aria-label="Whop">
+          <Image src="/brands/whop-logo.svg" alt="Whop" width={148} height={52} />
+        </div>
+        <div className={styles.whopCopy}>
+          <span>Payments and payouts powered by Whop</span>
+          <h2>Focus on your members. Whop handles the commerce layer.</h2>
+          <p>Approved creators connect through Whop to support secure checkout, recurring access, account onboarding, balances, and payouts.</p>
+        </div>
+        <div className={styles.whopBenefits}>
+          <span><ShieldCheck size={18} /> Connected creator onboarding</span>
+          <span><CreditCard size={18} /> Membership checkout</span>
+          <span><CircleDollarSign size={18} /> Balance and payout tools</span>
+        </div>
+      </section>
+
+      <section className={styles.section} id="how-it-works">
+        <div className={styles.sectionHeading}>
+          <span>How it works</span><h2>From application to launch.</h2>
+          <p>A focused approval process keeps the creator marketplace useful for members and creators.</p>
+        </div>
+        <div className={styles.steps}>
+          {STEPS.map(([number, title, copy]) => (
+            <article className={styles.step} key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.applicationSection} id="creator-application">
+        <aside className={styles.reviewPanel}>
+          <span className={styles.kicker}>Before you apply</span>
+          <h2>What we look for.</h2>
+          <p>We approve creators who can add a clear, responsible point of view to the SlipSurge community.</p>
+          <ul>
+            <li><CheckCircle2 size={18} /><span><strong>A clear niche</strong>Tell us which sports or markets you cover.</span></li>
+            <li><CheckCircle2 size={18} /><span><strong>Useful content</strong>Show how your work helps members make informed decisions.</span></li>
+            <li><CheckCircle2 size={18} /><span><strong>A credible record</strong>Share public examples, past picks, or an established audience.</span></li>
+            <li><CheckCircle2 size={18} /><span><strong>Community standards</strong>Creators must communicate responsibly and never guarantee outcomes.</span></li>
+          </ul>
+          <div className={styles.disclosure}>Approval and earnings are not guaranteed. Creator content must follow SlipSurge policies and applicable law.</div>
+        </aside>
+
+        <div className={styles.formCard}>
+          {isCreator ? (
+            <div className={styles.formState}>
+              <div className={styles.stateIcon}><BadgeCheck size={30} /></div>
+              <span>Creator access active</span><h2>You are already approved.</h2>
+              <p>Open Creator Studio to configure your group, channels, products, and member access.</p>
+              <Link className={styles.primaryButton} href="/creators/studio">Open Creator Studio <ArrowRight size={17} /></Link>
+            </div>
+          ) : done ? (
+            <div className={styles.formState}>
+              <div className={styles.stateIcon}><CheckCircle2 size={30} /></div>
+              <span>Application received</span><h2>We have it from here.</h2>
+              <p>Our team will review your application. You will receive an update when a decision is ready.</p>
+              <Link className={styles.secondaryButton} href="/feed">Return to the feed</Link>
+            </div>
+          ) : !user ? (
+            <div className={styles.formState}>
+              <div className={styles.stateIcon}><Sparkles size={30} /></div>
+              <span>Ready to apply?</span><h2>Sign in to get started.</h2>
+              <p>Your SlipSurge account connects your application to your profile, content, and creator access.</p>
+              <Link className={styles.primaryButton} href="/auth/login?next=/creators/apply">Sign in and apply <ArrowRight size={17} /></Link>
+              <small>Creating a SlipSurge account is free.</small>
+            </div>
+          ) : (
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <div className={styles.formHeading}><span>Creator application</span><h2>Tell us about your work.</h2><p>Required fields are marked with an asterisk.</p></div>
+              <fieldset>
+                <legend>Sports you cover <em>*</em></legend>
+                <div className={styles.sportGrid}>
+                  {SPORTS.map((sport) => {
+                    const selected = sports.includes(sport)
+                    const logo = sportLogoUrl(sport)
+                    return <button className={selected ? styles.sportSelected : styles.sport} aria-pressed={selected} key={sport} type="button" onClick={() => toggleSport(sport)}>{logo && <img src={logo} alt="" width={18} height={18} /> /* eslint-disable-line @next/next/no-img-element */}<span>{sport}</span>{selected && <Check size={14} />}</button>
+                  })}
+                </div>
+              </fieldset>
+              <label>Why do you want to create on SlipSurge? <em>*</em>
+                <textarea value={whyCreator} onChange={(event) => setWhyCreator(event.target.value)} maxLength={500} rows={5} required placeholder="Tell us about your experience, audience, approach, and what you want to build." />
+                <small>{whyCreator.length}/500</small>
+              </label>
+              <label>Sample picks or track record <span>Optional</span>
+                <textarea value={samplePicks} onChange={(event) => setSamplePicks(event.target.value)} maxLength={1000} rows={4} placeholder="Share recent examples, results, or a link to your public work." />
+              </label>
+              <div className={styles.socialFields}>
+                <label>X handle <span>Optional</span><input value={twitter} onChange={(event) => setTwitter(event.target.value)} placeholder="@username" /></label>
+                <label>Instagram <span>Optional</span><input value={instagram} onChange={(event) => setInstagram(event.target.value)} placeholder="@username" /></label>
+              </div>
+              {error && <div className={styles.error} role="alert">{error}</div>}
+              <button className={styles.submitButton} type="submit" disabled={submitting || !whyCreator.trim() || sports.length === 0}>{submitting ? 'Submitting application...' : 'Submit creator application'}<ArrowRight size={17} /></button>
+              <p className={styles.formNote}>By applying, you agree to follow SlipSurge creator and community policies.</p>
+            </form>
+          )}
+        </div>
+      </section>
+    </main>
   )
 }
