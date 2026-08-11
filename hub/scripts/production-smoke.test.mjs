@@ -272,6 +272,13 @@ test('public blog views are atomic and remain server controlled', async () => {
   assert.ok(migration.includes('grant execute on function public.record_blog_view(uuid) to service_role'))
 })
 
+test('Ultimate-only Matrix tools do not call protected APIs for lower tiers', async () => {
+  const matrixPanel = await read('src/components/dugout/CustomMatrixPanel.tsx')
+  assert.ok(matrixPanel.includes('const hasUltimate = !!profile'))
+  assert.ok(matrixPanel.includes('if (user && hasUltimate) refresh()'))
+  assert.ok(matrixPanel.includes('if (!user || !hasUltimate) return null'))
+})
+
 test('provider-returned navigation remains on trusted Whop destinations', async () => {
   const validator = await read('src/lib/whopUrl.ts')
   const onboarding = await read('src/app/api/creator/whop-onboard/route.ts')

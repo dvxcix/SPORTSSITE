@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { Grid3x3, Plus, Pencil, Trash2, Copy, Check, X, GripVertical, Share2, ShoppingBag } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 import { BookLogo } from '@/components/BookLogo'
 import { PipelineBuilder, type MatrixPipelineStep } from './PipelineBuilder'
@@ -1276,7 +1277,7 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
 }
 
 export function MatrixButton() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const router = useRouter()
   const fab = useDraggableFab('matrix-fab-pos')
   const [open, setOpen] = useState(false)
@@ -1286,6 +1287,15 @@ export function MatrixButton() {
   const [importCode, setImportCode] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const profileTier = effectiveTier(
+    (profile?.tier as Tier | undefined) ?? 'free',
+    profile?.discord_advanced_claimed,
+    profile?.admin_granted_tier as Tier | null | undefined,
+  )
+  const hasUltimate = !!profile && (
+    hasFullAccessOverride(profile.account_type, profile.beta_access_active)
+    || hasTierAccess(profileTier, 'ultimate')
+  )
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -1315,7 +1325,9 @@ export function MatrixButton() {
     notifyMatricesChanged()
   }, [refresh, notifyMatricesChanged])
 
-  useEffect(() => { if (user) refresh() }, [user, refresh])
+  useEffect(() => {
+    if (user && hasUltimate) refresh()
+  }, [user, hasUltimate, refresh])
 
   const doImport = useCallback(async () => {
     if (!importCode.trim()) return
@@ -1328,7 +1340,7 @@ export function MatrixButton() {
     notifyMatricesChanged()
   }, [importCode, refresh, notifyMatricesChanged])
 
-  if (!user) return null
+  if (!user || !hasUltimate) return null
 
   return (
     <>
