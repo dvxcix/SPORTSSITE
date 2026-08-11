@@ -7,6 +7,58 @@ import { PLATFORM_URL } from '@/lib/platform'
 export const revalidate = 0
 export const maxDuration = 280
 
+const SCRAPE_TIMEOUT_MS = 70_000
+const MAX_SCRAPE_ATTEMPTS = 2
+
+async function scrapeGame(gamePk: number) {
+  let lastResult = {
+    gamePk,
+    status: 502,
+    ok: false,
+    skipped: false,
+    attempts: 0,
+    error: 'scrape request failed',
+  }
+
+  for (let attempt = 1; attempt <= MAX_SCRAPE_ATTEMPTS; attempt += 1) {
+    try {
+      const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePk=${gamePk}`, {
+        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        signal: AbortSignal.timeout(SCRAPE_TIMEOUT_MS),
+      })
+      const body = await res.json().catch(() => null)
+      const ok = res.ok && body?.result?.imported?.ok !== false
+      const skipped = body?.result?.skipped === true
+
+      lastResult = {
+        gamePk,
+        status: res.status,
+        ok,
+        skipped,
+        attempts: attempt,
+        error: ok ? '' : 'scrape or import failed',
+      }
+
+      if (ok || skipped) return lastResult
+    } catch {
+      lastResult = {
+        gamePk,
+        status: 502,
+        ok: false,
+        skipped: false,
+        attempts: attempt,
+        error: 'scrape request failed',
+      }
+    }
+
+    if (attempt < MAX_SCRAPE_ATTEMPTS) {
+      console.warn('[poll-pikkit-picks] retrying game scrape', { gamePk, attempt })
+    }
+  }
+
+  return lastResult
+}
+
 // Runs every 30 minutes (see vercel.json). Unlike FanDuel/BetMGM — which
 // only need ONE scrape per game, right when the opening line appears —
 // Pikkit's community pick counts keep changing throughout the whole
@@ -25,26 +77,12 @@ async function run(req: Request) {
   if (!pregame.length) return NextResponse.json({ date, games: games.length, pregame: 0, results: [] })
 
   const results = await Promise.allSettled(
-    pregame.map(async g => {
-      const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePk=${g.gamePk}`, {
-        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-        signal: AbortSignal.timeout(55_000),
-      })
-      const body = await res.json().catch(() => null)
-      const ok = res.ok && body?.result?.imported?.ok !== false
-      return {
-        gamePk: g.gamePk,
-        status: res.status,
-        ok,
-        skipped: body?.result?.skipped === true,
-        error: ok ? undefined : 'scrape or import failed',
-      }
-    })
+    pregame.map(g => scrapeGame(g.gamePk))
   )
 
   const normalizedResults = results.map((result, index) => result.status === 'fulfilled'
     ? result.value
-    : { gamePk: pregame[index].gamePk, status: 502, ok: false, skipped: false, error: 'scrape request failed' })
+    : { gamePk: pregame[index].gamePk, status: 502, ok: false, skipped: false, attempts: MAX_SCRAPE_ATTEMPTS, error: 'scrape request failed' })
   const failed = normalizedResults.filter(result => !result.ok)
 
   if (failed.length) {
