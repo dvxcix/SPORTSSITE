@@ -23,6 +23,13 @@ test('production web security headers remain enabled', async () => {
   }
 })
 
+test('public discovery files bypass the authenticated request proxy', async () => {
+  const proxy = await read('src/proxy.ts')
+  for (const route of ['manifest.webmanifest', 'robots.txt', 'sitemap.xml']) {
+    assert.ok(proxy.includes(route), `${route} is not excluded from the authenticated proxy`)
+  }
+})
+
 test('critical pipelines write health telemetry', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   const jobs = [...new Set(vercel.crons.map(cron => cron.path.split('?')[0].split('/').at(-1)))]
