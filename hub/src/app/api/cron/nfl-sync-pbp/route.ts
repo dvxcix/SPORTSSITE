@@ -3,7 +3,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
-import { syncNflPbp } from '@/lib/nflverseSync'
+import { NflverseAssetError, syncNflPbp } from '@/lib/nflverseSync'
 
 export const revalidate = 0
 export const maxDuration = 120
@@ -30,7 +30,17 @@ async function run(req: Request) {
   try {
     const count = await syncNflPbp(admin, season)
     return NextResponse.json({ synced: count, season })
-  } catch (e: any) {
+  } catch (e: unknown) {
+    // nflverse does not publish a season PBP asset until games exist. That is
+    // an expected upstream state, not a broken SlipSurge pipeline. Keep the
+    // health row green while still exposing the reason to the admin panel.
+    if (e instanceof NflverseAssetError && e.status === 404) {
+      return NextResponse.json({
+        synced: 0,
+        season,
+        skipped: 'upstream_not_published',
+      })
+    }
     console.error('[nfl-sync-pbp] failed', { type: e instanceof Error ? e.name : typeof e })
     return safeApiError('nfl-sync-pbp', e)
   }

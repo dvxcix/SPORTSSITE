@@ -28,6 +28,7 @@ export default async function PicksPage({
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const oneDayAgo = new Date(new Date().getTime() - 86400000).toISOString()
 
   // Parlays are picks too (multi-leg instead of single) — filtering to only
   // post_type 'pick' was silently excluding every parlay post from this page
@@ -47,7 +48,7 @@ export default async function PicksPage({
     .from('posts')
     .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)')
     .in('post_type', ['pick', 'parlay'])
-    .gte('created_at', new Date(Date.now() - 86400000).toISOString())
+    .gte('created_at', oneDayAgo)
     .order('reaction_count', { ascending: false })
     .limit(5)
 

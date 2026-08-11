@@ -28,8 +28,8 @@ export type NotifRow = {
   data?: { avatar_url?: string; emoji?: string; team_logo?: string; actors?: { id: string; avatar_url?: string }[]; count?: number } | null
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
+function timeAgo(dateStr: string, nowMs: number) {
+  const diff = nowMs - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m`
@@ -40,6 +40,7 @@ function timeAgo(dateStr: string) {
 
 export function NotificationsList({ userId, initialNotifications }: { userId: string; initialNotifications: NotifRow[] }) {
   const supabase = createClient()
+  const [renderedAt] = useState(() => Date.now())
   const [notifications, setNotifications] = useState(initialNotifications)
   const [clearing, setClearing] = useState(false)
   const { confirm, notify } = useFeedback()
@@ -69,7 +70,7 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
 
   const groups: Record<string, NotifRow[]> = {}
   for (const n of notifications) {
-    const diff = Math.floor((Date.now() - new Date(n.created_at).getTime()) / 86400000)
+    const diff = Math.floor((renderedAt - new Date(n.created_at).getTime()) / 86400000)
     const key = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff < 7 ? 'This Week' : 'Earlier'
     groups[key] = [...(groups[key] ?? []), n]
   }
@@ -109,8 +110,8 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {entries.map(entry => Array.isArray(entry)
-                ? <GroupedFollowRow key={entry[0].id} items={entry} onDelete={() => deleteMany(entry.map(n => n.id))} />
-                : <NotificationRow key={entry.id} n={entry} onDelete={() => deleteMany([entry.id])} />
+                ? <GroupedFollowRow key={entry[0].id} items={entry} nowMs={renderedAt} onDelete={() => deleteMany(entry.map(n => n.id))} />
+                : <NotificationRow key={entry.id} n={entry} nowMs={renderedAt} onDelete={() => deleteMany([entry.id])} />
               )}
             </div>
           </div>
@@ -148,7 +149,7 @@ export function collapseConsecutiveFollows(items: NotifRow[]): (NotifRow | Notif
   return out
 }
 
-function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void }) {
+function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; onDelete: () => void }) {
   const customEmojis = useCustomEmojis()
   const Icon = NOTIF_ICONS[n.type] ?? Bell
   const actorName = n.actor?.display_name || n.actor?.username
@@ -203,7 +204,7 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
           {actorName && <span style={{ fontWeight: 800 }}>{actorName} </span>}
           {n.message || n.body || 'interacted with you'}
         </p>
-        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(n.created_at)}</p>
+        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(n.created_at, nowMs)}</p>
       </div>
       {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', marginTop: 6, flexShrink: 0 }} />}
     </>
@@ -246,7 +247,7 @@ function NotificationRow({ n, onDelete }: { n: NotifRow; onDelete: () => void })
 // avatar is the most recent follower's and the message names them plus how
 // many others. Clicking still goes to that most-recent follower's profile;
 // dismissing removes every underlying notification in the group at once.
-function GroupedFollowRow({ items, onDelete }: { items: NotifRow[]; onDelete: () => void }) {
+function GroupedFollowRow({ items, nowMs, onDelete }: { items: NotifRow[]; nowMs: number; onDelete: () => void }) {
   const latest = items[0]
   const actorName = latest.actor?.display_name || latest.actor?.username
   const othersCount = items.length - 1
@@ -274,7 +275,7 @@ function GroupedFollowRow({ items, onDelete }: { items: NotifRow[]; onDelete: ()
           {actorName && <span style={{ fontWeight: 800 }}>{actorName} </span>}
           and {othersCount} other{othersCount === 1 ? '' : 's'} followed you
         </p>
-        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(latest.created_at)}</p>
+        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(latest.created_at, nowMs)}</p>
       </div>
       {anyUnread && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', marginTop: 6, flexShrink: 0 }} />}
     </>

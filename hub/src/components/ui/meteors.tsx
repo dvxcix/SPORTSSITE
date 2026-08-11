@@ -11,6 +11,8 @@ export const Meteors = ({
   className?: string;
 }) => {
   const meteors = new Array(number || 20).fill(true);
+  const deterministicFraction = (index: number, salt: number) =>
+    ((index + 1) * (salt * 37 + 17) % 101) / 101;
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -33,8 +35,8 @@ export const Meteors = ({
             style={{
               top: "-40px", // Start above the container
               left: position + "px",
-              animationDelay: Math.random() * 5 + "s", // Random delay between 0-5s
-              animationDuration: Math.floor(Math.random() * (10 - 5) + 5) + "s", // Keep some randomness in duration
+              animationDelay: `${deterministicFraction(idx, 2) * 5}s`,
+              animationDuration: `${5 + Math.floor(deterministicFraction(idx, 5) * 5)}s`,
             }}
           ></span>
         );

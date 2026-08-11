@@ -10,8 +10,11 @@ type ErrorPageProps = {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    console.error('SlipSurge page error', error)
-  }, [error])
+    console.error('SlipSurge page error', {
+      name: error.name,
+      digest: error.digest ?? null,
+    })
+  }, [error.digest, error.name])
 
   return (
     <PageState

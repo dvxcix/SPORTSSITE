@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Clock, Eye, Heart, ArrowLeft, BookOpen } from 'lucide-react'
@@ -36,8 +37,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   if (!blog) notFound()
 
-  // Increment view count
-  await supabase.from('blogs').update({ view_count: (blog.view_count ?? 0) + 1 }).eq('id', blog.id)
+  // Keep this atomic and server-only. Public readers should never need write
+  // access to article rows, and concurrent views must not overwrite the same
+  // stale count.
+  const admin = createAdminClient()
+  const { data: recordedViewCount } = await admin.rpc('record_blog_view', { p_blog_id: blog.id })
+  const displayedViewCount = typeof recordedViewCount === 'number'
+    ? recordedViewCount
+    : (blog.view_count ?? 0)
 
   // Related posts
   const { data: related } = await supabase
@@ -91,7 +98,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </p>
             <p className="text-xs text-zinc-500 flex items-center gap-2">
               <Clock size={10} /> {new Date(blog.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-              <Eye size={10} /> {blog.view_count ?? 0} views
+              <Eye size={10} /> {displayedViewCount} views
             </p>
           </div>
         </Link>

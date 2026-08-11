@@ -62,7 +62,9 @@ export function PostLiveProvider({ children }: { children: ReactNode }) {
 export function usePostLiveUpdates(postId: string | undefined, onUpdate: LiveCallback) {
   const ctx = useContext(PostLiveContext)
   const cbRef = useRef(onUpdate)
-  cbRef.current = onUpdate
+  useEffect(() => {
+    cbRef.current = onUpdate
+  }, [onUpdate])
   useEffect(() => {
     if (!ctx || !postId) return
     return ctx.subscribe(postId, payload => cbRef.current(payload))

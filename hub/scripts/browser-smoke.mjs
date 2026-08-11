@@ -1,6 +1,10 @@
 import { chromium } from 'playwright-core'
 
-const baseUrl = (process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '')
+const productionTarget = process.argv.includes('--production')
+const baseUrl = (
+  process.env.SMOKE_BASE_URL
+  || (productionTarget ? 'https://www.slipsurge.com' : 'http://127.0.0.1:3000')
+).replace(/\/$/, '')
 const edgePath = process.env.EDGE_PATH || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 const isLocalTarget = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(baseUrl)
 
@@ -116,8 +120,18 @@ try {
   })
   await verifyPage(desktop, '/auth/login', 'Sign in')
   await verifyPage(desktop, '/pricing', 'Ultimate')
-  await verifyProtectedPage(desktop, '/creators/apply')
+  await verifyPage(desktop, '/creators/apply', 'Give your audience more')
+  await verifyPage(desktop, '/creators', 'Find the people behind the edge')
+  await verifyPage(desktop, '/blog', 'Blog')
+  await verifyPage(desktop, '/about', 'SlipSurge')
+  await verifyPage(desktop, '/faq', 'Is SlipSurge a sportsbook?')
+  await verifyPage(desktop, '/support', 'Support')
+  await verifyPage(desktop, '/responsible-gambling', 'Responsible')
+  await verifyPage(desktop, '/privacy', 'Privacy')
+  await verifyPage(desktop, '/terms', 'Terms')
   await verifyProtectedPage(desktop, '/feed')
+  await verifyProtectedPage(desktop, '/explore')
+  await verifyProtectedPage(desktop, '/leaderboard')
   await verifyProtectedPage(desktop, '/settings/security')
   await desktop.close()
 
@@ -130,7 +144,8 @@ try {
   })
   await verifyPage(mobile, '/auth/login', 'Sign in', { label: 'mobile', checkOverflow: true })
   await verifyPage(mobile, '/pricing', 'Ultimate', { label: 'mobile', checkOverflow: true })
-  await verifyProtectedPage(mobile, '/creators/apply', { label: 'mobile' })
+  await verifyPage(mobile, '/creators/apply', 'Give your audience more', { label: 'mobile', checkOverflow: true })
+  await verifyPage(mobile, '/creators', 'Find the people behind the edge', { label: 'mobile', checkOverflow: true })
   await verifyProtectedPage(mobile, '/feed', { label: 'mobile' })
   await mobile.close()
 } finally {

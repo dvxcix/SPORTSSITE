@@ -84,6 +84,7 @@ export default async function ExplorePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const date = todayET()
+  const oneDayAgo = new Date(new Date().getTime() - 86400000).toISOString()
 
   const [
     { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
@@ -94,9 +95,9 @@ export default async function ExplorePage() {
     supabase.from('users').select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
       .eq('is_active_member', true).neq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
-      .gte('created_at', new Date(Date.now() - 86400000).toISOString()).order('reaction_count', { ascending: false }).limit(3),
+      .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('post_type', 'pick').eq('visibility', 'public')
-      .gte('created_at', new Date(Date.now() - 86400000).toISOString()).order('reaction_count', { ascending: false }).limit(3),
+      .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
     supabase.from('pages').select('id, slug, name, description, avatar_url, emoji, category, follower_count, is_verified')
       .eq('is_published', true).order('follower_count', { ascending: false }).limit(4),
     supabase.from('groups').select('id, slug, name, description, avatar_url, emoji, sport, member_count')

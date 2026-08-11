@@ -24,6 +24,7 @@ export default async function AdminOnlineUsersPage() {
   }
   const profileById = new Map(profiles.map(p => [p.id, p]))
   const ACTIVE_WINDOW_MIN = 15
+  const renderedAt = new Date().getTime()
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -49,7 +50,7 @@ export default async function AdminOnlineUsersPage() {
             <tbody className="divide-y divide-zinc-800">
               {bySignIn.map(u => {
                 const p = profileById.get(u.id)
-                const minsAgo = (Date.now() - new Date(u.last_sign_in_at!).getTime()) / 60000
+                const minsAgo = (renderedAt - new Date(u.last_sign_in_at!).getTime()) / 60000
                 const isRecent = minsAgo <= ACTIVE_WINDOW_MIN
                 return (
                   <tr key={u.id} className="hover:bg-zinc-800/40 transition-colors">

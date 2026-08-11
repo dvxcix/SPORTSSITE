@@ -56,9 +56,22 @@ async function fetchNflverseCsv(url: string): Promise<Record<string, string>[]> 
 // receiving/rushing.csv.gz — the ones that actually stay current, unlike
 // the stale/incomplete per-season ngs_YYYY_*.csv.gz assets) are gzipped.
 // Node's built-in zlib covers this with no new dependency.
+export class NflverseAssetError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly assetUrl: string,
+  ) {
+    super(message)
+    this.name = 'NflverseAssetError'
+  }
+}
+
 async function fetchNflverseCsvGz(url: string): Promise<Record<string, string>[]> {
   const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30_000) })
-  if (!res.ok) throw new Error(`nflverse CSV.gz request failed (${res.status})`)
+  if (!res.ok) {
+    throw new NflverseAssetError(`nflverse CSV.gz request failed (${res.status})`, res.status, url)
+  }
   const buf = Buffer.from(await res.arrayBuffer())
   const text = gunzipSync(buf).toString('utf8')
   return parseCsv(text)

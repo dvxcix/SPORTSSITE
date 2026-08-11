@@ -96,8 +96,8 @@ function insertReplyIntoTree(nodes: CommentNode[], parentId: string, reply: Comm
     : { ...n, replies: insertReplyIntoTree(n.replies, parentId, reply) })
 }
 
-function timeAgo(date: string) {
-  const diff = Date.now() - new Date(date).getTime()
+function timeAgo(date: string, nowMs: number) {
+  const diff = nowMs - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m`
@@ -156,13 +156,14 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [isDeleted, setIsDeleted] = useState(false)
   const [isEditingPost, setIsEditingPost] = useState(false)
   const [editPostText, setEditPostText] = useState(initialPost.content ?? '')
+  const [renderedAt] = useState(() => Date.now())
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
   const post = { ...initialPost, pick_data: pickData, content }
   const isOwnPost = !!user && user.id === post.author_id
   // Edit window matches the "edit within 10 minutes" behavior the rest of
   // the app doesn't otherwise enforce anywhere — delete has no such limit,
   // same as every mainstream social app (X included).
-  const canEditPost = isOwnPost && Date.now() - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
+  const canEditPost = isOwnPost && renderedAt - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
 
   // Fans out from the single shared channel PostLiveProvider owns (mounted
   // once in the root layout) instead of opening a connection per rendered
@@ -602,7 +603,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     @{post.author.username}
                   </Link>
                   <span style={{ color: 'var(--text-4)', fontSize: 12 }}>·</span>
-                  <span style={{ color: 'var(--text-3)', fontSize: 12, flexShrink: 0 }}>{timeAgo(post.created_at)}</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: 12, flexShrink: 0 }}>{timeAgo(post.created_at, renderedAt)}</span>
                 </div>
 
                 {/* More menu */}
@@ -968,6 +969,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 key={node.id}
                 node={node}
                 depth={0}
+                nowMs={renderedAt}
                 currentUserId={user?.id}
                 currentUserAvatar={profile?.avatar_url}
                 currentUserDisplay={profile?.display_name || profile?.username}
@@ -1074,13 +1076,13 @@ function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
 // live on the parent card), matching the single edit-in-place behavior
 // comments already had.
 function CommentItem({
-  node, depth, currentUserId, currentUserAvatar, currentUserDisplay,
+  node, depth, nowMs, currentUserId, currentUserAvatar, currentUserDisplay,
   editingCommentId, editText, setEditText, onStartEdit, onSaveEdit, onCancelEdit,
   onDelete, onReport, onToggleLike,
   replyingTo, replyText, setReplyText, onStartReply, onCancelReply, onSubmitReply,
   collapsedThreads, onToggleCollapsed,
 }: {
-  node: CommentNode; depth: number
+  node: CommentNode; depth: number; nowMs: number
   currentUserId?: string; currentUserAvatar?: string | null; currentUserDisplay?: string
   editingCommentId: string | null; editText: string; setEditText: (v: string) => void
   onStartEdit: (n: CommentNode) => void; onSaveEdit: (id: string) => void; onCancelEdit: () => void
@@ -1114,7 +1116,7 @@ function CommentItem({
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{node.author?.display_name || node.author?.username}</span>
             <UserBadges userId={node.author_id} size={12} />
             <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-              {timeAgo(node.created_at)}{isEdited && ` · edited ${timeAgo(node.updated_at)}`}
+              {timeAgo(node.created_at, nowMs)}{isEdited && ` · edited ${timeAgo(node.updated_at, nowMs)}`}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               {isOwn ? (
@@ -1214,6 +1216,7 @@ function CommentItem({
           key={reply.id}
           node={reply}
           depth={depth + 1}
+          nowMs={nowMs}
           currentUserId={currentUserId}
           currentUserAvatar={currentUserAvatar}
           currentUserDisplay={currentUserDisplay}

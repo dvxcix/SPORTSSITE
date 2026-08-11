@@ -188,7 +188,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  // Only the marketing homepage, static legal/info pages, and pricing (no
+  // Public discovery also includes published editorial content plus the
+  // creator acquisition and catalog surface. Creator studios and payouts
+  // remain gated below. The marketing homepage, legal/info pages, and pricing (no
   // real member data on any of them) are visible signed-out — /feed,
   // /channels, and /leaderboard used to be in this list too, which meant
   // anyone with the URL could browse real members' posts, picks, and
@@ -198,9 +200,18 @@ export async function updateSession(request: NextRequest) {
   // prospective subscriber needs to see plans before they have an account
   // to log into; PricingCheckoutButton itself handles sending a logged-out
   // click to /auth/login.
+  const pathname = request.nextUrl.pathname
+  const creatorSlug = pathname.match(/^\/creators\/([^/]+)$/)?.[1]
+  const blogSlug = pathname.match(/^\/blog\/([^/]+)$/)?.[1]
+  const isPublicCreatorRoute = pathname === '/creators'
+    || pathname === '/creators/apply'
+    || pathname.startsWith('/creators/offers/')
+    || (!!creatorSlug && !['studio', 'payouts'].includes(creatorSlug))
+  const isPublicBlogRoute = pathname === '/blog'
+    || (!!blogSlug && !['create', 'edit', 'my'].includes(blogSlug))
   const isPublicRoute = ['/', '/about', '/faq', '/terms', '/privacy', '/responsible-gambling', '/support', '/pricing'].some(p =>
-    request.nextUrl.pathname === p
-  )
+    pathname === p
+  ) || isPublicCreatorRoute || isPublicBlogRoute
 
   if (!user && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()

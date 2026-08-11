@@ -30,6 +30,46 @@ test('public discovery files bypass the authenticated request proxy', async () =
   }
 })
 
+test('public discovery and authentication boundaries stay aligned', async () => {
+  const middleware = await read('src/lib/supabase/middleware.ts')
+  const sitemap = await read('src/app/sitemap.ts')
+  assert.ok(middleware.includes("'/creators/apply'"), 'creator acquisition page is not public')
+  assert.ok(sitemap.includes("path: '/creators/apply'"), 'creator acquisition page is missing from discovery')
+  assert.ok(middleware.includes("pathname === '/creators'"), 'creator marketplace is not public')
+  assert.ok(middleware.includes("pathname === '/blog'"), 'published editorial content is not public')
+  assert.ok(sitemap.includes("path: '/creators'"), 'creator marketplace is missing from discovery')
+  assert.ok(sitemap.includes("path: '/blog'"), 'blog is missing from discovery')
+  for (const privateRoute of ['/explore', '/sports', '/leaderboard']) {
+    assert.ok(!sitemap.includes(`path: '${privateRoute}'`), `${privateRoute} should not be advertised while auth-gated`)
+  }
+  for (const privateCreatorRoute of ['studio', 'payouts']) {
+    assert.ok(middleware.includes(`!['studio', 'payouts'].includes(creatorSlug)`), `${privateCreatorRoute} must remain protected`)
+  }
+})
+
+test('root failures retain a branded recovery path', async () => {
+  const globalError = await read('src/app/global-error.tsx')
+  const segmentError = await read('src/app/error.tsx')
+  assert.ok(globalError.includes('<html lang="en">'))
+  assert.ok(globalError.includes('onClick={reset}'))
+  assert.ok(!segmentError.includes("console.error('SlipSurge page error', error)"))
+})
+
+test('expected unpublished NFL data does not poison pipeline health', async () => {
+  const route = await read('src/app/api/cron/nfl-sync-pbp/route.ts')
+  const sync = await read('src/lib/nflverseSync.ts')
+  assert.ok(sync.includes('export class NflverseAssetError'))
+  assert.ok(route.includes('e.status === 404'))
+  assert.ok(route.includes("skipped: 'upstream_not_published'"))
+})
+
+test('decorative animation values are deterministic during render', async () => {
+  const meteors = await read('src/components/ui/meteors.tsx')
+  const beams = await read('src/components/ui/background-beams.tsx')
+  assert.ok(!meteors.includes('Math.random()'))
+  assert.ok(!beams.includes('Math.random()'))
+})
+
 test('critical pipelines write health telemetry', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   const jobs = [...new Set(vercel.crons.map(cron => cron.path.split('?')[0].split('/').at(-1)))]
@@ -218,6 +258,18 @@ test('database RPCs and reaction notifications are least privilege', async () =>
   for (const table of ['push_subscriptions', 'discord_config', 'rate_limit_counters', 'pro_plan_payout_runs', 'scrape_dispatch_queue']) {
     assert.ok(grants.includes(`revoke all on table public.${table} from anon, authenticated`), `${table} retains browser grants`)
   }
+})
+
+test('public blog views are atomic and remain server controlled', async () => {
+  const page = await read('src/app/blog/[slug]/page.tsx')
+  const migration = await read('supabase/migrations/20260811230000_atomic_blog_views.sql')
+  assert.ok(page.includes("createAdminClient()"))
+  assert.ok(page.includes("rpc('record_blog_view'"))
+  assert.ok(!page.includes("from('blogs').update({ view_count"))
+  assert.ok(migration.includes('set view_count = coalesce(view_count, 0) + 1'))
+  assert.ok(migration.includes("status = 'published'"))
+  assert.ok(migration.includes('revoke all on function public.record_blog_view(uuid) from public, anon, authenticated'))
+  assert.ok(migration.includes('grant execute on function public.record_blog_view(uuid) to service_role'))
 })
 
 test('provider-returned navigation remains on trusted Whop destinations', async () => {
