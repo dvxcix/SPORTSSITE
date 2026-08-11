@@ -1,0 +1,16 @@
+# Native clients are released independently from the web project.
+hub/desktop
+
+# Local build and dependency artifacts.
+hub/.next
+hub/node_modules
+hub/coverage
+hub/out
+hub/build
+hub/*.tsbuildinfo
+
+# Local-only configuration and tooling state.
+hub/.env*
+hub/.vercel
+hub/.claude
+.codex-worktrees

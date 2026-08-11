@@ -1,0 +1,15 @@
+# Native clients are released independently and are not part of the web build.
+desktop
+
+# Local build and dependency artifacts.
+.next
+node_modules
+coverage
+out
+build
+*.tsbuildinfo
+
+# Local-only configuration and tooling state.
+.env*
+.vercel
+.claude
