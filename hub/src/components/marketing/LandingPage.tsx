@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import styles from './LandingPage.module.css'
 import { motion, AnimatePresence } from 'motion/react'
 import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, Megaphone } from 'lucide-react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
@@ -151,15 +152,15 @@ export function LandingPage() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       {/* Nav */}
-      <header className="ss-landing-nav">
-        <Link href="/" className="ss-landing-brand" aria-label="SlipSurge home">
+      <header className={styles.nav}>
+        <Link href="/" className={styles.brand} aria-label="SlipSurge home">
           <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain' }} />
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
         </Link>
-        <nav className="ss-landing-actions" aria-label="Public navigation">
-          <Link href="/pricing" className="ss-landing-link ss-landing-pricing">Pricing</Link>
-          <Link href="/auth/login" className="ss-landing-link">Sign in</Link>
-          <Link href="/auth/register" className="ss-landing-cta">Get started</Link>
+        <nav className={styles.actions} aria-label="Public navigation">
+          <Link href="/pricing" className={`${styles.link} ${styles.pricing}`}>Pricing</Link>
+          <Link href="/auth/login" className={styles.link}>Sign in</Link>
+          <Link href="/auth/register" className={styles.cta}>Get started</Link>
         </nav>
       </header>
 
