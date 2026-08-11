@@ -85,6 +85,7 @@ const nextConfig: NextConfig = {
     '/api/cron/scrape-fanduel': ['./node_modules/playwright-core/**/*'],
     '/api/cron/scrape-mgm': ['./node_modules/playwright-core/**/*'],
     '/api/cron/scrape-pikkit': ['./node_modules/playwright-core/**/*'],
+    '/api/cron/poll-pikkit-picks': ['./node_modules/playwright-core/**/*'],
   },
 };
 

@@ -67,6 +67,18 @@ export class NflverseAssetError extends Error {
   }
 }
 
+export function isNflverseAssetError(
+  error: unknown,
+  status?: number,
+): error is NflverseAssetError {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as { name?: unknown; status?: unknown; assetUrl?: unknown }
+  return candidate.name === 'NflverseAssetError'
+    && typeof candidate.status === 'number'
+    && typeof candidate.assetUrl === 'string'
+    && (status === undefined || candidate.status === status)
+}
+
 async function fetchNflverseCsvGz(url: string): Promise<Record<string, string>[]> {
   const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30_000) })
   if (!res.ok) {

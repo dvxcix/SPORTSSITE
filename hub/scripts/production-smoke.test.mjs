@@ -59,8 +59,22 @@ test('expected unpublished NFL data does not poison pipeline health', async () =
   const route = await read('src/app/api/cron/nfl-sync-pbp/route.ts')
   const sync = await read('src/lib/nflverseSync.ts')
   assert.ok(sync.includes('export class NflverseAssetError'))
-  assert.ok(route.includes('e.status === 404'))
+  assert.ok(sync.includes('export function isNflverseAssetError'))
+  assert.ok(route.includes('isNflverseAssetError(e, 404)'))
   assert.ok(route.includes("skipped: 'upstream_not_published'"))
+})
+
+test('Browserbase routes include Playwright runtime assets', async () => {
+  const config = await read('next.config.ts')
+  for (const route of [
+    '/api/admin/pikkit-context',
+    '/api/cron/poll-pikkit-picks',
+    '/api/cron/scrape-fanduel',
+    '/api/cron/scrape-mgm',
+    '/api/cron/scrape-pikkit',
+  ]) {
+    assert.ok(config.includes(`'${route}': ['./node_modules/playwright-core/**/*']`), `${route} must trace Playwright assets`)
+  }
 })
 
 test('decorative animation values are deterministic during render', async () => {
