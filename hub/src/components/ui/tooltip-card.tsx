@@ -35,6 +35,7 @@ export type TooltipCardData = {
   title: React.ReactNode;
   description?: React.ReactNode;
   image?: { src: string; alt?: string } | null;
+  team?: { logo: string; label: string } | null;
   icon?: React.ReactNode;
   book?: string | null;
   accent?: string;
@@ -174,7 +175,19 @@ export function TooltipVisual({ content }: { content: TooltipValue }) {
         <TooltipArtwork key={data.image?.src ?? book ?? String(data.kind)} data={data} />
         <div className="ss-tooltip-copy">
           <span className="ss-tooltip-eyebrow">
-            {data.eyebrow ?? (book ? BOOK_LABELS[book] : "SlipSurge guide")}
+            <span>{data.eyebrow ?? (book ? BOOK_LABELS[book] : "SlipSurge guide")}</span>
+            {data.team?.logo ? (
+              <span className="ss-tooltip-team-mark" aria-label={data.team.label}>
+                <Image
+                  src={data.team.logo}
+                  alt=""
+                  width={14}
+                  height={14}
+                  sizes="14px"
+                  unoptimized
+                />
+              </span>
+            ) : null}
           </span>
           <strong>{data.title}</strong>
           {data.description && <p>{data.description}</p>}

@@ -86,16 +86,21 @@ test('decorative animation values are deterministic during render', async () => 
 
 test('contextual tooltips remain portaled, branded, and touch-safe', async () => {
   const tooltip = await read('src/components/ui/tooltip-card.tsx')
+  const styles = await read('src/app/globals.css')
   const layout = await read('src/app/layout.tsx')
   const dugout = await read('src/components/dugout/DugoutClient.tsx')
   assert.ok(tooltip.includes('createPortal('), 'tooltips can be clipped by page overflow')
   assert.ok(tooltip.includes('<BookLogo'), 'sportsbook context is missing from tooltip visuals')
+  assert.ok(tooltip.includes('ss-tooltip-team-mark'), 'team logos are missing from tooltip visuals')
+  assert.ok(styles.includes('.ss-tooltip-art.is-image { overflow: visible;'), 'sportsbook badges are clipped by player portraits')
+  assert.match(styles, /\.ss-tooltip-book-badge[\s\S]*?border-radius: 50%/, 'sportsbook badges must remain circular')
   assert.ok(tooltip.includes('MutationObserver'), 'legacy title attributes are not upgraded')
   assert.ok(tooltip.includes('role="tooltip"'), 'tooltip semantics are missing')
   assert.ok(!tooltip.includes('onTouchStart='), 'tooltips must not intercept mobile actions')
   assert.ok(layout.includes('<NativeTooltipProvider />'), 'the global tooltip provider is not mounted')
   assert.ok(dugout.includes("kind: 'market'"), 'TheDugout odds cells lack market context')
   assert.ok(dugout.includes('mlbHeadshot(row.mlb_id)'), 'TheDugout odds tooltips lack player imagery')
+  assert.ok(dugout.includes("team: teamLogo ? { logo: teamLogo, label: row.team } : null"), 'TheDugout odds tooltips lack team logos')
 })
 
 test('onboarding completion performs one durable handoff to the feed', async () => {

@@ -1098,9 +1098,10 @@ function OddsCell({
 
   const hasDelta = openOdds != null && openOdds !== odds
   const deltaTitle = hasDelta ? `Opened ${oStr(openOdds)} → now ${oStr(odds)}` : null
+  const teamLogo = getTeamLogoUrl(row.team)
   const tooltipContent: TooltipCardData = {
     kind: 'market',
-    eyebrow: `${meta?.label ?? propKey} · ${row.team}`,
+    eyebrow: meta?.label ?? propKey,
     title: row.name,
     description: saved
       ? 'Saved to your watchlist. Select the price again to remove it.'
@@ -1108,6 +1109,7 @@ function OddsCell({
         ? 'Select this price to add the market to your watchlist.'
         : 'Sign in to save this market to your watchlist.',
     image: row.mlb_id ? { src: mlbHeadshot(row.mlb_id), alt: row.name } : null,
+    team: teamLogo ? { logo: teamLogo, label: row.team } : null,
     book,
     metrics: [
       { label: 'Current', value: oStr(odds) },
