@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { safeApiError } from '@/lib/safeApiError'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -33,7 +34,7 @@ export async function PATCH(req: Request) {
   const { error } = await admin
     .from('platform_settings')
     .upsert({ key: body.key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('admin-platform-setting', error)
 
   return NextResponse.json({ ok: true })
 }

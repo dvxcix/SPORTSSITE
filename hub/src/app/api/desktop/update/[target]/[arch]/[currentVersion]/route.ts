@@ -24,7 +24,7 @@ export async function GET(
   context: { params: Promise<{ target: string; arch: string; currentVersion: string }> },
 ) {
   const { target, arch, currentVersion } = await context.params;
-  if (!/^\d+\.\d+\.\d+$/.test(currentVersion)) {
+  if (target !== "windows" || arch !== "x86_64" || !/^\d+\.\d+\.\d+$/.test(currentVersion)) {
     return NextResponse.json({ error: "Invalid version" }, { status: 400 });
   }
 
@@ -47,16 +47,31 @@ export async function GET(
 
     const platform = manifest.platforms[`${target}-${arch}`];
     if (!platform) return new NextResponse(null, { status: 204 });
+    let downloadUrl: URL;
+    try {
+      downloadUrl = new URL(platform.url);
+    } catch {
+      return new NextResponse(null, { status: 204 });
+    }
+    if (
+      downloadUrl.protocol !== "https:" ||
+      !(downloadUrl.hostname === "slipsurge.com" || downloadUrl.hostname.endsWith(".slipsurge.com")) ||
+      typeof platform.signature !== "string" ||
+      platform.signature.length < 40 ||
+      platform.signature.length > 2_048
+    ) {
+      return new NextResponse(null, { status: 204 });
+    }
 
     return NextResponse.json({
       version: manifest.version,
-      pub_date: manifest.pub_date,
-      notes: manifest.notes ?? "A new SlipSurge desktop update is ready.",
-      url: platform.url,
+      pub_date: Number.isNaN(Date.parse(manifest.pub_date)) ? new Date().toISOString() : manifest.pub_date,
+      notes: typeof manifest.notes === "string" ? manifest.notes.slice(0, 4_000) : "A new SlipSurge desktop update is ready.",
+      url: downloadUrl.toString(),
       signature: platform.signature,
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("Desktop updater lookup failed", error);
+    console.error("Desktop updater lookup failed", { type: error instanceof Error ? error.name : typeof error });
     return new NextResponse(null, { status: 204 });
   }
 }

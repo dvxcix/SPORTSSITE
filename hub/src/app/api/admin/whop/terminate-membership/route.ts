@@ -5,6 +5,8 @@ import { cancelWhopMembership } from '@/lib/whop'
 import { effectiveTier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
+import { safeApiError } from '@/lib/safeApiError'
+import { writeAdminAudit } from '@/lib/adminAudit'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -12,7 +14,7 @@ async function requireAdmin() {
   if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
   const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).single()
   if (profile?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  return {}
+  return { adminId: user.id }
 }
 
 // Admin-only, immediate-only counterpart to the member-initiated
@@ -24,11 +26,11 @@ async function requireAdmin() {
 // tied to an account row here — e.g. an abandoned checkout, or a purchase
 // made before the buyer ever created a SlipSurge account).
 export async function POST(req: Request) {
-  const { error } = await requireAdmin()
+  const { error, adminId } = await requireAdmin()
   if (error) return error
 
   const { membershipId } = await req.json().catch(() => ({}))
-  if (!membershipId || typeof membershipId !== 'string') {
+  if (!membershipId || typeof membershipId !== 'string' || membershipId.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(membershipId)) {
     return NextResponse.json({ error: 'membershipId is required' }, { status: 400 })
   }
 
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
     if (result.ok || result.status !== 404) break
   }
   if (!result?.ok) {
-    return NextResponse.json({ error: result?.error ?? 'Cancel failed', status: result?.status }, { status: 502 })
+    return safeApiError('admin-whop-terminate', { status: result?.status }, 'Membership cancellation failed', 502)
   }
 
   // Best-effort: if this membership is the one actually on file for a
@@ -74,6 +76,15 @@ export async function POST(req: Request) {
     await syncTierBadge(admin, matched.id, effectiveTier('free', matched.discord_advanced_claimed, matched.admin_granted_tier))
     await syncDiscordRoleForUser(admin, matched.id)
   }
+
+  await writeAdminAudit(admin, {
+    actorUserId: adminId!,
+    action: 'whop.membership_terminated',
+    targetType: 'whop_membership',
+    targetId: membershipId,
+    details: { business: usedBusiness, matched_account: Boolean(matched) },
+    request: req,
+  })
 
   return NextResponse.json({ ok: true, business: usedBusiness, matchedAccountId: matched?.id ?? null })
 }

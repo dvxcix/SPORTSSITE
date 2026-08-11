@@ -5,6 +5,7 @@ async function fetchFirstPitchAt(gamePk: string): Promise<string | null> {
     const response = await fetch(`https://statsapi.mlb.com/api/v1/game/${gamePk}/playByPlay`, {
       cache: 'no-store',
       headers: { 'User-Agent': 'SlipSurge/1.0' },
+      signal: AbortSignal.timeout(15_000),
     })
     if (!response.ok) return null
     const payload = await response.json()

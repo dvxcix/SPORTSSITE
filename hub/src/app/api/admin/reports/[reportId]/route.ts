@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { writeAdminAudit } from '@/lib/adminAudit'
+import { safeApiError } from '@/lib/safeApiError'
 
 export async function POST(request: Request, context: { params: Promise<{ reportId: string }> }) {
   const supabase = await createClient()
@@ -13,6 +14,9 @@ export async function POST(request: Request, context: { params: Promise<{ report
   if (operator?.account_type !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { reportId } = await context.params
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportId)) {
+    return NextResponse.json({ error: 'Invalid report ID' }, { status: 400 })
+  }
   const body = await request.json().catch(() => ({}))
   const status = String(body.status || '')
   if (!['actioned', 'dismissed'].includes(status)) {
@@ -33,7 +37,7 @@ export async function POST(request: Request, context: { params: Promise<{ report
     .select('id,target_type,target_id,reason')
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('admin-report-decision', error)
   if (!report) return NextResponse.json({ error: 'Report was already reviewed or does not exist' }, { status: 409 })
 
   await writeAdminAudit(admin, {

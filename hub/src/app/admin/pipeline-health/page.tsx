@@ -148,7 +148,10 @@ export default async function PipelineHealthPage() {
     const ageMinutes = run ? (currentTimestamp() - new Date(run.started_at).getTime()) / 60_000 : Infinity
     const evidenceAgeMinutes = evidence?.observedAt ? (currentTimestamp() - new Date(evidence.observedAt).getTime()) / 60_000 : Infinity
     const evidenceIsCurrent = Boolean(evidence?.currentOutput || (evidence?.observedAt && evidenceAgeMinutes <= pipeline.staleAfterMinutes))
-    const state = run?.status === 'failed'
+    const timedOut = run?.status === 'running' && ageMinutes > Math.min(10, pipeline.staleAfterMinutes)
+    const state = timedOut
+      ? 'timed_out'
+      : run?.status === 'failed'
       ? 'failed'
       : run && ageMinutes <= pipeline.staleAfterMinutes
         ? run.status
@@ -160,7 +163,7 @@ export default async function PipelineHealthPage() {
     return { pipeline, run, evidence, state }
   })
   const healthy = rows.filter(row => row.state === 'succeeded' || row.state === 'verified').length
-  const problems = rows.filter(row => row.state === 'failed' || row.state === 'stale').length
+  const problems = rows.filter(row => row.state === 'failed' || row.state === 'stale' || row.state === 'timed_out').length
 
   return (
     <div className="mx-auto max-w-7xl p-6 lg:p-8">
@@ -194,15 +197,16 @@ export default async function PipelineHealthPage() {
         </div>
         {rows.map(({ pipeline, run, evidence, state }) => {
           const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
-          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' ? 'text-red-400' : 'text-amber-400'
-          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state
+          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' || state === 'timed_out' ? 'text-red-400' : 'text-amber-400'
+          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state === 'timed_out' ? 'Timed out' : state
           const signalAt = state === 'verified' ? evidence?.observedAt : run?.started_at ?? evidence?.observedAt
+          const ageMinutes = run?.started_at ? Math.max(1, (Date.now() - new Date(run.started_at).getTime()) / 60_000) : 0
           return (
             <div key={pipeline.name} className="grid grid-cols-[minmax(220px,1fr)_120px_130px_100px] gap-4 border-b border-zinc-800/70 px-5 py-4 text-sm last:border-0">
               <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className="mt-1 truncate text-xs text-red-300" title={run.error}>{run.error}</div>}</div>
               <div className={`flex items-center gap-1.5 ${tone}`} title={state === 'verified' ? `Verified from ${evidence?.detail}` : undefined}><Icon size={14} />{statusLabel}</div>
               <div className="text-zinc-300">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
-              <div className="text-zinc-400">{run ? durationLabel(run.duration_ms) : '—'}</div>
+              <div className="text-zinc-400">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms) : '—'}</div>
             </div>
           )
         })}

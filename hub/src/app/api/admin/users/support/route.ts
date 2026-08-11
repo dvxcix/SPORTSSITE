@@ -3,6 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, brandedEmailHtml } from '@/lib/email'
 import { reconcileWhopMain } from '@/lib/whopMainReconcile'
+import { safeApiError } from '@/lib/safeApiError'
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  })[character] ?? character)
+}
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -27,20 +38,22 @@ export async function POST(req: Request) {
   if (auth.error) return auth.error
 
   const { userId, action, value } = await req.json().catch(() => ({}))
-  if (!userId || !action) {
+  if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId) || !action) {
     return NextResponse.json({ error: 'userId and action are required' }, { status: 400 })
   }
 
   const admin = createAdminClient()
   const { data: targetUser, error: getUserErr } = await admin.auth.admin.getUserById(userId)
   if (getUserErr || !targetUser?.user?.email) {
-    return NextResponse.json({ error: getUserErr?.message ?? 'User not found' }, { status: 404 })
+    if (getUserErr) return safeApiError('admin-support-user-read', getUserErr, 'User not found', 404)
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
   const currentEmail = targetUser.user.email
 
   if (action === 'sendPasswordReset') {
     const { data: link, error } = await admin.auth.admin.generateLink({ type: 'recovery', email: currentEmail })
-    if (error || !link) return NextResponse.json({ error: error?.message ?? 'Failed to generate reset link' }, { status: 500 })
+    if (error) return safeApiError('admin-support-reset-link', error, 'Failed to generate reset link')
+    if (!link) return NextResponse.json({ error: 'Failed to generate reset link' }, { status: 500 })
     const sent = await sendEmail({
       to: currentEmail,
       subject: 'Reset your SlipSurge password',
@@ -62,7 +75,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This email is already verified' }, { status: 400 })
     }
     const { data: link, error } = await admin.auth.admin.generateLink({ type: 'signup', email: currentEmail, password: crypto.randomUUID() })
-    if (error || !link) return NextResponse.json({ error: error?.message ?? 'Failed to generate verification link' }, { status: 500 })
+    if (error) return safeApiError('admin-support-verification-link', error, 'Failed to generate verification link')
+    if (!link) return NextResponse.json({ error: 'Failed to generate verification link' }, { status: 500 })
     const sent = await sendEmail({
       to: currentEmail,
       subject: 'Confirm your SlipSurge email',
@@ -80,7 +94,7 @@ export async function POST(req: Request) {
 
   if (action === 'changeEmail') {
     const newEmail = typeof value === 'string' ? value.trim().toLowerCase() : ''
-    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    if (!newEmail || newEmail.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(newEmail)) {
       return NextResponse.json({ error: 'A valid new email is required' }, { status: 400 })
     }
     if (newEmail === currentEmail.toLowerCase()) {
@@ -96,7 +110,8 @@ export async function POST(req: Request) {
       admin.auth.admin.generateLink({ type: 'email_change_new', email: currentEmail, newEmail }),
       admin.auth.admin.generateLink({ type: 'email_change_current', email: currentEmail, newEmail }),
     ])
-    if (newErr || !newLink) return NextResponse.json({ error: newErr?.message ?? 'Failed to generate email-change link' }, { status: 500 })
+    if (newErr) return safeApiError('admin-support-email-change-link', newErr, 'Failed to generate email-change link')
+    if (!newLink) return NextResponse.json({ error: 'Failed to generate email-change link' }, { status: 500 })
 
     const sentNew = await sendEmail({
       to: newEmail,
@@ -104,7 +119,7 @@ export async function POST(req: Request) {
       text: `A SlipSurge team member requested this account's email be changed to this address. Click to confirm:\n\n${newLink.properties.action_link}\n\nIf you weren't expecting this, ignore it and nothing will change.`,
       html: brandedEmailHtml({
         heading: 'Confirm your new email',
-        bodyHtml: `A SlipSurge team member requested this account's email be changed to this address (from ${currentEmail}). Click below to confirm.`,
+        bodyHtml: `A SlipSurge team member requested this account's email be changed to this address (from ${escapeHtml(currentEmail)}). Click below to confirm.`,
         ctaLabel: 'Confirm new email',
         ctaUrl: newLink.properties.action_link,
         footerHtml: '<p style="margin:0;font-size:12px;color:#6B7280;">Weren\'t expecting this? Ignore this email and nothing will change.</p>',
@@ -122,7 +137,7 @@ export async function POST(req: Request) {
         text: `A SlipSurge team member requested this account's email be changed to ${newEmail}. If this wasn't you, contact support@slipsurge.com immediately. Otherwise, no action is needed here — the new address has its own confirmation link.`,
         html: brandedEmailHtml({
           heading: 'Email change requested',
-          bodyHtml: `A SlipSurge team member requested this account's email be changed to <strong style="color:#F5F5F5;">${newEmail}</strong>.`,
+          bodyHtml: `A SlipSurge team member requested this account's email be changed to <strong style="color:#F5F5F5;">${escapeHtml(newEmail)}</strong>.`,
           footerHtml: '<p style="margin:0;font-size:13px;color:#F87171;font-weight:700;">Wasn\'t you? Contact support@slipsurge.com immediately.</p>',
         }),
       })
@@ -144,7 +159,7 @@ export async function POST(req: Request) {
     // support needed a way to force a fix immediately instead of waiting on
     // the next cron tick.
     const result = await reconcileWhopMain()
-    if ('error' in result) return NextResponse.json({ error: result.error }, { status: 502 })
+    if ('error' in result) return safeApiError('admin-support-whop-reconcile', result.error, 'Membership reconciliation failed', 502)
     const mine = result.results.filter((r: any) => r.internalUserId === userId)
     const granted = mine.find((r: any) => r.granted)
     if (granted) {
@@ -152,10 +167,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, message: `Reconciled — now ${label.charAt(0).toUpperCase()}${label.slice(1)}.` })
     }
     const withError = mine.find((r: any) => r.error)
-    if (withError) return NextResponse.json({ error: `Reconcile ran but hit an error: ${withError.error}` }, { status: 502 })
+    if (withError) return safeApiError('admin-support-whop-member', withError.error, 'Membership reconciliation failed', 502)
     if (!mine.length) return NextResponse.json({ error: 'No Whop membership on file for this user across any plan — nothing to reconcile.' }, { status: 404 })
     return NextResponse.json({ ok: true, message: 'Checked — no active membership found, tier unchanged.' })
   }
 
-  return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }

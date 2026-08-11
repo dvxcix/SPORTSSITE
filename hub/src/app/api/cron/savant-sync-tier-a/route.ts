@@ -72,9 +72,9 @@ async function run(req: Request) {
           source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
         }, { onConflict: 'source,entity_type,entity_id,season' })
       }
-    } catch (e: any) {
-      console.error('[savant-sync-tier-a] category failed', resultKey, e)
-      results[resultKey] = { error: e?.message || String(e) }
+    } catch (e) {
+      console.error('[savant-sync-tier-a] category failed', { resultKey, type: e instanceof Error ? e.name : typeof e })
+      results[resultKey] = { error: 'sync failed' }
       await admin.from('sync_state').upsert({
         source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
       }, { onConflict: 'source,entity_type,entity_id,season' })

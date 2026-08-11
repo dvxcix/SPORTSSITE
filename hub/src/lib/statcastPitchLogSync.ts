@@ -29,6 +29,7 @@ async function fetchScheduleJson(date: string): Promise<any> {
   const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=venue`, {
     cache: 'no-store',
     headers: { 'User-Agent': 'SlipSurge/1.0' },
+    signal: AbortSignal.timeout(20_000),
   })
   if (!res.ok) throw new Error(`MLB schedule ${res.status}: ${date}`)
   return res.json()

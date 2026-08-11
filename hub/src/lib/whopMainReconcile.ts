@@ -19,14 +19,21 @@ const MAIN_PLAN_IDS = Object.entries(WHOP_PLANS)
 
 type ReconcileResult =
   | { error: string }
-  | { totalMemberships: number; results: any[] }
+  | { totalMemberships: number; results: Record<string, unknown>[] }
+
+function sameInstant(left: string | null | undefined, right: string | null | undefined) {
+  if (!left || !right) return !left && !right
+  const leftMs = Date.parse(left)
+  const rightMs = Date.parse(right)
+  return Number.isFinite(leftMs) && Number.isFinite(rightMs) ? leftMs === rightMs : left === right
+}
 
 export async function reconcileWhopMain(): Promise<ReconcileResult> {
   const apiKey = process.env.WHOP_API_KEY
   if (!apiKey) return { error: 'WHOP_API_KEY is not configured' }
 
   const admin = createAdminClient()
-  const results: any[] = []
+  const results: Record<string, unknown>[] = []
   let totalMemberships = 0
 
   // A user can end up with more than one simultaneously active membership
@@ -39,14 +46,21 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // regardless of its actual rank.
   const bestByUser = new Map<string, { planId: string; tier: Tier; membershipId?: string; periodEnd: string | null }>()
 
-  for (const planId of MAIN_PLAN_IDS) {
-    const planInfo = WHOP_PLANS[planId]
+  const planFetches = await Promise.all(MAIN_PLAN_IDS.map(async planId => ({
+    planId,
+    fetched: await fetchAllWhopMemberships(apiKey, planId),
+  })))
 
-    const fetched = await fetchAllWhopMemberships(apiKey, planId)
-    if ('error' in fetched) {
-      results.push({ planId, error: fetched.error })
-      continue
+  const failedFetches = planFetches.filter(entry => 'error' in entry.fetched)
+  if (failedFetches.length) {
+    return {
+      error: `Whop reconciliation stopped before writes because ${failedFetches.length} plan lookup${failedFetches.length === 1 ? '' : 's'} failed`,
     }
+  }
+
+  for (const { planId, fetched } of planFetches) {
+    const planInfo = WHOP_PLANS[planId]
+    if ('error' in fetched) continue
     const memberships = fetched.memberships
     totalMemberships += memberships.length
 
@@ -64,25 +78,31 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
         results.push({ planId, membershipId, status, skipped: 'no internal_user_id in metadata' })
         continue
       }
-      if (!isActive) {
-        results.push({ planId, membershipId, internalUserId, status, skipped: 'not active' })
-        continue
-      }
+      if (!isActive) continue
 
       const current = bestByUser.get(internalUserId)
       if (!current || TIER_RANK[planInfo.tier] > TIER_RANK[current.tier]) {
         bestByUser.set(internalUserId, { planId, tier: planInfo.tier, membershipId, periodEnd })
-      } else {
-        results.push({ planId, membershipId, internalUserId, status, skipped: `lower tier than existing active ${current.tier}` })
       }
     }
   }
+
+  const activeUserIds = [...bestByUser.keys()]
+  const { data: existingUsers, error: existingUsersError } = activeUserIds.length
+    ? await admin.from('users').select('id, tier, tier_purchased_at, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
+    : { data: [], error: null }
+  if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
+  const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
 
   for (const [internalUserId, best] of bestByUser) {
     // Only stamp tier_purchased_at when unset — this route re-runs on a
     // schedule and would otherwise bump it to "now" every time it sees
     // the same still-active membership, same reasoning as the webhook.
-    const { data: existing } = await admin.from('users').select('tier, tier_purchased_at').eq('id', internalUserId).maybeSingle()
+    const existing = existingById.get(internalUserId)
+    if (!existing) {
+      results.push({ planId: best.planId, membershipId: best.membershipId, internalUserId, error: 'user not found' })
+      continue
+    }
     const isFirstPurchase = !existing?.tier_purchased_at
 
     // Real incident: a user can hold simultaneously active memberships on
@@ -105,6 +125,18 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
       continue
     }
 
+    const samePeriodEnd = sameInstant(existing.tier_current_period_end, best.periodEnd)
+    const unchanged = currentTier === best.tier
+      && existing.whop_plan_id === best.planId
+      && existing.tier_status === 'active'
+      && (existing.whop_membership_id ?? null) === (best.membershipId ?? null)
+      && samePeriodEnd
+    if (unchanged) continue
+
+    const previousEffectiveTier = effectiveTier(currentTier, existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const nextEffectiveTier = effectiveTier(best.tier, existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const accessChanged = previousEffectiveTier !== nextEffectiveTier
+
     const { data: updated, error } = await admin.from('users').update({
       tier: best.tier,
       whop_plan_id: best.planId,
@@ -119,8 +151,12 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
       continue
     }
 
-    await syncTierBadge(admin, internalUserId, effectiveTier(best.tier, updated.discord_advanced_claimed, updated.admin_granted_tier))
-    await syncDiscordRoleForUser(admin, internalUserId)
+    // A renewal timestamp can change without changing access. Avoid badge
+    // writes and Discord calls unless the member's effective tier changed.
+    if (accessChanged) {
+      await syncTierBadge(admin, internalUserId, nextEffectiveTier)
+      await syncDiscordRoleForUser(admin, internalUserId)
+    }
     // Only a genuine first-time purchase, never a still-active membership
     // this cron already saw on a previous run — same fire-and-forget
     // reasoning as whopWebhook.ts, must never delay this reconcile job.

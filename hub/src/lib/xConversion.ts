@@ -54,12 +54,10 @@ export async function sendXConversion({
 }): Promise<void> {
   const token = process.env.X_PIXEL_ACCESSTOKEN
   if (!token) {
-    console.error('[xConversion] X_PIXEL_ACCESSTOKEN not configured — skipping', conversionId)
     return
   }
   const eventId = X_EVENT_IDS[eventType]
   if (!eventId) {
-    console.error(`[xConversion] X_${eventType.toUpperCase()}_EVENT_ID not configured — skipping`, conversionId)
     return
   }
 
@@ -74,7 +72,6 @@ export async function sendXConversion({
     identifiers.user_agent = userAgent
   }
   if (!Object.keys(identifiers).length) {
-    console.error('[xConversion] no usable identifiers (no email, no ip+ua pair) — skipping', conversionId)
     return
   }
 
@@ -91,10 +88,11 @@ export async function sendXConversion({
           identifiers: [identifiers],
         }],
       }),
+      signal: AbortSignal.timeout(12_000),
     })
-    if (!res.ok) console.error('[xConversion] API rejected event', conversionId, res.status, await res.text().catch(() => ''))
+    if (!res.ok) console.error('[xConversion] API rejected event', { status: res.status })
   } catch (e) {
-    console.error('[xConversion] request threw', conversionId, e)
+    console.error('[xConversion] request failed', { type: e instanceof Error ? e.name : typeof e })
   }
 }
 

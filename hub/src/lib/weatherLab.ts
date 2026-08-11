@@ -17,7 +17,7 @@ async function fetchHourly(lat: number, lon: number, dateISO: string): Promise<M
     `&start_date=${dateISO}&end_date=${dateISO}`
   const map = new Map<string, HourEntry>()
   try {
-    const res = await fetch(url, { next: { revalidate: 900 } })
+    const res = await fetch(url, { next: { revalidate: 900 }, signal: AbortSignal.timeout(15_000) })
     if (!res.ok) return map
     const d = await res.json()
     const times: string[] = d.hourly?.time ?? []

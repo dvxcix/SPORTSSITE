@@ -10,6 +10,7 @@ export async function fanOutToSelf(routePath: string, gamePks: number[], extraQu
     gamePks.map(async gamePk => {
       const res = await fetch(`${PLATFORM_URL}${routePath}?gamePk=${gamePk}${extraQuery}`, {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        signal: AbortSignal.timeout(55_000),
       })
       return { gamePk, status: res.status, body: await res.json().catch(() => null) }
     })

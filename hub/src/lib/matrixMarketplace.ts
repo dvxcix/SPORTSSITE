@@ -24,14 +24,14 @@ export async function snapshotOwnedMatrix(admin: SupabaseClient, matrixId: strin
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (error || !matrix) return { error: error?.message || 'Matrix not found.' } as const
+  if (error || !matrix) return { error: 'Matrix not found.' } as const
 
   const isPipeline = matrix.matrix_type === 'pipeline'
   const childResult = isPipeline
     ? await admin.from('matrix_pipeline_steps').select(MATRIX_STEP_SELECT).eq('matrix_id', matrix.id).order('position')
     : await admin.from('matrix_factors').select(MATRIX_FACTOR_SELECT).eq('matrix_id', matrix.id).order('position')
 
-  if (childResult.error) return { error: childResult.error.message } as const
+  if (childResult.error) return { error: 'Could not prepare this Matrix for sharing.' } as const
   if (!childResult.data?.length) return { error: `This ${isPipeline ? 'Pipeline' : 'Matrix'} has no ${isPipeline ? 'steps' : 'Elements'} to share.` } as const
 
   const snapshot: MarketplaceMatrixSnapshot = {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 
 export const revalidate = 0
 
@@ -12,6 +13,9 @@ export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const rate = await consumeServerRateLimit(user.id, 'welcome_email', 3, 24 * 60 * 60)
+  if (!rate.available || !rate.allowed) return NextResponse.json({ ok: true, skipped: 'rate limited' })
 
   // Reported live: this has been silently failing for every user since at
   // least 2026-07-13 — the actual Vercel env vars are EMAIL_RESEND_API_KEY /
@@ -61,10 +65,11 @@ export async function POST() {
 </td></tr>
 </table>`,
       }),
+      signal: AbortSignal.timeout(15_000),
     })
-    if (!res.ok) console.error('[notify-welcome] Resend send failed', await res.text())
+    if (!res.ok) console.error('[notify-welcome] Resend send failed', { status: res.status })
   } catch (e) {
-    console.error('[notify-welcome] threw', e)
+    console.error('[notify-welcome] request failed', { type: e instanceof Error ? e.name : typeof e })
   }
 
   return NextResponse.json({ ok: true })

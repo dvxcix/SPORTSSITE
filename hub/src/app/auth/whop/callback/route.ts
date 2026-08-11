@@ -5,6 +5,7 @@ import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess, buildWhopVerif
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -81,7 +82,7 @@ export async function GET(request: Request) {
     // stored.next is user-suppliable (came from ?next= on the /auth/whop/login
     // request) — must be a same-site relative path, not "//host/..." (a
     // protocol-relative external redirect).
-    const linkNext = stored.next && stored.next.startsWith('/') && !stored.next.startsWith('//') ? stored.next : '/settings/membership'
+    const linkNext = safeInternalPath(stored.next, '/settings/membership')
     return handleWhopLink(admin, stored.linkUserId, whopUser, discordHasAccess, origin, linkNext)
   }
 
@@ -129,7 +130,7 @@ export async function GET(request: Request) {
     // check we have without a webhook, so a login after cancelling the
     // Discord plan is also what clears the claim.
     const { error: claimErr } = await admin.from('users').update({ discord_advanced_claimed: discordHasAccess }).eq('id', authUserId)
-    if (claimErr) console.error('[whop/callback] failed to sync discord_advanced_claimed', claimErr)
+    if (claimErr) console.error('[whop/callback] failed to sync discord_advanced_claimed', { code: claimErr.code })
   } else {
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email: whopUser.email,
@@ -175,7 +176,7 @@ export async function GET(request: Request) {
         display_name: byEmail.display_name || whopUser.name || whopUser.preferred_username,
         discord_advanced_claimed: discordHasAccess,
       }).eq('id', authUserId)
-      if (linkUpdateErr) console.error('[whop/callback] failed to link whop_user_id to existing account', linkUpdateErr)
+      if (linkUpdateErr) console.error('[whop/callback] failed to link whop_user_id to existing account', { code: linkUpdateErr.code })
     } else {
       authUserId = created.user.id
       authUserEmail = whopUser.email
@@ -238,11 +239,12 @@ export async function GET(request: Request) {
   // straight to wherever they were headed, same as today.
   const completeUrl = new URL(`${origin}/auth/whop/complete`)
   completeUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
-  completeUrl.searchParams.set('next', isNewAccount ? '/onboarding' : (stored.next || '/feed'))
+  const next = isNewAccount ? '/onboarding' : safeInternalPath(stored.next)
+  completeUrl.searchParams.set('next', next)
   if (stored.desktopState && /^[0-9a-f-]{36}$/i.test(stored.desktopState)) {
     const desktopUrl = new URL('slipsurge://auth/complete')
     desktopUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
-    desktopUrl.searchParams.set('next', isNewAccount ? '/onboarding' : (stored.next || '/feed'))
+    desktopUrl.searchParams.set('next', next)
     desktopUrl.searchParams.set('state', stored.desktopState)
     return NextResponse.redirect(desktopUrl.toString())
   }

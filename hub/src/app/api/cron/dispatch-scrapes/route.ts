@@ -5,6 +5,7 @@ import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/platform'
 import { missingMarkets } from '@/lib/scrapers/retryMarkets'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 280
@@ -70,7 +71,7 @@ async function run(req: Request) {
     .lte('ready_at', nowIso)
     .select('game_pk, retry_count')
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('dispatch-scrapes-claim', error)
   if (!due?.length) return NextResponse.json({ ok: true, dispatched: 0 })
 
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
@@ -84,6 +85,7 @@ async function run(req: Request) {
     toScrape.map(async row => {
       const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel?gamePk=${row.game_pk}`, {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        signal: AbortSignal.timeout(55_000),
       })
       const body = await res.json().catch(() => null)
       // scrape-fanduel's own scrapeOneGame already retried once same-request
@@ -116,6 +118,6 @@ async function run(req: Request) {
     skippedAlreadyLive: live.map(r => r.game_pk),
     gamePks: toScrape.map(r => r.game_pk),
     retryQueued: needsRetry.map(r => ({ gamePk: r.gamePk, missing: r.stillMissing })),
-    results: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason?.message ?? String(r.reason) }),
+    results: results.map(r => r.status === 'fulfilled' ? r.value : { error: 'dispatch failed' }),
   })
 }

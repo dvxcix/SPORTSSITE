@@ -23,18 +23,19 @@ async function fetchPitchArsenalDetails(playerId: number, pitchType: string, sea
   const url = `https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?details=true&player_id=${playerId}&year=${season}&min_ab=1&type=pitcher&pitchType=${pitchType}`
   const res = await fetch(url, {
     cache: 'no-store',
+    signal: AbortSignal.timeout(20_000),
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'application/json,text/plain,*/*',
     },
   })
   const text = await res.text()
-  if (!res.ok) throw new Error(`Savant pitch-arsenal details ${res.status}: player ${playerId} pitch ${pitchType} :: ${text.slice(0, 300)}`)
+  if (!res.ok) throw new Error(`Savant pitch-arsenal details request failed (${res.status})`)
   try {
     const parsed = JSON.parse(text)
     return Array.isArray(parsed) ? parsed : []
   } catch {
-    console.error('[savant-pitch-arsenal-details] unparseable response', { playerId, pitchType, preview: text.slice(0, 300) })
+    console.error('[savant-pitch-arsenal-details] unparseable response', { playerId, pitchType, responseBytes: text.length })
     return []
   }
 }
@@ -106,7 +107,7 @@ async function seedPendingCombos(admin: AdminClient, season: number) {
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) {
-      console.error('[savant-pitch-arsenal-details] seed query failed', error)
+      console.error('[savant-pitch-arsenal-details] seed query failed', { code: error.code })
       return
     }
     if (!page?.length) break
@@ -177,8 +178,8 @@ export async function syncPitchArsenalDetailBatch(admin: AdminClient, season: nu
     try {
       return { idStr, events: await fetchPitchArsenalDetails(mlbId, pitchType, season), error: null as string | null }
     } catch (e: any) {
-      console.error('[savant-pitch-arsenal-details] combo fetch failed', idStr, e)
-      return { idStr, events: [] as any[], error: e?.message || String(e) }
+      console.error('[savant-pitch-arsenal-details] combo fetch failed', { type: e instanceof Error ? e.name : typeof e })
+      return { idStr, events: [] as any[], error: 'fetch failed' }
     }
   })
 
@@ -224,8 +225,8 @@ export async function syncPitchArsenalDetailBatch(admin: AdminClient, season: nu
         if (error) throw error
       }
     } catch (e: any) {
-      console.error('[savant-pitch-arsenal-details] bulk write failed', e)
-      writeFailed = e?.message || String(e)
+      console.error('[savant-pitch-arsenal-details] bulk write failed', { type: e instanceof Error ? e.name : typeof e })
+      writeFailed = 'write failed'
     }
   }
 

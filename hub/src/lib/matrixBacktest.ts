@@ -65,7 +65,7 @@ async function mpGetAll(path: string): Promise<any[]> {
   const out: any[] = []
   for (let offset = 0; offset < 100_000; offset += PAGE) {
     try {
-      const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' })
+      const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store', signal: AbortSignal.timeout(20_000) })
       if (!res.ok) break
       const page = await res.json()
       if (!Array.isArray(page) || !page.length) break
@@ -395,7 +395,7 @@ async function fetchRealHrHitters(games: TodayGame[]): Promise<Map<number, Map<n
   const byGamePk = new Map<number, Map<number, { name: string; team: string }>>()
   await Promise.all(games.map(async g => {
     try {
-      const r = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${g.gamePk}/feed/live`, { cache: 'no-store' })
+      const r = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${g.gamePk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
       if (!r.ok) return
       const feed = await r.json()
       const teams = feed?.liveData?.boxscore?.teams
@@ -460,8 +460,8 @@ export async function runBacktestForDate(matrix: Matrix, date: string): Promise<
       }
     })
     return { date, games }
-  } catch (e: any) {
-    return { date, games: [], error: e?.message || String(e) }
+  } catch {
+    return { date, games: [], error: 'Backtest data is temporarily unavailable' }
   }
 }
 

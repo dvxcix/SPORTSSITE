@@ -112,7 +112,7 @@ export async function seedPending(admin: AdminClient, entityType: string, entity
 }
 
 export async function fetchMlbJson(url: string): Promise<any> {
-  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } })
+  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(20_000) })
   if (!res.ok) throw new Error(`MLB API ${res.status}: ${url}`)
   return res.json()
 }

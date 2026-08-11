@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName } from '@slipsurge/core/nameNorm'
+import { safeApiError } from '@/lib/safeApiError'
 
 // Full franchise names as they appear in FanDuel's own event.title (e.g.
 // "Colorado Rockies @ San Francisco Giants Player Combos Odds") — used to
@@ -147,6 +148,8 @@ function parseOdds(odds: string): number | null {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
+  const contentLength = Number(req.headers.get('content-length') || 0)
+  if (contentLength > 8_000_000) return NextResponse.json({ error: 'Import payload is too large' }, { status: 413 })
 
   const body = await req.json().catch(() => null)
   const { json, gameDate, homeTeam, awayTeam, gameKey, isOpening } = body ?? {}
@@ -293,7 +296,7 @@ export async function POST(req: Request) {
     const { error } = await admin
       .from('fanduel_gap_odds')
       .upsert(rows, { onConflict: 'game_date,game_key,name_norm' })
-    if (error) return NextResponse.json({ error: `Upsert failed for ${thisGameKey}: ${error.message}` }, { status: 500 })
+    if (error) return safeApiError('admin-fanduel-import', error, `Import failed for ${thisGameKey}`)
 
     // Preserve the FIRST real price seen for each (game, player, MARKET) as
     // a permanent opening baseline, so we can compute opening-vs-current
@@ -323,7 +326,7 @@ export async function POST(req: Request) {
           .from('market_opening_prices')
           .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market,book', ignoreDuplicates: true })
         if (!openErr) openingSaved = true
-        else console.error(`[fanduel-import] opening-price upsert failed for ${thisGameKey}`, openErr)
+        else console.error('[fanduel-import] opening-price upsert failed', { code: openErr.code })
       }
     }
   }

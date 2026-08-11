@@ -10,5 +10,5 @@ export const runtime = 'nodejs'
 // event from this business can never be verified against (or mistaken for)
 // a normal tier-payments customer's event.
 export async function POST(req: Request) {
-  return handleWhopWebhookRequest(req, process.env.ADDON_WHOP_WEBHOOK)
+  return handleWhopWebhookRequest(req, process.env.ADDON_WHOP_WEBHOOK, 'addon')
 }

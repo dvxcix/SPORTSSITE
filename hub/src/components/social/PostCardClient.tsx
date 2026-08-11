@@ -247,9 +247,12 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         // this has to be a security-definer RPC rather than a plain
         // insert (grouping needs to read the recipient's own notification
         // rows, which RLS correctly blocks a different user from doing).
-        await supabase.rpc('notify_reaction', {
-          p_user_id: post.author_id, p_actor_id: user.id, p_post_id: post.id, p_emoji: emoji,
-        })
+        void fetch('/api/posts/reaction-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: post.id, emoji }),
+          signal: AbortSignal.timeout(10_000),
+        }).catch(() => undefined)
       }
     }
     if (error && error.code !== '23505') {
@@ -503,11 +506,23 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     // RPC never trusts this client-held snapshot for the real write.
     setPollCounts(pollCounts.map((c, i) => i === idx ? c + 1 : c))
     setPollVoted(idx)
-    const { data: finalVote, error } = await supabase.rpc('cast_poll_vote', { p_post_id: post.id, p_option_index: idx })
-    if (error) { setPollCounts(prevCounts); setPollVoted(null); return }
-    // finalVote reflects whatever's actually recorded for this user (handles
-    // the rare case of a vote already existing from another tab/device).
-    if (typeof finalVote === 'number' && finalVote !== idx) setPollVoted(finalVote)
+    try {
+      const response = await fetch('/api/posts/poll-vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, optionIndex: idx }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error('Vote was not accepted')
+      const finalVote = result?.optionIndex
+      // finalVote reflects whatever's actually recorded for this user (handles
+      // the rare case of a vote already existing from another tab/device).
+      if (typeof finalVote === 'number' && finalVote !== idx) setPollVoted(finalVote)
+    } catch {
+      setPollCounts(prevCounts)
+      setPollVoted(null)
+    }
   }
 
   const pickBorderColor = pickResult === 'win' ? 'rgba(46,213,115,0.3)' : pickResult === 'loss' ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,77,0.2)'

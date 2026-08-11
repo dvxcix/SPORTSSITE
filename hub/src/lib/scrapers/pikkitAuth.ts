@@ -69,11 +69,12 @@ async function sendAuthAlertEmail(): Promise<void> {
       text: `${text}\n\n${instructions}`,
       html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${text}</p><p>${instructions}</p></div>`,
     }),
+    signal: AbortSignal.timeout(15_000),
   }).catch(e => {
-    console.error('[pikkitAuth] Resend send threw', e)
+    console.error('[pikkitAuth] Resend send failed', { type: e instanceof Error ? e.name : typeof e })
     return null
   })
-  if (res && !res.ok) console.error('[pikkitAuth] Resend send failed', await res.text().catch(() => ''))
+  if (res && !res.ok) console.error('[pikkitAuth] Resend send failed', { status: res.status })
 }
 
 // Called from scrape-pikkit's sweep handler only when EVERY game in the
@@ -87,7 +88,7 @@ export async function checkPikkitAuthAndAlert(contextId: string): Promise<void> 
   try {
     signedIn = await isPikkitSignedIn(contextId)
   } catch (e) {
-    console.error('[pikkitAuth] sign-in check itself failed, skipping alert', e)
+    console.error('[pikkitAuth] sign-in check itself failed, skipping alert', { type: e instanceof Error ? e.name : typeof e })
     return
   }
 

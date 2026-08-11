@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 30
@@ -35,7 +36,7 @@ async function run(req: Request) {
     admin.from('provider_webhook_events').delete({ count: 'exact' }).lt('received_at', webhookCutoff),
   ])
   const failure = results.find(result => result.error)
-  if (failure?.error) return NextResponse.json({ error: failure.error.message }, { status: 500 })
+  if (failure?.error) return safeApiError('prune-notifications', failure.error)
 
   return NextResponse.json({
     ok: true,

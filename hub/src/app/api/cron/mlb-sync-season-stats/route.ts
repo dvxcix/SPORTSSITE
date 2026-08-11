@@ -80,7 +80,7 @@ async function run(req: Request) {
       await markSyncState(admin, 'season_stats', String(mlbId), season, 'mlb_complete')
       synced++
     } catch (e) {
-      console.error('[mlb-sync-season-stats] failed', mlbId, e)
+      console.error('[mlb-sync-season-stats] failed', { type: e instanceof Error ? e.name : typeof e })
       await markSyncState(admin, 'season_stats', String(mlbId), season, 'error')
       failed++
     }

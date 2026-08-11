@@ -93,11 +93,13 @@ export type NewWatchlistItem = {
   notes?: string | null
 }
 
+const WATCHLIST_COLUMNS = 'id,user_id,sport,game_pk,game_date,mlb_id,player_name,team,position,bats,headshot_url,prop_key,prop_label,line,book,odds,odds_by_book,notes,status,posted_pick_id,created_at,updated_at'
+
 export async function fetchWatchlist(userId: string): Promise<WatchlistItem[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('watchlist_items')
-    .select('*')
+    .select(WATCHLIST_COLUMNS)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -109,7 +111,7 @@ export async function addWatchlistItem(userId: string, item: NewWatchlistItem): 
   const { data, error } = await supabase
     .from('watchlist_items')
     .insert({ user_id: userId, ...item })
-    .select('*')
+    .select(WATCHLIST_COLUMNS)
     .single()
   if (error) throw error
   return data

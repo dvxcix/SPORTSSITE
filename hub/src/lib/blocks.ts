@@ -32,7 +32,7 @@ export async function blockUser(supabase: SupabaseClient, blockerId: string, blo
   const { error } = await supabase.from('blocks').insert({ blocker_id: blockerId, blocked_id: blockedId })
   // A duplicate-key error just means the block already existed — not a real
   // failure (same reasoning as FollowButton's own 23505 handling).
-  if (error && error.code !== '23505') return { ok: false, error: error.message }
+  if (error && error.code !== '23505') return { ok: false, error: 'Could not block this account.' }
   await Promise.all([
     supabase.from('follows').delete().match({ follower_id: blockerId, following_id: blockedId }),
     supabase.from('follows').delete().match({ follower_id: blockedId, following_id: blockerId }),
@@ -42,6 +42,6 @@ export async function blockUser(supabase: SupabaseClient, blockerId: string, blo
 
 export async function unblockUser(supabase: SupabaseClient, blockerId: string, blockedId: string): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase.from('blocks').delete().match({ blocker_id: blockerId, blocked_id: blockedId })
-  if (error) return { ok: false, error: error.message }
+  if (error) return { ok: false, error: 'Could not unblock this account.' }
   return { ok: true }
 }

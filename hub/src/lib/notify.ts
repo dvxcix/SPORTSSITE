@@ -62,7 +62,7 @@ export async function notify(supabase: SupabaseClient, {
   // as already-succeeded by the time it calls notify() — this is purely a
   // side effect, so a failure here shouldn't roll any of that back. Logged
   // so a systemic problem (e.g. a bad migration) is at least visible.
-  if (error) console.error('[notify] failed to insert notification', { type, userId, error })
+  if (error) console.error('[notify] failed to insert notification', { type, code: error.code })
 }
 
 // Fans a notification out to everyone following `actorId`. In-app rows are
@@ -90,6 +90,6 @@ export async function notifyFollowers(supabase: SupabaseClient, {
   })).filter(row => row.user_id && row.user_id !== actorId)
   for (let index = 0; index < rows.length; index += 500) {
     const { error } = await supabase.from('notifications').insert(rows.slice(index, index + 500))
-    if (error) console.error('[notifyFollowers] failed to insert notification batch', { type, actorId, index, error })
+    if (error) console.error('[notifyFollowers] failed to insert notification batch', { type, index, code: error.code })
   }
 }

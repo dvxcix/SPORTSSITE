@@ -63,7 +63,7 @@ async function run(req: Request) {
       await markSyncState(admin, 'career_stats', String(mlbId), 0, 'mlb_complete')
       synced++
     } catch (e) {
-      console.error('[mlb-sync-career-stats] failed', mlbId, e)
+      console.error('[mlb-sync-career-stats] failed', { type: e instanceof Error ? e.name : typeof e })
       await markSyncState(admin, 'career_stats', String(mlbId), 0, 'error')
       failed++
     }

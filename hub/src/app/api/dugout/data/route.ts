@@ -400,7 +400,7 @@ const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type':
 async function mpGet(path: string, cache = 3600, range?: string): Promise<any[]> {
   try {
     const headers = range ? { ...mpH, Range: range } : mpH
-    const res = await fetch(`${MP_URL}${path}`, { headers, next: { revalidate: cache } })
+    const res = await fetch(`${MP_URL}${path}`, { headers, next: { revalidate: cache }, signal: AbortSignal.timeout(20_000) })
     if (!res.ok) return []
     const d = await res.json()
     return Array.isArray(d) ? d : []
@@ -432,6 +432,7 @@ async function mpRpc(fn: string, body: any): Promise<any[]> {
       method: 'POST',
       headers: { ...mpH, Range: '0-4999' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
       next: { revalidate: 3600 },
     })
     if (!res.ok) return []
@@ -533,7 +534,7 @@ async function fetchBoxscoreOutcomes(mlbGames: any[]): Promise<Record<number, Re
   const byGamePk: Record<number, Record<number, any>> = {}
   await Promise.all(gradedPks.map(async (pk: number) => {
     try {
-      const r = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${pk}/feed/live`, { cache: 'no-store' })
+      const r = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${pk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
       if (!r.ok) return
       const feed = await r.json()
       const teams = feed?.liveData?.boxscore?.teams
@@ -576,7 +577,7 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
   try {
     const res = await fetch(
       `https://statsapi.mlb.com/api/v1/teams/${teamId}/roster?rosterType=Active`,
-      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -598,7 +599,7 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
       try {
         const peopleRes = await fetch(
           `https://statsapi.mlb.com/api/v1/people?personIds=${ids.join(',')}`,
-          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
         )
         if (peopleRes.ok) {
           const people = (await peopleRes.json()).people ?? []
@@ -851,7 +852,7 @@ export async function GET(req: Request) {
       ? (async () => {
           const combined: Record<number, any[]> = {}
           const results = await asyncPool(15, allDisplayedBatterIdList, id =>
-            getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', id, e); return {} as Record<number, any[]> })
+            getCachedBatterPitchRows(id).catch(e => { console.error('[dugout/data] matrix pitch rows failed', { type: e instanceof Error ? e.name : typeof e }); return {} as Record<number, any[]> })
           )
           for (const r of results) Object.assign(combined, r)
           return combined
@@ -872,7 +873,7 @@ export async function GET(req: Request) {
         const { data } = await admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
       } catch (e) {
-        console.error('[dugout/data] precomputed statcast fetch failed', e)
+        console.error('[dugout/data] precomputed statcast fetch failed', { type: e instanceof Error ? e.name : typeof e })
         return [] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[])),
@@ -888,7 +889,7 @@ export async function GET(req: Request) {
         const { data } = await admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[]
       } catch (e) {
-        console.error('[dugout/data] precomputed pitchlog stat fetch failed', e)
+        console.error('[dugout/data] precomputed pitchlog stat fetch failed', { type: e instanceof Error ? e.name : typeof e })
         return [] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[])),
@@ -905,7 +906,7 @@ export async function GET(req: Request) {
         const { data } = await admin.from(MATCHUP_EDGE_TABLE).select('mlb_id, role, data').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
       } catch (e) {
-        console.error('[dugout/data] precomputed matchup edge fetch failed', e)
+        console.error('[dugout/data] precomputed matchup edge fetch failed', { type: e instanceof Error ? e.name : typeof e })
         return [] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[])),
@@ -918,7 +919,7 @@ export async function GET(req: Request) {
       try {
         const res = await fetch(
           `https://statsapi.mlb.com/api/v1/people?personIds=${lineupBatterIdList.join(',')}`,
-          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
         )
         if (!res.ok) return []
         const people = (await res.json()).people ?? []
@@ -943,7 +944,7 @@ export async function GET(req: Request) {
       try {
         const res = await fetch(
           `https://statsapi.mlb.com/api/v1/people?personIds=${pitcherIdList.join(',')}`,
-          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+          { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
         )
         if (!res.ok) return []
         const people = (await res.json()).people ?? []

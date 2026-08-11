@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { Highlight } from '@/components/ui/hero-highlight'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 // Meteors picks random delays/durations at render time — fine for a purely
 // decorative background, but that randomness differs between the server
@@ -35,7 +36,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/feed'
+  const next = safeInternalPath(searchParams.get('next'))
   const isDesktop = searchParams.get('platform') === 'desktop' ||
     (typeof navigator !== 'undefined' && navigator.userAgent.includes('SlipSurgeDesktop/'))
   const oauthError = searchParams.get('error')
@@ -78,7 +79,7 @@ function LoginForm() {
       const supabase = createClient()
       await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${location.origin}/auth/callback?next=${next}` },
+        options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
       })
     }
   }

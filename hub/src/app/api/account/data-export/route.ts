@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { safeApiError } from '@/lib/safeApiError'
+import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 
 export async function GET() {
   const supabase = await createClient()
@@ -9,11 +11,11 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('data_export_requests')
-    .select('id,status,requested_at,completed_at,expires_at,error')
+    .select('id,status,requested_at,completed_at,expires_at')
     .eq('user_id', user.id)
     .order('requested_at', { ascending: false })
     .limit(10)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('data-export-list', error)
   return NextResponse.json({ requests: data ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
@@ -21,6 +23,10 @@ export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+
+  const rate = await consumeServerRateLimit(user.id, 'account_data_export', 3, 24 * 60 * 60)
+  if (!rate.available) return NextResponse.json({ error: 'Data export is temporarily unavailable' }, { status: 503 })
+  if (!rate.allowed) return NextResponse.json({ error: 'Data export limit reached. Try again later.' }, { status: 429 })
 
   const admin = createAdminClient()
   const { data: existing } = await admin
@@ -41,6 +47,6 @@ export async function POST() {
     expires_at: expires.toISOString(),
     metadata: { format: 'json', generated_on_download: true },
   }).select('id,status,requested_at,completed_at,expires_at').single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('data-export-create', error, 'Could not create a data export.')
   return NextResponse.json({ request: data }, { status: 201 })
 }

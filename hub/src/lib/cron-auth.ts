@@ -1,4 +1,11 @@
 import { NextResponse } from 'next/server'
+import { hasBearerSecret } from '@/lib/requestAuth'
+
+export function isCronRequestAuthorized(req: Request, allowSecondary = false): boolean {
+  const primary = process.env.CRON_SECRET
+  const secondary = allowSecondary ? process.env.SECOND_CRON_SECRET : undefined
+  return hasBearerSecret(req, primary) || hasBearerSecret(req, secondary)
+}
 
 // Was copy-pasted identically across every cron route — extracted once
 // there were enough of them (player-data sync adds several more) that a
@@ -8,8 +15,7 @@ export function requireCronAuth(req: Request): NextResponse | null {
   if (!secret) {
     return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 500 })
   }
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${secret}`) {
+  if (!isCronRequestAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return null
@@ -27,9 +33,7 @@ export function requireBrowserbaseCronAuth(req: Request): NextResponse | null {
   if (!primary && !secondary) {
     return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 500 })
   }
-  const auth = req.headers.get('authorization')
-  const ok = (!!primary && auth === `Bearer ${primary}`) || (!!secondary && auth === `Bearer ${secondary}`)
-  if (!ok) {
+  if (!isCronRequestAuthorized(req, true)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return null

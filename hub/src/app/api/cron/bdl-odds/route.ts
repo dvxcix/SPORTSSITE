@@ -77,11 +77,11 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
   try {
     const res = await fetch(
       `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=team`,
-      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
     )
     if (res.ok) mlbGames = (await res.json()).dates?.[0]?.games ?? []
   } catch (e) {
-    console.error('[bdl-odds cron] MLB schedule fetch failed', date, e)
+    console.error('[bdl-odds cron] MLB schedule fetch failed', { date, type: e instanceof Error ? e.name : typeof e })
   }
 
   // Once a game is genuinely live/final, live odds aren't pregame research
@@ -182,7 +182,7 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
 
   if (upserts.length) {
     const { error } = await admin.from('pregame_odds_snapshots').upsert(upserts, { onConflict: 'game_pk' })
-    if (error) console.error('[bdl-odds cron] snapshot upsert failed', date, error)
+    if (error) console.error('[bdl-odds cron] snapshot upsert failed', { date, code: error.code })
 
     // Append-only companion to the upsert above — the upsert only ever
     // keeps the LATEST value per game_pk, so this is the only place an
@@ -192,14 +192,14 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
     const { error: historyError } = await admin.from('pregame_odds_snapshot_history').insert(
       upserts.map(u => ({ game_pk: u.game_pk, game_date: u.game_date, prop_map: u.prop_map, captured_at: u.captured_at }))
     )
-    if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', date, historyError)
+    if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', { date, code: historyError.code })
   }
 
   if (openingRows.length) {
     const { error: openingError } = await admin
       .from('market_opening_prices')
       .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm,market,book', ignoreDuplicates: true })
-    if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', date, openingError)
+    if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', { date, code: openingError.code })
   }
 
   return { date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, openingRowAttempts: openingRows.length }
@@ -213,7 +213,7 @@ async function run(req: Request) {
   try {
     admin = createAdminClient()
   } catch (e) {
-    console.error('[bdl-odds cron] admin client not configured', e)
+    console.error('[bdl-odds cron] admin client not configured', { type: e instanceof Error ? e.name : typeof e })
     return NextResponse.json({ error: 'Supabase admin client not configured' }, { status: 500 })
   }
 
@@ -224,9 +224,9 @@ async function run(req: Request) {
   for (const date of dates) {
     try {
       results[date] = await processDate(admin, date)
-    } catch (e: any) {
-      console.error('[bdl-odds cron] date failed', date, e)
-      results[date] = { error: e?.message || String(e) }
+    } catch (e) {
+      console.error('[bdl-odds cron] date failed', { date, type: e instanceof Error ? e.name : typeof e })
+      results[date] = { error: 'sync failed' }
     }
   }
 

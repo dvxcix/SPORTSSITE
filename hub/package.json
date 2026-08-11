@@ -13,13 +13,15 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "audit:production": "node scripts/audit-production.mjs",
     "test:production": "node --test scripts/production-smoke.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
     "desktop:dev": "npm run dev --workspace @slipsurge/desktop",
     "desktop:build": "npm run build --workspace @slipsurge/desktop",
     "desktop:publish-update": "node scripts/publish-desktop-update.mjs",
     "desktop:doctor": "npm run doctor --workspace @slipsurge/desktop",
-    "desktop:verify-release": "node scripts/verify-desktop-release.mjs"
+    "desktop:verify-release": "node scripts/verify-desktop-release.mjs",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@browserbasehq/sdk": "^2.16.0",
@@ -62,6 +64,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.3.0",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

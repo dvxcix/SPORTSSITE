@@ -5,6 +5,7 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, checkEarlyWin, settleFinalPick, applyLegResultToPost } from '@/lib/pickGrading'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -40,7 +41,7 @@ async function run(req: Request) {
     .not('game_pk', 'is', null)
     .not('mlb_id', 'is', null)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('grade-live-picks-query', error)
   if (!pending?.length) return NextResponse.json({ won: 0, settled: 0, checked: 0, message: 'No pending MLB picks with game_pk + mlb_id' })
 
   const byGame = new Map<string, typeof pending>()

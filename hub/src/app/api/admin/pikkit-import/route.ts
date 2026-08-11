@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { safeApiError } from '@/lib/safeApiError'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 // Was hardcoded here (and in api/dugout/data/route.ts) — a live service_role
@@ -61,10 +62,17 @@ export async function POST(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
 
+  const contentLength = Number(req.headers.get('content-length') ?? 0)
+  if (contentLength > 8_000_000) return NextResponse.json({ error: 'Import payload is too large' }, { status: 413 })
+  if (!MP_KEY) return NextResponse.json({ error: 'Import service is not configured' }, { status: 503 })
+
   const body = await req.json().catch(() => null)
   const { json, gameDate, homeTeam, awayTeam, gameKey } = body ?? {}
   if (!json || !gameDate || !homeTeam || !awayTeam) {
     return NextResponse.json({ error: 'json, gameDate, homeTeam, and awayTeam are all required — pick a game from the dropdown' }, { status: 400 })
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(gameDate)) || !/^[A-Za-z0-9]{2,5}$/.test(String(homeTeam)) || !/^[A-Za-z0-9]{2,5}$/.test(String(awayTeam)) || (gameKey && !/^[A-Za-z0-9]+@[A-Za-z0-9]+(?:-G\d+)?$/.test(String(gameKey)))) {
+    return NextResponse.json({ error: 'Invalid game metadata' }, { status: 400 })
   }
 
   let parsed: { url?: string; game?: string; props: Record<string, Record<string, number>> }
@@ -87,10 +95,11 @@ export async function POST(req: Request) {
   const rows: any[] = []
   const marketSummary: Record<string, number> = {}
   for (const [shortKey, players] of Object.entries(parsed.props)) {
-    const market = MARKET_MAP[shortKey] ?? shortKey
+    const market = (MARKET_MAP[shortKey] ?? shortKey).slice(0, 80)
+    if (!/^[a-z0-9_]+$/i.test(market) || !players || typeof players !== 'object' || Array.isArray(players)) continue
     let count = 0
     for (const [playerName, picks] of Object.entries(players)) {
-      if (typeof picks !== 'number') continue
+      if (typeof picks !== 'number' || !Number.isInteger(picks) || picks < 0 || picks > 1_000_000 || playerName.length < 1 || playerName.length > 120) continue
       rows.push({
         player_name: playerName,
         game_date: gameDate,
@@ -104,6 +113,7 @@ export async function POST(req: Request) {
         updated_at: new Date().toISOString(),
       })
       count++
+      if (rows.length > 50_000) return NextResponse.json({ error: 'Import contains too many rows' }, { status: 413 })
     }
     marketSummary[market] = count
   }
@@ -116,10 +126,10 @@ export async function POST(req: Request) {
     method: 'POST',
     headers: mpH,
     body: JSON.stringify(rows),
+    signal: AbortSignal.timeout(30_000),
   })
   if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    return NextResponse.json({ error: `Upsert failed: ${res.status} ${errText}` }, { status: 500 })
+    return safeApiError('admin-pikkit-import', { status: res.status }, 'Import failed', 502)
   }
 
   return NextResponse.json({ ok: true, rowsImported: rows.length, marketSummary, gameKey: gameKey ?? null })

@@ -49,10 +49,10 @@ function firstPitchOf(play: any) {
 export async function GET() {
   try {
     const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${ASG_GAME_PK}/feed/live`, {
-      cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
+      next: { revalidate: 30 }, headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(8_000),
     })
     if (!res.ok) {
-      return NextResponse.json(EMPTY, { headers: { 'Cache-Control': 'no-store' } })
+      return NextResponse.json(EMPTY, { headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=60' } })
     }
     const feed = await res.json()
 
@@ -236,9 +236,9 @@ export async function GET() {
         pitchers, firstPaOutcome, firstInningPitcher, teamTotalStrikeouts, bothTeamsDouble, bothTeamsTriple,
         hrDistances, doublePlayRecorded, playerNames,
       },
-      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
+      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } }
     )
   } catch {
-    return NextResponse.json(EMPTY, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json(EMPTY, { headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=60' } })
   }
 }

@@ -34,7 +34,7 @@ export async function notifyMentions(
     .or(usernames.map(username => `username.ilike.${username}`).join(','))
     .limit(usernames.length)
   if (error) {
-    console.error('[mentions] failed to resolve mentioned users', error)
+    console.error('[mentions] failed to resolve mentioned users', { code: error.code })
     return
   }
   const excluded = new Set([actorId, ...excludeUserIds])

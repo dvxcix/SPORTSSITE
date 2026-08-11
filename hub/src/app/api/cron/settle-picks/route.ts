@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { PROP_META } from '@/lib/watchlist'
 import { fetchLiveFeed, settleFinalPick } from '@/lib/pickGrading'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -22,7 +23,7 @@ async function run(req: Request) {
     .not('game_pk', 'is', null)
     .not('mlb_id', 'is', null)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('settle-picks-query', error)
   if (!pending?.length) return NextResponse.json({ graded: 0, skipped: 0, message: 'No pending MLB picks with game_pk + mlb_id' })
 
   const byGame = new Map<string, typeof pending>()

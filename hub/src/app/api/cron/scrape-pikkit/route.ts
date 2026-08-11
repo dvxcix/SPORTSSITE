@@ -31,11 +31,12 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
     body: JSON.stringify({ json, gameDate, homeTeam, awayTeam, gameKey }),
+    signal: AbortSignal.timeout(45_000),
   })
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, debug = false) {
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
   const bb = await openSession({ contextId, metadata: { book: 'pikkit', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     // Pikkit scraping is pure text/DOM extraction (team names, a market
@@ -81,7 +82,6 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       return {
         gameKey: g.gameKey,
         error: 'landed on the wrong game page after clicking "More wagers" on the Pikkit listing — expected teams not found',
-        ...(debug ? { landedOnSnippet: landedText.slice(0, 300) } : {}),
       }
     }
 
@@ -119,18 +119,15 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       // not existing yet for this game look identical from the outside
       // otherwise). Not run on every cron invocation — this is extra page
       // read time on top of an already long scrape.
-      const pageText = debug
-        ? await bb.page.evaluate(() => document.body?.innerText?.slice(0, 2000) ?? '').catch(() => null)
-        : undefined
-      return { gameKey: g.gameKey, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked, ...(debug ? { pageText } : {}) }
+      return { gameKey: g.gameKey, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked }
     }
 
     if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, dryRun: true, scrape }
 
     const imported = await postImport(scrape, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, marketsScraped: marketCount, imported }
-  } catch (e: any) {
-    return { gameKey: g.gameKey, error: e?.message ?? String(e) }
+  } catch {
+    return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
     await bb.close()
   }
@@ -152,12 +149,11 @@ export async function GET(req: Request) {
   const reqUrl = new URL(req.url)
   const gamePkParam = reqUrl.searchParams.get('gamePk')
   const dryRun = reqUrl.searchParams.get('dryRun') === '1'
-  const debug = reqUrl.searchParams.get('debug') === '1'
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
-    const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun, debug)
+    const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun)
     return NextResponse.json({ date, gamePk, result })
   }
 
@@ -170,7 +166,7 @@ export async function GET(req: Request) {
   // pikkitAuth.ts for why this can't just trust the error string alone.
   const allSignedOutError = results.length > 0 && results.every(r => r.body?.result?.error === `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`)
   if (allSignedOutError) {
-    await checkPikkitAuthAndAlert(contextId).catch(e => console.error('[scrape-pikkit] auth alert check failed', e))
+    await checkPikkitAuthAndAlert(contextId).catch(e => console.error('[scrape-pikkit] auth alert check failed', { type: e instanceof Error ? e.name : typeof e }))
   }
 
   return NextResponse.json({ date, games: games.length, results })

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, BadgeDollarSign, BarChart3, BellRing, Building2, Check, Copy, ExternalLink, Eye, Layers3, Loader2, LockKeyhole, MessageSquareText, Pause, Play, Plus, Radio, Rocket, ShieldCheck, Users } from 'lucide-react'
 import styles from './CreatorStudio.module.css'
+import { isTrustedSlipSurgeUrl, isTrustedWhopUrl } from '@/lib/whopUrl'
 
 type Product = { id: string; title: string; description: string | null; price: number; product_type: string; status: string; purchase_url: string | null; created_at: string }
 type CreatorProfile = { username: string; whop_connected_company_id: string | null }
@@ -25,9 +26,19 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
 
   async function onboard() {
     if (isTestAccount) return setError('Test mode is active. Payment onboarding and money movement are disabled for this account.')
-    setBusy(true); setError('')
-    const res = await fetch('/api/creator/whop-onboard', { method: 'POST' }); const data = await res.json()
-    setBusy(false); if (!res.ok) return setError(data.error || 'Could not start onboarding'); window.location.href = data.url
+    setBusy(true)
+    setError('')
+    try {
+      const res = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(20_000) })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Could not start onboarding')
+      if (!isTrustedWhopUrl(data?.url)) throw new Error('Whop returned an invalid onboarding destination')
+      window.location.assign(data.url)
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : 'Could not start onboarding')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function createProduct() {
@@ -35,19 +46,38 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
     setBusy(true); setError('')
     const included = BENEFITS.filter(([key]) => benefits[key]).map(([, , label]) => label)
     const description = [form.description.trim(), included.length ? `Includes: ${included.join(', ')}.` : ''].filter(Boolean).join(' ')
-    const res = await fetch('/api/creator/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, description, price: Number(form.price) }) }); const data = await res.json()
-    setBusy(false); if (!res.ok) return setError(data.error || 'Could not create membership'); window.location.reload()
+    try {
+      const res = await fetch('/api/creator/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, description, price: Number(form.price) }), signal: AbortSignal.timeout(20_000) })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Could not create membership')
+      window.location.reload()
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : 'Could not create membership')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function setProductStatus(productId: string, status: 'active' | 'paused') {
     setBusy(true); setError('')
-    const res = await fetch('/api/creator/products', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productId, status }) })
-    const data = await res.json(); setBusy(false)
-    if (!res.ok) return setError(data.error || 'Could not update membership'); window.location.reload()
+    try {
+      const res = await fetch('/api/creator/products', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productId, status }), signal: AbortSignal.timeout(20_000) })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Could not update membership')
+      window.location.reload()
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : 'Could not update membership')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function copyStorefront() {
-    await navigator.clipboard.writeText(`${window.location.origin}/creators/${profile.username}`)
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/creators/${profile.username}`)
+    } catch {
+      setError('Could not copy the storefront link')
+    }
   }
 
   const setupCount = [true, !!profile.whop_connected_company_id, products.length > 0, groups.length > 0].filter(Boolean).length
@@ -81,7 +111,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
 
         <article className={styles.panel}>
           <header><div><span>YOUR OFFERS</span><h2>Membership catalog</h2><p>Manage availability and open the customer checkout experience.</p></div><LockKeyhole size={21} /></header>
-          <div className={styles.productList}>{products.length ? products.map(product => <div key={product.id}><div><span className={`${styles.status} ${styles[product.status]}`}>{product.status}</span><h3>{product.title}</h3><p>{product.product_type === 'membership' ? 'Monthly' : 'One time'} · ${Number(product.price).toFixed(2)}</p></div><div className={styles.productActions}>{product.purchase_url && <a href={product.purchase_url} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Checkout</a>}<button disabled={busy} onClick={() => setProductStatus(product.id, product.status === 'active' ? 'paused' : 'active')}>{product.status === 'active' ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Publish</>}</button></div></div>) : <div className={styles.empty}>Create your first membership above. It will appear on your public storefront immediately after publishing.</div>}</div>
+          <div className={styles.productList}>{products.length ? products.map(product => <div key={product.id}><div><span className={`${styles.status} ${styles[product.status]}`}>{product.status}</span><h3>{product.title}</h3><p>{product.product_type === 'membership' ? 'Monthly' : 'One time'} · ${Number(product.price).toFixed(2)}</p></div><div className={styles.productActions}>{(isTrustedSlipSurgeUrl(product.purchase_url) || isTrustedWhopUrl(product.purchase_url)) && <a href={product.purchase_url} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Checkout</a>}<button disabled={busy} onClick={() => setProductStatus(product.id, product.status === 'active' ? 'paused' : 'active')}>{product.status === 'active' ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Publish</>}</button></div></div>) : <div className={styles.empty}>Create your first membership above. It will appear on your public storefront immediately after publishing.</div>}</div>
         </article>
       </div>
 

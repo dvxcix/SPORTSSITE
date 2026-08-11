@@ -278,8 +278,8 @@ export async function syncSwingTake(admin: AdminClient, season: number) {
 
       return [key, { rows: rowsWritten }] as const
     } catch (e: any) {
-      console.error('[savant-swing-take] job failed', key, e)
-      return [key, { error: e?.message || String(e) }] as const
+      console.error('[savant-swing-take] job failed', { key, type: e instanceof Error ? e.name : typeof e })
+      return [key, { error: 'sync failed' }] as const
     }
   })
 
@@ -342,8 +342,8 @@ export async function syncBattingStance(admin: AdminClient, season: number) {
         const deduped = dedupeByKey(upsertRows, ['mlb_id', 'role', 'category', 'window_type', 'dims_key'])
         results[key] = { rows: await upsertSplitsChunked(admin, deduped) }
       } catch (e: any) {
-        console.error('[savant-batting-stance] job failed', key, e)
-        results[key] = { error: e?.message || String(e) }
+        console.error('[savant-batting-stance] job failed', { key, type: e instanceof Error ? e.name : typeof e })
+        results[key] = { error: 'sync failed' }
       }
     }
   }
@@ -393,8 +393,8 @@ export async function syncBothWindows(admin: AdminClient, board: SplitLeaderboar
       try {
         results[key] = await syncSplitLeaderboard(admin, board, season, role, windowType, dateStart, dateEnd)
       } catch (e: any) {
-        console.error(`[savant-splits:${board.category}] failed`, key, e)
-        results[key] = { error: e?.message || String(e) }
+        console.error(`[savant-splits:${board.category}] failed`, { key, type: e instanceof Error ? e.name : typeof e })
+        results[key] = { error: 'sync failed' }
       }
     }
   }
@@ -452,8 +452,8 @@ export async function syncPitchArsenalStats(admin: AdminClient, season: number) 
       const deduped = dedupeByKey(upsertRows, ['mlb_id', 'role', 'category', 'window_type', 'dims_key'])
       results[role] = { rows: await upsertSplitsChunked(admin, deduped) }
     } catch (e: any) {
-      console.error('[savant-pitch-arsenal-stats] failed', role, e)
-      results[role] = { error: e?.message || String(e) }
+      console.error('[savant-pitch-arsenal-stats] failed', { role, type: e instanceof Error ? e.name : typeof e })
+      results[role] = { error: 'sync failed' }
     }
   }
 

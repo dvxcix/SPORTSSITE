@@ -29,6 +29,16 @@ function aggregateOverall(rows: SplitRow[], weightKey: string, rateKeys: string[
 
 const BAT_TRACKING_RATE_KEYS = ['avg_bat_speed', 'hard_swing_rate', 'squared_up_per_swing', 'blast_per_swing', 'whiff_per_swing', 'swing_length']
 
+// These responses are served through an admin client after a tier check.
+// Keep their projection explicit so a future private/internal column cannot
+// silently become part of the public player API.
+const PLAYER_COLUMNS = 'mlb_id,full_name,first_name,last_name,birth_date,height,weight,bat_side,pitch_hand,primary_position,current_team_id,current_team_abbr,mlb_debut,active,last_synced_at'
+const SEASON_BATTING_COLUMNS = 'id,mlb_id,season,game_type,team_id,team_abbr,games_played,at_bats,hits,home_runs,rbi,runs,stolen_bases,walks,strikeouts,avg,obp,slg,ops,last_synced_at'
+const SEASON_PITCHING_COLUMNS = 'id,mlb_id,season,game_type,team_id,team_abbr,games_played,games_started,wins,losses,saves,innings_pitched,strikeouts,walks,earned_runs,home_runs_allowed,era,whip,last_synced_at'
+const CAREER_BATTING_COLUMNS = 'mlb_id,games_played,at_bats,hits,home_runs,rbi,runs,stolen_bases,walks,strikeouts,avg,obp,slg,ops,last_synced_at'
+const CAREER_PITCHING_COLUMNS = 'mlb_id,games_played,games_started,wins,losses,saves,innings_pitched,strikeouts,walks,earned_runs,home_runs_allowed,era,whip,last_synced_at'
+const HOME_RUN_COLUMNS = 'game_pk,season,game_date,batter_id,batter_name,pitcher_id,pitcher_name,result,exit_velocity,launch_angle,hr_distance,hr_cat,hr_type,parks'
+
 // League-wide value pools for the Quality of Contact card's heat-coloring —
 // that card shows one player's single season number per metric, so unlike
 // every other heat-mapped table on this page (which colors relative to the
@@ -120,7 +130,7 @@ async function fetchPlayerData(mlbId: number, season: number) {
     swingTakeBatRes, swingTakePitRes,
     stanceSeasonRes, stanceRecencyRes,
   ] = await Promise.all([
-    admin.from('players').select('*').eq('mlb_id', mlbId).maybeSingle(),
+    admin.from('players').select(PLAYER_COLUMNS).eq('mlb_id', mlbId).maybeSingle(),
     // A player traded mid-season gets one row per team PLUS an aggregate
     // row (team_id null, MLB's own season total) — all three share the
     // same (mlb_id, season, game_type), just different team_id, so a bare
@@ -129,18 +139,18 @@ async function fetchPlayerData(mlbId: number, season: number) {
     // Derek Hill: PHI split + CWS split + a null-team total, all for 2026).
     // Ordering team_id nulls-first means the season-total row wins when it
     // exists; a never-traded player only ever has the one real-team row.
-    admin.from('player_season_stats_batting').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').order('team_id', { ascending: true, nullsFirst: true }).limit(1).maybeSingle(),
-    admin.from('player_season_stats_pitching').select('*').eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').order('team_id', { ascending: true, nullsFirst: true }).limit(1).maybeSingle(),
-    admin.from('player_career_stats_batting').select('*').eq('mlb_id', mlbId).maybeSingle(),
-    admin.from('player_career_stats_pitching').select('*').eq('mlb_id', mlbId).maybeSingle(),
+    admin.from('player_season_stats_batting').select(SEASON_BATTING_COLUMNS).eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').order('team_id', { ascending: true, nullsFirst: true }).limit(1).maybeSingle(),
+    admin.from('player_season_stats_pitching').select(SEASON_PITCHING_COLUMNS).eq('mlb_id', mlbId).eq('season', season).eq('game_type', 'R').order('team_id', { ascending: true, nullsFirst: true }).limit(1).maybeSingle(),
+    admin.from('player_career_stats_batting').select(CAREER_BATTING_COLUMNS).eq('mlb_id', mlbId).maybeSingle(),
+    admin.from('player_career_stats_pitching').select(CAREER_PITCHING_COLUMNS).eq('mlb_id', mlbId).maybeSingle(),
     admin.from('player_statcast_hitting_season').select('category, metrics').eq('mlb_id', mlbId).eq('season', season),
     admin.from('player_statcast_pitching_season').select('category, metrics').eq('mlb_id', mlbId).eq('season', season),
     admin.from('player_fielding_season').select('position, category, metrics').eq('mlb_id', mlbId).eq('season', season),
     admin.from('player_baserunning_season').select('category, metrics').eq('mlb_id', mlbId).eq('season', season),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'pitch_arsenal_stats').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'pitcher').eq('category', 'pitch_arsenal_stats').eq('window_type', 'season'),
-    admin.from('player_home_run_events').select('*').eq('batter_id', mlbId).order('game_date', { ascending: false }).limit(15),
-    admin.from('player_home_run_events').select('*').eq('pitcher_id', mlbId).order('game_date', { ascending: false }).limit(15),
+    admin.from('player_home_run_events').select(HOME_RUN_COLUMNS).eq('batter_id', mlbId).order('game_date', { ascending: false }).limit(15),
+    admin.from('player_home_run_events').select(HOME_RUN_COLUMNS).eq('pitcher_id', mlbId).order('game_date', { ascending: false }).limit(15),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'swing_take').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'pitcher').eq('category', 'swing_take').eq('window_type', 'season'),
     admin.from('player_statcast_splits').select('dims, metrics').eq('mlb_id', mlbId).eq('role', 'batter').eq('category', 'batting_stance').eq('window_type', 'season'),
@@ -261,7 +271,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params
   const mlbId = Number(id)
-  if (!Number.isFinite(mlbId)) {
+  if (!Number.isSafeInteger(mlbId) || mlbId <= 0 || mlbId > 10_000_000) {
     return NextResponse.json({ error: 'Invalid player id' }, { status: 400 })
   }
 

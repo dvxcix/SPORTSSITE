@@ -5,6 +5,7 @@ import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { writeAdminAudit } from '@/lib/adminAudit'
+import { safeApiError } from '@/lib/safeApiError'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   if (auth.error) return auth.error
 
   const { userId, action, value } = await req.json().catch(() => ({}))
-  if (!userId || !action) {
+  if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId) || !action) {
     return NextResponse.json({ error: 'userId and action are required' }, { status: 400 })
   }
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
 
   if (action === 'verify') {
     const { error } = await admin.from('users').update({ is_verified: !!value }).eq('id', userId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return safeApiError('admin-user-verify', error)
     await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.verification_changed', targetType: 'user', targetId: userId, details: { verified: !!value }, request: req })
     return NextResponse.json({ ok: true })
   }
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'value must be user, creator, or admin' }, { status: 400 })
     }
     const { error } = await admin.from('users').update({ account_type: value }).eq('id', userId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return safeApiError('admin-user-type', error)
     await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.account_type_changed', targetType: 'user', targetId: userId, details: { account_type: value }, request: req })
     return NextResponse.json({ ok: true })
   }
@@ -64,7 +65,8 @@ export async function POST(req: Request) {
       admin_granted_tier_by: auth.adminId,
       admin_granted_tier_at: new Date().toISOString(),
     }).eq('id', userId).select('tier, discord_advanced_claimed').single()
-    if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
+    if (error) return safeApiError('admin-user-tier-grant', error)
+    if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, value as Tier))
     await syncDiscordRoleForUser(admin, userId)
     await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.tier_granted', targetType: 'user', targetId: userId, details: { tier: value }, request: req })
@@ -78,7 +80,8 @@ export async function POST(req: Request) {
       admin_granted_tier_at: null,
       admin_granted_tier_note: null,
     }).eq('id', userId).select('tier, discord_advanced_claimed').single()
-    if (error || !updated) return NextResponse.json({ error: error?.message ?? 'User not found' }, { status: 500 })
+    if (error) return safeApiError('admin-user-tier-revoke', error)
+    if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     await syncTierBadge(admin, userId, effectiveTier((updated.tier as Tier) ?? 'free', updated.discord_advanced_claimed, null))
     await syncDiscordRoleForUser(admin, userId)
     await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.tier_grant_revoked', targetType: 'user', targetId: userId, request: req })
@@ -90,10 +93,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Can't delete your own account" }, { status: 400 })
     }
     const { error } = await admin.from('users').delete().eq('id', userId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return safeApiError('admin-user-delete', error)
     await writeAdminAudit(admin, { actorUserId: auth.adminId, action: 'user.deleted', targetType: 'user', targetId: userId, request: req })
     return NextResponse.json({ ok: true })
   }
 
-  return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }

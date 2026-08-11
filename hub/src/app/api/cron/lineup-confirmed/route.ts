@@ -229,6 +229,6 @@ async function broadcast(admin: Admin, recipientIds: string[], message: string, 
     data: teamLogo ? { avatar_url: teamLogo } : null,
   }))
   const { error } = await admin.from('notifications').insert(rows)
-  if (error) { console.error('[lineup-confirmed] broadcast insert failed', { message, error }); return 0 }
+  if (error) { console.error('[lineup-confirmed] broadcast insert failed', { code: error.code }); return 0 }
   return rows.length
 }

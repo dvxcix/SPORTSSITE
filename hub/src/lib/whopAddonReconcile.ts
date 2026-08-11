@@ -16,7 +16,21 @@ export const ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
 
 type ReconcileResult =
   | { error: string }
-  | { totalMemberships: number; results: any[] }
+  | { totalMemberships: number; results: Record<string, unknown>[] }
+
+type ActiveMembership = {
+  membershipId?: string
+  internalUserId: string
+  periodEnd: string | null
+  status?: string
+}
+
+function sameInstant(left: string | null | undefined, right: string | null | undefined) {
+  if (!left || !right) return !left && !right
+  const leftMs = Date.parse(left)
+  const rightMs = Date.parse(right)
+  return Number.isFinite(leftMs) && Number.isFinite(rightMs) ? leftMs === rightMs : left === right
+}
 
 export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const apiKey = process.env.ADDON_WHOP_KEY
@@ -29,34 +43,48 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const memberships = fetched.memberships
 
   const admin = createAdminClient()
-  const results: any[] = []
-
+  const results: Record<string, unknown>[] = []
+  const bestByUser = new Map<string, ActiveMembership>()
   for (const m of memberships) {
-    // Defensive across a few plausible field shapes — same reasoning as the
-    // webhook handler, since this is the same API family with the same
-    // undocumented-payload problem.
     const status: string | undefined = m.status ?? m.valid_status
     const isActive = status === 'active' || status === 'valid' || m.valid === true
     const internalUserId: string | undefined = m.metadata?.internal_user_id
-    const membershipId: string | undefined = m.id
+    if (!internalUserId) {
+      results.push({ membershipId: m.id, status, skipped: 'no internal_user_id in metadata' })
+      continue
+    }
+    if (!isActive) continue
     const periodEndRaw = m.renewal_period_end ?? m.period_end ?? m.expires_at
     const periodEnd = typeof periodEndRaw === 'number'
       ? new Date(periodEndRaw * 1000).toISOString()
       : typeof periodEndRaw === 'string' ? periodEndRaw : null
+    const candidate = { membershipId: m.id as string | undefined, internalUserId, periodEnd, status }
+    const current = bestByUser.get(internalUserId)
+    const candidateEnd = periodEnd ? Date.parse(periodEnd) : 0
+    const currentEnd = current?.periodEnd ? Date.parse(current.periodEnd) : 0
+    if (!current || candidateEnd > currentEnd) bestByUser.set(internalUserId, candidate)
+  }
+  const activeUserIds = [...bestByUser.keys()]
+  const { data: existingUsers, error: existingUsersError } = activeUserIds.length
+    ? await admin.from('users').select('id, tier, tier_purchased_at, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
+    : { data: [], error: null }
+  if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
+  const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
 
-    if (!internalUserId) {
-      results.push({ membershipId, status, skipped: 'no internal_user_id in metadata' })
-      continue
-    }
-    if (!isActive) {
-      results.push({ membershipId, internalUserId, status, skipped: 'not active' })
-      continue
-    }
+  for (const m of bestByUser.values()) {
+    // Defensive across a few plausible field shapes — same reasoning as the
+    // webhook handler, since this is the same API family with the same
+    // undocumented-payload problem.
+    const { status, internalUserId, membershipId, periodEnd } = m
 
     // Only stamp tier_purchased_at when unset — this route re-runs on a
     // schedule and would otherwise bump it to "now" every time it sees the
     // same still-active membership, same reasoning as the webhook handler.
-    const { data: existing } = await admin.from('users').select('tier, tier_purchased_at').eq('id', internalUserId).maybeSingle()
+    const existing = existingById.get(internalUserId)
+    if (!existing) {
+      results.push({ membershipId, internalUserId, error: 'user not found' })
+      continue
+    }
     const isFirstPurchase = !existing?.tier_purchased_at
 
     // Real incident: a user can hold simultaneously active memberships on
@@ -76,6 +104,17 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
       continue
     }
 
+    const unchanged = currentTier === planInfo.tier
+      && existing.whop_plan_id === ADDON_PLAN_ID
+      && existing.tier_status === 'active'
+      && (existing.whop_membership_id ?? null) === (membershipId ?? null)
+      && sameInstant(existing.tier_current_period_end, periodEnd)
+    if (unchanged) continue
+
+    const previousEffectiveTier = effectiveTier(currentTier, existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const nextEffectiveTier = effectiveTier(planInfo.tier as Tier, existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const accessChanged = previousEffectiveTier !== nextEffectiveTier
+
     const { data: updated, error } = await admin.from('users').update({
       tier: planInfo.tier,
       whop_plan_id: ADDON_PLAN_ID,
@@ -90,8 +129,10 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
       continue
     }
 
-    await syncTierBadge(admin, internalUserId, effectiveTier(planInfo.tier as Tier, updated.discord_advanced_claimed, updated.admin_granted_tier))
-    await syncDiscordRoleForUser(admin, internalUserId)
+    if (accessChanged) {
+      await syncTierBadge(admin, internalUserId, nextEffectiveTier)
+      await syncDiscordRoleForUser(admin, internalUserId)
+    }
     // Only a genuine first-time purchase, never a still-active membership
     // this cron already saw on a previous run — same fire-and-forget
     // reasoning as whopWebhook.ts, must never delay this reconcile job.

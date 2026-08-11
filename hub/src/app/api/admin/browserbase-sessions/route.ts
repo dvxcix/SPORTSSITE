@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Browserbase from '@browserbasehq/sdk'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 
@@ -19,19 +20,31 @@ export async function GET(req: Request) {
   const apiKey = process.env.BROWSERBASE_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'BROWSERBASE_API_KEY is not configured' }, { status: 500 })
 
-  const bb = new Browserbase({ apiKey })
-  const sessions = await bb.sessions.list({ status: 'RUNNING' })
+  try {
+    const bb = new Browserbase({ apiKey })
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    const sessions = await Promise.race([
+      bb.sessions.list({ status: 'RUNNING' }),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('Browserbase request timed out')), 12_000)
+      }),
+    ]).finally(() => {
+      if (timeout) clearTimeout(timeout)
+    })
 
-  const now = Date.now()
-  const summarized = sessions.map(s => ({
-    id: s.id,
-    createdAt: s.createdAt,
-    expiresAt: s.expiresAt,
-    keepAlive: s.keepAlive,
-    region: s.region,
-    proxyBytes: s.proxyBytes,
-    ageMinutes: Math.round((now - new Date(s.createdAt).getTime()) / 60000),
-  }))
+    const now = Date.now()
+    const summarized = sessions.map(s => ({
+      idSuffix: s.id.slice(-8),
+      createdAt: s.createdAt,
+      expiresAt: s.expiresAt,
+      keepAlive: s.keepAlive,
+      region: s.region,
+      proxyBytes: s.proxyBytes,
+      ageMinutes: Math.round((now - new Date(s.createdAt).getTime()) / 60000),
+    }))
 
-  return NextResponse.json({ runningCount: summarized.length, sessions: summarized })
+    return NextResponse.json({ runningCount: summarized.length, sessions: summarized })
+  } catch (cause) {
+    return safeApiError('admin-browserbase-sessions', cause, 'Browser session check failed', 502)
+  }
 }

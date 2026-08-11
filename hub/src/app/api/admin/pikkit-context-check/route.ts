@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { openSession } from '@/lib/browserbase'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -21,17 +22,33 @@ export async function GET(req: Request) {
   }
 
   const reqUrl = new URL(req.url)
-  const waitMs = Number(reqUrl.searchParams.get('waitMs') ?? 2500)
+  const requestedWaitMs = Number(reqUrl.searchParams.get('waitMs') ?? 2500)
+  const waitMs = Number.isFinite(requestedWaitMs)
+    ? Math.min(10_000, Math.max(0, Math.trunc(requestedWaitMs)))
+    : 2500
 
-  const bb = await openSession({ contextId })
+  let bb: Awaited<ReturnType<typeof openSession>> | null = null
   try {
+    bb = await openSession({ contextId })
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(waitMs)
     const url = bb.page.url()
     const title = await bb.page.title().catch(() => null)
-    const bodyText = await bb.page.evaluate(() => document.body?.innerText?.slice(0, 800) ?? '').catch(() => null)
-    return NextResponse.json({ contextId, url, title, bodyText })
+    const pageState = await bb.page.evaluate(() => {
+      const text = document.body?.innerText?.toLowerCase() ?? ''
+      return {
+        hasLoginPrompt: /log in|sign in/.test(text),
+        hasGameLinks: document.querySelectorAll('a[href*="game"], a[href*="matchup"]').length > 0,
+      }
+    }).catch(() => ({ hasLoginPrompt: false, hasGameLinks: false }))
+    return NextResponse.json({
+      origin: (() => { try { return new URL(url).origin } catch { return null } })(),
+      title: typeof title === 'string' ? title.slice(0, 160) : null,
+      ...pageState,
+    })
+  } catch (cause) {
+    return safeApiError('admin-pikkit-context-check', cause, 'Pikkit context check failed', 502)
   } finally {
-    await bb.close()
+    if (bb) await bb.close().catch(() => undefined)
   }
 }

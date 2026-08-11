@@ -7,6 +7,7 @@ import crypto from 'crypto'
 // here is deliberately raw fetch() against Whop's documented REST endpoints,
 // matching how their own guide implements it.
 const WHOP_API_BASE = 'https://api.whop.com'
+const WHOP_FETCH_TIMEOUT_MS = 12_000
 
 function requireEnv(name: string): string {
   const v = process.env[name]
@@ -65,6 +66,7 @@ export async function exchangeCodeForToken(code: string, redirectUri: string, co
         client_secret: requireEnv('WHOP_CLIENT_SECRET'),
         code_verifier: codeVerifier,
       }),
+      signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) return null
     return await res.json()
@@ -84,6 +86,7 @@ export async function fetchWhopUserInfo(accessToken: string): Promise<WhopUserIn
   try {
     const res = await fetch(`${WHOP_API_BASE}/oauth/userinfo`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) return null
     return await res.json()
@@ -126,6 +129,7 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
   try {
     const res = await fetch(`${WHOP_API_BASE}/api/v1/users/${whopUserId}/access/${accessPassId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) return false
     const data = await res.json().catch(() => null)
@@ -169,6 +173,7 @@ async function isTrialingMembership(membershipId: string, apiKey: string): Promi
   try {
     const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) return false
     const data = await res.json().catch(() => null)
@@ -192,15 +197,18 @@ export async function cancelWhopMembership(membershipId: string, apiKey: string,
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: immediate ? JSON.stringify({ cancellation_mode: 'immediate' }) : undefined,
+      signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
-      console.error('[cancelWhopMembership] Whop rejected the cancel request', { membershipId, status: res.status, body: errBody })
-      return { ok: false, status: res.status, error: errBody || `Whop returned ${res.status}` }
+      if (/already\s+(?:cancelled|canceled)|cancellation\s+already/i.test(errBody)) return { ok: true }
+      console.error('[cancelWhopMembership] Whop rejected the cancel request', { status: res.status })
+      return { ok: false, status: res.status, error: `Whop returned ${res.status}` }
     }
     return { ok: true }
-  } catch (e: any) {
-    console.error('[cancelWhopMembership] network error contacting Whop', { membershipId, error: e?.message })
-    return { ok: false, status: 0, error: e?.message || 'Network error contacting Whop' }
+  } catch (error: unknown) {
+    const type = error instanceof Error ? error.name : typeof error
+    console.error('[cancelWhopMembership] network error contacting Whop', { type })
+    return { ok: false, status: 0, error: 'Whop is temporarily unavailable' }
   }
 }

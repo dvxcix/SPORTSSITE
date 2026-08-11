@@ -123,19 +123,27 @@ export async function fetchSavantCsv(url: string): Promise<Record<string, string
   // Vercel's serverless IP ranges differently than a residential one.
   const res = await fetch(url, {
     cache: 'no-store',
+    signal: AbortSignal.timeout(30_000),
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/csv,text/plain,*/*',
     },
   })
   const text = await res.text()
-  if (!res.ok) throw new Error(`Savant CSV ${res.status}: ${url} :: ${text.slice(0, 300)}`)
+  if (!res.ok) throw new Error(`Savant CSV request failed (${res.status})`)
   const rows = parseCsv(text)
   // Generic sanity check only — different Savant leaderboards key their id
   // column differently ('player_id' on /leaderboard/custom, plain 'id' on
   // /leaderboard/bat-tracking), so this can't assume a specific column name.
   if (!rows.length) {
-    console.error('[savant] empty/unparseable response', { url, status: res.status, contentType: res.headers.get('content-type'), preview: text.slice(0, 300) })
+    const nonEmptyLines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim().length > 0)
+    if (nonEmptyLines.length > 1 || !nonEmptyLines[0]?.includes(',')) {
+      console.error('[savant] empty/unparseable response', {
+        status: res.status,
+        contentType: res.headers.get('content-type'),
+        responseBytes: text.length,
+      })
+    }
   }
   return rows
 }

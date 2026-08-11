@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 
@@ -222,6 +223,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const gate = await requireTier('ultimate')
   if (gate.error) return gate.error
   const { id } = await params
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'Matrix not found.' }, { status: 404 })
 
   const admin = createAdminClient()
   const { data: owned } = await admin.from('matrices').select('id, match_mode, match_any_count').eq('id', id).eq('user_id', gate.userId!).maybeSingle()
@@ -279,26 +281,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { error: updateError } = await admin.from('matrices').update(updates).eq('id', id)
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+  if (updateError) return safeApiError('matrix-update', updateError, 'Could not update this Matrix.')
 
   if (cleanFactors) {
     const { error: deleteError } = await admin.from('matrix_factors').delete().eq('matrix_id', id)
-    if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
+    if (deleteError) return safeApiError('matrix-factors-replace', deleteError, 'Could not update this Matrix.')
     const { error: insertError } = await admin.from('matrix_factors').insert(
       cleanFactors.map((f, i) => ({ ...f, matrix_id: id, position: i }))
     )
-    if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+    if (insertError) return safeApiError('matrix-factors-insert', insertError, 'Could not update this Matrix.')
   }
 
   // Same delete-and-reinsert shape as the Factor list above, for Pipeline
   // mode's step list.
   if (cleanSteps) {
     const { error: deleteStepsError } = await admin.from('matrix_pipeline_steps').delete().eq('matrix_id', id)
-    if (deleteStepsError) return NextResponse.json({ error: deleteStepsError.message }, { status: 500 })
+    if (deleteStepsError) return safeApiError('matrix-steps-replace', deleteStepsError, 'Could not update this Matrix.')
     const { error: insertStepsError } = await admin.from('matrix_pipeline_steps').insert(
       cleanSteps.map((s, i) => ({ ...s, matrix_id: id, position: i }))
     )
-    if (insertStepsError) return NextResponse.json({ error: insertStepsError.message }, { status: 500 })
+    if (insertStepsError) return safeApiError('matrix-steps-insert', insertStepsError, 'Could not update this Matrix.')
   }
 
   return NextResponse.json({ ok: true })
@@ -308,9 +310,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const gate = await requireTier('ultimate')
   if (gate.error) return gate.error
   const { id } = await params
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'Matrix not found.' }, { status: 404 })
 
   const admin = createAdminClient()
   const { error } = await admin.from('matrices').delete().eq('id', id).eq('user_id', gate.userId!)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('matrix-delete', error, 'Could not delete this Matrix.')
   return NextResponse.json({ ok: true })
 }

@@ -3,6 +3,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncAffinityData } from '@/lib/affinitySync'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -20,7 +21,7 @@ async function run(req: Request) {
     const result = await syncAffinityData(admin)
     return NextResponse.json({ ok: true, ...result })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+    return safeApiError('savant-sync-affinity', e)
   }
 }
 

@@ -30,6 +30,7 @@ async function mpRpc(fn: string, body: any): Promise<any[]> {
       method: 'POST',
       headers: { ...mpH, Range: '0-4999' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
       cache: 'no-store',
     })
     if (!res.ok) return []
@@ -43,7 +44,7 @@ async function mpGetAll(path: string): Promise<any[]> {
   const out: any[] = []
   for (let offset = 0; offset < 100_000; offset += PAGE) {
     try {
-      const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' })
+      const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store', signal: AbortSignal.timeout(20_000) })
       if (!res.ok) break
       const page = await res.json()
       if (!Array.isArray(page)) break
@@ -81,7 +82,7 @@ async function fetchSeasonAvgDirect(marketKey: string, date: string): Promise<an
 // attempting to bypass the RPC and query the table directly.
 async function mpTableSample(table: string): Promise<{ ok: boolean; status: number; sample: any[] }> {
   try {
-    const res = await fetch(`${MP_URL}/rest/v1/${table}?select=*&limit=2`, { headers: mpH, cache: 'no-store' })
+    const res = await fetch(`${MP_URL}/rest/v1/${table}?select=*&limit=2`, { headers: mpH, cache: 'no-store', signal: AbortSignal.timeout(20_000) })
     const sample = res.ok ? await res.json() : []
     return { ok: res.ok, status: res.status, sample: Array.isArray(sample) ? sample : [] }
   } catch {
@@ -99,7 +100,7 @@ async function mpDirectNameLookup(nameNorm: string): Promise<any[]> {
   try {
     const res = await fetch(
       `${MP_URL}/rest/v1/player_price_season_avg?select=name_norm,bookmaker,market_key,avg_price,through_date&name_norm=eq.${encodeURIComponent(nameNorm)}&order=through_date.desc&limit=20`,
-      { headers: mpH, cache: 'no-store' }
+      { headers: mpH, cache: 'no-store', signal: AbortSignal.timeout(20_000) }
     )
     if (!res.ok) return []
     const d = await res.json()
@@ -119,7 +120,7 @@ async function mpSubstringSearch(term: string): Promise<any[]> {
   try {
     const res = await fetch(
       `${MP_URL}/rest/v1/player_price_season_avg?select=name_norm&name_norm=ilike.*${encodeURIComponent(term.toLowerCase())}*&limit=20`,
-      { headers: mpH, cache: 'no-store' }
+      { headers: mpH, cache: 'no-store', signal: AbortSignal.timeout(20_000) }
     )
     if (!res.ok) return []
     const d = await res.json()
@@ -138,7 +139,7 @@ async function mpPropsHistoryLookup(nameNorm: string): Promise<any[]> {
   try {
     const res = await fetch(
       `${MP_URL}/rest/v1/props_history?select=player_name,name_norm,bookmaker,market_key,over_price,over_point,captured_at,game_time&name_norm=eq.${encodeURIComponent(nameNorm)}&order=captured_at.desc&limit=50`,
-      { headers: mpH, cache: 'no-store' }
+      { headers: mpH, cache: 'no-store', signal: AbortSignal.timeout(20_000) }
     )
     if (!res.ok) return []
     const d = await res.json()

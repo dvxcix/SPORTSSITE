@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 // The actual "log the user in" step. The callback route (server-side)
 // verified Whop, checked access, and provisioned/found the matching
@@ -17,7 +18,7 @@ function WhopCompleteInner() {
 
   useEffect(() => {
     const tokenHash = searchParams.get('token_hash')
-    const next = searchParams.get('next') || '/feed'
+    const next = safeInternalPath(searchParams.get('next'))
     if (!tokenHash) { setError('Missing sign-in token.'); return }
 
     const supabase = createClient()

@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
+import { isTrustedPushEndpoint } from '@/lib/pushEndpoint'
+import { hasBearerSecret } from '@/lib/requestAuth'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 export const revalidate = 0
 
@@ -10,8 +13,7 @@ function requirePushAuth(req: Request): NextResponse | null {
   if (!secret) {
     return NextResponse.json({ error: 'PUSH_TRIGGER_SECRET is not configured — refusing to run an unauthenticated push send' }, { status: 500 })
   }
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${secret}`) {
+  if (!hasBearerSecret(req, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return null
@@ -34,7 +36,9 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null)
   const notificationId = body?.notification_id as string | undefined
-  if (!notificationId) return NextResponse.json({ error: 'Missing notification_id' }, { status: 400 })
+  if (!notificationId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(notificationId)) {
+    return NextResponse.json({ error: 'Malformed notification_id' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
 
@@ -64,15 +68,22 @@ export async function POST(request: Request) {
     .eq('user_id', notification.user_id)
   if (!subscriptions?.length) return NextResponse.json({ ok: true, skipped: 'no push subscriptions' })
 
+  const invalidSubscriptions = subscriptions.filter(subscription => !isTrustedPushEndpoint(subscription.endpoint))
+  if (invalidSubscriptions.length) {
+    await admin.from('push_subscriptions').delete().in('id', invalidSubscriptions.map(subscription => subscription.id))
+  }
+  const trustedSubscriptions = subscriptions.filter(subscription => isTrustedPushEndpoint(subscription.endpoint))
+  if (!trustedSubscriptions.length) return NextResponse.json({ ok: true, skipped: 'no trusted push subscriptions' })
+
   const { data: deliveredAttempts } = await admin
     .from('notification_delivery_attempts')
     .select('subscription_id')
     .eq('notification_id', notification.id)
     .eq('channel', 'web_push')
     .eq('status', 'sent')
-    .in('subscription_id', subscriptions.map(subscription => subscription.id))
+    .in('subscription_id', trustedSubscriptions.map(subscription => subscription.id))
   const deliveredSubscriptionIds = new Set((deliveredAttempts ?? []).map(attempt => attempt.subscription_id).filter(Boolean))
-  const pendingSubscriptions = subscriptions.filter(subscription => !deliveredSubscriptionIds.has(subscription.id))
+  const pendingSubscriptions = trustedSubscriptions.filter(subscription => !deliveredSubscriptionIds.has(subscription.id))
   if (!pendingSubscriptions.length) return NextResponse.json({ ok: true, skipped: 'push already delivered', sent: 0, failed: 0 })
 
   const actor = notification.actor as { display_name?: string | null; username?: string | null } | null
@@ -84,15 +95,16 @@ export async function POST(request: Request) {
   // before for every notification type that doesn't set data.avatar_url.
   const notificationData = (notification.data ?? {}) as Record<string, unknown>
   const richImage = typeof notificationData.avatar_url === 'string' ? notificationData.avatar_url : undefined
+  const notificationPath = safeInternalPath(notification.link, '/notifications')
   const groupingKey = notification.type === 'lineup_confirmed'
-    ? `lineup:${notificationData.game_pk || notification.link || notification.user_id}`
-    : `${notification.type}:${notification.link || notification.user_id}`
+    ? `lineup:${notificationData.game_pk || notificationPath || notification.user_id}`
+    : `${notification.type}:${notificationPath || notification.user_id}`
   const payload = JSON.stringify({
     title: 'SlipSurge',
     body: (actorName ? `${actorName} ` : '') + (notification.message || 'sent you a notification'),
     icon: richImage || '/icon-192.png',
     image: typeof notificationData.image_url === 'string' ? notificationData.image_url : undefined,
-    url: notification.link || '/notifications',
+    url: notificationPath,
     type: notification.type,
     tag: groupingKey,
     renotify: true,
@@ -143,7 +155,7 @@ export async function POST(request: Request) {
       subscription_id: subscription.id,
       status: 'failed',
       provider_status: providerStatus,
-      error: reason instanceof Error ? reason.message.slice(0, 1000) : 'Unknown push delivery error',
+      error: 'push delivery failed',
     }
   }), { ignoreDuplicates: true })
 

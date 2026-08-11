@@ -14,7 +14,6 @@ export async function GET() {
       status: healthy ? 'ok' : 'degraded',
       database: healthy ? 'reachable' : 'unavailable',
       latencyMs: Date.now() - startedAt,
-      release: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ?? 'local',
       checkedAt: new Date().toISOString(),
     },
     {

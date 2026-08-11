@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
+import { hasBearerSecret } from '@/lib/requestAuth'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 export const revalidate = 0
 
@@ -19,8 +21,7 @@ function requireWebhookAuth(req: Request): NextResponse | null {
   if (!secret) {
     return NextResponse.json({ error: 'PUSH_TRIGGER_SECRET is not configured — refusing to run an unauthenticated email send' }, { status: 500 })
   }
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${secret}`) {
+  if (!hasBearerSecret(req, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return null
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null)
   const notificationId = body?.notification_id as string | undefined
-  if (!notificationId) return NextResponse.json({ error: 'Missing notification_id' }, { status: 400 })
+  if (!notificationId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(notificationId)) {
+    return NextResponse.json({ error: 'Malformed notification_id' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
 
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
       provider_status: details?.providerStatus ?? null,
       error: details?.error?.slice(0, 1000) ?? null,
     })
-    if (error) console.error('[email/send-notification] could not record delivery telemetry', error)
+    if (error) console.error('[email/send-notification] could not record delivery telemetry', { code: error.code })
   }
 
   const { data: notification } = await admin
@@ -102,7 +105,7 @@ export async function POST(request: Request) {
   const actor = notification.actor as any
   const actorName = actor?.display_name || actor?.username
   const text = (actorName ? `${actorName} ` : '') + (notification.message || 'sent you a notification')
-  const url = notification.link ? `https://www.slipsurge.com${notification.link}` : 'https://www.slipsurge.com/notifications'
+  const url = `https://www.slipsurge.com${safeInternalPath(notification.link, '/notifications')}`
   // Same rich image NotificationsList/push already show (player headshot,
   // team logo — see notifications.data) — omitted entirely when absent,
   // same as every notification type before this.
@@ -150,17 +153,17 @@ ${safeRichImage ? (
 </td></tr>
 </table>`,
       }),
+      signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) {
-      const errorText = await res.text()
-      console.error('[email/send-notification] Resend send failed', errorText)
-      await recordDelivery('failed', { userId: notification.user_id, providerStatus: res.status, error: errorText })
+      console.error('[email/send-notification] Resend send failed', { status: res.status })
+      await recordDelivery('failed', { userId: notification.user_id, providerStatus: res.status, error: 'provider rejected request' })
       return NextResponse.json({ ok: false, error: 'Email provider rejected the notification' }, { status: 502 })
     }
     await recordDelivery('sent', { userId: notification.user_id, providerStatus: res.status })
   } catch (e) {
-    console.error('[email/send-notification] threw', e)
-    await recordDelivery('failed', { userId: notification.user_id, error: e instanceof Error ? e.message : 'Unknown email delivery error' })
+    console.error('[email/send-notification] request failed', { type: e instanceof Error ? e.name : typeof e })
+    await recordDelivery('failed', { userId: notification.user_id, error: 'delivery request failed' })
     return NextResponse.json({ ok: false, error: 'Email delivery failed' }, { status: 502 })
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { insertWithUniqueElementCode } from '@/lib/elementCode'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null)
   const code = typeof body?.element_code === 'string' ? body.element_code.trim().toUpperCase() : ''
-  if (!code) return NextResponse.json({ error: 'Enter an Element Code.' }, { status: 400 })
+  if (!/^EL-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(code)) return NextResponse.json({ error: 'Enter a valid Element Code.' }, { status: 400 })
 
   const admin = createAdminClient()
   const { data: source } = await admin
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       .select('position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
       .eq('matrix_id', source.id)
       .order('position', { ascending: true })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return safeApiError('matrix-import-steps', error, 'Could not import this Matrix.')
     if (!data?.length) return NextResponse.json({ error: 'That Pipeline has no steps to import.' }, { status: 400 })
     sourceSteps = data
   } else {
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       .select('position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
       .eq('matrix_id', source.id)
       .order('position', { ascending: true })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return safeApiError('matrix-import-factors', error, 'Could not import this Matrix.')
     if (!data?.length) return NextResponse.json({ error: 'That Matrix has no Factors to import.' }, { status: 400 })
     sourceFactors = data
   }
@@ -71,9 +72,10 @@ export async function POST(req: Request) {
     element_code: elementCode,
   }))
   if (inserted.error || !inserted.data) {
-    const message = inserted.error ?? 'Could not import this Matrix.'
+    const message = inserted.error ?? ''
     const capHit = message.includes('MATRIX_CAP_REACHED')
-    return NextResponse.json({ error: capHit ? 'You can save up to 10 Matrices — delete one to make room.' : message }, { status: capHit ? 400 : 500 })
+    if (capHit) return NextResponse.json({ error: 'You can save up to 10 Matrices — delete one to make room.' }, { status: 400 })
+    return safeApiError('matrix-import-create', inserted.error, 'Could not import this Matrix.')
   }
 
   const newMatrixId = inserted.data.id as string
@@ -82,7 +84,7 @@ export async function POST(req: Request) {
     : await admin.from('matrix_factors').insert(sourceFactors.map(f => ({ ...f, matrix_id: newMatrixId })))
   if (cloneError) {
     await admin.from('matrices').delete().eq('id', newMatrixId)
-    return NextResponse.json({ error: cloneError.message }, { status: 500 })
+    return safeApiError('matrix-import-clone', cloneError, 'Could not import this Matrix.')
   }
 
   return NextResponse.json({ matrix: inserted.data })

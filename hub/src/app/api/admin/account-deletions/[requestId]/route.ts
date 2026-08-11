@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { writeAdminAudit } from '@/lib/adminAudit'
+import { safeApiError } from '@/lib/safeApiError'
 
 export async function POST(request: Request, context: { params: Promise<{ requestId: string }> }) {
   const supabase = await createClient()
@@ -12,6 +13,7 @@ export async function POST(request: Request, context: { params: Promise<{ reques
   if (operator?.account_type !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { requestId } = await context.params
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) return NextResponse.json({ error: 'Request changed or no longer exists' }, { status: 404 })
   const body = await request.json().catch(() => ({})) as { status?: string; note?: string; scheduledFor?: string }
   const status = String(body.status || '')
   if (!['reviewing', 'blocked', 'scheduled', 'canceled'].includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
@@ -27,7 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ reques
     resolution_note: String(body.note || '').trim().slice(0, 1000) || null,
   }).eq('id', requestId).in('status', ['pending', 'reviewing', 'blocked'])
     .select('id,user_id,status').maybeSingle()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('admin-account-deletion', error)
   if (!row) return NextResponse.json({ error: 'Request changed or no longer exists' }, { status: 409 })
 
   await writeAdminAudit(admin, {

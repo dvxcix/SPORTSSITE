@@ -142,12 +142,13 @@ export async function getBDLGames(date: string): Promise<BDLGame[]> {
     const res = await fetch(`${BDL_BASE}/games?dates[]=${date}&per_page=30`, {
       headers: bdlHeaders,
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(12_000),
     })
     if (!res.ok) { logBDLError('games', res.status); return [] }
     const data = await res.json()
     return data.data ?? []
   } catch (e) {
-    console.error('[BDL] games fetch threw', e)
+    console.error('[BDL] games fetch failed', { type: e instanceof Error ? e.name : typeof e })
     return []
   }
 }
@@ -161,12 +162,13 @@ export async function getBDLPlayerProps(gameId: number): Promise<BDLPlayerProp[]
     const res = await fetch(`${BDL_BASE}/odds/player_props?game_id=${gameId}&per_page=100`, {
       headers: bdlHeaders,
       next: { revalidate: 120 },
+      signal: AbortSignal.timeout(12_000),
     })
     if (!res.ok) { logBDLError(`odds/player_props?game_id=${gameId}`, res.status); return [] }
     const data = await res.json()
     return data.data ?? []
   } catch (e) {
-    console.error(`[BDL] player_props fetch threw for game ${gameId}`, e)
+    console.error('[BDL] player_props fetch failed', { type: e instanceof Error ? e.name : typeof e })
     return []
   }
 }

@@ -6,5 +6,5 @@ export const runtime = 'nodejs'
 // Ultimate customer. See /api/webhooks/whop-addon for the entirely separate
 // Discord-community business the $10 Ultimate add-on lives under.
 export async function POST(req: Request) {
-  return handleWhopWebhookRequest(req, process.env.WHOP_WEBHOOK_KEY)
+  return handleWhopWebhookRequest(req, process.env.WHOP_WEBHOOK_KEY, 'main')
 }

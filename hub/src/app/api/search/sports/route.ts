@@ -10,17 +10,17 @@ export const revalidate = 0
 // schedule endpoints) — no site-internal data touched here.
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const q = searchParams.get('q')?.trim() ?? ''
+  const q = (searchParams.get('q') ?? '').trim().slice(0, 64).replace(/[\\\r\n]/g, '')
   if (q.length < 2) return NextResponse.json({ players: [], teams: [] })
 
   const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
   const [playersRes, scheduleRes] = await Promise.all([
     fetch(`https://statsapi.mlb.com/api/v1/people/search?names=${encodeURIComponent(q)}&hydrate=currentTeam`, {
-      headers: { 'User-Agent': 'SlipSurge/1.0' }, cache: 'no-store',
+      headers: { 'User-Agent': 'SlipSurge/1.0' }, next: { revalidate: 60 }, signal: AbortSignal.timeout(8_000),
     }).catch(() => null),
     fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${todayET}&hydrate=probablePitcher`, {
-      headers: { 'User-Agent': 'SlipSurge/1.0' }, cache: 'no-store',
+      headers: { 'User-Agent': 'SlipSurge/1.0' }, next: { revalidate: 60 }, signal: AbortSignal.timeout(8_000),
     }).catch(() => null),
   ])
 
@@ -64,5 +64,7 @@ export async function GET(req: Request) {
 
   const teams = searchMlbTeams(q).slice(0, 5).map(t => ({ ...t, gamePk: gamePkByTeamId[t.id] ?? null }))
 
-  return NextResponse.json({ players, teams, date: todayET }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ players, teams, date: todayET }, {
+    headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+  })
 }

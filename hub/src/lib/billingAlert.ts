@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { postAlert } from '@/lib/discord'
 
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char] as string))
+
 // Called when a payment/renewal event lands for a user who had already
 // asked to cancel (tier_cancel_at_period_end was true going into this
 // webhook) — a real, confirmed customer complaint: someone cancels
@@ -13,7 +17,7 @@ import { postAlert } from '@/lib/discord'
 export async function alertUnexpectedChargeAfterCancel(admin: SupabaseClient, params: {
   userId: string; email: string | null; membershipId: string | null; planTier: string
 }) {
-  console.error('[billing] payment landed on an already-cancelling membership', params)
+  console.error('[billing] payment landed on an already-cancelling membership', { planTier: params.planTier })
   await Promise.all([
     sendUnexpectedChargeEmail(admin, params),
     postAlert(admin, 'pipeline_health', {
@@ -49,11 +53,12 @@ async function sendUnexpectedChargeEmail(admin: SupabaseClient, params: {
       to: recipients,
       subject: 'Member charged after cancelling — may need a refund',
       text,
-      html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${text}</p></div>`,
+      html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${escapeHtml(text)}</p></div>`,
     }),
+    signal: AbortSignal.timeout(15_000),
   }).catch(e => {
-    console.error('[billing] Resend send threw', e)
+    console.error('[billing] Resend send failed', { type: e instanceof Error ? e.name : typeof e })
     return null
   })
-  if (res && !res.ok) console.error('[billing] Resend send failed', await res.text().catch(() => ''))
+  if (res && !res.ok) console.error('[billing] Resend send failed', { status: res.status })
 }

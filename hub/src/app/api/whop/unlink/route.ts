@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
+import { safeApiError } from '@/lib/safeApiError'
 
 // Whop isn't a Supabase-native identity, so there's no auth.unlinkIdentity()
 // call for it (see verifiedIdentity.ts) — this is the equivalent hand-rolled
@@ -26,7 +27,7 @@ export async function POST() {
     discord_advanced_claimed: false,
     verified_identities: nextVI,
   }).eq('id', user.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('whop-unlink', error, 'Could not unlink Whop.')
 
   await syncTierBadge(admin, user.id, effectiveTier((current?.tier as Tier) ?? 'free', false))
 

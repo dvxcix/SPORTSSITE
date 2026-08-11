@@ -40,7 +40,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Desktop installer download failed", error);
+    console.error("Desktop installer download failed", { type: error instanceof Error ? error.name : typeof error });
     return NextResponse.json({ error: "Release unavailable" }, { status: 503 });
   }
 }

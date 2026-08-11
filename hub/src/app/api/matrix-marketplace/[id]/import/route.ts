@@ -3,11 +3,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { insertWithUniqueElementCode } from '@/lib/elementCode'
 import { readMarketplaceSnapshot } from '@/lib/matrixMarketplace'
+import { safeApiError } from '@/lib/safeApiError'
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireTier('ultimate')
   if (gate.error) return gate.error
   const { id } = await params
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'This Matrix is no longer available.' }, { status: 404 })
   const admin = createAdminClient()
   const { data: listing } = await admin
     .from('matrix_marketplace_listings')
@@ -33,7 +35,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     pipeline_scope: snapshot.pipeline_scope,
     element_code: elementCode,
   }))
-  if (inserted.error || !inserted.data) return NextResponse.json({ error: inserted.error || 'Could not add this Matrix.' }, { status: 500 })
+  if (inserted.error || !inserted.data) return safeApiError('marketplace-matrix-create', inserted.error, 'Could not add this Matrix.')
 
   const matrixId = inserted.data.id as string
   const childError = snapshot.matrix_type === 'pipeline'
@@ -42,7 +44,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   if (childError) {
     await admin.from('matrices').delete().eq('id', matrixId)
-    return NextResponse.json({ error: childError.message }, { status: 500 })
+    return safeApiError('marketplace-matrix-clone', childError, 'Could not add this Matrix.')
   }
 
   await admin.from('matrix_marketplace_imports').insert({ listing_id: listing.id, user_id: gate.userId!, imported_matrix_id: matrixId })

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { safeApiError } from '@/lib/safeApiError'
 import { precomputeMatchupEdgeForDate } from '@/lib/dugoutMatchupEdgePrecompute'
 
 export const maxDuration = 300
@@ -32,6 +33,6 @@ export async function GET(req: Request) {
     const result = await precomputeMatchupEdgeForDate(date)
     return NextResponse.json(result)
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+    return safeApiError('admin-dugout-matchup-edge-backfill', e)
   }
 }

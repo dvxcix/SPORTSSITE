@@ -6,6 +6,7 @@ import { currentSeason } from '@/lib/playerSync'
 import { daysAgoET } from '@/lib/savantSplitsSync'
 import { PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
 import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 30
@@ -32,7 +33,7 @@ async function run(req: Request) {
     .eq('season', season)
     .order('game_date', { ascending: false })
     .limit(1)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('pitch-log-freshness-query', error)
 
   const latestDate = freshness?.[0]?.game_date ?? null
   await checkPitchLogFreshnessAndAlert(admin, latestDate, end)

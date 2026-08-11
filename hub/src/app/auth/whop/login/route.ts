@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { generatePkce, randomToken, buildAuthorizeUrl } from '@/lib/whop'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -22,7 +23,7 @@ const STATE_COOKIE = 'whop_oauth_state'
 // later verify the same session is still the one completing the link.
 export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url)
-  const next = searchParams.get('next') || '/feed'
+  const next = safeInternalPath(searchParams.get('next'))
   const mode = searchParams.get('mode') === 'link' ? 'link' as const : undefined
   const desktopState = searchParams.get('desktop_state')
 

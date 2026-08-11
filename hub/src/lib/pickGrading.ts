@@ -26,7 +26,7 @@ export const THRESHOLDS: Record<string, (b: any) => boolean> = {
 }
 
 export async function fetchLiveFeed(gamePk: string) {
-  const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store' })
+  const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
   if (!res.ok) return null
   return res.json()
 }

@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
 import { cancelWhopMembership } from '@/lib/whop'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { consumeServerRateLimit } from '@/lib/serverRateLimit'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 
@@ -21,6 +23,10 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
+  const rate = await consumeServerRateLimit(user.id, 'whop_cancel', 5, 60 * 60)
+  if (!rate.available) return NextResponse.json({ error: 'Cancellation is temporarily unavailable' }, { status: 503 })
+  if (!rate.allowed) return NextResponse.json({ error: 'Too many cancellation attempts. Try again later.' }, { status: 429 })
+
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('users')
@@ -34,13 +40,14 @@ export async function POST() {
 
   const apiKeyEnv = checkoutApiKeyEnvFor(profile.whop_plan_id)
   const apiKey = process.env[apiKeyEnv]
-  if (!apiKey) return NextResponse.json({ error: `${apiKeyEnv} is not configured` }, { status: 500 })
+  if (!apiKey) return NextResponse.json({ error: 'Cancellation is temporarily unavailable' }, { status: 503 })
 
   const result = await cancelWhopMembership(profile.whop_membership_id, apiKey)
   if (!result.ok) {
-    return NextResponse.json({ error: `Whop cancellation failed: ${result.status} ${result.error}` }, { status: 502 })
+    return safeApiError('whop-cancel-membership', { status: result.status }, 'Cancellation is temporarily unavailable', 502)
   }
 
-  await admin.from('users').update({ tier_cancel_at_period_end: true }).eq('id', user.id)
+  const { error: updateError } = await admin.from('users').update({ tier_cancel_at_period_end: true }).eq('id', user.id)
+  if (updateError) return safeApiError('whop-cancel-membership-state', updateError, 'Cancellation was received, but account status could not be refreshed', 502)
   return NextResponse.json({ ok: true })
 }

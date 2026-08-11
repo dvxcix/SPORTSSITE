@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflSchedule } from '@/lib/nflverseSync'
@@ -29,8 +30,8 @@ async function run(req: Request) {
     const count = await syncNflSchedule(admin, currentNflSeason())
     return NextResponse.json({ synced: count, season: currentNflSeason() })
   } catch (e: any) {
-    console.error('[nfl-sync-schedule] failed', e)
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+    console.error('[nfl-sync-schedule] failed', { type: e instanceof Error ? e.name : typeof e })
+    return safeApiError('nfl-sync-schedule', e)
   }
 }
 

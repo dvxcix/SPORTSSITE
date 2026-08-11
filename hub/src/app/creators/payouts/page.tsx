@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function CreatorPayoutsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/login?next=/creators/payouts')
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -38,7 +38,7 @@ export default async function CreatorPayoutsPage() {
   return (
     <PayoutSetupClient
       profile={profile}
-      isTestAccount={profile.username.toLowerCase() === 'slipsurge'}
+      isTestAccount={(profile.username ?? '').toLowerCase() === 'slipsurge'}
       recentPayouts={recentPayouts ?? []}
     />
   )

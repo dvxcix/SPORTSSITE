@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 export const maxDuration = 30
@@ -31,7 +32,7 @@ async function run(req: Request) {
     .eq('status', 'pending')
     .lt('game_date', today)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('archive-stale-watchlist', error)
   return NextResponse.json({ ok: true, archived: count ?? 0, today })
 }
 

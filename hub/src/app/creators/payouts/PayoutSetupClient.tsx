@@ -8,6 +8,7 @@ import {
   WithdrawButtonElement,
   WithdrawalsElement,
 } from '@whop/embedded-components-react-js'
+import { isTrustedWhopUrl } from '@/lib/whopUrl'
 
 type CreatorPayoutProfile = { whop_connected_company_id: string | null }
 type CommerceEvent = { id: string; event_type: string; created_at: string; amount: number | null; currency: string | null; status: string | null }
@@ -21,13 +22,18 @@ export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = fals
 
   useEffect(() => {
     if (!connected || isTestAccount) return
-    fetch('/api/creator/payout-token', { method: 'POST' })
+    const controller = new AbortController()
+    fetch('/api/creator/payout-token', { method: 'POST', cache: 'no-store', signal: controller.signal })
       .then(async response => {
         const payload = await response.json()
         if (!response.ok) throw new Error(payload.error || 'Could not open payouts')
         setToken(payload.token)
       })
-      .catch(reason => setError(reason.message))
+      .catch((reason: unknown) => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return
+        setError(reason instanceof Error ? reason.message : 'Could not open payouts')
+      })
+    return () => controller.abort()
   }, [connected, isTestAccount])
 
   async function startOnboarding() {
@@ -35,10 +41,11 @@ export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = fals
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/creator/whop-onboard', { method: 'POST' })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || 'Could not start onboarding')
-      window.location.href = payload.url
+      const response = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(20_000) })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(payload?.error || 'Could not start onboarding')
+      if (!isTrustedWhopUrl(payload?.url)) throw new Error('Whop returned an invalid onboarding destination')
+      window.location.assign(payload.url)
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : String(reason))
       setLoading(false)

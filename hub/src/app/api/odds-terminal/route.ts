@@ -167,7 +167,7 @@ export async function GET(req: Request) {
       { headers: { 'Cache-Control': date === today ? 'private, max-age=20' : 'private, max-age=86400, immutable' } },
     )
   } catch (error) {
-    console.error('[odds-terminal] history read failed', { date, gamePk, error })
+    console.error('[odds-terminal] history read failed', { date, gamePk, type: error instanceof Error ? error.name : typeof error })
     return NextResponse.json({ error: 'Odds history is temporarily unavailable.' }, { status: 500 })
   }
 }

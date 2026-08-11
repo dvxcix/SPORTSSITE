@@ -36,7 +36,7 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: '#fff' },
   betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: '#000' },
   caesars:    { favicon: '/sportsbooks/caesars.png',    initials: 'CZ',  bg: '#0B4032', color: '#B8960C' },
-  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: '#fff' },
+  betrivers:  { favicon: '', initials: 'BR', bg: '#003087', color: '#fff' },
   pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
 }
@@ -101,6 +101,9 @@ function Avatar({ src, name, size }: { src?: string | null; name?: string | null
 
 export async function GET(req: Request, { params }: { params: Promise<{ postId: string }> }) {
   const { postId } = await params
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(postId)) {
+    return new Response('No shareable pick on this post', { status: 404 })
+  }
   const origin = new URL(req.url).origin
 
   const supabase = await createClient()

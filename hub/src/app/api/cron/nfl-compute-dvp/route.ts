@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { computeNflDvp, computeNflDvpFromPbp } from '@/lib/nflverseSync'
@@ -39,8 +40,8 @@ async function run(req: Request) {
     ])
     return NextResponse.json({ current, prior, seasons: [season, season - 1] })
   } catch (e: any) {
-    console.error('[nfl-compute-dvp] failed', e)
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+    console.error('[nfl-compute-dvp] failed', { type: e instanceof Error ? e.name : typeof e })
+    return safeApiError('nfl-compute-dvp', e)
   }
 }
 

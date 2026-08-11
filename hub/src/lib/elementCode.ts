@@ -35,7 +35,7 @@ export async function insertWithUniqueElementCode<T extends Record<string, unkno
     const elementCode = generateElementCode()
     const { data, error } = await admin.from(table).insert(buildRow(elementCode)).select().single()
     if (!error) return { data, error: null }
-    if (error.code !== '23505') return { data: null, error: error.message }
+    if (error.code !== '23505') return { data: null, error: 'Could not save this Matrix. Please try again.' }
     // 23505 on the element_code unique constraint specifically — regenerate
     // and retry. A collision on any other unique constraint would also come
     // back as 23505, but this table only has the one, so no need to inspect

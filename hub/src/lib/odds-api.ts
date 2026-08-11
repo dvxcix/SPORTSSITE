@@ -21,8 +21,9 @@ export async function getMLBOdds(): Promise<OddsGame[]> {
   if (!KEY) return []
   const res = await fetch(
     `${BASE}/sports/baseball_mlb/odds?apiKey=${KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`,
-    { next: { revalidate: 300 } }
+    { next: { revalidate: 300 }, signal: AbortSignal.timeout(10_000) }
   )
   if (!res.ok) return []
-  return res.json()
+  const data = await res.json().catch(() => [])
+  return Array.isArray(data) ? data : []
 }

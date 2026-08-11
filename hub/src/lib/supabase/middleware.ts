@@ -156,15 +156,19 @@ export async function updateSession(request: NextRequest) {
   // truly logged-out visitor) treated as a hard redirect to /auth/login —
   // bouncing a real active session for what's actually a same-session race
   // with a sibling request, not an expired login. Passing this one request
-  // through unauthenticated (skip the redirect/onboarding gate below, don't
-  // touch cookies) is the safe side of the race: the next request from this
-  // same browser carries whichever refresh token cookie actually won, and
-  // resolves normally. Any GENUINELY dead session hits this same code path
-  // on every subsequent request too, and gets handled by whatever
-  // page/route-level auth check runs downstream instead of a middleware
-  // redirect — not silently treated as logged in.
+  // A request with a failed refresh must never be allowed through a protected
+  // route as if authentication succeeded. A sibling request that won the
+  // rotation will repair the next request; a genuinely dead session stays
+  // signed out. Do not clear cookies here because a losing concurrent
+  // response could overwrite the valid cookies issued by the winner.
   if (authError && (authError.code === 'refresh_token_already_used' || authError.code === 'refresh_token_not_found')) {
-    return supabaseResponse
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Authentication required', code: 'SESSION_EXPIRED' }, { status: 401 })
+    }
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/auth/login'
+    loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(loginUrl)
   }
 
   if (user && request.nextUrl.pathname.startsWith('/api/admin/')) {

@@ -25,6 +25,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
     body: JSON.stringify({ json, gameDate, homeTeam, awayTeam, gameKey, isOpening: true }),
+    signal: AbortSignal.timeout(45_000),
   })
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
@@ -60,8 +61,8 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
 
     const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, thresholdsScraped: scrapes.length, imported }
-  } catch (e: any) {
-    return { gameKey: g.gameKey, error: e?.message ?? String(e) }
+  } catch {
+    return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
     await bb.close()
   }

@@ -16,13 +16,14 @@ const BASE = 'https://baseballsavant.mlb.com/app/affinity'
 async function fetchAffinityCsv(name: string): Promise<Record<string, string>[]> {
   const res = await fetch(`${BASE}/${name}.csv`, {
     cache: 'no-store',
+    signal: AbortSignal.timeout(20_000),
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/csv,text/plain,*/*',
     },
   })
   const text = await res.text()
-  if (!res.ok) throw new Error(`Affinity CSV ${res.status}: ${name} :: ${text.slice(0, 300)}`)
+  if (!res.ok) throw new Error(`Affinity CSV request failed (${res.status}) for ${name}`)
   return parseCsv(text)
 }
 

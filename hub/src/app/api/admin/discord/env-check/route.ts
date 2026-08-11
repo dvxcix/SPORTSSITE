@@ -21,8 +21,5 @@ export async function GET() {
     hasBotToken: !!process.env.DISCORD_BOT_TOKEN,
     hasApplicationId: !!process.env.DISCORD_APPLICATION_ID,
     hasPublicKey: !!process.env.DISCORD_PUBLIC_KEY,
-    botTokenLength: process.env.DISCORD_BOT_TOKEN?.length ?? 0,
-    deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? null,
-    vercelEnv: process.env.VERCEL_ENV ?? null,
   })
 }

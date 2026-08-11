@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { cleanMarketplaceTags, snapshotOwnedMatrix } from '@/lib/matrixMarketplace'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
     : query.order('published_at', { ascending: false })
 
   const { data: listings, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('matrix-marketplace-list', error, 'Could not load the Matrix Marketplace.')
 
   const authorIds = [...new Set((listings ?? []).map(row => row.author_id))]
   const [{ data: authors }, { data: follows }, { data: badgeRows }] = authorIds.length
@@ -101,6 +102,6 @@ export async function POST(req: Request) {
     ? admin.from('matrix_marketplace_listings').update(listingPayload).eq('id', existing.id).select('id').single()
     : admin.from('matrix_marketplace_listings').insert(listingPayload).select('id').single()
   const { data, error } = await mutation
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('matrix-marketplace-publish', error, 'Could not publish this Matrix.')
   return NextResponse.json({ listing_id: data.id }, { status: existing ? 200 : 201 })
 }

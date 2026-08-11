@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import type { DiscordConfig } from '@/lib/supabase/types'
+import { safeErrorMetadata } from '@/lib/safeApiError'
 
 const API = 'https://discord.com/api/v10'
 
@@ -13,22 +14,30 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   const token = process.env.DISCORD_BOT_TOKEN
   if (!token) throw new Error('DISCORD_BOT_TOKEN is not configured')
   const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json', ...(init.headers || {}) }
-  const res = await fetch(`${API}${path}`, { ...init, headers })
+  let res: Response | null = null
   // Role add/remove during a bulk sync routinely trips Discord's per-route
   // rate limit (confirmed: every call in a 5-concurrent-user batch came back
   // 429) — retry once after the server-specified cooldown instead of just
   // logging and dropping the call.
-  if (res.status === 429) {
-    const body = await res.clone().json().catch(() => null)
-    const retryAfterMs = Math.min(Number(body?.retry_after) || 1, 15) * 1000 + 100
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch(`${API}${path}`, { ...init, headers, signal: AbortSignal.timeout(12_000) })
+    if (res.status !== 429 && res.status < 500) return res
+    if (attempt === 3) break
+    const body = res.status === 429 ? await res.clone().json().catch(() => null) : null
+    const retryAfterMs = res.status === 429
+      ? Math.min(Number(body?.retry_after) || 1, 15) * 1000 + 100
+      : Math.min(500 * 2 ** attempt, 4_000)
     await new Promise(r => setTimeout(r, retryAfterMs))
-    return fetch(`${API}${path}`, { ...init, headers })
   }
-  return res
+  return res as Response
 }
 
 export async function getDiscordConfig(admin: SupabaseClient): Promise<DiscordConfig | null> {
-  const { data } = await admin.from('discord_config').select('*').eq('id', 1).single()
+  const { data } = await admin
+    .from('discord_config')
+    .select('id,guild_id,alert_channels,tier_roles,enabled,updated_at')
+    .eq('id', 1)
+    .single()
   return (data as DiscordConfig) ?? null
 }
 
@@ -40,9 +49,9 @@ export async function postToChannel(channelId: string | null | undefined, payloa
   if (!channelId) return
   try {
     const res = await discordFetch(`/channels/${channelId}/messages`, { method: 'POST', body: JSON.stringify(payload) })
-    if (!res.ok) console.error('[discord] postToChannel failed', channelId, res.status, await res.text().catch(() => ''))
+    if (!res.ok) console.error('[discord] postToChannel failed', { status: res.status })
   } catch (e) {
-    console.error('[discord] postToChannel error', e)
+    console.error('[discord] postToChannel error', safeErrorMetadata(e))
   }
 }
 
@@ -62,7 +71,7 @@ export async function getGuildChannels(guildId: string): Promise<{ id: string; n
       .map((c: any) => ({ id: c.id, name: c.name }))
       .sort((a, b) => a.name.localeCompare(b.name))
   } catch (e) {
-    console.error('[discord] getGuildChannels error', e)
+    console.error('[discord] getGuildChannels error', safeErrorMetadata(e))
     return []
   }
 }
@@ -76,10 +85,10 @@ export async function postToChannelChecked(channelId: string, payload: { content
   if (!channelId) return { ok: false, error: 'No channel selected' }
   try {
     const res = await discordFetch(`/channels/${channelId}/messages`, { method: 'POST', body: JSON.stringify(payload) })
-    if (!res.ok) return { ok: false, error: (await res.text().catch(() => '')) || `Discord returned ${res.status}` }
+    if (!res.ok) return { ok: false, error: `Discord returned ${res.status}` }
     return { ok: true }
-  } catch (e: any) {
-    return { ok: false, error: e?.message ?? 'Request failed' }
+  } catch {
+    return { ok: false, error: 'Request failed' }
   }
 }
 
@@ -115,14 +124,14 @@ export function anytimeHrOddsLine(bdlByName: Record<string, any>, playerName: st
 async function addRole(guildId: string, discordUserId: string, roleId: string): Promise<boolean> {
   const res = await discordFetch(`/guilds/${guildId}/members/${discordUserId}/roles/${roleId}`, { method: 'PUT' })
   if (res.ok || res.status === 404) return true
-  console.error('[discord] addRole failed', discordUserId, roleId, res.status, await res.text().catch(() => ''))
+  console.error('[discord] addRole failed', { status: res.status })
   return false
 }
 
 async function removeRole(guildId: string, discordUserId: string, roleId: string): Promise<boolean> {
   const res = await discordFetch(`/guilds/${guildId}/members/${discordUserId}/roles/${roleId}`, { method: 'DELETE' })
   if (res.ok || res.status === 404) return true
-  console.error('[discord] removeRole failed', discordUserId, roleId, res.status, await res.text().catch(() => ''))
+  console.error('[discord] removeRole failed', { status: res.status })
   return false
 }
 
@@ -146,18 +155,16 @@ export async function syncDiscordRoleForUser(admin: SupabaseClient, userId: stri
     const wantRoleId = config.tier_roles?.[tier]
     const allTierRoleIds = Object.values(config.tier_roles || {}).filter(Boolean) as string[]
 
-    await Promise.all(
-      allTierRoleIds
-        .filter(roleId => roleId !== wantRoleId)
-        .map(roleId => removeRole(config.guild_id as string, user.discord_id as string, roleId))
-    )
+    for (const roleId of allTierRoleIds.filter(roleId => roleId !== wantRoleId)) {
+      await removeRole(config.guild_id as string, user.discord_id as string, roleId)
+    }
     // The add is the outcome that actually matters for reporting — removes
     // are best-effort cleanup of stale roles, but a failed add means this
     // member did NOT get the role they're supposed to have.
     if (wantRoleId) return await addRole(config.guild_id, user.discord_id, wantRoleId)
     return true
   } catch (e) {
-    console.error('[discord] syncDiscordRoleForUser error', userId, e)
+    console.error('[discord] syncDiscordRoleForUser error', safeErrorMetadata(e))
     return false
   }
 }
@@ -184,12 +191,12 @@ export async function syncDiscordIdentity(admin: SupabaseClient, userId: string)
     if (!identity) return
     const extracted = extractDiscordIdentity(identity)
     if (!extracted) {
-      console.error('[discord] syncDiscordIdentity: linked but no provider_id/sub found', userId, Object.keys(identity.identity_data || {}))
+      console.error('[discord] syncDiscordIdentity: linked identity missing provider identifier')
       return
     }
     await admin.from('users').update({ discord_id: extracted.discordId, discord_username: extracted.discordUsername }).eq('id', userId)
   } catch (e) {
-    console.error('[discord] syncDiscordIdentity error', userId, e)
+    console.error('[discord] syncDiscordIdentity error', safeErrorMetadata(e))
   }
 }
 
@@ -261,7 +268,7 @@ export function verifyDiscordSignature(signature: string | null, timestamp: stri
     })
     return cryptoVerify(null, Buffer.from(timestamp + rawBody), keyObject, Buffer.from(signature, 'hex'))
   } catch (e) {
-    console.error('[discord] verifyDiscordSignature error', e)
+    console.error('[discord] verifyDiscordSignature error', safeErrorMetadata(e))
     return false
   }
 }
@@ -277,9 +284,9 @@ export async function editDeferredReply(applicationId: string, token: string, pa
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) console.error('[discord] editDeferredReply failed', res.status, await res.text().catch(() => ''))
+    if (!res.ok) console.error('[discord] editDeferredReply failed', { status: res.status })
   } catch (e) {
-    console.error('[discord] editDeferredReply error', e)
+    console.error('[discord] editDeferredReply error', safeErrorMetadata(e))
   }
 }
 
@@ -287,6 +294,6 @@ export async function registerGlobalCommands(commands: any[]) {
   const appId = process.env.DISCORD_APPLICATION_ID
   if (!appId) throw new Error('DISCORD_APPLICATION_ID is not configured')
   const res = await discordFetch(`/applications/${appId}/commands`, { method: 'PUT', body: JSON.stringify(commands) })
-  if (!res.ok) throw new Error(`Discord command registration failed: ${res.status} ${await res.text().catch(() => '')}`)
+  if (!res.ok) throw Object.assign(new Error('Discord command registration failed'), { status: res.status })
   return res.json()
 }

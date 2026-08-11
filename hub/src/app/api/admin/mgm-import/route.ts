@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName } from '@slipsurge/core/nameNorm'
+import { safeApiError } from '@/lib/safeApiError'
 
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token
 // the /api/cron/* jobs already use — the latter lets the scrape-books
@@ -33,6 +34,8 @@ function parseOdds(odds: string | null): number | null {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
+  const contentLength = Number(req.headers.get('content-length') || 0)
+  if (contentLength > 8_000_000) return NextResponse.json({ error: 'Import payload is too large' }, { status: 413 })
 
   const body = await req.json().catch(() => null)
   const { json, gameDate, homeTeam, awayTeam, gameKey, isOpening } = body ?? {}
@@ -99,7 +102,7 @@ export async function POST(req: Request) {
     .from('mgm_gap_odds')
     .upsert(rows, { onConflict: 'game_date,game_key,name_norm' })
 
-  if (error) return NextResponse.json({ error: `Upsert failed: ${error.message}` }, { status: 500 })
+  if (error) return safeApiError('admin-mgm-import', error, 'Import failed')
 
   // Preserve the FIRST "Opening/Early" paste of the day for this game —
   // never overwritten by later pastes — so we can compute deltas.

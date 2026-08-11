@@ -53,9 +53,9 @@ async function run(req: Request) {
   for (const date of dates) {
     try {
       results[date] = await precomputeMatchupEdgeForDate(date)
-    } catch (e: any) {
-      console.error('[dugout-matchup-edge-precompute] date failed', date, e)
-      results[date] = { error: e?.message || String(e) }
+    } catch (e) {
+      console.error('[dugout-matchup-edge-precompute] date failed', { date, type: e instanceof Error ? e.name : typeof e })
+      results[date] = { error: 'precompute failed' }
     }
   }
   return NextResponse.json({ dates, results })

@@ -28,6 +28,7 @@ async function run(req: Request) {
     pregame.map(async g => {
       const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePk=${g.gamePk}`, {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        signal: AbortSignal.timeout(55_000),
       })
       return { gamePk: g.gamePk, status: res.status }
     })
@@ -37,8 +38,8 @@ async function run(req: Request) {
     date,
     games: games.length,
     pregame: pregame.length,
-    results: results.map((r, i) => r.status === 'fulfilled' ? r.value : { gamePk: pregame[i].gamePk, error: r.reason?.message ?? String(r.reason) }),
+    results: results.map((r, i) => r.status === 'fulfilled' ? r.value : { gamePk: pregame[i].gamePk, error: 'scrape failed' }),
   })
 }
 
-export const GET = withPipelineHealth('poll-pikkit-picks', run)
+export const GET = withPipelineHealth('poll-pikkit-picks', run, { allowSecondarySecret: true })

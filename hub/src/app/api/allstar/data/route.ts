@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -16,9 +17,10 @@ const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
 const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
 
 async function mpGet(path: string, range?: string): Promise<any[]> {
+  if (!MP_KEY) return []
   try {
     const headers = range ? { ...mpH, Range: range } : mpH
-    const res = await fetch(`${MP_URL}${path}`, { headers, cache: 'no-store' })
+    const res = await fetch(`${MP_URL}${path}`, { headers, next: { revalidate: 3600 }, signal: AbortSignal.timeout(12_000) })
     if (!res.ok) return []
     const d = await res.json()
     return Array.isArray(d) ? d : []
@@ -49,6 +51,8 @@ const PITCH_RECENT_BATTER_COLS = 'mlb_id,name_norm,pitch_type,pitcher_hand,pitch
 const PITCH_RECENT_PITCHER_COLS = 'mlb_id,name_norm,pitch_type,bat_hand,pitches,usage_pct,whiff_pct,gb_pct,fb_pct,ld_pct,pu_pct,hard_hit_pct,barrel_pct,home_runs_allowed,avg_exit_velo_against,avg_launch_angle_against,window_start,window_end'
 
 export async function GET() {
+  const gate = await requireTier('free')
+  if (gate.error) return gate.error
   // 1. Real live game feed — boxscore.teams.{away,home}.players already
   // carries the full announced All-Star roster (confirmed: 32-33 players per
   // side) even pregame, since MLB publishes full ASG rosters well ahead of
@@ -56,7 +60,7 @@ export async function GET() {
   let feed: any = null
   try {
     const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${ASG_GAME_PK}/feed/live`, {
-      cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
+      next: { revalidate: 3600 }, headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(12_000),
     })
     if (res.ok) feed = await res.json()
   } catch {}
@@ -94,7 +98,7 @@ export async function GET() {
     try {
       const res = await fetch(
         `https://statsapi.mlb.com/api/v1/people?personIds=${allIds.join(',')}&hydrate=currentTeam`,
-        { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+        { next: { revalidate: 3600 }, headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(12_000) }
       )
       if (res.ok) {
         const people = (await res.json()).people ?? []
@@ -164,6 +168,6 @@ export async function GET() {
       pitcherPitchRecent,
       markets,
     },
-    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
+    { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } }
   )
 }

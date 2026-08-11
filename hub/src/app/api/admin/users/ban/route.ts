@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { writeAdminAudit } from '@/lib/adminAudit'
+import { safeApiError } from '@/lib/safeApiError'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
   if (auth.error) return auth.error
 
   const { userId, ban } = await req.json().catch(() => ({}))
-  if (!userId || typeof ban !== 'boolean') {
+  if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId) || typeof ban !== 'boolean') {
     return NextResponse.json({ error: 'userId and ban (boolean) are required' }, { status: 400 })
   }
   if (userId === auth.adminId) {
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     ban_duration: ban ? '876000h' : 'none',
   })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('admin-user-ban', error)
   await writeAdminAudit(admin, { actorUserId: auth.adminId, action: ban ? 'user.banned' : 'user.unbanned', targetType: 'user', targetId: userId, request: req })
   return NextResponse.json({ ok: true, banned: ban })
 }

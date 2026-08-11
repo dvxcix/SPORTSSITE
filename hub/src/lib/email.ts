@@ -19,14 +19,15 @@ export async function sendEmail({ to, subject, text, html }: {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: `SlipSurge <team@${fromDomain}>`, to: [to], subject, text, html }),
+      signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) {
-      console.error('[email] Resend send failed', await res.text())
+      console.error('[email] Resend send failed', { status: res.status })
       return false
     }
     return true
   } catch (e) {
-    console.error('[email] threw', e)
+    console.error('[email] request failed', { type: e instanceof Error ? e.name : typeof e })
     return false
   }
 }

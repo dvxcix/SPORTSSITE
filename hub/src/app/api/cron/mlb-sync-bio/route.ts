@@ -73,7 +73,7 @@ async function run(req: Request) {
       ])
       synced++
     } catch (e) {
-      console.error('[mlb-sync-bio] player fetch failed', mlbId, e)
+      console.error('[mlb-sync-bio] player fetch failed', { type: e instanceof Error ? e.name : typeof e })
       await markSyncState(admin, 'player_bio', String(mlbId), 0, 'error')
       failed++
     }

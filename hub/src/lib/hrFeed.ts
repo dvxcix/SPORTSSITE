@@ -41,7 +41,7 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
 
   const results = await Promise.all(livePks.map(async (pk: number) => {
     try {
-      const r = await fetch(`https://statsapi.mlb.com/api/v1/game/${pk}/playByPlay`, { cache: 'no-store' })
+      const r = await fetch(`https://statsapi.mlb.com/api/v1/game/${pk}/playByPlay`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
       if (!r.ok) return []
       const d = await r.json()
       const plays: any[] = d.allPlays || []

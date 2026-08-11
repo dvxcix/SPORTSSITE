@@ -14,7 +14,7 @@ const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type':
 
 async function mpGet(path: string): Promise<any[]> {
   try {
-    const res = await fetch(`${MP_URL}${path}`, { headers: mpH, next: { revalidate: 3600 } })
+    const res = await fetch(`${MP_URL}${path}`, { headers: mpH, next: { revalidate: 3600 }, signal: AbortSignal.timeout(20_000) })
     if (!res.ok) return []
     const d = await res.json()
     return Array.isArray(d) ? d : []

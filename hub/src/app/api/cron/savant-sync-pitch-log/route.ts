@@ -8,6 +8,7 @@ import { currentSeason } from '@/lib/playerSync'
 import { seasonStartDate, daysAgoET } from '@/lib/savantSplitsSync'
 import { syncStatcastDay, PITCH_LOG_TABLE } from '@/lib/statcastPitchLogSync'
 import { checkPitchLogFreshnessAndAlert } from '@/lib/pitchLogAlert'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 // Was 60s — too tight for MAX_DAYS_PER_RUN=4 dates processed sequentially,
@@ -57,7 +58,7 @@ async function run(req: Request) {
     .lte('game_date', end)
     .order('game_date', { ascending: false })
     .limit(1)
-  if (latestError) return NextResponse.json({ error: latestError.message }, { status: 500 })
+  if (latestError) return safeApiError('savant-sync-pitch-log-cursor', latestError)
 
   let start = latest?.[0]?.game_date ? format(addDays(parseISO(latest[0].game_date), 1), 'yyyy-MM-dd') : seasonStartDate(season)
 
@@ -138,9 +139,9 @@ async function run(req: Request) {
   for (const date of dates) {
     try {
       results[date] = await syncStatcastDay(admin, date, season)
-    } catch (e: any) {
-      console.error('[savant-sync-pitch-log] date failed', date, e)
-      results[date] = { error: e?.message || String(e) }
+    } catch (e) {
+      console.error('[savant-sync-pitch-log] date failed', { date, type: e instanceof Error ? e.name : typeof e })
+      results[date] = { error: 'sync failed' }
     }
   }
 

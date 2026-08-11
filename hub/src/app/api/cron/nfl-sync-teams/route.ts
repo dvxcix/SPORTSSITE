@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { syncNflTeams } from '@/lib/nflverseSync'
@@ -19,8 +20,8 @@ async function run(req: Request) {
     const count = await syncNflTeams(admin)
     return NextResponse.json({ synced: count })
   } catch (e: any) {
-    console.error('[nfl-sync-teams] failed', e)
-    return NextResponse.json({ error: e?.message || String(e) }, { status: 500 })
+    console.error('[nfl-sync-teams] failed', { type: e instanceof Error ? e.name : typeof e })
+    return safeApiError('nfl-sync-teams', e)
   }
 }
 

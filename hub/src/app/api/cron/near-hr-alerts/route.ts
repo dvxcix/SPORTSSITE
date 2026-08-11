@@ -22,7 +22,7 @@ const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
 const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
 async function mpGet(path: string): Promise<any[]> {
   try {
-    const res = await fetch(`${MP_URL}${path}`, { headers: mpH })
+    const res = await fetch(`${MP_URL}${path}`, { headers: mpH, signal: AbortSignal.timeout(20_000) })
     if (!res.ok) return []
     const d = await res.json()
     return Array.isArray(d) ? d : []

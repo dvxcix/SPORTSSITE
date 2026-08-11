@@ -17,7 +17,7 @@ async function fetchProjectedLineup(teamId: number): Promise<LineupBatter[]> {
   try {
     const res = await fetch(
       `https://statsapi.mlb.com/api/v1/teams/${teamId}/roster?rosterType=Active`,
-      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+      { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -50,7 +50,7 @@ export async function fetchGameLineups(gamePk: string | number): Promise<{
 }> {
   const res = await fetch(
     `https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${gamePk}&hydrate=lineups,team,venue`,
-    { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' } }
+    { cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' }, signal: AbortSignal.timeout(15_000) }
   )
   if (!res.ok) throw new Error('schedule fetch failed')
   const data = await res.json()
@@ -116,7 +116,7 @@ function parseCsvLine(line: string): string[] {
 async function fetchHrCsvRows(url: string): Promise<{ batterId: number; year: number }[]> {
   const rows: { batterId: number; year: number }[] = []
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, next: { revalidate: 3600 } })
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, next: { revalidate: 3600 }, signal: AbortSignal.timeout(20_000) })
     if (!res.ok) return rows
     const text = await res.text()
     const lines = text.split('\n')

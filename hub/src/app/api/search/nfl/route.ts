@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 
@@ -8,8 +9,13 @@ export const revalidate = 0
 // own (nfl_teams/nfl_players, synced from nflverse) — a plain ilike against
 // our own DB, no external round trip needed.
 export async function GET(req: Request) {
+  const gate = await requireTier('free')
+  if (gate.error) return gate.error
   const { searchParams } = new URL(req.url)
-  const q = searchParams.get('q')?.trim() ?? ''
+  const q = (searchParams.get('q') ?? '')
+    .trim()
+    .slice(0, 64)
+    .replace(/[%_,().\\]/g, '')
   if (q.length < 2) return NextResponse.json({ players: [], teams: [] })
 
   const admin = createAdminClient()
@@ -32,5 +38,7 @@ export async function GET(req: Request) {
   const logoByAbbr = new Map((allTeams ?? []).map(t => [t.team_abbr, t.team_logo_espn]))
   const playersWithLogo = (players ?? []).map(p => ({ ...p, team_logo_espn: p.latest_team ? logoByAbbr.get(p.latest_team) ?? null : null }))
 
-  return NextResponse.json({ players: playersWithLogo, teams: teams ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ players: playersWithLogo, teams: teams ?? [] }, {
+    headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+  })
 }

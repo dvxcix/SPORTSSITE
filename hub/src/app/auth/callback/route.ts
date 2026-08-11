@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 import { syncDiscordIdentity, syncDiscordRoleForUser } from '@/lib/discord'
+import { safeInternalPath } from '@/lib/safeRedirect'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/feed'
+  const next = safeInternalPath(searchParams.get('next'))
   const desktopState = searchParams.get('desktop_state')
   const isDesktop = !!desktopState && /^[0-9a-f-]{36}$/i.test(desktopState)
 
@@ -113,8 +114,8 @@ export async function GET(request: Request) {
     }
 
     if (error && wasAlreadyLoggedIn) {
-      const failUrl = new URL(`${origin}${next}`)
-      failUrl.searchParams.set('link_error', error.message)
+      const failUrl = new URL(next, origin)
+      failUrl.searchParams.set('link_error', 'provider_link_failed')
       return NextResponse.redirect(failUrl.toString())
     }
   }

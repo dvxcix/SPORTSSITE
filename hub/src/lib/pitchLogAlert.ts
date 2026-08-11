@@ -41,11 +41,12 @@ async function sendStalenessAlertEmail(admin: SupabaseClient, latestDate: string
       text: `${text}\n\n${instructions}`,
       html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${text}</p><p>${instructions}</p></div>`,
     }),
+    signal: AbortSignal.timeout(15_000),
   }).catch(e => {
-    console.error('[pitchLogAlert] Resend send threw', e)
+    console.error('[pitchLogAlert] Resend send failed', { type: e instanceof Error ? e.name : typeof e })
     return null
   })
-  if (res && !res.ok) console.error('[pitchLogAlert] Resend send failed', await res.text().catch(() => ''))
+  if (res && !res.ok) console.error('[pitchLogAlert] Resend send failed', { status: res.status })
 }
 
 // Called at the end of every savant-sync-pitch-log run, after it's had its

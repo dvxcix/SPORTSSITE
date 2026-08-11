@@ -23,7 +23,7 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: '#fff' },
   betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: '#000' },
   caesars:    { favicon: '/sportsbooks/caesars.png',    initials: 'CZ',  bg: '#0B4032', color: '#B8960C' },
-  betrivers:  { favicon: '/sportsbooks/betrivers.ico',  initials: 'BR',  bg: '#003087', color: '#fff' },
+  betrivers:  { favicon: '', initials: 'BR', bg: '#003087', color: '#fff' },
   pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
   fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: '#fff' },
@@ -40,13 +40,13 @@ function normalizeVendor(v: string): string {
 }
 function BookIcon({ book, origin, size }: { book: string; origin: string; size: number }) {
   const info = BOOKS[normalizeVendor(book)]
-  if (!info) {
+  if (!info || !info.favicon) {
     return (
       <div style={{
         display: 'flex', width: size, height: size, borderRadius: 3, alignItems: 'center', justifyContent: 'center',
-        background: '#252936', color: '#8891A8', fontSize: size * 0.5, fontWeight: 800,
+        background: info?.bg || '#252936', color: info?.color || '#8891A8', fontSize: size * 0.5, fontWeight: 800,
       }}>
-        {book.slice(0, 2).toUpperCase()}
+        {info?.initials || book.slice(0, 2).toUpperCase()}
       </div>
     )
   }
@@ -150,7 +150,7 @@ export async function GET(req: Request) {
 
   const [{ data: profile }, { data: items }] = await Promise.all([
     supabase.from('users').select('username, display_name, avatar_url, is_verified').eq('id', user.id).single(),
-    supabase.from('watchlist_items').select('*').eq('user_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+    supabase.from('watchlist_items').select('id,sport,game_pk,game_date,mlb_id,player_name,team,position,bats,headshot_url,prop_key,prop_label,line,book,odds,odds_by_book,notes,status,created_at').eq('user_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
   ])
 
   if (!items || items.length === 0) {

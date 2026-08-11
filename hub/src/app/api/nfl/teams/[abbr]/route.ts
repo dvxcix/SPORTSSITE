@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireTier } from '@/lib/requireTier'
 
 export const revalidate = 0
 
@@ -17,10 +18,19 @@ function currentNflSeason(): number {
 // active in 2015 can still show status='ACT'. Scoping to last_season >=
 // the current NFL season is what actually approximates "still around."
 export async function GET(_req: Request, { params }: { params: Promise<{ abbr: string }> }) {
+  const gate = await requireTier('free')
+  if (gate.error) return gate.error
   const { abbr } = await params
+  const normalizedAbbr = abbr.trim().toUpperCase()
+  if (!/^[A-Z]{2,3}$/.test(normalizedAbbr)) {
+    return NextResponse.json({ error: 'Team not found' }, { status: 404 })
+  }
   const admin = createAdminClient()
 
-  const { data: team } = await admin.from('nfl_teams').select('*').eq('team_abbr', abbr.toUpperCase()).maybeSingle()
+  const { data: team } = await admin.from('nfl_teams')
+    .select('team_abbr,team_name,team_id,team_nick,team_conf,team_division,team_color,team_color2,team_logo_espn,team_logo_wikipedia,team_wordmark,team_logo_squared')
+    .eq('team_abbr', normalizedAbbr)
+    .maybeSingle()
   if (!team) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
 
   const { data: roster } = await admin
@@ -31,5 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ abbr: s
     .order('position_group', { ascending: true })
     .order('display_name', { ascending: true })
 
-  return NextResponse.json({ team, roster: roster ?? [] })
+  return NextResponse.json({ team, roster: roster ?? [] }, {
+    headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' },
+  })
 }

@@ -50,6 +50,7 @@ const ACTIONABLE_EVENT_TYPES = new Set([
   'payment.failed',
   'membership.deactivated',
   'membership.went_invalid',
+  'membership.cancel_at_period_end_changed',
 ])
 
 // Whop also delivers lifecycle events that are useful for its own audit
@@ -57,7 +58,9 @@ const ACTIONABLE_EVENT_TYPES = new Set([
 // Acknowledge them normally so they do not become false production errors.
 const PASSIVE_EVENT_TYPES = new Set([
   'payment.created',
+  'membership.trial_ending_soon',
   'withdrawal.updated',
+  'ledger_account.funds_available',
 ])
 
 // Field names below (event.action vs event.type, data.plan_id vs
@@ -66,7 +69,11 @@ const PASSIVE_EVENT_TYPES = new Set([
 // MUST be confirmed against a real payload's actual field names before
 // trusting the tier/plan extraction below (signature verification itself is
 // now confirmed correct — see verifyWhopSignature).
-export async function handleWhopWebhookRequest(req: Request, secret: string | undefined): Promise<NextResponse> {
+export async function handleWhopWebhookRequest(
+  req: Request,
+  secret: string | undefined,
+  source: 'main' | 'addon' = 'main',
+): Promise<NextResponse> {
   const id = req.headers.get('webhook-id')
   const timestamp = req.headers.get('webhook-timestamp')
   const signature = req.headers.get('webhook-signature')
@@ -155,10 +162,6 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     // event-type strings this switch matches against (dot-separated,
     // e.g. "membership.activated") were never confirmed against a real
     // payload either. One line, no payload contents, removed once confirmed.
-    if (type && !ACTIONABLE_EVENT_TYPES.has(type) && !PASSIVE_EVENT_TYPES.has(type)) {
-      console.error('[whop-webhook] unrecognized event type', { type })
-    }
-
     if (creatorProductId && creatorId) {
       await supabase.from('creator_commerce_events').upsert({
         creator_id: creatorId,
@@ -186,12 +189,31 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
       return NextResponse.json({ received: true })
     }
 
+    if (!type || PASSIVE_EVENT_TYPES.has(type) || !ACTIONABLE_EVENT_TYPES.has(type)) {
+      await finalizeReceipt('ignored')
+      return NextResponse.json({ received: true, ignored: true })
+    }
+
+    let resolvedInternalUserId = internalUserId
+    if (!resolvedInternalUserId && membershipId) {
+      const { data: membershipOwner } = await supabase
+        .from('users')
+        .select('id')
+        .eq('whop_membership_id', membershipId)
+        .maybeSingle()
+      resolvedInternalUserId = membershipOwner?.id
+    }
+
     switch (type) {
       case 'payment.succeeded':
       case 'membership.activated':
       case 'membership.went_valid': {
-        if (!internalUserId) {
-          console.error('[whop-webhook] no metadata.internal_user_id on', type, JSON.stringify(event))
+        if (!resolvedInternalUserId) {
+          // Provider-wide and connected-creator events can legitimately land
+          // on these endpoints. Without SlipSurge metadata or a membership
+          // already linked to one of our users, the event is not allowed to
+          // mutate a member account. Never log the raw provider payload: it
+          // can contain customer email, address, and payment metadata.
           break
         }
         const planInfo = planId ? WHOP_PLANS[planId] : undefined
@@ -200,12 +222,13 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           // product, or a Discord-business event unrelated to the add-on.
           break
         }
+        if ((source === 'addon') !== (planInfo.company === 'addon')) break
         // This event fires on every recurring renewal payment too, not just
         // the first purchase — only stamp tier_purchased_at when it's
         // currently unset, so it tracks when the CURRENT subscription
         // started, not the most recent renewal. Cleared on cancellation
         // below, so a later resubscribe gets its own fresh start date.
-        const { data: existing } = await supabase.from('users').select('tier_purchased_at, tier_cancel_at_period_end, email').eq('id', internalUserId).maybeSingle()
+        const { data: existing } = await supabase.from('users').select('tier_purchased_at, tier_cancel_at_period_end, email').eq('id', resolvedInternalUserId).maybeSingle()
         const isFirstPurchase = !existing?.tier_purchased_at
         // Real confirmed bug: a payment CAN still land on a membership that
         // was already marked cancel-at-period-end — Whop's own cancellation
@@ -226,12 +249,12 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
           whop_membership_id: membershipId ?? null,
           tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
           tier_cancel_at_period_end: false,
-        }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
-        await syncTierBadge(supabase, internalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
-        await syncDiscordRoleForUser(supabase, internalUserId)
+        }).eq('id', resolvedInternalUserId).select('discord_advanced_claimed, admin_granted_tier, email').single()
+        await syncTierBadge(supabase, resolvedInternalUserId, effectiveTier(planInfo.tier, updated?.discord_advanced_claimed, updated?.admin_granted_tier))
+        await syncDiscordRoleForUser(supabase, resolvedInternalUserId)
         if (wasAlreadyCancelling) {
           await alertUnexpectedChargeAfterCancel(supabase, {
-            userId: internalUserId, email: existing?.email ?? updated?.email ?? null, membershipId: membershipId ?? null, planTier: planInfo.tier,
+            userId: resolvedInternalUserId, email: existing?.email ?? updated?.email ?? null, membershipId: membershipId ?? null, planTier: planInfo.tier,
           })
         }
         // Only a genuine first-time purchase, never a renewal (see the
@@ -240,15 +263,14 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         // webhook's ack to Whop or fail the tier grant itself.
         if (isFirstPurchase && updated?.email) {
           const email = updated.email
-          after(() => sendXConversion({ eventType: 'purchase', conversionId: `purchase-${internalUserId}`, email }))
+          after(() => sendXConversion({ eventType: 'purchase', conversionId: `purchase-${resolvedInternalUserId}`, email }))
         }
         break
       }
       case 'payment.failed':
       case 'membership.deactivated':
       case 'membership.went_invalid': {
-        if (!internalUserId) {
-          console.error('[whop-webhook] no metadata.internal_user_id on', type, JSON.stringify(event))
+        if (!resolvedInternalUserId) {
           break
         }
         // A failed/deactivated event about a DIFFERENT membership than the
@@ -261,22 +283,35 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
         // success event and this handler reset tier unconditionally. Only
         // downgrade when the event is actually about the membership that's
         // driving the user's current tier.
-        const { data: current } = await supabase.from('users').select('whop_membership_id').eq('id', internalUserId).maybeSingle()
+        const { data: current } = await supabase.from('users').select('whop_membership_id,whop_plan_id').eq('id', resolvedInternalUserId).maybeSingle()
         if (!membershipId || current?.whop_membership_id !== membershipId) {
           break
         }
+        const currentPlan = current.whop_plan_id ? WHOP_PLANS[current.whop_plan_id] : undefined
+        if (currentPlan && (source === 'addon') !== (currentPlan.company === 'addon')) break
         const { data: updated } = await supabase.from('users').update({
           tier: 'free',
           tier_status: type,
           tier_purchased_at: null,
           tier_cancel_at_period_end: false,
-        }).eq('id', internalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
+        }).eq('id', resolvedInternalUserId).select('discord_advanced_claimed, admin_granted_tier').single()
         // Losing a purchased tier doesn't necessarily mean losing every
         // badge — someone who cancels the $10 add-on drops from Ultimate
         // back to Advanced (still free via the Discord plan or an admin
         // grant), not to nothing.
-        await syncTierBadge(supabase, internalUserId, effectiveTier('free', updated?.discord_advanced_claimed, updated?.admin_granted_tier))
-        await syncDiscordRoleForUser(supabase, internalUserId)
+        await syncTierBadge(supabase, resolvedInternalUserId, effectiveTier('free', updated?.discord_advanced_claimed, updated?.admin_granted_tier))
+        await syncDiscordRoleForUser(supabase, resolvedInternalUserId)
+        break
+      }
+      case 'membership.cancel_at_period_end_changed': {
+        if (!resolvedInternalUserId || !membershipId) break
+        const cancelAtPeriodEnd = data.cancel_at_period_end
+        if (typeof cancelAtPeriodEnd !== 'boolean') break
+        await supabase
+          .from('users')
+          .update({ tier_cancel_at_period_end: cancelAtPeriodEnd })
+          .eq('id', resolvedInternalUserId)
+          .eq('whop_membership_id', membershipId)
         break
       }
       default:
@@ -288,6 +323,6 @@ export async function handleWhopWebhookRequest(req: Request, secret: string | un
     return NextResponse.json({ error: message }, { status: 500 })
   }
 
-  await finalizeReceipt(type ? 'succeeded' : 'ignored')
+  await finalizeReceipt(type && ACTIONABLE_EVENT_TYPES.has(type) ? 'succeeded' : 'ignored')
   return NextResponse.json({ received: true })
 }

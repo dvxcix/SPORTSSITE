@@ -28,6 +28,6 @@ export async function writeAdminAudit(admin: SupabaseClient, input: AuditInput) 
     details: input.details ?? {},
     ...requestMetadata(input.request),
   })
-  if (error) console.error('[admin-audit] failed to persist audit event', error)
+  if (error) console.error('[admin-audit] failed to persist audit event', { code: error.code })
   return error
 }

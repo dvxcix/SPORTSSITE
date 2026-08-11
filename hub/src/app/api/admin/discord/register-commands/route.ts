@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { registerGlobalCommands } from '@/lib/discord'
+import { safeApiError } from '@/lib/safeApiError'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -30,7 +31,7 @@ export async function POST() {
   try {
     const result = await registerGlobalCommands(COMMANDS)
     return NextResponse.json({ ok: true, registered: Array.isArray(result) ? result.length : 0 })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'Failed to register commands' }, { status: 500 })
+  } catch (error) {
+    return safeApiError('admin-discord-register-commands', error, 'Failed to register commands')
   }
 }

@@ -12,7 +12,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 300
-export const GET = withPipelineHealth('scrape-fanduel', run)
+export const GET = withPipelineHealth('scrape-fanduel', run, { allowSecondarySecret: true })
 
 // Automates the exact manual workflow: sportsbook.fanduel.com/navigation/mlb
 // -> "GAMES" tab -> click into a specific game -> run the all-tabs scraper
@@ -35,6 +35,7 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
     body: JSON.stringify({ json, gameDate, homeTeam, awayTeam, gameKey, isOpening: true }),
+    signal: AbortSignal.timeout(45_000),
   })
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
@@ -66,8 +67,8 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
 
     const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, tabsScraped: scrapes.length, imported }
-  } catch (e: any) {
-    return { gameKey: g.gameKey, error: e?.message ?? String(e) }
+  } catch {
+    return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
     await bb.close()
   }

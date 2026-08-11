@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
 import { insertWithUniqueElementCode } from '@/lib/elementCode'
+import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
 
@@ -312,7 +313,7 @@ export async function GET() {
     .select('id, name, color, priority, match_mode, match_any_count, matrix_type, pipeline_scope, element_code, enabled, created_at, updated_at')
     .eq('user_id', gate.userId!)
     .order('priority', { ascending: true })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return safeApiError('matrices-list', error, 'Could not load your Matrices.')
   if (!matrices?.length) return NextResponse.json({ matrices: [] })
 
   const { data: factors, error: factorsError } = await admin
@@ -320,14 +321,14 @@ export async function GET() {
     .select('id, matrix_id, position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
-  if (factorsError) return NextResponse.json({ error: factorsError.message }, { status: 500 })
+  if (factorsError) return safeApiError('matrix-factors-list', factorsError, 'Could not load your Matrices.')
 
   const { data: pipelineSteps, error: stepsError } = await admin
     .from('matrix_pipeline_steps')
     .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
-  if (stepsError) return NextResponse.json({ error: stepsError.message }, { status: 500 })
+  if (stepsError) return safeApiError('matrix-steps-list', stepsError, 'Could not load your Matrices.')
 
   const factorsByMatrix = new Map<string, typeof factors>()
   for (const f of factors ?? []) factorsByMatrix.set(f.matrix_id, [...(factorsByMatrix.get(f.matrix_id) ?? []), f])
@@ -387,9 +388,10 @@ export async function POST(req: Request) {
   if (inserted.error || !inserted.data) {
     // The cap trigger raises a plain exception, not a Postgres error code —
     // surfaced to the member as the real reason, not a generic 500.
-    const message = inserted.error ?? 'Could not save this Matrix.'
+    const message = inserted.error ?? ''
     const capHit = message.includes('MATRIX_CAP_REACHED')
-    return NextResponse.json({ error: capHit ? 'You can save up to 10 Matrices — delete one to make room.' : message }, { status: capHit ? 400 : 500 })
+    if (capHit) return NextResponse.json({ error: 'You can save up to 10 Matrices — delete one to make room.' }, { status: 400 })
+    return safeApiError('matrix-create', inserted.error, 'Could not save this Matrix.')
   }
 
   const matrixId = inserted.data.id as string
@@ -398,7 +400,7 @@ export async function POST(req: Request) {
     : await admin.from('matrix_factors').insert(validatedFactors.map((f, i) => ({ ...f, matrix_id: matrixId, position: i })))
   if (childError) {
     await admin.from('matrices').delete().eq('id', matrixId) // don't leave a childless Matrix behind
-    return NextResponse.json({ error: childError.message }, { status: 500 })
+    return safeApiError('matrix-children-create', childError, 'Could not save this Matrix.')
   }
 
   return NextResponse.json({ matrix: inserted.data })
