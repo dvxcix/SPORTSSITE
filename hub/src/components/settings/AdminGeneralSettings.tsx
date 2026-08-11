@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
+import { Switch } from '@/components/ui/Switch'
 
 export function AdminGeneralSettings({ initial }: { initial: Record<string, string> }) {
   const supabase = createClient()
@@ -50,11 +51,11 @@ export function AdminGeneralSettings({ initial }: { initial: Record<string, stri
           ].map(({ key, label }) => (
             <div key={key} className="flex items-center justify-between bg-zinc-800 rounded-xl px-4 py-3">
               <span className="text-sm font-bold text-white">{label}</span>
-              <button
-                onClick={() => setValues(v => ({ ...v, [key]: v[key as keyof typeof v] === 'true' ? 'false' : 'true' }))}
-                className={`relative w-11 h-6 rounded-full transition-colors ${values[key as keyof typeof values] === 'true' ? 'bg-green-500' : 'bg-zinc-600'}`}>
-                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${values[key as keyof typeof values] === 'true' ? 'translate-x-5' : ''}`} />
-              </button>
+              <Switch
+                checked={values[key as keyof typeof values] === 'true'}
+                onChange={checked => setValues(v => ({ ...v, [key]: checked ? 'true' : 'false' }))}
+                ariaLabel={label}
+              />
             </div>
           ))}
         </div>

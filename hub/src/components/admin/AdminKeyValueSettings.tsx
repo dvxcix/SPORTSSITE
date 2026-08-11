@@ -70,7 +70,7 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
               {f.hint && <p className="text-xs text-zinc-500 mt-0.5">{f.hint}</p>}
             </div>
             {f.type === 'toggle' ? (
-              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} />
+              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} ariaLabel={f.label} />
             ) : (
               <input
                 type={f.type}

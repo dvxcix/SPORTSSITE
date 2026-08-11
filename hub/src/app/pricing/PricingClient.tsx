@@ -172,7 +172,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
         <div className={styles.intervalWrap}>
           <div className={styles.intervalControl}>
             <span style={{ fontSize: 13, fontWeight: 700, color: interval === 'monthly' ? 'var(--text-1)' : 'var(--text-3)' }}>Monthly</span>
-            <Switch checked={interval === 'annual'} onChange={v => setInterval(v ? 'annual' : 'monthly')} />
+            <Switch checked={interval === 'annual'} onChange={v => setInterval(v ? 'annual' : 'monthly')} ariaLabel="Use annual billing" />
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: interval === 'annual' ? 'var(--text-1)' : 'var(--text-3)' }}>
               Annual
               <Badge variant="save">Save up to 21%</Badge>

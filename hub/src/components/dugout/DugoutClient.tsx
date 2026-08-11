@@ -2640,6 +2640,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
               <label key={group} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-2)', padding: '4px 8px', borderRadius: 6, background: 'var(--surface-2)', cursor: 'pointer' }}>
                 <Switch
                   checked={!hiddenGroups.has(group)}
+                  ariaLabel={`Show ${DUGOUT_GROUP_LABELS[group] ?? group} section`}
                   onChange={v => setHiddenGroups(prev => {
                     const next = new Set(prev)
                     if (v) next.delete(group); else next.add(group)
@@ -2664,7 +2665,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
                       {DUGOUT_COLUMN_LABELS[col.key] ?? col.key}
                       <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-4)' }}>{DUGOUT_GROUP_LABELS[col.group]}</span>
                     </span>
-                    <Switch checked={visible} onChange={value => setColumnVisible(col.key, value)} />
+                    <Switch checked={visible} onChange={value => setColumnVisible(col.key, value)} ariaLabel={`Show ${DUGOUT_COLUMN_LABELS[col.key] ?? col.key} column`} />
                   </div>
                 )
               })}
@@ -2695,6 +2696,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
                       <span style={{ flex: 1, fontSize: 11, color: 'var(--text-2)' }}>{DUGOUT_COLUMN_LABELS[key] ?? key}</span>
                       <Switch
                         checked={!hiddenColumns.has(key)}
+                        ariaLabel={`Show ${DUGOUT_COLUMN_LABELS[key] ?? key} column`}
                         onChange={v => setColumnVisible(key, v)}
                       />
                     </div>
@@ -2718,6 +2720,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
                       </span>
                       <Switch
                         checked={false}
+                        ariaLabel={`Show ${DUGOUT_COLUMN_LABELS[key] ?? key} column`}
                         onChange={() => setHiddenColumns(prev => {
                           const next = new Set(prev)
                           next.delete(key)

@@ -77,7 +77,7 @@ export function AdminGeneralSettings() {
           <div key={f.key} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-sm font-medium text-white">{f.label}</label>
             {f.type === 'toggle' ? (
-              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} />
+              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} ariaLabel={f.label} />
             ) : (
               <input
                 type={f.type}

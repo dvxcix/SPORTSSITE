@@ -226,7 +226,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
               <p className="text-[10px] text-zinc-600 mt-0.5">{new Date(entry.created_at).toLocaleDateString()} · {entry.audience_tier === 'ultimate' ? 'Ultimate only' : 'All members'} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <Toggle checked={entry.is_active} onChange={() => toggleActive(entry)} />
+              <Toggle checked={entry.is_active} onChange={() => toggleActive(entry)} ariaLabel={`${entry.title} active`} />
               <button onClick={() => startEdit(entry)} className="text-xs font-bold text-zinc-400 hover:text-white">Edit</button>
               <button onClick={() => remove(entry)} className="text-xs font-bold text-red-400/80 hover:text-red-400">Delete</button>
             </div>

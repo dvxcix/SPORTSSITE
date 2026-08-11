@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
+import { Switch } from '@/components/ui/Switch'
 
 export function PrivacySettingsForm({ settings }: { settings: { is_private: boolean; allow_dms: boolean; hide_win_rate: boolean } }) {
   const supabase = createClient()
@@ -40,10 +41,7 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
               <p className="text-sm font-bold text-white">{s.label}</p>
               <p className="text-xs text-zinc-500">{s.desc}</p>
             </div>
-            <button type="button" role="switch" aria-checked={s.value} aria-label={s.label} onClick={() => s.set(!s.value)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${s.value ? 'bg-green-500' : 'bg-zinc-700'}`}>
-              <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${s.value ? 'translate-x-5' : ''}`} />
-            </button>
+            <Switch checked={s.value} onChange={s.set} ariaLabel={s.label} />
           </div>
         ))}
       </div>

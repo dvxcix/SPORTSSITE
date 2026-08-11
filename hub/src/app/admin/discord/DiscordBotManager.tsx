@@ -107,7 +107,7 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold text-zinc-400">Enabled</label>
-          <Toggle checked={enabled} onChange={setEnabled} label="" />
+          <Toggle checked={enabled} onChange={setEnabled} ariaLabel="Enable Discord bot" />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Server (Guild) ID</label>

@@ -417,6 +417,29 @@ test('privacy requests and moderation actions are server controlled', async () =
   assert.ok(auditMigration.includes('revoke all on table public.admin_audit_logs from anon, authenticated'))
 })
 
+test('site switches share contained geometry and accessible labels', async () => {
+  const sharedSwitch = await read('src/components/ui/Switch.tsx')
+  assert.ok(sharedSwitch.includes("overflow: 'hidden'"))
+  assert.ok(sharedSwitch.includes("boxSizing: 'border-box'"))
+  assert.ok(sharedSwitch.includes('transform: `translateX('))
+  assert.ok(sharedSwitch.includes('aria-label={ariaLabel'))
+
+  for (const file of [
+    'src/components/settings/PrivacySettingsForm.tsx',
+    'src/components/settings/NotificationSettingsForm.tsx',
+    'src/components/settings/AdminGeneralSettings.tsx',
+    'src/components/onboarding/OnboardingFlow.tsx',
+    'src/components/groups/CreateGroupForm.tsx',
+    'src/components/groups/GroupSettingsForm.tsx',
+    'src/components/pages/PageSettingsForm.tsx',
+  ]) {
+    const source = await read(file)
+    assert.ok(source.includes("@/components/ui/Switch"), `${file} bypasses the shared switch`)
+    assert.ok(!source.includes('translate-x-5'), `${file} retains fragile toggle geometry`)
+    assert.ok(!source.includes("translateX(18px)"), `${file} retains an ad-hoc toggle`)
+  }
+})
+
 test('release workflow validates before publishing', async () => {
   const workflow = await read('../.github/workflows/desktop-release.yml')
   const typecheck = workflow.indexOf('npm run typecheck')

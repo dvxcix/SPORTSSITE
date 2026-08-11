@@ -10,6 +10,7 @@ import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
 import { trackProductEvent } from '@/lib/productAnalytics'
+import { Switch } from '@/components/ui/Switch'
 
 // dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
 // onboarding page itself (Next 16), so the Meteors background lives here
@@ -253,10 +254,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                       <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{s.label}</p>
                       <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, lineHeight: 1.4 }}>{s.desc}</p>
                     </div>
-                    <button type="button" onClick={() => s.set(!s.value)}
-                      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${s.value ? 'bg-green-500' : 'bg-zinc-700'}`}>
-                      <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${s.value ? 'translate-x-5' : ''}`} />
-                    </button>
+                    <Switch checked={s.value} onChange={s.set} ariaLabel={s.label} />
                   </div>
                 ))}
               </div>

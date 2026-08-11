@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
+import { Switch } from '@/components/ui/Switch'
 
 const SETTINGS = [
   { key: 'new_follower', label: 'New follower', desc: 'When someone follows you' },
@@ -17,17 +18,6 @@ const SETTINGS = [
   { key: 'subscription', label: 'Subscriptions', desc: 'New subscriber / subscription alerts' },
   { key: 'lineup_confirmed', label: 'Lineup confirmed', desc: 'When a favorite team’s starting lineup is confirmed for today' },
 ]
-
-function Toggle({ on, onClick, size = 'md' }: { on: boolean; onClick: () => void; size?: 'sm' | 'md' }) {
-  const w = size === 'sm' ? 'w-9 h-5' : 'w-11 h-6'
-  const knob = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'
-  const travel = size === 'sm' ? 'translate-x-4' : 'translate-x-5'
-  return (
-    <button type="button" role="switch" aria-checked={on} aria-label={on ? 'Disable notification' : 'Enable notification'} onClick={onClick} className={`relative ${w} rounded-full transition-colors shrink-0 ${on ? 'bg-green-500' : 'bg-zinc-700'}`}>
-      <span className={`absolute top-0.5 left-0.5 ${knob} bg-white rounded-full shadow transition-transform ${on ? travel : ''}`} />
-    </button>
-  )
-}
 
 // Two independent delivery channels per notification type — push (default
 // ON, matches the always-on behavior most people expect for in-the-moment
@@ -101,10 +91,10 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
             </div>
             <div className="flex items-center gap-6 shrink-0">
               <div className="w-9 flex justify-center">
-                <Toggle size="sm" on={values[s.key]} onClick={() => setValues(v => ({ ...v, [s.key]: !v[s.key] }))} />
+                <Switch size="sm" checked={values[s.key]} onChange={checked => setValues(v => ({ ...v, [s.key]: checked }))} ariaLabel={`${s.label} push notifications`} />
               </div>
               <div className="w-9 flex justify-center">
-                <Toggle size="sm" on={values[`${s.key}_email`]} onClick={() => setValues(v => ({ ...v, [`${s.key}_email`]: !v[`${s.key}_email`] }))} />
+                <Switch size="sm" checked={values[`${s.key}_email`]} onChange={checked => setValues(v => ({ ...v, [`${s.key}_email`]: checked }))} ariaLabel={`${s.label} email notifications`} />
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import { Switch } from '@/components/ui/Switch'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '⚾', '🏀', '🏒', '⚽', '🥊', '🎉', '💎', '🚀', '👑', '🦁', '🎰']
@@ -138,10 +139,7 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
             <p className="text-sm font-medium text-white">Public group</p>
             <p className="text-xs text-zinc-500">Anyone can find and join</p>
           </div>
-          <button type="button" onClick={() => setForm(f => ({ ...f, is_public: !f.is_public }))}
-            style={{ width: '40px', height: '22px', background: form.is_public ? '#22c55e' : '#3f3f46', borderRadius: '11px', position: 'relative', transition: 'background 0.15s' }}>
-            <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', background: 'white', borderRadius: '50%', transition: 'transform 0.15s', transform: form.is_public ? 'translateX(18px)' : 'translateX(2px)' }} />
-          </button>
+          <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />
         </div>
       </div>
 

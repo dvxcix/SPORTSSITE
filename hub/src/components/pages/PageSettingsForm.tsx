@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
+import { Switch } from '@/components/ui/Switch'
 
 const CATEGORIES = ['Team', 'Athlete', 'Media', 'Brand', 'Community', 'Podcast', 'Other']
 const EMOJIS = ['⭐', '🏈', '⚾', '🏀', '🏒', '⚽', '🎯', '🔥', '💰', '📊']
@@ -101,10 +102,7 @@ export function PageSettingsForm({ page }: { page: any }) {
             <p className="text-sm font-medium text-white">Published</p>
             <p className="text-xs text-zinc-500">Unpublish to hide this page from everyone but you</p>
           </div>
-          <button type="button" onClick={() => setForm(f => ({ ...f, is_published: !f.is_published }))}
-            style={{ width: '40px', height: '22px', background: form.is_published ? '#22c55e' : '#3f3f46', borderRadius: '11px', position: 'relative', transition: 'background 0.15s' }}>
-            <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', background: 'white', borderRadius: '50%', transition: 'transform 0.15s', transform: form.is_published ? 'translateX(18px)' : 'translateX(2px)' }} />
-          </button>
+          <Switch checked={form.is_published} onChange={checked => setForm(f => ({ ...f, is_published: checked }))} ariaLabel="Published" />
         </div>
       </div>
 
