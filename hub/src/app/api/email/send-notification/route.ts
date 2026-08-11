@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 import { hasBearerSecret } from '@/lib/requestAuth'
 import { safeInternalPath } from '@/lib/safeRedirect'
-import { brandedEmailHtml } from '@/lib/email'
+import { brandedEmailHtml, sendEmailWithResult } from '@/lib/email'
 
 export const revalidate = 0
 
@@ -11,6 +11,15 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
   })[character]!)
+}
+
+type NotificationActor = {
+  display_name: string | null
+  username: string | null
+}
+
+type NotificationData = {
+  avatar_url?: unknown
 }
 
 // Reuses the same secret as /api/push/send — both routes are called the
@@ -36,10 +45,6 @@ export async function POST(request: Request) {
   const authError = requireWebhookAuth(request)
   if (authError) return authError
 
-  const apiKey = process.env.EMAIL_RESEND_API_KEY || process.env.RESEND_API_KEY
-  if (!apiKey) return NextResponse.json({ ok: false, skipped: 'Resend API key not configured' })
-  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || process.env.RESEND_EMAIL_DOMAIN || 'slipsurge.com'
-
   const body = await request.json().catch(() => null)
   const notificationId = body?.notification_id as string | undefined
   if (!notificationId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(notificationId)) {
@@ -48,13 +53,14 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
 
-  async function recordDelivery(status: 'sent' | 'failed' | 'skipped', details?: { providerStatus?: number | null; error?: string | null; userId?: string | null; notificationId?: string | null }) {
+  async function recordDelivery(status: 'sent' | 'failed' | 'skipped', details?: { providerStatus?: number | null; providerMessageId?: string | null; error?: string | null; userId?: string | null; notificationId?: string | null }) {
     const { error } = await admin.from('notification_delivery_attempts').insert({
       notification_id: details?.notificationId === undefined ? notificationId : details.notificationId,
       user_id: details?.userId ?? null,
       channel: 'email',
       status,
       provider_status: details?.providerStatus ?? null,
+      provider_message_id: details?.providerMessageId ?? null,
       error: details?.error?.slice(0, 1000) ?? null,
     })
     if (error) console.error('[email/send-notification] could not record delivery telemetry', { code: error.code })
@@ -89,38 +95,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: 'email disabled for this notification type' })
   }
 
-  const { count: alreadySent } = await admin
+  const { count: alreadyAccepted } = await admin
     .from('notification_delivery_attempts')
     .select('id', { count: 'exact', head: true })
     .eq('notification_id', notification.id)
     .eq('channel', 'email')
-    .eq('status', 'sent')
-  if ((alreadySent ?? 0) > 0) {
-    return NextResponse.json({ ok: true, skipped: 'email already delivered' })
+    .or('status.eq.sent,provider_message_id.not.is.null')
+  if ((alreadyAccepted ?? 0) > 0) {
+    return NextResponse.json({ ok: true, skipped: 'email already accepted by provider' })
   }
 
-  const actor = notification.actor as any
+  const actorValue = notification.actor as unknown as NotificationActor | NotificationActor[] | null
+  const actor = Array.isArray(actorValue) ? actorValue[0] : actorValue
   const actorName = actor?.display_name || actor?.username
   const text = (actorName ? `${actorName} ` : '') + (notification.message || 'sent you a notification')
   const url = `https://www.slipsurge.com${safeInternalPath(notification.link, '/notifications')}`
   // Same rich image NotificationsList/push already show (player headshot,
   // team logo — see notifications.data) — omitted entirely when absent,
   // same as every notification type before this.
-  const richImage = (notification.data as any)?.avatar_url as string | undefined
+  const richImageValue = (notification.data as NotificationData | null)?.avatar_url
+  const richImage = typeof richImageValue === 'string' ? richImageValue : undefined
   const safeText = escapeHtml(text)
   const safeUrl = escapeHtml(url)
   const safeRichImage = richImage?.startsWith('https://') ? escapeHtml(richImage) : undefined
 
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: `SlipSurge <team@${fromDomain}>`,
-        to: [recipient.email],
-        subject: text,
-        text: `${text}\n\n${url}\n\nManage which notifications email you: https://www.slipsurge.com/settings/notifications`,
-        html: brandedEmailHtml({
+  const result = await sendEmailWithResult({
+    to: recipient.email,
+    subject: text,
+    text: `${text}\n\n${url}\n\nManage which notifications email you: https://www.slipsurge.com/settings/notifications`,
+    idempotencyKey: `notification/${notification.id}`,
+    tags: [
+      { name: 'category', value: 'member_notification' },
+      { name: 'notification_type', value: String(notification.type).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 256) },
+    ],
+    html: brandedEmailHtml({
           eyebrow: 'New notification',
           heading: 'Something new on SlipSurge',
           preheader: text,
@@ -137,21 +145,13 @@ export async function POST(request: Request) {
           ctaLabel: 'View on SlipSurge',
           ctaUrl: safeUrl,
           footerHtml: '<a href="https://www.slipsurge.com/settings/notifications" style="font-size:11px;color:#7D8796;text-decoration:underline;">Manage notification emails</a>',
-        }),
-      }),
-      signal: AbortSignal.timeout(15_000),
-    })
-    if (!res.ok) {
-      console.error('[email/send-notification] Resend send failed', { status: res.status })
-      await recordDelivery('failed', { userId: notification.user_id, providerStatus: res.status, error: 'provider rejected request' })
-      return NextResponse.json({ ok: false, error: 'Email provider rejected the notification' }, { status: 502 })
-    }
-    await recordDelivery('sent', { userId: notification.user_id, providerStatus: res.status })
-  } catch (e) {
-    console.error('[email/send-notification] request failed', { type: e instanceof Error ? e.name : typeof e })
-    await recordDelivery('failed', { userId: notification.user_id, error: 'delivery request failed' })
+    }),
+  })
+  if (!result.ok) {
+    await recordDelivery('failed', { userId: notification.user_id, providerStatus: result.status, error: result.error })
     return NextResponse.json({ ok: false, error: 'Email delivery failed' }, { status: 502 })
   }
+  await recordDelivery('sent', { userId: notification.user_id, providerStatus: result.status, providerMessageId: result.id })
 
   return NextResponse.json({ ok: true })
 }

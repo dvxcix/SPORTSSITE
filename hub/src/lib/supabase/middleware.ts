@@ -91,11 +91,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // Whop's webhooks — server-to-server POST with no browser session, same bug
-  // class as the routes above. Authenticates itself independently via the
-  // Standard Webhooks signature header, not a session cookie. Two separate
-  // paths for the two separate Whop businesses (see whopWebhook.ts).
-  if (request.nextUrl.pathname === '/api/webhooks/whop' || request.nextUrl.pathname === '/api/webhooks/whop-addon') {
+  // Provider webhooks are server-to-server POSTs with no browser session.
+  // Each route verifies its own Standard Webhooks signature before accepting
+  // the payload, so the cookie-session proxy must let the request reach it.
+  if (
+    request.nextUrl.pathname === '/api/webhooks/whop' ||
+    request.nextUrl.pathname === '/api/webhooks/whop-addon' ||
+    request.nextUrl.pathname === '/api/webhooks/resend'
+  ) {
     return NextResponse.next({ request })
   }
 

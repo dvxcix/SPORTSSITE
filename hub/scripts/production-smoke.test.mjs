@@ -120,7 +120,25 @@ test('Whop billing is retry-safe, exclusive, and deliveries are observable', asy
   assert.ok(push.includes("from('notification_delivery_attempts')"))
   assert.ok(push.includes("skipped: 'push already delivered'"))
   assert.ok(email.includes("channel: 'email'"))
-  assert.ok(email.includes("skipped: 'email already delivered'"))
+  assert.ok(email.includes("skipped: 'email already accepted by provider'"))
+})
+
+test('Resend email delivery is signed, retry-safe, and observable', async () => {
+  const middleware = await read('src/lib/supabase/middleware.ts')
+  const sender = await read('src/lib/email.ts')
+  const notification = await read('src/app/api/email/send-notification/route.ts')
+  const webhook = await read('src/app/api/webhooks/resend/route.ts')
+  const migration = await read('supabase/migrations/20260811220000_email_delivery_lifecycle.sql')
+  assert.ok(middleware.includes("request.nextUrl.pathname === '/api/webhooks/resend'"))
+  assert.ok(sender.includes("'Idempotency-Key'"))
+  assert.ok(sender.includes('AbortSignal.timeout(15_000)'))
+  assert.ok(notification.includes('provider_message_id'))
+  assert.ok(notification.includes('notification/${notification.id}'))
+  assert.ok(webhook.includes("new Webhook(secret).verify(rawBody"))
+  assert.ok(webhook.includes("from('provider_webhook_events')"))
+  assert.ok(webhook.includes("'email.complained'"))
+  assert.ok(!webhook.includes('JSON.stringify(event)'))
+  assert.ok(migration.includes('provider_message_id text'))
 })
 
 test('billing reconciliation is bounded and avoids unchanged side effects', async () => {
