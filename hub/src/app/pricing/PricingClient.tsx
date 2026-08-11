@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
-import { Check, X } from 'lucide-react'
+import { Check, X, ShieldCheck } from 'lucide-react'
 import type { Tier } from '@slipsurge/core/tiers'
 import { PricingCheckoutButton } from './PricingCheckoutButton'
 import { Spotlight } from '@/components/ui/spotlight'
@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import styles from './PricingClient.module.css'
 
 // Meteors' per-mount randomized delays differ between server and client
 // render — same hydration-mismatch fix as every other marketing/auth page
@@ -49,7 +50,7 @@ const TIERS: TierDef[] = [
     monthlyPrice: 24.99, annualPrice: 249.99, trialDaysMonthly: 7,
   },
   {
-    tier: 'ultimate', label: 'Ultimate', tagline: 'Every tool, every edge — for serious bettors only.',
+    tier: 'ultimate', label: 'Ultimate', tagline: 'Every research tool for members who want the complete workspace.',
     monthlyPlanId: 'plan_tCrVAX62uKyEq', annualPlanId: 'plan_1eWRTXv0XXTrI',
     monthlyPrice: 34.99, annualPrice: 329.99, highlight: 'premium', trialDaysMonthly: 3,
   },
@@ -64,17 +65,23 @@ const TIERS: TierDef[] = [
 // since it's read off the same Tier rank.
 const TIER_RANK: Record<Tier, number> = { free: 0, basic: 1, advanced: 2, ultimate: 3 }
 const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
-  { label: 'Community access — posts, DMs, groups, channels & notifications', minTier: 'basic' },
+  { label: 'Community access: posts, DMs, groups, channels, and notifications', minTier: 'basic' },
   { label: 'Community leaderboard', minTier: 'free' },
   { label: 'Player research & search', minTier: 'basic' },
   { label: 'Live scores & play-by-play', minTier: 'basic' },
   { label: 'Pitcher Report + Weather Lab', minTier: 'basic' },
   { label: 'Full Slate Breakdown', minTier: 'advanced' },
-  { label: 'The Dugout — our proprietary Game Matrix', minTier: 'ultimate' },
+  { label: 'The Dugout, our proprietary Game Matrix', minTier: 'ultimate' },
   { label: 'The Public', minTier: 'advanced' },
   { label: 'Line Movement Tracker', minTier: 'ultimate' },
 ]
 const FREE_ROWS = ['Browse the community feed', 'View & manage your profile']
+
+const PLAN_GUIDE = [
+  { href: '#plan-basic', label: 'Start with Basic', detail: 'Community, live scores, and core MLB research' },
+  { href: '#plan-advanced', label: 'Choose Advanced', detail: 'Add full-slate analysis and public market context' },
+  { href: '#plan-ultimate', label: 'Go Ultimate', detail: 'Unlock The Dugout, Odds Terminal, and every tool' },
+]
 
 export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, adminGrantedTier = null, fullAccessReason = null, checkoutStatus }: {
   loggedIn: boolean
@@ -102,14 +109,14 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   const fullAccess = !!fullAccessReason
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
+    <div className={styles.page}>
       {checkoutStatus === 'success' && (
         <div style={{
           position: 'relative', zIndex: 2, textAlign: 'center', fontSize: 13, fontWeight: 600,
           color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderBottom: '1px solid rgba(74,222,128,0.25)',
           padding: '10px 16px',
         }}>
-          Payment received — your plan updates automatically within a few seconds. If it doesn&apos;t show yet, refresh the page.
+          Payment received. Your plan updates automatically within a few seconds. If it doesn&apos;t show yet, refresh the page.
         </div>
       )}
       {checkoutStatus === 'error' && (
@@ -118,11 +125,11 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           color: '#f87171', background: 'rgba(248,113,113,0.1)', borderBottom: '1px solid rgba(248,113,113,0.25)',
           padding: '10px 16px',
         }}>
-          Checkout didn&apos;t complete. No charge was made — try again whenever you&apos;re ready.
+          Checkout didn&apos;t complete. No charge was made. Try again whenever you&apos;re ready.
         </div>
       )}
       {/* Hero — same treatment as the main LandingPage: Spotlight + BackgroundBeams + Meteors */}
-      <div style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className={styles.hero}>
         <div style={{
           position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)',
           width: 700, height: 700, borderRadius: '50%',
@@ -137,21 +144,33 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
 
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          style={{ position: 'relative', maxWidth: 620, margin: '0 auto', padding: '64px 24px 8px', textAlign: 'center', zIndex: 1 }}
+          className={styles.heroContent}
         >
+          <div className={styles.eyebrow}>SlipSurge memberships</div>
           <h1 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, color: 'var(--text-1)', marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-            Bet smarter, not <span style={{ color: 'var(--accent)' }}>harder.</span>
+            Start free. Upgrade when you need <span style={{ color: 'var(--accent)' }}>more signal.</span>
           </h1>
           <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
             Free tools to get started. Upgrade for live analytics, line movement, and the deepest breakdown on the slate.
-            Try Advanced free for 7 days or Ultimate free for 3 — monthly plans only.
+            Monthly Advanced includes a 7-day trial. Monthly Ultimate includes a 3-day trial.
           </p>
         </motion.div>
       </div>
 
-      <div style={{ position: 'relative', maxWidth: 1120, margin: '0 auto', padding: '20px 20px 64px', zIndex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 36 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 999, padding: '8px 18px' }}>
+      <div style={{ position: 'relative', maxWidth: 1160, margin: '0 auto', padding: '20px 20px 64px', zIndex: 1 }}>
+        <nav className={styles.planGuide} aria-label="Choose a membership by goal">
+          {PLAN_GUIDE.map(item => (
+            <a key={item.href} href={item.href}>
+              <strong>{item.label}</strong>
+              <span>{item.detail}</span>
+            </a>
+          ))}
+        </nav>
+
+        <div className={styles.billingTrust}><ShieldCheck size={14} /> Secure membership management and billing powered by Whop</div>
+
+        <div className={styles.intervalWrap}>
+          <div className={styles.intervalControl}>
             <span style={{ fontSize: 13, fontWeight: 700, color: interval === 'monthly' ? 'var(--text-1)' : 'var(--text-3)' }}>Monthly</span>
             <Switch checked={interval === 'annual'} onChange={v => setInterval(v ? 'annual' : 'monthly')} />
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: interval === 'annual' ? 'var(--text-1)' : 'var(--text-3)' }}>
@@ -171,7 +190,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+        <div className={styles.cards}>
           {TIERS.map(t => {
             const isCurrent = t.tier === currentTier
             const cardRank = TIER_RANK[t.tier]
@@ -211,7 +230,8 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
             const savePct = t.monthlyPrice && t.annualPrice ? Math.round((1 - (t.annualPrice / 12) / t.monthlyPrice) * 100) : null
 
             return (
-              <CometCard key={t.tier} className="w-full">
+              <div key={t.tier} id={`plan-${t.tier}`} className={styles.cardAnchor}>
+              <CometCard className="w-full h-full">
                 <div style={{
                   background: t.highlight === 'premium'
                     ? 'linear-gradient(160deg, rgba(180,255,77,0.10), var(--surface-1) 55%)'
@@ -239,7 +259,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                       {savePct && <Badge variant="save">Save {savePct}%</Badge>}
                     </div>
                   ) : interval === 'annual' && t.tier !== 'free' && !t.annualPrice ? (
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>No annual plan — billed monthly</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>No annual plan. Billed monthly.</p>
                   ) : (
                     <div style={{ marginBottom: 8 }} />
                   )}
@@ -333,12 +353,13 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                       marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--border)',
                       display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)',
                     }}>
-                      <span>↻ Renews {hasAnnual ? 'annually' : 'monthly'}</span>
-                      <span>⊘ Cancel anytime</span>
+                      <span>Renews {hasAnnual ? 'annually' : 'monthly'}</span>
+                      <span>Cancel anytime</span>
                     </div>
                   )}
                 </div>
               </CometCard>
+              </div>
             )
           })}
         </div>

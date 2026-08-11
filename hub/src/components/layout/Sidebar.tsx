@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
@@ -32,21 +33,21 @@ type NavLink = {
   href: string; icon: LucideIcon; label: string
   flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean; ultimateOnly?: boolean
 }
-type NavItem = NavLink | { section: string; logo: string } | null
+type NavItem = NavLink | { section: string; logo?: string } | null
 
 const nav: NavItem[] = [
+  { section: 'Community' },
   { href: '/feed',        icon: Home,          label: 'Feed' },
   { href: '/explore',     icon: Compass,       label: 'Explore' },
   { href: '/search',      icon: Search,        label: 'Search' },
   { href: '/picks',       icon: TrendingUp,    label: 'Picks' },
-  { href: '/pricing',     icon: Sparkles,      label: 'Memberships' },
   { href: '/messages',    icon: MessageCircle, label: 'Messages' },
   { href: '/notifications',icon: Bell,         label: 'Notifications' },
   null, // divider
   // A labeled section (logo header, no per-item red "MLB" badge needed
   // anymore) so these read as a distinct tool group, not just more generic
   // pages mixed in with Groups/Explore/etc.
-  { section: 'MLB', logo: MLB_LOGO_URL },
+  { section: 'MLB Research', logo: MLB_LOGO_URL },
   { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
   { href: '/dugout',      icon: FlaskConical,  label: 'The Dugout' },
   { href: '/weather-lab', icon: CloudSun,      label: 'Weather Lab' },
@@ -58,6 +59,7 @@ const nav: NavItem[] = [
   { href: '/daily-recap', icon: Flame,         label: 'Daily Recap' },
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
   null,
+  { section: 'Connect' },
   { href: '/groups',      icon: Users,         label: 'Groups' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
@@ -66,9 +68,11 @@ const nav: NavItem[] = [
   { href: '/marketplace', icon: ShoppingBag,   label: 'Matrix Marketplace', badge: 'ULT', ultimateOnly: true },
   { href: '/channels',    icon: Zap,           label: 'Channels' },
   null,
+  { section: 'Discover' },
   { href: '/leaderboard', icon: Trophy,        label: 'Leaderboard' },
   { href: '/creators',    icon: Star,          label: 'Creators' },
   { href: '/bookmarks',   icon: Bookmark,      label: 'Bookmarks' },
+  { href: '/pricing',     icon: Sparkles,      label: 'Memberships' },
 ]
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -169,14 +173,14 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         borderBottom: '1px solid var(--border)',
         textDecoration: 'none',
       }}>
-        <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+        <Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority style={{ objectFit: 'contain', flexShrink: 0 }} />
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
               Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
             </div>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: -1 }}>
-              SPORTS · PICKS · SOCIAL
+              SPORTS | PICKS | SOCIAL
             </div>
           </div>
         )}
@@ -231,7 +235,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 justifyContent: isCollapsed ? 'center' : 'flex-start',
                 padding: isCollapsed ? '10px 0 4px' : '10px 10px 4px',
               }}>
-                <img src={item.logo} alt={item.section} title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
+                {item.logo
+                  ? <img src={item.logo} alt="" title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
+                  : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)', flexShrink: 0 }} />}
                 {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
               </div>
             )

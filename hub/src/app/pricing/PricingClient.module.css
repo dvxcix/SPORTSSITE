@@ -1,0 +1,132 @@
+.page {
+  min-height: 100dvh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 50% -10rem, color-mix(in srgb, var(--accent) 7%, transparent), transparent 36rem),
+    var(--bg);
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 78px) 20px 12px;
+  text-align: center;
+}
+
+.eyebrow {
+  width: fit-content;
+  margin: 0 auto 15px;
+  padding: 7px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  font: 850 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.planGuide {
+  width: min(100%, 980px);
+  margin: 22px auto 30px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  box-shadow: inset 0 1px rgba(255,255,255,.025);
+}
+
+.planGuide a {
+  min-width: 0;
+  min-height: 66px;
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: var(--text-2);
+  background: transparent;
+  text-decoration: none;
+  transition: border-color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast);
+}
+
+.planGuide a:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--surface-2);
+}
+
+.planGuide strong { color: var(--text-1); font-size: 12px; }
+.planGuide span { overflow: hidden; color: var(--text-3); font-size: 10.5px; line-height: 1.35; text-overflow: ellipsis; }
+
+.billingTrust {
+  width: fit-content;
+  margin: 0 auto 30px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-3);
+  background: var(--surface-1);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.billingTrust svg { color: var(--accent); }
+
+.intervalWrap { display: flex; justify-content: center; margin-bottom: 30px; }
+.intervalControl { display: flex; align-items: center; gap: 12px; padding: 8px 18px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-1); }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.cardAnchor { height: 100%; scroll-margin-top: 100px; }
+
+@media (max-width: 1050px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+  .heroContent { padding: 42px 16px 8px; }
+  .heroContent h1 { font-size: 34px !important; }
+  .heroContent p { font-size: 14px !important; }
+  .planGuide {
+    width: calc(100% + 20px);
+    margin-left: -10px;
+    padding: 8px 10px;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    border-inline: 0;
+    border-radius: 0;
+  }
+  .planGuide::-webkit-scrollbar { display: none; }
+  .planGuide a { min-width: min(78vw, 270px); scroll-snap-align: start; }
+  .cards { grid-template-columns: 1fr; gap: 14px; }
+  .intervalControl { width: 100%; justify-content: center; padding-inline: 11px; }
+  .billingTrust { width: 100%; border-radius: 12px; text-align: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planGuide a { transition: none; }
+}

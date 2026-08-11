@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import styles from './LandingPage.module.css'
 import { motion, AnimatePresence } from 'motion/react'
-import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, Megaphone } from 'lucide-react'
+import { CloudSun, Activity, Rows3, TrendingUp, ChevronDown, Layers, Radio, Trophy, Users, Megaphone, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { Spotlight } from '@/components/ui/spotlight'
 import { CometCard } from '@/components/ui/comet-card'
@@ -25,9 +26,9 @@ const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Mete
 // grid above it instead of reading as a leftover plain-text list.
 const FEATURES: { icon: React.ReactNode; title: string; description: string; link: string }[] = [
   { icon: <Layers size={18} />, title: 'Post picks & parlays', description: 'Build parlays with live odds and payout math calculated automatically as you compose.', link: '/auth/register?utm_feature=picks' },
-  { icon: <Radio size={18} />, title: 'Live scores', description: 'Every game, every league, updating in real time — without leaving the app.', link: '/auth/register?utm_feature=scores' },
-  { icon: <Trophy size={18} />, title: 'Leaderboard', description: 'Real rankings by record, streaks, and per-sport performance — see who\'s actually hot.', link: '/leaderboard' },
-  { icon: <Users size={18} />, title: 'Real community', description: 'Channels, groups, and a feed built around sports conversation — not noise.', link: '/auth/register?utm_feature=community' },
+  { icon: <Radio size={18} />, title: 'Live scores', description: 'Every game and every update in real time, without leaving the app.', link: '/auth/register?utm_feature=scores' },
+  { icon: <Trophy size={18} />, title: 'Leaderboard', description: 'Rankings by public record, streaks, and sport so strong performance is easy to verify.', link: '/leaderboard' },
+  { icon: <Users size={18} />, title: 'Real community', description: 'Channels, groups, and a feed built around sports conversation, not noise.', link: '/auth/register?utm_feature=community' },
 ]
 
 const STEPS = [
@@ -37,25 +38,30 @@ const STEPS = [
 ]
 
 type TierKey = 'basic' | 'advanced' | 'ultimate'
-const TIER_COLOR: Record<TierKey, string> = { basic: 'var(--blue)', advanced: 'var(--gold)', ultimate: 'var(--purple)' }
+const TIER_STYLE: Record<TierKey, { color: string; background: string; border: string }> = {
+  basic: { color: '#4d9eff', background: 'rgba(77, 158, 255, 0.1)', border: 'rgba(77, 158, 255, 0.28)' },
+  advanced: { color: '#ff4d6a', background: 'rgba(255, 77, 106, 0.1)', border: 'rgba(255, 77, 106, 0.28)' },
+  ultimate: { color: '#39d9ff', background: 'rgba(57, 217, 255, 0.1)', border: 'rgba(57, 217, 255, 0.3)' },
+}
 const TIER_LABEL: Record<TierKey, string> = { basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
 function TierPill({ tier }: { tier: TierKey }) {
+  const palette = TIER_STYLE[tier]
   return (
     <span style={{
       fontSize: 10, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase',
-      color: TIER_COLOR[tier], background: `${TIER_COLOR[tier]}1a`, border: `1px solid ${TIER_COLOR[tier]}40`,
+      color: palette.color, background: palette.background, border: `1px solid ${palette.border}`,
       borderRadius: 999, padding: '3px 9px',
     }}>{TIER_LABEL[tier]}</span>
   )
 }
 
 const TOOLS: { icon: React.ReactNode; title: string; description: string; tier: TierKey; link: string }[] = [
-  { icon: <CloudSun size={18} />, title: 'Weather Lab', description: 'Ballpark conditions that actually move the numbers — wind, temperature, and altitude, at a glance.', tier: 'basic', link: '/auth/register?utm_feature=weather' },
+  { icon: <CloudSun size={18} />, title: 'Weather Lab', description: 'See wind, temperature, altitude, and game conditions in one focused view.', tier: 'basic', link: '/auth/register?utm_feature=weather' },
   { icon: <Activity size={18} />, title: 'Pitcher Report', description: 'See exactly what a starter has thrown lately and who in tonight\'s lineup has been hitting it hard.', tier: 'basic', link: '/auth/register?utm_feature=pitcher' },
   { icon: <Rows3 size={18} />, title: 'Slate Breakdown', description: 'Every pitcher and batter matchup on tonight\'s slate, laid out side by side before first pitch.', tier: 'advanced', link: '/auth/register?utm_feature=slate' },
-  { icon: <TrendingUp size={18} />, title: 'Batter Cost', description: 'Tracks how a prop\'s price has actually moved since the line opened — see who the market\'s shading.', tier: 'ultimate', link: '/auth/register?utm_feature=batter-cost' },
-  { icon: <Megaphone size={18} />, title: 'The Public', description: '', tier: 'advanced', link: '/auth/register?utm_feature=public' },
+  { icon: <TrendingUp size={18} />, title: 'Batter Cost', description: 'Compare opening and current prices across the slate without rebuilding the board by hand.', tier: 'ultimate', link: '/auth/register?utm_feature=batter-cost' },
+  { icon: <Megaphone size={18} />, title: 'The Public', description: 'See where community attention is concentrated across players and prop markets.', tier: 'advanced', link: '/auth/register?utm_feature=public' },
 ]
 
 // Illustrative mockup only — not a live screenshot. Team pairs and numbers
@@ -76,7 +82,7 @@ function DugoutMockup() {
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red)' }} />
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)' }} />
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)' }} />
-        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>The Dugout — tonight's matchups</span>
+        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>The Dugout | Tonight&apos;s matchups</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr', padding: '8px 14px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
         <span>Matchup</span><span>1st HR</span><span>Anytime HR</span><span>Strikeouts</span>
@@ -108,9 +114,9 @@ const PRICING_TEASER = [
 ]
 
 const FAQS = [
-  { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks — we never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
-  { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile — their picks land in your feed automatically, and their record updates the moment each pick grades. No screenshots, no self-reported win rates.' },
-  { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded — any single loss fails the whole thing, all-push is a push, otherwise it\'s a win, same as a real sportsbook slip.' },
+  { q: 'Is SlipSurge a sportsbook? Can I place real bets here?', a: 'No. SlipSurge is a social platform for sharing and following picks. We never accept wagers or hold funds for betting. Place actual bets through a licensed sportsbook in your jurisdiction.' },
+  { q: 'How do I follow a capper\'s record?', a: 'Follow anyone from their profile. Their picks land in your feed automatically, and their record updates when each pick grades. No screenshots or self-reported win rates.' },
+  { q: 'How does parlay grading work?', a: 'Each leg grades independently against the final box score. A parlay only shows WIN once every leg has graded. Any single loss fails the whole slip, while an all-push result is graded as a push.' },
   { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. The community (posting, DMs, groups), player research, live scores, and our analytics tools (Weather Lab, Pitcher Report, Slate Breakdown, The Dugout, The Public) are unlocked across Basic, Advanced, and Ultimate.' },
 ]
 
@@ -150,13 +156,18 @@ function FaqAccordion() {
 
 export function LandingPage() {
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+    <div className={styles.page}>
       {/* Nav */}
       <header className={styles.nav}>
         <Link href="/" className={styles.brand} aria-label="SlipSurge home">
-          <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority style={{ objectFit: 'contain' }} />
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
         </Link>
+        <nav className={styles.primaryNav} aria-label="Product navigation">
+          <a href="#research">Research</a>
+          <a href="#community">Community</a>
+          <a href="#how-it-works">How it works</a>
+        </nav>
         <nav className={styles.actions} aria-label="Public navigation">
           <Link href="/pricing" className={`${styles.link} ${styles.pricing}`}>Pricing</Link>
           <Link href="/auth/login" className={styles.link}>Sign in</Link>
@@ -165,7 +176,8 @@ export function LandingPage() {
       </header>
 
       {/* Hero */}
-      <div style={{ position: 'relative', overflow: 'hidden' }}>
+      <main>
+      <div className={styles.hero}>
         <div style={{
           position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)',
           width: 700, height: 700, borderRadius: '50%',
@@ -180,23 +192,23 @@ export function LandingPage() {
 
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          style={{ position: 'relative', maxWidth: 720, margin: '0 auto', padding: '70px 24px 32px', textAlign: 'center', zIndex: 1 }}
+          className={styles.heroContent}
         >
+          <div className={styles.eyebrow}><span /> Sports research and community, connected</div>
           <h1 style={{ fontSize: 'clamp(32px, 6vw, 58px)', fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 20 }}>
-            The social hub for<br />sports & picks.
+            One place to research,<br /><span className={styles.heroAccent}>track, and talk sports.</span>
           </h1>
-          <p style={{ fontSize: 17, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 500, margin: '0 auto 32px' }}>
-            Post picks, build parlays, and see who's actually winning — every record graded automatically, every stat live.
+          <p style={{ fontSize: 17, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 560, margin: '0 auto 32px' }}>
+            Follow live markets, compare the full slate, publish picks, and see public records update automatically.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/auth/register" style={{
-              fontSize: 15, fontWeight: 800, color: 'var(--accent-fg)', background: 'var(--accent)',
-              padding: '13px 28px', borderRadius: 10, textDecoration: 'none',
-            }}>Create free account</Link>
-            <Link href="/auth/login" style={{
-              fontSize: 15, fontWeight: 700, color: 'var(--text-1)', background: 'var(--surface-2)',
-              border: '1px solid var(--border-2)', padding: '13px 28px', borderRadius: 10, textDecoration: 'none',
-            }}>Sign in</Link>
+          <div className={styles.heroActions}>
+            <Link href="/auth/register" className={styles.heroPrimary}>Create free account <ArrowRight size={16} /></Link>
+            <Link href="/pricing" className={styles.heroSecondary}>Compare memberships</Link>
+          </div>
+          <div className={styles.heroProof} aria-label="Platform highlights">
+            <span><CheckCircle2 size={14} /> Free account</span>
+            <span><CheckCircle2 size={14} /> Automatic grading</span>
+            <span><ShieldCheck size={14} /> Whop-powered memberships</span>
           </div>
         </motion.div>
 
@@ -218,23 +230,23 @@ export function LandingPage() {
       </div>
 
       {/* Flagship tool showcase */}
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px 20px', width: '100%' }}>
+      <section id="research" className={styles.section}>
         <motion.h2
           initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', textAlign: 'center', marginBottom: 4 }}
         >
           Research tools built for bettors, not analysts
         </motion.h2>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', marginBottom: 32 }}>The same tools we use ourselves — no spreadsheets, no juggling five tabs.</p>
+        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', marginBottom: 32 }}>The full slate in one workspace, without rebuilding the board across five tabs.</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)', gap: 24, alignItems: 'center', marginBottom: 20 }} className="ss-landing-grid">
           <motion.div initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
             <TierPill tier="ultimate" />
             <h3 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-1)', margin: '10px 0 8px' }}>The Dugout</h3>
             <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 16 }}>
-              Our proprietary Game Matrix — a live, sortable board of every MLB matchup tonight, with odds, splits, and pitch-mix data heat-mapped in one dense view.
+              Our proprietary Game Matrix is a live, sortable board of every MLB matchup tonight, with odds, splits, and pitch-mix data in one dense view.
             </p>
-            <Link href="/auth/register?utm_feature=dugout" style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', textDecoration: 'none' }}>Explore The Dugout →</Link>
+            <Link href="/auth/register?utm_feature=dugout" className={styles.inlineLink}>Explore The Dugout <ArrowRight size={14} /></Link>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
             <CometCard>
@@ -265,10 +277,10 @@ export function LandingPage() {
             </motion.div>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Everything else */}
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 24px 20px', width: '100%' }}>
+      <section id="community" className={styles.section}>
         <motion.h2
           initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', textAlign: 'center', marginBottom: 4 }}
@@ -293,10 +305,10 @@ export function LandingPage() {
             </motion.div>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* How it works */}
-      <div style={{ maxWidth: 900, margin: '10px auto 40px', padding: '0 24px', width: '100%' }}>
+      <section id="how-it-works" className={`${styles.section} ${styles.stepsSection}`}>
         <motion.h2
           initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', textAlign: 'center', marginBottom: 28 }}
@@ -321,7 +333,7 @@ export function LandingPage() {
             </motion.div>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Pricing teaser */}
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 24px 40px', width: '100%' }}>
@@ -329,9 +341,9 @@ export function LandingPage() {
           initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}
           style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', textAlign: 'center', marginBottom: 4 }}
         >
-          Free to start, cheap to go all in
+          Start free, then choose the tools you need
         </motion.h2>
-        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', marginBottom: 28 }}>Cancel anytime. Annual plans save more — see the full breakdown.</p>
+        <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', marginBottom: 28 }}>Cancel anytime. Annual plans save more. See the full breakdown before choosing.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {PRICING_TEASER.map(p => (
             <div key={p.tier} className="ss-card" style={{
@@ -355,7 +367,7 @@ export function LandingPage() {
           <Link href="/pricing" style={{
             fontSize: 14, fontWeight: 800, color: 'var(--text-1)', background: 'var(--surface-2)',
             border: '1px solid var(--border-2)', padding: '11px 24px', borderRadius: 10, textDecoration: 'none',
-          }}>See full pricing & annual savings</Link>
+          }}>See full pricing and annual savings</Link>
         </div>
       </div>
 
@@ -369,7 +381,7 @@ export function LandingPage() {
         </motion.h2>
         <FaqAccordion />
         <p style={{ textAlign: 'center', marginTop: 20 }}>
-          <Link href="/faq" style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textDecoration: 'none' }}>See the full FAQ →</Link>
+          <Link href="/faq" className={styles.inlineLink}>See the full FAQ <ArrowRight size={14} /></Link>
         </p>
       </div>
 
@@ -391,6 +403,8 @@ export function LandingPage() {
           }}>Create free account</Link>
         </motion.div>
       </div>
+
+      </main>
 
       {/* Footer */}
       <div style={{ borderTop: '1px solid var(--border)', padding: '20px 24px', marginTop: 'auto' }}>
