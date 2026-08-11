@@ -266,12 +266,12 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
           { icon: <TrendingUp size={14} />, label: 'Avg Win Rate', value: avgWin > 0 ? `${avgWin}%` : '--' },
           { icon: <Flame size={14} />, label: 'Active Bettors', value: String(activeCnt) },
         ].map(({ icon, label, value }) => (
-          <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', marginBottom: 6 }}>
+          <div key={label} className={styles.statCard}>
+            <div className={styles.statLabel}>
               {icon}
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+              <span>{label}</span>
             </div>
-            <p style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-1)' }}>{value}</p>
+            <p className={styles.statValue}>{value}</p>
           </div>
         ))}
       </div>

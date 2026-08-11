@@ -110,18 +110,26 @@
   .heroContent h1 { font-size: 34px !important; }
   .heroContent p { font-size: 14px !important; }
   .planGuide {
-    width: calc(100% + 20px);
-    margin-left: -10px;
-    padding: 8px 10px;
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    border-inline: 0;
-    border-radius: 0;
+    width: 100%;
+    margin: 18px auto 24px;
+    padding: 7px;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    overflow: visible;
+    border-radius: 14px;
   }
-  .planGuide::-webkit-scrollbar { display: none; }
-  .planGuide a { min-width: min(78vw, 270px); scroll-snap-align: start; }
+  .planGuide a {
+    min-width: 0;
+    min-height: 54px;
+    padding: 9px 11px;
+    border-color: color-mix(in srgb, var(--border-2) 55%, transparent);
+    background: color-mix(in srgb, var(--surface-2) 68%, transparent);
+  }
+  .planGuide span {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
   .cards { grid-template-columns: 1fr; gap: 14px; }
   .intervalControl { width: 100%; justify-content: center; padding-inline: 11px; }
   .billingTrust { width: 100%; border-radius: 12px; text-align: center; }

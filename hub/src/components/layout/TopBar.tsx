@@ -270,7 +270,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           hide on desktop. */}
       {onMenuClick && (
         <button onClick={onMenuClick} className="flex md:hidden items-center justify-center" style={{
-          width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+          width: 42, height: 42, borderRadius: 11, flexShrink: 0,
           background: 'transparent', border: '1px solid var(--border)',
           color: 'var(--text-2)', cursor: 'pointer',
         }}

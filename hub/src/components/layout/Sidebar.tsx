@@ -187,7 +187,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         {!isCollapsed && (
           <button
             onClick={e => { e.preventDefault(); onClose() }}
-            className="md:hidden"
+            className="ss-sidebar-close md:hidden"
             style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4, flexShrink: 0 }}
             aria-label="Close menu"
           >
@@ -299,7 +299,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
-        <Link href="/settings" title={isCollapsed ? 'Settings & Help' : undefined} style={{
+        <Link href="/settings" className="ss-sidebar-settings" title={isCollapsed ? 'Settings & Help' : undefined} style={{
           display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
           justifyContent: isCollapsed ? 'center' : 'flex-start',
           padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,
