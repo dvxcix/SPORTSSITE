@@ -26,7 +26,7 @@ export const maxDuration = 300
 // own backend tolerates multiple simultaneous sessions on one signed-in
 // account cleanly; watch the first real multi-game day's Browserbase
 // replays for unexpected logouts before trusting this at full concurrency.
-async function postImport(json: any, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
+async function postImport(json: unknown, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
   const res = await fetch(`${PLATFORM_URL}/api/admin/pikkit-import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -59,7 +59,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       await bb.page.waitForTimeout(3000)
       clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
     }
-    if (!clicked) return { gameKey: g.gameKey, error: `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}` }
+    if (!clicked) return { gameKey: g.gameKey, skipped: true, error: `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}` }
     // "More wagers" navigates to a whole new page (the game's event page),
     // not just an in-place DOM update — give it real time to load.
     await bb.page.waitForTimeout(3000)
@@ -119,14 +119,26 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       // not existing yet for this game look identical from the outside
       // otherwise). Not run on every cron invocation — this is extra page
       // read time on top of an already long scrape.
-      return { gameKey: g.gameKey, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked }
+      return { gameKey: g.gameKey, skipped: true, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked }
     }
 
     if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, dryRun: true, scrape }
 
     const imported = await postImport(scrape, date, g.homeTeam, g.awayTeam, g.gameKey)
+    if (!imported.ok) {
+      console.error('[scrape-pikkit] import failed', {
+        gameKey: g.gameKey,
+        status: imported.status,
+        marketsScraped: marketCount,
+      })
+      return { gameKey: g.gameKey, marketsScraped: marketCount, error: 'pick import failed', imported }
+    }
     return { gameKey: g.gameKey, marketsScraped: marketCount, imported }
-  } catch {
+  } catch (error) {
+    console.error('[scrape-pikkit] scrape failed', {
+      gameKey: g.gameKey,
+      type: error instanceof Error ? error.name : typeof error,
+    })
     return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
     await bb.close()
@@ -154,7 +166,9 @@ export async function GET(req: Request) {
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
     const result = await scrapeOneGame(g, date, legIndexFor(g), contextId, dryRun)
-    return NextResponse.json({ date, gamePk, result })
+    const failed = ('error' in result && !('skipped' in result && result.skipped))
+      || ('imported' in result && result.imported?.ok === false)
+    return NextResponse.json({ date, gamePk, result }, { status: failed ? 502 : 200 })
   }
 
   const results = await fanOutToSelf('/api/cron/scrape-pikkit', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
@@ -169,5 +183,6 @@ export async function GET(req: Request) {
     await checkPikkitAuthAndAlert(contextId).catch(e => console.error('[scrape-pikkit] auth alert check failed', { type: e instanceof Error ? e.name : typeof e }))
   }
 
-  return NextResponse.json({ date, games: games.length, results })
+  const failed = results.filter(result => result.error || result.status >= 400 || result.body?.result?.imported?.ok === false)
+  return NextResponse.json({ date, games: games.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
 }

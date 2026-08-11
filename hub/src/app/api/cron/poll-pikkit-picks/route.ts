@@ -30,16 +30,41 @@ async function run(req: Request) {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
         signal: AbortSignal.timeout(55_000),
       })
-      return { gamePk: g.gamePk, status: res.status }
+      const body = await res.json().catch(() => null)
+      const ok = res.ok && body?.result?.imported?.ok !== false
+      return {
+        gamePk: g.gamePk,
+        status: res.status,
+        ok,
+        skipped: body?.result?.skipped === true,
+        error: ok ? undefined : 'scrape or import failed',
+      }
     })
   )
+
+  const normalizedResults = results.map((result, index) => result.status === 'fulfilled'
+    ? result.value
+    : { gamePk: pregame[index].gamePk, status: 502, ok: false, skipped: false, error: 'scrape request failed' })
+  const failed = normalizedResults.filter(result => !result.ok)
+
+  if (failed.length) {
+    console.error('[poll-pikkit-picks] one or more games failed', {
+      date,
+      pregame: pregame.length,
+      failed: failed.length,
+      gamePks: failed.map(result => result.gamePk),
+    })
+  }
 
   return NextResponse.json({
     date,
     games: games.length,
     pregame: pregame.length,
-    results: results.map((r, i) => r.status === 'fulfilled' ? r.value : { gamePk: pregame[i].gamePk, error: 'scrape failed' }),
-  })
+    succeeded: normalizedResults.length - failed.length,
+    skipped: normalizedResults.filter(result => result.skipped).length,
+    failed: failed.length,
+    results: normalizedResults,
+  }, { status: failed.length ? 502 : 200 })
 }
 
 export const GET = withPipelineHealth('poll-pikkit-picks', run, { allowSecondarySecret: true })

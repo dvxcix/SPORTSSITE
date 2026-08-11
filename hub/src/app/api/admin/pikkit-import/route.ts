@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { safeApiError } from '@/lib/safeApiError'
+import { isValidPikkitGameMetadata } from '@/lib/pikkitImportValidation'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 // Was hardcoded here (and in api/dugout/data/route.ts) — a live service_role
@@ -41,6 +42,19 @@ const MARKET_MAP: Record<string, string> = {
   strike_outs: 'strikouts',
 }
 
+type PikkitPickRow = {
+  player_name: string
+  game_date: string
+  market: string
+  prop_type: string
+  picks: number
+  pick_count: number
+  home_team: string
+  away_team: string
+  game_key: string
+  updated_at: string
+}
+
 // A real admin session (cookie-based) OR the same CRON_SECRET bearer token
 // the /api/cron/* jobs already use — the latter lets the scrape-books
 // automation call this route without ever holding a real login session/
@@ -71,7 +85,13 @@ export async function POST(req: Request) {
   if (!json || !gameDate || !homeTeam || !awayTeam) {
     return NextResponse.json({ error: 'json, gameDate, homeTeam, and awayTeam are all required — pick a game from the dropdown' }, { status: 400 })
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(gameDate)) || !/^[A-Za-z0-9]{2,5}$/.test(String(homeTeam)) || !/^[A-Za-z0-9]{2,5}$/.test(String(awayTeam)) || (gameKey && !/^[A-Za-z0-9]+@[A-Za-z0-9]+(?:-G\d+)?$/.test(String(gameKey)))) {
+  if (!isValidPikkitGameMetadata({ gameDate, homeTeam, awayTeam, gameKey })) {
+    console.warn('[admin-pikkit-import] rejected game metadata', {
+      gameDate: typeof gameDate === 'string' ? gameDate : typeof gameDate,
+      gameKey: typeof gameKey === 'string' ? gameKey : typeof gameKey,
+      homeTeamType: typeof homeTeam,
+      awayTeamType: typeof awayTeam,
+    })
     return NextResponse.json({ error: 'Invalid game metadata' }, { status: 400 })
   }
 
@@ -92,7 +112,7 @@ export async function POST(req: Request) {
   // both). The game picker already resolves the exact per-leg key
   // ("TB@BOS" / "TB@BOS-G2") the same way Dugout's own game tabs do —
   // stamp every row with it so the two legs get separate storage slots.
-  const rows: any[] = []
+  const rows: PikkitPickRow[] = []
   const marketSummary: Record<string, number> = {}
   for (const [shortKey, players] of Object.entries(parsed.props)) {
     const market = (MARKET_MAP[shortKey] ?? shortKey).slice(0, 80)
@@ -129,8 +149,18 @@ export async function POST(req: Request) {
     signal: AbortSignal.timeout(30_000),
   })
   if (!res.ok) {
+    console.error('[admin-pikkit-import] database upsert failed', {
+      status: res.status,
+      gameKey: gameKey ?? null,
+      rows: rows.length,
+    })
     return safeApiError('admin-pikkit-import', { status: res.status }, 'Import failed', 502)
   }
 
+  console.info('[admin-pikkit-import] imported picks', {
+    gameKey: gameKey ?? null,
+    rows: rows.length,
+    markets: Object.keys(marketSummary).length,
+  })
   return NextResponse.json({ ok: true, rowsImported: rows.length, marketSummary, gameKey: gameKey ?? null })
 }
