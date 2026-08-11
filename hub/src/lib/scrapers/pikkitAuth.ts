@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { openSession } from '@/lib/browserbase'
+import { brandedEmailHtml, sendEmail } from '@/lib/email'
 
 // scrape-pikkit's per-game "game link not found ... check the persisted
 // context is still signed in" error is a GUESS, not a confirmed diagnosis —
@@ -36,21 +37,9 @@ async function isPikkitSignedIn(contextId: string): Promise<boolean> {
 }
 
 async function sendAuthAlertEmail(): Promise<void> {
-  // Same env var naming mismatch as the other three Resend-based email
-  // routes (notify-welcome, notify-password-changed, email/send-notification)
-  // — the real Vercel vars are EMAIL_RESEND_API_KEY / EMAIL_RESEND_EMAIL_DOMAIN,
-  // not the plain RESEND_API_KEY this read, so this alert has never actually
-  // been able to send.
-  const apiKey = process.env.EMAIL_RESEND_API_KEY
-  if (!apiKey) {
-    console.error('[pikkitAuth] EMAIL_RESEND_API_KEY not configured — cannot send auth-failure alert')
-    return
-  }
-  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
-
   const admin = createAdminClient()
   const { data: admins } = await admin.from('users').select('email').eq('account_type', 'admin')
-  const recipients = (admins ?? []).map(a => a.email).filter(Boolean)
+  const recipients = (admins ?? []).map(a => a.email).filter((email): email is string => Boolean(email))
   if (!recipients.length) {
     console.error('[pikkitAuth] no admin emails found — cannot send auth-failure alert')
     return
@@ -59,22 +48,20 @@ async function sendAuthAlertEmail(): Promise<void> {
   const text = 'Pikkit has signed out of the persisted Browserbase context — scrape-pikkit will keep failing until it\'s manually re-authenticated.'
   const instructions = 'Sign in again from /admin (call GET /api/admin/pikkit-context while signed in as admin), open the returned Live View URL, log into Pikkit by hand, then update PIKKIT_CONTEXT_ID in Vercel to the new context id and redeploy.'
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: `SlipSurge <team@${fromDomain}>`,
-      to: recipients,
-      subject: 'Pikkit scraper signed out — action needed',
-      text: `${text}\n\n${instructions}`,
-      html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${text}</p><p>${instructions}</p></div>`,
+  const sent = await sendEmail({
+    to: recipients,
+    subject: 'Pikkit scraper signed out — action needed',
+    text: `${text}\n\n${instructions}`,
+    html: brandedEmailHtml({
+      eyebrow: 'Importer alert',
+      heading: 'Pikkit needs to be reconnected',
+      preheader: 'The persisted Pikkit session has signed out.',
+      bodyHtml: '<p style="margin:0 0 14px;">The persisted Browserbase session is signed out, so Pikkit imports will remain paused until an admin reconnects it.</p><div style="padding:14px 16px;border:1px solid #2B3940;border-radius:12px;background:#0C1519;color:#C9F9FF;text-align:left;">Create a fresh context from the admin panel, sign in through Live View, then replace <strong>PIKKIT_CONTEXT_ID</strong> in Vercel and redeploy.</div>',
+      ctaLabel: 'Open admin panel',
+      ctaUrl: 'https://www.slipsurge.com/admin',
     }),
-    signal: AbortSignal.timeout(15_000),
-  }).catch(e => {
-    console.error('[pikkitAuth] Resend send failed', { type: e instanceof Error ? e.name : typeof e })
-    return null
   })
-  if (res && !res.ok) console.error('[pikkitAuth] Resend send failed', { status: res.status })
+  if (!sent) console.error('[pikkitAuth] auth-failure email was not delivered to Resend')
 }
 
 // Called from scrape-pikkit's sweep handler only when EVERY game in the

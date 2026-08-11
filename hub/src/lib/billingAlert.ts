@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { postAlert } from '@/lib/discord'
+import { brandedEmailHtml, sendEmail } from '@/lib/email'
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -33,32 +34,24 @@ export async function alertUnexpectedChargeAfterCancel(admin: SupabaseClient, pa
 async function sendUnexpectedChargeEmail(admin: SupabaseClient, params: {
   userId: string; email: string | null; membershipId: string | null; planTier: string
 }) {
-  const apiKey = process.env.EMAIL_RESEND_API_KEY
-  if (!apiKey) {
-    console.error('[billing] EMAIL_RESEND_API_KEY not configured — cannot send unexpected-charge alert')
-    return
-  }
-  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
   const { data: admins } = await admin.from('users').select('email').eq('account_type', 'admin')
-  const recipients = (admins ?? []).map(a => a.email).filter(Boolean)
+  const recipients = (admins ?? []).map(a => a.email).filter((email): email is string => Boolean(email))
   if (!recipients.length) return
 
   const text = `${params.email ?? params.userId} (user ${params.userId}) had tier_cancel_at_period_end already set to true, and just got charged for ${params.planTier} anyway (membership ${params.membershipId ?? 'unknown'}). Likely needs a manual refund in Whop — check their membership history there directly.`
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: `SlipSurge <team@${fromDomain}>`,
-      to: recipients,
-      subject: 'Member charged after cancelling — may need a refund',
-      text,
-      html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${escapeHtml(text)}</p></div>`,
+  const sent = await sendEmail({
+    to: recipients,
+    subject: 'Member charged after cancelling — may need a refund',
+    text,
+    html: brandedEmailHtml({
+      eyebrow: 'Billing alert',
+      heading: 'A payment needs review',
+      preheader: 'A member may have been charged after cancelling.',
+      bodyHtml: `<p style="margin:0 0 14px;">A payment landed after this member had already asked to cancel.</p><div style="padding:14px 16px;border:1px solid #4A2629;border-radius:12px;background:#1A1012;color:#FCA5A5;text-align:left;"><strong>${escapeHtml(params.email ?? params.userId)}</strong><br />Plan: ${escapeHtml(params.planTier)}<br />Membership: ${escapeHtml(params.membershipId ?? 'unknown')}</div><p style="margin:14px 0 0;">Review the membership history before issuing a refund or changing access.</p>`,
+      ctaLabel: 'Open admin panel',
+      ctaUrl: 'https://www.slipsurge.com/admin',
     }),
-    signal: AbortSignal.timeout(15_000),
-  }).catch(e => {
-    console.error('[billing] Resend send failed', { type: e instanceof Error ? e.name : typeof e })
-    return null
   })
-  if (res && !res.ok) console.error('[billing] Resend send failed', { status: res.status })
+  if (!sent) console.error('[billing] unexpected-charge email was not delivered to Resend')
 }

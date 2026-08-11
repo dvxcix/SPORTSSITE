@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { postAlert } from '@/lib/discord'
+import { brandedEmailHtml, sendEmail } from '@/lib/email'
 
 // Same debounce shape as pikkitAuth.ts's checkPikkitAuthAndAlert — a
 // key/value row in site_settings, set when an alert goes out and cleared
@@ -14,15 +15,8 @@ const ALERT_DEBOUNCE_KEY = 'pitch_log_stale_alert_sent_at'
 const STALE_THRESHOLD_DAYS = 2
 
 async function sendStalenessAlertEmail(admin: SupabaseClient, latestDate: string, expectedDate: string, staleDays: number) {
-  const apiKey = process.env.EMAIL_RESEND_API_KEY
-  if (!apiKey) {
-    console.error('[pitchLogAlert] EMAIL_RESEND_API_KEY not configured — cannot send staleness alert')
-    return
-  }
-  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
-
   const { data: admins } = await admin.from('users').select('email').eq('account_type', 'admin')
-  const recipients = (admins ?? []).map(a => a.email).filter(Boolean)
+  const recipients = (admins ?? []).map(a => a.email).filter((email): email is string => Boolean(email))
   if (!recipients.length) {
     console.error('[pitchLogAlert] no admin emails found — cannot send staleness alert')
     return
@@ -31,22 +25,20 @@ async function sendStalenessAlertEmail(admin: SupabaseClient, latestDate: string
   const text = `player_pitch_log is ${staleDays} days behind — latest data is ${latestDate}, expected through ${expectedDate}. Last N Starts, the Statcast section, and the Paper/matchup-edge score are all computed off this table, so they're currently showing stale numbers for real games that have already happened.`
   const instructions = `The daily savant-sync-pitch-log cron has its own multi-day recheck/retry logic and hasn't caught up on its own — check Vercel's runtime logs for that route, and see hub/scripts/diagnose-pitch-log-gap.mjs for a script that replicates the sync directly against production and reports exactly where it fails (a prior incident traced this to Savant treating Vercel's serverless IPs differently than a normal connection).`
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: `SlipSurge <team@${fromDomain}>`,
-      to: recipients,
-      subject: `Pitch log data is ${staleDays} days stale — action needed`,
-      text: `${text}\n\n${instructions}`,
-      html: `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111;"><p>${text}</p><p>${instructions}</p></div>`,
+  const sent = await sendEmail({
+    to: recipients,
+    subject: `Pitch log data is ${staleDays} days stale — action needed`,
+    text: `${text}\n\n${instructions}`,
+    html: brandedEmailHtml({
+      eyebrow: 'Pipeline health',
+      heading: 'Pitch data needs attention',
+      preheader: `Pitch log data is ${staleDays} days behind.`,
+      bodyHtml: `<div style="padding:14px 16px;border:1px solid #4A2629;border-radius:12px;background:#1A1012;color:#FCA5A5;"><strong>${staleDays} days behind</strong><br />Latest: ${latestDate}<br />Expected: ${expectedDate}</div><p style="margin:14px 0 0;">Last N Starts, Statcast, and Paper matchup scores may be stale. The automated retry window did not catch up, so runtime logs need review.</p>`,
+      ctaLabel: 'Review pipeline health',
+      ctaUrl: 'https://www.slipsurge.com/admin/pipeline-health',
     }),
-    signal: AbortSignal.timeout(15_000),
-  }).catch(e => {
-    console.error('[pitchLogAlert] Resend send failed', { type: e instanceof Error ? e.name : typeof e })
-    return null
   })
-  if (res && !res.ok) console.error('[pitchLogAlert] Resend send failed', { status: res.status })
+  if (!sent) console.error('[pitchLogAlert] staleness email was not delivered to Resend')
 }
 
 // Called at the end of every savant-sync-pitch-log run, after it's had its

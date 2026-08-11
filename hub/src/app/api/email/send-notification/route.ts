@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 import { hasBearerSecret } from '@/lib/requestAuth'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import { brandedEmailHtml } from '@/lib/email'
 
 export const revalidate = 0
 
@@ -35,13 +36,9 @@ export async function POST(request: Request) {
   const authError = requireWebhookAuth(request)
   if (authError) return authError
 
-  // Reported live: this has been silently failing for every user since at
-  // least 2026-07-13 — the actual Vercel env vars are EMAIL_RESEND_API_KEY /
-  // EMAIL_RESEND_EMAIL_DOMAIN, not the plain RESEND_API_KEY this (and the
-  // other two Resend-based email routes) read, so the key was never found.
-  const apiKey = process.env.EMAIL_RESEND_API_KEY
-  if (!apiKey) return NextResponse.json({ ok: false, skipped: 'EMAIL_RESEND_API_KEY not configured' })
-  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
+  const apiKey = process.env.EMAIL_RESEND_API_KEY || process.env.RESEND_API_KEY
+  if (!apiKey) return NextResponse.json({ ok: false, skipped: 'Resend API key not configured' })
+  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || process.env.RESEND_EMAIL_DOMAIN || 'slipsurge.com'
 
   const body = await request.json().catch(() => null)
   const notificationId = body?.notification_id as string | undefined
@@ -123,15 +120,11 @@ export async function POST(request: Request) {
         to: [recipient.email],
         subject: text,
         text: `${text}\n\n${url}\n\nManage which notifications email you: https://www.slipsurge.com/settings/notifications`,
-        html: `<table width="100%" cellpadding="0" cellspacing="0" style="background:#06070A;padding:40px 0;font-family:-apple-system,Segoe UI,sans-serif;">
-<tr><td align="center">
-<table width="480" cellpadding="0" cellspacing="0" style="background:#0B0D12;border:1px solid #1A1D24;border-radius:16px;overflow:hidden;">
-<tr><td style="padding:32px 32px 0;text-align:center;">
-<img src="https://www.slipsurge.com/logo.png" width="40" height="40" style="display:block;margin:0 auto 12px;" alt="SlipSurge" />
-<div style="font-size:18px;font-weight:900;color:#F5F5F5;letter-spacing:-0.02em;">Slip<span style="color:#B4FF4D;">Surge</span></div>
-</td></tr>
-<tr><td style="padding:28px 32px 8px;text-align:center;">
-${safeRichImage ? (
+        html: brandedEmailHtml({
+          eyebrow: 'New notification',
+          heading: 'Something new on SlipSurge',
+          preheader: text,
+          bodyHtml: `${safeRichImage ? (
   notification.type === 'lineup_confirmed'
     // object-fit is unreliable across email clients (Outlook ignores it
     // outright), and a team logo cropped to fill a circle via cover just
@@ -140,18 +133,11 @@ ${safeRichImage ? (
     // around it, works everywhere without depending on object-fit at all.
     ? `<table role="presentation" width="56" height="56" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;border-radius:50%;background:#1A1D24;"><tr><td align="center" valign="middle"><img src="${safeRichImage}" width="36" style="display:block;" alt="" /></td></tr></table>`
     : `<img src="${safeRichImage}" width="56" height="56" style="display:block;margin:0 auto 14px;border-radius:50%;object-fit:cover;" alt="" />`
-) : ''}
-<p style="margin:0;font-size:15px;line-height:1.6;color:#F5F5F5;">${safeText}</p>
-</td></tr>
-<tr><td style="padding:16px 32px 32px;text-align:center;">
-<a href="${safeUrl}" style="display:inline-block;background:#B4FF4D;color:#0B1600;font-weight:800;font-size:14px;padding:12px 32px;border-radius:99px;text-decoration:none;">View on SlipSurge</a>
-</td></tr>
-<tr><td style="padding:0 32px 28px;text-align:center;">
-<a href="https://www.slipsurge.com/settings/notifications" style="font-size:12px;color:#6B7280;text-decoration:underline;">Manage notification emails</a>
-</td></tr>
-</table>
-</td></tr>
-</table>`,
+) : ''}<p style="margin:0;font-size:15px;line-height:1.6;color:#F5F5F5;">${safeText}</p>`,
+          ctaLabel: 'View on SlipSurge',
+          ctaUrl: safeUrl,
+          footerHtml: '<a href="https://www.slipsurge.com/settings/notifications" style="font-size:11px;color:#7D8796;text-decoration:underline;">Manage notification emails</a>',
+        }),
       }),
       signal: AbortSignal.timeout(15_000),
     })

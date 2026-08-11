@@ -1,24 +1,21 @@
-// Shared Resend sender + branded shell, extracted from the near-identical
-// fetch('https://api.resend.com/emails') calls already duplicated across
-// api/email/send-notification, api/settings/notify-password-changed, and
-// api/onboarding/notify-welcome — every new transactional email (support
-// actions below) reuses this instead of copy-pasting the Resend call and
-// HTML table shell a fourth/fifth/sixth time.
+// Shared Resend sender and responsive branded shell. Transactional and
+// operational email paths use this instead of maintaining separate sender
+// configuration and drifting visual templates.
 export async function sendEmail({ to, subject, text, html }: {
-  to: string; subject: string; text: string; html: string
+  to: string | string[]; subject: string; text: string; html: string
 }): Promise<boolean> {
-  const apiKey = process.env.EMAIL_RESEND_API_KEY
+  const apiKey = process.env.EMAIL_RESEND_API_KEY || process.env.RESEND_API_KEY
   if (!apiKey) {
-    console.error('[email] EMAIL_RESEND_API_KEY not configured')
+    console.error('[email] Resend API key not configured')
     return false
   }
-  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || 'slipsurge.com'
+  const fromDomain = process.env.EMAIL_RESEND_EMAIL_DOMAIN || process.env.RESEND_EMAIL_DOMAIN || 'slipsurge.com'
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: `SlipSurge <team@${fromDomain}>`, to: [to], subject, text, html }),
+      body: JSON.stringify({ from: `SlipSurge <team@${fromDomain}>`, to: Array.isArray(to) ? to : [to], subject, text, html }),
       signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) {
@@ -32,29 +29,52 @@ export async function sendEmail({ to, subject, text, html }: {
   }
 }
 
-// Same dark-mode card shell every existing Resend email in this codebase
-// already uses (send-notification, notify-password-changed) — kept as one
-// shared builder so new transactional emails match without re-typing the
-// inline styles.
-export function brandedEmailHtml({ heading, bodyHtml, ctaLabel, ctaUrl, footerHtml }: {
-  heading: string; bodyHtml: string; ctaLabel?: string; ctaUrl?: string; footerHtml?: string
+// Table-based and inline-styled for dependable rendering in Gmail, Outlook,
+// Apple Mail, and mobile clients while preserving SlipSurge's dark visual
+// system and high-contrast CTA treatment.
+export function brandedEmailHtml({ heading, bodyHtml, ctaLabel, ctaUrl, footerHtml, preheader, eyebrow }: {
+  heading: string
+  bodyHtml: string
+  ctaLabel?: string
+  ctaUrl?: string
+  footerHtml?: string
+  preheader?: string
+  eyebrow?: string
 }): string {
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#06070A;padding:40px 0;font-family:-apple-system,Segoe UI,sans-serif;">
-<tr><td align="center">
-<table width="480" cellpadding="0" cellspacing="0" style="background:#0B0D12;border:1px solid #1A1D24;border-radius:16px;overflow:hidden;">
-<tr><td style="padding:32px 32px 0;text-align:center;">
-<img src="https://www.slipsurge.com/logo.png" width="40" height="40" style="display:block;margin:0 auto 12px;" alt="SlipSurge" />
-<div style="font-size:18px;font-weight:900;color:#F5F5F5;letter-spacing:-0.02em;">Slip<span style="color:#B4FF4D;">Surge</span></div>
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="supported-color-schemes" content="dark" />
+<style>@media only screen and (max-width:560px){.email-shell{width:100%!important}.email-pad{padding-left:22px!important;padding-right:22px!important}}</style>
+</head>
+<body style="margin:0;padding:0;background:#06070A;color:#F5F5F5;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>` : ''}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#06070A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" class="email-shell" width="520" cellpadding="0" cellspacing="0" style="width:520px;max-width:100%;background:#0B0D12;border:1px solid #242A33;border-radius:20px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.42);">
+<tr><td style="height:3px;background:linear-gradient(90deg,#B4FF4D 0%,#5EEAD4 55%,#22D3EE 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td class="email-pad" style="padding:32px 34px 0;text-align:center;">
+<img src="https://www.slipsurge.com/logo.png" width="46" height="46" style="display:block;margin:0 auto 12px;border:0;border-radius:14px;" alt="SlipSurge" />
+<div style="font-size:19px;font-weight:900;color:#F8FAFC;letter-spacing:-.02em;">Slip<span style="color:#B4FF4D;">Surge</span></div>
 </td></tr>
-<tr><td style="padding:28px 32px 8px;text-align:center;">
-<h1 style="margin:0 0 8px;font-size:22px;font-weight:900;color:#F5F5F5;">${heading}</h1>
-<p style="margin:0;font-size:14px;line-height:1.6;color:#9CA3AF;">${bodyHtml}</p>
+<tr><td class="email-pad" style="padding:28px 34px 10px;text-align:center;">
+${eyebrow ? `<div style="margin:0 0 10px;font-size:11px;line-height:1.4;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#B4FF4D;">${eyebrow}</div>` : ''}
+<h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;font-weight:900;color:#F8FAFC;letter-spacing:-.025em;">${heading}</h1>
+<div style="margin:0;font-size:14px;line-height:1.7;color:#AAB2BF;">${bodyHtml}</div>
 </td></tr>
-${ctaLabel && ctaUrl ? `<tr><td style="padding:16px 32px 32px;text-align:center;">
-<a href="${ctaUrl}" style="display:inline-block;background:#B4FF4D;color:#0B1600;font-weight:800;font-size:14px;padding:12px 32px;border-radius:99px;text-decoration:none;">${ctaLabel}</a>
+${ctaLabel && ctaUrl ? `<tr><td class="email-pad" style="padding:18px 34px 32px;text-align:center;">
+<a href="${ctaUrl}" style="display:inline-block;background:#B4FF4D;color:#0B1600;font-weight:900;font-size:14px;line-height:1;padding:14px 30px;border:1px solid #C7FF78;border-radius:999px;text-decoration:none;box-shadow:0 8px 28px rgba(180,255,77,.18);">${ctaLabel}</a>
 </td></tr>` : ''}
-${footerHtml ? `<tr><td style="padding:0 32px 28px;text-align:center;">${footerHtml}</td></tr>` : ''}
-</table>
+<tr><td class="email-pad" style="padding:${ctaLabel && ctaUrl ? '0' : '18px'} 34px 28px;text-align:center;border-top:1px solid #1B2028;">
+${footerHtml || '<p style="margin:0;font-size:11px;line-height:1.6;color:#687181;">SlipSurge · Built for sharper sports decisions</p>'}
 </td></tr>
-</table>`
+</table>
+<p style="margin:16px 0 0;font-size:11px;line-height:1.5;color:#596170;">© ${new Date().getFullYear()} SlipSurge</p>
+</td></tr>
+</table>
+</body>
+</html>`
 }
