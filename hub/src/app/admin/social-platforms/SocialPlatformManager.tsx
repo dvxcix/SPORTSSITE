@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
 import { Trash2, Plus, Pencil } from 'lucide-react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 type Platform = { id: string; key: string; name: string; icon_url: string; url_template: string | null; sort_order: number }
 const KEY_RE = /^[a-z0-9_]{2,30}$/
@@ -20,6 +21,7 @@ export function SocialPlatformManager({ userId, initialPlatforms }: { userId: st
   const [editingId, setEditingId] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
+  const { confirm } = useFeedback()
 
   async function create() {
     const normalizedKey = key.trim().toLowerCase()
@@ -64,7 +66,7 @@ export function SocialPlatformManager({ userId, initialPlatforms }: { userId: st
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this platform? Anyone who filled in a handle for it will just stop showing that badge.')) return
+    if (!await confirm({ title: 'Delete social platform?', message: 'Member handles will be preserved, but this platform badge will stop appearing.', confirmLabel: 'Delete platform', tone: 'warning' })) return
     const { error: err } = await supabase.from('social_platforms').delete().eq('id', id)
     if (err) { setError(err.message); return }
     setPlatforms(p => p.filter(x => x.id !== id))

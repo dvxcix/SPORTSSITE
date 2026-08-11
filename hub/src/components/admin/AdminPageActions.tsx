@@ -4,26 +4,28 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Trash2 } from 'lucide-react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 export function AdminPageActions({ pageId, isVerified }: { pageId: string; isVerified: boolean }) {
   const supabase = createClient()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { confirm, notify } = useFeedback()
 
   async function verify() {
     setLoading(true)
     const { error } = await supabase.from('pages').update({ is_verified: !isVerified }).eq('id', pageId)
     setLoading(false)
-    if (error) { alert(`Could not update: ${error.message}`); return }
+    if (error) { notify({ title: 'Update failed', message: error.message, tone: 'error' }); return }
     router.refresh()
   }
 
   async function del() {
-    if (!confirm('Delete this page?')) return
+    if (!await confirm({ title: 'Delete page?', message: 'This community page will be permanently removed.', confirmLabel: 'Delete page', tone: 'error' })) return
     setLoading(true)
     const { error } = await supabase.from('pages').delete().eq('id', pageId)
     setLoading(false)
-    if (error) { alert(`Could not delete: ${error.message}`); return }
+    if (error) { notify({ title: 'Delete failed', message: error.message, tone: 'error' }); return }
     router.refresh()
   }
 

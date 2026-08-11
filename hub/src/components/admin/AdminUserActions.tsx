@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 export function AdminUserActions({ userId, currentType, isVerified, bannedUntil, adminGrantedTier }: {
   userId: string; currentType: string; isVerified: boolean; bannedUntil?: string | null
@@ -9,6 +10,7 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil,
 }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { confirm, notify } = useFeedback()
   const isBanned = !!bannedUntil && new Date(bannedUntil) > new Date()
 
   // users.UPDATE/DELETE RLS only allows auth.uid() = id — a direct
@@ -25,7 +27,7 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil,
         body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { alert(data?.error || 'Action failed'); return }
+      if (!res.ok) { notify({ title: 'Action failed', message: data?.error || 'Please try again.', tone: 'error' }); return }
       router.refresh()
     } finally {
       setLoading(false)
@@ -38,8 +40,8 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil,
     else callManage({ userId, action: 'grantTier', value })
   }
   const toggleVerify = () => callManage({ userId, action: 'verify', value: !isVerified })
-  const deleteUser = () => {
-    if (!confirm('Permanently delete this user? This cannot be undone.')) return
+  const deleteUser = async () => {
+    if (!await confirm({ title: 'Permanently delete user?', message: 'This removes the account and cannot be undone.', confirmLabel: 'Delete user', tone: 'error' })) return
     callManage({ userId, action: 'delete' })
   }
 
@@ -54,7 +56,7 @@ export function AdminUserActions({ userId, currentType, isVerified, bannedUntil,
       body: JSON.stringify({ userId, ban: !isBanned }),
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) alert(data?.error || 'Action failed')
+    if (!res.ok) notify({ title: 'Action failed', message: data?.error || 'Please try again.', tone: 'error' })
     router.refresh()
     setLoading(false)
   }

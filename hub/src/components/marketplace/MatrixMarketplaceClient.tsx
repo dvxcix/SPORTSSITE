@@ -25,6 +25,8 @@ import { FollowButton } from "@/components/social/FollowButton";
 import { UserBadges } from "@/components/social/UserBadges";
 import type { Badge } from "@/lib/badges";
 import styles from "./MatrixMarketplace.module.css";
+import { useFeedback } from "@/components/ui/FeedbackProvider";
+import { trackProductEvent } from "@/lib/productAnalytics";
 
 export type Snapshot = {
   version: 1;
@@ -168,6 +170,7 @@ export function MatrixMarketplaceClient({
   const [authorLabel, setAuthorLabel] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(Boolean(initialShareMatrixId));
   const [toast, setToast] = useState<string | null>(null);
+  const { confirm } = useFeedback();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -213,16 +216,17 @@ export function MatrixMarketplaceClient({
       return setToast(body.error || "Could not add this Matrix.");
     window.dispatchEvent(new Event("ss:matrices-updated"));
     setToast(`${listing.snapshot.name} was added to your Matrices.`);
+    trackProductEvent("matrix_marketplace_imported", { matrix_type: listing.snapshot.matrix_type });
     load();
   }
 
   async function removeListing(listing: Listing) {
-    if (
-      !confirm(
-        `Remove “${listing.title}” from the Marketplace? Your original Matrix stays saved.`,
-      )
-    )
-      return;
+    if (!await confirm({
+      title: "Remove Marketplace listing?",
+      message: `“${listing.title}” will be removed from the Marketplace. Your original Matrix stays saved.`,
+      confirmLabel: "Remove listing",
+      tone: "warning",
+    })) return;
     const response = await fetch(`/api/matrix-marketplace/${listing.id}`, {
       method: "DELETE",
     });
@@ -595,6 +599,7 @@ function PublishMatrixModal({
     setSaving(false);
     if (!response.ok)
       return setError(body.error || "Could not publish this Matrix.");
+    trackProductEvent("matrix_marketplace_published", { matrix_type: selected.matrix_type, tag_count: tags.length });
     onPublished();
   }
 

@@ -25,6 +25,7 @@ import { EmojiPicker } from './EmojiPicker'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { useCustomEmojis } from '@/lib/emoji'
 import { UserBadges } from './UserBadges'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 interface PostCardClientProps {
   post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
@@ -108,6 +109,7 @@ function timeAgo(date: string) {
 export function PostCardClient({ post: initialPost, index = 0, detail = false }: PostCardClientProps) {
   const { user, profile } = useAuth()
   const router = useRouter()
+  const { confirm: confirmAction, notify: showNotice } = useFeedback()
   const [reactionSummary, setReactionSummary] = useState<Record<string, number>>(initialPost.reaction_summary ?? {})
   const [myReactions, setMyReactions] = useState<Set<string>>(new Set(initialPost.user_reacted_emojis ?? []))
   const customEmojis = useCustomEmojis()
@@ -455,7 +457,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // actually happens server-side rather than leaving orphaned replies
   // visible until the next reload.
   async function deleteComment(id: string) {
-    if (!confirm('Delete this comment? Any replies to it will be deleted too.')) return
+    if (!await confirmAction({ title: 'Delete comment?', message: 'The comment and all of its replies will be permanently removed.', confirmLabel: 'Delete comment', tone: 'error' })) return
     const { error } = await supabase.from('comments').delete().eq('id', id)
     if (error) return
     setCommentTree(t => removeFromCommentTree(t, id))
@@ -463,9 +465,9 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   }
 
   async function deletePost() {
-    if (!confirm('Delete this post? This cannot be undone.')) return
+    if (!await confirmAction({ title: 'Delete post?', message: 'This post and its discussion will be permanently removed.', confirmLabel: 'Delete post', tone: 'error' })) return
     const { error } = await supabase.from('posts').delete().eq('id', post.id)
-    if (error) { alert('Could not delete post — please try again.'); return }
+    if (error) { showNotice({ title: 'Post not deleted', message: 'Please try again.', tone: 'error' }); return }
     setIsDeleted(true)
   }
 
@@ -492,7 +494,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   async function saveEditPost() {
     const text = editPostText.trim()
     const { error } = await supabase.from('posts').update({ content: text, updated_at: new Date().toISOString() }).eq('id', post.id)
-    if (error) { alert('Could not save changes — please try again.'); return }
+    if (error) { showNotice({ title: 'Changes not saved', message: 'Please try again.', tone: 'error' }); return }
     setContent(text)
     setIsEditingPost(false)
   }

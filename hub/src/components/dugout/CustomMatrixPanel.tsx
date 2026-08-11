@@ -9,6 +9,7 @@ import { BookLogo } from '@/components/BookLogo'
 import { PipelineBuilder, type MatrixPipelineStep } from './PipelineBuilder'
 import { PipelineSummary } from './PipelineSummary'
 import { useRouter } from 'next/navigation'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 // "Custom Matrix" — a member's own saved highlight rules for The Dugout's
 // batter table. Terminology is deliberately its own: a saved rule is a
@@ -1199,6 +1200,7 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const { confirm } = useFeedback()
 
   const copyCode = useCallback(() => {
     navigator.clipboard?.writeText(matrix.element_code).then(() => {
@@ -1208,11 +1210,11 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
   }, [matrix.element_code])
 
   const del = useCallback(async () => {
-    if (!confirm(`Delete "${matrix.name}"? This can't be undone.`)) return
+    if (!await confirm({ title: 'Delete Matrix?', message: `"${matrix.name}" will be permanently removed.`, confirmLabel: 'Delete Matrix', tone: 'error' })) return
     setDeleting(true)
     await api(`/api/matrices/${matrix.id}`, { method: 'DELETE' })
     onDeleted()
-  }, [matrix, onDeleted])
+  }, [confirm, matrix, onDeleted])
 
   // A cheap single-field PATCH — omitting `factors` from the body entirely
   // skips the delete-and-reinsert Factor path (see /api/matrices/[id]),

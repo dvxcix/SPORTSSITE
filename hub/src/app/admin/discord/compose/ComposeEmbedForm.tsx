@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 font-mono'
 const labelClass = 'block text-xs font-bold text-zinc-400 mb-1.5'
@@ -23,13 +24,14 @@ async function uploadImage(file: File): Promise<string> {
 function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const { notify } = useFeedback()
 
   async function handleFile(f: File) {
     setUploading(true)
     try {
       onChange(await uploadImage(f))
     } catch (e: any) {
-      alert(e?.message ?? 'Upload failed')
+      notify({ title: 'Image upload failed', message: e?.message ?? 'Please try again.', tone: 'error' })
     } finally {
       setUploading(false)
     }

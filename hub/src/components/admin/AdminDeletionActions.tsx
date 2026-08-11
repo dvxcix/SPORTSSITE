@@ -2,18 +2,32 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 export function AdminDeletionActions({ requestId, status }: { requestId: string; status: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { notify, prompt } = useFeedback()
   if (!['pending', 'reviewing', 'blocked'].includes(status)) return null
 
   async function update(nextStatus: 'reviewing' | 'blocked' | 'scheduled' | 'canceled') {
-    const note = window.prompt(nextStatus === 'blocked' ? 'Why is this request blocked?' : 'Internal resolution note (optional)')
+    const note = await prompt({
+      title: nextStatus === 'blocked' ? 'Block deletion request' : 'Update deletion request',
+      label: 'Internal note',
+      message: 'Add context for the admin audit trail. This is not shown to the member.',
+      placeholder: nextStatus === 'blocked' ? 'Why is this request blocked?' : 'Optional resolution note',
+      multiline: true,
+    })
     if (note === null) return
     let scheduledFor: string | undefined
     if (nextStatus === 'scheduled') {
-      const value = window.prompt('Deletion date and time (for example 2026-08-20T15:00)')
+      const value = await prompt({
+        title: 'Schedule account deletion',
+        label: 'Deletion date and time',
+        message: 'Choose the exact date and time for the scheduled deletion.',
+        type: 'datetime-local',
+        confirmLabel: 'Schedule deletion',
+      })
       if (!value) return
       scheduledFor = value
     }
@@ -21,7 +35,7 @@ export function AdminDeletionActions({ requestId, status }: { requestId: string;
     const response = await fetch(`/api/admin/account-deletions/${requestId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus, note, scheduledFor }) })
     const body = await response.json().catch(() => ({}))
     setLoading(false)
-    if (!response.ok) { window.alert(body.error || 'Request could not be updated.'); return }
+    if (!response.ok) { notify({ title: 'Request not updated', message: body.error || 'Please try again.', tone: 'error' }); return }
     router.refresh()
   }
 

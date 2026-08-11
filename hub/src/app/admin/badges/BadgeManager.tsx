@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { invalidateBadgeCache } from '@/lib/badges'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight, Users, Pencil, Sparkles } from 'lucide-react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 type BadgeRow = { id: string; name: string; icon_url: string; description: string; card_image_url: string | null }
 type BadgeMember = { id: string; username: string; display_name: string | null; avatar_url: string | null }
@@ -26,6 +27,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
   const [editing, setEditing] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
+  const { confirm, notify } = useFeedback()
 
   const membersByBadge = (badgeId: string) => assignments.filter(a => a.badge_id === badgeId && a.user)
 
@@ -82,9 +84,9 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
   }
 
   async function deleteBadge(id: string) {
-    if (!confirm('Delete this badge? It will be removed from everyone who has it.')) return
+    if (!await confirm({ title: 'Delete badge?', message: 'The badge will be removed from every member who has it.', confirmLabel: 'Delete badge', tone: 'error' })) return
     const { error } = await supabase.from('badges').delete().eq('id', id)
-    if (error) { alert(`Could not delete: ${error.message}`); return }
+    if (error) { notify({ title: 'Badge not deleted', message: error.message, tone: 'error' }); return }
     setBadges(b => b.filter(x => x.id !== id))
     setAssignments(a => a.filter(x => x.badge_id !== id))
     invalidateBadgeCache()
@@ -101,7 +103,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
 
   async function revoke(badgeId: string, uid: string) {
     const { error } = await supabase.from('user_badges').delete().match({ badge_id: badgeId, user_id: uid })
-    if (error) { alert(`Could not revoke: ${error.message}`); return }
+    if (error) { notify({ title: 'Badge not revoked', message: error.message, tone: 'error' }); return }
     setAssignments(a => a.filter(x => !(x.badge_id === badgeId && x.user?.id === uid)))
     invalidateBadgeCache()
     router.refresh()
@@ -115,7 +117,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
     const { data: allUsers } = await supabase.from('users').select('id, username, display_name, avatar_url').limit(1000)
     const toAward = (allUsers ?? []).filter(u => !alreadyHas.has(u.id))
     if (toAward.length === 0) return
-    if (!confirm(`Award "${badges.find(b => b.id === badgeId)?.name}" to all ${toAward.length} member(s) who don't already have it?`)) return
+    if (!await confirm({ title: 'Award badge to eligible members?', message: `Award "${badges.find(b => b.id === badgeId)?.name}" to ${toAward.length} member(s) who do not already have it?`, confirmLabel: 'Award badge' })) return
 
     const { error: err } = await supabase.from('user_badges')
       .insert(toAward.map(u => ({ user_id: u.id, badge_id: badgeId, awarded_by: userId })))

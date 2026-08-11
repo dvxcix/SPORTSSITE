@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { WhopCheckoutEmbed } from '@whop/checkout/react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { trackProductEvent } from '@/lib/productAnalytics'
 
 // Whop's embed accepts EITHER planId OR sessionId (mutually exclusive per its
 // own types) — we always use sessionId here, created server-side with the
@@ -45,6 +46,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
   }, [sessionId])
 
   async function startCheckout() {
+    trackProductEvent('pricing_checkout_clicked', { plan_id: planId, logged_in: loggedIn })
     if (!loggedIn) {
       router.push('/auth/login?next=/pricing')
       return
@@ -60,6 +62,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Failed to start checkout')
       setSessionId(data.sessionId)
+      trackProductEvent('pricing_checkout_opened', { plan_id: planId })
     } catch (e: any) {
       setError(e.message ?? 'Something went wrong')
     } finally {
@@ -142,6 +145,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
               themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
               onComplete={() => {
                 setSessionId(null)
+                trackProductEvent('pricing_checkout_completed', { plan_id: planId })
                 router.push('/pricing?status=success')
                 router.refresh()
               }}

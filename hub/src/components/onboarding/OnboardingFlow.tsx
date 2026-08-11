@@ -10,6 +10,7 @@ import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
 import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
+import { trackProductEvent } from '@/lib/productAnalytics'
 
 // dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
 // onboarding page itself (Next 16), so the Meteors background lives here
@@ -65,8 +66,9 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   }
 
   async function finish() {
+    setError('')
     setSaving(true)
-    await supabase.from('users').update({
+    const { error: updateError } = await supabase.from('users').update({
       display_name: displayName.trim() || undefined,
       bio: bio.trim() || undefined,
       avatar_url: avatarUrl.trim() || undefined,
@@ -77,10 +79,17 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       // authenticated request back to /onboarding until this is set —
       // this is the one place that ever sets it.
       onboarding_completed_at: new Date().toISOString(),
-    }).eq('id', userId)
+    }).eq('id', userId).select('id').single()
+    if (updateError) {
+      setSaving(false)
+      setError('We could not save your profile. Check your connection and try again.')
+      return
+    }
     // Best-effort — never blocks getting into the app if the email fails.
     fetch('/api/onboarding/notify-welcome', { method: 'POST' }).catch(() => {})
+    trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length })
     router.push('/feed')
+    router.refresh()
   }
 
   const initials = (displayName || initialProfile?.username || '?')[0]?.toUpperCase()

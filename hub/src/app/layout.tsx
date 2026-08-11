@@ -9,12 +9,39 @@ import { PostLiveProvider } from '@/context/PostLiveContext'
 import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
 import { SiteBanner } from '@/components/layout/SiteBanner'
 import { ChangelogPopup } from '@/components/layout/ChangelogPopup'
+import { FeedbackProvider } from '@/components/ui/FeedbackProvider'
 
 const geist = Geist({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SlipSurge — The Social Hub for Sports & Betting',
-  description: 'Live scores, picks, community channels, and creator content — all in one place.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.slipsurge.com'),
+  title: 'SlipSurge | Sports Research, Picks and Community',
+  description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores in one platform.',
+  applicationName: 'SlipSurge',
+  category: 'sports',
+  creator: 'SlipSurge',
+  publisher: 'SlipSurge',
+  keywords: ['sports research', 'sports analytics', 'live odds', 'market movement', 'sports picks', 'creator communities'],
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'SlipSurge',
+    title: 'SlipSurge | Sports Research, Picks and Community',
+    description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores in one platform.',
+    images: [{ url: '/og.png', width: 1731, height: 909, alt: 'SlipSurge sports research platform' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SlipSurge | Sports Research, Picks and Community',
+    description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores in one platform.',
+    images: ['/og.png'],
+  },
+  robots: { index: true, follow: true },
+  icons: {
+    icon: [{ url: '/icon-192.png', type: 'image/png' }],
+    apple: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
+  manifest: '/manifest.webmanifest',
 }
 
 export const viewport: Viewport = {
@@ -32,15 +59,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className={`${geist.className} bg-zinc-950 text-white antialiased`}>
-        <SiteBanner />
-        <ChangelogPopup />
-        <AuthProvider>
-          <PostLiveProvider>
-            <RootLayoutShell>
-              {children}
-            </RootLayoutShell>
-          </PostLiveProvider>
-        </AuthProvider>
+        <FeedbackProvider>
+          <SiteBanner />
+          <ChangelogPopup />
+          <AuthProvider>
+            <PostLiveProvider>
+              <RootLayoutShell>
+                {children}
+              </RootLayoutShell>
+            </PostLiveProvider>
+          </AuthProvider>
+        </FeedbackProvider>
         <Analytics />
         <SpeedInsights />
         {/* X (Twitter) conversion tracking pixel — afterInteractive per

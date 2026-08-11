@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2 } from 'lucide-react'
 import { useCustomEmojis } from '@/lib/emoji'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 export const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart,
@@ -41,22 +42,29 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
   const supabase = createClient()
   const [notifications, setNotifications] = useState(initialNotifications)
   const [clearing, setClearing] = useState(false)
+  const { confirm, notify } = useFeedback()
 
   async function deleteMany(ids: string[]) {
     const prev = notifications
     setNotifications(p => p.filter(n => !ids.includes(n.id)))
     const { error } = await supabase.from('notifications').delete().in('id', ids).eq('user_id', userId)
-    if (error) setNotifications(prev) // still in the DB — restore instead of pretending it's gone
+    if (error) {
+      setNotifications(prev)
+      notify({ title: 'Notification not removed', message: error.message, tone: 'error' })
+    }
   }
 
   async function clearAll() {
-    if (!confirm('Clear all notifications? This can\'t be undone.')) return
+    if (!await confirm({ title: 'Clear all notifications?', message: 'This permanently removes every notification in your inbox.', confirmLabel: 'Clear all', tone: 'error' })) return
     const prev = notifications
     setClearing(true)
     setNotifications([])
     const { error } = await supabase.from('notifications').delete().eq('user_id', userId)
     setClearing(false)
-    if (error) setNotifications(prev) // delete didn't happen — don't leave the list looking cleared
+    if (error) {
+      setNotifications(prev)
+      notify({ title: 'Notifications not cleared', message: error.message, tone: 'error' })
+    }
   }
 
   const groups: Record<string, NotifRow[]> = {}

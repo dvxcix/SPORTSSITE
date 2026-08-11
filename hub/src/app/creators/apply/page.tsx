@@ -30,6 +30,7 @@ import { createClient } from '@/lib/supabase/client'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import styles from './CreatorApply.module.css'
 import { hasCreatorAccess } from '@/lib/creator'
+import { trackProductEvent } from '@/lib/productAnalytics'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Tennis', 'Golf', 'Boxing', 'CFB', 'CBB']
 
@@ -110,6 +111,7 @@ export default function CreatorApplyPage() {
 
     setDone(true)
     setSubmitting(false)
+    trackProductEvent('creator_application_submitted', { sport_count: sports.length, has_social_link: Boolean(twitter.trim() || instagram.trim()) })
   }
 
   const isCreator = hasCreatorAccess(profile?.account_type)

@@ -1,10 +1,5 @@
-import { AdminComingSoon } from '@/components/admin/AdminComingSoon'
+import { redirect } from 'next/navigation'
 
 export default function AdminJobsPage() {
-  return (
-    <AdminComingSoon
-      title="Jobs"
-      missing="There's no jobs/listings table in the database yet — the Jobs feature on the site itself hasn't been built either, so there's nothing for this page to manage."
-    />
-  )
+  redirect('/admin/creators')
 }

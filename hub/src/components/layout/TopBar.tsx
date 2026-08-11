@@ -14,6 +14,7 @@ import { collapseConsecutiveFollows } from '@/components/social/NotificationsLis
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { Badge } from '@/components/ui/badge'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
@@ -337,9 +338,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <button key={`nt-${t.team_abbr}`} onClick={() => goTo(`/nfl/teams/${t.team_abbr}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
-                    {t.team_logo_espn
-                      ? <img src={t.team_logo_espn} alt={t.team_abbr} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
-                      : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />}
+                    <SafeImage src={t.team_logo_espn} alt={t.team_abbr} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} fallback={<div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />} />
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{t.team_name}</span>
                     <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, color: 'var(--text-3)' }}>NFL</span>
                   </button>
@@ -348,9 +347,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <button key={`np-${p.gsis_id}`} onClick={() => goTo(`/nfl/players/${p.gsis_id}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
-                    {p.headshot
-                      ? <img src={p.headshot} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                      : <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />}
+                    <SafeImage src={p.headshot} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} fallback={<div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.display_name}</div>
                       <div style={{ fontSize: 10, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -366,7 +363,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'var(--text-3)' }}>
-                      {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.display_name || u.username)[0].toUpperCase()}
+                      <SafeImage src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={(u.display_name || u.username)[0].toUpperCase()} />
                     </div>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{u.display_name || u.username}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>@{u.username}</span>
@@ -543,10 +540,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   flex: '0 0 26px', aspectRatio: '1 / 1',
                   fontSize: 11, fontWeight: 900, color: 'var(--accent)',
                 }}>
-                  {profile?.avatar_url
-                    ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : (profile?.display_name || profile?.username || '?')[0].toUpperCase()
-                  }
+                  <SafeImage src={profile?.avatar_url} alt="" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={(profile?.display_name || profile?.username || '?')[0].toUpperCase()} />
                 </div>
                 <span className="ss-topbar-profile-copy hidden sm:flex">
                   <strong>{profile?.display_name || profile?.username || 'Me'}</strong>

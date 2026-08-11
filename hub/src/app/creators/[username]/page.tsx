@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, BadgeCheck, BarChart3, BellRing, Check, LockKeyhole, MessageSquareText, ShieldCheck, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import styles from './CreatorStorefront.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
   return <main className={styles.page}>
     <Link href="/creators" className={styles.back}><ArrowLeft size={15} /> Creator marketplace</Link>
     <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,rgba(7,10,8,.96),rgba(7,10,8,.68)),url(${creator.banner_url})` } : undefined}>
-      <div className={styles.identity}><div className={styles.avatar}>{creator.avatar_url ? <img src={creator.avatar_url} alt="" /> : (creator.display_name || creator.username)[0].toUpperCase()}</div><div><span className={styles.verified}><BadgeCheck size={15} /> VERIFIED SLIPSURGE CREATOR</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
+      <div className={styles.identity}><div className={styles.avatar}><SafeImage src={creator.avatar_url} alt="" fallback={(creator.display_name || creator.username)[0].toUpperCase()} /></div><div><span className={styles.verified}><BadgeCheck size={15} /> VERIFIED SLIPSURGE CREATOR</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
       <p className={styles.bio}>{creator.bio || 'Premium sports content, research, and member community on SlipSurge.'}</p>
       <div className={styles.heroFeatures}><span><BarChart3 size={15} /> Research</span><span><BellRing size={15} /> Member alerts</span><span><MessageSquareText size={15} /> Private channels</span></div>
     </section>

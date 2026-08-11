@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { invalidateCustomEmojiCache } from '@/lib/emoji'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { Trash2, Plus, Pencil } from 'lucide-react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 type Category = { id: string; name: string; sort_order: number }
 type CustomEmojiRow = { id: string; code: string; image_url: string; category_id: string | null; category: { name: string } | null; created_at: string }
@@ -27,6 +28,7 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
   const [editingId, setEditingId] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
+  const { confirm, notify } = useFeedback()
 
   async function addCategory() {
     const name = newCategoryName.trim()
@@ -45,11 +47,16 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
 
   async function removeCategory(id: string) {
     const inUse = emojis.filter(e => e.category_id === id).length
-    if (!confirm(inUse > 0
-      ? `Delete this category? ${inUse} emoji(s) in it will become uncategorized (they'll still work, just show under "Other" in the picker).`
-      : 'Delete this category?')) return
+    if (!await confirm({
+      title: 'Delete emoji category?',
+      message: inUse > 0
+        ? `${inUse} emoji(s) will remain available under Other in the picker.`
+        : 'This empty category will be permanently removed.',
+      confirmLabel: 'Delete category',
+      tone: 'warning',
+    })) return
     const { error } = await supabase.from('custom_emoji_categories').delete().eq('id', id)
-    if (error) { alert(`Could not delete category: ${error.message}`); return }
+    if (error) { notify({ title: 'Category not deleted', message: error.message, tone: 'error' }); return }
     setCategories(c => c.filter(x => x.id !== id))
     setEmojis(e => e.map(x => x.category_id === id ? { ...x, category_id: null, category: null } : x))
     if (categoryId === id) setCategoryId('')
@@ -107,9 +114,9 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this emoji? Any existing :code: text using it will stop rendering as an image.')) return
+    if (!await confirm({ title: 'Delete custom emoji?', message: 'Existing :code: text using it will stop rendering as an image.', confirmLabel: 'Delete emoji', tone: 'error' })) return
     const { error } = await supabase.from('custom_emojis').delete().eq('id', id)
-    if (error) { alert(`Could not delete: ${error.message}`); return }
+    if (error) { notify({ title: 'Emoji not deleted', message: error.message, tone: 'error' }); return }
     setEmojis(e => e.filter(x => x.id !== id))
     invalidateCustomEmojiCache()
     router.refresh()

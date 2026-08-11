@@ -2,13 +2,22 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 export function AdminReportActions({ reportId, currentStatus }: { reportId: string; currentStatus: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { notify, prompt } = useFeedback()
 
   async function update(status: string) {
-    const resolutionNote = window.prompt(status === 'actioned' ? 'What action was taken? (optional)' : 'Dismissal note (optional)')
+    const resolutionNote = await prompt({
+      title: status === 'actioned' ? 'Record moderation action' : 'Dismiss report',
+      label: 'Internal note',
+      message: 'This note is stored with the report for the moderation team.',
+      placeholder: status === 'actioned' ? 'What action was taken?' : 'Why was this report dismissed?',
+      confirmLabel: status === 'actioned' ? 'Save action' : 'Dismiss report',
+      multiline: true,
+    })
     if (resolutionNote === null) return
     setLoading(true)
     const response = await fetch(`/api/admin/reports/${reportId}`, {
@@ -18,7 +27,7 @@ export function AdminReportActions({ reportId, currentStatus }: { reportId: stri
     })
     const result = await response.json().catch(() => ({}))
     setLoading(false)
-    if (!response.ok) { alert(`Could not update: ${result.error || 'Unknown error'}`); return }
+    if (!response.ok) { notify({ title: 'Report not updated', message: result.error || 'Unknown error', tone: 'error' }); return }
     router.refresh()
   }
 

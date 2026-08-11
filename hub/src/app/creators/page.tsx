@@ -2,6 +2,10 @@ import Link from 'next/link'
 import { ArrowRight, BadgeCheck, Compass, LockKeyhole, Search, Sparkles, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import styles from './CreatorsMarketplace.module.css'
+import { pageMetadata } from '@/lib/siteMetadata'
+import { SafeImage } from '@/components/ui/SafeImage'
+
+export const metadata = pageMetadata({ title: 'Sports Creators and Communities | SlipSurge', description: 'Discover sports creators, premium memberships, private groups, and member channels powered by Whop.', path: '/creators' })
 
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +52,7 @@ export default async function CreatorsPage() {
       {creators.length ? <div className={styles.grid}>{creators.map(creator => {
         const offer = creator.creator_products?.[0]
         return <Link className={styles.card} href={`/creators/${creator.username}`} key={creator.id}>
-          <div className={styles.cardTop}><div className={styles.avatar}>{creator.avatar_url ? <img src={creator.avatar_url} alt="" /> : (creator.display_name || creator.username)[0].toUpperCase()}</div><div><h3>{creator.display_name || creator.username}<BadgeCheck size={15} /></h3><span>@{creator.username}</span></div></div>
+          <div className={styles.cardTop}><div className={styles.avatar}><SafeImage src={creator.avatar_url} alt="" fallback={(creator.display_name || creator.username)[0].toUpperCase()} /></div><div><h3>{creator.display_name || creator.username}<BadgeCheck size={15} /></h3><span>@{creator.username}</span></div></div>
           <p>{creator.bio || offer?.description || 'Sports analysis, member content, and community access on SlipSurge.'}</p>
           <div className={styles.offer}><span>{offer?.title || 'Creator membership'}</span><strong>{offer ? `$${Number(offer.price).toFixed(2)}` : 'View offers'}<small>{offer?.product_type === 'membership' ? '/mo' : ''}</small></strong></div>
           <footer><span>{creator.follower_count ?? 0} followers</span><b>View storefront <ArrowRight size={14} /></b></footer>

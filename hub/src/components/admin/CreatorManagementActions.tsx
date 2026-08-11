@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pause, Play, ShieldOff } from 'lucide-react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 type Props =
   | { kind: 'product'; id: string; status: string }
@@ -12,11 +13,12 @@ export function CreatorManagementActions(props: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const { confirm } = useFeedback()
   const productPaused = props.kind === 'product' && props.status === 'paused'
   const disabled = busy || (props.kind === 'entitlement' && props.status === 'revoked')
 
   async function act() {
-    if (props.kind === 'entitlement' && !window.confirm('Revoke this member’s creator access?')) return
+    if (props.kind === 'entitlement' && !await confirm({ title: 'Revoke creator access?', message: 'This member will immediately lose access to the creator product.', confirmLabel: 'Revoke access', tone: 'error' })) return
     setBusy(true)
     setError('')
     const response = await fetch('/api/admin/creators/manage', {

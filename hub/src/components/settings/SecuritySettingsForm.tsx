@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle2, KeyRound, LoaderCircle, LogOut, ShieldCheck, ShieldOff } from 'lucide-react'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 type Factor = { id: string; friendly_name?: string; status: string; created_at: string }
 
@@ -15,6 +16,7 @@ export function SecuritySettingsForm() {
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const { confirm } = useFeedback()
 
   async function loadFactors() {
     const { data } = await supabase.auth.mfa.listFactors()
@@ -46,7 +48,7 @@ export function SecuritySettingsForm() {
   }
 
   async function removeFactor(id: string) {
-    if (!window.confirm('Turn off two-factor authentication for this account?')) return
+    if (!await confirm({ title: 'Turn off two-factor authentication?', message: 'Your account will no longer require an authenticator code at sign in.', confirmLabel: 'Turn off 2FA', tone: 'warning' })) return
     setBusy(id); setError('')
     const { error: removeError } = await supabase.auth.mfa.unenroll({ factorId: id })
     setBusy('')

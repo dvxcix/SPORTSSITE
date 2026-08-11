@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ChangelogPopupBody } from '@/components/layout/ChangelogPopupBody'
 import { X } from 'lucide-react'
 import type { ChangelogAudience, ChangelogEntry } from '@/lib/changelog'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 const EMPTY_DRAFT = { id: null as string | null, title: '', description: '', how_to_use: '', screenshot_urls: [] as string[], audience_tier: 'all' as ChangelogAudience, is_active: false }
 type Draft = typeof EMPTY_DRAFT
@@ -26,6 +27,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
   const [showFullPreview, setShowFullPreview] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+  const { confirm, notify } = useFeedback()
 
   function startNew() { setDraft({ ...EMPTY_DRAFT }); setError('') }
   function startEdit(entry: ChangelogEntry) {
@@ -81,9 +83,9 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
   }
 
   async function remove(entry: ChangelogEntry) {
-    if (!confirm(`Delete "${entry.title}"? This also clears everyone's dismissal record for it.`)) return
+    if (!await confirm({ title: 'Delete changelog entry?', message: `Delete "${entry.title}" and clear every member's dismissal record for it?`, confirmLabel: 'Delete entry', tone: 'error' })) return
     const { error: err } = await supabase.from('changelog_entries').delete().eq('id', entry.id)
-    if (err) return
+    if (err) { notify({ title: 'Entry not deleted', message: err.message, tone: 'error' }); return }
     setEntries(prev => prev.filter(e => e.id !== entry.id))
   }
 
