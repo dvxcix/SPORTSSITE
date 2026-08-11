@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
-import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
@@ -31,7 +30,6 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   accountType: 'user' | 'creator'
   suggestedUsers: SuggestedUser[]
 }) {
-  const router = useRouter()
   const supabase = createClient()
   const [step, setStep] = useState(0)
   const [displayName, setDisplayName] = useState(initialProfile?.display_name ?? '')
@@ -86,10 +84,15 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       return
     }
     // Best-effort — never blocks getting into the app if the email fails.
-    fetch('/api/onboarding/notify-welcome', { method: 'POST' }).catch(() => {})
+    fetch('/api/onboarding/notify-welcome', { method: 'POST', keepalive: true }).catch(() => {})
     trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length })
-    router.push('/feed')
-    router.refresh()
+    // Use one full-document handoff after the confirmed profile write. Calling
+    // router.push() and router.refresh() back-to-back creates competing RSC
+    // navigations and can strand a new member on Next/Vercel's generic
+    // recovery screen. replace() also keeps the completed wizard out of the
+    // Back stack and gives middleware a fresh request that sees the saved
+    // onboarding_completed_at value before loading /feed.
+    window.location.replace('/feed')
   }
 
   const initials = (displayName || initialProfile?.username || '?')[0]?.toUpperCase()

@@ -98,6 +98,14 @@ test('contextual tooltips remain portaled, branded, and touch-safe', async () =>
   assert.ok(dugout.includes('mlbHeadshot(row.mlb_id)'), 'TheDugout odds tooltips lack player imagery')
 })
 
+test('onboarding completion performs one durable handoff to the feed', async () => {
+  const onboarding = await read('src/components/onboarding/OnboardingFlow.tsx')
+  assert.ok(onboarding.includes("window.location.replace('/feed')"), 'completed onboarding must hard-navigate to the feed')
+  assert.ok(onboarding.includes("keepalive: true"), 'welcome notification should survive the document navigation')
+  assert.ok(!/^\s*router\.push\('\/feed'\)/m.test(onboarding), 'onboarding must not start a competing client navigation')
+  assert.ok(!/^\s*router\.refresh\(\)/m.test(onboarding), 'onboarding must not race a refresh against its redirect')
+})
+
 test('critical pipelines write health telemetry', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   const jobs = [...new Set(vercel.crons.map(cron => cron.path.split('?')[0].split('/').at(-1)))]
