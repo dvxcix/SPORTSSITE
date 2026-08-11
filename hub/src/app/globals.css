@@ -175,6 +175,124 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 img { max-width: 100%; }
 
+/* ─── contextual tooltip system ────────────────────────────────────────────
+   One portaled surface for explicit React tooltips and legacy title text.
+   Kept outside page stacking contexts so data tables, sheets, and charts can
+   never clip it. */
+.ss-tooltip-portal {
+  --tooltip-accent: var(--accent);
+  position: fixed;
+  z-index: calc(var(--layer-critical) + 90);
+  width: min(330px, calc(100vw - 20px));
+  max-height: min(360px, calc(100dvh - 20px));
+  overflow: hidden auto;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--tooltip-accent) 28%, var(--border-2));
+  border-radius: 16px;
+  color: var(--text-1);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--tooltip-accent) 7%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow:
+    0 26px 72px rgba(0,0,0,.72),
+    0 0 32px color-mix(in srgb, var(--tooltip-accent) 9%, transparent),
+    inset 0 1px rgba(255,255,255,.055);
+  backdrop-filter: blur(20px) saturate(1.15);
+  isolation: isolate;
+}
+.ss-tooltip-portal::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .19;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(to bottom, #000, transparent 78%);
+}
+.ss-tooltip-portal::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--tooltip-accent), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--tooltip-accent) 38%, transparent);
+}
+.ss-tooltip-content { padding: 13px; }
+.ss-tooltip-main { display: flex; align-items: flex-start; gap: 11px; min-width: 0; }
+.ss-tooltip-art {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  overflow: visible;
+  border: 1px solid color-mix(in srgb, var(--tooltip-accent) 35%, var(--border));
+  border-radius: 11px;
+  color: var(--tooltip-accent);
+  background: radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--tooltip-accent) 19%, transparent), color-mix(in srgb, var(--surface-3) 94%, transparent));
+  box-shadow: inset 0 1px rgba(255,255,255,.06), 0 7px 18px rgba(0,0,0,.28);
+}
+.ss-tooltip-art.is-image { overflow: hidden; border-radius: 50%; background: var(--surface-3); }
+.ss-tooltip-art.is-image > img { width: 100%; height: 100%; object-fit: cover; }
+.ss-tooltip-book-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--surface);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.ss-tooltip-copy { min-width: 0; padding-top: 1px; }
+.ss-tooltip-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+  color: var(--tooltip-accent);
+  font: 850 8px/1.1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.ss-tooltip-copy strong { display: block; color: var(--text-1); font-size: 12px; line-height: 1.35; letter-spacing: -.01em; }
+.ss-tooltip-copy p { margin: 4px 0 0; color: var(--text-2); font-size: 10.5px; line-height: 1.45; }
+.ss-tooltip-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 6px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--tooltip-accent) 13%, var(--border));
+}
+.ss-tooltip-metrics > span { min-width: 0; padding: 7px 8px; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--surface-3) 76%, transparent); }
+.ss-tooltip-metrics small, .ss-tooltip-metrics b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-tooltip-metrics small { color: var(--text-3); font: 750 7px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.ss-tooltip-metrics b { margin-top: 4px; color: var(--text-1); font: 850 10px/1.1 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.ss-tooltip-metrics .is-positive b { color: var(--green); }
+.ss-tooltip-metrics .is-negative b { color: var(--red); }
+.ss-tooltip-footer { margin-top: 9px; color: var(--text-3); font-size: 9px; line-height: 1.35; }
+.ss-tooltip-custom { min-width: 0; padding: 12px; color: var(--text-2); font-size: 11px; line-height: 1.45; }
+
+@media (max-width: 640px), (pointer: coarse) {
+  .ss-tooltip-portal { width: min(300px, calc(100vw - 16px)); border-radius: 14px; }
+  .ss-tooltip-content { padding: 11px; }
+  .ss-tooltip-art { width: 34px; height: 34px; flex-basis: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-tooltip-portal { transition: none !important; }
+}
+
 /* Shared responsive page primitives. */
 .ss-page {
   width: min(100%, var(--page-max));

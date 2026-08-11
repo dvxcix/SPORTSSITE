@@ -84,6 +84,20 @@ test('decorative animation values are deterministic during render', async () => 
   assert.ok(!beams.includes('Math.random()'))
 })
 
+test('contextual tooltips remain portaled, branded, and touch-safe', async () => {
+  const tooltip = await read('src/components/ui/tooltip-card.tsx')
+  const layout = await read('src/app/layout.tsx')
+  const dugout = await read('src/components/dugout/DugoutClient.tsx')
+  assert.ok(tooltip.includes('createPortal('), 'tooltips can be clipped by page overflow')
+  assert.ok(tooltip.includes('<BookLogo'), 'sportsbook context is missing from tooltip visuals')
+  assert.ok(tooltip.includes('MutationObserver'), 'legacy title attributes are not upgraded')
+  assert.ok(tooltip.includes('role="tooltip"'), 'tooltip semantics are missing')
+  assert.ok(!tooltip.includes('onTouchStart='), 'tooltips must not intercept mobile actions')
+  assert.ok(layout.includes('<NativeTooltipProvider />'), 'the global tooltip provider is not mounted')
+  assert.ok(dugout.includes("kind: 'market'"), 'TheDugout odds cells lack market context')
+  assert.ok(dugout.includes('mlbHeadshot(row.mlb_id)'), 'TheDugout odds tooltips lack player imagery')
+})
+
 test('critical pipelines write health telemetry', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   const jobs = [...new Set(vercel.crons.map(cron => cron.path.split('?')[0].split('/').at(-1)))]

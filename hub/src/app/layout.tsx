@@ -10,6 +10,7 @@ import { RootLayoutShell } from '@/components/layout/RootLayoutShell'
 import { SiteBanner } from '@/components/layout/SiteBanner'
 import { ChangelogPopup } from '@/components/layout/ChangelogPopup'
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider'
+import { NativeTooltipProvider } from '@/components/ui/tooltip-card'
 
 const geist = Geist({ subsets: ['latin'] })
 
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className={`${geist.className} bg-zinc-950 text-white antialiased`}>
+        <NativeTooltipProvider />
         <FeedbackProvider>
           <SiteBanner />
           <ChangelogPopup />

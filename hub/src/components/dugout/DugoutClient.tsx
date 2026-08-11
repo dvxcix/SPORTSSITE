@@ -3,7 +3,7 @@ import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallba
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
-import { Tooltip } from '@/components/ui/tooltip-card'
+import { Tooltip, type TooltipCardData } from '@/components/ui/tooltip-card'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -1098,10 +1098,25 @@ function OddsCell({
 
   const hasDelta = openOdds != null && openOdds !== odds
   const deltaTitle = hasDelta ? `Opened ${oStr(openOdds)} → now ${oStr(odds)}` : null
-  const title = [
-    wl.signedIn ? (saved ? 'Saved to watchlist — click to remove' : `Click to add ${meta?.label ?? propKey} @ ${book} to watchlist`) : null,
-    deltaTitle,
-  ].filter(Boolean).join(' · ') || undefined
+  const tooltipContent: TooltipCardData = {
+    kind: 'market',
+    eyebrow: `${meta?.label ?? propKey} · ${row.team}`,
+    title: row.name,
+    description: saved
+      ? 'Saved to your watchlist. Select the price again to remove it.'
+      : wl.signedIn
+        ? 'Select this price to add the market to your watchlist.'
+        : 'Sign in to save this market to your watchlist.',
+    image: row.mlb_id ? { src: mlbHeadshot(row.mlb_id), alt: row.name } : null,
+    book,
+    metrics: [
+      { label: 'Current', value: oStr(odds) },
+      ...(openOdds != null ? [{ label: 'Opened', value: oStr(openOdds), tone: 'neutral' as const }] : []),
+      ...(hasDelta ? [{ label: 'Move', value: odds! < openOdds! ? 'Shorter' : 'Longer', tone: odds! < openOdds! ? 'positive' as const : 'negative' as const }] : []),
+      ...(pickCount != null ? [{ label: 'Picks', value: pickCount.toLocaleString() }] : []),
+    ],
+    footer: deltaTitle ?? `${row.position || 'Batter'} · ${row.bats || '—'}HB`,
+  }
 
   // Wrapped in its own column flex — when this renders inside the
   // title-tooltip's row-flex container below, an unwrapped fragment would
@@ -1151,11 +1166,9 @@ function OddsCell({
         fontWeight: saved ? 700 : style.fontWeight,
       }}
     >
-      {title ? (
-        <Tooltip content={title} containerClassName="w-full h-full flex items-center justify-center">
-          {cellContent}
-        </Tooltip>
-      ) : cellContent}
+      <Tooltip content={tooltipContent} containerClassName="w-full h-full flex items-center justify-center">
+        {cellContent}
+      </Tooltip>
     </td>
   )
 }
@@ -2120,7 +2133,14 @@ function sortRowsMulti(rows: BatterRow[], keys: MultiSortEntry[]): BatterRow[] {
 // that jump the other direction (Pitcher Report -> Dugout via ?highlight=).
 function PitcherLinkChip({ pitcher, teamAbbr }: { pitcher: { id: number; name: string; hand: string }; teamAbbr: string; date: string }) {
   return (
-    <Tooltip content={`Open ${pitcher.name}'s player profile`}>
+    <Tooltip content={{
+      kind: 'player',
+      eyebrow: `${teamAbbr} probable starter`,
+      title: pitcher.name,
+      description: 'Open the full player profile and pitching report.',
+      image: { src: mlbHeadshot(pitcher.id), alt: pitcher.name },
+      metrics: [{ label: 'Throws', value: `${pitcher.hand}HP` }],
+    }}>
       <Link
         href={`/players/${pitcher.id}`}
         style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', textDecoration: 'none' }}
