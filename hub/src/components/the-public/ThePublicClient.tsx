@@ -9,6 +9,8 @@ import { BookLogo } from '@/components/BookLogo'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { PageState } from '@/components/layout/PageState'
+import controls from '@/components/product/ResearchControls.module.css'
 
 // Every book we actually store odds under (see BookLogo.tsx) — every
 // category shows whichever of these actually have a real price for that
@@ -197,14 +199,14 @@ function GameSelector({ games, value, onChange }: { games: GameOption[]; value: 
   const timeStr = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} className={controls.selectWrap}>
       <button
+        type="button"
         onClick={() => setOpen(o => !o)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', minWidth: 220,
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-          cursor: 'pointer', color: 'var(--text-1)', fontSize: 13, fontWeight: 700,
-        }}
+        className={controls.selectButton}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Choose a game"
       >
         {selected ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -219,32 +221,30 @@ function GameSelector({ games, value, onChange }: { games: GameOption[]; value: 
         <ChevronDown size={14} style={{ marginLeft: 'auto', color: 'var(--text-3)' }} />
       </button>
       {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30, minWidth: '100%',
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-          overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-        }}>
-          <div
+        <div className={controls.menu} role="listbox">
+          <button
+            type="button"
             onClick={() => { onChange('all'); setOpen(false) }}
-            style={{ padding: '10px 14px', fontSize: 13, fontWeight: 700, color: value === 'all' ? 'var(--accent)' : 'var(--text-1)', cursor: 'pointer', background: value === 'all' ? 'var(--accent-dim)' : 'transparent' }}
+            className={`${controls.menuItem} ${value === 'all' ? controls.menuItemActive : ''}`}
+            role="option"
+            aria-selected={value === 'all'}
           >
             All Games
-          </div>
+          </button>
           {games.map(g => (
-            <div
+            <button
+              type="button"
               key={g.gameKey}
               onClick={() => { onChange(g.gameKey); setOpen(false) }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', cursor: 'pointer',
-                background: value === g.gameKey ? 'var(--accent-dim)' : 'transparent',
-                borderTop: '1px solid var(--border)',
-              }}
+              className={`${controls.menuItem} ${value === g.gameKey ? controls.menuItemActive : ''}`}
+              role="option"
+              aria-selected={value === g.gameKey}
             >
               <TeamLogo logo={getTeamLogoUrl(g.awayAbbr)} name={g.awayAbbr} size={22} />
               <span style={{ color: 'var(--text-3)', fontSize: 11, fontWeight: 800 }}>@</span>
               <TeamLogo logo={getTeamLogoUrl(g.homeAbbr)} name={g.homeAbbr} size={22} />
               <span style={{ marginLeft: 4, color: 'var(--text-2)', fontSize: 12, fontWeight: 700 }}>{timeStr(g.gameDate)}</span>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -379,26 +379,24 @@ export function ThePublicClient({ date }: { date: string }) {
   const activeCat = CATEGORIES.find(c => c.key === activeCategory)!
   const rows = (rowsByCategory[activeCategory] ?? []).filter(r => activeGame === 'all' || r.gameKey === activeGame)
 
-  if (error) return <div style={{ padding: 24, color: 'var(--red)', fontSize: 13 }}>{error}</div>
-  if (!data) return <div style={{ padding: 24, color: 'var(--text-3)', fontSize: 13 }}>Loading today&apos;s picks…</div>
+  if (error) return <PageState kind="error" title="Public board unavailable" message={error} />
+  if (!data) return <PageState kind="loading" title="Loading public board" message="Matching community activity to today's markets." />
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+      <div className={controls.toolbar}>
         <GameSelector games={games} value={activeGame} onChange={setActiveGame} />
+        <span className={controls.count}>{rows.length} players</span>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+      <div className={controls.scrollRail} aria-label="Choose a market">
         {CATEGORIES.map(c => (
           <button
+            type="button"
             key={c.key}
             onClick={() => setActiveCategory(c.key)}
-            style={{
-              padding: '8px 14px', borderRadius: 999, fontSize: 12, fontWeight: 800, cursor: 'pointer',
-              border: `1px solid ${activeCategory === c.key ? 'var(--accent)' : 'var(--border)'}`,
-              background: activeCategory === c.key ? 'var(--accent-dim)' : 'var(--surface)',
-              color: activeCategory === c.key ? 'var(--accent)' : 'var(--text-2)',
-            }}
+            aria-pressed={activeCategory === c.key}
+            className={`${controls.pill} ${activeCategory === c.key ? controls.pillActive : ''}`}
           >
             {c.label}
           </button>

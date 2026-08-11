@@ -6,6 +6,8 @@ import { ChevronDown } from 'lucide-react'
 import { AffinityMatchupCards, type Evidence } from '@/components/dugout/AffinityMatchupScore'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { PageState } from '@/components/layout/PageState'
+import controls from '@/components/product/ResearchControls.module.css'
 
 type SynergyMatchup = {
   gameKey: string
@@ -72,42 +74,40 @@ function GameSelector({ games, value, onChange }: { games: SynergyGame[]; value:
   const selected = games.find(g => g.gameKey === value)
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} className={controls.selectWrap}>
       <button
+        type="button"
         onClick={() => setOpen(o => !o)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', minWidth: 200,
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-          cursor: 'pointer', color: 'var(--text-1)', fontSize: 13, fontWeight: 700,
-        }}
+        className={controls.selectButton}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Choose a game"
       >
         {selected ? <GameStatusChip game={selected} /> : <span>All Games</span>}
         <ChevronDown size={14} style={{ marginLeft: 'auto', color: 'var(--text-3)' }} />
       </button>
       {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30, minWidth: '100%', maxHeight: 360, overflowY: 'auto',
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-        }}>
-          <div
+        <div className={controls.menu} role="listbox">
+          <button
+            type="button"
             onClick={() => { onChange('all'); setOpen(false) }}
-            style={{ padding: '10px 14px', fontSize: 13, fontWeight: 700, color: value === 'all' ? 'var(--accent)' : 'var(--text-1)', cursor: 'pointer', background: value === 'all' ? 'var(--accent-dim)' : 'transparent' }}
+            className={`${controls.menuItem} ${value === 'all' ? controls.menuItemActive : ''}`}
+            role="option"
+            aria-selected={value === 'all'}
           >
             All Games
-          </div>
+          </button>
           {games.map(g => (
-            <div
+            <button
+              type="button"
               key={g.gameKey}
               onClick={() => { onChange(g.gameKey); setOpen(false) }}
-              style={{
-                display: 'flex', alignItems: 'center', padding: '8px 14px', cursor: 'pointer',
-                background: value === g.gameKey ? 'var(--accent-dim)' : 'transparent',
-                borderTop: '1px solid var(--border)',
-              }}
+              className={`${controls.menuItem} ${value === g.gameKey ? controls.menuItemActive : ''}`}
+              role="option"
+              aria-selected={value === g.gameKey}
             >
               <GameStatusChip game={g} />
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -175,30 +175,29 @@ export function SynergyClient() {
     return [...filtered].sort((a, b) => scoreFor(b, sortMode) - scoreFor(a, sortMode))
   }, [matchups, sortMode, activeGame])
 
-  if (error) return <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '20px 0' }}>Couldn&apos;t load today&apos;s matchups.</div>
-  if (matchups === null) return <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
-  if (matchups.length === 0) return <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '20px 0' }}>No games today.</div>
+  if (error) return <PageState kind="error" title="Synergy unavailable" message="Today's matchup data could not be loaded." />
+  if (matchups === null) return <PageState kind="loading" title="Building matchup board" message="Comparing every confirmed batter and pitcher pairing." />
+  if (matchups.length === 0) return <PageState kind="empty" title="No matchups available" message="Confirmed matchups will appear here when the slate is ready." />
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className={controls.toolbar}>
         <GameSelector games={games} value={activeGame} onChange={setActiveGame} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', marginLeft: 8 }}>SORT BY</span>
-        {SORT_OPTIONS.map(opt => (
-          <button
-            key={opt.key}
-            onClick={() => setSortMode(opt.key)}
-            style={{
-              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              border: '1px solid var(--border)',
-              background: sortMode === opt.key ? 'var(--accent)' : 'var(--surface)',
-              color: sortMode === opt.key ? 'var(--accent-fg)' : 'var(--text-2)',
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-3)' }}>{sorted.length} matchups</span>
+        <div className={controls.scrollRail} aria-label="Sort matchups">
+          <span className={controls.label}>Sort by</span>
+          {SORT_OPTIONS.map(opt => (
+            <button
+              type="button"
+              key={opt.key}
+              onClick={() => setSortMode(opt.key)}
+              aria-pressed={sortMode === opt.key}
+              className={`${controls.pill} ${sortMode === opt.key ? controls.pillActive : ''}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <span className={controls.count}>{sorted.length} matchups</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -7,6 +7,7 @@ import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@slipsurge/core/
 import { getGameStatus } from '@slipsurge/core/espn-api'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
+import styles from '@/components/product/GameDetail.module.css'
 
 type Reactions = Record<string, Record<string, { count: number; mine: boolean }>>
 type TeamInfo = { id: string; logo: string; color: string; altColor: string; abbr: string; name: string }
@@ -815,9 +816,9 @@ export function GameDetailClient({
   ]
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px' }}>
+    <main className={styles.page}>
       {/* Back */}
-      <Link href="/sports" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 13, textDecoration: 'none', marginBottom: 18 }}>
+      <Link href="/sports" className={styles.back}>
         <ArrowLeft size={14} /> {sportLabel} Scores
       </Link>
 
@@ -839,28 +840,24 @@ export function GameDetailClient({
       )}
 
       {/* Post pick CTA */}
-      <div style={{ margin: '12px 0', background: 'var(--accent-dim)', border: '1px solid rgba(180,255,77,0.2)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>Got a pick on this game?</p>
-        <Link href={`/feed?pick=true&game=${gameId}&sport=${sport}`} style={{ padding: '8px 16px', background: 'var(--accent)', color: 'var(--accent-fg)', borderRadius: 8, fontWeight: 800, fontSize: 12, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+      <div className={styles.cta}>
+        <p className={styles.ctaText}>Got a pick on this game?</p>
+        <Link href={`/feed?pick=true&game=${gameId}&sport=${sport}`} className={styles.ctaButton}>
           Post Pick →
         </Link>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
+      <div className={styles.tabs} role="tablist" aria-label="Game details">
         {TABS.map(t => {
           const active = tab === t.id
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              style={{
-                padding: '11px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                background: 'none', border: 'none',
-                color: active ? 'var(--accent)' : 'var(--text-3)',
-                borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                marginBottom: -1, whiteSpace: 'nowrap', transition: 'color 130ms',
-              }}
+              className={`${styles.tab} ${active ? styles.tabActive : ''}`}
+              role="tab"
+              aria-selected={active}
             >
               {t.label}
             </button>
@@ -869,7 +866,7 @@ export function GameDetailClient({
       </div>
 
       {/* Tab panels */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 16px 16px', overflow: 'hidden', minHeight: 200 }}>
+      <div className={styles.content}>
         {tab === 'summary' && (
           <div>
             <SummaryTab plays={plays} gameStatus={gameStatus} />
@@ -898,10 +895,10 @@ export function GameDetailClient({
       </div>
 
       {isLive && (
-        <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 14 }}>
-          🔴 Live · refreshes every 30s
+        <p className={styles.live}>
+          <span className={styles.liveDot} /> Live · refreshes every 30s
         </p>
       )}
-    </div>
+    </main>
   )
 }

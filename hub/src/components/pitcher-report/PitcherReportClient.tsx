@@ -8,6 +8,8 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { PitchMixTable, BatterVsPitchTable, TeamLogoImg, effectiveBatSide, pct } from './MatchupTables'
 import { normName } from '@slipsurge/core/nameNorm'
+import { DateButtonNavigator } from '@/components/product/DateButtonNavigator'
+import { PageState } from '@/components/layout/PageState'
 
 // ─── shapes from /api/dugout/data ──────────────────────────────────────────
 interface PitcherInfo { id: number; name: string; hand: string }
@@ -333,22 +335,13 @@ export function PitcherReportClient() {
   }, [hotPitches, pinned, activeRows, showAll])
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 py-5 sm:px-6">
-      <div className="fade-in" style={{ marginBottom: 18 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>
-          Pitcher <span style={{ color: 'var(--accent)' }}>Report</span>
-        </h1>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
-          Pick today's starter, see his pitch mix and who he's been getting hit by lately, then see which of tonight's opposing batters are hot against those exact pitches.
-        </p>
-      </div>
-
-      <DateStrip date={date} onChange={setDate} />
+    <div>
+      <DateButtonNavigator date={date} today={localToday()} onChange={setDate} />
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
+        <PageState compact kind="loading" title="Loading probable starters" message="Preparing pitch mixes and opponent lineups." />
       ) : starters.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No probable starters announced yet for {date}.</div>
+        <PageState compact kind="empty" title="No probable starters yet" message={`No probable starters are available for ${date}.`} />
       ) : (
         <>
           {/* starter picker */}

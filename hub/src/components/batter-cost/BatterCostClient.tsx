@@ -392,7 +392,7 @@ export function BatterCostClient({ date }: { date: string }) {
   )
 
   if (error) return <PageState compact kind="error" title="Batter markets could not load" message={error} />
-  if (!data) return <div style={{ padding: 24, color: 'var(--text-3)', fontSize: 13 }}>Loading today&apos;s odds…</div>
+  if (!data) return <PageState compact kind="loading" title="Loading batter markets" message="Syncing prices and movement across the board." />
 
   return (
     <div>

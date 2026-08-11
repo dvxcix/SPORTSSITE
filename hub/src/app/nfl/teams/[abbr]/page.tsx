@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { ChevronRight, Shield } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TierGate } from '@/components/layout/TierGate'
+import styles from '@/components/product/EntityPage.module.css'
 
 export const revalidate = 0
 
-// Same "not linked from nav yet, internal-only" posture as /players/[id] —
-// this is the data-framework foundation for the 2026-27 NFL season, not a
-// finished feature. It IS wired into global search (that's the whole point
-// of building it now), just not in the Sidebar.
 function currentNflSeason(): number {
   const now = new Date()
   const year = now.getUTCFullYear()
@@ -41,63 +40,54 @@ export default async function NflTeamPage({ params }: { params: Promise<{ abbr: 
   const data = await getTeamData(abbr)
   if (!data) notFound()
   const { team, roster } = data
-
   const groups = new Map<string, typeof roster>()
-  for (const p of roster) {
-    const key = p.position_group || 'Other'
+  for (const player of roster) {
+    const key = player.position_group || 'Other'
     if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(p)
+    groups.get(key)!.push(player)
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-      <div
-        className="rounded-xl p-6 mb-6 flex items-center gap-4"
-        style={{ background: `linear-gradient(135deg, ${team.team_color ?? '#111'}, #06070a)` }}
-      >
-        {team.team_logo_espn && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={team.team_logo_espn} alt={team.team_name} width={72} height={72} style={{ objectFit: 'contain' }} />
-        )}
-        <div>
-          <h1 className="text-2xl font-black text-white">{team.team_name}</h1>
-          <p className="text-sm text-zinc-300">{team.team_conf} {team.team_division}</p>
-        </div>
-      </div>
+    <TierGate requiredTier="basic" label="Team Pages">
+      <main className={styles.page} style={{ '--entity-color': team.team_color ?? '#9cff39' } as React.CSSProperties}>
+        <header className={styles.hero}>
+          <div className={styles.avatar}>
+            {team.team_logo_espn ? <img src={team.team_logo_espn} alt="" /> : <Shield size={38} />}
+          </div>
+          <div className={styles.identity}>
+            <p className={styles.eyebrow}>NFL team hub</p>
+            <h1 className={styles.title}>{team.team_name}</h1>
+            <div className={styles.meta}>
+              <span className={styles.metaPill}>{team.team_conf} {team.team_division}</span>
+              <span className={styles.metaPill}>{roster.length} active players</span>
+            </div>
+          </div>
+        </header>
 
-      <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">Roster ({roster.length})</h2>
-      {roster.length === 0 && (
-        <p className="text-sm text-zinc-500">No current roster data synced yet.</p>
-      )}
-      <div className="space-y-6">
-        {Array.from(groups.entries()).map(([group, players]) => (
-          <div key={group}>
-            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">{group}</h3>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
-              {players.map(p => (
-                <Link
-                  key={p.gsis_id}
-                  href={`/nfl/players/${p.gsis_id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/50 transition-colors"
-                >
-                  {p.headshot ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.headshot} alt={p.display_name} width={32} height={32} className="rounded-full object-cover" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-500">
-                      {p.position || '—'}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{p.display_name}</p>
-                    <p className="text-xs text-zinc-500">{p.position}{p.jersey_number != null ? ` · #${p.jersey_number}` : ''}</p>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Current roster</h2>
+          <span className={styles.sectionMeta}>{currentNflSeason()} season</span>
+        </div>
+        <section className={styles.panel}>
+          {roster.length === 0 ? <div className={styles.empty}>Current roster data has not synced yet.</div> : Array.from(groups.entries()).map(([group, players]) => (
+            <div className={styles.group} key={group}>
+              <div className={styles.groupLabel}>{group}</div>
+              {players.map(player => (
+                <Link key={player.gsis_id} href={`/nfl/players/${player.gsis_id}`} className={styles.row}>
+                  <div className={styles.rowAvatar}>
+                    {player.headshot ? <img src={player.headshot} alt="" /> : <span>{player.position || 'NFL'}</span>}
                   </div>
+                  <div className={styles.rowMain}>
+                    <div className={styles.rowName}>{player.display_name}</div>
+                    <div className={styles.rowMeta}>{player.position}{player.jersey_number != null ? ` · #${player.jersey_number}` : ''}{player.status ? ` · ${player.status}` : ''}</div>
+                  </div>
+                  <ChevronRight className={styles.chevron} size={16} aria-hidden="true" />
                 </Link>
               ))}
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </section>
+      </main>
+    </TierGate>
   )
 }

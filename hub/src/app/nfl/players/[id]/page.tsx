@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
+import { TierGate } from '@/components/layout/TierGate'
+import styles from '@/components/product/EntityPage.module.css'
 
 export const revalidate = 0
 
@@ -168,10 +170,10 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
   const dvpByCategory = new Map((dvpRows as StatRow[]).map(r => [r.stat_category as string, r]))
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
+    <TierGate requiredTier="basic" label="Player Pages">
+    <main className={styles.page} style={{ '--entity-color': team?.team_color ?? '#9cff39' } as React.CSSProperties}>
       <div
-        className="rounded-xl p-6 mb-6 flex items-center gap-4"
-        style={{ background: `linear-gradient(135deg, ${team?.team_color ?? '#111'}, #06070a)` }}
+        className={styles.hero}
       >
         {player.headshot ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -416,6 +418,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           </table>
         </div>
       )}
-    </div>
+    </main>
+    </TierGate>
   )
 }

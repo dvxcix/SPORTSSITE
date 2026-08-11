@@ -10,6 +10,7 @@ import { Tooltip } from '@/components/ui/tooltip-card'
 import { createClient } from '@/lib/supabase/client'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel, pitchOutcomeColor, pitchOutcomeLabel } from '@slipsurge/core/mlb-api'
 import type { MLBGameFeed, MLBPlay, MLBBoxPlayer } from '@slipsurge/core/mlb-api'
+import styles from '@/components/product/GameDetail.module.css'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function fmt(n: number | undefined, dec = 0): string {
@@ -948,15 +949,15 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
   const home = feed.gameData.teams.home
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 16px' }}>
+    <main className={styles.page}>
       {/* Breadcrumb */}
-      <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>
+      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/sports" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Sports</Link>
         {' / '}
         <Link href="/sports" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>MLB</Link>
         {' / '}
         <span style={{ color: 'var(--text-2)' }}>{away.abbreviation} vs {home.abbreviation}</span>
-      </p>
+      </nav>
 
       <Scoreboard feed={feed} />
 
@@ -967,15 +968,9 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
       {(feed.liveData.linescore.innings?.length ?? 0) > 0 && <Linescore feed={feed} />}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
+      <div className={styles.tabs} role="tablist" aria-label="Game details">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: '10px 16px', fontSize: 13, fontWeight: 700,
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: tab === t ? 'var(--text-1)' : 'var(--text-3)',
-            borderBottom: `2px solid ${tab === t ? 'var(--accent)' : 'transparent'}`,
-            marginBottom: -1, transition: 'color 120ms',
-          }}>
+          <button key={t} onClick={() => setTab(t)} className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`} role="tab" aria-selected={tab === t}>
             {t}{t === 'Picks' && communityPicks.length > 0 ? ` (${communityPicks.length})` : ''}
           </button>
         ))}
@@ -1055,6 +1050,6 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
       )}
       {tab === 'Box Score' && <BoxScore feed={feed} />}
       {tab === 'Picks' && <CommunityPicks picks={communityPicks} />}
-    </div>
+    </main>
   )
 }

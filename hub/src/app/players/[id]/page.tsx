@@ -3,12 +3,11 @@ import type { Metadata } from 'next'
 import { PlayerPageClient } from '@/components/players/PlayerPageClient'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TierGate } from '@/components/layout/TierGate'
+import { PageState } from '@/components/layout/PageState'
+import entityStyles from '@/components/product/EntityPage.module.css'
 
 export const revalidate = 0
 
-// Deliberately not linked from Sidebar nav yet — internal-only test page
-// for the site-owned player data system (bio/season/career + Savant
-// Statcast + HR log + pitch arsenal), same pattern as /allstar2026.
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const admin = createAdminClient()
@@ -20,9 +19,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const { id } = await params
   return (
     <TierGate requiredTier="basic" label="Player Pages">
-      <Suspense fallback={null}>
-        <PlayerPageClient mlbId={id} />
-      </Suspense>
+      <main className={entityStyles.page}>
+        <Suspense fallback={<PageState kind="loading" title="Loading player profile" message="Preparing season, Statcast, pitch, and matchup data." />}>
+          <PlayerPageClient mlbId={id} />
+        </Suspense>
+      </main>
     </TierGate>
   )
 }

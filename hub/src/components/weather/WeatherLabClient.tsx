@@ -7,6 +7,8 @@ import { MLB_PARK_SHAPES } from '@slipsurge/core/mlbParkShapes'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { Tooltip } from '@/components/ui/tooltip-card'
+import { DateButtonNavigator } from '@/components/product/DateButtonNavigator'
+import { PageState } from '@/components/layout/PageState'
 
 // For the logo halo — a plain white glow read as flat/ugly against several
 // teams' colors, so the halo uses that team's own secondary color instead.
@@ -647,23 +649,13 @@ export function WeatherLabClient() {
   }, [date])
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 py-5 sm:px-6">
-      <div className="fade-in" style={{ marginBottom: 18 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          Weather <span style={{ color: 'var(--accent)' }}>Lab</span>
-          <span className="live-dot" />
-        </h1>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
-          Live park-by-park conditions for every game — wind, temp, humidity, and roof status.
-        </p>
-      </div>
-
-      <DateStrip date={date} onChange={setDate} />
+    <div>
+      <DateButtonNavigator date={date} today={localToday()} onChange={setDate} />
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
+        <PageState compact kind="loading" title="Loading ballpark conditions" message="Refreshing forecasts for the selected slate." />
       ) : games.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No games with weather data for {date}.</div>
+        <PageState compact kind="empty" title="No weather data yet" message={`No games with weather data are available for ${date}.`} />
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {games.map(g => <GameCard key={g.gamePk} game={g} />)}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { PageState } from '@/components/layout/PageState'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
@@ -10,6 +11,7 @@ import { MIN_PITCHES_FOR_HEAT } from '@slipsurge/core/batterStatsEngine'
 import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
 import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
 import type { PlayerTodayContext } from '@slipsurge/core/mlbSchedule'
+import entityStyles from '@/components/product/EntityPage.module.css'
 
 type SplitRow = { dims: Record<string, any>; metrics: Record<string, any> }
 type SplitWindow = { season: SplitRow[]; recency: SplitRow[] }
@@ -578,8 +580,8 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
       .catch(() => setTodayContext(null))
   }, [mlbId])
 
-  if (error) return <div style={{ padding: 24, color: 'var(--red)' }}>{error}</div>
-  if (!data) return <div style={{ padding: 24, color: 'var(--text-3)' }}>Loading…</div>
+  if (error) return <PageState kind="error" title="Player data unavailable" message={error} />
+  if (!data) return <PageState kind="loading" title="Loading player profile" message="Preparing current and historical performance." />
 
   const { player, seasonStats, careerStats, statcastSeason, pitchArsenal, form, splits, swingTake, battingStance, homeRuns, isBatter, isPitcher } = data
 
@@ -603,31 +605,35 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
     typeof value === 'number' ? heat(value, pools[role][field] ?? [], dir) : undefined
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 16px 64px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <PlayerAvatar
-          headshot={mlbHeadshot(player.mlb_id)}
-          teamLogo={player.current_team_id ? mlbTeamLogo(player.current_team_id) : undefined}
-          teamAbbr={player.current_team_abbr}
-          name={player.full_name ?? ''}
-          size={72}
-        />
-        <div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <header className={entityStyles.hero}>
+        <div className={entityStyles.avatar} style={{ display: 'grid', placeItems: 'center' }}>
+          <PlayerAvatar
+            headshot={mlbHeadshot(player.mlb_id)}
+            teamLogo={player.current_team_id ? mlbTeamLogo(player.current_team_id) : undefined}
+            teamAbbr={player.current_team_abbr}
+            name={player.full_name ?? ''}
+            size={82}
+          />
+        </div>
+        <div className={entityStyles.identity}>
+          <p className={entityStyles.eyebrow}>MLB player profile</p>
+          <h1 className={entityStyles.title}>
             {player.full_name ?? `Player ${player.mlb_id}`}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            {player.current_team_abbr && <span>{getTeamName(player.current_team_abbr)}</span>}
-            {player.primary_position && <span>{player.primary_position}</span>}
-            {player.bat_side && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Bats <HandBadge hand={player.bat_side} /></span>}
-            {player.pitch_hand && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Throws <HandBadge hand={player.pitch_hand} /></span>}
-            {player.height && <span>{player.height}</span>}
-            {player.weight && <span>{player.weight} lb</span>}
-            {player.mlb_debut && <span>Debut {player.mlb_debut}</span>}
+          </h1>
+          <div className={entityStyles.meta}>
+            {player.current_team_abbr && player.current_team_id ? (
+              <Link className={entityStyles.metaPill} href={`/mlb/teams/${player.current_team_id}`}>{getTeamName(player.current_team_abbr)}</Link>
+            ) : player.current_team_abbr ? <span className={entityStyles.metaPill}>{getTeamName(player.current_team_abbr)}</span> : null}
+            {player.primary_position && <span className={entityStyles.metaPill}>{player.primary_position}</span>}
+            {player.bat_side && <span className={entityStyles.metaPill}>Bats <HandBadge hand={player.bat_side} /></span>}
+            {player.pitch_hand && <span className={entityStyles.metaPill}>Throws <HandBadge hand={player.pitch_hand} /></span>}
+            {player.height && <span className={entityStyles.metaPill}>{player.height}</span>}
+            {player.weight && <span className={entityStyles.metaPill}>{player.weight} lb</span>}
+            {player.mlb_debut && <span className={entityStyles.metaPill}>Debut {player.mlb_debut}</span>}
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Season / career stats */}
       {isBatter && (

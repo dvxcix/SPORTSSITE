@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Trophy, TrendingUp, Target, Flame } from 'lucide-react'
+import { TrendingUp, Target, Flame, Trophy } from 'lucide-react'
 import { UserBadges } from '@/components/social/UserBadges'
+import styles from './Leaderboard.module.css'
 
 type UserRow = {
   id: string
@@ -29,10 +30,6 @@ const SPORT_LABELS: Record<string, string> = {
   soccer: 'MLS', mma: 'MMA',
 }
 
-const SPORT_EMOJI: Record<string, string> = {
-  mlb: 'b', nfl: 'f', nba: 'b', nhl: 'h', soccer: 's', mma: 'm',
-}
-
 function Avatar({ user, size = 40 }: { user: UserRow; size?: number }) {
   const initials = (user.display_name || user.username).slice(0, 2).toUpperCase()
   return (
@@ -43,7 +40,7 @@ function Avatar({ user, size = 40 }: { user: UserRow; size?: number }) {
       fontSize: size * 0.35, fontWeight: 800, color: 'var(--accent)',
     }}>
       {user.avatar_url
-        ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ? <img src={user.avatar_url} alt={`${user.display_name || user.username}'s avatar`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         : initials
       }
     </div>
@@ -127,10 +124,10 @@ function RankRow({ user, rank }: { user: UserRow; rank: number }) {
   return (
     <Link href={`/profile/${user.username}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div
+        className={styles.rankRow}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
           background: hovered ? 'var(--surface-2)' : 'var(--surface)',
           border: `1px solid ${hovered ? 'var(--border-2)' : 'var(--border)'}`,
           borderRadius: 14, transition: 'all 130ms',
@@ -157,7 +154,7 @@ function RankRow({ user, rank }: { user: UserRow; rank: number }) {
             <RecentDots results={user.recentResults} />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0 }}>
+        <div className={styles.record}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 16, fontWeight: 900, color: graded > 0 && user.winPct >= 55 ? '#4ade80' : 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
               {graded > 0 ? `${user.winPct}%` : '---'}
@@ -261,29 +258,9 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
   ]
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 16px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(180,255,77,0.08)', border: '1px solid rgba(180,255,77,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Trophy size={20} style={{ color: 'var(--accent)' }} />
-          </div>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Leaderboard</h1>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Top bettors on SlipSurge</p>
-          </div>
-        </div>
-        <Link href="/picks" style={{
-          padding: '8px 16px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-fg)',
-          fontSize: 12, fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <TrendingUp size={13} />
-          Drop a Pick
-        </Link>
-      </div>
-
+    <div>
       {/* Stats strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
+      <div className={styles.stats}>
         {[
           { icon: <Target size={14} />, label: 'Picks Graded', value: totalPicks > 0 ? totalPicks.toLocaleString() : '0' },
           { icon: <TrendingUp size={14} />, label: 'Avg Win Rate', value: avgWin > 0 ? `${avgWin}%` : '--' },
@@ -300,18 +277,14 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflowX: 'auto', paddingBottom: 2 }}>
+      <div className={styles.tabs} role="tablist" aria-label="Leaderboard period and sport">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            style={{
-              padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-              border: `1px solid ${tab === t.id ? 'var(--accent)' : 'var(--border)'}`,
-              background: tab === t.id ? 'var(--accent)' : 'var(--surface)',
-              color: tab === t.id ? 'var(--accent-fg)' : 'var(--text-2)',
-              cursor: 'pointer', transition: 'all 130ms', whiteSpace: 'nowrap', flexShrink: 0,
-            }}
+            className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
+            role="tab"
+            aria-selected={tab === t.id}
           >
             {t.label}
           </button>
@@ -322,7 +295,7 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
       {tab === 'overall' && (
         <>
           {topThree.length >= 3 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr 1fr', gap: 10, marginBottom: 20 }}>
+            <div className={styles.podium}>
               <PodiumCard user={topThree[1]} rank={2} />
               <PodiumCard user={topThree[0]} rank={1} />
               <PodiumCard user={topThree[2]} rank={3} />
@@ -364,7 +337,7 @@ export function LeaderboardClient({ users, allSports }: { users: UserRow[]; allS
 function EmptyState({ label = 'Be the first to drop picks and climb the board.' }: { label?: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>🏆</div>
+      <Trophy size={38} aria-hidden="true" style={{ color: 'var(--accent)', marginBottom: 12 }} />
       <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>No rankings yet</p>
       <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>{label}</p>
       <Link href="/picks" style={{

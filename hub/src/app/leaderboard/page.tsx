@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { LeaderboardClient } from './LeaderboardClient'
 import { TierGate } from '@/components/layout/TierGate'
+import { TrendingUp, Trophy } from 'lucide-react'
+import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 
 // The page itself is NOT statically cached anymore — every request needs
 // the real signed-in viewer to filter blocked users out of a shared
@@ -156,7 +158,10 @@ export default async function LeaderboardPage() {
 
   return (
     <TierGate requiredTier="basic" label="Leaderboard">
-      <LeaderboardClient users={users} allSports={allSports} />
+      <ProductPageShell narrow>
+        <ProductHero icon={<Trophy size={23} />} eyebrow="Community performance" title="Leaderboard" description="Compare verified pick performance across the community, by week and by sport." status={`${users.length} ranked members`} actions={<ProductAction href="/picks"><TrendingUp size={14} />Drop a Pick</ProductAction>} />
+        <LeaderboardClient users={users} allSports={allSports} />
+      </ProductPageShell>
     </TierGate>
   )
 }

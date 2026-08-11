@@ -8,6 +8,8 @@ import type { TodayGame } from '@slipsurge/core/mlbSchedule'
 import { GameMatchup } from './GameMatchup'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { Lock } from 'lucide-react'
+import { PageState } from '@/components/layout/PageState'
+import controls from '@/components/product/ResearchControls.module.css'
 
 // `locked` is added server-side by /api/slate/games for below-Advanced
 // members — always `false` for Advanced+ (see that route for the exact
@@ -52,28 +54,25 @@ export function SlateBreakdownClient({ date }: { date: string }) {
       .catch(() => setError('Failed to load the schedule for this date.'))
   }, [date])
 
-  if (error) return <div style={{ padding: 24, color: 'var(--red)' }}>{error}</div>
-  if (!games) return <div style={{ padding: 24, color: 'var(--text-3)' }}>Loading slate…</div>
-  if (!games.length) return <div style={{ padding: 24, color: 'var(--text-3)' }}>No games scheduled for this date.</div>
+  if (error) return <PageState kind="error" title="Slate unavailable" message={error} />
+  if (!games) return <PageState kind="loading" title="Loading slate" message="Preparing every matchup on the board." />
+  if (!games.length) return <PageState kind="empty" title="No games scheduled" message="Choose another date to review a different slate." />
 
   const activeGame = games.find(g => g.gameKey === activeGameKey) ?? games[0]
   const featuredGame = games.find(g => !g.locked)
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className={controls.scrollRail} aria-label="Choose a game">
         {games.map(g => {
           const isActive = g.gameKey === activeGameKey
           return (
             <button
               key={g.gameKey}
               onClick={() => setActiveGameKey(g.gameKey)}
+              aria-pressed={isActive}
+              className={`${controls.gameButton} ${isActive ? controls.gameButtonActive : ''}`}
               style={{
-                display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-                border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
-                background: isActive ? 'var(--accent-dim)' : 'var(--surface)',
-                color: isActive ? 'var(--accent)' : 'var(--text-2)',
-                fontSize: 12, fontWeight: 700,
                 opacity: g.locked ? 0.6 : 1,
               }}
             >
