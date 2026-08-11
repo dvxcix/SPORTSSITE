@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Check, ChevronDown, X } from 'lucide-react'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -42,6 +43,37 @@ interface StarterOption {
   oppAbbr: string; oppName: string
   oppLineup: LineupPlayer[]
   oppLineupConfirmed: boolean
+}
+
+function StarterOptionCard({ starter, selected, onSelect }: { starter: StarterOption; selected: boolean; onSelect: () => void }) {
+  return (
+    <div
+      className={`pitcher-starter-option${selected ? ' is-selected' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onSelect()
+        }
+      }}
+    >
+      <Link href={`/players/${starter.pitcher.id}`} onClick={event => event.stopPropagation()} className="pitcher-starter-avatar">
+        <PlayerAvatar headshot={mlbHeadshot(starter.pitcher.id)} teamLogo={getTeamLogoUrl(starter.teamAbbr)} teamAbbr={starter.teamAbbr} name={starter.pitcher.name} size={34} />
+      </Link>
+      <div className="pitcher-starter-copy">
+        <strong>{starter.pitcher.name}</strong>
+        <span>
+          <b className={starter.pitcher.hand === 'L' ? 'is-left' : 'is-right'}>{starter.pitcher.hand}HP</b>
+          <TeamLogoImg abbr={starter.teamAbbr} size={13} />
+          <small>vs</small>
+          <TeamLogoImg abbr={starter.oppAbbr} size={13} />
+        </span>
+      </div>
+      {selected ? <Check className="pitcher-starter-check" size={15} /> : null}
+    </div>
+  )
 }
 
 // ─── full Statcast/bat-tracking builders — same shape/logic as DugoutClient's
@@ -156,6 +188,7 @@ export function PitcherReportClient() {
   const [data, setData] = useState<DugoutData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [starterPickerOpen, setStarterPickerOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -199,6 +232,20 @@ export function PitcherReportClient() {
   }, [starters, selectedKey, linkedPitcherId])
 
   const selected = starters.find(s => s.key === selectedKey) ?? null
+
+  useEffect(() => {
+    if (!starterPickerOpen) return
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setStarterPickerOpen(false)
+    }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [starterPickerOpen])
 
   const splitMap = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
   const timingMap = useMemo(() => buildTimingMap(data?.timingSplits ?? []), [data?.timingSplits])
@@ -344,57 +391,30 @@ export function PitcherReportClient() {
         <PageState compact kind="empty" title="No probable starters yet" message={`No probable starters are available for ${date}.`} />
       ) : (
         <>
-          {/* starter picker */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-            {starters.map(s => {
-              const isSel = s.key === selectedKey
-              return (
-                // A <div role="button"> instead of a real <button> — the
-                // avatar below needs to be its own nested <Link> to the
-                // player profile (clicking anywhere else here still selects
-                // this starter same as before), and a real <a> nested inside
-                // a real <button> is invalid HTML.
-                <div
-                  key={s.key}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedKey(s.key)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedKey(s.key) } }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '7px 12px', borderRadius: 10,
-                    border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
-                    background: isSel ? 'var(--accent-dim)' : 'var(--surface)',
-                    cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
-                  <Link href={`/players/${s.pitcher.id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', flexShrink: 0 }}>
-                    <PlayerAvatar headshot={mlbHeadshot(s.pitcher.id)} teamLogo={getTeamLogoUrl(s.teamAbbr)} teamAbbr={s.teamAbbr} name={s.pitcher.name} size={32} />
-                  </Link>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: isSel ? 'var(--accent)' : 'var(--text-1)' }}>{s.pitcher.name}</div>
-                    <div style={{ fontSize: 9, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {/* Same L/R color convention as the batter-hand badges
-                          in these tables (L=blue, R=orange) — so pitcher
-                          handedness reads at a glance instead of blending
-                          into gray meta text. */}
-                      <span style={{ fontWeight: 800, color: s.pitcher.hand === 'L' ? '#60a5fa' : '#fb923c' }}>{s.pitcher.hand}HP</span>
-                      <span style={{ color: 'var(--text-3)' }}>·</span>
-                      <TeamLogoImg abbr={s.teamAbbr} size={12} />
-                      <span style={{ color: 'var(--text-3)' }}>vs</span>
-                      <TeamLogoImg abbr={s.oppAbbr} size={12} />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="pitcher-starter-grid">
+            {starters.map(starter => (
+              <StarterOptionCard key={starter.key} starter={starter} selected={starter.key === selectedKey} onSelect={() => setSelectedKey(starter.key)} />
+            ))}
           </div>
+
+          {selected ? (
+            <button type="button" className="pitcher-starter-mobile-trigger" onClick={() => setStarterPickerOpen(true)} aria-haspopup="dialog">
+              <PlayerAvatar headshot={mlbHeadshot(selected.pitcher.id)} teamLogo={getTeamLogoUrl(selected.teamAbbr)} teamAbbr={selected.teamAbbr} name={selected.pitcher.name} size={38} />
+              <span>
+                <small>Selected starter</small>
+                <strong>{selected.pitcher.name}</strong>
+                <em>{selected.pitcher.hand}HP · {selected.teamAbbr} vs {selected.oppAbbr}</em>
+              </span>
+              <b>Change <ChevronDown size={14} /></b>
+            </button>
+          ) : null}
 
           {selected && (
             <>
               {/* selected pitcher header — links to his player profile, plain hover-underline since nothing else in this header competes for the click */}
               <Tooltip content={`Open ${selected.pitcher.name}'s player profile`}>
                 <Link
+                  className="pitcher-selected-header"
                   href={`/players/${selected.pitcher.id}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6, textDecoration: 'none', color: 'inherit', width: 'fit-content' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline' }}
@@ -534,6 +554,73 @@ export function PitcherReportClient() {
           )}
         </>
       )}
+      {starterPickerOpen ? (
+        <div className="pitcher-picker-backdrop" role="presentation" onMouseDown={event => {
+          if (event.target === event.currentTarget) setStarterPickerOpen(false)
+        }}>
+          <section className="pitcher-picker-sheet" role="dialog" aria-modal="true" aria-label="Choose a probable starter">
+            <header>
+              <div>
+                <span>Probable starters</span>
+                <strong>Choose a matchup</strong>
+              </div>
+              <button type="button" onClick={() => setStarterPickerOpen(false)} aria-label="Close starter picker"><X size={17} /></button>
+            </header>
+            <div className="pitcher-picker-list">
+              {starters.map(starter => (
+                <StarterOptionCard
+                  key={starter.key}
+                  starter={starter}
+                  selected={starter.key === selectedKey}
+                  onSelect={() => {
+                    setSelectedKey(starter.key)
+                    setStarterPickerOpen(false)
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+      <style>{`
+        .pitcher-starter-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+        .pitcher-starter-option{display:flex;min-width:190px;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;transition:border-color 150ms ease,background 150ms ease,transform 150ms ease}
+        .pitcher-starter-option:hover{border-color:color-mix(in srgb,var(--accent) 42%,var(--border));transform:translateY(-1px)}
+        .pitcher-starter-option.is-selected{border-color:var(--accent);background:var(--accent-dim)}
+        .pitcher-starter-option:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+        .pitcher-starter-avatar{display:flex;flex:0 0 auto}
+        .pitcher-starter-copy{display:grid;gap:3px;min-width:0;flex:1}
+        .pitcher-starter-copy>strong{overflow:hidden;color:var(--text-1);font-size:12px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+        .pitcher-starter-option.is-selected .pitcher-starter-copy>strong{color:var(--accent)}
+        .pitcher-starter-copy>span{display:flex;align-items:center;gap:4px;color:var(--text-3);font-size:9px}
+        .pitcher-starter-copy b{font-size:9px}.pitcher-starter-copy b.is-left{color:#60a5fa}.pitcher-starter-copy b.is-right{color:#fb923c}
+        .pitcher-starter-copy small{font-size:9px}
+        .pitcher-starter-check{flex:0 0 auto;color:var(--accent)}
+        .pitcher-starter-mobile-trigger,.pitcher-picker-backdrop{display:none}
+        @media(max-width:640px){
+          .pitcher-starter-grid{display:none}
+          .pitcher-starter-mobile-trigger{display:flex;width:100%;min-height:64px;align-items:center;gap:10px;margin-bottom:12px;padding:9px 10px;border:1px solid color-mix(in srgb,var(--accent) 34%,var(--border));border-radius:13px;background:linear-gradient(135deg,var(--accent-dim),var(--surface));color:var(--text-1);text-align:left}
+          .pitcher-starter-mobile-trigger>span{display:grid;gap:1px;min-width:0;flex:1;font-style:normal}
+          .pitcher-starter-mobile-trigger small{color:var(--accent);font-family:var(--font-mono,monospace);font-size:8px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+          .pitcher-starter-mobile-trigger strong{overflow:hidden;font-size:13px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+          .pitcher-starter-mobile-trigger em{color:var(--text-3);font-size:9px;font-style:normal;font-weight:700}
+          .pitcher-starter-mobile-trigger>b{display:flex;align-items:center;gap:3px;color:var(--accent);font-size:9px;font-weight:850}
+          .pitcher-selected-header{display:none!important}
+          .pitcher-picker-backdrop{position:fixed;inset:0;z-index:1500;display:flex;align-items:flex-end;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);overscroll-behavior:contain}
+          .pitcher-picker-sheet{position:relative;display:flex;width:100%;max-height:calc(100dvh - 58px);flex-direction:column;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-bottom:0;border-radius:20px 20px 0 0;background:var(--surface);box-shadow:0 -20px 70px rgba(0,0,0,.65);padding-bottom:max(10px,env(safe-area-inset-bottom));animation:pitcher-picker-in 180ms ease-out}
+          .pitcher-picker-sheet::before{content:"";position:absolute;top:7px;left:50%;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.7}
+          .pitcher-picker-sheet>header{display:flex;align-items:center;gap:10px;padding:20px 14px 12px;border-bottom:1px solid var(--border)}
+          .pitcher-picker-sheet>header>div{display:grid;gap:2px;min-width:0;flex:1}
+          .pitcher-picker-sheet>header span{color:var(--accent);font-family:var(--font-mono,monospace);font-size:9px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+          .pitcher-picker-sheet>header strong{color:var(--text-1);font-size:15px}
+          .pitcher-picker-sheet>header button{display:grid;width:36px;height:36px;place-items:center;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text-2)}
+          .pitcher-picker-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-height:0;overflow-y:auto;padding:12px 14px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+          .pitcher-picker-list .pitcher-starter-option{min-width:0;padding:9px;background:var(--surface-2)}
+          @keyframes pitcher-picker-in{from{opacity:.5;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+        }
+        @media(max-width:390px){.pitcher-picker-list{grid-template-columns:1fr}}
+        @media(prefers-reduced-motion:reduce){.pitcher-picker-sheet{animation:none}}
+      `}</style>
     </div>
   )
 }

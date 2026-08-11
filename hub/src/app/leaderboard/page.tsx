@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { LeaderboardClient } from './LeaderboardClient'
-import { TierGate } from '@/components/layout/TierGate'
 import { TrendingUp, Trophy } from 'lucide-react'
 import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 
@@ -31,6 +30,27 @@ function wilsonLowerBound(wins: number, total: number): number {
   return (phat + z2 / (2 * total) - z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total)) / (1 + z2 / total)
 }
 
+type LeaderboardUserRow = {
+  id: string
+  username: string
+  display_name: string | null
+  avatar_url: string | null
+  is_verified: boolean | null
+  account_type: string | null
+  follower_count: number | null
+  pick_record: { wins?: number; losses?: number; pushes?: number } | null
+  is_private: boolean | null
+  hide_win_rate: boolean | null
+}
+
+type LeaderboardPickRow = {
+  id: string
+  author_id: string | null
+  sport: string | null
+  pick_data: { result?: string } | null
+  created_at: string
+}
+
 // The shared, expensive part — every user's picks re-aggregated and
 // re-ranked — cached across all viewers at the same 120s interval this
 // whole page used to revalidate at. Uses the admin client (service role,
@@ -42,24 +62,44 @@ function wilsonLowerBound(wins: number, total: number): number {
 async function fetchRankedLeaderboard() {
   const admin = createAdminClient()
 
-  // Private accounts never appear here — this is a public ranking with no
+  // Private accounts and accounts that hide their win rate never appear here — this is a public ranking with no
   // per-viewer follow check (unlike the profile page, which can show a
   // private account's stats to its own followers), so the only correct
   // answer for "does the public see this account's record" is no. Filtered
   // in JS rather than `.eq('is_private', false)` — is_private predates a
   // default and can be NULL on older rows, which Postgres's `= false` would
   // wrongly exclude.
-  const { data: rawUsers } = await admin
-    .from('users')
-    .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record, is_private')
-    .limit(200)
-  const users = (rawUsers ?? []).filter(u => !u.is_private).slice(0, 100)
-
-  const { data: pickStats } = await admin
-    .from('posts')
-    .select('author_id, sport, pick_data, created_at')
-    .in('post_type', ['pick', 'parlay'])
-    .not('pick_data', 'is', null)
+  // Supabase caps a select at the project's API row limit. The previous
+  // query fetched an arbitrary profile batch and then sliced it again, so
+  // valid public records outside that batch could never rank. Read every
+  // page and let visibility, not membership tier or insertion order, decide.
+  const rawUsers: LeaderboardUserRow[] = []
+  const pickStats: LeaderboardPickRow[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin
+      .from('users')
+      .select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record, is_private, hide_win_rate')
+      .order('id', { ascending: true })
+      .range(from, from + pageSize - 1)
+    if (error) throw error
+    rawUsers.push(...((data ?? []) as LeaderboardUserRow[]))
+    if (!data || data.length < pageSize) break
+  }
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin
+      .from('posts')
+      .select('id, author_id, sport, pick_data, created_at')
+      .in('post_type', ['pick', 'parlay'])
+      .not('pick_data', 'is', null)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + pageSize - 1)
+    if (error) throw error
+    pickStats.push(...((data ?? []) as LeaderboardPickRow[]))
+    if (!data || data.length < pageSize) break
+  }
+  const users = rawUsers.filter(u => !u.is_private && !u.hide_win_rate)
 
   const oneWeekAgo = new Date()
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
@@ -72,13 +112,13 @@ async function fetchRankedLeaderboard() {
     recentResults: ('W' | 'L' | 'P')[]
   }> = {}
 
-  for (const pick of pickStats ?? []) {
+  for (const pick of pickStats) {
     if (!pick.author_id) continue
     if (!statsByUser[pick.author_id]) {
       statsByUser[pick.author_id] = { wins: 0, losses: 0, pushes: 0, bySport: {}, thisWeek: { wins: 0, losses: 0 }, recentResults: [] }
     }
     const s = statsByUser[pick.author_id]
-    const result = (pick.pick_data as Record<string, string> | null)?.result
+    const result = pick.pick_data?.result
     const sport = pick.sport || 'other'
     if (!s.bySport[sport]) s.bySport[sport] = { wins: 0, losses: 0, pushes: 0 }
 
@@ -96,7 +136,7 @@ async function fetchRankedLeaderboard() {
     }
   }
 
-  const ranked = (users ?? []).map(u => {
+  const ranked = users.map(u => {
     const fromPosts = statsByUser[u.id]
     const fromRecord = u.pick_record as { wins?: number; losses?: number; pushes?: number } | null
 
@@ -139,10 +179,10 @@ async function fetchRankedLeaderboard() {
       thisWeek: fromPosts?.thisWeek ?? { wins: 0, losses: 0 },
       bySport: fromPosts?.bySport ?? {},
     }
-  }).sort((a, b) => wilsonLowerBound(b.wins, b.wins + b.losses) - wilsonLowerBound(a.wins, a.wins + a.losses)
+  }).filter(u => u.wins + u.losses > 0).sort((a, b) => wilsonLowerBound(b.wins, b.wins + b.losses) - wilsonLowerBound(a.wins, a.wins + a.losses)
     || b.follower_count - a.follower_count)
 
-  const allSports = Array.from(new Set((pickStats ?? []).map(p => p.sport).filter(Boolean))) as string[]
+  const allSports = Array.from(new Set(pickStats.map(p => p.sport).filter(Boolean))) as string[]
 
   return { ranked, allSports }
 }
@@ -157,11 +197,9 @@ export default async function LeaderboardPage() {
   const users = blockedIds ? ranked.filter(u => !blockedIds.has(u.id)) : ranked
 
   return (
-    <TierGate requiredTier="basic" label="Leaderboard">
-      <ProductPageShell narrow>
-        <ProductHero icon={<Trophy size={23} />} eyebrow="Community performance" title="Leaderboard" description="Compare verified pick performance across the community, by week and by sport." status={`${users.length} ranked members`} actions={<ProductAction href="/picks"><TrendingUp size={14} />Drop a Pick</ProductAction>} />
-        <LeaderboardClient users={users} allSports={allSports} />
-      </ProductPageShell>
-    </TierGate>
+    <ProductPageShell narrow>
+      <ProductHero icon={<Trophy size={23} />} eyebrow="Community performance" title="Leaderboard" description="Compare public pick performance across the community, by week and by sport." status={`${users.length} ranked members`} actions={<ProductAction href="/picks"><TrendingUp size={14} />Drop a Pick</ProductAction>} />
+      <LeaderboardClient users={users} allSports={allSports} />
+    </ProductPageShell>
   )
 }

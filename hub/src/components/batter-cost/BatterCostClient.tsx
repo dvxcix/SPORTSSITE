@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink, TrendingDown, TrendingUp, X } from 'lucide-react'
+import { Check, ExternalLink, SlidersHorizontal, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
@@ -189,6 +189,7 @@ export function BatterCostClient({ date }: { date: string }) {
   // highlight the one actually under the cursor.
   const [hovered, setHovered] = useState<string | null>(null)
   const [expandedPlayerKey, setExpandedPlayerKey] = useState<string | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   // Default: biggest HR% drop vs. this player's own season-average price
   // first — the "who's the biggest opening-day mover" view the page exists
   // for. Click any column to re-sort by it instead.
@@ -207,6 +208,8 @@ export function BatterCostClient({ date }: { date: string }) {
   const setDeltaFilter = (key: string, v: DeltaFilter) => setDeltaFilters(prev => ({ ...prev, [key]: v }))
   const [pwrFilter, setPwrFilter] = useState<'all' | 'pwr'>('all')
   const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || pwrFilter !== 'all' || Object.values(deltaFilters).some(v => v && v !== 'all')
+  const activeFilterCount = Number(fhrPctFilter !== 'all') + Number(saPctFilter !== 'all') + Number(pwrFilter !== 'all')
+    + Object.values(deltaFilters).filter(v => v && v !== 'all').length
   const resetFilters = () => { setFhrPctFilter('all'); setSaPctFilter('all'); setDeltaFilters({}); setPwrFilter('all') }
 
   useEffect(() => {
@@ -220,13 +223,18 @@ export function BatterCostClient({ date }: { date: string }) {
   }, [date])
 
   useEffect(() => {
-    if (!expandedPlayerKey) return
+    if (!expandedPlayerKey && !filtersOpen) return
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setExpandedPlayerKey(null)
+      if (event.key === 'Escape') { setExpandedPlayerKey(null); setFiltersOpen(false) }
     }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [expandedPlayerKey])
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [expandedPlayerKey, filtersOpen])
 
   // Same source, same map-building, and the exact same fhr_pct/sa_pct math
   // DugoutClient.tsx's buildBatterRow already uses (today's FanDuel price
@@ -391,30 +399,47 @@ export function BatterCostClient({ date }: { date: string }) {
     [flatBatters, expandedPlayerKey],
   )
 
+  const renderFilterControls = () => (
+    <>
+      <FilterGroup label="FHR%" value={fhrPctFilter} onChange={setFhrPctFilter} options={[
+        { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'blank', label: '0' },
+      ]} />
+      <FilterGroup label="HR%" value={saPctFilter} onChange={setSaPctFilter} options={[
+        { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'blank', label: '0' },
+      ]} />
+      <FilterGroup label="⚡PWR" value={pwrFilter} onChange={setPwrFilter} options={[
+        { key: 'all', label: 'All' }, { key: 'pwr', label: 'PWR only' },
+      ]} />
+      {MARKETS.map(m => (
+        <FilterGroup key={m.key} label={`${m.label} Δ`} value={getDeltaFilter(m.key)} onChange={(v: DeltaFilter) => setDeltaFilter(m.key, v)} options={[
+          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
+        ]} />
+      ))}
+    </>
+  )
+
   if (error) return <PageState compact kind="error" title="Batter markets could not load" message={error} />
   if (!data) return <PageState compact kind="loading" title="Loading batter markets" message="Syncing prices and movement across the board." />
 
   return (
     <div>
-      <div style={{
+      <div className="batter-cost-filter-summary">
+        <div>
+          <SlidersHorizontal size={16} />
+          <span>{activeFilterCount ? `${activeFilterCount} active` : 'All markets'}</span>
+          <small>{sorted.length} batters</small>
+        </div>
+        {filtersActive ? <button type="button" className="batter-cost-filter-clear" onClick={resetFilters}>Clear</button> : null}
+        <button type="button" className="batter-cost-filter-open" onClick={() => setFiltersOpen(true)}>
+          Filters {activeFilterCount ? <b>{activeFilterCount}</b> : null}
+        </button>
+      </div>
+      <div className="batter-cost-filter-panel" style={{
         display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16,
         padding: '10px 12px', marginBottom: 12,
         background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
       }}>
-        <FilterGroup label="FHR%" value={fhrPctFilter} onChange={setFhrPctFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'blank', label: '0' },
-        ]} />
-        <FilterGroup label="HR%" value={saPctFilter} onChange={setSaPctFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'blank', label: '0' },
-        ]} />
-        <FilterGroup label="⚡PWR" value={pwrFilter} onChange={setPwrFilter} options={[
-          { key: 'all', label: 'All' }, { key: 'pwr', label: 'PWR only' },
-        ]} />
-        {MARKETS.map(m => (
-          <FilterGroup key={m.key} label={`${m.label} Δ`} value={getDeltaFilter(m.key)} onChange={(v: DeltaFilter) => setDeltaFilter(m.key, v)} options={[
-            { key: 'all', label: 'All' }, { key: 'pos', label: '+' }, { key: 'neg', label: '−' }, { key: 'flat', label: '0' },
-          ]} />
-        ))}
+        {renderFilterControls()}
         {filtersActive && (
           <button
             onClick={resetFilters}
@@ -589,9 +614,41 @@ export function BatterCostClient({ date }: { date: string }) {
           </section>
         </div>
       ) : null}
+      {filtersOpen ? (
+        <div className="batter-cost-filter-backdrop" role="presentation" onMouseDown={event => {
+          if (event.target === event.currentTarget) setFiltersOpen(false)
+        }}>
+          <section className="batter-cost-filter-sheet" role="dialog" aria-modal="true" aria-label="Filter batter markets">
+            <header className="batter-cost-filter-sheet-header">
+              <div>
+                <span>Board filters</span>
+                <strong>Refine market movement</strong>
+              </div>
+              <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><X size={17} /></button>
+            </header>
+            <div className="batter-cost-filter-sheet-body">{renderFilterControls()}</div>
+            <footer className="batter-cost-filter-sheet-footer">
+              <button type="button" className="batter-cost-filter-reset" onClick={resetFilters} disabled={!filtersActive}>Clear all</button>
+              <button type="button" className="batter-cost-filter-apply" onClick={() => setFiltersOpen(false)}>
+                <Check size={15} /> Show {sorted.length} batters
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
       <style>{`
-        .batter-cost-player-mobile,.batter-cost-mobile-backdrop{display:none}
+        .batter-cost-player-mobile,.batter-cost-mobile-backdrop,.batter-cost-filter-summary,.batter-cost-filter-backdrop{display:none}
         @media(max-width:640px){
+          .batter-cost-filter-panel{display:none!important}
+          .batter-cost-filter-summary{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+          .batter-cost-filter-summary>div{display:flex;align-items:center;gap:7px;min-width:0;flex:1;color:var(--text-2)}
+          .batter-cost-filter-summary>div>svg{color:var(--accent);flex:0 0 auto}
+          .batter-cost-filter-summary span{font-size:11px;font-weight:850;white-space:nowrap}
+          .batter-cost-filter-summary small{overflow:hidden;color:var(--text-4);font-size:9px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+          .batter-cost-filter-summary button{min-height:34px;border-radius:9px;font-size:10px;font-weight:850}
+          .batter-cost-filter-clear{padding:0 9px;border:1px solid var(--border);background:transparent;color:var(--text-3)}
+          .batter-cost-filter-open{display:flex;align-items:center;gap:6px;padding:0 11px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-dim);color:var(--accent)}
+          .batter-cost-filter-open b{display:grid;width:18px;height:18px;place-items:center;border-radius:99px;background:var(--accent);color:var(--accent-fg);font-size:9px}
           .batter-cost-table-scroll{overscroll-behavior-x:contain;border-radius:8px!important}
           .batter-cost-table{font-size:12px!important;width:max-content!important;min-width:100%}
           .batter-cost-row>td{padding-top:8px!important;padding-bottom:8px!important}
@@ -628,9 +685,27 @@ export function BatterCostClient({ date }: { date: string }) {
           .batter-cost-sheet-market .is-longer,.batter-cost-sheet-market .is-longer strong{color:#f87171}
           .batter-cost-sheet-market .is-flat,.batter-cost-sheet-market .is-flat strong{color:var(--text-3)}
           .batter-cost-profile-link{display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;margin:0 14px;border:1px solid var(--accent);border-radius:11px;background:var(--accent-dim);color:var(--accent);font-size:11px;font-weight:900;text-decoration:none}
+          .batter-cost-filter-backdrop{position:fixed;inset:0;z-index:1500;display:flex;align-items:flex-end;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);overscroll-behavior:contain}
+          .batter-cost-filter-sheet{position:relative;display:flex;width:100%;max-height:calc(100dvh - 58px);flex-direction:column;overflow:hidden;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-bottom:0;border-radius:20px 20px 0 0;background:var(--surface);box-shadow:0 -20px 70px rgba(0,0,0,.65);padding-bottom:max(8px,env(safe-area-inset-bottom));animation:batter-cost-sheet-in 180ms ease-out}
+          .batter-cost-filter-sheet::before{content:"";position:absolute;top:7px;left:50%;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.7}
+          .batter-cost-filter-sheet-header{display:flex;align-items:center;gap:10px;padding:20px 14px 12px;border-bottom:1px solid var(--border)}
+          .batter-cost-filter-sheet-header>div{display:grid;gap:2px;min-width:0;flex:1}
+          .batter-cost-filter-sheet-header span{color:var(--accent);font-family:var(--font-mono,monospace);font-size:9px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+          .batter-cost-filter-sheet-header strong{color:var(--text-1);font-size:15px}
+          .batter-cost-filter-sheet-header button{display:grid;width:36px;height:36px;place-items:center;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text-2)}
+          .batter-cost-filter-sheet-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:0;overflow-y:auto;padding:14px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+          .batter-cost-filter-sheet-body>div{min-width:0;justify-content:space-between;gap:4px!important;padding:9px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+          .batter-cost-filter-sheet-body>div>span{min-width:42px;font-size:9px!important}
+          .batter-cost-filter-sheet-body button{min-width:29px!important;min-height:30px;padding:3px 7px!important}
+          .batter-cost-filter-sheet-footer{display:grid;grid-template-columns:minmax(92px,.6fr) minmax(0,1.4fr);gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface)}
+          .batter-cost-filter-sheet-footer button{display:flex;min-height:44px;align-items:center;justify-content:center;gap:6px;border-radius:11px;font-size:11px;font-weight:900}
+          .batter-cost-filter-reset{border:1px solid var(--border);background:var(--surface-2);color:var(--text-2)}
+          .batter-cost-filter-reset:disabled{opacity:.45}
+          .batter-cost-filter-apply{border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg)}
           @keyframes batter-cost-sheet-in{from{opacity:.5;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
         }
-        @media(prefers-reduced-motion:reduce){.batter-cost-mobile-sheet{animation:none}}
+        @media(max-width:370px){.batter-cost-filter-sheet-body{grid-template-columns:1fr}}
+        @media(prefers-reduced-motion:reduce){.batter-cost-mobile-sheet,.batter-cost-filter-sheet{animation:none}}
       `}</style>
     </div>
   )

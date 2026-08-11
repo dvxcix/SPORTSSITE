@@ -136,13 +136,16 @@
 .sectionMeta { color: var(--text-3); font-size: 11px; font-weight: 700; }
 
 @media (max-width: 720px) {
-  .shell { padding-inline: 12px; }
-  .hero { align-items: flex-start; flex-direction: column; border-radius: 16px; }
+  .shell { padding: 10px 12px clamp(72px, 8vw, 108px); }
+  .hero { align-items: flex-start; flex-direction: column; gap: 10px; margin-bottom: 10px; padding: 14px; border-radius: 16px; }
   .heroIdentity { align-items: flex-start; }
-  .icon { width: 42px; height: 42px; border-radius: 12px; }
+  .icon { width: 38px; height: 38px; border-radius: 11px; }
+  .title { font-size: 22px; }
+  .description { margin-top: 4px; line-height: 1.4; }
   .actions { width: 100%; justify-content: flex-start; }
-  .action { flex: 1 1 auto; }
-  .dateNav { grid-template-columns: 42px repeat(7, minmax(34px, 1fr)) 42px; border-radius: 14px; }
+  .action { min-height: 36px; flex: 1 1 auto; padding-inline: 10px; }
+  .status { padding: 6px 9px; }
+  .dateNav { grid-template-columns: 40px repeat(7, minmax(34px, 1fr)) 40px; margin-bottom: 12px; border-radius: 14px; }
   .dateValue { font-size: 10px; }
 }
 

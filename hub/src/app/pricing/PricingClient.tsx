@@ -65,7 +65,7 @@ const TIERS: TierDef[] = [
 const TIER_RANK: Record<Tier, number> = { free: 0, basic: 1, advanced: 2, ultimate: 3 }
 const FEATURE_ROWS: { label: string; minTier: Tier }[] = [
   { label: 'Community access — posts, DMs, groups, channels & notifications', minTier: 'basic' },
-  { label: 'Community leaderboard', minTier: 'basic' },
+  { label: 'Community leaderboard', minTier: 'free' },
   { label: 'Player research & search', minTier: 'basic' },
   { label: 'Live scores & play-by-play', minTier: 'basic' },
   { label: 'Pitcher Report + Weather Lab', minTier: 'basic' },
