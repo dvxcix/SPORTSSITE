@@ -3,6 +3,11 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/platform'
+import {
+  PIKKIT_SIGNED_OUT_ERROR,
+  checkPikkitAuthAndAlert,
+  checkPikkitImportHealthAndAlert,
+} from '@/lib/scrapers/pikkitAuth'
 
 export const revalidate = 0
 export const maxDuration = 280
@@ -18,6 +23,8 @@ async function scrapeGame(gamePk: number) {
     skipped: false,
     attempts: 0,
     error: 'scrape request failed',
+    reason: 'scrape request failed',
+    rowsImported: 0,
   }
 
   for (let attempt = 1; attempt <= MAX_SCRAPE_ATTEMPTS; attempt += 1) {
@@ -29,6 +36,10 @@ async function scrapeGame(gamePk: number) {
       const body = await res.json().catch(() => null)
       const ok = res.ok && body?.result?.imported?.ok !== false
       const skipped = body?.result?.skipped === true
+      const reason = typeof body?.result?.error === 'string'
+        ? body.result.error
+        : typeof body?.error === 'string' ? body.error : ''
+      const rowsImported = Number(body?.result?.imported?.body?.rowsImported ?? 0)
 
       lastResult = {
         gamePk,
@@ -37,6 +48,8 @@ async function scrapeGame(gamePk: number) {
         skipped,
         attempts: attempt,
         error: ok ? '' : 'scrape or import failed',
+        reason,
+        rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0,
       }
 
       if (ok || skipped) return lastResult
@@ -48,6 +61,8 @@ async function scrapeGame(gamePk: number) {
         skipped: false,
         attempts: attempt,
         error: 'scrape request failed',
+        reason: 'scrape request failed',
+        rowsImported: 0,
       }
     }
 
@@ -82,8 +97,29 @@ async function run(req: Request) {
 
   const normalizedResults = results.map((result, index) => result.status === 'fulfilled'
     ? result.value
-    : { gamePk: pregame[index].gamePk, status: 502, ok: false, skipped: false, attempts: MAX_SCRAPE_ATTEMPTS, error: 'scrape request failed' })
+    : { gamePk: pregame[index].gamePk, status: 502, ok: false, skipped: false, attempts: MAX_SCRAPE_ATTEMPTS, error: 'scrape request failed', reason: 'scrape request failed', rowsImported: 0 })
   const failed = normalizedResults.filter(result => !result.ok)
+  const unavailableReason = `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`
+  const allListingsUnavailable = normalizedResults.length > 0
+    && normalizedResults.every(result => result.skipped && result.reason === unavailableReason)
+  const allMarketDataUnavailable = normalizedResults.length > 0
+    && normalizedResults.every(result => result.skipped && (
+      result.reason === unavailableReason || result.reason === 'no markets scraped'
+    ))
+
+  let authState: Awaited<ReturnType<typeof checkPikkitAuthAndAlert>> | null = null
+  if (allListingsUnavailable) {
+    const contextId = process.env.PIKKIT_CONTEXT_ID
+    authState = contextId ? await checkPikkitAuthAndAlert(contextId) : 'unknown'
+  }
+
+  await checkPikkitImportHealthAndAlert({
+    pregame: pregame.length,
+    failedGamePks: failed.map(result => result.gamePk),
+    accessUnavailable: allMarketDataUnavailable && authState !== 'signed-out',
+  }).catch(error => console.error('[poll-pikkit-picks] health alert failed', {
+    type: error instanceof Error ? error.name : typeof error,
+  }))
 
   if (failed.length) {
     console.error('[poll-pikkit-picks] one or more games failed', {
@@ -101,6 +137,8 @@ async function run(req: Request) {
     succeeded: normalizedResults.length - failed.length,
     skipped: normalizedResults.filter(result => result.skipped).length,
     failed: failed.length,
+    rowsImported: normalizedResults.reduce((sum, result) => sum + result.rowsImported, 0),
+    authState,
     results: normalizedResults,
   }, { status: failed.length ? 502 : 200 })
 }
