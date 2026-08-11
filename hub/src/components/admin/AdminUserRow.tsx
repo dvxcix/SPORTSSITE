@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { WHOP_PLANS, TIER_LABEL, type Tier } from '@slipsurge/core/tiers'
@@ -17,8 +18,32 @@ function fmtDate(iso: string | null | undefined) {
   return iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
+export interface AdminUserRecord {
+  id: string
+  username: string
+  display_name: string | null
+  avatar_url: string | null
+  email: string
+  account_type: string
+  is_verified: boolean
+  follower_count: number | null
+  created_at: string
+  tier: Tier | null
+  discord_advanced_claimed: boolean | null
+  admin_granted_tier: Exclude<Tier, 'free'> | null
+  admin_granted_tier_at: string | null
+  beta_access_active: boolean | null
+  verified_identities: Record<string, unknown> | null
+  whop_user_id: string | null
+  whop_plan_id: string | null
+  tier_status: string | null
+  tier_current_period_end: string | null
+  tier_purchased_at: string | null
+  whop_membership_id: string | null
+}
+
 export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: {
-  user: any
+  user: AdminUserRecord
   displayTier: Tier
   subLabel: string | null
   emailVerified: boolean
@@ -38,7 +63,7 @@ export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: 
           <button onClick={() => setOpen(v => !v)} className="flex items-center gap-3 text-left" aria-label="Toggle details">
             {open ? <ChevronDown size={14} className="text-zinc-500 shrink-0" /> : <ChevronRight size={14} className="text-zinc-500 shrink-0" />}
             <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-black text-white overflow-hidden shrink-0">
-              {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
+              {u.avatar_url ? <Image unoptimized src={u.avatar_url} alt="" width={32} height={32} className="h-full w-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-1.5">

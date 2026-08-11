@@ -26,9 +26,9 @@ export function TerminateMembershipTool() {
           ? `Terminated (${body.business} business) — linked SlipSurge account downgraded to Free.`
           : `Terminated (${body.business} business) — no SlipSurge account has this membership ID on file.`
       )
-    } catch (e: any) {
+    } catch (e: unknown) {
       setIsError(true)
-      setResult(e?.message ?? 'Termination failed')
+      setResult(e instanceof Error ? e.message : 'Termination failed')
     } finally {
       setRunning(false)
       setConfirming(false)
@@ -40,7 +40,7 @@ export function TerminateMembershipTool() {
       <p className="text-xs font-bold text-red-400 uppercase tracking-wider">Force-terminate a Whop membership</p>
       <p className="text-xs text-zinc-500">
         Cancels immediately (not at period end) by raw Whop membership ID — works against either business, and
-        doesn't require the membership to be linked to a SlipSurge account. For ToS violations / fraud / chargebacks.
+        does not require the membership to be linked to a SlipSurge account. For ToS violations, fraud, or chargebacks.
       </p>
       <div className="flex items-center gap-2">
         <input

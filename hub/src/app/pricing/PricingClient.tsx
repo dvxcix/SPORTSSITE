@@ -102,14 +102,14 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   const fullAccess = !!fullAccessReason
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
       {checkoutStatus === 'success' && (
         <div style={{
           position: 'relative', zIndex: 2, textAlign: 'center', fontSize: 13, fontWeight: 600,
           color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderBottom: '1px solid rgba(74,222,128,0.25)',
           padding: '10px 16px',
         }}>
-          Payment received — your plan updates automatically within a few seconds. If it doesn't show yet, refresh the page.
+          Payment received — your plan updates automatically within a few seconds. If it doesn&apos;t show yet, refresh the page.
         </div>
       )}
       {checkoutStatus === 'error' && (
@@ -118,7 +118,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           color: '#f87171', background: 'rgba(248,113,113,0.1)', borderBottom: '1px solid rgba(248,113,113,0.25)',
           padding: '10px 16px',
         }}>
-          Checkout didn't complete. No charge was made — try again whenever you're ready.
+          Checkout didn&apos;t complete. No charge was made — try again whenever you&apos;re ready.
         </div>
       )}
       {/* Hero — same treatment as the main LandingPage: Spotlight + BackgroundBeams + Meteors */}

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
 
-export type SettingField = { key: string; label: string; type: 'text' | 'email' | 'number' | 'toggle'; default: any; hint?: string }
+type SettingValue = string | number | boolean
+export type SettingField = { key: string; label: string; type: 'text' | 'email' | 'number' | 'toggle'; default: SettingValue; hint?: string }
 
 // Generic settings-list component backed by site_settings (key/value text
 // rows). Unlike AdminGeneralSettings (its older sibling), this actually
@@ -12,8 +13,8 @@ export type SettingField = { key: string; label: string; type: 'text' | 'email' 
 // defaults — that was a real bug there, not fixed here since it's a
 // separate, already-shipped page outside this task's scope.
 export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
-  const [values, setValues] = useState<Record<string, any>>(() => {
-    const v: Record<string, any> = {}
+  const [values, setValues] = useState<Record<string, SettingValue>>(() => {
+    const v: Record<string, SettingValue> = {}
     fields.forEach(f => { v[f.key] = f.default })
     return v
   })
@@ -63,7 +64,7 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
     <div className="space-y-4">
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
         {fields.map(f => (
-          <div key={f.key} className="flex items-center justify-between px-4 py-3.5">
+          <div key={f.key} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <label className="text-sm font-medium text-white">{f.label}</label>
               {f.hint && <p className="text-xs text-zinc-500 mt-0.5">{f.hint}</p>}
@@ -73,9 +74,9 @@ export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
             ) : (
               <input
                 type={f.type}
-                value={values[f.key] ?? ''}
+                value={String(values[f.key] ?? '')}
                 onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-green-500/50 w-56 text-right shrink-0"
+                className="w-full shrink-0 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-left text-sm text-white outline-none focus:border-green-500/50 sm:w-56 sm:py-1.5 sm:text-right"
               />
             )}
           </div>

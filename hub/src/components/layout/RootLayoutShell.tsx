@@ -66,7 +66,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
       <MfaGate />
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
-      <div className={`flex min-h-screen ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
+      <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         {isDesktop
           ? <DesktopNavigation />
           : <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />}

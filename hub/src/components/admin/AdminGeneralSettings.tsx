@@ -15,9 +15,11 @@ const SETTINGS_FIELDS = [
   { key: 'posts_per_page', label: 'Posts Per Page', type: 'number', default: 30 },
 ]
 
+type SettingValue = string | number | boolean
+
 export function AdminGeneralSettings() {
-  const [values, setValues] = useState<Record<string, any>>(() => {
-    const v: Record<string, any> = {}
+  const [values, setValues] = useState<Record<string, SettingValue>>(() => {
+    const v: Record<string, SettingValue> = {}
     SETTINGS_FIELDS.forEach(f => { v[f.key] = f.default })
     return v
   })
@@ -72,16 +74,16 @@ export function AdminGeneralSettings() {
     <div className="space-y-4">
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
         {SETTINGS_FIELDS.map(f => (
-          <div key={f.key} className="flex items-center justify-between px-4 py-3.5">
+          <div key={f.key} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-sm font-medium text-white">{f.label}</label>
             {f.type === 'toggle' ? (
               <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} />
             ) : (
               <input
                 type={f.type}
-                value={values[f.key]}
+                value={String(values[f.key] ?? '')}
                 onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-green-500/50 w-48 text-right"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-left text-sm text-white outline-none focus:border-green-500/50 sm:w-48 sm:py-1.5 sm:text-right"
               />
             )}
           </div>

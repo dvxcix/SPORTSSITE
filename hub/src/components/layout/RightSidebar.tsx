@@ -76,7 +76,7 @@ export async function RightSidebar() {
   }
 
   return (
-    <aside className="ss-feed-rail shrink-0 sticky h-screen overflow-y-auto hidden xl:flex flex-col gap-4">
+    <aside className="ss-feed-rail hidden min-h-0 shrink-0 flex-col gap-4 overflow-y-auto xl:sticky xl:flex">
       {/* Trending */}
       {trending.length > 0 && (
         <div className="ss-feed-rail-card ss-trending-card p-4">

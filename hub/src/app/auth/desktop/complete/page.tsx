@@ -17,7 +17,7 @@ function DesktopAuthCompleteInner() {
     const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/feed'
 
     if (!tokenHash || !state || state !== expectedState) {
-      setError('This desktop sign-in request is invalid or expired.')
+      window.queueMicrotask(() => setError('This desktop sign-in request is invalid or expired.'))
       return
     }
 
@@ -33,7 +33,7 @@ function DesktopAuthCompleteInner() {
   }, [router, searchParams])
 
   return (
-    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>
+    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>
       <p style={{ color: error ? 'var(--red)' : 'var(--text-3)', fontSize: 13 }}>
         {error || 'Finishing desktop sign-in…'}
       </p>

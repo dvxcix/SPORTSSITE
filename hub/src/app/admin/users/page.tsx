@@ -1,13 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { AdminUserRow } from '@/components/admin/AdminUserRow'
+import { AdminUserRow, type AdminUserRecord } from '@/components/admin/AdminUserRow'
 import { TerminateMembershipTool } from '@/components/admin/TerminateMembershipTool'
 import { Search } from 'lucide-react'
 import { effectiveTier, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
 export const dynamic = 'force-dynamic'
 
-function tierSubLabel(u: any): string | null {
+function tierSubLabel(u: AdminUserRecord): string | null {
   if (u.account_type === 'admin') return 'Admin'
   if (u.beta_access_active) return 'Beta'
   const rawTier: Tier = (u.tier as Tier) ?? 'free'
@@ -20,7 +19,6 @@ export default async function AdminUsersPage({
   searchParams,
 }: { searchParams: Promise<{ q?: string; type?: string; tier?: string }> }) {
   const { q, type, tier: tierFilter } = await searchParams
-  const supabase = await createClient()
   const admin = createAdminClient()
 
   let query = admin.from('users')
@@ -40,7 +38,7 @@ export default async function AdminUsersPage({
   query = query.limit(fetchLimit)
 
   const { data: rawUsers } = await query
-  let users = rawUsers ?? []
+  let users = (rawUsers ?? []) as AdminUserRecord[]
   if (tierFilter) {
     users = users.filter(u => effectiveTier((u.tier as Tier) ?? 'free', u.discord_advanced_claimed, u.admin_granted_tier as Tier | null) === tierFilter)
   }
@@ -104,7 +102,7 @@ export default async function AdminUsersPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800">
-            {users.map((u: any) => {
+            {users.map(u => {
               const rawTier: Tier = (u.tier as Tier) ?? 'free'
               const displayTier = effectiveTier(rawTier, u.discord_advanced_claimed, u.admin_granted_tier as Tier | null)
               const subLabel = tierSubLabel(u)

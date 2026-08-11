@@ -43,7 +43,7 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
         @media (max-width: 767px) {
           .ss-utility-dock {
             right: 14px;
-            bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+            bottom: calc(var(--mobile-dock-clearance) - 8px);
           }
           .ss-utility-dock-items { gap: 7px; }
           .ss-utility-dock-toggle {

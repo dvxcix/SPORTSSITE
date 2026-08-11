@@ -7,27 +7,26 @@ import { createClient } from '@/lib/supabase/client'
 function DesktopAuthStartInner() {
   const searchParams = useSearchParams()
   const [error, setError] = useState('')
+  const provider = searchParams.get('provider')
+  const state = searchParams.get('state')
+  const requestError = !state || !/^[0-9a-f-]{36}$/i.test(state)
+    ? 'Invalid desktop sign-in request.'
+    : provider !== 'whop' && provider !== 'discord' && provider !== 'x'
+      ? 'Unsupported sign-in provider.'
+      : ''
 
   useEffect(() => {
-    const provider = searchParams.get('provider')
-    const state = searchParams.get('state')
     const rawNext = searchParams.get('next') || '/feed'
     const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/feed'
 
-    if (!state || !/^[0-9a-f-]{36}$/i.test(state)) {
-      setError('Invalid desktop sign-in request.')
-      return
-    }
+    if (requestError || !state) return
 
     if (provider === 'whop') {
       location.replace(`/auth/whop/login?next=${encodeURIComponent(next)}&desktop_state=${encodeURIComponent(state)}`)
       return
     }
 
-    if (provider !== 'discord' && provider !== 'x') {
-      setError('Unsupported sign-in provider.')
-      return
-    }
+    if (provider !== 'discord' && provider !== 'x') return
 
     const callback = new URL('/auth/callback', location.origin)
     callback.searchParams.set('next', next)
@@ -39,14 +38,14 @@ function DesktopAuthStartInner() {
     }).then(({ error }) => {
       if (error) setError(error.message)
     })
-  }, [searchParams])
+  }, [provider, requestError, searchParams, state])
 
-  return <DesktopAuthStatus error={error} />
+  return <DesktopAuthStatus error={requestError || error} />
 }
 
 function DesktopAuthStatus({ error }: { error: string }) {
   return (
-    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#090b0f', color: '#f5f7fa' }}>
+    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#090b0f', color: '#f5f7fa' }}>
       <div style={{ textAlign: 'center', maxWidth: 420, padding: 32 }}>
         <img src="/logo.png" alt="SlipSurge" width={52} height={52} />
         <h1 style={{ margin: '18px 0 8px', fontSize: 22 }}>SlipSurge desktop sign-in</h1>

@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-dvh flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-black">
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
                 ticket for the (common) case of someone who signed up with
                 Discord/X and has no password to reset in the first place. */}
             <p className="text-center text-xs text-zinc-600">
-              Signed up with Discord or X? There's no password to reset — just{' '}
+              Signed up with Discord or X? There&apos;s no password to reset — just{' '}
               <Link href="/auth/login" className="text-zinc-400 hover:text-zinc-300 underline">sign in that same way</Link>.
             </p>
           </div>

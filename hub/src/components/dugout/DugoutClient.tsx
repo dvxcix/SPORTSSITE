@@ -3679,7 +3679,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
     <div
       className="daily-recap-board-scroll"
       style={{
-        overflow: 'auto', maxHeight: 'calc(100vh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
+        overflow: 'auto', maxHeight: 'calc(100dvh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
         borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
         ['--dugout-header-top' as string]: '0px',
       }}

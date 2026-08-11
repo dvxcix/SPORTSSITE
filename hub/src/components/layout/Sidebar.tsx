@@ -155,7 +155,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           // banner's height. 100vh just means the sticky desktop sidebar's
           // own box extends a few tens of px past the viewport bottom when
           // a banner is showing — invisible/harmless, unlike the mobile gap.
-          height: '100vh',
+          height: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,

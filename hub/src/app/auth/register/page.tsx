@@ -123,7 +123,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', background: 'var(--bg)' }}>
       {/* Left panel */}
       <div style={{
         flex: 1, display: 'none', flexDirection: 'column', justifyContent: 'center',
@@ -170,7 +170,7 @@ export default function RegisterPage() {
             <div style={{ fontSize: 40, marginBottom: 16 }}>🚧</div>
             <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Registration is closed</h1>
             <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 340, margin: '0 auto' }}>
-              New accounts aren't open right now. Check back soon, or sign in if you already have one.
+              New accounts aren&apos;t open right now. Check back soon, or sign in if you already have one.
             </p>
             <Link href="/auth/login" style={{
               display: 'inline-block', marginTop: 24,

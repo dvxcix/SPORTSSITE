@@ -15,11 +15,12 @@ function WhopCompleteInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [error, setError] = useState('')
+  const tokenHash = searchParams.get('token_hash')
+  const requestError = tokenHash ? '' : 'Missing sign-in token.'
 
   useEffect(() => {
-    const tokenHash = searchParams.get('token_hash')
     const next = safeInternalPath(searchParams.get('next'))
-    if (!tokenHash) { setError('Missing sign-in token.'); return }
+    if (!tokenHash) return
 
     const supabase = createClient()
     supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' }).then(({ error }) => {
@@ -27,13 +28,13 @@ function WhopCompleteInner() {
       router.push(next)
       router.refresh()
     })
-  }, [searchParams, router])
+  }, [searchParams, router, tokenHash])
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-      {error ? (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      {requestError || error ? (
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 12 }}>{error}</div>
+          <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 12 }}>{requestError || error}</div>
           <a href="/auth/login" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>Back to login →</a>
         </div>
       ) : (
@@ -46,7 +47,7 @@ function WhopCompleteInner() {
 export default function WhopCompletePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
         <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Loading…</div>
       </div>
     }>

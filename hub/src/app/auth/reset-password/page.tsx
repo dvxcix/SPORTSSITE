@@ -40,8 +40,10 @@ export default function ResetPasswordPage() {
     const params = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''))
     const errorCode = params.get('error_code') || params.get('error')
     if (errorCode) {
-      setLinkError(LINK_ERROR_LABEL[errorCode] || params.get('error_description')?.replace(/\+/g, ' ') || 'This reset link is invalid.')
-      setLinkStatus('invalid')
+      window.queueMicrotask(() => {
+        setLinkError(LINK_ERROR_LABEL[errorCode] || params.get('error_description')?.replace(/\+/g, ' ') || 'This reset link is invalid.')
+        setLinkStatus('invalid')
+      })
       return
     }
     // No error AND no code means this page was opened directly, not from an
@@ -51,8 +53,10 @@ export default function ResetPasswordPage() {
     // confirmed live: without this check, visiting this page signed-in with
     // zero query params still flipped straight to the "valid" form.
     if (!params.get('code')) {
-      setLinkError('This page is only reachable from a password reset email.')
-      setLinkStatus('invalid')
+      window.queueMicrotask(() => {
+        setLinkError('This page is only reachable from a password reset email.')
+        setLinkStatus('invalid')
+      })
       return
     }
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -81,7 +85,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-dvh flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-black">

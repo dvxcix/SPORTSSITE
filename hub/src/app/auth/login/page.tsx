@@ -50,7 +50,7 @@ function LoginForm() {
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const description = hash.get('error_description')
-    if (description) setHashErrorDescription(description.replace(/\+/g, ' '))
+    if (description) window.queueMicrotask(() => setHashErrorDescription(description.replace(/\+/g, ' ')))
   }, [])
 
   async function handleLogin(e: React.FormEvent) {
@@ -102,7 +102,7 @@ function LoginForm() {
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex',
+      minHeight: '100dvh', display: 'flex',
       background: 'var(--bg)',
     }}>
       {/* Left panel — brand */}
@@ -280,7 +280,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
         <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Loading…</div>
       </div>
     }>

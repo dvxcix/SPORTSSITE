@@ -149,22 +149,19 @@ function FaqAccordion() {
 
 export function LandingPage() {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       {/* Nav */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', maxWidth: 1100, margin: '0 auto', width: '100%', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <header className="ss-landing-nav">
+        <Link href="/" className="ss-landing-brand" aria-label="SlipSurge home">
           <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain' }} />
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Link href="/pricing" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
-          <Link href="/auth/login" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', textDecoration: 'none' }}>Sign in</Link>
-          <Link href="/auth/register" style={{
-            fontSize: 13, fontWeight: 800, color: 'var(--accent-fg)', background: 'var(--accent)',
-            padding: '8px 16px', borderRadius: 8, textDecoration: 'none',
-          }}>Get started</Link>
-        </div>
-      </div>
+        </Link>
+        <nav className="ss-landing-actions" aria-label="Public navigation">
+          <Link href="/pricing" className="ss-landing-link ss-landing-pricing">Pricing</Link>
+          <Link href="/auth/login" className="ss-landing-link">Sign in</Link>
+          <Link href="/auth/register" className="ss-landing-cta">Get started</Link>
+        </nav>
+      </header>
 
       {/* Hero */}
       <div style={{ position: 'relative', overflow: 'hidden' }}>
