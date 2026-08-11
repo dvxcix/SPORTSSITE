@@ -1,5 +1,5 @@
 # Native clients are released independently from the web project.
-hub/desktop
+/hub/desktop
 
 # Local build and dependency artifacts.
 hub/.next
