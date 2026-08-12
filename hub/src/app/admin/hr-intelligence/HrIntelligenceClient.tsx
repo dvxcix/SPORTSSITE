@@ -7,11 +7,18 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import type { HrIntelGameResult, HrIntelPlayerResult } from '@/lib/hrIntelligence'
+import { HR_INTELLIGENCE_CALIBRATION } from '@/lib/hrIntelligenceCalibration'
 import type { HrIntelligenceSlate } from '@/lib/hrIntelligenceData'
 import styles from './HrIntelligence.module.css'
 
+const AUDITED_COMPLETE_GAMES = Object.values(HR_INTELLIGENCE_CALIBRATION.splits)
+  .reduce((total, split) => total + split.completeGames, 0)
+const QUALIFIED_FHR_RULES = HR_INTELLIGENCE_CALIBRATION.qualifiedRules.filter(rule => rule.target === 'fhr').length
+const QUALIFIED_ANYTIME_RULES = HR_INTELLIGENCE_CALIBRATION.qualifiedRules.filter(rule => rule.target === 'anytime').length
+
 const MARKET_LABELS: Record<string, string> = {
   hr2: '2+ HR', laser105: '105+ HR', laser110: '110+ HR', moonshot: 'Moonshot', pa1: '1st PA HR', hrMl: 'HR / ML',
+  hrr: 'H+R+RBI',
   rbi1: '1+ RBI', rbi2: '2+ RBI', rbi3: '3+ RBI', tb2: '2+ TB', tb3: '3+ TB', tb4: '4+ TB', tb5: '5+ TB',
   singles: 'Single', doubles: 'Double', triples: 'Triple', hits1: '1+ Hit', hits2: '2+ Hits', runs1: '1+ Run', runs2: '2+ Runs',
   sb1: '1+ SB', sb2: '2+ SB',
@@ -62,8 +69,8 @@ function SignalCard({ player, role, score, kind }: { player: HrIntelPlayerResult
 }
 
 function WatchRow({ player, rank, lane }: { player: HrIntelPlayerResult; rank: number; lane: 'candidate' | 'contrarian' | 'companion' }) {
-  const score = lane === 'contrarian' ? player.contradictionScore : lane === 'companion' ? player.anytimeScore : Math.max(player.contradictionScore, player.modelFhrScore)
-  const label = lane === 'candidate' ? 'candidate score' : lane === 'contrarian' ? 'contradiction score' : 'support score'
+  const score = player.selectionScore
+  const label = lane === 'candidate' ? player.candidateArchetype : lane === 'contrarian' ? 'next relational read' : 'independent companion'
   return <div className={styles.pairRow}>
     <b className={styles.pairRank}>{rank}</b>
     <div className={styles.pairPlayers}>
@@ -91,7 +98,7 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
       <span><small>Anytime</small><strong>{odds(player.hr.current)}</strong><i>{signed(player.movement.hrImpliedPoints, ' pp')}</i></span>
       <span><small>Public</small><strong>{player.hrPicks ?? 'N/A'}</strong><i>#{player.publicRank ?? 'N/A'}</i></span>
       <span><small>Contact</small><strong>{signed(player.contactAcceleration, '%')}</strong><i>MM {player.mm?.l10 ?? 'N/A'}</i></span>
-      <span><small>Signal lanes</small><strong>{player.contradictionScore.toFixed(1)} / {player.modelFhrScore.toFixed(1)}</strong><i>Contradiction / model</i></span>
+      <span><small>Relational read</small><strong>{player.selectionScore.toFixed(1)} / {player.decoyRiskScore.toFixed(1)}</strong><i>{player.candidateArchetype} / decoy risk</i></span>
       <ChevronDown size={16} className={expanded ? styles.rotated : ''} />
     </button>
     {expanded ? <PlayerDetail player={player} /> : null}
@@ -107,7 +114,8 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const modelLeader = getPlayer(game.recommendation.modelLeaderMlbId)
   const marketLeader = getPlayer(game.recommendation.marketLeaderMlbId)
   const exposureLeader = getPlayer(game.recommendation.exposureLeaderMlbId)
-  const candidates = game.recommendation.fhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const publishedCandidates = game.recommendation.fhrCandidateMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const diagnosticCandidates = game.recommendation.fhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const contrarianWatch = game.recommendation.contrarianWatchMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const companionWatch = game.recommendation.companionShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
@@ -115,8 +123,8 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
 
   return <div className={styles.analysis}>
     <section className={styles.signalHeader} data-status={game.recommendation.status}>
-      <div><span><ShieldCheck size={14} /> {game.recommendation.mode.replaceAll('-', ' ').toUpperCase()}</span><h2>{game.recommendation.confidenceLabel} board separation</h2><p>{game.recommendation.reason}</p></div>
-      <div className={styles.confidence}><strong>{game.recommendation.confidence.toFixed(1)}</strong><span>Signal strength</span></div>
+      <div><span><ShieldCheck size={14} /> {game.recommendation.publicationEligible ? 'VALIDATED READ' : 'NO VALIDATED READ'}</span><h2>{game.recommendation.confidenceLabel} diagnostic separation</h2><p>{game.recommendation.reason}</p><small>{game.recommendation.publicationReason}</small></div>
+      <div className={styles.confidence}><strong>{game.recommendation.confidence.toFixed(1)}</strong><span>Diagnostic strength</span></div>
     </section>
 
     {game.warnings.length ? <div className={styles.warnings}>{game.warnings.map(warning => <p key={warning}><AlertTriangle size={14} /> {warning}</p>)}</div> : null}
@@ -125,16 +133,17 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
       <div><span>POSTGAME VALIDATION</span><strong>{game.validation.actualNoHr ? 'No home runs' : `First HR: ${game.validation.firstHrName ?? 'Unknown'}`}</strong><small>Outcomes appear only after scoring and never enter the pregame read.</small></div>
       <div>
         <b>{game.validation.diagnosticLeaderHit ? 'Diagnostic leader hit' : 'Diagnostic leader missed'}</b>
-        <b>{game.validation.fhrShortlistHit ? 'Candidate set hit' : 'Candidate set missed'}</b>
+        <b>{game.validation.fhrShortlistPublished ? game.validation.fhrShortlistHit ? 'Published FHR set hit' : 'Published FHR set missed' : 'FHR publication withheld'}</b>
+        <b>{game.validation.diagnosticFhrShortlistHit ? 'Diagnostic FHR hypothesis hit' : 'Diagnostic FHR hypothesis missed'}</b>
         <b>{game.validation.contrarianWatchHit ? 'Contrarian watch hit' : 'Contrarian watch missed'}</b>
-        <b>{game.validation.pairCoverageHit ? 'Pair coverage hit' : 'No pair coverage hit'}</b>
+        <b>{game.validation.pairCoverageHit ? 'Diagnostic pair coverage hit' : 'No diagnostic pair coverage hit'}</b>
         <b>{!game.validation.companionWatchPublished ? 'Companion publication withheld' : game.validation.companionShortlistHit ? 'Companion watch hit' : 'Companion watch missed'}</b>
       </div>
       {!game.validation.actualNoHr ? <p>All HRs: {game.validation.hrNames.join(', ')}</p> : null}
     </section> : null}
 
     <section className={styles.recommendations}>
-      <SignalCard player={diagnosticLeader} role={`${game.recommendation.primaryLane} diagnostic`} score={diagnosticLeader == null ? null : game.recommendation.primaryLane === 'contradiction' ? diagnosticLeader.contradictionScore : diagnosticLeader.modelFhrScore} kind="diagnostic" />
+      <SignalCard player={diagnosticLeader} role={diagnosticLeader ? `${diagnosticLeader.candidateArchetype} diagnostic` : 'Relational diagnostic'} score={diagnosticLeader?.selectionScore ?? null} kind="diagnostic" />
       <SignalCard player={contradictionLeader} role="Contradiction leader" score={contradictionLeader?.contradictionScore ?? null} kind="contradiction" />
       <SignalCard player={modelLeader} role="Model leader" score={modelLeader?.modelFhrScore ?? null} kind="model" />
       <SignalCard player={exposureLeader} role="Exposure contradiction" score={exposureLeader?.publicPattern.redirectedExposureScore ?? null} kind="exposure" />
@@ -151,18 +160,23 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
 
     <div className={styles.candidateGrid}>
       <section className={styles.panel}>
-        <header><div><span>FHR CANDIDATE SET</span><h3>{game.recommendation.fhrRecipe}</h3></div><small>Three independent pregame reads. This is not an exact FHR call.</small></header>
-        <div className={styles.pairList}>{candidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
+        <header><div><span>PUBLICATION GATE</span><h3>{game.recommendation.publicationEligible ? 'Validated candidate set' : 'No wager set published'}</h3></div><small>A player appears here only after its rule survives chronological discovery, calibration, and untouched holdout.</small></header>
+        <div className={styles.pairList}>{publishedCandidates.length ? publishedCandidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />) : <p className={styles.missing}>{game.recommendation.publicationReason}</p>}</div>
       </section>
       <section className={styles.panel}>
-        <header><div><span>CONTRARIAN WATCH</span><h3>Signals outside the core set</h3></div><small>Independent contradiction reads preserved so a model-heavy recipe cannot erase them.</small></header>
-        <div className={styles.pairList}>{contrarianWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="contrarian" />)}</div>
+        <header><div><span>DIAGNOSTIC HYPOTHESES</span><h3>{game.recommendation.fhrRecipe}</h3></div><small>These explain the board and support research. They are not picks and did not clear publication.</small></header>
+        <div className={styles.pairList}>{diagnosticCandidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
       </section>
     </div>
 
+    {contrarianWatch.length ? <section className={styles.panel}>
+      <header><div><span>NEXT DIAGNOSTIC READS</span><h3>Signals outside the primary hypothesis</h3></div><small>Visible for comparison only. These players did not clear the publication gate.</small></header>
+      <div className={styles.pairList}>{contrarianWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="contrarian" />)}</div>
+    </section> : null}
+
     <div className={styles.contentGrid}>
       <section className={styles.panel}>
-        <header><div><span>COMPANION GATE</span><h3>{game.recommendation.companionRecipe}</h3></div><small>Conditional anytime reads for multi-HR review. No pair is published until a separate gate is validated.</small></header>
+        <header><div><span>COMPANION DIAGNOSTIC</span><h3>{game.recommendation.companionRecipe}</h3></div><small>Market relationships for multi-HR research. No companion is published without walk-forward support.</small></header>
         <div className={styles.pairList}>{companionWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
         <div className={styles.pairEvidence}><span>Multi-HR read: <b>{game.recommendation.multiHrRead}</b></span><span>Published companion: <b>{game.recommendation.anytimeCompanionMlbId == null ? 'None qualified' : getPlayer(game.recommendation.anytimeCompanionMlbId)?.name}</b></span><span>Data state: <b>{game.recommendation.dataComplete ? 'Complete' : 'Partial'}</b></span></div>
       </section>
@@ -206,7 +220,7 @@ export function HrIntelligenceClient() {
   return <main className={styles.page}>
     <section className={styles.hero}>
       <div className={styles.heroIcon}><Crosshair size={25} /></div>
-      <div><span>ADMIN | PREGAME DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reconstruct each 18-player board and separate contradiction, model, market, companion, and No HR signals without forcing a pick.</p></div>
+      <div><span>ADMIN | PREGAME DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reconstruct each 18-player board and compare price clusters, market ladders, exposure, form, and No HR pressure without forcing a pick.</p></div>
       <div className={styles.heroMeta}><b>Outcome blind</b><span>Postgame results never enter scoring.</span></div>
     </section>
 
@@ -214,6 +228,18 @@ export function HrIntelligenceClient() {
       <label><span>Slate date</span><input type="date" value={date} onChange={event => setDate(event.target.value)} /></label>
       <button type="button" onClick={analyze} disabled={loading || !date}>{loading ? <RefreshCw size={17} className={styles.spin} /> : <BarChart3 size={17} />}{loading ? 'Reconstructing board...' : 'Analyze full slate'}</button>
       {result ? <div><strong>{result.diagnostics.gamesAnalyzed}</strong><span>games analyzed</span></div> : null}
+    </section>
+
+    <section className={styles.calibrationLedger} aria-label="HR intelligence publication audit">
+      <div className={styles.calibrationIntro}>
+        <span>PUBLICATION AUDIT</span>
+        <strong>Fail-closed calibration</strong>
+        <small>Diagnostic rankings remain visible. Picks stay withheld until a rule survives chronological discovery, calibration, and untouched holdout.</small>
+      </div>
+      <div><strong>{AUDITED_COMPLETE_GAMES}</strong><span>complete games</span><small>{HR_INTELLIGENCE_CALIBRATION.splits.discovery.start} to {HR_INTELLIGENCE_CALIBRATION.auditedThrough}</small></div>
+      <div><strong>{QUALIFIED_FHR_RULES}</strong><span>validated FHR rules</span><small>{HR_INTELLIGENCE_CALIBRATION.minimumSupport.fhr.discoveryGames}+ discovery games required</small></div>
+      <div><strong>{QUALIFIED_ANYTIME_RULES}</strong><span>validated anytime rules</span><small>{HR_INTELLIGENCE_CALIBRATION.minimumSupport.anytime.discoveryGames}+ discovery games required</small></div>
+      <div><strong>{HR_INTELLIGENCE_CALIBRATION.splits.holdout.completeGames}</strong><span>untouched holdout games</span><small>Audited through {HR_INTELLIGENCE_CALIBRATION.auditedThrough}</small></div>
     </section>
 
     {error ? <div className={styles.error}><AlertTriangle size={16} /> {error}</div> : null}

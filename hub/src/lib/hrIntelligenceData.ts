@@ -46,6 +46,7 @@ const MARKET_SPECS: Record<string, { market: string; open: string }> = {
   moonshot: { market: 'moonshot', open: 'moonshot' },
   pa1: { market: 'pa1', open: 'pa1' },
   hrMl: { market: 'hrMl', open: 'hrMl' },
+  hrr: { market: 'hrr', open: 'hrrFd' },
   rbi1: { market: 'rbi', open: 'rbiFd' },
   rbi2: { market: 'rbi2', open: 'rbi2Fd' },
   rbi3: { market: 'rbi3', open: 'rbi3Fd' },
@@ -74,6 +75,18 @@ function market(props: OddsProps | null, marketName: string, openName: string): 
     current: props?.[marketName]?.fanduel ?? null,
     open: props?.open?.[openName] ?? null,
   }
+}
+
+function marketBooks(
+  props: OddsProps | null,
+  marketName: 'fhr' | 'sa',
+  openNames: Partial<Record<'fanduel' | 'caesars' | 'betmgm' | 'betrivers' | 'fanatics', string>>,
+) {
+  const current = props?.[marketName]
+  return Object.fromEntries(Object.entries(openNames).map(([book, openName]) => [book, {
+    current: current?.[book as keyof typeof current] ?? null,
+    open: props?.open?.[openName] ?? null,
+  }]))
 }
 
 function finite(value: unknown): number | null {
@@ -106,8 +119,11 @@ function marketsFor(props: OddsProps | null): Record<string, HrIntelMarket> {
   )
 }
 
-function picksFor(bundle: FieldBundle): Record<string, number | null> {
-  return Object.fromEntries(PICK_MARKETS.map(key => [key, finite(bundle.pikkitEntry?.[key]?.picks)]))
+function picksFor(bundle: FieldBundle, exposureAvailable: boolean): Record<string, number | null> {
+  return Object.fromEntries(PICK_MARKETS.map(key => {
+    const picks = finite(bundle.pikkitEntry?.[key]?.picks)
+    return [key, picks ?? (exposureAvailable ? 0 : null)]
+  }))
 }
 
 function playerInput(
@@ -116,6 +132,7 @@ function playerInput(
   team: string,
   opponent: string,
   lineupConfirmed: boolean,
+  exposureAvailable: boolean,
 ): HrIntelPlayerInput {
   const props = bundle.props
   return {
@@ -129,11 +146,22 @@ function playerInput(
     projected: player.projected || !lineupConfirmed,
     fhr: market(props, 'fhr', 'fhr'),
     hr: market(props, 'sa', 'saFd'),
+    marketBooks: {
+      fhr: marketBooks(props, 'fhr', { fanduel: 'fhr', caesars: 'fhrCz', fanatics: 'fhrFan' }),
+      hr: marketBooks(props, 'sa', {
+        fanduel: 'saFd', caesars: 'saCz', betmgm: 'saMgm', betrivers: 'saBr', fanatics: 'saFan',
+      }),
+    },
     markets: marketsFor(props),
     fhrBaselineDeltaPct: computeDugoutSpecsValue('fhr_pct', props, bundle.fhrAvg, bundle.saAvg),
     hrBaselineDeltaPct: computeDugoutSpecsValue('sa_pct', props, bundle.fhrAvg, bundle.saAvg),
-    hrPicks: finite(bundle.pikkitEntry?.home_runs?.picks),
-    picksByMarket: picksFor(bundle),
+    // Pikkit stores observed selections, not explicit zero rows. Once at
+    // least one lineup-matched row proves that a game's feed arrived, a
+    // missing player/market row means zero selections rather than missing
+    // telemetry. If the entire game has no feed, values remain null and the
+    // publication gate still fails closed.
+    hrPicks: finite(bundle.pikkitEntry?.home_runs?.picks) ?? (exposureAvailable ? 0 : null),
+    picksByMarket: picksFor(bundle, exposureAvailable),
     windows: {
       season: metricWindow(bundle, 'season'),
       l10: metricWindow(bundle, 'l10'),
@@ -249,13 +277,14 @@ function analyzeBundle(gameBundle: GameBundles, slateDate: string): HrIntelGameR
   const { game } = gameBundle
   const warnings: string[] = [...gameBundle.sourceWarnings]
   const players: HrIntelPlayerInput[] = []
+  const exposureAvailable = Object.values(gameBundle.gameTotalPicksByMarket).some(value => value > 0)
   for (const player of game.awayLineup) {
     const bundle = gameBundle.awayBundle.get(normName(player.name))
-    if (bundle) players.push(playerInput(bundle, player, game.awayAbbr, game.homeAbbr, game.awayLineupConfirmed))
+    if (bundle) players.push(playerInput(bundle, player, game.awayAbbr, game.homeAbbr, game.awayLineupConfirmed, exposureAvailable))
   }
   for (const player of game.homeLineup) {
     const bundle = gameBundle.homeBundle.get(normName(player.name))
-    if (bundle) players.push(playerInput(bundle, player, game.homeAbbr, game.awayAbbr, game.homeLineupConfirmed))
+    if (bundle) players.push(playerInput(bundle, player, game.homeAbbr, game.awayAbbr, game.homeLineupConfirmed, exposureAvailable))
   }
   if (!players.some(player => player.hrPicks != null)) {
     warnings.push('No Pikkit exposure rows were available for this game. Public-exposure evidence is not being treated as complete.')
@@ -290,7 +319,8 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
   const companionId = game.recommendation.anytimeCompanionMlbId
   const primaryPublished = anchorId != null && game.recommendation.status !== 'abstain'
   const companionPublished = companionId != null && game.recommendation.status === 'qualified'
-  const fhrShortlistPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain'
+  const fhrShortlistPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain' && game.recommendation.fhrCandidateMlbIds.length > 0
+  const anytimeCandidatesPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain' && game.recommendation.anytimeCandidateMlbIds.length > 0
   const companionWatchPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain' && game.recommendation.companionShortlistMlbIds.length > 0
   const anchorHit = anchorId != null && first?.mlb_id === anchorId
   const diagnosticLeaderHit = diagnosticLeaderId != null && first?.mlb_id === diagnosticLeaderId
@@ -298,16 +328,19 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
   const contradictionLeaderHit = game.recommendation.contradictionLeaderMlbId != null && first?.mlb_id === game.recommendation.contradictionLeaderMlbId
   const modelLeaderHit = game.recommendation.modelLeaderMlbId != null && first?.mlb_id === game.recommendation.modelLeaderMlbId
   const marketLeaderHit = game.recommendation.marketLeaderMlbId != null && first?.mlb_id === game.recommendation.marketLeaderMlbId
-  const fhrShortlistHit = first?.mlb_id != null && game.recommendation.fhrShortlistMlbIds.includes(first.mlb_id)
+  const fhrShortlistHit = first?.mlb_id != null && game.recommendation.fhrCandidateMlbIds.includes(first.mlb_id)
+  const diagnosticFhrShortlistHit = first?.mlb_id != null && game.recommendation.fhrShortlistMlbIds.includes(first.mlb_id)
+  const anytimeCandidateHits = game.recommendation.anytimeCandidateMlbIds.filter(id => hrMlbIds.includes(id)).length
+  const anytimeCandidateMisses = game.recommendation.anytimeCandidateMlbIds.length - anytimeCandidateHits
   const contrarianWatchHit = first?.mlb_id != null && game.recommendation.contrarianWatchMlbIds.includes(first.mlb_id)
   const companionShortlistHit = game.recommendation.companionShortlistMlbIds.some(id => hrMlbIds.includes(id) && id !== first?.mlb_id)
   const laterHrIds = hrMlbIds.filter(id => id !== first?.mlb_id)
-  const candidateSetPairHit = fhrShortlistHit && laterHrIds.some(id => game.recommendation.fhrShortlistMlbIds.includes(id))
+  const candidateSetPairHit = diagnosticFhrShortlistHit && laterHrIds.some(id => game.recommendation.fhrShortlistMlbIds.includes(id))
   const candidateContrarianPairHit = first?.mlb_id != null && (
     (game.recommendation.fhrShortlistMlbIds.includes(first.mlb_id) && laterHrIds.some(id => game.recommendation.contrarianWatchMlbIds.includes(id))) ||
     (game.recommendation.contrarianWatchMlbIds.includes(first.mlb_id) && laterHrIds.some(id => game.recommendation.fhrShortlistMlbIds.includes(id)))
   )
-  const pairCoverageHit = candidateSetPairHit || candidateContrarianPairHit || (fhrShortlistHit && companionShortlistHit)
+  const pairCoverageHit = candidateSetPairHit || candidateContrarianPairHit || (diagnosticFhrShortlistHit && companionShortlistHit)
   return {
     ...game,
     validation: {
@@ -324,6 +357,10 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
       pairHit: anchorHit && companionHit,
       fhrShortlistHit,
       fhrShortlistPublished,
+      diagnosticFhrShortlistHit,
+      anytimeCandidateHits,
+      anytimeCandidateMisses,
+      anytimeCandidatesPublished,
       contrarianWatchHit,
       companionShortlistHit,
       companionWatchPublished,

@@ -1,6 +1,7 @@
 import nextEnv from '@next/env'
 
 nextEnv.loadEnvConfig(process.cwd())
+await import('./lib/install-pikkit-fixture-fetch.mts')
 
 const start = process.argv[2]
 const end = process.argv[3] ?? start
@@ -30,6 +31,12 @@ type Metrics = {
   customAnyTop1: number
   marketAnyTop1: number
   fhrShortlistHits: number
+  fhrShortlistGames: number
+  anytimeCandidatePlayers: number
+  anytimeCandidateHits: number
+  anytimeCandidateMisses: number
+  anytimeCandidateGames: number
+  anytimeCandidateGameHits: number
   companionWatchHits: number
   companionGames: number
 }
@@ -37,7 +44,9 @@ type Metrics = {
 const total: Metrics = {
   games: 0, graded: 0, hrGames: 0, noHrGames: 0, outcomeFailures: 0, picksCompleteGames: 0,
   customFhrTop1: 0, customFhrTop3: 0, marketFhrTop1: 0, marketFhrTop3: 0,
-  customAnyTop1: 0, marketAnyTop1: 0, fhrShortlistHits: 0, companionWatchHits: 0, companionGames: 0,
+  customAnyTop1: 0, marketAnyTop1: 0, fhrShortlistHits: 0, fhrShortlistGames: 0,
+  anytimeCandidatePlayers: 0, anytimeCandidateHits: 0, anytimeCandidateMisses: 0,
+  anytimeCandidateGames: 0, anytimeCandidateGameHits: 0, companionWatchHits: 0, companionGames: 0,
 }
 const daily: Array<{ date: string } & Metrics> = []
 
@@ -57,6 +66,12 @@ for (const date of dates) {
     customAnyTop1: 0,
     marketAnyTop1: 0,
     fhrShortlistHits: 0,
+    fhrShortlistGames: 0,
+    anytimeCandidatePlayers: 0,
+    anytimeCandidateHits: 0,
+    anytimeCandidateMisses: 0,
+    anytimeCandidateGames: 0,
+    anytimeCandidateGameHits: 0,
     companionWatchHits: 0,
     companionGames: 0,
   }
@@ -82,7 +97,17 @@ for (const date of dates) {
     if (marketFhr.slice(0, 3).some(player => player.mlbId === firstId)) metrics.marketFhrTop3 += 1
     if (customAny[0] && hrIds.has(customAny[0].mlbId)) metrics.customAnyTop1 += 1
     if (marketAny[0] && hrIds.has(marketAny[0].mlbId)) metrics.marketAnyTop1 += 1
-    if (validation.fhrShortlistHit) metrics.fhrShortlistHits += 1
+    if (validation.fhrShortlistPublished) {
+      metrics.fhrShortlistGames += 1
+      if (validation.fhrShortlistHit) metrics.fhrShortlistHits += 1
+    }
+    if (validation.anytimeCandidatesPublished) {
+      metrics.anytimeCandidateGames += 1
+      metrics.anytimeCandidatePlayers += game.recommendation.anytimeCandidateMlbIds.length
+      metrics.anytimeCandidateHits += validation.anytimeCandidateHits
+      metrics.anytimeCandidateMisses += validation.anytimeCandidateMisses
+      if (validation.anytimeCandidateHits > 0) metrics.anytimeCandidateGameHits += 1
+    }
     if (companionIds.size) {
       metrics.companionGames += 1
       if (validation.companionShortlistHit) metrics.companionWatchHits += 1
@@ -103,7 +128,9 @@ process.stdout.write(`${JSON.stringify({
     marketFhrTop3: pct(total.marketFhrTop3, total.hrGames),
     customAnyTop1: pct(total.customAnyTop1, total.hrGames),
     marketAnyTop1: pct(total.marketAnyTop1, total.hrGames),
-    fhrShortlist: pct(total.fhrShortlistHits, total.hrGames),
+    fhrShortlist: pct(total.fhrShortlistHits, total.fhrShortlistGames),
+    anytimeCandidatePrecision: pct(total.anytimeCandidateHits, total.anytimeCandidatePlayers),
+    anytimeCandidateGameHitRate: pct(total.anytimeCandidateGameHits, total.anytimeCandidateGames),
     companionWatchlist: pct(total.companionWatchHits, total.companionGames),
   },
   daily,

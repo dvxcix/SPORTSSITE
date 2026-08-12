@@ -4,6 +4,7 @@ import type {
   HrIntelMetricWindow,
   HrIntelPlayerInput,
 } from '../src/lib/hrIntelligence'
+import { HR_INTELLIGENCE_CALIBRATION } from '../src/lib/hrIntelligenceCalibration.ts'
 
 const hrIntelligenceModule = '../src/lib/hrIntelligence.ts'
 const { analyzeHrGame } = await import(hrIntelligenceModule)
@@ -24,7 +25,7 @@ const neutralMarkets: Record<string, { current: number; open: number }> = {
   tb2: { current: 400, open: 400 }, tb3: { current: 850, open: 850 }, tb4: { current: 1500, open: 1500 }, tb5: { current: 2600, open: 2600 },
   singles: { current: 150, open: 150 }, doubles: { current: 450, open: 450 }, triples: { current: 1800, open: 1800 },
   hits1: { current: -180, open: -180 }, hits2: { current: 300, open: 300 }, runs1: { current: 130, open: 130 }, runs2: { current: 850, open: 850 },
-  sb1: { current: 800, open: 800 }, sb2: { current: 5000, open: 5000 },
+  sb1: { current: 800, open: 800 }, sb2: { current: 5000, open: 5000 }, hrr: { current: 700, open: 700 },
 }
 
 function player(overrides: Partial<HrIntelPlayerInput> & Pick<HrIntelPlayerInput, 'mlbId' | 'name' | 'team' | 'battingOrder'>): HrIntelPlayerInput {
@@ -57,7 +58,7 @@ function player(overrides: Partial<HrIntelPlayerInput> & Pick<HrIntelPlayerInput
 }
 
 const chase = player({
-  mlbId: 1, name: 'Chase DeLauter', team: 'CLE', battingOrder: 3,
+  mlbId: 1, name: 'Chase DeLauter', team: 'CLE', battingOrder: 2,
   fhr: { current: 950, open: 950 }, hr: { current: 630, open: 560 },
   fhrBaselineDeltaPct: -5, hrBaselineDeltaPct: 3.2, hrPicks: 25,
   windows: {
@@ -67,18 +68,18 @@ const chase = player({
     l3: statWindow({ bbe: 5, pa: 9, hr: 0, avgEv: 95, maxEv: 112, hardHitPct: 60, barrelPct: 18, sweetSpotPct: 45, avgBatSpeed: 76, pullAirRate: 0.31 }),
     l1: statWindow({ bbe: 3, pa: 4, hr: 0, avgEv: 96, maxEv: 112, hardHitPct: 67, barrelPct: 20, sweetSpotPct: 50, avgBatSpeed: 76, pullAirRate: 0.33 }),
   },
-  mm: { l1: 7, l3: 7, l5: 6, l10: 5 },
-  paperRank: { l1: 3, l3: 4, l5: 4, l10: 5 }, bookRank: { l1: 8, l3: 8, l5: 7, l10: 7 },
+  mm: { l1: 7, l3: 7, l5: 7, l10: 7 },
+  paperRank: { l1: 1, l3: 1, l5: 1, l10: 1 }, bookRank: { l1: 8, l3: 8, l5: 8, l10: 8 },
 })
 
 const jo = player({
   mlbId: 2, name: 'Jo Adell', team: 'CLE', battingOrder: 5,
-  fhr: { current: 900, open: 900 }, hr: { current: 500, open: 560 },
-  fhrBaselineDeltaPct: -0.6, hrBaselineDeltaPct: 1.4, hrPicks: 48,
+  fhr: { current: 900, open: 900 }, hr: { current: 500, open: 460 },
+  fhrBaselineDeltaPct: -0.6, hrBaselineDeltaPct: 1.4, hrPicks: 85,
   markets: {
     ...neutralMarkets,
-    hr2: { current: 3000, open: 3600 }, laser105: { current: 800, open: 950 },
-    laser110: { current: 1800, open: 2400 }, moonshot: { current: 1500, open: 1900 },
+    hr2: { current: 3600, open: 3000 }, laser105: { current: 950, open: 800 },
+    laser110: { current: 2400, open: 1800 }, moonshot: { current: 1900, open: 1500 },
   },
   windows: {
     season: statWindow({ avgEv: 91, maxEv: 111, hardHitPct: 47, barrelPct: 12, sweetSpotPct: 33, avgBatSpeed: 74, pullAirRate: 0.2 }),
@@ -87,8 +88,8 @@ const jo = player({
     l3: statWindow({ bbe: 5, pa: 9, avgEv: 96, maxEv: 114, hardHitPct: 63, barrelPct: 22, sweetSpotPct: 47, avgBatSpeed: 77, pullAirRate: 0.33 }),
     l1: statWindow({ bbe: 3, pa: 4, avgEv: 97, maxEv: 114, hardHitPct: 67, barrelPct: 24, sweetSpotPct: 50, avgBatSpeed: 77, pullAirRate: 0.35 }),
   },
-  mm: { l1: 6, l3: 6, l5: 5, l10: 5 },
-  paperRank: { l1: 4, l3: 5, l5: 5, l10: 6 }, bookRank: { l1: 7, l3: 7, l5: 6, l10: 6 },
+  mm: { l1: -2, l3: -2, l5: -2, l10: -2 },
+  paperRank: { l1: 6, l3: 6, l5: 6, l10: 6 }, bookRank: { l1: 4, l3: 4, l5: 4, l10: 4 },
   contextReset: true,
 })
 
@@ -115,14 +116,18 @@ const game: HrIntelGameInput = {
 
 const result = analyzeHrGame(game)
 const repeatedResult = analyzeHrGame(game)
+assert.equal(HR_INTELLIGENCE_CALIBRATION.qualifiedRules.length, 0, 'No publication rule may be added without a new dated walk-forward audit')
 assert.equal(result.diagnostics.pairCount, 153, 'An 18-player game must score all 153 unordered pairings')
 assert.equal(result.recommendation.fhrAnchorMlbId, null, 'An unproven exact FHR gate must not publish an anchor')
 assert.equal(result.recommendation.diagnosticLeaderMlbId, chase.mlbId, 'Chase must remain the diagnostic leader')
 assert.equal(result.recommendation.contradictionLeaderMlbId, chase.mlbId, 'Chase must remain the contradiction leader')
 assert.deepEqual(repeatedResult, result, 'Identical game inputs must produce identical analysis')
 assert.equal(result.recommendation.anytimeCompanionMlbId, null, 'The analyzer must not force an unvalidated anytime companion')
-assert.ok(result.recommendation.fhrShortlistMlbIds.includes(chase.mlbId), 'The FHR shortlist must retain the contradiction leader')
-assert.ok(result.recommendation.companionShortlistMlbIds.includes(jo.mlbId), 'Jo must remain visible in the companion watchlist')
+assert.deepEqual(result.recommendation.fhrCandidateMlbIds, [], 'Unvalidated historical shapes must not publish an FHR candidate')
+assert.deepEqual(result.recommendation.anytimeCandidateMlbIds, [], 'Unvalidated historical shapes must not publish an anytime-HR candidate')
+assert.deepEqual(result.recommendation.fhrShortlistMlbIds, [chase.mlbId], 'Chase must remain inspectable as the protected-divergence hypothesis')
+assert.deepEqual(result.recommendation.companionShortlistMlbIds, [jo.mlbId], 'Jo must remain inspectable as the role-reset companion hypothesis')
+assert.equal(result.recommendation.publicationEligible, false, 'A post-hoc fixture must never qualify itself for publication')
 assert.equal(result.recommendation.advertisedAlternativeMlbId, lowe.mlbId, 'Lowe must remain the advertised alternative')
 
 const abstain = analyzeHrGame({ ...game, gamePk: 999002, awayLineupConfirmed: false, players: game.players.slice(0, 17), noHr: { current: -120, open: -110 } })
@@ -140,7 +145,130 @@ const missingExposure = analyzeHrGame({
 assert.equal(missingExposure.recommendation.status, 'abstain', 'Missing exposure must fail closed')
 assert.equal(missingExposure.recommendation.dataComplete, false, 'Missing exposure must mark the board partial')
 assert.equal(missingExposure.recommendation.fhrAnchorMlbId, null, 'Missing exposure must never publish an exact FHR call')
-assert.ok(missingExposure.recommendation.fhrShortlistMlbIds.length > 0, 'Diagnostic candidates must remain inspectable when publication is withheld')
+assert.deepEqual(missingExposure.recommendation.fhrCandidateMlbIds, [], 'Missing exposure must leave the published set empty')
+assert.ok(missingExposure.recommendation.fhrShortlistMlbIds.length > 0, 'Diagnostic hypotheses must remain inspectable when publication is withheld')
+
+const ruiz = player({
+  mlbId: 101, name: 'Esteury Ruiz', team: 'MIA', battingOrder: 9,
+  fhr: { current: 2200, open: 2000 }, hr: { current: 1060, open: 1060 },
+  fhrBaselineDeltaPct: 31.7, hrBaselineDeltaPct: 18.3, hrPicks: 3,
+  markets: {
+    ...neutralMarkets,
+    rbi1: { current: 550, open: 650 }, tb2: { current: 500, open: 600 },
+    tb3: { current: 1400, open: 1800 }, tb4: { current: 3000, open: 4000 },
+    hits1: { current: -110, open: 100 }, runs1: { current: 450, open: 600 },
+    hrr: { current: 900, open: 1200 },
+  },
+  mm: { l1: 6, l3: 5, l5: 5, l10: 6 },
+  paperRank: { l1: 4, l3: 4, l5: 12, l10: 14 },
+  bookRank: { l1: 14, l3: 14, l5: 14, l10: 14 },
+})
+const pitMiaFillers = Array.from({ length: 17 }, (_, index) => player({
+  mlbId: 102 + index, name: `PIT-MIA Player ${index + 1}`, team: index < 8 ? 'MIA' : 'PIT',
+  battingOrder: index < 8 ? index + 1 : index - 7,
+  fhr: { current: 650 + index * 90, open: index < 5 ? 800 + index * 90 : 650 + index * 90 },
+  hr: { current: 400 + index * 45, open: index < 5 ? 500 + index * 45 : 400 + index * 45 },
+  fhrBaselineDeltaPct: index < 5 ? -22 : -4, hrBaselineDeltaPct: index < 5 ? -18 : -3,
+  hrPicks: index < 5 ? 295 - index * 35 : 12 + index,
+  mm: { l1: -2, l3: -1, l5: 0, l10: 0 },
+  paperRank: { l1: 8 + index / 4, l3: 8 + index / 4, l5: 8 + index / 4, l10: 8 + index / 4 },
+  bookRank: { l1: 1 + index, l3: 1 + index, l5: 1 + index, l10: 1 + index },
+}))
+const pitMia = analyzeHrGame({
+  ...game, gamePk: 999004, gameKey: 'PIT@MIA', awayTeam: 'PIT', homeTeam: 'MIA',
+  noHr: { current: 320, open: 310 }, players: [ruiz, ...pitMiaFillers],
+})
+assert.deepEqual(pitMia.recommendation.anytimeCandidateMlbIds, [], 'A containment-tail case study must not self-validate for publication')
+assert.deepEqual(pitMia.recommendation.fhrShortlistMlbIds, [ruiz.mlbId], 'Ruiz must remain the sole containment-tail diagnostic hypothesis')
+
+const randy = player({
+  mlbId: 201, name: 'Randy Arozarena', team: 'SEA', battingOrder: 2,
+  fhr: { current: 850, open: 900 }, hr: { current: 460, open: 440 },
+  fhrBaselineDeltaPct: -21.9, hrBaselineDeltaPct: -25.3, hrPicks: 80,
+  paperRank: { l1: 12, l3: 13, l5: 13, l10: 12 }, bookRank: { l1: 12, l3: 12, l5: 12, l10: 12 },
+})
+const ward = player({
+  mlbId: 202, name: 'Taylor Ward', team: 'SEA', battingOrder: 1,
+  fhr: { current: 850, open: 800 }, hr: { current: 460, open: 450 },
+  fhrBaselineDeltaPct: -24.1, hrBaselineDeltaPct: -22, hrPicks: 40,
+  paperRank: { l1: 7, l3: 8, l5: 9, l10: 10 }, bookRank: { l1: 11, l3: 11, l5: 11, l10: 11 },
+})
+const seaNyyFillers = Array.from({ length: 16 }, (_, index) => player({
+  mlbId: 203 + index, name: `SEA-NYY Player ${index + 1}`, team: index < 7 ? 'SEA' : 'NYY',
+  battingOrder: index < 7 ? index + 3 : index - 6,
+  fhr: { current: 600 + index * 120, open: 700 + index * 120 },
+  hr: { current: 340 + index * 45, open: 420 + index * 45 },
+  fhrBaselineDeltaPct: -25, hrBaselineDeltaPct: -22, hrPicks: 700 - index * 28,
+  mm: { l1: -2, l3: -2, l5: -1, l10: 0 },
+  paperRank: { l1: 8, l3: 9, l5: 10, l10: 11 }, bookRank: { l1: 1 + index, l3: 1 + index, l5: 1 + index, l10: 1 + index },
+}))
+const seaNyy = analyzeHrGame({
+  ...game, gamePk: 999005, gameKey: 'SEA@NYY', awayTeam: 'SEA', homeTeam: 'NYY',
+  noHr: { current: 1400, open: 1200 }, players: [randy, ward, ...seaNyyFillers],
+})
+assert.ok(seaNyy.recommendation.fhrShortlistMlbIds.includes(randy.mlbId), 'Randy must win the diagnostic +850 FHR tie through relative movement')
+assert.ok(!seaNyy.recommendation.fhrShortlistMlbIds.includes(ward.mlbId), 'Ward must not survive the same-price diagnostic tie-break')
+assert.deepEqual(seaNyy.recommendation.fhrCandidateMlbIds, [], 'The diagnostic tie-break must not become a published pick')
+
+const ozzie = player({
+  mlbId: 301, name: 'Ozzie Albies', team: 'ATL', battingOrder: 3,
+  fhr: { current: 1300, open: 1300 }, hr: { current: 600, open: 450 },
+  fhrBaselineDeltaPct: 8.6, hrBaselineDeltaPct: -6.3, hrPicks: 19,
+  markets: {
+    ...neutralMarkets,
+    rbi1: { current: 370, open: 450 }, tb2: { current: 600, open: 700 },
+    tb3: { current: 2000, open: 2600 }, tb4: { current: 5500, open: 7000 },
+    hits1: { current: -150, open: -120 }, runs1: { current: 210, open: 260 },
+    hrr: { current: 950, open: 1200 },
+  },
+  mm: { l1: 5, l3: 5, l5: 4, l10: 4 },
+  paperRank: { l1: 7, l3: 7, l5: 7, l10: 7 }, bookRank: { l1: 10, l3: 10, l5: 10, l10: 10 },
+})
+const riley = player({
+  mlbId: 302, name: 'Austin Riley', team: 'ATL', battingOrder: 7,
+  fhr: { current: 1300, open: 1400 }, hr: { current: 560, open: 650 },
+  fhrBaselineDeltaPct: 49.7, hrBaselineDeltaPct: 6.8, hrPicks: 18,
+  mm: { l1: 5, l3: 5, l5: 4, l10: 3 },
+  paperRank: { l1: 12, l3: 12, l5: 12, l10: 12 }, bookRank: { l1: 7, l3: 7, l5: 7, l10: 7 },
+})
+const olson = player({
+  mlbId: 303, name: 'Matt Olson', team: 'ATL', battingOrder: 4,
+  fhr: { current: 700, open: 600 }, hr: { current: 310, open: 265 },
+  fhrBaselineDeltaPct: 3.1, hrBaselineDeltaPct: -15.7, hrPicks: 657,
+  markets: {
+    ...neutralMarkets,
+    hr2: { current: 1900, open: 1700 }, laser105: { current: 490, open: 450 },
+    rbi1: { current: 290, open: 250 }, tb2: { current: 500, open: 460 },
+    tb3: { current: 1900, open: 1700 }, tb4: { current: 2200, open: 2000 },
+  },
+  windows: {
+    season: statWindow({ avgEv: 92, maxEv: 113, hardHitPct: 52, barrelPct: 16, sweetSpotPct: 35, avgBatSpeed: 75, pullAirRate: 0.25 }),
+    l10: statWindow({ avgEv: 95, maxEv: 115, hardHitPct: 60, barrelPct: 20, sweetSpotPct: 40, avgBatSpeed: 76, pullAirRate: 0.30 }),
+    l5: statWindow({ bbe: 8, pa: 14, avgEv: 96, maxEv: 115, hardHitPct: 63, barrelPct: 22, sweetSpotPct: 42, avgBatSpeed: 76.5, pullAirRate: 0.32 }),
+    l3: statWindow({ bbe: 5, pa: 9, avgEv: 97, maxEv: 115, hardHitPct: 67, barrelPct: 24, sweetSpotPct: 45, avgBatSpeed: 77, pullAirRate: 0.34 }),
+    l1: statWindow({ bbe: 3, pa: 4, avgEv: 98, maxEv: 115, hardHitPct: 67, barrelPct: 25, sweetSpotPct: 50, avgBatSpeed: 77, pullAirRate: 0.36 }),
+  },
+  mm: { l1: 9, l3: 8, l5: 8, l10: 7 },
+  paperRank: { l1: 2, l3: 2, l5: 2, l10: 2 }, bookRank: { l1: 3, l3: 3, l5: 3, l10: 3 },
+})
+const nymAtlFillers = Array.from({ length: 15 }, (_, index) => player({
+  mlbId: 304 + index, name: `NYM-ATL Player ${index + 1}`, team: index < 6 ? 'ATL' : 'NYM',
+  battingOrder: index < 6 ? index + 1 : index - 5,
+  fhr: { current: 650 + index * 100, open: 750 + index * 100 },
+  hr: { current: 380 + index * 45, open: 460 + index * 45 },
+  fhrBaselineDeltaPct: index < 4 ? -20 : -3, hrBaselineDeltaPct: index < 4 ? -16 : -2,
+  hrPicks: index < 4 ? 554 - index * 100 : 12 + index,
+  mm: { l1: -2, l3: -1, l5: 0, l10: 0 },
+  paperRank: { l1: 9, l3: 9, l5: 9, l10: 9 }, bookRank: { l1: 1 + index, l3: 1 + index, l5: 1 + index, l10: 1 + index },
+}))
+const nymAtl = analyzeHrGame({
+  ...game, gamePk: 999006, gameKey: 'NYM@ATL', awayTeam: 'NYM', homeTeam: 'ATL',
+  noHr: { current: 600, open: 650 }, players: [ozzie, riley, olson, ...nymAtlFillers],
+})
+assert.deepEqual(nymAtl.recommendation.fhrShortlistMlbIds, [ozzie.mlbId], 'Ozzie must win the diagnostic +1300 FHR tie over the promoted Riley price')
+assert.ok(nymAtl.recommendation.companionShortlistMlbIds.includes(olson.mlbId), 'Olson must survive as the secondary HR hypothesis')
+assert.ok(!nymAtl.recommendation.companionShortlistMlbIds.includes(riley.mlbId), 'Riley must not survive the same-price diagnostic tie-break')
+assert.deepEqual(nymAtl.recommendation.anytimeCandidateMlbIds, [], 'NYM-ATL must not publish a post-hoc candidate set')
 
 console.log(JSON.stringify({
   pairCount: result.diagnostics.pairCount,
@@ -151,4 +279,7 @@ console.log(JSON.stringify({
   confidence: result.recommendation.confidence,
   abstain: abstain.recommendation.status,
   missingExposure: missingExposure.recommendation.status,
+  pitMia: pitMia.recommendation.fhrShortlistMlbIds,
+  seaNyy: seaNyy.recommendation.fhrShortlistMlbIds,
+  nymAtl: nymAtl.recommendation.fhrShortlistMlbIds,
 }, null, 2))

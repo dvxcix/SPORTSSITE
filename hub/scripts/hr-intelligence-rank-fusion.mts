@@ -1,6 +1,7 @@
 import nextEnv from '@next/env'
 
 nextEnv.loadEnvConfig(process.cwd())
+await import('./lib/install-pikkit-fixture-fetch.mts')
 
 const trainingStart = process.argv[2] ?? '2026-07-01'
 const trainingEnd = process.argv[3] ?? '2026-07-31'
