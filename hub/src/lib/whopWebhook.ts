@@ -296,7 +296,7 @@ export async function handleWhopWebhookRequest(
         const scheduledCancellation = type === 'membership.deactivated'
           && cancellationPeriodEnd !== null
           && Date.parse(cancellationPeriodEnd) > Date.now()
-          && (data.cancel_at_period_end === true || current.tier_cancel_at_period_end === true)
+          && (data.cancel_at_period_end !== false || current.tier_cancel_at_period_end === true)
         if (scheduledCancellation) {
           await supabase.from('users').update({
             tier_status: 'canceling',

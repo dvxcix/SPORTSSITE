@@ -54,12 +54,26 @@ export async function POST() {
     )
   }
 
-  const result = await cancelWhopMembership(profile.whop_membership_id, apiKey)
-  if (!result.ok) {
-    return safeApiError('whop-cancel-membership', { status: result.status }, 'Cancellation is temporarily unavailable', 502)
+  // Mark the cancellation before calling Whop. Whop can deliver the
+  // deactivation webhook before this request returns, so writing afterward
+  // leaves a race where the webhook sees no scheduled-cancel signal and
+  // strips paid-through access. Roll this optimistic state back only when
+  // Whop rejects the cancellation.
+  const { error: scheduleError } = await admin.from('users').update({
+    tier_cancel_at_period_end: true,
+    tier_status: 'canceling',
+  }).eq('id', user.id)
+  if (scheduleError) {
+    return safeApiError('whop-cancel-membership-state', scheduleError, 'Cancellation could not be scheduled', 502)
   }
 
-  const { error: updateError } = await admin.from('users').update({ tier_cancel_at_period_end: true }).eq('id', user.id)
-  if (updateError) return safeApiError('whop-cancel-membership-state', updateError, 'Cancellation was received, but account status could not be refreshed', 502)
+  const result = await cancelWhopMembership(profile.whop_membership_id, apiKey)
+  if (!result.ok) {
+    await admin.from('users').update({
+      tier_cancel_at_period_end: false,
+      tier_status: 'active',
+    }).eq('id', user.id)
+    return safeApiError('whop-cancel-membership', { status: result.status }, 'Cancellation is temporarily unavailable', 502)
+  }
   return NextResponse.json({ ok: true })
 }
