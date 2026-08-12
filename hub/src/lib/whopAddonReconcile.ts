@@ -5,6 +5,7 @@ import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
+import { whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
 // Shared by the admin route (manual/emergency re-run) and the hourly cron
 // (see vercel.json) — safety net for the addon Whop business's webhook,
@@ -23,6 +24,7 @@ type ActiveMembership = {
   internalUserId: string
   periodEnd: string | null
   status?: string
+  cancelAtPeriodEnd: boolean
 }
 
 function sameInstant(left: string | null | undefined, right: string | null | undefined) {
@@ -61,7 +63,7 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const bestByUser = new Map<string, ActiveMembership>()
   for (const m of memberships) {
     const status: string | undefined = m.status ?? m.valid_status
-    const isActive = status === 'active' || status === 'valid' || m.valid === true
+    const isActive = whopMembershipGrantsAccess(m)
     const internalUserId: string | undefined = m.metadata?.internal_user_id
       ?? (m.id ? linkedOwnerByMembershipId.get(m.id) : undefined)
     if (!internalUserId) {
@@ -69,11 +71,9 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
       continue
     }
     if (!isActive) continue
-    const periodEndRaw = m.renewal_period_end ?? m.period_end ?? m.expires_at
-    const periodEnd = typeof periodEndRaw === 'number'
-      ? new Date(periodEndRaw * 1000).toISOString()
-      : typeof periodEndRaw === 'string' ? periodEndRaw : null
-    const candidate = { membershipId: m.id as string | undefined, internalUserId, periodEnd, status }
+    const periodEnd = whopMembershipPeriodEnd(m)
+    const cancelAtPeriodEnd = whopCancellationKeepsAccess(m)
+    const candidate = { membershipId: m.id as string | undefined, internalUserId, periodEnd, status, cancelAtPeriodEnd }
     const current = bestByUser.get(internalUserId)
     const candidateEnd = periodEnd ? Date.parse(periodEnd) : 0
     const currentEnd = current?.periodEnd ? Date.parse(current.periodEnd) : 0
@@ -81,7 +81,7 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   }
   const activeUserIds = [...bestByUser.keys()]
   const { data: existingUsers, error: existingUsersError } = activeUserIds.length
-    ? await admin.from('users').select('id, tier, tier_purchased_at, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
+    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
     : { data: [], error: null }
   if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
   const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
@@ -90,7 +90,7 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     // Defensive across a few plausible field shapes — same reasoning as the
     // webhook handler, since this is the same API family with the same
     // undocumented-payload problem.
-    const { status, internalUserId, membershipId, periodEnd } = m
+    const { status, internalUserId, membershipId, periodEnd, cancelAtPeriodEnd } = m
 
     // Only stamp tier_purchased_at when unset — this route re-runs on a
     // schedule and would otherwise bump it to "now" every time it sees the
@@ -121,7 +121,8 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
 
     const unchanged = currentTier === planInfo.tier
       && existing.whop_plan_id === ADDON_PLAN_ID
-      && existing.tier_status === 'active'
+      && existing.tier_status === (cancelAtPeriodEnd ? 'canceling' : 'active')
+      && existing.tier_cancel_at_period_end === cancelAtPeriodEnd
       && (existing.whop_membership_id ?? null) === (membershipId ?? null)
       && sameInstant(existing.tier_current_period_end, periodEnd)
     if (unchanged) continue
@@ -133,10 +134,11 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     const { data: updated, error } = await admin.from('users').update({
       tier: planInfo.tier,
       whop_plan_id: ADDON_PLAN_ID,
-      tier_status: 'active',
+      tier_status: cancelAtPeriodEnd ? 'canceling' : 'active',
       tier_current_period_end: periodEnd,
       whop_membership_id: membershipId ?? null,
       tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
+      tier_cancel_at_period_end: cancelAtPeriodEnd,
     }).eq('id', internalUserId).select('username, discord_advanced_claimed, admin_granted_tier, email').single()
 
     if (error || !updated) {

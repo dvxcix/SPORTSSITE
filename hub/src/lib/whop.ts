@@ -147,8 +147,8 @@ export async function checkHasAccess(whopUserId: string, accessToken: string, ac
 // as fetchAllWhopMemberships (whopMembershipsFetch.ts, confirmed live) since
 // that's the proven-correct version prefix for this exact resource in this
 // codebase — Whop's own docs are inconsistent about v1 vs v2 elsewhere.
-// Omitting the body relies on the 'at_period_end' default, matching the
-// caller's own UI copy ("you'll keep access until period end").
+// Send the cancellation mode explicitly so API-version defaults cannot
+// silently change the access behavior promised by the caller's UI.
 //
 // Whop cancels at the end of the current billing period by default (access
 // continues, auto-renew stops) rather than revoking immediately — the caller
@@ -196,7 +196,7 @@ export async function cancelWhopMembership(membershipId: string, apiKey: string,
     const res = await fetch(`${WHOP_API_BASE}/api/v2/memberships/${membershipId}/cancel`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: immediate ? JSON.stringify({ cancellation_mode: 'immediate' }) : undefined,
+      body: JSON.stringify({ cancellation_mode: immediate ? 'immediate' : 'at_period_end' }),
       signal: AbortSignal.timeout(WHOP_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) {

@@ -5,6 +5,7 @@ import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
+import { whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
 // Same safety-net reasoning as whopAddonReconcile.ts, for the MAIN
 // tier-payments business — confirmed live that its webhook (/api/webhooks/whop)
@@ -44,7 +45,7 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // best (highest-tier) active membership per user before writing anything
   // avoids letting whichever plan happens to be iterated last silently win
   // regardless of its actual rank.
-  const bestByUser = new Map<string, { planId: string; tier: Tier; membershipId?: string; periodEnd: string | null }>()
+  const bestByUser = new Map<string, { planId: string; tier: Tier; membershipId?: string; periodEnd: string | null; cancelAtPeriodEnd: boolean }>()
 
   const planFetches = await Promise.all(MAIN_PLAN_IDS.map(async planId => ({
     planId,
@@ -84,14 +85,12 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
 
     for (const m of memberships) {
       const status: string | undefined = m.status ?? m.valid_status
-      const isActive = status === 'active' || status === 'valid' || m.valid === true
+      const isActive = whopMembershipGrantsAccess(m)
       const membershipId: string | undefined = m.id
       const internalUserId: string | undefined = m.metadata?.internal_user_id
         ?? (membershipId ? linkedOwnerByMembershipId.get(membershipId) : undefined)
-      const periodEndRaw = m.renewal_period_end ?? m.period_end ?? m.expires_at
-      const periodEnd = typeof periodEndRaw === 'number'
-        ? new Date(periodEndRaw * 1000).toISOString()
-        : typeof periodEndRaw === 'string' ? periodEndRaw : null
+      const periodEnd = whopMembershipPeriodEnd(m)
+      const cancelAtPeriodEnd = whopCancellationKeepsAccess(m)
 
       if (!internalUserId) {
         results.push({ planId, membershipId, status, skipped: 'no metadata or linked membership owner' })
@@ -100,15 +99,21 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
       if (!isActive) continue
 
       const current = bestByUser.get(internalUserId)
-      if (!current || TIER_RANK[planInfo.tier] > TIER_RANK[current.tier]) {
-        bestByUser.set(internalUserId, { planId, tier: planInfo.tier, membershipId, periodEnd })
+      const candidateEnd = periodEnd ? Date.parse(periodEnd) : 0
+      const currentEnd = current?.periodEnd ? Date.parse(current.periodEnd) : 0
+      const hasHigherTier = !current || TIER_RANK[planInfo.tier] > TIER_RANK[current.tier]
+      const hasLaterSameTier = current
+        && TIER_RANK[planInfo.tier] === TIER_RANK[current.tier]
+        && candidateEnd > currentEnd
+      if (hasHigherTier || hasLaterSameTier) {
+        bestByUser.set(internalUserId, { planId, tier: planInfo.tier, membershipId, periodEnd, cancelAtPeriodEnd })
       }
     }
   }
 
   const activeUserIds = [...bestByUser.keys()]
   const { data: existingUsers, error: existingUsersError } = activeUserIds.length
-    ? await admin.from('users').select('id, tier, tier_purchased_at, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
+    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
     : { data: [], error: null }
   if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
   const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
@@ -147,7 +152,8 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     const samePeriodEnd = sameInstant(existing.tier_current_period_end, best.periodEnd)
     const unchanged = currentTier === best.tier
       && existing.whop_plan_id === best.planId
-      && existing.tier_status === 'active'
+      && existing.tier_status === (best.cancelAtPeriodEnd ? 'canceling' : 'active')
+      && existing.tier_cancel_at_period_end === best.cancelAtPeriodEnd
       && (existing.whop_membership_id ?? null) === (best.membershipId ?? null)
       && samePeriodEnd
     if (unchanged) continue
@@ -159,10 +165,11 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     const { data: updated, error } = await admin.from('users').update({
       tier: best.tier,
       whop_plan_id: best.planId,
-      tier_status: 'active',
+      tier_status: best.cancelAtPeriodEnd ? 'canceling' : 'active',
       tier_current_period_end: best.periodEnd,
       whop_membership_id: best.membershipId ?? null,
       tier_purchased_at: existing?.tier_purchased_at ?? new Date().toISOString(),
+      tier_cancel_at_period_end: best.cancelAtPeriodEnd,
     }).eq('id', internalUserId).select('username, discord_advanced_claimed, admin_granted_tier, email').single()
 
     if (error || !updated) {

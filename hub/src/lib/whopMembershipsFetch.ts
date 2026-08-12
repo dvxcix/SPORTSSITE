@@ -14,6 +14,7 @@ export type WhopMembershipRecord = {
   status?: string
   valid_status?: string
   valid?: boolean
+  cancel_at_period_end?: boolean
   metadata?: { internal_user_id?: string }
   renewal_period_end?: string | number
   period_end?: string | number

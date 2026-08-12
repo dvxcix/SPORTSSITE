@@ -278,6 +278,9 @@ test('Whop billing retries are bounded without breaking idempotency or legacy ac
   const cancel = await read('src/app/api/whop/cancel-membership/route.ts')
   const addonReconcile = await read('src/lib/whopAddonReconcile.ts')
   const mainReconcile = await read('src/lib/whopMainReconcile.ts')
+  const membershipAccess = await read('src/lib/whopMembershipAccess.ts')
+  const webhook = await read('src/lib/whopWebhook.ts')
+  const whop = await read('src/lib/whop.ts')
   assert.ok(checkout.includes("consumeServerRateLimit(user.id, 'whop_checkout', 12, 5 * 60)"))
   assert.ok(checkout.includes("'Retry-After': '300'"))
   assert.ok(cancel.indexOf('if (profile.tier_cancel_at_period_end)') < cancel.indexOf("consumeServerRateLimit(user.id, 'whop_cancel'"))
@@ -286,7 +289,14 @@ test('Whop billing retries are bounded without breaking idempotency or legacy ac
   for (const reconcile of [addonReconcile, mainReconcile]) {
     assert.ok(reconcile.includes('linkedOwnerByMembershipId'))
     assert.ok(reconcile.includes("select('id, whop_membership_id')"))
+    assert.ok(reconcile.includes('whopMembershipGrantsAccess'))
+    assert.ok(reconcile.includes('tier_cancel_at_period_end'))
   }
+  assert.ok(whop.includes("cancellation_mode: immediate ? 'immediate' : 'at_period_end'"))
+  assert.ok(membershipAccess.includes("['active', 'valid', 'trialing', 'canceling', 'past_due', 'completed']"))
+  assert.ok(membershipAccess.includes('whopCancellationKeepsAccess'))
+  assert.ok(webhook.includes("tier_status: 'canceling'"))
+  assert.ok(webhook.includes("data.cancel_at_period_end === true || current.tier_cancel_at_period_end === true"))
 })
 
 test('pipeline telemetry records starts before handlers can time out', async () => {

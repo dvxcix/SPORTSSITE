@@ -6,6 +6,7 @@ import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { alertUnexpectedChargeAfterCancel } from '@/lib/billingAlert'
+import { whopCancellationKeepsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
 // Shared by both /api/webhooks/whop (the main tier-payments Whop business,
 // WHOP_WEBHOOK_KEY) and /api/webhooks/whop-addon (the entirely separate
@@ -153,10 +154,7 @@ export async function handleWhopWebhookRequest(
     // `.membership` field on itself), so this still correctly falls through
     // to `data.id` there — unchanged for that case.
     const membershipId = stringValue(data.membership) ?? objectId(data.membership) ?? stringValue(data.membership_id) ?? stringValue(data.id)
-    const periodEndRaw = data?.renewal_period_end ?? data?.period_end ?? data?.expires_at
-    const periodEnd = typeof periodEndRaw === 'number'
-      ? new Date(periodEndRaw * 1000).toISOString()
-      : typeof periodEndRaw === 'string' ? periodEndRaw : null
+    const periodEnd = whopMembershipPeriodEnd(data)
 
     // Temporary — signature verification is now confirmed correct, but the
     // event-type strings this switch matches against (dot-separated,
@@ -182,6 +180,8 @@ export async function handleWhopWebhookRequest(
           await supabase.from('group_members').upsert({ group_id: group.id, user_id: internalUserId, role: 'member' }, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
           if (group.channel_id) await supabase.from('channel_members').upsert({ channel_id: group.channel_id, user_id: internalUserId }, { onConflict: 'channel_id,user_id', ignoreDuplicates: true })
         }
+      } else if (internalUserId && type === 'membership.deactivated' && whopCancellationKeepsAccess(data)) {
+        await supabase.from('creator_entitlements').update({ status: 'active', current_period_end: periodEnd, updated_at: new Date().toISOString() }).eq('user_id', internalUserId).eq('product_id', creatorProductId)
       } else if (internalUserId && ['payment.failed', 'membership.deactivated', 'membership.went_invalid'].includes(type || '')) {
         await supabase.from('creator_entitlements').update({ status: type === 'payment.failed' ? 'past_due' : 'expired', updated_at: new Date().toISOString() }).eq('user_id', internalUserId).eq('product_id', creatorProductId)
       }
@@ -283,12 +283,28 @@ export async function handleWhopWebhookRequest(
         // success event and this handler reset tier unconditionally. Only
         // downgrade when the event is actually about the membership that's
         // driving the user's current tier.
-        const { data: current } = await supabase.from('users').select('whop_membership_id,whop_plan_id').eq('id', resolvedInternalUserId).maybeSingle()
+        const { data: current } = await supabase.from('users').select('whop_membership_id,whop_plan_id,tier_cancel_at_period_end,tier_current_period_end').eq('id', resolvedInternalUserId).maybeSingle()
         if (!membershipId || current?.whop_membership_id !== membershipId) {
           break
         }
         const currentPlan = current.whop_plan_id ? WHOP_PLANS[current.whop_plan_id] : undefined
         if (currentPlan && (source === 'addon') !== (currentPlan.company === 'addon')) break
+        const storedPeriodEnd = current.tier_current_period_end && Number.isFinite(Date.parse(current.tier_current_period_end))
+          ? new Date(current.tier_current_period_end).toISOString()
+          : null
+        const cancellationPeriodEnd = periodEnd ?? storedPeriodEnd
+        const scheduledCancellation = type === 'membership.deactivated'
+          && cancellationPeriodEnd !== null
+          && Date.parse(cancellationPeriodEnd) > Date.now()
+          && (data.cancel_at_period_end === true || current.tier_cancel_at_period_end === true)
+        if (scheduledCancellation) {
+          await supabase.from('users').update({
+            tier_status: 'canceling',
+            tier_current_period_end: cancellationPeriodEnd,
+            tier_cancel_at_period_end: true,
+          }).eq('id', resolvedInternalUserId)
+          break
+        }
         const { data: updated } = await supabase.from('users').update({
           tier: 'free',
           tier_status: type,
@@ -309,7 +325,11 @@ export async function handleWhopWebhookRequest(
         if (typeof cancelAtPeriodEnd !== 'boolean') break
         await supabase
           .from('users')
-          .update({ tier_cancel_at_period_end: cancelAtPeriodEnd })
+          .update({
+            tier_cancel_at_period_end: cancelAtPeriodEnd,
+            tier_status: cancelAtPeriodEnd ? 'canceling' : 'active',
+            ...(periodEnd ? { tier_current_period_end: periodEnd } : {}),
+          })
           .eq('id', resolvedInternalUserId)
           .eq('whop_membership_id', membershipId)
         break
