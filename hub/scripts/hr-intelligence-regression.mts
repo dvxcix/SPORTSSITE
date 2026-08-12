@@ -114,19 +114,41 @@ const game: HrIntelGameInput = {
 }
 
 const result = analyzeHrGame(game)
+const repeatedResult = analyzeHrGame(game)
 assert.equal(result.diagnostics.pairCount, 153, 'An 18-player game must score all 153 unordered pairings')
-assert.equal(result.recommendation.fhrAnchorMlbId, chase.mlbId, 'Chase must remain the hidden FHR anchor')
-assert.equal(result.recommendation.anytimeCompanionMlbId, jo.mlbId, 'Jo must remain the anytime companion')
+assert.equal(result.recommendation.fhrAnchorMlbId, null, 'An unproven exact FHR gate must not publish an anchor')
+assert.equal(result.recommendation.diagnosticLeaderMlbId, chase.mlbId, 'Chase must remain the diagnostic leader')
+assert.equal(result.recommendation.contradictionLeaderMlbId, chase.mlbId, 'Chase must remain the contradiction leader')
+assert.deepEqual(repeatedResult, result, 'Identical game inputs must produce identical analysis')
+assert.equal(result.recommendation.anytimeCompanionMlbId, null, 'The analyzer must not force an unvalidated anytime companion')
+assert.ok(result.recommendation.fhrShortlistMlbIds.includes(chase.mlbId), 'The FHR shortlist must retain the contradiction leader')
+assert.ok(result.recommendation.companionShortlistMlbIds.includes(jo.mlbId), 'Jo must remain visible in the companion watchlist')
 assert.equal(result.recommendation.advertisedAlternativeMlbId, lowe.mlbId, 'Lowe must remain the advertised alternative')
 
 const abstain = analyzeHrGame({ ...game, gamePk: 999002, awayLineupConfirmed: false, players: game.players.slice(0, 17), noHr: { current: -120, open: -110 } })
 assert.equal(abstain.recommendation.status, 'abstain', 'Incomplete lineups and a strong No HR price must produce an abstain')
 
+const missingExposure = analyzeHrGame({
+  ...game,
+  gamePk: 999003,
+  players: game.players.map(candidate => ({
+    ...candidate,
+    hrPicks: null,
+    picksByMarket: Object.fromEntries(Object.keys(candidate.picksByMarket).map(key => [key, null])),
+  })),
+})
+assert.equal(missingExposure.recommendation.status, 'abstain', 'Missing exposure must fail closed')
+assert.equal(missingExposure.recommendation.dataComplete, false, 'Missing exposure must mark the board partial')
+assert.equal(missingExposure.recommendation.fhrAnchorMlbId, null, 'Missing exposure must never publish an exact FHR call')
+assert.ok(missingExposure.recommendation.fhrShortlistMlbIds.length > 0, 'Diagnostic candidates must remain inspectable when publication is withheld')
+
 console.log(JSON.stringify({
   pairCount: result.diagnostics.pairCount,
-  anchor: result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === result.recommendation.fhrAnchorMlbId)?.name,
+  diagnosticLeader: result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === result.recommendation.diagnosticLeaderMlbId)?.name,
   companion: result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === result.recommendation.anytimeCompanionMlbId)?.name,
+  companionWatchlist: result.recommendation.companionShortlistMlbIds.map((id: number) => result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === id)?.name),
   advertised: result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === result.recommendation.advertisedAlternativeMlbId)?.name,
   confidence: result.recommendation.confidence,
   abstain: abstain.recommendation.status,
+  missingExposure: missingExposure.recommendation.status,
 }, null, 2))

@@ -60,20 +60,27 @@ async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ d
   return out
 }
 
-async function mpGetAll(path: string): Promise<any[]> {
+type MpRowsResult = { rows: any[]; error: string | null }
+
+async function mpGetAll(path: string): Promise<MpRowsResult> {
   const PAGE = 1000
   const out: any[] = []
   for (let offset = 0; offset < 100_000; offset += PAGE) {
     try {
       const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store', signal: AbortSignal.timeout(20_000) })
-      if (!res.ok) break
+      if (!res.ok) {
+        const detail = (await res.text()).slice(0, 240)
+        return { rows: out, error: `mlb-party returned HTTP ${res.status}${detail ? `: ${detail}` : ''}` }
+      }
       const page = await res.json()
       if (!Array.isArray(page) || !page.length) break
       out.push(...page)
       if (page.length < PAGE) break
-    } catch { break }
+    } catch (error) {
+      return { rows: out, error: error instanceof Error ? error.message : String(error) }
+    }
   }
-  return out
+  return { rows: out, error: null }
 }
 
 // Exact copy of dugout/data/route.ts's own reshaping table — market_opening_
@@ -102,6 +109,7 @@ export type GameBundles = {
   awayBundle: Map<string, FieldBundle>
   gameTotalPicksByMarket: Record<string, number>
   noHr: { current: number | null; open: number | null }
+  sourceWarnings: string[]
 }
 
 // Everything a Factor/pipeline step across every category could reference,
@@ -112,27 +120,35 @@ export type GameBundles = {
 export async function fetchHistoricalGameBundles(date: string): Promise<GameBundles[]> {
   const admin = createAdminClient()
 
-  const [games, snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, pikkitRows] = await Promise.all([
+  const [games, snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, pikkitRowsResult] = await Promise.all([
     getTodaysMatchups(date),
-    admin.from('pregame_odds_snapshots').select('game_pk, prop_map').eq('game_date', date).then(r => r.data ?? []),
-    admin.from('fanduel_gap_odds')
+    admin.from('pregame_odds_snapshots').select('game_pk, prop_map').eq('game_date', date).order('game_pk').then(r => r.data ?? []),
+    selectAll<any>((from, to) => admin.from('fanduel_gap_odds')
       .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
-      .eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
-    admin.from('mgm_gap_odds').select('game_key, name_norm, sa_mgm, hr2_mgm').eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
+      .eq('game_date', date).order('game_key').order('name_norm').range(from, to)),
+    selectAll<any>((from, to) => admin.from('mgm_gap_odds')
+      .select('game_key, name_norm, sa_mgm, hr2_mgm')
+      .eq('game_date', date).order('game_key').order('name_norm').range(from, to)),
     selectAll<{ game_key: string; name_norm: string; market: string; book: string; opening_price: number }>(
-      (from, to) => admin.from('market_opening_prices').select('game_key, name_norm, market, book, opening_price').eq('game_date', date).range(from, to)
+      (from, to) => admin.from('market_opening_prices').select('game_key, name_norm, market, book, opening_price')
+        .eq('game_date', date).order('game_key').order('name_norm').order('market').order('book').range(from, to)
     ),
     selectAll<{ name_norm: string; bookmaker: string; avg_price: number; market_key: string }>(
-      (from, to) => admin.from(DUGOUT_SEASON_AVG_TABLE).select('name_norm, bookmaker, avg_price, market_key').eq('game_date', date).in('market_key', ['batter_first_home_run', 'batter_home_runs']).range(from, to)
+      (from, to) => admin.from(DUGOUT_SEASON_AVG_TABLE).select('name_norm, bookmaker, avg_price, market_key')
+        .eq('game_date', date).in('market_key', ['batter_first_home_run', 'batter_home_runs'])
+        .order('market_key').order('name_norm').order('bookmaker').range(from, to)
     ),
     selectAll<{ mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }>(
-      (from, to) => admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date).range(from, to)
+      (from, to) => admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows')
+        .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
     ),
     selectAll<{ mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }>(
-      (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date).range(from, to)
+      (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows')
+        .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
     ),
     mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`),
   ])
+  const pikkitRows = pikkitRowsResult.rows
 
   if (!games.length) return []
 
@@ -270,6 +286,11 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
         current: fanduelGapByName.__game__?.no_hr_fd ?? null,
         open: openingByName.__game__?.['noHr:fanduel'] ?? null,
       },
+      sourceWarnings: pikkitRowsResult.error
+        ? [`Pikkit exposure could not be loaded: ${pikkitRowsResult.error}`]
+        : pikkitRows.length === 0
+          ? ['Pikkit exposure returned no rows for this date.']
+          : [],
     }
   })
 }

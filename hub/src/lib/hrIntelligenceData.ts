@@ -35,6 +35,7 @@ export type HrIntelligenceSlate = {
     confirmedGames: number
     pikkitRowsPresent: boolean
     outcomesAvailable: number
+    outcomeFailures: number
   }
 }
 
@@ -244,9 +245,9 @@ function attachMm(
   }
 }
 
-function analyzeBundle(gameBundle: GameBundles): HrIntelGameResult {
+function analyzeBundle(gameBundle: GameBundles, slateDate: string): HrIntelGameResult {
   const { game } = gameBundle
-  const warnings: string[] = []
+  const warnings: string[] = [...gameBundle.sourceWarnings]
   const players: HrIntelPlayerInput[] = []
   for (const player of game.awayLineup) {
     const bundle = gameBundle.awayBundle.get(normName(player.name))
@@ -263,7 +264,10 @@ function analyzeBundle(gameBundle: GameBundles): HrIntelGameResult {
     warnings.push('MM and paper-rank evidence is unavailable for this game.')
   }
   return analyzeHrGame({
-    date: gameBundle.game.gameDate.slice(0, 10),
+    // Historical matchup records can carry a stale embedded gameDate when a
+    // matchup is reconstructed from a saved slate. The selected slate date is
+    // the source of truth for calibration, diagnostics, and postgame grading.
+    date: slateDate,
     gamePk: game.gamePk,
     gameKey: gameBundle.gameKey,
     awayTeam: game.awayAbbr,
@@ -282,9 +286,28 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
   const hrMlbIds = [...new Set(ordered.map(event => event.mlb_id).filter((id): id is number => id != null))]
   const hrNames = [...new Set(ordered.map(event => event.player_name).filter(Boolean))]
   const anchorId = game.recommendation.fhrAnchorMlbId
+  const diagnosticLeaderId = game.recommendation.diagnosticLeaderMlbId
   const companionId = game.recommendation.anytimeCompanionMlbId
+  const primaryPublished = anchorId != null && game.recommendation.status !== 'abstain'
+  const companionPublished = companionId != null && game.recommendation.status === 'qualified'
+  const fhrShortlistPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain'
+  const companionWatchPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain' && game.recommendation.companionShortlistMlbIds.length > 0
   const anchorHit = anchorId != null && first?.mlb_id === anchorId
+  const diagnosticLeaderHit = diagnosticLeaderId != null && first?.mlb_id === diagnosticLeaderId
   const companionHit = companionId != null && hrMlbIds.includes(companionId)
+  const contradictionLeaderHit = game.recommendation.contradictionLeaderMlbId != null && first?.mlb_id === game.recommendation.contradictionLeaderMlbId
+  const modelLeaderHit = game.recommendation.modelLeaderMlbId != null && first?.mlb_id === game.recommendation.modelLeaderMlbId
+  const marketLeaderHit = game.recommendation.marketLeaderMlbId != null && first?.mlb_id === game.recommendation.marketLeaderMlbId
+  const fhrShortlistHit = first?.mlb_id != null && game.recommendation.fhrShortlistMlbIds.includes(first.mlb_id)
+  const contrarianWatchHit = first?.mlb_id != null && game.recommendation.contrarianWatchMlbIds.includes(first.mlb_id)
+  const companionShortlistHit = game.recommendation.companionShortlistMlbIds.some(id => hrMlbIds.includes(id) && id !== first?.mlb_id)
+  const laterHrIds = hrMlbIds.filter(id => id !== first?.mlb_id)
+  const candidateSetPairHit = fhrShortlistHit && laterHrIds.some(id => game.recommendation.fhrShortlistMlbIds.includes(id))
+  const candidateContrarianPairHit = first?.mlb_id != null && (
+    (game.recommendation.fhrShortlistMlbIds.includes(first.mlb_id) && laterHrIds.some(id => game.recommendation.contrarianWatchMlbIds.includes(id))) ||
+    (game.recommendation.contrarianWatchMlbIds.includes(first.mlb_id) && laterHrIds.some(id => game.recommendation.fhrShortlistMlbIds.includes(id)))
+  )
+  const pairCoverageHit = candidateSetPairHit || candidateContrarianPairHit || (fhrShortlistHit && companionShortlistHit)
   return {
     ...game,
     validation: {
@@ -294,8 +317,22 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
       hrMlbIds,
       hrNames,
       anchorHit,
+      diagnosticLeaderHit,
+      primaryPublished,
       companionHit,
+      companionPublished,
       pairHit: anchorHit && companionHit,
+      fhrShortlistHit,
+      fhrShortlistPublished,
+      contrarianWatchHit,
+      companionShortlistHit,
+      companionWatchPublished,
+      candidateSetPairHit,
+      candidateContrarianPairHit,
+      pairCoverageHit,
+      contradictionLeaderHit,
+      modelLeaderHit,
+      marketLeaderHit,
     },
   }
 }
@@ -305,13 +342,15 @@ export async function buildHrIntelligenceSlate(date: string, gamePk?: number): P
   const bundles = gamePk == null ? allBundles : allBundles.filter(bundle => bundle.game.gamePk === gamePk)
   const pitcherIds = [...new Set(bundles.flatMap(bundle => [bundle.game.homePitcher?.id, bundle.game.awayPitcher?.id]).filter((id): id is number => !!id))]
   const admin = createAdminClient()
-  const finalBundles = bundles.filter(bundle => bundle.game.status === 'Final')
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const outcomeBundles = date < today ? bundles : bundles.filter(bundle => bundle.game.status === 'Final')
   const [pitcherRows, edgeResult, outcomeResult] = await Promise.all([
     fetchPitcherMix(pitcherIds, date),
-    admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data').eq('game_date', date),
-    finalBundles.length
-      ? fetchHrFeed(finalBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
-      : Promise.resolve({ hrFeed: [], pitcherIdByName: {} }),
+    admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data')
+      .eq('game_date', date).order('mlb_id').order('role'),
+    outcomeBundles.length
+      ? fetchHrFeed(outcomeBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
+      : Promise.resolve({ hrFeed: [], pitcherIdByName: {}, completedGamePks: [], failures: [] }),
   ])
   if (edgeResult.error) throw new Error(`Matchup-edge query failed: ${edgeResult.error.message}`)
 
@@ -329,11 +368,14 @@ export async function buildHrIntelligenceSlate(date: string, gamePk?: number): P
     events.push(event)
     eventsByGame.set(event.game_pk, events)
   }
-  const finalGamePks = new Set(finalBundles.map(bundle => bundle.game.gamePk))
+  const completedGamePks = new Set(outcomeResult.completedGamePks)
+  const failureByGamePk = new Map(outcomeResult.failures.map(failure => [failure.gamePk, failure.reason]))
   const games = bundles.map(bundle => {
-    const analysis = analyzeBundle(bundle)
-    return finalGamePks.has(bundle.game.gamePk)
-      ? attachValidation(analysis, eventsByGame.get(bundle.game.gamePk) ?? [])
+    const analysis = analyzeBundle(bundle, date)
+    if (completedGamePks.has(bundle.game.gamePk)) return attachValidation(analysis, eventsByGame.get(bundle.game.gamePk) ?? [])
+    const failure = failureByGamePk.get(bundle.game.gamePk)
+    return failure
+      ? { ...analysis, warnings: [...analysis.warnings, `Postgame validation unavailable: ${failure}`] }
       : analysis
   })
 
@@ -347,6 +389,7 @@ export async function buildHrIntelligenceSlate(date: string, gamePk?: number): P
       confirmedGames: games.filter(game => game.homeLineupConfirmed && game.awayLineupConfirmed).length,
       pikkitRowsPresent: games.some(game => game.players.some(player => player.hrPicks != null)),
       outcomesAvailable: games.filter(game => game.validation).length,
+      outcomeFailures: outcomeResult.failures.length,
     },
   }
 }

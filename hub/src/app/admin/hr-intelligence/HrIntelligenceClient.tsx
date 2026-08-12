@@ -6,7 +6,7 @@ import { Activity, AlertTriangle, BarChart3, ChevronDown, Crosshair, EyeOff, Ref
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import type { HrIntelGameResult, HrIntelPairResult, HrIntelPlayerResult } from '@/lib/hrIntelligence'
+import type { HrIntelGameResult, HrIntelPlayerResult } from '@/lib/hrIntelligence'
 import type { HrIntelligenceSlate } from '@/lib/hrIntelligenceData'
 import styles from './HrIntelligence.module.css'
 
@@ -27,12 +27,12 @@ function easternToday() {
 }
 
 function odds(value: number | null) {
-  if (value == null) return '—'
+  if (value == null) return 'N/A'
   return value > 0 ? `+${value}` : String(value)
 }
 
 function signed(value: number | null, suffix = '') {
-  if (value == null) return '—'
+  if (value == null) return 'N/A'
   return `${value > 0 ? '+' : ''}${value.toFixed(1)}${suffix}`
 }
 
@@ -44,44 +44,41 @@ function TeamLogo({ team }: { team: string }) {
 function PlayerIdentity({ player, role }: { player: HrIntelPlayerResult; role?: string }) {
   return <div className={styles.playerIdentity}>
     <PlayerAvatar headshot={mlbHeadshot(player.mlbId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.name} size={42} />
-    <div><strong>{player.name}</strong><span>{role ? `${role} · ` : ''}{player.team} · #{player.battingOrder} · {player.position}</span></div>
+    <div><strong>{player.name}</strong><span>{role ? `${role} | ` : ''}{player.team} | #{player.battingOrder} | {player.position}</span></div>
   </div>
 }
 
-function RecommendationCard({ player, role, score, icon }: { player: HrIntelPlayerResult | null; role: string; score: number | null; icon: 'anchor' | 'companion' | 'advertised' }) {
-  const Icon = icon === 'anchor' ? Crosshair : icon === 'companion' ? Sparkles : EyeOff
-  return <article className={styles.recommendationCard} data-kind={icon}>
-    <header><span><Icon size={15} /> {role}</span><b>{score == null ? '—' : score.toFixed(1)}</b></header>
+function SignalCard({ player, role, score, kind }: { player: HrIntelPlayerResult | null; role: string; score: number | null; kind: 'diagnostic' | 'contradiction' | 'model' | 'market' | 'exposure' }) {
+  const Icon = kind === 'diagnostic' ? Target : kind === 'contradiction' ? Crosshair : kind === 'model' ? Sparkles : kind === 'exposure' ? Users : BarChart3
+  return <article className={styles.recommendationCard} data-kind={kind}>
+    <header><span><Icon size={15} /> {role}</span><b>{score == null ? 'N/A' : score.toFixed(1)}</b></header>
     {player ? <>
       <PlayerIdentity player={player} />
       <div className={styles.quickEvidence}>
-        <span>FHR {odds(player.fhr.current)}</span><span>HR {odds(player.hr.current)}</span><span>{player.hrPicks ?? '—'} HR picks</span>
+        <span>FHR {odds(player.fhr.current)}</span><span>HR {odds(player.hr.current)}</span><span>{player.hrPicks ?? 'N/A'} HR picks</span>
       </div>
     </> : <p className={styles.missing}>No qualified player</p>}
   </article>
 }
 
-function PairRow({ pair, players, rank }: { pair: HrIntelPairResult; players: Map<number, HrIntelPlayerResult>; rank: number }) {
-  const anchor = players.get(pair.anchorMlbId)
-  const companion = players.get(pair.companionMlbId)
-  if (!anchor || !companion) return null
+function WatchRow({ player, rank, lane }: { player: HrIntelPlayerResult; rank: number; lane: 'candidate' | 'contrarian' | 'companion' }) {
+  const score = lane === 'contrarian' ? player.contradictionScore : lane === 'companion' ? player.anytimeScore : Math.max(player.contradictionScore, player.modelFhrScore)
+  const label = lane === 'candidate' ? 'candidate score' : lane === 'contrarian' ? 'contradiction score' : 'support score'
   return <div className={styles.pairRow}>
     <b className={styles.pairRank}>{rank}</b>
     <div className={styles.pairPlayers}>
-      <span><PlayerAvatar headshot={mlbHeadshot(anchor.mlbId)} teamLogo={getTeamLogoUrl(anchor.team)} teamAbbr={anchor.team} name={anchor.name} size={31} /><span><b>{anchor.name}</b><small>FHR anchor</small></span></span>
-      <i>+</i>
-      <span><PlayerAvatar headshot={mlbHeadshot(companion.mlbId)} teamLogo={getTeamLogoUrl(companion.team)} teamAbbr={companion.team} name={companion.name} size={31} /><span><b>{companion.name}</b><small>Anytime companion</small></span></span>
+      <span><PlayerAvatar headshot={mlbHeadshot(player.mlbId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.name} size={31} /><span><b>{player.name}</b><small>{player.team} | #{player.battingOrder} | {odds(player.fhr.current)} FHR</small></span></span>
     </div>
-    <div className={styles.pairScore}><strong>{pair.score.toFixed(1)}</strong><small>{pair.exposurePenalty ? `-${pair.exposurePenalty.toFixed(1)} exposure` : 'clean exposure'}</small></div>
+    <div className={styles.pairScore}><strong>{score.toFixed(1)}</strong><small>{label}</small></div>
   </div>
 }
 
 function PlayerDetail({ player }: { player: HrIntelPlayerResult }) {
   return <div className={styles.playerDetail}>
     <div className={styles.evidenceGrid}>{player.evidence.map(item => <div key={item.key} data-tone={item.tone}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div>
-    <section><h4>Market ladder</h4><div className={styles.marketGrid}>{Object.entries(player.markets).map(([key, value]) => <div key={key}><span>{MARKET_LABELS[key] ?? key}</span><strong>{odds(value.open)} <i>→</i> {odds(value.current)}</strong></div>)}</div></section>
-    <section><h4>Public exposure by market</h4><div className={styles.marketGrid}>{Object.entries(player.picksByMarket).map(([key, value]) => <div key={key}><span>{PICK_LABELS[key] ?? key}</span><strong>{value ?? '—'}</strong></div>)}</div></section>
-    <section><h4>MM and rank windows</h4><div className={styles.windowGrid}>{(['l1', 'l3', 'l5', 'l10'] as const).map(window => <div key={window}><span>{window.toUpperCase()}</span><strong>MM {player.mm?.[window] ?? '—'}</strong><small>Book {player.bookRank?.[window] ?? '—'} · Paper {player.paperRank?.[window] ?? '—'}</small></div>)}</div></section>
+    <section><h4>Market ladder</h4><div className={styles.marketGrid}>{Object.entries(player.markets).map(([key, value]) => <div key={key}><span>{MARKET_LABELS[key] ?? key}</span><strong>{odds(value.open)} <i>to</i> {odds(value.current)}</strong></div>)}</div></section>
+    <section><h4>Public exposure by market</h4><div className={styles.marketGrid}>{Object.entries(player.picksByMarket).map(([key, value]) => <div key={key}><span>{PICK_LABELS[key] ?? key}</span><strong>{value ?? 'N/A'}</strong></div>)}</div></section>
+    <section><h4>MM and rank windows</h4><div className={styles.windowGrid}>{(['l1', 'l3', 'l5', 'l10'] as const).map(window => <div key={window}><span>{window.toUpperCase()}</span><strong>MM {player.mm?.[window] ?? 'N/A'}</strong><small>Book {player.bookRank?.[window] ?? 'N/A'} | Paper {player.paperRank?.[window] ?? 'N/A'}</small></div>)}</div></section>
   </div>
 }
 
@@ -92,9 +89,9 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
       <PlayerIdentity player={player} />
       <span><small>FHR</small><strong>{odds(player.fhr.current)}</strong><i>{player.fhrTieSize > 1 ? `${player.fhrTieSize}-way tie` : signed(player.fhrBaselineDeltaPct, '%')}</i></span>
       <span><small>Anytime</small><strong>{odds(player.hr.current)}</strong><i>{signed(player.movement.hrImpliedPoints, ' pp')}</i></span>
-      <span><small>Public</small><strong>{player.hrPicks ?? '—'}</strong><i>#{player.publicRank ?? '—'}</i></span>
-      <span><small>Contact</small><strong>{signed(player.contactAcceleration, '%')}</strong><i>MM {player.mm?.l10 ?? '—'}</i></span>
-      <span><small>Role scores</small><strong>{player.fhrScore.toFixed(1)} / {player.anytimeScore.toFixed(1)}</strong><i>FHR / HR</i></span>
+      <span><small>Public</small><strong>{player.hrPicks ?? 'N/A'}</strong><i>#{player.publicRank ?? 'N/A'}</i></span>
+      <span><small>Contact</small><strong>{signed(player.contactAcceleration, '%')}</strong><i>MM {player.mm?.l10 ?? 'N/A'}</i></span>
+      <span><small>Signal lanes</small><strong>{player.contradictionScore.toFixed(1)} / {player.modelFhrScore.toFixed(1)}</strong><i>Contradiction / model</i></span>
       <ChevronDown size={16} className={expanded ? styles.rotated : ''} />
     </button>
     {expanded ? <PlayerDetail player={player} /> : null}
@@ -104,45 +101,70 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
 function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null)
   const playersById = useMemo(() => new Map(game.players.map(player => [player.mlbId, player])), [game.players])
-  const anchor = game.recommendation.fhrAnchorMlbId == null ? null : playersById.get(game.recommendation.fhrAnchorMlbId) ?? null
-  const companion = game.recommendation.anytimeCompanionMlbId == null ? null : playersById.get(game.recommendation.anytimeCompanionMlbId) ?? null
-  const advertised = game.recommendation.advertisedAlternativeMlbId == null ? null : playersById.get(game.recommendation.advertisedAlternativeMlbId) ?? null
+  const getPlayer = (id: number | null) => id == null ? null : playersById.get(id) ?? null
+  const diagnosticLeader = getPlayer(game.recommendation.diagnosticLeaderMlbId)
+  const contradictionLeader = getPlayer(game.recommendation.contradictionLeaderMlbId)
+  const modelLeader = getPlayer(game.recommendation.modelLeaderMlbId)
+  const marketLeader = getPlayer(game.recommendation.marketLeaderMlbId)
+  const exposureLeader = getPlayer(game.recommendation.exposureLeaderMlbId)
+  const candidates = game.recommendation.fhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const contrarianWatch = game.recommendation.contrarianWatchMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const companionWatch = game.recommendation.companionShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
   const home = game.players.filter(player => player.team === game.homeTeam).sort((a, b) => a.battingOrder - b.battingOrder)
-  const bestPair = game.pairs[0] ?? null
 
   return <div className={styles.analysis}>
     <section className={styles.signalHeader} data-status={game.recommendation.status}>
-      <div><span><ShieldCheck size={14} /> {game.recommendation.status.toUpperCase()}</span><h2>{game.recommendation.confidenceLabel} separation</h2><p>{game.recommendation.reason}</p></div>
-      <div className={styles.confidence}><strong>{game.recommendation.confidence.toFixed(1)}</strong><span>Confidence</span></div>
+      <div><span><ShieldCheck size={14} /> {game.recommendation.mode.replaceAll('-', ' ').toUpperCase()}</span><h2>{game.recommendation.confidenceLabel} board separation</h2><p>{game.recommendation.reason}</p></div>
+      <div className={styles.confidence}><strong>{game.recommendation.confidence.toFixed(1)}</strong><span>Signal strength</span></div>
     </section>
 
     {game.warnings.length ? <div className={styles.warnings}>{game.warnings.map(warning => <p key={warning}><AlertTriangle size={14} /> {warning}</p>)}</div> : null}
 
-    {game.validation ? <section className={styles.validation} data-hit={game.validation.pairHit}>
-      <div><span>POSTGAME VALIDATION</span><strong>{game.validation.actualNoHr ? 'No home runs' : `First HR: ${game.validation.firstHrName ?? 'Unknown'}`}</strong><small>Outcomes are displayed after scoring and never enter the model.</small></div>
-      <div><b>{game.validation.anchorHit ? 'FHR hit' : 'FHR miss'}</b><b>{game.validation.companionHit ? 'Companion hit' : 'Companion miss'}</b><b>{game.validation.pairHit ? 'Pair hit' : 'Pair missed'}</b></div>
+    {game.validation ? <section className={styles.validation} data-hit={game.validation.fhrShortlistHit}>
+      <div><span>POSTGAME VALIDATION</span><strong>{game.validation.actualNoHr ? 'No home runs' : `First HR: ${game.validation.firstHrName ?? 'Unknown'}`}</strong><small>Outcomes appear only after scoring and never enter the pregame read.</small></div>
+      <div>
+        <b>{game.validation.diagnosticLeaderHit ? 'Diagnostic leader hit' : 'Diagnostic leader missed'}</b>
+        <b>{game.validation.fhrShortlistHit ? 'Candidate set hit' : 'Candidate set missed'}</b>
+        <b>{game.validation.contrarianWatchHit ? 'Contrarian watch hit' : 'Contrarian watch missed'}</b>
+        <b>{game.validation.pairCoverageHit ? 'Pair coverage hit' : 'No pair coverage hit'}</b>
+        <b>{!game.validation.companionWatchPublished ? 'Companion publication withheld' : game.validation.companionShortlistHit ? 'Companion watch hit' : 'Companion watch missed'}</b>
+      </div>
       {!game.validation.actualNoHr ? <p>All HRs: {game.validation.hrNames.join(', ')}</p> : null}
     </section> : null}
 
     <section className={styles.recommendations}>
-      <RecommendationCard player={anchor} role="Hidden FHR anchor" score={anchor?.fhrScore ?? null} icon="anchor" />
-      <RecommendationCard player={companion} role="Anytime companion" score={companion?.anytimeScore ?? null} icon="companion" />
-      <RecommendationCard player={advertised} role="Advertised alternative" score={advertised?.advertisedScore ?? null} icon="advertised" />
+      <SignalCard player={diagnosticLeader} role={`${game.recommendation.primaryLane} diagnostic`} score={diagnosticLeader == null ? null : game.recommendation.primaryLane === 'contradiction' ? diagnosticLeader.contradictionScore : diagnosticLeader.modelFhrScore} kind="diagnostic" />
+      <SignalCard player={contradictionLeader} role="Contradiction leader" score={contradictionLeader?.contradictionScore ?? null} kind="contradiction" />
+      <SignalCard player={modelLeader} role="Model leader" score={modelLeader?.modelFhrScore ?? null} kind="model" />
+      <SignalCard player={exposureLeader} role="Exposure contradiction" score={exposureLeader?.publicPattern.redirectedExposureScore ?? null} kind="exposure" />
+      <SignalCard player={marketLeader} role="Market benchmark" score={marketLeader == null ? null : 19 - (marketLeader.fhrRank ?? 18)} kind="market" />
     </section>
 
     <section className={styles.diagnostics}>
-      <div><Target size={17} /><span><strong>{game.diagnostics.pairCount}</strong> pairings scored</span></div>
+      <div><Target size={17} /><span><strong>{game.diagnostics.boardProfile}</strong> board profile</span></div>
       <div><Activity size={17} /><span><strong>{game.diagnostics.marketCoveragePct}%</strong> market coverage</span></div>
-      <div><Users size={17} /><span><strong>{game.diagnostics.picksCoveragePct}%</strong> pick coverage</span></div>
-      <div><EyeOff size={17} /><span><strong>{game.diagnostics.noHrImpliedPct == null ? '—' : `${game.diagnostics.noHrImpliedPct}%`}</strong> No HR implied</span></div>
+      <div><Users size={17} /><span><strong>{game.diagnostics.picksCoveragePct}%</strong> HR pick coverage</span></div>
+      <div><Users size={17} /><span><strong>{game.diagnostics.crossMarketPicksCoveragePct}%</strong> cross-market coverage</span></div>
+      <div><EyeOff size={17} /><span><strong>{game.diagnostics.noHrImpliedPct == null ? 'N/A' : `${game.diagnostics.noHrImpliedPct}%`}</strong> No HR implied</span></div>
     </section>
+
+    <div className={styles.candidateGrid}>
+      <section className={styles.panel}>
+        <header><div><span>FHR CANDIDATE SET</span><h3>{game.recommendation.fhrRecipe}</h3></div><small>Three independent pregame reads. This is not an exact FHR call.</small></header>
+        <div className={styles.pairList}>{candidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
+      </section>
+      <section className={styles.panel}>
+        <header><div><span>CONTRARIAN WATCH</span><h3>Signals outside the core set</h3></div><small>Independent contradiction reads preserved so a model-heavy recipe cannot erase them.</small></header>
+        <div className={styles.pairList}>{contrarianWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="contrarian" />)}</div>
+      </section>
+    </div>
 
     <div className={styles.contentGrid}>
       <section className={styles.panel}>
-        <header><div><span>PAIR LAB</span><h3>Top role-aware pairings</h3></div><small>All {game.diagnostics.pairCount} unordered pairs are scored in both role directions.</small></header>
-        <div className={styles.pairList}>{game.pairs.slice(0, 10).map((pair, index) => <PairRow key={`${pair.anchorMlbId}-${pair.companionMlbId}`} pair={pair} players={playersById} rank={index + 1} />)}</div>
-        {bestPair ? <div className={styles.pairEvidence}>{bestPair.evidence.map(item => <span key={item.key}>{item.label}: <b>{item.value}</b></span>)}</div> : null}
+        <header><div><span>COMPANION GATE</span><h3>{game.recommendation.companionRecipe}</h3></div><small>Conditional anytime reads for multi-HR review. No pair is published until a separate gate is validated.</small></header>
+        <div className={styles.pairList}>{companionWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
+        <div className={styles.pairEvidence}><span>Multi-HR read: <b>{game.recommendation.multiHrRead}</b></span><span>Published companion: <b>{game.recommendation.anytimeCompanionMlbId == null ? 'None qualified' : getPlayer(game.recommendation.anytimeCompanionMlbId)?.name}</b></span><span>Data state: <b>{game.recommendation.dataComplete ? 'Complete' : 'Partial'}</b></span></div>
       </section>
 
       <section className={styles.panel}>
@@ -184,18 +206,22 @@ export function HrIntelligenceClient() {
   return <main className={styles.page}>
     <section className={styles.hero}>
       <div className={styles.heroIcon}><Crosshair size={25} /></div>
-      <div><span>ADMIN · PREGAME DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reconstruct every 18-player board, score both home-run roles, and expose the pair the full market story supports.</p></div>
-      <div className={styles.heroMeta}><b>Outcome blind</b><span>No postgame results enter scoring.</span></div>
+      <div><span>ADMIN | PREGAME DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reconstruct each 18-player board and separate contradiction, model, market, companion, and No HR signals without forcing a pick.</p></div>
+      <div className={styles.heroMeta}><b>Outcome blind</b><span>Postgame results never enter scoring.</span></div>
     </section>
 
     <section className={styles.controls}>
       <label><span>Slate date</span><input type="date" value={date} onChange={event => setDate(event.target.value)} /></label>
-      <button type="button" onClick={analyze} disabled={loading || !date}>{loading ? <RefreshCw size={17} className={styles.spin} /> : <BarChart3 size={17} />}{loading ? 'Reconstructing board…' : 'Analyze full slate'}</button>
+      <button type="button" onClick={analyze} disabled={loading || !date}>{loading ? <RefreshCw size={17} className={styles.spin} /> : <BarChart3 size={17} />}{loading ? 'Reconstructing board...' : 'Analyze full slate'}</button>
       {result ? <div><strong>{result.diagnostics.gamesAnalyzed}</strong><span>games analyzed</span></div> : null}
     </section>
 
     {error ? <div className={styles.error}><AlertTriangle size={16} /> {error}</div> : null}
-    {loading ? <div className={styles.loading}><div /><strong>Reconstructing odds, exposure, form, MM, and all pairings</strong><span>This can take a moment for a full slate.</span></div> : null}
+    {result && !result.diagnostics.pikkitRowsPresent ? <div className={styles.exposureWarning}>
+      <AlertTriangle size={17} />
+      <div><strong>Public exposure source unavailable</strong><span>Picks-based qualification is withheld. Market and form diagnostics remain visible for review.</span></div>
+    </div> : null}
+    {loading ? <div className={styles.loading}><div /><strong>Reconstructing odds, exposure, form, MM, and all signal lanes</strong><span>This can take a moment for a full slate.</span></div> : null}
     {!loading && result && !result.games.length ? <div className={styles.empty}><Target size={28} /><strong>No games found</strong><span>Choose another slate date.</span></div> : null}
 
     {!loading && result?.games.length ? <>
@@ -203,7 +229,7 @@ export function HrIntelligenceClient() {
         {result.games.map(game => <button type="button" key={game.gamePk} data-active={selectedGame?.gamePk === game.gamePk} data-status={game.recommendation.status} onClick={() => setSelectedGamePk(game.gamePk)}>
           <span><TeamLogo team={game.awayTeam} /><i>at</i><TeamLogo team={game.homeTeam} /></span>
           <strong>{game.awayTeam} @ {game.homeTeam}</strong>
-          <small>{game.recommendation.confidence.toFixed(0)} confidence</small>
+          <small>{game.recommendation.mode.replaceAll('-', ' ')}</small>
         </button>)}
       </nav>
       {selectedGame ? <GameAnalysis key={selectedGame.gamePk} game={selectedGame} /> : null}

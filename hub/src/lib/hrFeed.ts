@@ -18,6 +18,45 @@ export type HrFeedEvent = {
   hr_time: string | null
 }
 
+export type HrFeedFailure = {
+  gamePk: number
+  reason: string
+}
+
+export type HrFeedResult = {
+  hrFeed: HrFeedEvent[]
+  pitcherIdByName: Record<string, number>
+  /** Games whose play-by-play response was fetched and parsed successfully. */
+  completedGamePks: number[]
+  /** A failed request is unknown, never evidence that a game had zero HRs. */
+  failures: HrFeedFailure[]
+}
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function fetchPlayByPlay(gamePk: number) {
+  let lastReason = 'Unknown MLB play-by-play failure'
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(`https://statsapi.mlb.com/api/v1/game/${gamePk}/playByPlay`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(20_000),
+      })
+      if (!response.ok) {
+        lastReason = `MLB play-by-play returned HTTP ${response.status}`
+      } else {
+        const body = await response.json()
+        if (Array.isArray(body?.allPlays)) return body.allPlays as any[]
+        lastReason = 'MLB play-by-play response did not contain allPlays'
+      }
+    } catch (error) {
+      lastReason = error instanceof Error ? error.message : String(error)
+    }
+    if (attempt < 2) await wait(250 * (attempt + 1))
+  }
+  throw new Error(lastReason)
+}
+
 // Live HR feed — pulled fresh from MLB's playByPlay per live/final game, same
 // approach as mlb-party's builder, but enriched with hitData (exit velo,
 // launch angle, distance) and the pitcher who allowed it — mlb-party's own
@@ -26,12 +65,12 @@ export type HrFeedEvent = {
 // Extracted from hub/src/app/api/dugout/data/route.ts (originally local to
 // that route) so the hr-alerts Discord cron can call the exact same logic
 // without duplicating it.
-export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstractGameState?: string } }[]): Promise<{ hrFeed: HrFeedEvent[]; pitcherIdByName: Record<string, number> }> {
+export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstractGameState?: string } }[]): Promise<HrFeedResult> {
   const livePks = mlbGames
     .filter((g: any) => { const s = g.status?.abstractGameState; return s === 'Live' || s === 'Final' })
     .map((g: any) => g.gamePk)
     .filter(Boolean)
-  if (!livePks.length) return { hrFeed: [], pitcherIdByName: {} }
+  if (!livePks.length) return { hrFeed: [], pitcherIdByName: {}, completedGamePks: [], failures: [] }
 
   // pitcherIdByName is built from EVERY play in the same playByPlay response
   // (not just home runs) — near_hrs (the "almost a HR" feed) only ever
@@ -39,18 +78,24 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
   // Reusing this already-fetched data costs zero extra requests.
   const pitcherIdByName: Record<string, number> = {}
 
-  const results = await Promise.all(livePks.map(async (pk: number) => {
-    try {
-      const r = await fetch(`https://statsapi.mlb.com/api/v1/game/${pk}/playByPlay`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
-      if (!r.ok) return []
-      const d = await r.json()
-      const plays: any[] = d.allPlays || []
+  const completedGamePks: number[] = []
+  const failures: HrFeedFailure[] = []
+  const results: HrFeedEvent[][] = new Array(livePks.length)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(4, livePks.length) }, async () => {
+    while (cursor < livePks.length) {
+      const index = cursor
+      cursor += 1
+      const pk = livePks[index]
+      try {
+        const plays = await fetchPlayByPlay(pk)
+        completedGamePks.push(pk)
       for (const p of plays) {
         const pid = p.matchup?.pitcher?.id
         const pname = p.matchup?.pitcher?.fullName
         if (pid && pname) pitcherIdByName[normName(pname)] = pid
       }
-      return plays
+        results[index] = plays
         .filter(p => p.result?.eventType === 'home_run')
         .map(p => {
           const hitEvent = (p.playEvents || []).find((e: any) => e.details?.isInPlay && e.hitData)
@@ -77,8 +122,13 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
             hr_time: p.about?.endTime ?? p.about?.startTime ?? null,
           }
         })
-    } catch { return [] }
-  }))
+      } catch (error) {
+        failures.push({ gamePk: pk, reason: error instanceof Error ? error.message : String(error) })
+        results[index] = []
+      }
+    }
+  })
+  await Promise.all(workers)
 
   const hrFeed = ([] as any[]).concat(...results)
   const byGame: Record<number, any[]> = {}
@@ -87,5 +137,5 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
     const arr = byGame[Number(pk)].sort((a, b) => a.ab_index - b.ab_index)
     if (arr[0]) arr[0].is_first_hr_of_game = true
   }
-  return { hrFeed, pitcherIdByName }
+  return { hrFeed, pitcherIdByName, completedGamePks, failures }
 }
