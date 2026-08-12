@@ -58,6 +58,24 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     }
   }
 
+  // Memberships created before SlipSurge attached checkout metadata remain
+  // linked by their provider membership id. Resolve those links before
+  // selecting the best active plan so account email changes never sever
+  // billing access.
+  const legacyMembershipIds = [...new Set(planFetches.flatMap(entry => {
+    if ('error' in entry.fetched) return []
+    return entry.fetched.memberships
+      .filter(membership => !membership.metadata?.internal_user_id && membership.id)
+      .map(membership => membership.id as string)
+  }))]
+  const { data: linkedUsers, error: linkedUsersError } = legacyMembershipIds.length
+    ? await admin.from('users').select('id, whop_membership_id').in('whop_membership_id', legacyMembershipIds)
+    : { data: [], error: null }
+  if (linkedUsersError) return { error: `Could not resolve linked memberships: ${linkedUsersError.message}` }
+  const linkedOwnerByMembershipId = new Map((linkedUsers ?? [])
+    .filter(user => user.whop_membership_id)
+    .map(user => [user.whop_membership_id as string, user.id as string]))
+
   for (const { planId, fetched } of planFetches) {
     const planInfo = WHOP_PLANS[planId]
     if ('error' in fetched) continue
@@ -67,15 +85,16 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     for (const m of memberships) {
       const status: string | undefined = m.status ?? m.valid_status
       const isActive = status === 'active' || status === 'valid' || m.valid === true
-      const internalUserId: string | undefined = m.metadata?.internal_user_id
       const membershipId: string | undefined = m.id
+      const internalUserId: string | undefined = m.metadata?.internal_user_id
+        ?? (membershipId ? linkedOwnerByMembershipId.get(membershipId) : undefined)
       const periodEndRaw = m.renewal_period_end ?? m.period_end ?? m.expires_at
       const periodEnd = typeof periodEndRaw === 'number'
         ? new Date(periodEndRaw * 1000).toISOString()
         : typeof periodEndRaw === 'string' ? periodEndRaw : null
 
       if (!internalUserId) {
-        results.push({ planId, membershipId, status, skipped: 'no internal_user_id in metadata' })
+        results.push({ planId, membershipId, status, skipped: 'no metadata or linked membership owner' })
         continue
       }
       if (!isActive) continue

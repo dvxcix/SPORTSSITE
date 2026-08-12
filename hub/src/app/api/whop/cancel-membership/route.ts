@@ -23,14 +23,10 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
-  const rate = await consumeServerRateLimit(user.id, 'whop_cancel', 5, 60 * 60)
-  if (!rate.available) return NextResponse.json({ error: 'Cancellation is temporarily unavailable' }, { status: 503 })
-  if (!rate.allowed) return NextResponse.json({ error: 'Too many cancellation attempts. Try again later.' }, { status: 429 })
-
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('users')
-    .select('whop_membership_id, whop_plan_id, tier')
+    .select('whop_membership_id, whop_plan_id, tier, tier_cancel_at_period_end')
     .eq('id', user.id)
     .single()
 
@@ -38,9 +34,25 @@ export async function POST() {
     return NextResponse.json({ error: 'No active Whop subscription found on this account' }, { status: 400 })
   }
 
+  // Cancellation is idempotent. A refresh, double-click, or client retry
+  // after Whop accepted the first request should return success without
+  // spending another rate-limit token or calling Whop again.
+  if (profile.tier_cancel_at_period_end) {
+    return NextResponse.json({ ok: true, alreadyScheduled: true })
+  }
+
   const apiKeyEnv = checkoutApiKeyEnvFor(profile.whop_plan_id)
   const apiKey = process.env[apiKeyEnv]
   if (!apiKey) return NextResponse.json({ error: 'Cancellation is temporarily unavailable' }, { status: 503 })
+
+  const rate = await consumeServerRateLimit(user.id, 'whop_cancel', 10, 5 * 60)
+  if (!rate.available) return NextResponse.json({ error: 'Cancellation is temporarily unavailable' }, { status: 503 })
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Please wait a few minutes before trying cancellation again.' },
+      { status: 429, headers: { 'Retry-After': '300' } },
+    )
+  }
 
   const result = await cancelWhopMembership(profile.whop_membership_id, apiKey)
   if (!result.ok) {

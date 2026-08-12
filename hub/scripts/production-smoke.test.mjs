@@ -260,6 +260,7 @@ test('third-party AI generation is validated, bounded, and rate limited', async 
   const limiter = await read('src/lib/serverRateLimit.ts')
   const migration = await read('supabase/migrations/20260811180000_server_rate_limit.sql')
   const atomicMigration = await read('supabase/migrations/20260811190000_atomic_rate_limits.sql')
+  const featureMigration = await read('supabase/migrations/20260811230000_allow_underscore_server_rate_features.sql')
   assert.ok(route.includes("consumeServerRateLimit(gate.userId!, 'ai-blog', 10, 3600)"))
   assert.ok(route.includes('AbortSignal.timeout(AI_TIMEOUT_MS)'))
   assert.ok(route.includes("prompt.trim().slice(0, 500)"))
@@ -268,6 +269,24 @@ test('third-party AI generation is validated, bounded, and rate limited', async 
   assert.ok(migration.includes('revoke all on function public.consume_server_rate_limit'))
   assert.ok(atomicMigration.includes('on conflict (key) do update'))
   assert.ok(atomicMigration.includes('least(counters.count + 1, p_max + 1)'))
+  assert.ok(featureMigration.includes("p_feature !~ '^[a-z0-9_-]{2,40}$'"))
+  assert.ok(limiter.includes('SERVER_RATE_LIMIT_FEATURE'))
+})
+
+test('Whop billing retries are bounded without breaking idempotency or legacy account links', async () => {
+  const checkout = await read('src/app/api/whop/checkout-session/route.ts')
+  const cancel = await read('src/app/api/whop/cancel-membership/route.ts')
+  const addonReconcile = await read('src/lib/whopAddonReconcile.ts')
+  const mainReconcile = await read('src/lib/whopMainReconcile.ts')
+  assert.ok(checkout.includes("consumeServerRateLimit(user.id, 'whop_checkout', 12, 5 * 60)"))
+  assert.ok(checkout.includes("'Retry-After': '300'"))
+  assert.ok(cancel.indexOf('if (profile.tier_cancel_at_period_end)') < cancel.indexOf("consumeServerRateLimit(user.id, 'whop_cancel'"))
+  assert.ok(cancel.includes('alreadyScheduled: true'))
+  assert.ok(cancel.includes("consumeServerRateLimit(user.id, 'whop_cancel', 10, 5 * 60)"))
+  for (const reconcile of [addonReconcile, mainReconcile]) {
+    assert.ok(reconcile.includes('linkedOwnerByMembershipId'))
+    assert.ok(reconcile.includes("select('id, whop_membership_id')"))
+  }
 })
 
 test('pipeline telemetry records starts before handlers can time out', async () => {

@@ -43,14 +43,29 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const memberships = fetched.memberships
 
   const admin = createAdminClient()
+  // Older memberships predate checkout metadata. Preserve their stable
+  // account link through users.whop_membership_id so an email change cannot
+  // make a paying member invisible to reconciliation.
+  const legacyMembershipIds = [...new Set(memberships
+    .filter(membership => !membership.metadata?.internal_user_id && membership.id)
+    .map(membership => membership.id as string))]
+  const { data: linkedUsers, error: linkedUsersError } = legacyMembershipIds.length
+    ? await admin.from('users').select('id, whop_membership_id').in('whop_membership_id', legacyMembershipIds)
+    : { data: [], error: null }
+  if (linkedUsersError) return { error: `Could not resolve linked memberships: ${linkedUsersError.message}` }
+  const linkedOwnerByMembershipId = new Map((linkedUsers ?? [])
+    .filter(user => user.whop_membership_id)
+    .map(user => [user.whop_membership_id as string, user.id as string]))
+
   const results: Record<string, unknown>[] = []
   const bestByUser = new Map<string, ActiveMembership>()
   for (const m of memberships) {
     const status: string | undefined = m.status ?? m.valid_status
     const isActive = status === 'active' || status === 'valid' || m.valid === true
     const internalUserId: string | undefined = m.metadata?.internal_user_id
+      ?? (m.id ? linkedOwnerByMembershipId.get(m.id) : undefined)
     if (!internalUserId) {
-      results.push({ membershipId: m.id, status, skipped: 'no internal_user_id in metadata' })
+      results.push({ membershipId: m.id, status, skipped: 'no metadata or linked membership owner' })
       continue
     }
     if (!isActive) continue

@@ -24,10 +24,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
   }
 
-  const rate = await consumeServerRateLimit(user.id, 'whop_checkout', 20, 60 * 60)
-  if (!rate.available) return NextResponse.json({ error: 'Checkout is temporarily unavailable' }, { status: 503 })
-  if (!rate.allowed) return NextResponse.json({ error: 'Checkout limit reached. Try again later.' }, { status: 429 })
-
   // plan_Q1Ey6RMgjS9XQ (the Discord add-on) lives under a completely
   // separate Whop business from every other plan here — using WHOP_API_KEY
   // for it 404s ("No such Plan found"), confirmed live, since that key only
@@ -35,6 +31,18 @@ export async function POST(req: Request) {
   const apiKeyEnv = checkoutApiKeyEnvFor(planId)
   const apiKey = process.env[apiKeyEnv]
   if (!apiKey) return NextResponse.json({ error: 'Checkout is temporarily unavailable' }, { status: 503 })
+
+  // A short rolling window prevents checkout-session spam without locking a
+  // legitimate member out for an hour after a browser retry or provider
+  // interruption.
+  const rate = await consumeServerRateLimit(user.id, 'whop_checkout', 12, 5 * 60)
+  if (!rate.available) return NextResponse.json({ error: 'Checkout is temporarily unavailable' }, { status: 503 })
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Please wait a few minutes before trying checkout again.' },
+      { status: 429, headers: { 'Retry-After': '300' } },
+    )
+  }
 
   try {
     const res = await fetch('https://api.whop.com/api/v2/checkout_sessions', {
