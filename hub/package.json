@@ -17,6 +17,7 @@
     "test:production": "node --test scripts/production-smoke.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:browser:production": "node scripts/browser-smoke.mjs --production",
+    "test:hr-intelligence": "node --experimental-strip-types scripts/hr-intelligence-regression.mts",
     "desktop:dev": "npm run dev --workspace @slipsurge/desktop",
     "desktop:build": "npm run build --workspace @slipsurge/desktop",
     "desktop:publish-update": "node scripts/publish-desktop-update.mjs",

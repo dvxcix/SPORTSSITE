@@ -9,8 +9,8 @@ import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
 import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 import {
-  type Matrix, type MatrixFactor, type MatrixTiebreaker, type MatrixPipelineStep,
-  type FieldBundle, type OddsProps, type PitchlogStatWindow, type DugoutSpecsAverages,
+  type Matrix, type MatrixFactor, type MatrixTiebreaker,
+  type FieldBundle, type PitchlogStatWindow, type DugoutSpecsAverages,
   runPipelineStep, evaluateMatrix, groupTiedCandidates, filterTieGroups, resolveTiebreakers, resolveFieldValue,
   evaluateOddsFactor, evaluateDugoutSpecsFactor, evaluatePitchlogFactorPrecomputed, evaluateSavantFactor, evaluatePicksFactor,
   MULTI_BOOK_MARKET,
@@ -95,12 +95,13 @@ const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
   'fhr:fanatics': 'fhrFan', 'sa:betrivers': 'saBr', 'sa:fanatics': 'saFan',
 }
 
-type GameBundles = {
+export type GameBundles = {
   game: TodayGame
   gameKey: string
   homeBundle: Map<string, FieldBundle>
   awayBundle: Map<string, FieldBundle>
   gameTotalPicksByMarket: Record<string, number>
+  noHr: { current: number | null; open: number | null }
 }
 
 // Everything a Factor/pipeline step across every category could reference,
@@ -115,7 +116,7 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
     getTodaysMatchups(date),
     admin.from('pregame_odds_snapshots').select('game_pk, prop_map').eq('game_date', date).then(r => r.data ?? []),
     admin.from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
+      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
       .eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
     admin.from('mgm_gap_odds').select('game_key, name_norm, sa_mgm, hr2_mgm').eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
     selectAll<{ game_key: string; name_norm: string; market: string; book: string; opening_price: number }>(
@@ -223,13 +224,13 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
     const gameTotalPicksByMarket: Record<string, number> = {}
     const pikkitByName: Record<string, Record<string, any>> = {}
     for (const r of pikkitRows) {
-      if (r.game_key && r.game_key !== gameKey) continue
+      if (r.game_key && canonGameKey(r.game_key) !== gameKey) continue
       const nn = normName(r.player_name || '')
       const market = r.prop_type
       if (!nn || !market) continue
       if (!pikkitByName[nn]) pikkitByName[nn] = {}
       const existing = pikkitByName[nn][market]
-      if (!existing || (r.game_key && r.game_key === gameKey && !existing.game_key)) pikkitByName[nn][market] = r
+      if (!existing || (r.game_key && canonGameKey(r.game_key) === gameKey && !existing.game_key)) pikkitByName[nn][market] = r
     }
     for (const p of [...game.homeLineup, ...game.awayLineup]) {
       const entry = resolveNameEntry(pikkitByName, normName(p.name))
@@ -244,7 +245,7 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
     // hand falls back to 'R' — same default the live route uses.
     const homePHand = (game.awayPitcher?.hand as 'L' | 'R') || 'R'
     const awayPHand = (game.homePitcher?.hand as 'L' | 'R') || 'R'
-    const resolveBundle = (mlbId: number, name: string, pHand: 'L' | 'R'): FieldBundle => {
+    const resolveBundle = (mlbId: number, name: string, pHand: 'L' | 'R', battingOrder: number): FieldBundle => {
       const nn = normName(name)
       return {
         props: resolveNameEntry(bdlByName, nn) || null,
@@ -253,12 +254,23 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
         pitchlogWindows: pitchlogByBatter[mlbId]?.[pHand] ?? null,
         statcastWindows: statcastByBatter[mlbId]?.[pHand] ?? null,
         pikkitEntry: resolveNameEntry(pikkitByName, nn) ?? null,
+        battingOrder,
       }
     }
-    const homeBundle = new Map(game.homeLineup.map(p => [normName(p.name), resolveBundle(p.mlb_id, p.name, homePHand)]))
-    const awayBundle = new Map(game.awayLineup.map(p => [normName(p.name), resolveBundle(p.mlb_id, p.name, awayPHand)]))
+    const homeBundle = new Map(game.homeLineup.map(p => [normName(p.name), resolveBundle(p.mlb_id, p.name, homePHand, p.batting_order)]))
+    const awayBundle = new Map(game.awayLineup.map(p => [normName(p.name), resolveBundle(p.mlb_id, p.name, awayPHand, p.batting_order)]))
 
-    return { game, gameKey, homeBundle, awayBundle, gameTotalPicksByMarket }
+    return {
+      game,
+      gameKey,
+      homeBundle,
+      awayBundle,
+      gameTotalPicksByMarket,
+      noHr: {
+        current: fanduelGapByName.__game__?.no_hr_fd ?? null,
+        open: openingByName.__game__?.['noHr:fanduel'] ?? null,
+      },
+    }
   })
 }
 
