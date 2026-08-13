@@ -23,6 +23,7 @@ const mean = (values: Array<number | null | undefined>) => {
 const rows = [...game.players]
   .sort((a, b) => a.team.localeCompare(b.team) || a.battingOrder - b.battingOrder)
   .map(player => ({
+    mlbId: player.mlbId,
     player: player.name,
     team: player.team,
     order: player.battingOrder,
@@ -52,6 +53,8 @@ const rows = [...game.players]
     nonPowerLong: player.movement.nonPowerLengthened,
     fhrScore: player.fhrScore,
     anytimeScore: player.anytimeScore,
+    graphFhrScore: player.graphFhrScore,
+    graphAnytimeScore: player.graphAnytimeScore,
   }))
 
 process.stdout.write(`${JSON.stringify({
@@ -60,6 +63,12 @@ process.stdout.write(`${JSON.stringify({
   noHr: game.noHr,
   diagnostics: game.diagnostics,
   recommendation: game.recommendation,
+  pairs: game.pairs.slice(0, 10).map(pair => ({
+    anchor: game.players.find(player => player.mlbId === pair.anchorMlbId)?.name,
+    companion: game.players.find(player => player.mlbId === pair.companionMlbId)?.name,
+    score: pair.score,
+    synergy: pair.synergy,
+  })),
   warnings: game.warnings,
   actual: game.validation,
   rows,

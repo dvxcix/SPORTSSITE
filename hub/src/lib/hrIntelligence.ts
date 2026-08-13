@@ -97,6 +97,8 @@ export type HrIntelPlayerResult = HrIntelPlayerInput & {
   selectionScore: number
   regimeScore: number
   calibratedAnytimeScore: number
+  graphFhrScore: number
+  graphAnytimeScore: number
   decoyRiskScore: number
   cashStackSupportScore: number
   alternativePathScore: number
@@ -210,6 +212,8 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     anytimeCandidateMlbIds: number[]
     fhrShortlistMlbIds: number[]
     calibratedAnytimeShortlistMlbIds: number[]
+    graphFhrShortlistMlbIds: number[]
+    graphAnytimeShortlistMlbIds: number[]
     companionShortlistMlbIds: number[]
     contradictionWatchMlbId: number | null
     contrarianWatchMlbIds: number[]
@@ -780,6 +784,8 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       selectionScore: round1(selectionScore),
       regimeScore: 0,
       calibratedAnytimeScore: 0,
+      graphFhrScore: 0,
+      graphAnytimeScore: 0,
       decoyRiskScore: round1(decoyRiskScore),
       cashStackSupportScore: round1(cashStackSupport * 100),
       alternativePathScore: round1(alternativePathScore * 100),
@@ -995,11 +1001,134 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     right.structuralPowerScore - left.structuralPowerScore ||
     left.battingOrder - right.battingOrder,
   )
+
+  // Treat the complete game as a weighted graph instead of forcing players
+  // through hand-authored candidate lanes. Node scores describe how unusual a
+  // player is relative to this board. Edge scores describe how strongly two
+  // players share (or complement) the same market construction.
+  const boardPercentile = (player: HrIntelPlayerResult, getter: (candidate: HrIntelPlayerResult) => number) =>
+    percentile(getter(player), results.map(getter)) ?? 0.5
+  const inverseBoardPercentile = (player: HrIntelPlayerResult, getter: (candidate: HrIntelPlayerResult) => number) =>
+    1 - boardPercentile(player, getter)
+  const baselineSplit = (player: HrIntelPlayerResult) =>
+    player.fhrBaselineDeltaPct == null || player.hrBaselineDeltaPct == null
+      ? 0
+      : Math.abs(player.fhrBaselineDeltaPct - player.hrBaselineDeltaPct)
+  const rankDislocation = (player: HrIntelPlayerResult) => {
+    const comparisons = [player.hrRank, player.publicRank].filter((rank): rank is number => rank != null)
+    if (player.fhrRank == null || !comparisons.length) return 0
+    return Math.max(0, player.fhrRank - Math.min(...comparisons))
+  }
+  const clusterCamouflage = (player: HrIntelPlayerResult) => player.fhrTieSize > 1
+    ? clamp((player.fhrTieSize - 1) / 3) : 0
+  const quietExposureNode = (player: HrIntelPlayerResult) =>
+    player.publicRank == null ? 0.5 : clamp((player.publicRank - 1) / 17)
+
+  for (const player of results) {
+    const fhrAnomaly = boardPercentile(player, baselineSplit)
+    const dislocation = boardPercentile(player, rankDislocation)
+    const uniquePrice = player.fhrTieSize === 1 ? 1 : 0
+    const viableFhrBand = player.fhrRank == null ? 0 : clamp(1 - Math.abs(player.fhrRank - 10) / 10)
+    const automaticSupport = player.cashStackSupportScore / 100
+    const structural = player.structuralPowerScore / 100
+    const lineupOpportunity = clamp((10 - player.battingOrder) / 9)
+    const coherentlyWithheld = (player.movement.fhrImpliedPoints ?? 0) <= 0 &&
+      (player.movement.hrImpliedPoints ?? 0) <= 0 ? 1 : 0
+    player.graphFhrScore = round1(100 * clamp(
+      fhrAnomaly * 0.15 + dislocation * 0.20 + uniquePrice * 0.08 +
+      viableFhrBand * 0.08 + automaticSupport * 0.08 + structural * 0.08 +
+      lineupOpportunity * 0.12 + coherentlyWithheld * 0.16 +
+      (1 - player.decoyRiskScore / 100) * 0.05,
+    ))
+    player.graphAnytimeScore = round1(100 * clamp(
+      (player.calibratedAnytimeScore / 100) * 0.22 + structural * 0.19 +
+      (player.movement.hiddenPowerContradiction / 100) * 0.13 +
+      clusterCamouflage(player) * 0.13 + quietExposureNode(player) * 0.12 +
+      (player.publicPattern.redirectedExposureScore ?? 0) / 100 * 0.09 +
+      automaticSupport * 0.07 + (1 - player.decoyRiskScore / 100) * 0.05,
+    ))
+  }
+
+  const graphEdgeAffinity = (left: HrIntelPlayerResult, right: HrIntelPlayerResult) => {
+    const similarity = (a: number | null, b: number | null, tolerance: number) =>
+      a == null || b == null ? null : clamp(1 - Math.abs(a - b) / tolerance)
+    const ratioAffinity = mean([
+      similarity(left.ratios.paToHr, right.ratios.paToHr, 0.10),
+      similarity(left.ratios.hrToRbi, right.ratios.hrToRbi, 0.10),
+      similarity(left.ratios.hrToHrr, right.ratios.hrToHrr, 0.32),
+      similarity(left.ratios.hrToTb4, right.ratios.hrToTb4, 0.38),
+      similarity(left.ratios.hrToMoneyline, right.ratios.hrToMoneyline, 0.35),
+      similarity(left.ratios.mgmToFanduel, right.ratios.mgmToFanduel, 0.30),
+    ].filter((value): value is number => value != null)) ?? 0
+    const exactFhrTie = left.fhr.current != null && left.fhr.current === right.fhr.current ? 1 : 0
+    const baselineAffinity = similarity(left.fhrBaselineDeltaPct, right.fhrBaselineDeltaPct, 20) ?? 0
+    const derivativeAffinity = mean([
+      similarity(left.markets.double?.current ?? null, right.markets.double?.current ?? null, 450),
+      similarity(left.markets.single?.current ?? null, right.markets.single?.current ?? null, 250),
+      similarity(left.markets.rbi?.current ?? null, right.markets.rbi?.current ?? null, 350),
+    ].filter((value): value is number => value != null)) ?? 0
+    const complementaryHrMove = left.movement.hrImpliedPoints == null || right.movement.hrImpliedPoints == null
+      ? 0 : clamp(Math.abs(left.movement.hrImpliedPoints - right.movement.hrImpliedPoints) / 4)
+    const lowJointExposure = clamp(1 - ((left.publicSharePct ?? 0) + (right.publicSharePct ?? 0)) / 18)
+    const zeroRbi = left.picksByMarket.rbi === 0 && right.picksByMarket.rbi === 0 ? 1 : 0
+    return clamp(
+      ratioAffinity * 0.22 + exactFhrTie * 0.20 + baselineAffinity * 0.12 +
+      derivativeAffinity * 0.10 + complementaryHrMove * 0.09 +
+      lowJointExposure * 0.09 + zeroRbi * 0.07 + (left.team === right.team ? 1 : 0) * 0.11,
+    )
+  }
+
+  const graphPairRanked = pairs.map(pair => {
+    const anchor = results.find(player => player.mlbId === pair.anchorMlbId)!
+    const companion = results.find(player => player.mlbId === pair.companionMlbId)!
+    const affinity = graphEdgeAffinity(anchor, companion)
+    return { pair, anchor, companion, affinity, score: anchor.graphFhrScore * 0.38 + companion.graphAnytimeScore * 0.32 + affinity * 30 }
+  }).sort((left, right) => right.score - left.score)
+
+  const graphFhrRanked = [...results].sort((left, right) => right.graphFhrScore - left.graphFhrScore)
+  const companionEdges = pairs.map(pair => {
+    const left = results.find(player => player.mlbId === pair.anchorMlbId)!
+    const right = results.find(player => player.mlbId === pair.companionMlbId)!
+    const affinity = graphEdgeAffinity(left, right)
+    return { left, right, affinity, score: mean([left.graphAnytimeScore, right.graphAnytimeScore])! * 0.35 + affinity * 65 }
+  }).sort((left, right) => right.score - left.score)
+  const strongestCompanionEdge = companionEdges[0] ?? null
+  const connectedCompanions = strongestCompanionEdge
+    ? [strongestCompanionEdge.left, strongestCompanionEdge.right]
+    : []
+  const connectedIds = new Set(connectedCompanions.map(player => player.mlbId))
+  const graphAnytimeRanked = [
+    ...connectedCompanions,
+    ...[...results].filter(player => !connectedIds.has(player.mlbId)).sort((left, right) => {
+      const edgeToCluster = (candidate: HrIntelPlayerResult) => connectedCompanions.length
+        ? mean(connectedCompanions.map(player => graphEdgeAffinity(candidate, player))) ?? 0
+        : 0
+      return (right.graphAnytimeScore + edgeToCluster(right) * 30) - (left.graphAnytimeScore + edgeToCluster(left) * 30)
+    }),
+  ]
+
+  // Reorient and rank every possible relationship from the graph. Candidate
+  // lanes remain explanatory metadata only and never suppress a player.
+  for (const ranked of graphPairRanked) {
+    ranked.pair.anchorMlbId = ranked.anchor.mlbId
+    ranked.pair.companionMlbId = ranked.companion.mlbId
+    ranked.pair.anchorScore = ranked.anchor.graphFhrScore
+    ranked.pair.companionScore = ranked.companion.graphAnytimeScore
+    ranked.pair.synergy = round1(ranked.affinity * 100)
+    ranked.pair.score = round1(ranked.score)
+  }
+  pairs.sort((left, right) => right.score - left.score)
   const resultById = new Map(results.map(player => [player.mlbId, player]))
   for (const pair of pairs) {
-    const anchor = resultById.get(pair.anchorMlbId)
-    const companion = resultById.get(pair.companionMlbId)
-    if (!anchor || !companion) continue
+    const first = resultById.get(pair.anchorMlbId)
+    const second = resultById.get(pair.companionMlbId)
+    if (!first || !second) continue
+    const orientations = [[first, second], [second, first]] as const
+    const [anchor, companion] = [...orientations].sort((left, right) => {
+      const score = ([candidateAnchor, candidateCompanion]: readonly [HrIntelPlayerResult, HrIntelPlayerResult]) =>
+        candidateAnchor.graphFhrScore * 0.38 + candidateCompanion.graphAnytimeScore * 0.32 + graphEdgeAffinity(candidateAnchor, candidateCompanion) * 30
+      return score(right) - score(left)
+    })[0]
     const ratioSimilarity = mean([
       anchor.ratios.paToHr != null && companion.ratios.paToHr != null
         ? clamp(1 - Math.abs(anchor.ratios.paToHr - companion.ratios.paToHr) / 0.08) : null,
@@ -1017,13 +1146,13 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     const quietPair = clamp(1 - ((anchor.publicSharePct ?? 0) + (companion.publicSharePct ?? 0)) / 14)
     const zeroRbiPair = anchor.picksByMarket.rbi === 0 && companion.picksByMarket.rbi === 0 ? 1 : 0
     const sameTeam = anchor.team === companion.team ? 1 : 0
-    pair.score = round1(
-      anchor.calibratedAnytimeScore * 0.38 + companion.calibratedAnytimeScore * 0.38 +
-      ratioSimilarity * 8 + derivativeSimilarity * 7 + quietPair * 6 + zeroRbiPair * 4 + sameTeam * 1.5,
-    )
-    pair.anchorScore = anchor.calibratedAnytimeScore
-    pair.companionScore = companion.calibratedAnytimeScore
-    pair.synergy = round1(ratioSimilarity * 8 + derivativeSimilarity * 7 + quietPair * 6 + zeroRbiPair * 4 + sameTeam * 1.5)
+    const graphAffinity = graphEdgeAffinity(anchor, companion)
+    pair.anchorMlbId = anchor.mlbId
+    pair.companionMlbId = companion.mlbId
+    pair.score = round1(anchor.graphFhrScore * 0.38 + companion.graphAnytimeScore * 0.32 + graphAffinity * 30)
+    pair.anchorScore = anchor.graphFhrScore
+    pair.companionScore = companion.graphAnytimeScore
+    pair.synergy = round1(graphAffinity * 100)
   }
   pairs.sort((left, right) => right.score - left.score)
   const selectionRanked = [...results].sort((left, right) => {
@@ -1407,6 +1536,8 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       anytimeCandidateMlbIds: publishedAnytimeCandidates.map(player => player.mlbId),
       fhrShortlistMlbIds: fhrShortlist.map(player => player.mlbId),
       calibratedAnytimeShortlistMlbIds: calibratedAnytimeRanked.slice(0, 3).map(player => player.mlbId),
+      graphFhrShortlistMlbIds: graphFhrRanked.slice(0, 3).map(player => player.mlbId),
+      graphAnytimeShortlistMlbIds: graphAnytimeRanked.slice(0, 4).map(player => player.mlbId),
       companionShortlistMlbIds: companionShortlist.map(player => player.mlbId),
       contradictionWatchMlbId: contradictionWatch?.mlbId ?? null,
       contrarianWatchMlbIds: contrarianWatch.map(player => player.mlbId),

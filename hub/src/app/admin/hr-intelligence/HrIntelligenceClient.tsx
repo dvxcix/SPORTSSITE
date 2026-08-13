@@ -98,7 +98,7 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
       <span><small>Anytime</small><strong>{odds(player.hr.current)}</strong><i>{signed(player.movement.hrImpliedPoints, ' pp')}</i></span>
       <span><small>Public</small><strong>{player.hrPicks ?? 'N/A'}</strong><i>#{player.publicRank ?? 'N/A'}</i></span>
       <span><small>Contact</small><strong>{signed(player.contactAcceleration, '%')}</strong><i>MM {player.mm?.l10 ?? 'N/A'}</i></span>
-      <span><small>Relational read</small><strong>{player.selectionScore.toFixed(1)} / {player.calibratedAnytimeScore.toFixed(1)}</strong><i>{player.candidateArchetype} / calibrated</i></span>
+      <span><small>Game graph</small><strong>{player.graphFhrScore.toFixed(1)} / {player.graphAnytimeScore.toFixed(1)}</strong><i>FHR node / anytime node</i></span>
       <ChevronDown size={16} className={expanded ? styles.rotated : ''} />
     </button>
     {expanded ? <PlayerDetail player={player} /> : null}
@@ -119,6 +119,8 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const contrarianWatch = game.recommendation.contrarianWatchMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const companionWatch = game.recommendation.companionShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const calibratedWatch = game.recommendation.calibratedAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const graphFhrWatch = game.recommendation.graphFhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const graphAnytimeWatch = game.recommendation.graphAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
   const home = game.players.filter(player => player.team === game.homeTeam).sort((a, b) => a.battingOrder - b.battingOrder)
 
@@ -160,6 +162,14 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
     </section>
 
     <div className={styles.candidateGrid}>
+      <section className={styles.panel}>
+        <header><div><span>GAME GRAPH</span><h3>Board-relative FHR anchors</h3></div><small>Ranks all 18 players by price, baseline, exposure, derivative and rank dislocation within this game. Candidate labels do not gate this list.</small></header>
+        <div className={styles.pairList}>{graphFhrWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
+      </section>
+      <section className={styles.panel}>
+        <header><div><span>GAME GRAPH</span><h3>Anytime companion cluster</h3></div><small>Finds the strongest connected players across FHR clusters, ratios, movements, derivative prices and public exposure.</small></header>
+        <div className={styles.pairList}>{graphAnytimeWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
+      </section>
       <section className={styles.panel}>
         <header><div><span>CHRONOLOGICAL MODEL</span><h3>Anytime HR board shortlist</h3></div><small>Frozen through August 8 and measured on later slates. This ranks the complete board and remains separate from the publication gate.</small></header>
         <div className={styles.pairList}>{calibratedWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="calibrated" />)}</div>
