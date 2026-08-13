@@ -1277,16 +1277,12 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       return { player, score }
     })
     .sort((left, right) => right.score - left.score) : []
+  // A complete board always reduces to two distinct players. The companion is
+  // the strongest relationship to the anchor across the same full-board graph;
+  // it is not suppressed merely because the anchor owns a rarer archetype.
+  // Accuracy is graded after the game as 0/2, 1/2, or 2/2 instead of turning a
+  // low-separation board into an unhelpful abstention.
   let boardCompanion: HrIntelPlayerResult | null = boardCompanionRanked[0]?.player ?? null
-  // Do not manufacture a second name around a singular compressed jackpot
-  // node. A companion survives this board shape only when it independently
-  // carries the same strict payoff-compression signal. Generic isolation can
-  // describe a quiet longshot, but it is not evidence that two home runs are
-  // encoded in the board.
-  if (boardFhr?.diagnosticArchetype === 'payoff-compressed' &&
-      boardCompanion?.diagnosticArchetype !== 'payoff-compressed') {
-    boardCompanion = null
-  }
   // When the reduction lands on two same-team members of the exact same FHR
   // cluster, price cannot determine their roles. Give FHR orientation to the
   // earlier, stronger-contact hitter and preserve the quieter node as the

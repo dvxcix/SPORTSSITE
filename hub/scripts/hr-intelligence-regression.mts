@@ -380,7 +380,8 @@ const bosTor = analyzeHrGame({
 })
 const durbinResult = bosTor.players.find((candidate: { mlbId: number }) => candidate.mlbId === durbin.mlbId)!
 assert.equal(bosTor.recommendation.boardFhrMlbId, durbin.mlbId, 'The payoff-compressed BOS board must reduce to Durbin')
-assert.equal(bosTor.recommendation.boardCompanionMlbId, null, 'A singular payoff-compressed board must not invent a companion')
+assert.notEqual(bosTor.recommendation.boardCompanionMlbId, null, 'Every complete board must return a second, distinct player')
+assert.notEqual(bosTor.recommendation.boardCompanionMlbId, durbin.mlbId, 'The companion must be distinct from the FHR anchor')
 assert.equal(durbinResult.diagnosticArchetype, 'payoff-compressed', 'Durbin must be identified as the compressed jackpot swing')
 assert.ok(durbinResult.payoffCompressionScore >= 64, 'Durbin must clear the payoff-compression gate')
 const [durbinOutcome] = buildRealizedHrOutcomes(bosTor, [{
@@ -421,7 +422,8 @@ const exactDurbin = exactBosTor.players.find((candidate: { name: string }) => ca
 assert.equal(exactBosTor.players.length, 18, 'The exact BOS@TOR fixture must retain all 18 hitters')
 assert.equal(exactDurbin.diagnosticArchetype, 'payoff-compressed', 'The exact board must classify Durbin as payoff-compressed')
 assert.equal(exactBosTor.recommendation.boardFhrMlbId, exactDurbin.mlbId, 'The exact pregame board must reduce to Durbin')
-assert.equal(exactBosTor.recommendation.boardCompanionMlbId, null, 'The exact pregame board must not manufacture a companion')
+assert.notEqual(exactBosTor.recommendation.boardCompanionMlbId, null, 'The exact complete board must return two players')
+assert.notEqual(exactBosTor.recommendation.boardCompanionMlbId, exactDurbin.mlbId, 'The exact board companion must be distinct from Durbin')
 assert.equal(exactDurbin.hrPicks, 8, 'The exact board must retain Durbin\'s quiet HR exposure')
 assert.equal(exactDurbin.picksByMarket.rbi, 1, 'The exact board must retain Durbin\'s quiet RBI exposure')
 assert.equal(exactDurbin.picksByMarket.hits_runs_rbi, 63, 'The exact board must retain Durbin\'s concentrated H+R+RBI exposure')

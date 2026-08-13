@@ -2,19 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
-import { Activity, AlertTriangle, BarChart3, ChevronDown, Crosshair, EyeOff, RefreshCw, ShieldCheck, Sparkles, Target, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, ChevronDown, Crosshair, EyeOff, RefreshCw, Sparkles, Target, Users } from 'lucide-react'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import type { HrIntelGameResult, HrIntelPlayerResult, HrIntelRealizedOutcome } from '@/lib/hrIntelligence'
-import { HR_INTELLIGENCE_CALIBRATION } from '@/lib/hrIntelligenceCalibration'
 import type { HrIntelligenceSlate } from '@/lib/hrIntelligenceData'
 import styles from './HrIntelligence.module.css'
-
-const AUDITED_COMPLETE_GAMES = Object.values(HR_INTELLIGENCE_CALIBRATION.splits)
-  .reduce((total, split) => total + split.completeGames, 0)
-const QUALIFIED_FHR_RULES = HR_INTELLIGENCE_CALIBRATION.qualifiedRules.filter(rule => rule.target === 'fhr').length
-const QUALIFIED_ANYTIME_RULES = HR_INTELLIGENCE_CALIBRATION.qualifiedRules.filter(rule => rule.target === 'anytime').length
 
 const MARKET_LABELS: Record<string, string> = {
   hr2: '2+ HR', laser105: '105+ HR', laser110: '110+ HR', moonshot: 'Moonshot', pa1: '1st PA HR', hrMl: 'HR / ML',
@@ -128,106 +122,58 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null)
   const playersById = useMemo(() => new Map(game.players.map(player => [player.mlbId, player])), [game.players])
   const getPlayer = (id: number | null) => id == null ? null : playersById.get(id) ?? null
-  const diagnosticLeader = getPlayer(game.recommendation.diagnosticLeaderMlbId)
-  const contradictionLeader = getPlayer(game.recommendation.contradictionLeaderMlbId)
-  const modelLeader = getPlayer(game.recommendation.modelLeaderMlbId)
-  const marketLeader = getPlayer(game.recommendation.marketLeaderMlbId)
-  const exposureLeader = getPlayer(game.recommendation.exposureLeaderMlbId)
-  const publishedCandidates = game.recommendation.fhrCandidateMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
-  const diagnosticCandidates = game.recommendation.fhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
-  const contrarianWatch = game.recommendation.contrarianWatchMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
-  const companionWatch = game.recommendation.companionShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
-  const calibratedWatch = game.recommendation.calibratedAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const graphFhrWatch = game.recommendation.graphFhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const graphAnytimeWatch = game.recommendation.graphAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const decisionAnchor = getPlayer(game.recommendation.boardFhrMlbId)
   const decisionCompanion = getPlayer(game.recommendation.boardCompanionMlbId)
+  const decisionPlayers = [decisionAnchor, decisionCompanion].filter((player): player is HrIntelPlayerResult => !!player)
+  const realizedHrIds = new Set(game.validation?.realizedHrOutcomes.map(outcome => outcome.mlbId) ?? [])
+  const pairHitCount = decisionPlayers.filter(player => realizedHrIds.has(player.mlbId)).length
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
   const home = game.players.filter(player => player.team === game.homeTeam).sort((a, b) => a.battingOrder - b.battingOrder)
 
   return <div className={styles.analysis}>
-    <section className={styles.signalHeader} data-status={game.recommendation.status}>
-      <div><span><ShieldCheck size={14} /> {game.recommendation.publicationEligible ? 'VALIDATED READ' : 'NO VALIDATED READ'}</span><h2>{game.recommendation.confidenceLabel} diagnostic separation</h2><p>{game.recommendation.reason}</p><small>{game.recommendation.publicationReason}</small></div>
-      <div className={styles.confidence}><strong>{game.recommendation.confidence.toFixed(1)}</strong><span>Diagnostic strength</span></div>
-    </section>
-
     {game.warnings.length ? <div className={styles.warnings}>{game.warnings.map(warning => <p key={warning}><AlertTriangle size={14} /> {warning}</p>)}</div> : null}
-
-    {game.validation ? <section className={styles.validation} data-hit={game.validation.fhrShortlistHit}>
-      <div><span>POSTGAME VALIDATION</span><strong>{game.validation.actualNoHr ? 'No home runs' : `First HR: ${game.validation.firstHrName ?? 'Unknown'}`}</strong><small>Outcomes appear only after scoring and never enter the pregame read.</small></div>
-      <div>
-        <b>{game.validation.diagnosticLeaderHit ? 'Diagnostic leader hit' : 'Diagnostic leader missed'}</b>
-        <b>{game.validation.fhrShortlistPublished ? game.validation.fhrShortlistHit ? 'Published FHR set hit' : 'Published FHR set missed' : 'FHR publication withheld'}</b>
-        <b>{game.validation.diagnosticFhrShortlistHit ? 'Diagnostic FHR hypothesis hit' : 'Diagnostic FHR hypothesis missed'}</b>
-        <b>{game.validation.boardFhrHit ? 'Board FHR anchor hit' : 'Board FHR anchor missed'}</b>
-        <b>{game.validation.boardCompanionHit ? 'Board companion hit' : 'Board companion missed'}</b>
-        <b>{game.validation.boardPairHit ? 'Board pair hit' : 'Board pair missed'}</b>
-        <b>{game.validation.contrarianWatchHit ? 'Contrarian watch hit' : 'Contrarian watch missed'}</b>
-        <b>{game.validation.pairCoverageHit ? 'Diagnostic pair coverage hit' : 'No diagnostic pair coverage hit'}</b>
-        <b>{!game.validation.companionWatchPublished ? 'Companion publication withheld' : game.validation.companionShortlistHit ? 'Companion watch hit' : 'Companion watch missed'}</b>
-      </div>
-      {!game.validation.actualNoHr ? <div className={styles.realizedGrid}>{game.validation.realizedHrOutcomes.map(outcome => <RealizedOutcomeCard key={outcome.mlbId} outcome={outcome} />)}</div> : null}
-    </section> : null}
 
     <section className={styles.decision}>
       <header>
-        <div><span>PREGAME REDUCTION · {game.diagnostics.gameRegime.replaceAll('-', ' ')}</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : decisionAnchor?.name ?? 'No coherent pair'}</h3></div>
-        <small>One board-level answer. The first player is the FHR anchor and the second is the anytime companion.</small>
+        <div><span>TWO-PLAYER READ | {game.diagnostics.gameRegime.replaceAll('-', ' ')}</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : 'Complete board required'}</h3></div>
+        <small>Exactly two names from the 18-player board. Player one carries the FHR lean. Either player homering counts toward the pair result.</small>
       </header>
       <div className={styles.decisionPlayers}>
-        <SignalCard player={decisionAnchor} role="FHR anchor" score={decisionAnchor?.diagnosticFhrScore ?? null} kind="diagnostic" />
-        <SignalCard player={decisionCompanion} role="Anytime companion" score={decisionCompanion?.diagnosticAnytimeScore ?? null} kind="contradiction" />
+        <SignalCard player={decisionAnchor} role="Player 1 | FHR lean" score={decisionAnchor?.diagnosticFhrScore ?? null} kind="diagnostic" />
+        <SignalCard player={decisionCompanion} role="Player 2 | Anytime companion" score={decisionCompanion?.diagnosticAnytimeScore ?? null} kind="contradiction" />
       </div>
-      <p>{game.diagnostics.regimeReasons.join('. ')}. The reduction weighs all 18 players, automatic HR payoff markets, alternative outcomes, public handle, MM, Statcast, price clusters, and cross-book structure.</p>
+      <p>The reduction compares all 18 players across FHR and anytime prices, movement, public exposure, payoff markets, MM, Statcast, price clusters, and cross-book structure.</p>
     </section>
 
-    <details className={styles.auditDetails}>
-      <summary>Open supporting diagnostics</summary>
-    <section className={styles.recommendations}>
-      <SignalCard player={diagnosticLeader} role={diagnosticLeader ? `${diagnosticLeader.candidateArchetype} diagnostic` : 'Relational diagnostic'} score={diagnosticLeader?.selectionScore ?? null} kind="diagnostic" />
-      <SignalCard player={contradictionLeader} role="Contradiction leader" score={contradictionLeader?.contradictionScore ?? null} kind="contradiction" />
-      <SignalCard player={modelLeader} role="Model leader" score={modelLeader?.modelFhrScore ?? null} kind="model" />
-      <SignalCard player={exposureLeader} role="Exposure contradiction" score={exposureLeader?.publicPattern.redirectedExposureScore ?? null} kind="exposure" />
-      <SignalCard player={marketLeader} role="Market benchmark" score={marketLeader == null ? null : 19 - (marketLeader.fhrRank ?? 18)} kind="market" />
-    </section>
-
-    <section className={styles.diagnostics}>
-      <div><Crosshair size={17} /><span><strong>{game.diagnostics.gameRegime.replaceAll('-', ' ')}</strong> game regime</span></div>
-      <div><Target size={17} /><span><strong>{game.diagnostics.boardProfile}</strong> board profile</span></div>
-      <div><Activity size={17} /><span><strong>{game.diagnostics.marketCoveragePct}%</strong> market coverage</span></div>
-      <div><Users size={17} /><span><strong>{game.diagnostics.picksCoveragePct}%</strong> HR pick coverage</span></div>
-      <div><Users size={17} /><span><strong>{game.diagnostics.crossMarketPicksCoveragePct}%</strong> cross-market coverage</span></div>
-      <div><EyeOff size={17} /><span><strong>{game.diagnostics.noHrImpliedPct == null ? 'N/A' : `${game.diagnostics.noHrImpliedPct}%`}</strong> No HR implied</span></div>
-    </section>
-
-    <div className={styles.candidateGrid}>
-      <section className={styles.panel}>
-        <header><div><span>GAME GRAPH</span><h3>Board-relative FHR anchors</h3></div><small>Ranks all 18 players by price, baseline, exposure, derivative and rank dislocation within this game. Candidate labels do not gate this list.</small></header>
-        <div className={styles.pairList}>{graphFhrWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
-      </section>
-      <section className={styles.panel}>
-        <header><div><span>GAME GRAPH</span><h3>Anytime companion cluster</h3></div><small>Finds the strongest connected players across FHR clusters, ratios, movements, derivative prices and public exposure.</small></header>
-        <div className={styles.pairList}>{graphAnytimeWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
-      </section>
-      <section className={styles.panel}>
-        <header><div><span>CHRONOLOGICAL MODEL</span><h3>Anytime HR board shortlist</h3></div><small>Frozen through August 8 and measured on later slates. This ranks the complete board and remains separate from the publication gate.</small></header>
-        <div className={styles.pairList}>{calibratedWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="calibrated" />)}</div>
-      </section>
-      <section className={styles.panel}>
-        <header><div><span>PUBLICATION GATE</span><h3>{game.recommendation.publicationEligible ? 'Validated candidate set' : 'No wager set published'}</h3></div><small>A player appears here only after its rule survives chronological discovery, calibration, and untouched holdout.</small></header>
-        <div className={styles.pairList}>{publishedCandidates.length ? publishedCandidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />) : <p className={styles.missing}>{game.recommendation.publicationReason}</p>}</div>
-      </section>
-      <section className={styles.panel}>
-        <header><div><span>DIAGNOSTIC HYPOTHESES</span><h3>{game.recommendation.fhrRecipe}</h3></div><small>These explain the board and support research. They are not picks and did not clear publication.</small></header>
-        <div className={styles.pairList}>{diagnosticCandidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
-      </section>
-    </div>
-
-    {contrarianWatch.length ? <section className={styles.panel}>
-      <header><div><span>NEXT DIAGNOSTIC READS</span><h3>Signals outside the primary hypothesis</h3></div><small>Visible for comparison only. These players did not clear the publication gate.</small></header>
-      <div className={styles.pairList}>{contrarianWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="contrarian" />)}</div>
+    {game.validation ? <section className={styles.validation} data-score={pairHitCount}>
+      <div className={styles.pairGrade}><strong>{pairHitCount}/2</strong><span>Pair result</span></div>
+      <div className={styles.validationSummary}><span>POSTGAME SCORECARD</span><strong>{game.validation.actualNoHr ? 'No home runs in this game' : `First HR: ${game.validation.firstHrName ?? 'Unknown'}`}</strong><small>Results are attached only after the game and never enter the pregame calculation.</small></div>
+      <div className={styles.selectionResults}>{decisionPlayers.map((player, index) => <b key={player.mlbId} data-hit={realizedHrIds.has(player.mlbId)}>{index + 1}. {player.name} | {realizedHrIds.has(player.mlbId) ? 'HR' : 'No HR'}</b>)}</div>
+      {!game.validation.actualNoHr && game.validation.realizedHrOutcomes.length ? <details className={styles.outcomeDetails}><summary>Open all realized HR settlements</summary><div className={styles.realizedGrid}>{game.validation.realizedHrOutcomes.map(outcome => <RealizedOutcomeCard key={outcome.mlbId} outcome={outcome} />)}</div></details> : null}
     </section> : null}
 
+    <details className={styles.auditDetails}>
+      <summary>Open model diagnostics</summary>
+      <section className={styles.diagnostics}>
+        <div><Crosshair size={17} /><span><strong>{game.diagnostics.gameRegime.replaceAll('-', ' ')}</strong> game regime</span></div>
+        <div><Target size={17} /><span><strong>{game.diagnostics.boardProfile}</strong> board profile</span></div>
+        <div><Activity size={17} /><span><strong>{game.diagnostics.marketCoveragePct}%</strong> market coverage</span></div>
+        <div><Users size={17} /><span><strong>{game.diagnostics.picksCoveragePct}%</strong> HR pick coverage</span></div>
+        <div><Users size={17} /><span><strong>{game.diagnostics.crossMarketPicksCoveragePct}%</strong> cross-market coverage</span></div>
+        <div><EyeOff size={17} /><span><strong>{game.diagnostics.noHrImpliedPct == null ? 'N/A' : `${game.diagnostics.noHrImpliedPct}%`}</strong> No HR implied</span></div>
+      </section>
+      <div className={styles.candidateGrid}>
+        <section className={styles.panel}>
+          <header><div><span>GAME GRAPH</span><h3>Board-relative FHR anchors</h3></div><small>Ranks all 18 players by price, baseline, exposure, derivative markets, and rank dislocation within this game.</small></header>
+          <div className={styles.pairList}>{graphFhrWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
+        </section>
+        <section className={styles.panel}>
+          <header><div><span>GAME GRAPH</span><h3>Anytime companion cluster</h3></div><small>Ranks the strongest relationships across FHR clusters, ratios, movements, derivative prices, and public exposure.</small></header>
+          <div className={styles.pairList}>{graphAnytimeWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
+        </section>
+      </div>
     </details>
 
     <div className={styles.contentGrid}>
@@ -249,6 +195,20 @@ export function HrIntelligenceClient() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const selectedGame = useMemo(() => result?.games.find(game => game.gamePk === selectedGamePk) ?? result?.games[0] ?? null, [result, selectedGamePk])
+  const slateScore = useMemo(() => {
+    const gradedGames = result?.games.filter(game => game.validation) ?? []
+    let playerHits = 0
+    let gamesWithHit = 0
+    for (const game of gradedGames) {
+      const homerIds = new Set(game.validation?.realizedHrOutcomes.map(outcome => outcome.mlbId) ?? [])
+      const selectedIds = [game.recommendation.boardFhrMlbId, game.recommendation.boardCompanionMlbId]
+        .filter((id): id is number => id != null)
+      const hits = selectedIds.filter(id => homerIds.has(id)).length
+      playerHits += hits
+      if (hits > 0) gamesWithHit += 1
+    }
+    return { gradedGames: gradedGames.length, gamesWithHit, playerHits, playerReads: gradedGames.length * 2 }
+  }, [result])
 
   async function analyze() {
     setLoading(true)
@@ -270,7 +230,7 @@ export function HrIntelligenceClient() {
   return <main className={styles.page}>
     <section className={styles.hero}>
       <div className={styles.heroIcon}><Crosshair size={25} /></div>
-      <div><span>ADMIN | PREGAME DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reconstruct each 18-player board and compare price clusters, market ladders, exposure, form, and No HR pressure without forcing a pick.</p></div>
+      <div><span>ADMIN | TWO-PLAYER DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reduce every complete 18-player board to two distinct names, then grade the pair transparently after the game.</p></div>
       <div className={styles.heroMeta}><b>Outcome blind</b><span>Postgame results never enter scoring.</span></div>
     </section>
 
@@ -278,18 +238,6 @@ export function HrIntelligenceClient() {
       <label><span>Slate date</span><input type="date" value={date} onChange={event => setDate(event.target.value)} /></label>
       <button type="button" onClick={analyze} disabled={loading || !date}>{loading ? <RefreshCw size={17} className={styles.spin} /> : <BarChart3 size={17} />}{loading ? 'Reconstructing board...' : 'Analyze full slate'}</button>
       {result ? <div><strong>{result.diagnostics.gamesAnalyzed}</strong><span>games analyzed</span></div> : null}
-    </section>
-
-    <section className={styles.calibrationLedger} aria-label="HR intelligence publication audit">
-      <div className={styles.calibrationIntro}>
-        <span>PUBLICATION AUDIT</span>
-        <strong>Fail-closed calibration</strong>
-        <small>Diagnostic rankings remain visible. Picks stay withheld until a rule survives chronological discovery, calibration, and untouched holdout.</small>
-      </div>
-      <div><strong>{AUDITED_COMPLETE_GAMES}</strong><span>complete games</span><small>{HR_INTELLIGENCE_CALIBRATION.splits.discovery.start} to {HR_INTELLIGENCE_CALIBRATION.auditedThrough}</small></div>
-      <div><strong>{QUALIFIED_FHR_RULES}</strong><span>validated FHR rules</span><small>{HR_INTELLIGENCE_CALIBRATION.minimumSupport.fhr.discoveryGames}+ discovery games required</small></div>
-      <div><strong>{QUALIFIED_ANYTIME_RULES}</strong><span>validated anytime rules</span><small>{HR_INTELLIGENCE_CALIBRATION.minimumSupport.anytime.discoveryGames}+ discovery games required</small></div>
-      <div><strong>{HR_INTELLIGENCE_CALIBRATION.splits.holdout.completeGames}</strong><span>untouched holdout games</span><small>Audited through {HR_INTELLIGENCE_CALIBRATION.auditedThrough}</small></div>
     </section>
 
     {error ? <div className={styles.error}><AlertTriangle size={16} /> {error}</div> : null}
@@ -308,6 +256,11 @@ export function HrIntelligenceClient() {
           <small>{game.recommendation.mode.replaceAll('-', ' ')}</small>
         </button>)}
       </nav>
+      {slateScore.gradedGames ? <section className={styles.slateScoreboard}>
+        <div><span>SLATE SCORECARD</span><strong>{slateScore.gamesWithHit}/{slateScore.gradedGames}</strong><small>games with at least one selected HR</small></div>
+        <div><strong>{slateScore.playerHits}/{slateScore.playerReads}</strong><span>individual player reads hit</span></div>
+        <div><strong>{Math.round((slateScore.gamesWithHit / slateScore.gradedGames) * 100)}%</strong><span>one-of-two game coverage</span></div>
+      </section> : null}
       {selectedGame ? <GameAnalysis key={selectedGame.gamePk} game={selectedGame} /> : null}
     </> : null}
   </main>
