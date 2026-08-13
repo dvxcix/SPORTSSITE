@@ -8,6 +8,7 @@ import { HR_INTELLIGENCE_CALIBRATION } from '../src/lib/hrIntelligenceCalibratio
 
 const hrIntelligenceModule = '../src/lib/hrIntelligence.ts'
 const { analyzeHrGame } = await import(hrIntelligenceModule)
+const { buildRealizedHrOutcomes } = await import('../src/lib/hrOutcomeValidation.ts')
 
 const neutralWindow: HrIntelMetricWindow = {
   bbe: 12, pa: 22, avg: 0.245, hr: 1, avgEv: 89, maxEv: 105,
@@ -327,6 +328,83 @@ assert.ok(nymAtl.recommendation.companionShortlistMlbIds.includes(olson.mlbId), 
 assert.ok(!nymAtl.recommendation.companionShortlistMlbIds.includes(riley.mlbId), 'Riley must not survive the same-price diagnostic tie-break')
 assert.deepEqual(nymAtl.recommendation.anytimeCandidateMlbIds, [], 'NYM-ATL must not publish a post-hoc candidate set')
 
+const durbin = player({
+  mlbId: 702332, name: 'Caleb Durbin', team: 'BOS', battingOrder: 4,
+  fhr: { current: 1400, open: 1600 }, hr: { current: 800, open: 750 },
+  fhrBaselineDeltaPct: -33, hrBaselineDeltaPct: -24.6, hrPicks: 8,
+  markets: {
+    ...neutralMarkets,
+    hr2: { current: 12500, open: 10000 }, laser105: { current: 5000, open: 5000 },
+    moonshot: { current: 3300, open: 3300 }, pa1: { current: 6500, open: 6500 },
+    hrMl: { current: 1000, open: 1000 }, hrr: { current: -260, open: 100 },
+    rbi1: { current: 200, open: 210 }, rbi2: { current: 750, open: 700 },
+    rbi3: { current: 6500, open: 6000 }, doubles: { current: 4000, open: 3500 },
+    runs1: { current: 150, open: 125 }, sb1: { current: 400, open: 500 },
+  },
+  picksByMarket: { home_runs: 8, hits: 8, runs: 0, stolen_bases: 2, singles: 8, doubles: 26, triples: 2, rbi: 1, hits_runs_rbi: 63, bases: 5 },
+  mm: { l1: 2, l3: 2, l5: 2, l10: 3 },
+  paperRank: { l1: 12, l3: 12, l5: 12, l10: 11 }, bookRank: { l1: 14, l3: 14, l5: 14, l10: 14 },
+  windows: {
+    season: statWindow(), l10: statWindow({ avgEv: 88.8, hardHitPct: 39 }),
+    l5: statWindow({ bbe: 8, pa: 14, avgEv: 88.7, hardHitPct: 38 }),
+    l3: statWindow({ bbe: 5, pa: 9, avgEv: 88.5, hardHitPct: 38 }),
+    l1: statWindow({ bbe: 3, pa: 4, avgEv: 88.5, hardHitPct: 37 }),
+  },
+})
+const bosTorFillers = Array.from({ length: 17 }, (_, index) => player({
+  mlbId: 710000 + index, name: `BOS-TOR Player ${index + 1}`, team: index < 8 ? 'BOS' : 'TOR',
+  battingOrder: index < 8 ? index + 1 : index - 7,
+  fhr: { current: 550 + index * 95, open: 650 + index * 95 },
+  hr: { current: 320 + index * 38, open: 380 + index * 38 },
+  fhrBaselineDeltaPct: -12 - index / 3, hrBaselineDeltaPct: -9 - index / 4,
+  hrPicks: 25 + index * 11,
+  picksByMarket: {
+    home_runs: 25 + index * 11, hits: 18 + index * 4, runs: 10 + index * 3,
+    stolen_bases: index % 4, singles: 6 + index, doubles: 3 + index,
+    triples: index % 2, rbi: 12 + index * 3, hits_runs_rbi: 8 + index * 2, bases: 14 + index * 3,
+  },
+  mm: { l1: -2, l3: -1, l5: 0, l10: 0 },
+  paperRank: { l1: index + 1, l3: index + 1, l5: index + 1, l10: index + 1 },
+  bookRank: { l1: index + 1, l3: index + 1, l5: index + 1, l10: index + 1 },
+}))
+const bosTor = analyzeHrGame({
+  ...game, gamePk: 999009, gameKey: 'BOS@TOR', awayTeam: 'BOS', homeTeam: 'TOR',
+  players: [durbin, ...bosTorFillers],
+})
+const durbinResult = bosTor.players.find((candidate: { mlbId: number }) => candidate.mlbId === durbin.mlbId)!
+assert.equal(bosTor.recommendation.boardFhrMlbId, durbin.mlbId, 'The payoff-compressed BOS board must reduce to Durbin')
+assert.equal(durbinResult.diagnosticArchetype, 'payoff-compressed', 'Durbin must be identified as the compressed jackpot swing')
+assert.ok(durbinResult.payoffCompressionScore >= 64, 'Durbin must clear the payoff-compression gate')
+const [durbinOutcome] = buildRealizedHrOutcomes(bosTor, [{
+  game_pk: bosTor.gamePk,
+  player_name: durbin.name,
+  name_norm: 'caleb durbin',
+  mlb_id: durbin.mlbId,
+  pitcher_name: 'Pitcher',
+  pitcher_mlb_id: 999,
+  inning: 8,
+  half: 'top',
+  is_first_hr_of_game: true,
+  ab_index: 55,
+  desc: 'Caleb Durbin hits a grand slam.',
+  exit_velocity: 102,
+  launch_angle: 28,
+  hit_distance: 402,
+  hr_time: '2026-08-13T20:00:00Z',
+  rbi_on_play: 4,
+  is_grand_slam: true,
+}], {
+  [durbin.mlbId]: { h: 2, doubles: 0, triples: 0, hr: 1, rbi: 4, runs: 1, singles: 1, tb: 5, sb: 0, hrr: 7 },
+})
+assert.equal(durbinOutcome.grandSlam, true, 'The exact HR play must retain the grand slam')
+assert.equal(durbinOutcome.maxHrSwingRbi, 4, 'The exact HR swing must retain four RBI')
+assert.equal(durbinOutcome.onlyHitWasHr, false, 'Durbin had another hit and must not be mislabeled as HR-only')
+assert.equal(durbinOutcome.additionalHit, true, 'Durbin must retain the additional-hit outcome')
+assert.ok(durbinOutcome.cashedMarkets.includes('5+ TB'), 'Five total bases must settle as cashed')
+assert.ok(durbinOutcome.cashedMarkets.includes('3+ RBI'), 'Four RBI must settle the 3+ RBI ladder')
+assert.ok(durbinOutcome.cashedMarkets.includes('2+ Hits'), 'Two hits must settle the 2+ hits ladder')
+assert.ok(durbinOutcome.missedMarkets.includes('2+ HR'), 'One home run must leave 2+ HR missed')
+
 console.log(JSON.stringify({
   pairCount: result.diagnostics.pairCount,
   diagnosticLeader: result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === result.recommendation.diagnosticLeaderMlbId)?.name,
@@ -340,4 +418,6 @@ console.log(JSON.stringify({
   seaNyy: seaNyy.recommendation.fhrShortlistMlbIds,
   nymAtl: nymAtl.recommendation.fhrShortlistMlbIds,
   balMinBoardPair: [balMin.recommendation.boardFhrMlbId, balMin.recommendation.boardCompanionMlbId],
+  bosTorBoardFhr: bosTor.recommendation.boardFhrMlbId,
+  durbinCompression: durbinResult.payoffCompressionScore,
 }, null, 2))

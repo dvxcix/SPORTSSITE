@@ -10,6 +10,7 @@ import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { canonAbbr, canonGameKey } from '@slipsurge/core/teamAbbr'
 import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 import { fetchHrFeed } from '@/lib/hrFeed'
+import { fetchBoxscoreOutcomes } from '@/lib/mlbBoxscoreOutcomes'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows,
   evaluateBatterMatrices, pitchlogNeeded, pitchlogCustomNeeded, asyncPool,
@@ -524,49 +525,6 @@ async function fetchPitcherSplits(mlbIds: number[]) {
 // identically to how a pick itself settles. fetchHrFeed above hits the
 // lighter playByPlay endpoint instead, which has no aggregated batting line
 // at all — this needs the actual box score, not just play events.
-async function fetchBoxscoreOutcomes(mlbGames: any[]): Promise<Record<number, Record<number, any>>> {
-  const gradedPks = mlbGames
-    .filter((g: any) => { const s = g.status?.abstractGameState; return s === 'Live' || s === 'Final' })
-    .map((g: any) => g.gamePk)
-    .filter(Boolean)
-  if (!gradedPks.length) return {}
-
-  const byGamePk: Record<number, Record<number, any>> = {}
-  await Promise.all(gradedPks.map(async (pk: number) => {
-    try {
-      const r = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${pk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
-      if (!r.ok) return
-      const feed = await r.json()
-      const teams = feed?.liveData?.boxscore?.teams
-      if (!teams) return
-      const byMlbId: Record<number, any> = {}
-      for (const side of ['home', 'away']) {
-        const players = teams[side]?.players ?? {}
-        for (const p of Object.values(players) as any[]) {
-          const mlbId = p?.person?.id
-          const b = p?.stats?.batting
-          if (!mlbId || !b) continue
-          const h = b.hits ?? 0
-          const doubles = b.doubles ?? 0
-          const triples = b.triples ?? 0
-          const hr = b.homeRuns ?? 0
-          const rbi = b.rbi ?? 0
-          const runs = b.runs ?? 0
-          byMlbId[mlbId] = {
-            h, doubles, triples, hr, rbi, runs,
-            singles: h - doubles - triples - hr,
-            tb: b.totalBases ?? 0,
-            sb: b.stolenBases ?? 0,
-            hrr: h + runs + rbi,
-          }
-        }
-      }
-      byGamePk[pk] = byMlbId
-    } catch {}
-  }))
-  return byGamePk
-}
-
 // Position priority for projected lineup ordering
 const POS_ORDER: Record<string, number> = {
   C:2, '1B':3, '2B':4, '3B':5, SS:6,

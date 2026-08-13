@@ -55,6 +55,10 @@ const rows = [...game.players]
     anytimeScore: player.anytimeScore,
     graphFhrScore: player.graphFhrScore,
     graphAnytimeScore: player.graphAnytimeScore,
+    payoffCompressionScore: player.payoffCompressionScore,
+    diagnosticFhrScore: player.diagnosticFhrScore,
+    diagnosticAnytimeScore: player.diagnosticAnytimeScore,
+    diagnosticArchetype: player.diagnosticArchetype,
   }))
 
 process.stdout.write(`${JSON.stringify({

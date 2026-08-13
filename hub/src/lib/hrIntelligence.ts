@@ -100,6 +100,7 @@ export type HrIntelPlayerResult = HrIntelPlayerInput & {
   graphFhrScore: number
   graphAnytimeScore: number
   payoffIsolationScore: number
+  payoffCompressionScore: number
   diagnosticFhrScore: number
   diagnosticAnytimeScore: number
   decoyRiskScore: number
@@ -126,7 +127,7 @@ export type HrIntelPlayerResult = HrIntelPlayerInput & {
     mgmToFanduel: number | null
   }
   candidateArchetype: 'protected' | 'containment' | 'tie-break' | 'market-confirmed' | 'none'
-  diagnosticArchetype: 'payoff-isolated' | 'data-confirmed-hidden' | 'advertised-real' | 'alternative-diversion' | 'public-bait' | 'unsupported'
+  diagnosticArchetype: 'payoff-compressed' | 'payoff-isolated' | 'data-confirmed-hidden' | 'advertised-real' | 'alternative-diversion' | 'public-bait' | 'unsupported'
   qualifiedLanes: HrIntelQualifiedLane[]
   archetypeScores: {
     protected: number
@@ -299,8 +300,33 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     contradictionLeaderHit: boolean
     modelLeaderHit: boolean
     marketLeaderHit: boolean
+    realizedHrOutcomes: HrIntelRealizedOutcome[]
   }
   warnings: string[]
+}
+
+export type HrIntelRealizedOutcome = {
+  mlbId: number
+  name: string
+  team: string
+  firstHr: boolean
+  hits: number | null
+  homeRuns: number | null
+  singles: number | null
+  doubles: number | null
+  triples: number | null
+  totalBases: number | null
+  runs: number | null
+  rbi: number | null
+  stolenBases: number | null
+  hrr: number | null
+  hrSwingRbiTotal: number
+  maxHrSwingRbi: number
+  grandSlam: boolean
+  onlyHitWasHr: boolean | null
+  additionalHit: boolean | null
+  cashedMarkets: string[]
+  missedMarkets: string[]
 }
 
 const POWER_EXTENSION_MARKETS = ['hr2', 'laser105', 'laser110', 'moonshot', 'pa1', 'hrMl']
@@ -800,6 +826,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       graphFhrScore: 0,
       graphAnytimeScore: 0,
       payoffIsolationScore: 0,
+      payoffCompressionScore: 0,
       diagnosticFhrScore: 0,
       diagnosticAnytimeScore: 0,
       decoyRiskScore: round1(decoyRiskScore),
@@ -1091,6 +1118,36 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     ].filter((value): value is number => value != null)) ?? 0.35
     const clusterCover = clusterCamouflage(player)
     const publicPromotionPenalty = (1 - publicSilence) * clamp(player.decoyRiskScore / 100)
+    const pickPercentile = (market: string) => {
+      const value = player.picksByMarket[market]
+      const board = results.map(candidate => candidate.picksByMarket[market]).filter((pick): pick is number => pick != null)
+      return percentile(value, board) ?? 0.5
+    }
+    const directLiabilitySilence = 1 - (mean([
+      pickPercentile('home_runs'),
+      pickPercentile('rbi'),
+    ]) ?? 0.5)
+    const surroundingExposure = mean([
+      pickPercentile('hits_runs_rbi'),
+      pickPercentile('bases'),
+      pickPercentile('doubles'),
+      pickPercentile('runs'),
+      pickPercentile('stolen_bases'),
+    ]) ?? 0.5
+    const exposureCompression = clamp(surroundingExposure - (1 - directLiabilitySilence) + 0.45)
+    const splitPressure = player.movement.fhrImpliedPoints == null || player.movement.hrImpliedPoints == null
+      ? 0
+      : clamp((player.movement.fhrImpliedPoints - player.movement.hrImpliedPoints) / 3)
+    const boardBurial = mean([
+      player.fhrRank == null ? null : clamp((player.fhrRank - 1) / 17),
+      player.hrRank == null ? null : clamp((player.hrRank - 1) / 17),
+    ].filter((value): value is number => value != null)) ?? 0.35
+    const hrrRbiMismatch = clamp(pickPercentile('hits_runs_rbi') - pickPercentile('rbi') + 0.35)
+    const payoffCompression = clamp(
+      directLiabilitySilence * 0.18 + surroundingExposure * 0.15 + exposureCompression * 0.15 +
+      splitPressure * 0.16 + baselineRespect * 0.10 + boardBurial * 0.07 +
+      paperBookDislocation * 0.07 + positiveMm(player) * 0.05 + hrrRbiMismatch * 0.07,
+    )
     const isolation = clamp(
       publicSilence * 0.18 + payoffRelease * 0.18 + hrDrift * 0.10 + fhrHold * 0.08 +
       contactNode * 0.14 + paperBookDislocation * 0.11 + redirected * 0.07 +
@@ -1100,17 +1157,24 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     const fhrViability = player.fhrRank == null ? 0 : clamp((19 - player.fhrRank) / 18)
     const lineupOpportunity = clamp((10 - player.battingOrder) / 9)
     player.payoffIsolationScore = round1(isolation * 100)
-    player.diagnosticFhrScore = round1(100 * clamp(
+    player.payoffCompressionScore = round1(payoffCompression * 100)
+    const isolationFhr = clamp(
       isolation * 0.36 + lineupOpportunity * 0.14 + fhrViability * 0.10 +
       (player.graphFhrScore / 100) * 0.08 + (player.crossBookSupportScore / 100) * 0.06 +
       fhrHold * 0.08 + clusterCover * 0.04 + contactNode * 0.08 + (player.isPowerCandidate ? 0.06 : 0),
-    ))
-    player.diagnosticAnytimeScore = round1(100 * clamp(
+    )
+    const compressedFhr = clamp(payoffCompression * 0.74 + splitPressure * 0.14 + baselineRespect * 0.07 + paperBookDislocation * 0.05)
+    player.diagnosticFhrScore = round1(100 * Math.max(isolationFhr, compressedFhr))
+    const isolationAnytime = clamp(
       isolation * 0.58 + (player.graphAnytimeScore / 100) * 0.10 +
       (player.structuralPowerScore / 100) * 0.08 + contactNode * 0.10 +
       publicSilence * 0.08 + clusterCover * 0.06,
-    ))
-    player.diagnosticArchetype = publicSilence >= 0.28 && payoffRelease >= 0.42 && isolation >= 0.56
+    )
+    const compressedAnytime = clamp(payoffCompression * 0.82 + baselineRespect * 0.10 + paperBookDislocation * 0.08)
+    player.diagnosticAnytimeScore = round1(100 * Math.max(isolationAnytime, compressedAnytime))
+    player.diagnosticArchetype = payoffCompression >= 0.64 && directLiabilitySilence >= 0.52 && exposureCompression >= 0.52
+      ? 'payoff-compressed'
+      : publicSilence >= 0.28 && payoffRelease >= 0.42 && isolation >= 0.56
       ? 'payoff-isolated'
       : publicSilence >= 0.45 && contactNode >= 0.68 && paperBookDislocation >= 0.52
         ? 'data-confirmed-hidden'
@@ -1123,6 +1187,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
               : 'unsupported'
     player.evidence.push(
       { key: 'payoff-isolation', label: 'Payoff isolation', value: `${player.payoffIsolationScore}% | ${player.diagnosticArchetype.replaceAll('-', ' ')}`, tone: player.payoffIsolationScore >= 58 ? 'positive' : 'neutral' },
+      { key: 'payoff-compression', label: 'Payoff compression', value: `${player.payoffCompressionScore}% | direct ${round1(directLiabilitySilence * 100)} / surrounding ${round1(surroundingExposure * 100)}`, tone: player.payoffCompressionScore >= 64 ? 'positive' : 'neutral' },
       { key: 'board-read', label: 'Board-relative read', value: `FHR ${player.diagnosticFhrScore} | Anytime ${player.diagnosticAnytimeScore}`, tone: Math.max(player.diagnosticFhrScore, player.diagnosticAnytimeScore) >= 62 ? 'positive' : 'neutral' },
     )
   }

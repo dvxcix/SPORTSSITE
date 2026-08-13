@@ -6,7 +6,7 @@ import { Activity, AlertTriangle, BarChart3, ChevronDown, Crosshair, EyeOff, Ref
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import type { HrIntelGameResult, HrIntelPlayerResult } from '@/lib/hrIntelligence'
+import type { HrIntelGameResult, HrIntelPlayerResult, HrIntelRealizedOutcome } from '@/lib/hrIntelligence'
 import { HR_INTELLIGENCE_CALIBRATION } from '@/lib/hrIntelligenceCalibration'
 import type { HrIntelligenceSlate } from '@/lib/hrIntelligenceData'
 import styles from './HrIntelligence.module.css'
@@ -105,6 +105,25 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
   </div>
 }
 
+function RealizedOutcomeCard({ outcome }: { outcome: HrIntelRealizedOutcome }) {
+  const line = outcome.hits == null
+    ? 'Box score unavailable'
+    : `${outcome.hits} H · ${outcome.homeRuns} HR · ${outcome.totalBases} TB · ${outcome.rbi} RBI · ${outcome.runs} R · ${outcome.hrr} H+R+RBI`
+  return <article className={styles.realizedOutcome}>
+    <header>
+      <PlayerAvatar headshot={mlbHeadshot(outcome.mlbId)} teamLogo={getTeamLogoUrl(outcome.team)} teamAbbr={outcome.team} name={outcome.name} size={38} />
+      <div><strong>{outcome.name}</strong><span>{outcome.team} · {outcome.firstHr ? 'First HR' : 'Anytime HR'}</span></div>
+      {outcome.grandSlam ? <b>GRAND SLAM</b> : null}
+    </header>
+    <p>{line}</p>
+    <small>{outcome.maxHrSwingRbi} RBI on the largest HR swing{outcome.additionalHit ? ' · additional hit recorded' : outcome.onlyHitWasHr ? ' · homer was the only hit' : ''}</small>
+    <div className={styles.settlementRows}>
+      <div><span>Cashed</span>{outcome.cashedMarkets.map(market => <i key={market}>{market}</i>)}</div>
+      <div><span>Missed</span>{outcome.missedMarkets.map(market => <i key={market}>{market}</i>)}</div>
+    </div>
+  </article>
+}
+
 function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null)
   const playersById = useMemo(() => new Map(game.players.map(player => [player.mlbId, player])), [game.players])
@@ -147,7 +166,7 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
         <b>{game.validation.pairCoverageHit ? 'Diagnostic pair coverage hit' : 'No diagnostic pair coverage hit'}</b>
         <b>{!game.validation.companionWatchPublished ? 'Companion publication withheld' : game.validation.companionShortlistHit ? 'Companion watch hit' : 'Companion watch missed'}</b>
       </div>
-      {!game.validation.actualNoHr ? <p>All HRs: {game.validation.hrNames.join(', ')}</p> : null}
+      {!game.validation.actualNoHr ? <div className={styles.realizedGrid}>{game.validation.realizedHrOutcomes.map(outcome => <RealizedOutcomeCard key={outcome.mlbId} outcome={outcome} />)}</div> : null}
     </section> : null}
 
     <section className={styles.decision}>

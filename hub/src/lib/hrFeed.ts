@@ -16,6 +16,8 @@ export type HrFeedEvent = {
   launch_angle: number | null
   hit_distance: number | null
   hr_time: string | null
+  rbi_on_play: number
+  is_grand_slam: boolean
 }
 
 export type HrFeedFailure = {
@@ -114,6 +116,8 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
             exit_velocity: hitEvent?.hitData?.launchSpeed ?? null,
             launch_angle: hitEvent?.hitData?.launchAngle ?? null,
             hit_distance: hitEvent?.hitData?.totalDistance ?? null,
+            rbi_on_play: Number(p.result?.rbi ?? 0),
+            is_grand_slam: Number(p.result?.rbi ?? 0) === 4,
             // Real wall-clock moment the HR happened — needed to sort
             // "Today's Home Runs" chronologically ACROSS games. ab_index only
             // orders at-bats within one game; two games' at-bats have no

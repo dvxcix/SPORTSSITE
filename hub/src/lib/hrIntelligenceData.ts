@@ -4,6 +4,8 @@ import { normName } from '@slipsurge/core/nameNorm'
 import { buildPitcherMap, computeMmByWindowForGame, type MatchupEdgeData, type MmPlayerInput, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
 import { fetchHistoricalGameBundles, type GameBundles } from '@/lib/matrixBacktest'
 import { fetchHrFeed, type HrFeedEvent } from '@/lib/hrFeed'
+import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
+import { buildRealizedHrOutcomes } from '@/lib/hrOutcomeValidation'
 import {
   analyzeHrGame,
   type HrIntelGameResult,
@@ -337,7 +339,11 @@ function analyzeBundle(gameBundle: GameBundles, slateDate: string): HrIntelGameR
   })
 }
 
-function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrIntelGameResult {
+function attachValidation(
+  game: HrIntelGameResult,
+  events: HrFeedEvent[],
+  boxscoreByMlbId: Record<number, MlbBatterOutcome>,
+): HrIntelGameResult {
   const ordered = [...events].sort((left, right) => left.ab_index - right.ab_index)
   const first = ordered[0] ?? null
   const hrMlbIds = [...new Set(ordered.map(event => event.mlb_id).filter((id): id is number => id != null))]
@@ -405,6 +411,7 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
       contradictionLeaderHit,
       modelLeaderHit,
       marketLeaderHit,
+      realizedHrOutcomes: buildRealizedHrOutcomes(game, ordered, boxscoreByMlbId),
     },
   }
 }
@@ -416,13 +423,16 @@ export async function buildHrIntelligenceSlate(date: string, gamePk?: number): P
   const admin = createAdminClient()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const outcomeBundles = date < today ? bundles : bundles.filter(bundle => bundle.game.status === 'Final')
-  const [pitcherRows, edgeResult, outcomeResult] = await Promise.all([
+  const [pitcherRows, edgeResult, outcomeResult, boxscoreOutcomes] = await Promise.all([
     fetchPitcherMix(pitcherIds, date),
     admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data')
       .eq('game_date', date).order('mlb_id').order('role'),
     outcomeBundles.length
       ? fetchHrFeed(outcomeBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
       : Promise.resolve({ hrFeed: [], pitcherIdByName: {}, completedGamePks: [], failures: [] }),
+    outcomeBundles.length
+      ? fetchBoxscoreOutcomes(outcomeBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
+      : Promise.resolve({} as Record<number, Record<number, MlbBatterOutcome>>),
   ])
   if (edgeResult.error) throw new Error(`Matchup-edge query failed: ${edgeResult.error.message}`)
 
@@ -444,7 +454,11 @@ export async function buildHrIntelligenceSlate(date: string, gamePk?: number): P
   const failureByGamePk = new Map(outcomeResult.failures.map(failure => [failure.gamePk, failure.reason]))
   const games = bundles.map(bundle => {
     const analysis = analyzeBundle(bundle, date)
-    if (completedGamePks.has(bundle.game.gamePk)) return attachValidation(analysis, eventsByGame.get(bundle.game.gamePk) ?? [])
+    if (completedGamePks.has(bundle.game.gamePk)) return attachValidation(
+      analysis,
+      eventsByGame.get(bundle.game.gamePk) ?? [],
+      boxscoreOutcomes[bundle.game.gamePk] ?? {},
+    )
     const failure = failureByGamePk.get(bundle.game.gamePk)
     return failure
       ? { ...analysis, warnings: [...analysis.warnings, `Postgame validation unavailable: ${failure}`] }
