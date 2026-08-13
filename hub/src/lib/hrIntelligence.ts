@@ -99,6 +99,9 @@ export type HrIntelPlayerResult = HrIntelPlayerInput & {
   calibratedAnytimeScore: number
   graphFhrScore: number
   graphAnytimeScore: number
+  payoffIsolationScore: number
+  diagnosticFhrScore: number
+  diagnosticAnytimeScore: number
   decoyRiskScore: number
   cashStackSupportScore: number
   alternativePathScore: number
@@ -123,6 +126,7 @@ export type HrIntelPlayerResult = HrIntelPlayerInput & {
     mgmToFanduel: number | null
   }
   candidateArchetype: 'protected' | 'containment' | 'tie-break' | 'market-confirmed' | 'none'
+  diagnosticArchetype: 'payoff-isolated' | 'data-confirmed-hidden' | 'advertised-real' | 'alternative-diversion' | 'public-bait' | 'unsupported'
   qualifiedLanes: HrIntelQualifiedLane[]
   archetypeScores: {
     protected: number
@@ -181,6 +185,7 @@ export type HrIntelPairResult = {
 }
 
 export type HrIntelBoardProfile = 'low-hr' | 'clustered' | 'active' | 'quiet' | 'mixed'
+export type HrIntelGameRegime = 'sparse-coherent' | 'concealment-explosion' | 'advertised-explosion' | 'mixed-concentrated' | 'open-board'
 export type HrIntelPrimaryLane = 'contradiction' | 'model' | 'relational'
 
 export type HrIntelGameInput = {
@@ -206,6 +211,8 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     confidenceLabel: 'Low' | 'Measured' | 'Strong'
     primaryLane: HrIntelPrimaryLane
     diagnosticLeaderMlbId: number | null
+    boardFhrMlbId: number | null
+    boardCompanionMlbId: number | null
     fhrAnchorMlbId: number | null
     anytimeCompanionMlbId: number | null
     fhrCandidateMlbIds: number[]
@@ -249,6 +256,8 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     crossMarketPicksCoveragePct: number
     noHrImpliedPct: number | null
     boardProfile: HrIntelBoardProfile
+    gameRegime: HrIntelGameRegime
+    regimeReasons: string[]
     fhrClusterPct: number
     movementActivityPct: number
     publicConcentrationPct: number
@@ -256,6 +265,7 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     powerCandidatePct: number
     hiddenPowerPct: number
     automaticCashSupportPct: number
+    payoffReleasePct: number
     paperBookDisagreementPct: number
     pairCount: number
   }
@@ -283,6 +293,9 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     candidateSetPairHit: boolean
     candidateContrarianPairHit: boolean
     pairCoverageHit: boolean
+    boardFhrHit: boolean
+    boardCompanionHit: boolean
+    boardPairHit: boolean
     contradictionLeaderHit: boolean
     modelLeaderHit: boolean
     marketLeaderHit: boolean
@@ -786,6 +799,9 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       calibratedAnytimeScore: 0,
       graphFhrScore: 0,
       graphAnytimeScore: 0,
+      payoffIsolationScore: 0,
+      diagnosticFhrScore: 0,
+      diagnosticAnytimeScore: 0,
       decoyRiskScore: round1(decoyRiskScore),
       cashStackSupportScore: round1(cashStackSupport * 100),
       alternativePathScore: round1(alternativePathScore * 100),
@@ -810,6 +826,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
         mgmToFanduel: mgmToFanduel == null ? null : round3(mgmToFanduel),
       },
       candidateArchetype,
+      diagnosticArchetype: 'unsupported',
       qualifiedLanes: [],
       archetypeScores: {
         protected: round1(protectedScore),
@@ -1049,6 +1066,90 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     ))
   }
 
+  // The payoff-isolation read answers the practical full-board question that
+  // the named lanes cannot: which player is still priced as viable while the
+  // public handle and the easier HR-cashing derivatives are being steered
+  // elsewhere? Every component is relative to this game's 18 hitters.
+  for (const player of results) {
+    const publicSilence = quietExposureNode(player)
+    const payoffRelease = clamp((player.movement.nonPowerLengthened - player.movement.nonPowerShortened * 0.35) / 12)
+    const hrDrift = player.movement.hrImpliedPoints == null ? 0.35 : clamp((-player.movement.hrImpliedPoints + 0.15) / 1.8)
+    const fhrHold = player.movement.fhrImpliedPoints == null
+      ? 0.4
+      : clamp(1 - Math.max(0, player.movement.fhrImpliedPoints) / 1.5 - Math.abs(Math.min(0, player.movement.fhrImpliedPoints)) / 4)
+    const contactNode = clamp(
+      (boardPercentile(player, candidate => candidate.contactAcceleration) * 0.62) +
+      clamp((player.contactAcceleration + 5) / 35) * 0.38,
+    )
+    const paper = meanRank(player.paperRank)
+    const book = meanRank(player.bookRank)
+    const paperBookDislocation = paper == null || book == null ? 0.35 : clamp((book - paper + 2) / 10)
+    const redirected = (player.publicPattern.redirectedExposureScore ?? 35) / 100
+    const baselineRespect = mean([
+      player.fhrBaselineDeltaPct == null ? null : clamp(-player.fhrBaselineDeltaPct / 35),
+      player.hrBaselineDeltaPct == null ? null : clamp(-player.hrBaselineDeltaPct / 35),
+    ].filter((value): value is number => value != null)) ?? 0.35
+    const clusterCover = clusterCamouflage(player)
+    const publicPromotionPenalty = (1 - publicSilence) * clamp(player.decoyRiskScore / 100)
+    const isolation = clamp(
+      publicSilence * 0.18 + payoffRelease * 0.18 + hrDrift * 0.10 + fhrHold * 0.08 +
+      contactNode * 0.14 + paperBookDislocation * 0.11 + redirected * 0.07 +
+      clusterCover * 0.05 + baselineRespect * 0.07 + (player.isPowerCandidate ? 0.04 : 0) -
+      publicPromotionPenalty * 0.08,
+    )
+    const fhrViability = player.fhrRank == null ? 0 : clamp((19 - player.fhrRank) / 18)
+    const lineupOpportunity = clamp((10 - player.battingOrder) / 9)
+    player.payoffIsolationScore = round1(isolation * 100)
+    player.diagnosticFhrScore = round1(100 * clamp(
+      isolation * 0.36 + lineupOpportunity * 0.14 + fhrViability * 0.10 +
+      (player.graphFhrScore / 100) * 0.08 + (player.crossBookSupportScore / 100) * 0.06 +
+      fhrHold * 0.08 + clusterCover * 0.04 + contactNode * 0.08 + (player.isPowerCandidate ? 0.06 : 0),
+    ))
+    player.diagnosticAnytimeScore = round1(100 * clamp(
+      isolation * 0.58 + (player.graphAnytimeScore / 100) * 0.10 +
+      (player.structuralPowerScore / 100) * 0.08 + contactNode * 0.10 +
+      publicSilence * 0.08 + clusterCover * 0.06,
+    ))
+    player.diagnosticArchetype = publicSilence >= 0.28 && payoffRelease >= 0.42 && isolation >= 0.56
+      ? 'payoff-isolated'
+      : publicSilence >= 0.45 && contactNode >= 0.68 && paperBookDislocation >= 0.52
+        ? 'data-confirmed-hidden'
+        : (player.publicRank ?? 99) <= 5 && player.archetypeScores.marketConfirmed >= 62 && player.contactAcceleration >= -5
+          ? 'advertised-real'
+          : (player.publicPattern.redirectedExposureScore ?? 0) >= 55 && player.publicPattern.loudestMarket !== 'home_runs'
+            ? 'alternative-diversion'
+            : (player.publicRank ?? 99) <= 4 && player.decoyRiskScore >= 50
+              ? 'public-bait'
+              : 'unsupported'
+    player.evidence.push(
+      { key: 'payoff-isolation', label: 'Payoff isolation', value: `${player.payoffIsolationScore}% | ${player.diagnosticArchetype.replaceAll('-', ' ')}`, tone: player.payoffIsolationScore >= 58 ? 'positive' : 'neutral' },
+      { key: 'board-read', label: 'Board-relative read', value: `FHR ${player.diagnosticFhrScore} | Anytime ${player.diagnosticAnytimeScore}`, tone: Math.max(player.diagnosticFhrScore, player.diagnosticAnytimeScore) >= 62 ? 'positive' : 'neutral' },
+    )
+  }
+
+  const payoffReleasePct = mean(results.map(player => clamp(
+    (player.movement.nonPowerLengthened - player.movement.nonPowerShortened * 0.35) / 12,
+  ) * 100)) ?? 0
+  const topPublicSharePct = Math.max(0, ...results.map(player => player.publicSharePct ?? 0))
+  const powerPromotionPct = mean(results.map(player => clamp(
+    (player.movement.powerShortened - player.movement.powerLengthened * 0.35) / Math.max(1, POWER_EXTENSION_MARKETS.length),
+  ) * 100)) ?? 0
+  const gameRegime: HrIntelGameRegime = noHrPct != null && noHrPct >= 18
+    ? 'sparse-coherent'
+    : payoffReleasePct >= 24 && topPublicSharePct >= 22
+      ? 'concealment-explosion'
+      : movementActivityPct >= 50 && powerPromotionPct >= 12
+        ? 'advertised-explosion'
+        : topPublicSharePct >= 18 || publicConcentrationPct >= 14
+          ? 'mixed-concentrated'
+          : 'open-board'
+  const regimeReasons = [
+    `${round1(payoffReleasePct)}% average payoff-market release`,
+    `${round1(topPublicSharePct)}% largest HR-pick share`,
+    `${round1(movementActivityPct)}% FHR/HR movement activity`,
+    noHrPct == null ? 'No-HR price unavailable' : `${round1(noHrPct)}% No-HR implied`,
+  ]
+
   const graphEdgeAffinity = (left: HrIntelPlayerResult, right: HrIntelPlayerResult) => {
     const similarity = (a: number | null, b: number | null, tolerance: number) =>
       a == null || b == null ? null : clamp(1 - Math.abs(a - b) / tolerance)
@@ -1076,6 +1177,42 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       derivativeAffinity * 0.10 + complementaryHrMove * 0.09 +
       lowJointExposure * 0.09 + zeroRbi * 0.07 + (left.team === right.team ? 1 : 0) * 0.11,
     )
+  }
+
+  const boardFhrRanked = [...results].sort((left, right) =>
+    right.diagnosticFhrScore - left.diagnosticFhrScore ||
+    right.payoffIsolationScore - left.payoffIsolationScore ||
+    left.battingOrder - right.battingOrder,
+  )
+  let boardFhr = boardFhrRanked.find(player => player.fhr.current != null && player.hr.current != null && player.battingOrder <= 8) ?? boardFhrRanked[0] ?? null
+  const boardCompanionRanked = boardFhr ? results
+    .filter(player => player.mlbId !== boardFhr.mlbId)
+    .map(player => {
+      const sameTeam = player.team === boardFhr.team ? 1 : 0
+      const exactCluster = player.fhr.current != null && player.fhr.current === boardFhr.fhr.current ? 1 : 0
+      const quietPair = clamp(1 - ((player.publicSharePct ?? 0) + (boardFhr.publicSharePct ?? 0)) / 18)
+      const score = player.diagnosticAnytimeScore * 0.58 + graphEdgeAffinity(boardFhr, player) * 22 +
+        sameTeam * 8 + exactCluster * 5 + quietPair * 7
+      return { player, score }
+    })
+    .sort((left, right) => right.score - left.score) : []
+  let boardCompanion = boardCompanionRanked[0]?.player ?? null
+  // When the reduction lands on two same-team members of the exact same FHR
+  // cluster, price cannot determine their roles. Give FHR orientation to the
+  // earlier, stronger-contact hitter and preserve the quieter node as the
+  // anytime companion.
+  if (boardFhr && boardCompanion && boardFhr.team === boardCompanion.team &&
+      boardFhr.fhr.current != null && boardFhr.fhr.current === boardCompanion.fhr.current &&
+      Math.abs(boardFhr.diagnosticFhrScore - boardCompanion.diagnosticFhrScore) <= 8) {
+    const fhrRoleScore = (player: HrIntelPlayerResult) =>
+      (percentile(player.contactAcceleration, results.map(candidate => candidate.contactAcceleration)) ?? 0.5) * 0.55 +
+      clamp((10 - player.battingOrder) / 9) * 0.30 +
+      (player.diagnosticFhrScore / 100) * 0.15
+    if (fhrRoleScore(boardCompanion) > fhrRoleScore(boardFhr)) {
+      const originalAnchor = boardFhr
+      boardFhr = boardCompanion
+      boardCompanion = originalAnchor
+    }
   }
 
   const graphPairRanked = pairs.map(pair => {
@@ -1530,6 +1667,8 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       confidenceLabel,
       primaryLane: diagnosticRead.lane,
       diagnosticLeaderMlbId: diagnosticLeader?.mlbId ?? null,
+      boardFhrMlbId: boardFhr?.mlbId ?? null,
+      boardCompanionMlbId: boardCompanion?.mlbId ?? null,
       fhrAnchorMlbId: exactCallQualified ? publishedFhrCandidates[0]?.mlbId ?? null : null,
       anytimeCompanionMlbId: null,
       fhrCandidateMlbIds: publishedFhrCandidates.map(player => player.mlbId),
@@ -1566,6 +1705,8 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       crossMarketPicksCoveragePct: round1(crossMarketPicksCoveragePct),
       noHrImpliedPct: noHrImpliedPct == null ? null : round1(noHrImpliedPct * 100),
       boardProfile: effectiveProfile,
+      gameRegime,
+      regimeReasons,
       fhrClusterPct: round1(fhrClusterPct),
       movementActivityPct: round1(movementActivityPct),
       publicConcentrationPct: round1(publicConcentrationPct),
@@ -1573,6 +1714,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       powerCandidatePct: round1(powerCandidatePct),
       hiddenPowerPct: round1(hiddenPowerPct),
       automaticCashSupportPct: round1(automaticCashSupportPct),
+      payoffReleasePct: round1(payoffReleasePct),
       paperBookDisagreementPct: round1(paperBookDisagreementPct),
       pairCount: pairs.length,
     },

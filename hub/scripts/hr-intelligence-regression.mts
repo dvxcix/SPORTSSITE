@@ -195,6 +195,9 @@ const balMin = analyzeHrGame({
 })
 assert.deepEqual(balMin.recommendation.fhrShortlistMlbIds, [beavers.mlbId], 'The earlier-hitting BAL structural anchor must lead the diagnostic FHR read')
 assert.deepEqual(balMin.recommendation.companionShortlistMlbIds, [taveras.mlbId], 'The aligned low-exposure BAL PWR companion must survive')
+assert.equal(balMin.recommendation.boardFhrMlbId, beavers.mlbId, 'The full-board payoff resolver must keep Beavers as the FHR anchor')
+assert.equal(balMin.recommendation.boardCompanionMlbId, taveras.mlbId, 'The full-board payoff resolver must keep Taveras as the quiet companion')
+assert.equal(balMin.diagnostics.gameRegime.length > 0, true, 'Every complete board must receive a game regime')
 assert.ok(
   balMin.players.find((candidate: { mlbId: number; isPowerCandidate: boolean }) => candidate.mlbId === beavers.mlbId)?.isPowerCandidate &&
   balMin.players.find((candidate: { mlbId: number; isPowerCandidate: boolean }) => candidate.mlbId === taveras.mlbId)?.isPowerCandidate,
@@ -336,4 +339,5 @@ console.log(JSON.stringify({
   pitMia: pitMia.recommendation.fhrShortlistMlbIds,
   seaNyy: seaNyy.recommendation.fhrShortlistMlbIds,
   nymAtl: nymAtl.recommendation.fhrShortlistMlbIds,
+  balMinBoardPair: [balMin.recommendation.boardFhrMlbId, balMin.recommendation.boardCompanionMlbId],
 }, null, 2))

@@ -62,7 +62,7 @@ function SignalCard({ player, role, score, kind }: { player: HrIntelPlayerResult
     {player ? <>
       <PlayerIdentity player={player} />
       <div className={styles.quickEvidence}>
-        <span>FHR {odds(player.fhr.current)}</span><span>HR {odds(player.hr.current)}</span><span>{player.hrPicks ?? 'N/A'} HR picks</span>
+        <span>FHR {odds(player.fhr.current)}</span><span>HR {odds(player.hr.current)}</span><span>{player.hrPicks ?? 'N/A'} HR picks</span><span>{player.diagnosticArchetype.replaceAll('-', ' ')}</span>
       </div>
     </> : <p className={styles.missing}>No qualified player</p>}
   </article>
@@ -98,7 +98,7 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
       <span><small>Anytime</small><strong>{odds(player.hr.current)}</strong><i>{signed(player.movement.hrImpliedPoints, ' pp')}</i></span>
       <span><small>Public</small><strong>{player.hrPicks ?? 'N/A'}</strong><i>#{player.publicRank ?? 'N/A'}</i></span>
       <span><small>Contact</small><strong>{signed(player.contactAcceleration, '%')}</strong><i>MM {player.mm?.l10 ?? 'N/A'}</i></span>
-      <span><small>Game graph</small><strong>{player.graphFhrScore.toFixed(1)} / {player.graphAnytimeScore.toFixed(1)}</strong><i>FHR node / anytime node</i></span>
+      <span><small>Board read</small><strong>{player.diagnosticFhrScore.toFixed(1)} / {player.diagnosticAnytimeScore.toFixed(1)}</strong><i>{player.diagnosticArchetype.replaceAll('-', ' ')}</i></span>
       <ChevronDown size={16} className={expanded ? styles.rotated : ''} />
     </button>
     {expanded ? <PlayerDetail player={player} /> : null}
@@ -121,8 +121,8 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const calibratedWatch = game.recommendation.calibratedAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const graphFhrWatch = game.recommendation.graphFhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const graphAnytimeWatch = game.recommendation.graphAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
-  const decisionAnchor = diagnosticCandidates[0] ?? null
-  const decisionCompanion = companionWatch.find(player => player.mlbId !== decisionAnchor?.mlbId) ?? null
+  const decisionAnchor = getPlayer(game.recommendation.boardFhrMlbId)
+  const decisionCompanion = getPlayer(game.recommendation.boardCompanionMlbId)
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
   const home = game.players.filter(player => player.team === game.homeTeam).sort((a, b) => a.battingOrder - b.battingOrder)
 
@@ -140,6 +140,9 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
         <b>{game.validation.diagnosticLeaderHit ? 'Diagnostic leader hit' : 'Diagnostic leader missed'}</b>
         <b>{game.validation.fhrShortlistPublished ? game.validation.fhrShortlistHit ? 'Published FHR set hit' : 'Published FHR set missed' : 'FHR publication withheld'}</b>
         <b>{game.validation.diagnosticFhrShortlistHit ? 'Diagnostic FHR hypothesis hit' : 'Diagnostic FHR hypothesis missed'}</b>
+        <b>{game.validation.boardFhrHit ? 'Board FHR anchor hit' : 'Board FHR anchor missed'}</b>
+        <b>{game.validation.boardCompanionHit ? 'Board companion hit' : 'Board companion missed'}</b>
+        <b>{game.validation.boardPairHit ? 'Board pair hit' : 'Board pair missed'}</b>
         <b>{game.validation.contrarianWatchHit ? 'Contrarian watch hit' : 'Contrarian watch missed'}</b>
         <b>{game.validation.pairCoverageHit ? 'Diagnostic pair coverage hit' : 'No diagnostic pair coverage hit'}</b>
         <b>{!game.validation.companionWatchPublished ? 'Companion publication withheld' : game.validation.companionShortlistHit ? 'Companion watch hit' : 'Companion watch missed'}</b>
@@ -149,14 +152,14 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
 
     <section className={styles.decision}>
       <header>
-        <div><span>PREGAME REDUCTION</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : decisionAnchor?.name ?? 'No coherent pair'}</h3></div>
+        <div><span>PREGAME REDUCTION · {game.diagnostics.gameRegime.replaceAll('-', ' ')}</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : decisionAnchor?.name ?? 'No coherent pair'}</h3></div>
         <small>One board-level answer. The first player is the FHR anchor and the second is the anytime companion.</small>
       </header>
       <div className={styles.decisionPlayers}>
-        <SignalCard player={decisionAnchor} role="FHR anchor" score={decisionAnchor?.selectionScore ?? null} kind="diagnostic" />
-        <SignalCard player={decisionCompanion} role="Anytime companion" score={decisionCompanion?.selectionScore ?? null} kind="contradiction" />
+        <SignalCard player={decisionAnchor} role="FHR anchor" score={decisionAnchor?.diagnosticFhrScore ?? null} kind="diagnostic" />
+        <SignalCard player={decisionCompanion} role="Anytime companion" score={decisionCompanion?.diagnosticAnytimeScore ?? null} kind="contradiction" />
       </div>
-      <p>{game.recommendation.fhrRecipe}. {game.recommendation.companionRecipe}.</p>
+      <p>{game.diagnostics.regimeReasons.join('. ')}. The reduction weighs all 18 players, automatic HR payoff markets, alternative outcomes, public handle, MM, Statcast, price clusters, and cross-book structure.</p>
     </section>
 
     <details className={styles.auditDetails}>
@@ -170,6 +173,7 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
     </section>
 
     <section className={styles.diagnostics}>
+      <div><Crosshair size={17} /><span><strong>{game.diagnostics.gameRegime.replaceAll('-', ' ')}</strong> game regime</span></div>
       <div><Target size={17} /><span><strong>{game.diagnostics.boardProfile}</strong> board profile</span></div>
       <div><Activity size={17} /><span><strong>{game.diagnostics.marketCoveragePct}%</strong> market coverage</span></div>
       <div><Users size={17} /><span><strong>{game.diagnostics.picksCoveragePct}%</strong> HR pick coverage</span></div>

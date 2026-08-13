@@ -345,6 +345,8 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
   const anchorId = game.recommendation.fhrAnchorMlbId
   const diagnosticLeaderId = game.recommendation.diagnosticLeaderMlbId
   const companionId = game.recommendation.anytimeCompanionMlbId
+  const boardFhrId = game.recommendation.boardFhrMlbId
+  const boardCompanionId = game.recommendation.boardCompanionMlbId
   const primaryPublished = anchorId != null && game.recommendation.status !== 'abstain'
   const companionPublished = companionId != null && game.recommendation.status === 'qualified'
   const fhrShortlistPublished = game.recommendation.dataComplete && game.recommendation.status !== 'abstain' && game.recommendation.fhrCandidateMlbIds.length > 0
@@ -353,6 +355,8 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
   const anchorHit = anchorId != null && first?.mlb_id === anchorId
   const diagnosticLeaderHit = diagnosticLeaderId != null && first?.mlb_id === diagnosticLeaderId
   const companionHit = companionId != null && hrMlbIds.includes(companionId)
+  const boardFhrHit = boardFhrId != null && first?.mlb_id === boardFhrId
+  const boardCompanionHit = boardCompanionId != null && hrMlbIds.includes(boardCompanionId)
   const contradictionLeaderHit = game.recommendation.contradictionLeaderMlbId != null && first?.mlb_id === game.recommendation.contradictionLeaderMlbId
   const modelLeaderHit = game.recommendation.modelLeaderMlbId != null && first?.mlb_id === game.recommendation.modelLeaderMlbId
   const marketLeaderHit = game.recommendation.marketLeaderMlbId != null && first?.mlb_id === game.recommendation.marketLeaderMlbId
@@ -395,6 +399,9 @@ function attachValidation(game: HrIntelGameResult, events: HrFeedEvent[]): HrInt
       candidateSetPairHit,
       candidateContrarianPairHit,
       pairCoverageHit,
+      boardFhrHit,
+      boardCompanionHit,
+      boardPairHit: boardFhrHit && boardCompanionHit,
       contradictionLeaderHit,
       modelLeaderHit,
       marketLeaderHit,
