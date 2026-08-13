@@ -62,18 +62,6 @@ function SignalCard({ player, role, score, kind }: { player: HrIntelPlayerResult
   </article>
 }
 
-function WatchRow({ player, rank, lane }: { player: HrIntelPlayerResult; rank: number; lane: 'candidate' | 'contrarian' | 'companion' | 'calibrated' }) {
-  const score = lane === 'calibrated' ? player.calibratedAnytimeScore : player.selectionScore
-  const label = lane === 'candidate' ? player.candidateArchetype : lane === 'contrarian' ? 'next relational read' : lane === 'calibrated' ? 'chronological anytime model' : 'independent companion'
-  return <div className={styles.pairRow}>
-    <b className={styles.pairRank}>{rank}</b>
-    <div className={styles.pairPlayers}>
-      <span><PlayerAvatar headshot={mlbHeadshot(player.mlbId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.name} size={31} /><span><b>{player.name}</b><small>{player.team} | #{player.battingOrder} | {odds(player.fhr.current)} FHR</small></span></span>
-    </div>
-    <div className={styles.pairScore}><strong>{score.toFixed(1)}</strong><small>{label}</small></div>
-  </div>
-}
-
 function PlayerDetail({ player }: { player: HrIntelPlayerResult }) {
   return <div className={styles.playerDetail}>
     <div className={styles.evidenceGrid}>{player.evidence.map(item => <div key={item.key} data-tone={item.tone}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div>
@@ -122,8 +110,6 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null)
   const playersById = useMemo(() => new Map(game.players.map(player => [player.mlbId, player])), [game.players])
   const getPlayer = (id: number | null) => id == null ? null : playersById.get(id) ?? null
-  const graphFhrWatch = game.recommendation.graphFhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
-  const graphAnytimeWatch = game.recommendation.graphAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const decisionAnchor = getPlayer(game.recommendation.boardFhrMlbId)
   const decisionCompanion = getPlayer(game.recommendation.boardCompanionMlbId)
   const decisionPlayers = [decisionAnchor, decisionCompanion].filter((player): player is HrIntelPlayerResult => !!player)
@@ -137,14 +123,14 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
 
     <section className={styles.decision}>
       <header>
-        <div><span>TWO-PLAYER READ | {game.diagnostics.gameRegime.replaceAll('-', ' ')}</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : 'Complete board required'}</h3></div>
-        <small>Exactly two names from the 18-player board. Player one carries the FHR lean. Either player homering counts toward the pair result.</small>
+        <div><span>TWO-LANE REDUCTION | {game.diagnostics.gameRegime.replaceAll('-', ' ')}</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : 'Complete board required'}</h3></div>
+        <small>Exactly two names from the 18-player board. One is the strongest market and form anchor. The other is the strongest structural dislocation. Either player homering counts.</small>
       </header>
       <div className={styles.decisionPlayers}>
-        <SignalCard player={decisionAnchor} role="Player 1 | FHR lean" score={decisionAnchor?.diagnosticFhrScore ?? null} kind="diagnostic" />
-        <SignalCard player={decisionCompanion} role="Player 2 | Anytime companion" score={decisionCompanion?.diagnosticAnytimeScore ?? null} kind="contradiction" />
+        <SignalCard player={decisionAnchor} role="Market and form anchor" score={game.recommendation.boardFhrScore} kind="diagnostic" />
+        <SignalCard player={decisionCompanion} role={game.recommendation.boardCompanionLane?.replaceAll('-', ' ') ?? 'Structural dislocation'} score={game.recommendation.boardCompanionScore} kind="contradiction" />
       </div>
-      <p>The reduction compares all 18 players across FHR and anytime prices, movement, public exposure, payoff markets, MM, Statcast, price clusters, and cross-book structure.</p>
+      <p>The reduction compares all 18 players across prices, movement, exposure, payoff markets, MM, Statcast, clusters, and cross-book structure.</p>
     </section>
 
     {game.validation ? <section className={styles.validation} data-score={pairHitCount}>
@@ -164,16 +150,6 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
         <div><Users size={17} /><span><strong>{game.diagnostics.crossMarketPicksCoveragePct}%</strong> cross-market coverage</span></div>
         <div><EyeOff size={17} /><span><strong>{game.diagnostics.noHrImpliedPct == null ? 'N/A' : `${game.diagnostics.noHrImpliedPct}%`}</strong> No HR implied</span></div>
       </section>
-      <div className={styles.candidateGrid}>
-        <section className={styles.panel}>
-          <header><div><span>GAME GRAPH</span><h3>Board-relative FHR anchors</h3></div><small>Ranks all 18 players by price, baseline, exposure, derivative markets, and rank dislocation within this game.</small></header>
-          <div className={styles.pairList}>{graphFhrWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />)}</div>
-        </section>
-        <section className={styles.panel}>
-          <header><div><span>GAME GRAPH</span><h3>Anytime companion cluster</h3></div><small>Ranks the strongest relationships across FHR clusters, ratios, movements, derivative prices, and public exposure.</small></header>
-          <div className={styles.pairList}>{graphAnytimeWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
-        </section>
-      </div>
     </details>
 
     <div className={styles.contentGrid}>
@@ -230,7 +206,7 @@ export function HrIntelligenceClient() {
   return <main className={styles.page}>
     <section className={styles.hero}>
       <div className={styles.heroIcon}><Crosshair size={25} /></div>
-      <div><span>ADMIN | TWO-PLAYER DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reduce every complete 18-player board to two distinct names, then grade the pair transparently after the game.</p></div>
+      <div><span>ADMIN | TWO-LANE DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reduce every complete 18-player board to one credible anchor and one structural dislocation, then grade that exact pair after the game.</p></div>
       <div className={styles.heroMeta}><b>Outcome blind</b><span>Postgame results never enter scoring.</span></div>
     </section>
 

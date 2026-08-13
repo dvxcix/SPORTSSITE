@@ -188,6 +188,15 @@ export type HrIntelPairResult = {
 export type HrIntelBoardProfile = 'low-hr' | 'clustered' | 'active' | 'quiet' | 'mixed'
 export type HrIntelGameRegime = 'sparse-coherent' | 'concealment-explosion' | 'advertised-explosion' | 'mixed-concentrated' | 'open-board'
 export type HrIntelPrimaryLane = 'contradiction' | 'model' | 'relational'
+export type HrIntelReductionLane =
+  | 'market-form-anchor'
+  | 'paper-book-dislocation'
+  | 'split-market-protection'
+  | 'payoff-compression'
+  | 'payoff-redirect'
+  | 'buried-derivative'
+  | 'quiet-viable'
+  | 'structural-fallback'
 
 export type HrIntelGameInput = {
   date: string
@@ -214,6 +223,10 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     diagnosticLeaderMlbId: number | null
     boardFhrMlbId: number | null
     boardCompanionMlbId: number | null
+    boardFhrScore: number | null
+    boardCompanionScore: number | null
+    boardFhrLane: HrIntelReductionLane | null
+    boardCompanionLane: HrIntelReductionLane | null
     fhrAnchorMlbId: number | null
     anytimeCompanionMlbId: number | null
     fhrCandidateMlbIds: number[]
@@ -1052,8 +1065,6 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
   // players share (or complement) the same market construction.
   const boardPercentile = (player: HrIntelPlayerResult, getter: (candidate: HrIntelPlayerResult) => number) =>
     percentile(getter(player), results.map(getter)) ?? 0.5
-  const inverseBoardPercentile = (player: HrIntelPlayerResult, getter: (candidate: HrIntelPlayerResult) => number) =>
-    1 - boardPercentile(player, getter)
   const baselineSplit = (player: HrIntelPlayerResult) =>
     player.fhrBaselineDeltaPct == null || player.hrBaselineDeltaPct == null
       ? 0
@@ -1244,62 +1255,92 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     )
   }
 
-  const boardFhrRanked = [...results].sort((left, right) =>
-    right.diagnosticFhrScore - left.diagnosticFhrScore ||
-    right.payoffIsolationScore - left.payoffIsolationScore ||
-    left.battingOrder - right.battingOrder,
-  )
-  const boardFhrEligible = boardFhrRanked.filter(player =>
-    player.fhr.current != null && player.hr.current != null && player.battingOrder <= 8,
-  )
-  // A payoff-compressed node is not merely another high diagnostic score. It
-  // is the board-specific shape where direct HR/RBI exposure is quiet while
-  // adjacent markets that one swing can settle carry the liability. The old
-  // reducer calculated that shape, labelled it correctly, and then discarded
-  // it in favor of tiny decimal score differences from the generic isolation
-  // lane. Prefer a genuinely gated compression node before the broad ranker.
-  const compressedBoardFhr = boardFhrEligible
-    .filter(player => player.diagnosticArchetype === 'payoff-compressed' && player.payoffCompressionScore >= 64)
-    .sort((left, right) =>
-      right.payoffCompressionScore - left.payoffCompressionScore ||
-      right.diagnosticFhrScore - left.diagnosticFhrScore ||
-      left.battingOrder - right.battingOrder,
-    )[0] ?? null
-  let boardFhr = compressedBoardFhr ?? boardFhrEligible[0] ?? boardFhrRanked[0] ?? null
-  const boardCompanionRanked = boardFhr ? results
-    .filter(player => player.mlbId !== boardFhr.mlbId)
-    .map(player => {
-      const sameTeam = player.team === boardFhr.team ? 1 : 0
-      const exactCluster = player.fhr.current != null && player.fhr.current === boardFhr.fhr.current ? 1 : 0
-      const quietPair = clamp(1 - ((player.publicSharePct ?? 0) + (boardFhr.publicSharePct ?? 0)) / 18)
-      const score = player.diagnosticAnytimeScore * 0.58 + graphEdgeAffinity(boardFhr, player) * 22 +
-        sameTeam * 8 + exactCluster * 5 + quietPair * 7
-      return { player, score }
-    })
-    .sort((left, right) => right.score - left.score) : []
-  // A complete board always reduces to two distinct players. The companion is
-  // the strongest relationship to the anchor across the same full-board graph;
-  // it is not suppressed merely because the anchor owns a rarer archetype.
-  // Accuracy is graded after the game as 0/2, 1/2, or 2/2 instead of turning a
-  // low-separation board into an unhelpful abstention.
-  let boardCompanion: HrIntelPlayerResult | null = boardCompanionRanked[0]?.player ?? null
-  // When the reduction lands on two same-team members of the exact same FHR
-  // cluster, price cannot determine their roles. Give FHR orientation to the
-  // earlier, stronger-contact hitter and preserve the quieter node as the
-  // anytime companion.
-  if (boardFhr && boardCompanion && boardFhr.team === boardCompanion.team &&
-      boardFhr.fhr.current != null && boardFhr.fhr.current === boardCompanion.fhr.current &&
-      Math.abs(boardFhr.diagnosticFhrScore - boardCompanion.diagnosticFhrScore) <= 8) {
-    const fhrRoleScore = (player: HrIntelPlayerResult) =>
-      (percentile(player.contactAcceleration, results.map(candidate => candidate.contactAcceleration)) ?? 0.5) * 0.55 +
-      clamp((10 - player.battingOrder) / 9) * 0.30 +
-      (player.diagnosticFhrScore / 100) * 0.15
-    if (fhrRoleScore(boardCompanion) > fhrRoleScore(boardFhr)) {
-      const originalAnchor = boardFhr
-      boardFhr = boardCompanion
-      boardCompanion = originalAnchor
-    }
+  // The publishable two-player reduction has two deliberately different jobs.
+  // The first player is the strongest credible market/form anchor. The second
+  // is the strongest board-relative dislocation: quiet direct HR/RBI exposure
+  // paired with paper/book disagreement, released payoff markets, or a buried
+  // derivative ladder. This mirrors how the board is read manually and avoids
+  // selecting two near-duplicates from one generic score.
+  const boardValues = <T extends number | null>(values: T[]) => values.filter((value): value is Exclude<T, null> => value != null && Number.isFinite(value))
+  const boardPickPercentile = (player: HrIntelPlayerResult, key: string, reverse = false) => {
+    const values = boardValues(results.map(candidate => candidate.picksByMarket[key] ?? null))
+    const value = player.picksByMarket[key] ?? null
+    const rank = percentile(value, values)
+    return rank == null ? 0.5 : reverse ? 1 - rank : rank
   }
+  const reducerProfiles = results.map(player => {
+    const paper = meanRank(player.paperRank) ?? 9.5
+    const book = meanRank(player.bookRank) ?? 9.5
+    const mmValues = player.mm ? boardValues(Object.values(player.mm)) : []
+    const mmMean = mmValues.length ? mmValues.reduce((sum, value) => sum + value, 0) / mmValues.length : 0
+    const mmPeak = mmValues.length ? Math.max(...mmValues) : 0
+    const publicQuiet = player.publicRank == null ? 0.5 : clamp((player.publicRank - 1) / Math.max(1, results.length - 1))
+    const market = mean([
+      player.fhrRank == null ? null : marketViability(player.fhrRank, results.length),
+      player.hrRank == null ? null : marketViability(player.hrRank, results.length),
+    ]) ?? 0.35
+    const contact = percentile(player.contactAcceleration, results.map(candidate => candidate.contactAcceleration)) ?? 0.5
+    const paperStrength = clamp((results.length + 1 - paper) / results.length)
+    const bookStrength = clamp((results.length + 1 - book) / results.length)
+    const paperBookGap = clamp((book - paper + 1) / 11)
+    const mmPositive = clamp((mmMean + 2) / 10)
+    const baselineMean = mean([player.fhrBaselineDeltaPct, player.hrBaselineDeltaPct]) ?? 0
+    const baselineLong = clamp(baselineMean / 40)
+    const baselineShort = clamp(-baselineMean / 40)
+    const burial = 1 - market
+    const nonPowerRelease = clamp((player.movement.nonPowerLengthened - player.movement.nonPowerShortened * 0.45) / 12)
+    const directQuiet = mean([
+      boardPickPercentile(player, 'home_runs', true),
+      boardPickPercentile(player, 'rbi', true),
+    ]) ?? 0.5
+    const adjacentLoud = mean(['hits_runs_rbi', 'bases', 'doubles', 'runs', 'stolen_bases']
+      .map(key => boardPickPercentile(player, key))) ?? 0.5
+    const hrrExposure = boardPickPercentile(player, 'hits_runs_rbi')
+    const compression = player.payoffCompressionScore / 100
+    const power = player.isPowerCandidate ? 1 : 0
+    const publicLoud = 1 - publicQuiet
+    const concentrationPenalty = (player.publicRank ?? 99) <= 3 ? publicLoud * 0.09 : 0
+    const anchorScore = clamp(
+      market * 0.31 + contact * 0.19 + paperStrength * 0.16 + bookStrength * 0.10 + mmPositive * 0.07 +
+      player.crossBookSupportScore / 100 * 0.06 + directQuiet * 0.06 + baselineShort * 0.03 + power * 0.02 - concentrationPenalty,
+    )
+    const compressedScore = compression * 0.42 + directQuiet * 0.16 + adjacentLoud * 0.13 + paperBookGap * 0.10 + mmPositive * 0.08 + market * 0.05 + power * 0.06
+    const dislocatedScore = paperBookGap * 0.26 + mmPositive * 0.16 + baselineLong * 0.17 + paperStrength * 0.13 + publicQuiet * 0.10 + nonPowerRelease * 0.09 + contact * 0.05 + power * 0.04
+    const buriedScore = burial * 0.20 + directQuiet * 0.18 + nonPowerRelease * 0.17 + adjacentLoud * 0.14 + power * 0.10 + paperBookGap * 0.08 + mmPositive * 0.07 + contact * 0.06
+    const laneScores: Array<{ lane: HrIntelReductionLane; score: number }> = [
+      ...(paper <= 3 && book - paper >= 5 && mmMean >= 3 && (player.fhrBaselineDeltaPct ?? -99) >= 8 && (player.hrBaselineDeltaPct ?? -99) >= 0
+        ? [{ lane: 'paper-book-dislocation' as const, score: 1 + dislocatedScore * 0.1 }] : []),
+      ...(market >= 0.58 && contact >= 0.64 && paper <= 3 && book - paper >= 2 && book - paper <= 5 && publicQuiet >= 0.35 &&
+          (player.movement.hrImpliedPoints ?? 0) <= -2 && player.movement.nonPowerLengthened >= 9
+        ? [{ lane: 'split-market-protection' as const, score: 0.95 + dislocatedScore * 0.1 }] : []),
+      ...(power === 1 && compression >= 0.64 && directQuiet >= 0.45
+        ? [{ lane: 'payoff-compression' as const, score: 0.90 + compressedScore * 0.1 }] : []),
+      ...((player.fhrRank ?? 99) >= 9 && (player.fhrRank ?? 99) <= 15 && (player.hrRank ?? 99) >= 9 && (player.hrRank ?? 99) <= 15 &&
+          (player.fhrBaselineDeltaPct ?? -99) >= 12 && (player.hrBaselineDeltaPct ?? -99) >= 8 && (mmMean >= 2 || mmPeak >= 3) &&
+          player.movement.powerLengthened >= 2 && ((player.publicPattern.redirectedExposureScore ?? 0) >= 50 || hrrExposure >= 0.65) && directQuiet >= 0.40
+        ? [{ lane: 'payoff-redirect' as const, score: 0.86 + buriedScore * 0.1 }] : []),
+      ...((player.fhrRank ?? 99) >= 9 && (player.fhrRank ?? 99) <= 15 && (player.hrRank ?? 99) >= 9 && (player.hrRank ?? 99) <= 15 &&
+          (player.fhrBaselineDeltaPct ?? -99) >= 12 && (player.hrBaselineDeltaPct ?? -99) >= 8 && (mmMean >= 2 || mmPeak >= 3) &&
+          player.movement.powerLengthened >= 2 && adjacentLoud >= 0.42 && directQuiet >= 0.45
+        ? [{ lane: 'buried-derivative' as const, score: 0.80 + buriedScore * 0.1 }] : []),
+      ...(market >= 0.55 && publicQuiet >= 0.42 && directQuiet >= 0.45 && contact >= 0.42 && (player.movement.powerShortened >= 2 || power === 1)
+        ? [{ lane: 'quiet-viable' as const, score: 0.70 + (market * 0.35 + directQuiet * 0.25 + contact * 0.20 + paperStrength * 0.20) * 0.1 }] : []),
+      { lane: 'structural-fallback', score: Math.max(compressedScore * 0.55, dislocatedScore * 0.54, buriedScore * 0.53) },
+    ]
+    const anomaly = laneScores.sort((left, right) => right.score - left.score)[0]
+    return { player, anchorScore, anomalyScore: anomaly.score, anomalyLane: anomaly.lane }
+  })
+  const eligibleProfiles = reducerProfiles.filter(({ player }) => player.fhr.current != null && player.hr.current != null)
+  const anchorProfile = [...eligibleProfiles].sort((left, right) =>
+    right.anchorScore - left.anchorScore || left.player.battingOrder - right.player.battingOrder,
+  )[0] ?? null
+  const companionProfile = [...eligibleProfiles].filter(({ player }) => player.mlbId !== anchorProfile?.player.mlbId).sort((left, right) =>
+    right.anomalyScore - left.anomalyScore || left.player.battingOrder - right.player.battingOrder,
+  )[0] ?? null
+  const boardFhr = anchorProfile?.player ?? null
+  const boardCompanion = companionProfile?.player ?? null
+  boardFhr?.evidence.push({ key: 'reduction-lane', label: 'Two-lane reduction', value: `Market/form anchor | ${round1((anchorProfile?.anchorScore ?? 0) * 100)}`, tone: 'positive' })
+  boardCompanion?.evidence.push({ key: 'reduction-lane', label: 'Two-lane reduction', value: `${companionProfile?.anomalyLane.replaceAll('-', ' ')} | ${round1((companionProfile?.anomalyScore ?? 0) * 100)}`, tone: 'positive' })
 
   const graphPairRanked = pairs.map(pair => {
     const anchor = results.find(player => player.mlbId === pair.anchorMlbId)!
@@ -1352,23 +1393,6 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
         candidateAnchor.graphFhrScore * 0.38 + candidateCompanion.graphAnytimeScore * 0.32 + graphEdgeAffinity(candidateAnchor, candidateCompanion) * 30
       return score(right) - score(left)
     })[0]
-    const ratioSimilarity = mean([
-      anchor.ratios.paToHr != null && companion.ratios.paToHr != null
-        ? clamp(1 - Math.abs(anchor.ratios.paToHr - companion.ratios.paToHr) / 0.08) : null,
-      anchor.ratios.hrToRbi != null && companion.ratios.hrToRbi != null
-        ? clamp(1 - Math.abs(anchor.ratios.hrToRbi - companion.ratios.hrToRbi) / 0.08) : null,
-      anchor.ratios.hrToMoneyline != null && companion.ratios.hrToMoneyline != null
-        ? clamp(1 - Math.abs(anchor.ratios.hrToMoneyline - companion.ratios.hrToMoneyline) / 0.30) : null,
-    ].filter((value): value is number => value != null)) ?? 0
-    const derivativeSimilarity = mean([
-      anchor.ratios.hrToHrr != null && companion.ratios.hrToHrr != null
-        ? clamp(1 - Math.abs(anchor.ratios.hrToHrr - companion.ratios.hrToHrr) / 0.30) : null,
-      anchor.ratios.hrToTb4 != null && companion.ratios.hrToTb4 != null
-        ? clamp(1 - Math.abs(anchor.ratios.hrToTb4 - companion.ratios.hrToTb4) / 0.35) : null,
-    ].filter((value): value is number => value != null)) ?? 0
-    const quietPair = clamp(1 - ((anchor.publicSharePct ?? 0) + (companion.publicSharePct ?? 0)) / 14)
-    const zeroRbiPair = anchor.picksByMarket.rbi === 0 && companion.picksByMarket.rbi === 0 ? 1 : 0
-    const sameTeam = anchor.team === companion.team ? 1 : 0
     const graphAffinity = graphEdgeAffinity(anchor, companion)
     pair.anchorMlbId = anchor.mlbId
     pair.companionMlbId = companion.mlbId
@@ -1640,15 +1664,6 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
   // resolver stopped as soon as one lane produced a player. That correctly
   // found an anchor such as Chase or Ozzie, but silently discarded Jo/Olson
   // and every other independently qualified companion on the same board.
-  // Preserve lane priority for FHR ordering while retaining the complete,
-  // deduplicated anytime candidate set for the game-level read.
-  const fhrCandidates = structuralPowerCandidates.length
-    ? structuralPowerCandidates.slice(0, 1)
-    : boardReleaseRegime && concealedAnchors.length
-    ? concealedAnchors.slice(0, 1)
-    : containmentTail
-    ? [containmentTail]
-    : selectDistinct([tieClusterWinner ? [tieClusterWinner] : [], protectedFhrDivergence], results.length)
   const anytimeCandidates = selectDistinct([
     structuralPowerCandidates,
     boardReleaseRegime ? relationalRoleCandidates : [],
@@ -1668,9 +1683,6 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     : boardReleaseRegime && tiedCompanions.length
     ? 'Tied companion with stronger anytime positioning'
     : 'Diagnostic anytime-HR hypotheses; no pair is published without validation'
-  const primaryIds = new Set(fhrCandidates.map(player => player.mlbId))
-  const companionShortlist = anytimeCandidates.filter(player => !primaryIds.has(player.mlbId))
-  const fhrShortlist = fhrCandidates
   const contrarianWatch = selectionRanked.filter(player => !anytimeCandidates.some(candidate => candidate.mlbId === player.mlbId)).slice(0, 2)
   const contradictionWatch = contrarianWatch[0] ?? null
   const crossMarketPicksCoveragePct = results.length
@@ -1755,15 +1767,19 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       diagnosticLeaderMlbId: diagnosticLeader?.mlbId ?? null,
       boardFhrMlbId: boardFhr?.mlbId ?? null,
       boardCompanionMlbId: boardCompanion?.mlbId ?? null,
+      boardFhrScore: anchorProfile == null ? null : round1(anchorProfile.anchorScore * 100),
+      boardCompanionScore: companionProfile == null ? null : round1(companionProfile.anomalyScore * 100),
+      boardFhrLane: anchorProfile == null ? null : 'market-form-anchor',
+      boardCompanionLane: companionProfile?.anomalyLane ?? null,
       fhrAnchorMlbId: exactCallQualified ? publishedFhrCandidates[0]?.mlbId ?? null : null,
       anytimeCompanionMlbId: null,
       fhrCandidateMlbIds: publishedFhrCandidates.map(player => player.mlbId),
       anytimeCandidateMlbIds: publishedAnytimeCandidates.map(player => player.mlbId),
-      fhrShortlistMlbIds: fhrShortlist.map(player => player.mlbId),
+      fhrShortlistMlbIds: boardFhr ? [boardFhr.mlbId] : [],
       calibratedAnytimeShortlistMlbIds: calibratedAnytimeRanked.slice(0, 3).map(player => player.mlbId),
       graphFhrShortlistMlbIds: graphFhrRanked.slice(0, 3).map(player => player.mlbId),
       graphAnytimeShortlistMlbIds: graphAnytimeRanked.slice(0, 4).map(player => player.mlbId),
-      companionShortlistMlbIds: companionShortlist.map(player => player.mlbId),
+      companionShortlistMlbIds: boardCompanion ? [boardCompanion.mlbId] : [],
       contradictionWatchMlbId: contradictionWatch?.mlbId ?? null,
       contrarianWatchMlbIds: contrarianWatch.map(player => player.mlbId),
       contradictionLeaderMlbId: contradictionLeader?.mlbId ?? null,

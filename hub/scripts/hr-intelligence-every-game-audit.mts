@@ -21,15 +21,9 @@ for (const date of dates) {
   for (const game of slate.games) {
     if (!game.validation) continue
     const byId = new Map(game.players.map(player => [player.mlbId, player]))
-    const shortlistIds = [...new Set([
-      ...game.recommendation.fhrShortlistMlbIds,
-      ...game.recommendation.companionShortlistMlbIds,
-    ])]
+    const shortlistIds = [game.recommendation.boardFhrMlbId, game.recommendation.boardCompanionMlbId]
+      .filter((id): id is number => id != null)
     const actualIds = new Set(game.validation.hrMlbIds)
-    const topPairs = game.pairs.slice(0, 3).map(pair => ({
-      players: [byId.get(pair.anchorMlbId)?.name, byId.get(pair.companionMlbId)?.name],
-      score: pair.score,
-    }))
     rows.push({
       date,
       game: game.gameKey,
@@ -38,7 +32,6 @@ for (const date of dates) {
       actualHr: game.validation.hrNames,
       shortlist: shortlistIds.map(id => byId.get(id)?.name),
       shortlistHits: shortlistIds.filter(id => actualIds.has(id)).map(id => byId.get(id)?.name),
-      topPairs,
       actualSignals: game.validation.hrMlbIds.map(id => {
         const player = byId.get(id)
         return player ? {
@@ -84,7 +77,6 @@ process.stdout.write(`${JSON.stringify({
     actualHr: row.actualHr,
     shortlist: row.shortlist,
     shortlistHits: row.shortlistHits,
-    topPairs: row.topPairs,
     actualSignals: row.actualSignals,
   })) : rows,
 }, null, 2)}\n`)
