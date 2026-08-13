@@ -121,6 +121,8 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const calibratedWatch = game.recommendation.calibratedAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const graphFhrWatch = game.recommendation.graphFhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const graphAnytimeWatch = game.recommendation.graphAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const decisionAnchor = diagnosticCandidates[0] ?? null
+  const decisionCompanion = companionWatch.find(player => player.mlbId !== decisionAnchor?.mlbId) ?? null
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
   const home = game.players.filter(player => player.team === game.homeTeam).sort((a, b) => a.battingOrder - b.battingOrder)
 
@@ -145,6 +147,20 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
       {!game.validation.actualNoHr ? <p>All HRs: {game.validation.hrNames.join(', ')}</p> : null}
     </section> : null}
 
+    <section className={styles.decision}>
+      <header>
+        <div><span>PREGAME REDUCTION</span><h3>{decisionAnchor && decisionCompanion ? `${decisionAnchor.name} + ${decisionCompanion.name}` : decisionAnchor?.name ?? 'No coherent pair'}</h3></div>
+        <small>One board-level answer. The first player is the FHR anchor and the second is the anytime companion.</small>
+      </header>
+      <div className={styles.decisionPlayers}>
+        <SignalCard player={decisionAnchor} role="FHR anchor" score={decisionAnchor?.selectionScore ?? null} kind="diagnostic" />
+        <SignalCard player={decisionCompanion} role="Anytime companion" score={decisionCompanion?.selectionScore ?? null} kind="contradiction" />
+      </div>
+      <p>{game.recommendation.fhrRecipe}. {game.recommendation.companionRecipe}.</p>
+    </section>
+
+    <details className={styles.auditDetails}>
+      <summary>Open supporting diagnostics</summary>
     <section className={styles.recommendations}>
       <SignalCard player={diagnosticLeader} role={diagnosticLeader ? `${diagnosticLeader.candidateArchetype} diagnostic` : 'Relational diagnostic'} score={diagnosticLeader?.selectionScore ?? null} kind="diagnostic" />
       <SignalCard player={contradictionLeader} role="Contradiction leader" score={contradictionLeader?.contradictionScore ?? null} kind="contradiction" />
@@ -189,27 +205,9 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
       <div className={styles.pairList}>{contrarianWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="contrarian" />)}</div>
     </section> : null}
 
-    <div className={styles.contentGrid}>
-      <section className={styles.panel}>
-        <header><div><span>COMPANION DIAGNOSTIC</span><h3>{game.recommendation.companionRecipe}</h3></div><small>Market relationships for multi-HR research. No companion is published without walk-forward support.</small></header>
-        <div className={styles.pairList}>{companionWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
-        <div className={styles.pairEvidence}><span>Multi-HR read: <b>{game.recommendation.multiHrRead}</b></span><span>Published companion: <b>{game.recommendation.anytimeCompanionMlbId == null ? 'None qualified' : getPlayer(game.recommendation.anytimeCompanionMlbId)?.name}</b></span><span>Data state: <b>{game.recommendation.dataComplete ? 'Complete' : 'Partial'}</b></span></div>
-        <header><div><span>PAIR TERMINAL</span><h3>Lowest-exposure relational pairs</h3></div><small>Ranks anchor and companion combinations using calibrated player probability, derivative-market similarity, public exposure, RBI exposure, and team shape.</small></header>
-        <div className={styles.pairList}>{game.pairs.slice(0, 3).map((pair, index) => {
-          const anchor = getPlayer(pair.anchorMlbId)
-          const companion = getPlayer(pair.companionMlbId)
-          if (!anchor || !companion) return null
-          return <div className={styles.pairRow} key={`${pair.anchorMlbId}-${pair.companionMlbId}`}>
-            <b className={styles.pairRank}>{index + 1}</b>
-            <div className={styles.pairPlayers}>
-              <span><PlayerAvatar headshot={mlbHeadshot(anchor.mlbId)} teamLogo={getTeamLogoUrl(anchor.team)} teamAbbr={anchor.team} name={anchor.name} size={31} /><span><b>{anchor.name}</b><small>FHR anchor</small></span></span>
-              <span><PlayerAvatar headshot={mlbHeadshot(companion.mlbId)} teamLogo={getTeamLogoUrl(companion.team)} teamAbbr={companion.team} name={companion.name} size={31} /><span><b>{companion.name}</b><small>Anytime companion</small></span></span>
-            </div>
-            <div className={styles.pairScore}><strong>{pair.score.toFixed(1)}</strong><small>synergy {pair.synergy.toFixed(1)}</small></div>
-          </div>
-        })}</div>
-      </section>
+    </details>
 
+    <div className={styles.contentGrid}>
       <section className={styles.panel}>
         <header><div><span>FULL BOARD</span><h3>All 18 players</h3></div><small>Expand any player for every captured market, pick category, and MM window.</small></header>
         {[{ team: game.awayTeam, players: away }, { team: game.homeTeam, players: home }].map(group => <div className={styles.teamGroup} key={group.team}>
