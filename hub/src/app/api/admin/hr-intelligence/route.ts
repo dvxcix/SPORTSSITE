@@ -36,6 +36,22 @@ export async function GET(request: Request) {
     if (gamePk != null && result.games.length === 0) {
       return NextResponse.json({ error: 'That game was not found on the selected slate.' }, { status: 404 })
     }
+    const incompleteExposureGames = result.games.filter(game =>
+      game.diagnostics.picksCoveragePct < 80 || game.diagnostics.crossMarketPicksCoveragePct < 70,
+    )
+    if (!result.diagnostics.pikkitRowsPresent || incompleteExposureGames.length > 0) {
+      const affectedGames = incompleteExposureGames.map(game => game.gameKey).join(', ')
+      console.error('[hr-intelligence] required Pikkit exposure unavailable', {
+        date,
+        gamePk: gamePk ?? null,
+        affectedGames,
+      })
+      return NextResponse.json({
+        error: affectedGames
+          ? `Analysis stopped because public exposure is incomplete for ${affectedGames}. No ranking was produced.`
+          : 'Analysis stopped because public exposure is unavailable. No ranking was produced.',
+      }, { status: 503 })
+    }
     return NextResponse.json(result, {
       headers: {
         'Cache-Control': 'private, no-store, max-age=0',

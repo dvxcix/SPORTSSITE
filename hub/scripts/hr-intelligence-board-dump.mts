@@ -40,8 +40,11 @@ if (compact) {
     date,
     game: game.gameKey,
     noHr: game.noHr,
+    diagnostics: slate.diagnostics,
+    recommendation: game.recommendation,
     actual: game.validation ? { first: game.validation.firstHrName, homers: game.validation.hrNames } : null,
     players: players.map(player => ({
+      mlbId: player.mlbId,
       team: player.team,
       order: player.battingOrder,
       player: player.name,
@@ -66,6 +69,11 @@ if (compact) {
       mm: mean(Object.values(player.mm ?? {})),
       contact: player.contactAcceleration,
       reset: player.contextReset,
+      payoffIsolation: player.payoffIsolationScore,
+      payoffCompression: player.payoffCompressionScore,
+      diagnosticFhr: player.diagnosticFhrScore,
+      diagnosticAnytime: player.diagnosticAnytimeScore,
+      archetype: player.diagnosticArchetype,
     })),
   }, null, 2)}\n`)
   process.exit(0)

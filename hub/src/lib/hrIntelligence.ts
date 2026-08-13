@@ -1249,7 +1249,23 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     right.payoffIsolationScore - left.payoffIsolationScore ||
     left.battingOrder - right.battingOrder,
   )
-  let boardFhr = boardFhrRanked.find(player => player.fhr.current != null && player.hr.current != null && player.battingOrder <= 8) ?? boardFhrRanked[0] ?? null
+  const boardFhrEligible = boardFhrRanked.filter(player =>
+    player.fhr.current != null && player.hr.current != null && player.battingOrder <= 8,
+  )
+  // A payoff-compressed node is not merely another high diagnostic score. It
+  // is the board-specific shape where direct HR/RBI exposure is quiet while
+  // adjacent markets that one swing can settle carry the liability. The old
+  // reducer calculated that shape, labelled it correctly, and then discarded
+  // it in favor of tiny decimal score differences from the generic isolation
+  // lane. Prefer a genuinely gated compression node before the broad ranker.
+  const compressedBoardFhr = boardFhrEligible
+    .filter(player => player.diagnosticArchetype === 'payoff-compressed' && player.payoffCompressionScore >= 64)
+    .sort((left, right) =>
+      right.payoffCompressionScore - left.payoffCompressionScore ||
+      right.diagnosticFhrScore - left.diagnosticFhrScore ||
+      left.battingOrder - right.battingOrder,
+    )[0] ?? null
+  let boardFhr = compressedBoardFhr ?? boardFhrEligible[0] ?? boardFhrRanked[0] ?? null
   const boardCompanionRanked = boardFhr ? results
     .filter(player => player.mlbId !== boardFhr.mlbId)
     .map(player => {
@@ -1261,7 +1277,16 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       return { player, score }
     })
     .sort((left, right) => right.score - left.score) : []
-  let boardCompanion = boardCompanionRanked[0]?.player ?? null
+  let boardCompanion: HrIntelPlayerResult | null = boardCompanionRanked[0]?.player ?? null
+  // Do not manufacture a second name around a singular compressed jackpot
+  // node. A companion survives this board shape only when it independently
+  // carries the same strict payoff-compression signal. Generic isolation can
+  // describe a quiet longshot, but it is not evidence that two home runs are
+  // encoded in the board.
+  if (boardFhr?.diagnosticArchetype === 'payoff-compressed' &&
+      boardCompanion?.diagnosticArchetype !== 'payoff-compressed') {
+    boardCompanion = null
+  }
   // When the reduction lands on two same-team members of the exact same FHR
   // cluster, price cannot determine their roles. Give FHR orientation to the
   // earlier, stronger-contact hitter and preserve the quieter node as the

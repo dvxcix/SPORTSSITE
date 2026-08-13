@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type {
   HrIntelGameInput,
   HrIntelMetricWindow,
@@ -9,6 +11,11 @@ import { HR_INTELLIGENCE_CALIBRATION } from '../src/lib/hrIntelligenceCalibratio
 const hrIntelligenceModule = '../src/lib/hrIntelligence.ts'
 const { analyzeHrGame } = await import(hrIntelligenceModule)
 const { buildRealizedHrOutcomes } = await import('../src/lib/hrOutcomeValidation.ts')
+
+const exactBosTorInput = JSON.parse(readFileSync(
+  resolve(process.cwd(), 'scripts/fixtures/hr-intelligence/bos-tor-2026-08-13.json'),
+  'utf8',
+)) as HrIntelGameInput
 
 const neutralWindow: HrIntelMetricWindow = {
   bbe: 12, pa: 22, avg: 0.245, hr: 1, avgEv: 89, maxEv: 105,
@@ -329,17 +336,17 @@ assert.ok(!nymAtl.recommendation.companionShortlistMlbIds.includes(riley.mlbId),
 assert.deepEqual(nymAtl.recommendation.anytimeCandidateMlbIds, [], 'NYM-ATL must not publish a post-hoc candidate set')
 
 const durbin = player({
-  mlbId: 702332, name: 'Caleb Durbin', team: 'BOS', battingOrder: 4,
+  mlbId: 702332, name: 'Caleb Durbin', team: 'BOS', battingOrder: 6,
   fhr: { current: 1400, open: 1600 }, hr: { current: 800, open: 750 },
   fhrBaselineDeltaPct: -33, hrBaselineDeltaPct: -24.6, hrPicks: 8,
   markets: {
     ...neutralMarkets,
     hr2: { current: 12500, open: 10000 }, laser105: { current: 5000, open: 5000 },
-    moonshot: { current: 3300, open: 3300 }, pa1: { current: 6500, open: 6500 },
+    moonshot: { current: 3300, open: 3300 }, pa1: { current: null, open: null },
     hrMl: { current: 1000, open: 1000 }, hrr: { current: -260, open: 100 },
     rbi1: { current: 200, open: 210 }, rbi2: { current: 750, open: 700 },
-    rbi3: { current: 6500, open: 6000 }, doubles: { current: 4000, open: 3500 },
-    runs1: { current: 150, open: 125 }, sb1: { current: 400, open: 500 },
+    rbi3: { current: 6500, open: 6000 }, doubles: { current: 500, open: 470 },
+    runs1: { current: 150, open: 130 }, sb1: { current: 400, open: 500 },
   },
   picksByMarket: { home_runs: 8, hits: 8, runs: 0, stolen_bases: 2, singles: 8, doubles: 26, triples: 2, rbi: 1, hits_runs_rbi: 63, bases: 5 },
   mm: { l1: 2, l3: 2, l5: 2, l10: 3 },
@@ -373,6 +380,7 @@ const bosTor = analyzeHrGame({
 })
 const durbinResult = bosTor.players.find((candidate: { mlbId: number }) => candidate.mlbId === durbin.mlbId)!
 assert.equal(bosTor.recommendation.boardFhrMlbId, durbin.mlbId, 'The payoff-compressed BOS board must reduce to Durbin')
+assert.equal(bosTor.recommendation.boardCompanionMlbId, null, 'A singular payoff-compressed board must not invent a companion')
 assert.equal(durbinResult.diagnosticArchetype, 'payoff-compressed', 'Durbin must be identified as the compressed jackpot swing')
 assert.ok(durbinResult.payoffCompressionScore >= 64, 'Durbin must clear the payoff-compression gate')
 const [durbinOutcome] = buildRealizedHrOutcomes(bosTor, [{
@@ -405,6 +413,20 @@ assert.ok(durbinOutcome.cashedMarkets.includes('3+ RBI'), 'Four RBI must settle 
 assert.ok(durbinOutcome.cashedMarkets.includes('2+ Hits'), 'Two hits must settle the 2+ hits ladder')
 assert.ok(durbinOutcome.missedMarkets.includes('2+ HR'), 'One home run must leave 2+ HR missed')
 
+// This is the frozen, outcome-blind BOS@TOR board captured before scoring.
+// It protects the full 18-player reduction instead of merely testing a
+// hand-shaped player in isolation.
+const exactBosTor = analyzeHrGame(exactBosTorInput)
+const exactDurbin = exactBosTor.players.find((candidate: { name: string }) => candidate.name === 'Caleb Durbin')!
+assert.equal(exactBosTor.players.length, 18, 'The exact BOS@TOR fixture must retain all 18 hitters')
+assert.equal(exactDurbin.diagnosticArchetype, 'payoff-compressed', 'The exact board must classify Durbin as payoff-compressed')
+assert.equal(exactBosTor.recommendation.boardFhrMlbId, exactDurbin.mlbId, 'The exact pregame board must reduce to Durbin')
+assert.equal(exactBosTor.recommendation.boardCompanionMlbId, null, 'The exact pregame board must not manufacture a companion')
+assert.equal(exactDurbin.hrPicks, 8, 'The exact board must retain Durbin\'s quiet HR exposure')
+assert.equal(exactDurbin.picksByMarket.rbi, 1, 'The exact board must retain Durbin\'s quiet RBI exposure')
+assert.equal(exactDurbin.picksByMarket.hits_runs_rbi, 63, 'The exact board must retain Durbin\'s concentrated H+R+RBI exposure')
+assert.equal(exactDurbin.picksByMarket.doubles, 26, 'The exact board must retain Durbin\'s adjacent doubles exposure')
+
 console.log(JSON.stringify({
   pairCount: result.diagnostics.pairCount,
   diagnosticLeader: result.players.find((candidate: { mlbId: number; name: string }) => candidate.mlbId === result.recommendation.diagnosticLeaderMlbId)?.name,
@@ -419,5 +441,7 @@ console.log(JSON.stringify({
   nymAtl: nymAtl.recommendation.fhrShortlistMlbIds,
   balMinBoardPair: [balMin.recommendation.boardFhrMlbId, balMin.recommendation.boardCompanionMlbId],
   bosTorBoardFhr: bosTor.recommendation.boardFhrMlbId,
+  exactBosTorBoardFhr: exactBosTor.recommendation.boardFhrMlbId,
+  exactBosTorCompanion: exactBosTor.recommendation.boardCompanionMlbId,
   durbinCompression: durbinResult.payoffCompressionScore,
 }, null, 2))

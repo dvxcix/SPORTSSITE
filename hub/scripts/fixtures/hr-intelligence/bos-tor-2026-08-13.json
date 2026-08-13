@@ -1,0 +1,5830 @@
+{
+  "date": "2026-08-13",
+  "gamePk": 822776,
+  "gameKey": "BOS@TOR",
+  "awayTeam": "BOS",
+  "homeTeam": "TOR",
+  "awayLineupConfirmed": true,
+  "homeLineupConfirmed": true,
+  "noHr": {
+    "current": 600,
+    "open": 600
+  },
+  "players": [
+    {
+      "mlbId": 657136,
+      "name": "Connor Wong",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 9,
+      "position": "C",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 1700,
+        "open": 1700
+      },
+      "hr": {
+        "current": 750,
+        "open": 680
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1700,
+            "open": 1700
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 2200,
+            "open": 2500
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 750,
+            "open": 680
+          },
+          "caesars": {
+            "current": 750,
+            "open": 750
+          },
+          "betmgm": {
+            "current": 675,
+            "open": 700
+          },
+          "betrivers": {
+            "current": 700,
+            "open": 750
+          },
+          "fanatics": {
+            "current": 750,
+            "open": 700
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 12500,
+          "open": 10000
+        },
+        "laser105": {
+          "current": 1700,
+          "open": 1700
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": null,
+          "open": null
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 900,
+          "open": 950
+        },
+        "hrr": {
+          "current": -200,
+          "open": 110
+        },
+        "rbi1": {
+          "current": 230,
+          "open": 200
+        },
+        "rbi2": {
+          "current": 800,
+          "open": 700
+        },
+        "rbi3": {
+          "current": 8000,
+          "open": 5500
+        },
+        "tb2": {
+          "current": 190,
+          "open": 165
+        },
+        "tb3": {
+          "current": 410,
+          "open": 350
+        },
+        "tb4": {
+          "current": 600,
+          "open": 550
+        },
+        "tb5": {
+          "current": 1500,
+          "open": 1200
+        },
+        "singles": {
+          "current": 115,
+          "open": -105
+        },
+        "doubles": {
+          "current": 550,
+          "open": 490
+        },
+        "triples": {
+          "current": 8000,
+          "open": 7500
+        },
+        "hits1": {
+          "current": -150,
+          "open": -175
+        },
+        "hits2": {
+          "current": 420,
+          "open": 320
+        },
+        "runs1": {
+          "current": 170,
+          "open": 155
+        },
+        "runs2": {
+          "current": 1400,
+          "open": 1100
+        },
+        "sb1": {
+          "current": 880,
+          "open": 800
+        },
+        "sb2": {
+          "current": 8000,
+          "open": 10000
+        }
+      },
+      "fhrBaselineDeltaPct": -1.9562536104042034,
+      "hrBaselineDeltaPct": -13.028509598832724,
+      "hrPicks": 4,
+      "picksByMarket": {
+        "home_runs": 4,
+        "hits": 3,
+        "runs": 0,
+        "stolen_bases": 0,
+        "singles": 0,
+        "doubles": 0,
+        "triples": 0,
+        "rbi": 2,
+        "hits_runs_rbi": 2,
+        "bases": 6
+      },
+      "windows": {
+        "season": {
+          "bbe": 77,
+          "pa": 129,
+          "avg": 0.24545454545454545,
+          "hr": 1,
+          "avgEv": 85.57402597402597,
+          "maxEv": 108.3,
+          "hardHitPct": 38.961038961038966,
+          "barrelPct": 1.2987012987012987,
+          "sweetSpotPct": 28.57142857142857,
+          "avgBatSpeed": 70.38634361233483,
+          "hardSwingRate": 0.2857142857142857,
+          "squaredUpPct": 0.2653061224489796,
+          "blastPct": 0.1360544217687075,
+          "avgSwingLength": 7.1706521739130435,
+          "avgAttackAngle": 11.330284119587558,
+          "idealAttackAngleRate": null,
+          "avgTilt": 31.81006829258241,
+          "avgLa": 8.896103896103897,
+          "fbRate": 0.2236842105263158,
+          "onTimePct": 0.5752688172043011,
+          "missDistance": 4.567643256423077,
+          "pullAirRate": 0.18421052631578946
+        },
+        "l10": {
+          "bbe": 19,
+          "pa": 34,
+          "avg": 0.15625,
+          "hr": 1,
+          "avgEv": 86.80526315789474,
+          "maxEv": 105.9,
+          "hardHitPct": 42.10526315789473,
+          "barrelPct": 5.263157894736842,
+          "sweetSpotPct": 36.84210526315789,
+          "avgBatSpeed": 69.45735294117647,
+          "hardSwingRate": 0.42105263157894735,
+          "squaredUpPct": 0.27586206896551724,
+          "blastPct": 0.13793103448275862,
+          "avgSwingLength": 7.119117647058823,
+          "avgAttackAngle": 10.022945653951279,
+          "idealAttackAngleRate": null,
+          "avgTilt": 32.58986294345449,
+          "avgLa": 13.263157894736842,
+          "fbRate": 0.3333333333333333,
+          "onTimePct": 0.5333333333333333,
+          "missDistance": 3.808712445818182,
+          "pullAirRate": 0.26666666666666666
+        },
+        "l5": {
+          "bbe": 12,
+          "pa": 18,
+          "avg": 0.17647058823529413,
+          "hr": 1,
+          "avgEv": 87.76666666666667,
+          "maxEv": 105.9,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 8.333333333333332,
+          "sweetSpotPct": 41.66666666666667,
+          "avgBatSpeed": 70.690625,
+          "hardSwingRate": 0.3333333333333333,
+          "squaredUpPct": 0.3181818181818182,
+          "blastPct": 0.13636363636363635,
+          "avgSwingLength": 7.11875,
+          "avgAttackAngle": 9.421860678930255,
+          "idealAttackAngleRate": null,
+          "avgTilt": 31.246599852857592,
+          "avgLa": 14.916666666666666,
+          "fbRate": 0.3076923076923077,
+          "onTimePct": 0.5151515151515151,
+          "missDistance": 3.738341997,
+          "pullAirRate": 0.3076923076923077
+        },
+        "l3": {
+          "bbe": 5,
+          "pa": 11,
+          "avg": 0.3,
+          "hr": 1,
+          "avgEv": 99.32000000000001,
+          "maxEv": 105.9,
+          "hardHitPct": 60,
+          "barrelPct": 20,
+          "sweetSpotPct": 60,
+          "avgBatSpeed": 73.85555555555555,
+          "hardSwingRate": 0.34615384615384615,
+          "squaredUpPct": 0.3684210526315789,
+          "blastPct": 0.15789473684210525,
+          "avgSwingLength": 7.78888888888889,
+          "avgAttackAngle": 18.356213714299383,
+          "idealAttackAngleRate": null,
+          "avgTilt": 30.16603381204561,
+          "avgLa": 12.4,
+          "fbRate": 0.2727272727272727,
+          "onTimePct": 0.5925925925925926,
+          "missDistance": 4.649830832,
+          "pullAirRate": 0.2727272727272727
+        },
+        "l1": {
+          "bbe": 1,
+          "pa": 3,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 101.5,
+          "maxEv": 101.5,
+          "hardHitPct": 100,
+          "barrelPct": 0,
+          "sweetSpotPct": 100,
+          "avgBatSpeed": 75.74,
+          "hardSwingRate": 0.36,
+          "squaredUpPct": 0.3684210526315789,
+          "blastPct": 0.15789473684210525,
+          "avgSwingLength": 7.8199999999999985,
+          "avgAttackAngle": 16.66616969801642,
+          "idealAttackAngleRate": null,
+          "avgTilt": 34.3684995310989,
+          "avgLa": 14,
+          "fbRate": 0.2727272727272727,
+          "onTimePct": 0.6153846153846154,
+          "missDistance": 2.846065668,
+          "pullAirRate": 0.2727272727272727
+        }
+      },
+      "mm": {
+        "l1": 8,
+        "l3": 8,
+        "l5": 6,
+        "l10": 6
+      },
+      "paperRank": {
+        "l1": 3,
+        "l3": 3,
+        "l5": 5,
+        "l10": 5
+      },
+      "bookRank": {
+        "l1": 11,
+        "l3": 11,
+        "l5": 11,
+        "l10": 11
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.4722222222222222,
+        "paToHr": null,
+        "hrToRbi": 0.38823529411764707,
+        "hrToRbi2": 1.0588235294117647,
+        "hrToRbi3": 9.529411764705882,
+        "hrToHrr": 0.17647058823529413,
+        "hrToTb2": 0.34117647058823525,
+        "hrToTb3": 0.6,
+        "hrToTb4": 0.823529411764706,
+        "hrToTb5": 1.8823529411764706,
+        "hrToTwoHr": 14.823529411764707,
+        "hrToMoneyline": 1.176470588235294,
+        "mgmToFanduel": 1.096774193548387
+      }
+    },
+    {
+      "mlbId": 678218,
+      "name": "Brandon Valenzuela",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 7,
+      "position": "C",
+      "bats": "S",
+      "projected": false,
+      "fhr": {
+        "current": 1600,
+        "open": 1700
+      },
+      "hr": {
+        "current": 750,
+        "open": 630
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1600,
+            "open": 1700
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1700,
+            "open": 1700
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 750,
+            "open": 630
+          },
+          "caesars": {
+            "current": 625,
+            "open": 700
+          },
+          "betmgm": {
+            "current": 575,
+            "open": 600
+          },
+          "betrivers": {
+            "current": 750,
+            "open": 750
+          },
+          "fanatics": {
+            "current": 700,
+            "open": 700
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 12500,
+          "open": 10000
+        },
+        "laser105": {
+          "current": 2500,
+          "open": 2500
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 2700,
+          "open": 2700
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1200,
+          "open": 1200
+        },
+        "hrr": {
+          "current": -160,
+          "open": 140
+        },
+        "rbi1": {
+          "current": 270,
+          "open": 240
+        },
+        "rbi2": {
+          "current": 1000,
+          "open": 800
+        },
+        "rbi3": {
+          "current": 10000,
+          "open": 10000
+        },
+        "tb2": {
+          "current": 210,
+          "open": 190
+        },
+        "tb3": {
+          "current": 470,
+          "open": 400
+        },
+        "tb4": {
+          "current": 650,
+          "open": 550
+        },
+        "tb5": {
+          "current": 1600,
+          "open": 1300
+        },
+        "singles": {
+          "current": 155,
+          "open": 145
+        },
+        "doubles": {
+          "current": 500,
+          "open": 500
+        },
+        "triples": {
+          "current": 12500,
+          "open": 10000
+        },
+        "hits1": {
+          "current": -125,
+          "open": -135
+        },
+        "hits2": {
+          "current": 550,
+          "open": 470
+        },
+        "runs1": {
+          "current": 200,
+          "open": 185
+        },
+        "runs2": {
+          "current": 1600,
+          "open": 1500
+        },
+        "sb1": {
+          "current": 2200,
+          "open": 2200
+        },
+        "sb2": {
+          "current": null,
+          "open": null
+        }
+      },
+      "fhrBaselineDeltaPct": 1.4349451344507438,
+      "hrBaselineDeltaPct": -8.635881946897491,
+      "hrPicks": 8,
+      "picksByMarket": {
+        "home_runs": 8,
+        "hits": 7,
+        "runs": 1,
+        "stolen_bases": 1,
+        "singles": 1,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 1,
+        "hits_runs_rbi": 7,
+        "bases": 5
+      },
+      "windows": {
+        "season": {
+          "bbe": 36,
+          "pa": 60,
+          "avg": 0.19607843137254902,
+          "hr": 2,
+          "avgEv": 89.29444444444442,
+          "maxEv": 107.5,
+          "hardHitPct": 47.22222222222222,
+          "barrelPct": 0,
+          "sweetSpotPct": 41.66666666666667,
+          "avgBatSpeed": 71.66766917293234,
+          "hardSwingRate": 0.2892561983471074,
+          "squaredUpPct": 0.25274725274725274,
+          "blastPct": 0.13186813186813187,
+          "avgSwingLength": 7.555555555555558,
+          "avgAttackAngle": 5.38474390296009,
+          "idealAttackAngleRate": null,
+          "avgTilt": 30.151170435736894,
+          "avgLa": 15.305555555555555,
+          "fbRate": 0.2222222222222222,
+          "onTimePct": 0.6021505376344086,
+          "missDistance": 3.2118113401818182,
+          "pullAirRate": 0.19444444444444445
+        },
+        "l10": {
+          "bbe": 9,
+          "pa": 14,
+          "avg": 0.07692307692307693,
+          "hr": 0,
+          "avgEv": 79.93333333333334,
+          "maxEv": 102.2,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 11.11111111111111,
+          "avgBatSpeed": 71.78181818181815,
+          "hardSwingRate": 0.07142857142857142,
+          "squaredUpPct": 0.1111111111111111,
+          "blastPct": 0,
+          "avgSwingLength": 7.555555555555558,
+          "avgAttackAngle": 5.38474390296009,
+          "idealAttackAngleRate": null,
+          "avgTilt": 30.151170435736894,
+          "avgLa": 12.333333333333334,
+          "fbRate": 0,
+          "onTimePct": 0.4666666666666667,
+          "missDistance": 2.167831272,
+          "pullAirRate": 0.25
+        },
+        "l5": {
+          "bbe": 4,
+          "pa": 6,
+          "avg": 0.2,
+          "hr": 0,
+          "avgEv": 85.92500000000001,
+          "maxEv": 102.2,
+          "hardHitPct": 50,
+          "barrelPct": 0,
+          "sweetSpotPct": 25,
+          "avgBatSpeed": 70.99333333333334,
+          "hardSwingRate": 0.07692307692307693,
+          "squaredUpPct": 0.125,
+          "blastPct": 0,
+          "avgSwingLength": 7.653333333333333,
+          "avgAttackAngle": 4.454245607308881,
+          "idealAttackAngleRate": null,
+          "avgTilt": 32.8394131912741,
+          "avgLa": 25,
+          "fbRate": 0,
+          "onTimePct": 0.4,
+          "missDistance": 2.167831272,
+          "pullAirRate": 0.3333333333333333
+        },
+        "l3": {
+          "bbe": 2,
+          "pa": 3,
+          "avg": 0.5,
+          "hr": 0,
+          "avgEv": 85.80000000000001,
+          "maxEv": 102.2,
+          "hardHitPct": 50,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 73.35999999999999,
+          "hardSwingRate": 0.09090909090909091,
+          "squaredUpPct": 0.125,
+          "blastPct": 0,
+          "avgSwingLength": 8,
+          "avgAttackAngle": 11.47230874869858,
+          "idealAttackAngleRate": null,
+          "avgTilt": 30.019993376174614,
+          "avgLa": 6,
+          "fbRate": 0,
+          "onTimePct": 0.38461538461538464,
+          "missDistance": 1.0758394039999999,
+          "pullAirRate": 0.3333333333333333
+        },
+        "l1": {
+          "bbe": 1,
+          "pa": 1,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 102.2,
+          "maxEv": 102.2,
+          "hardHitPct": 100,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": null,
+          "hardSwingRate": 0.1,
+          "squaredUpPct": 0,
+          "blastPct": 0,
+          "avgSwingLength": null,
+          "avgAttackAngle": null,
+          "idealAttackAngleRate": null,
+          "avgTilt": null,
+          "avgLa": -8,
+          "fbRate": 0,
+          "onTimePct": 0.3333333333333333,
+          "missDistance": 1.0758394039999999,
+          "pullAirRate": 0.3333333333333333
+        }
+      },
+      "mm": {
+        "l1": 2,
+        "l3": 4,
+        "l5": 4,
+        "l10": 4
+      },
+      "paperRank": {
+        "l1": 11,
+        "l3": 9,
+        "l5": 9,
+        "l10": 9
+      },
+      "bookRank": {
+        "l1": 13,
+        "l3": 13,
+        "l5": 13,
+        "l10": 13
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": true,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5,
+        "paToHr": null,
+        "hrToRbi": 0.4352941176470588,
+        "hrToRbi2": 1.2941176470588234,
+        "hrToRbi3": 11.882352941176471,
+        "hrToHrr": 0.19117647058823528,
+        "hrToTb2": 0.36470588235294116,
+        "hrToTb3": 0.6705882352941177,
+        "hrToTb4": 0.8823529411764706,
+        "hrToTb5": 2,
+        "hrToTwoHr": 14.823529411764707,
+        "hrToMoneyline": 1.5294117647058822,
+        "mgmToFanduel": 1.2592592592592593
+      }
+    },
+    {
+      "mlbId": 686765,
+      "name": "Nick Sogard",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 1,
+      "position": "2B",
+      "bats": "S",
+      "projected": false,
+      "fhr": {
+        "current": 1300,
+        "open": 1400
+      },
+      "hr": {
+        "current": 870,
+        "open": 900
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1300,
+            "open": 1400
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1700,
+            "open": 2800
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 870,
+            "open": 900
+          },
+          "caesars": {
+            "current": 750,
+            "open": 950
+          },
+          "betmgm": {
+            "current": 775,
+            "open": 1000
+          },
+          "betrivers": {
+            "current": 700,
+            "open": 750
+          },
+          "fanatics": {
+            "current": 800,
+            "open": 800
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 15000,
+          "open": 20000
+        },
+        "laser105": {
+          "current": 5000,
+          "open": 5000
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": null,
+          "open": null
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1100,
+          "open": 1400
+        },
+        "hrr": {
+          "current": -300,
+          "open": 130
+        },
+        "rbi1": {
+          "current": 250,
+          "open": 260
+        },
+        "rbi2": {
+          "current": 1000,
+          "open": 950
+        },
+        "rbi3": {
+          "current": 10000,
+          "open": 10000
+        },
+        "tb2": {
+          "current": 135,
+          "open": 200
+        },
+        "tb3": {
+          "current": 340,
+          "open": 490
+        },
+        "tb4": {
+          "current": 600,
+          "open": 800
+        },
+        "tb5": {
+          "current": 1200,
+          "open": 2000
+        },
+        "singles": {
+          "current": -125,
+          "open": 120
+        },
+        "doubles": {
+          "current": 380,
+          "open": 500
+        },
+        "triples": {
+          "current": 4000,
+          "open": 4500
+        },
+        "hits1": {
+          "current": -210,
+          "open": -140
+        },
+        "hits2": {
+          "current": 260,
+          "open": 460
+        },
+        "runs1": {
+          "current": 115,
+          "open": 150
+        },
+        "runs2": {
+          "current": 800,
+          "open": 1200
+        },
+        "sb1": {
+          "current": 550,
+          "open": 850
+        },
+        "sb2": {
+          "current": 6000,
+          "open": 10000
+        }
+      },
+      "fhrBaselineDeltaPct": -33.992300489022995,
+      "hrBaselineDeltaPct": -23.84602301717785,
+      "hrPicks": 7,
+      "picksByMarket": {
+        "home_runs": 7,
+        "hits": 32,
+        "runs": 19,
+        "stolen_bases": 0,
+        "singles": 4,
+        "doubles": 0,
+        "triples": 0,
+        "rbi": 1,
+        "hits_runs_rbi": 17,
+        "bases": 7
+      },
+      "windows": {
+        "season": {
+          "bbe": 49,
+          "pa": 74,
+          "avg": 0.2711864406779661,
+          "hr": 0,
+          "avgEv": 79.2714285714286,
+          "maxEv": 104.9,
+          "hardHitPct": 24.489795918367346,
+          "barrelPct": 2.0408163265306123,
+          "sweetSpotPct": 34.69387755102041,
+          "avgBatSpeed": 64.4625,
+          "hardSwingRate": 0.04210526315789474,
+          "squaredUpPct": 0.32894736842105265,
+          "blastPct": 0.07894736842105263,
+          "avgSwingLength": 6.7465753424657535,
+          "avgAttackAngle": 8.99942406366753,
+          "idealAttackAngleRate": null,
+          "avgTilt": 33.60400307550775,
+          "avgLa": 8.061224489795919,
+          "fbRate": 0.1836734693877551,
+          "onTimePct": 0.7678571428571429,
+          "missDistance": null,
+          "pullAirRate": 0.22448979591836735
+        },
+        "l10": {
+          "bbe": 25,
+          "pa": 40,
+          "avg": 0.23333333333333334,
+          "hr": 0,
+          "avgEv": 81.008,
+          "maxEv": 104.9,
+          "hardHitPct": 28.000000000000004,
+          "barrelPct": 4,
+          "sweetSpotPct": 28.000000000000004,
+          "avgBatSpeed": 66.29375,
+          "hardSwingRate": 0.06060606060606061,
+          "squaredUpPct": 0.3333333333333333,
+          "blastPct": 0.07407407407407407,
+          "avgSwingLength": 6.7578125,
+          "avgAttackAngle": 9.383916360531432,
+          "idealAttackAngleRate": null,
+          "avgTilt": 33.70174922991243,
+          "avgLa": 7.28,
+          "fbRate": 0.2413793103448276,
+          "onTimePct": 0.7605633802816901,
+          "missDistance": 1.081791067076923,
+          "pullAirRate": 0.17241379310344832
+        },
+        "l5": {
+          "bbe": 12,
+          "pa": 19,
+          "avg": 0.26666666666666666,
+          "hr": 0,
+          "avgEv": 85.11666666666666,
+          "maxEv": 104.9,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 8.333333333333332,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 66.25666666666666,
+          "hardSwingRate": 0.047619047619047616,
+          "squaredUpPct": 0.42424242424242425,
+          "blastPct": 0.09090909090909091,
+          "avgSwingLength": 6.739999999999999,
+          "avgAttackAngle": 11.247902729025961,
+          "idealAttackAngleRate": null,
+          "avgTilt": 32.46813459018721,
+          "avgLa": 7.333333333333333,
+          "fbRate": 0.19047619047619047,
+          "onTimePct": 0.6956521739130435,
+          "missDistance": 1.1562519678,
+          "pullAirRate": 0.23809523809523808
+        },
+        "l3": {
+          "bbe": 9,
+          "pa": 13,
+          "avg": 0.2,
+          "hr": 0,
+          "avgEv": 87.77777777777777,
+          "maxEv": 104.9,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 22.22222222222222,
+          "avgBatSpeed": 67.30625,
+          "hardSwingRate": 0.03571428571428571,
+          "squaredUpPct": 0.5238095238095238,
+          "blastPct": 0.14285714285714285,
+          "avgSwingLength": 6.675,
+          "avgAttackAngle": 12.743193091076057,
+          "idealAttackAngleRate": null,
+          "avgTilt": 31.716575927897495,
+          "avgLa": 10.555555555555555,
+          "fbRate": 0.21428571428571427,
+          "onTimePct": 0.7931034482758621,
+          "missDistance": 1.4583392211428572,
+          "pullAirRate": 0.21428571428571427
+        },
+        "l1": {
+          "bbe": 2,
+          "pa": 5,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 95.6,
+          "maxEv": 103.2,
+          "hardHitPct": 50,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 70.6,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.38461538461538464,
+          "blastPct": 0.07692307692307693,
+          "avgSwingLength": 6.859999999999999,
+          "avgAttackAngle": 10.399132988446109,
+          "idealAttackAngleRate": null,
+          "avgTilt": 32.639275492718966,
+          "avgLa": -6,
+          "fbRate": 0.25,
+          "onTimePct": 0.7142857142857143,
+          "missDistance": 1.4583392211428572,
+          "pullAirRate": 0.125
+        }
+      },
+      "mm": {
+        "l1": 6,
+        "l3": 5,
+        "l5": 4,
+        "l10": 3
+      },
+      "paperRank": {
+        "l1": 9,
+        "l3": 10,
+        "l5": 11,
+        "l10": 12
+      },
+      "bookRank": {
+        "l1": 15,
+        "l3": 15,
+        "l5": 15,
+        "l10": 15
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6928571428571428,
+        "paToHr": null,
+        "hrToRbi": 0.36082474226804123,
+        "hrToRbi2": 1.134020618556701,
+        "hrToRbi3": 10.412371134020617,
+        "hrToHrr": 0.1374570446735395,
+        "hrToTb2": 0.24226804123711337,
+        "hrToTb3": 0.4536082474226804,
+        "hrToTb4": 0.7216494845360825,
+        "hrToTb5": 1.3402061855670102,
+        "hrToTwoHr": 15.56701030927835,
+        "hrToMoneyline": 1.2371134020618557,
+        "mgmToFanduel": 1.1085714285714285
+      }
+    },
+    {
+      "mlbId": 664702,
+      "name": "Myles Straw",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 8,
+      "position": "CF",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 2500,
+        "open": 2500
+      },
+      "hr": {
+        "current": 1060,
+        "open": 1100
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 2500,
+            "open": 2500
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 3000,
+            "open": 3000
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 1060,
+            "open": 1100
+          },
+          "caesars": {
+            "current": 1100,
+            "open": 1100
+          },
+          "betmgm": {
+            "current": 1600,
+            "open": 1650
+          },
+          "betrivers": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 900,
+            "open": 800
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 22500,
+          "open": 35000
+        },
+        "laser105": {
+          "current": 7000,
+          "open": 6500
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 4500,
+          "open": 4500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1700,
+          "open": 1900
+        },
+        "hrr": {
+          "current": -210,
+          "open": 145
+        },
+        "rbi1": {
+          "current": 260,
+          "open": 300
+        },
+        "rbi2": {
+          "current": 1000,
+          "open": 1200
+        },
+        "rbi3": {
+          "current": 10000,
+          "open": 3300
+        },
+        "tb2": {
+          "current": 185,
+          "open": 190
+        },
+        "tb3": {
+          "current": 450,
+          "open": 490
+        },
+        "tb4": {
+          "current": 800,
+          "open": 850
+        },
+        "tb5": {
+          "current": 2000,
+          "open": 2000
+        },
+        "singles": {
+          "current": 105,
+          "open": 110
+        },
+        "doubles": {
+          "current": 480,
+          "open": 470
+        },
+        "triples": {
+          "current": 3500,
+          "open": 3000
+        },
+        "hits1": {
+          "current": -160,
+          "open": -155
+        },
+        "hits2": {
+          "current": 390,
+          "open": 410
+        },
+        "runs1": {
+          "current": 200,
+          "open": 200
+        },
+        "runs2": {
+          "current": 1600,
+          "open": 1800
+        },
+        "sb1": {
+          "current": 640,
+          "open": 640
+        },
+        "sb2": {
+          "current": 8000,
+          "open": 8000
+        }
+      },
+      "fhrBaselineDeltaPct": 0.52262871121984,
+      "hrBaselineDeltaPct": -9.89312129599224,
+      "hrPicks": 16,
+      "picksByMarket": {
+        "home_runs": 16,
+        "hits": 59,
+        "runs": 1,
+        "stolen_bases": 1,
+        "singles": 1,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 2,
+        "hits_runs_rbi": 6,
+        "bases": 48
+      },
+      "windows": {
+        "season": {
+          "bbe": 96,
+          "pa": 129,
+          "avg": 0.1896551724137931,
+          "hr": 2,
+          "avgEv": 83.98020833333331,
+          "maxEv": 107.2,
+          "hardHitPct": 28.125,
+          "barrelPct": 2.083333333333333,
+          "sweetSpotPct": 36.45833333333333,
+          "avgBatSpeed": 66.114,
+          "hardSwingRate": 0.05405405405405406,
+          "squaredUpPct": 0.3333333333333333,
+          "blastPct": 0.08333333333333333,
+          "avgSwingLength": 6.926229508196721,
+          "avgAttackAngle": 5.897714229400003,
+          "idealAttackAngleRate": null,
+          "avgTilt": 34.629246892732155,
+          "avgLa": 14.25,
+          "fbRate": 0.3333333333333333,
+          "onTimePct": 0.7607361963190185,
+          "missDistance": 1.5126479187777777,
+          "pullAirRate": 0.1458333333333333
+        },
+        "l10": {
+          "bbe": 19,
+          "pa": 22,
+          "avg": 0.18181818181818182,
+          "hr": 0,
+          "avgEv": 78.46315789473687,
+          "maxEv": 96.9,
+          "hardHitPct": 5.263157894736842,
+          "barrelPct": 0,
+          "sweetSpotPct": 42.10526315789473,
+          "avgBatSpeed": 65.46410256410257,
+          "hardSwingRate": 0.11428571428571428,
+          "squaredUpPct": 0.20689655172413793,
+          "blastPct": 0,
+          "avgSwingLength": 6.861538461538462,
+          "avgAttackAngle": 5.512924361348984,
+          "idealAttackAngleRate": null,
+          "avgTilt": 35.984793002162554,
+          "avgLa": 7.7894736842105265,
+          "fbRate": 0.29411764705882354,
+          "onTimePct": 0.75,
+          "missDistance": 3.2965244445,
+          "pullAirRate": 0
+        },
+        "l5": {
+          "bbe": 9,
+          "pa": 12,
+          "avg": 0.16666666666666666,
+          "hr": 0,
+          "avgEv": 70.68888888888888,
+          "maxEv": 91.9,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 44.44444444444444,
+          "avgBatSpeed": 63.73181818181819,
+          "hardSwingRate": 0.11538461538461539,
+          "squaredUpPct": 0.2,
+          "blastPct": 0,
+          "avgSwingLength": 6.8909090909090915,
+          "avgAttackAngle": 7.733301844396178,
+          "idealAttackAngleRate": null,
+          "avgTilt": 37.05418216850859,
+          "avgLa": 1.8888888888888888,
+          "fbRate": 0.25,
+          "onTimePct": 0.7241379310344828,
+          "missDistance": 3.2975201715000004,
+          "pullAirRate": 0
+        },
+        "l3": {
+          "bbe": 6,
+          "pa": 8,
+          "avg": 0.25,
+          "hr": 0,
+          "avgEv": 74.28333333333333,
+          "maxEv": 91.9,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 58.94166666666666,
+          "hardSwingRate": 0.1111111111111111,
+          "squaredUpPct": 0.25,
+          "blastPct": 0,
+          "avgSwingLength": 6.641666666666667,
+          "avgAttackAngle": 4.134856589429728,
+          "idealAttackAngleRate": null,
+          "avgTilt": 39.23696725580702,
+          "avgLa": 5.166666666666667,
+          "fbRate": 0.125,
+          "onTimePct": 0.7,
+          "missDistance": 3.2975201715000004,
+          "pullAirRate": 0
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 3,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 87.43333333333334,
+          "maxEv": 91.9,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 69.43333333333334,
+          "hardSwingRate": 0.11764705882352941,
+          "squaredUpPct": 0.2727272727272727,
+          "blastPct": 0,
+          "avgSwingLength": 7.066666666666667,
+          "avgAttackAngle": 2.0762856646922536,
+          "idealAttackAngleRate": null,
+          "avgTilt": 34.44891762198527,
+          "avgLa": -5,
+          "fbRate": 0.14285714285714285,
+          "onTimePct": 0.7368421052631579,
+          "missDistance": 3.2975201715000004,
+          "pullAirRate": 0
+        }
+      },
+      "mm": {
+        "l1": 4,
+        "l3": 1,
+        "l5": 2,
+        "l10": 2
+      },
+      "paperRank": {
+        "l1": 13,
+        "l3": 16,
+        "l5": 15,
+        "l10": 15
+      },
+      "bookRank": {
+        "l1": 17,
+        "l3": 17,
+        "l5": 17,
+        "l10": 17
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.4461538461538461,
+        "paToHr": null,
+        "hrToRbi": 0.3103448275862069,
+        "hrToRbi2": 0.9482758620689655,
+        "hrToRbi3": 8.706896551724139,
+        "hrToHrr": 0.1272577996715928,
+        "hrToTb2": 0.2456896551724138,
+        "hrToTb3": 0.47413793103448276,
+        "hrToTb4": 0.7758620689655173,
+        "hrToTb5": 1.810344827586207,
+        "hrToTwoHr": 19.48275862068966,
+        "hrToMoneyline": 1.5517241379310347,
+        "mgmToFanduel": 0.6823529411764705
+      }
+    },
+    {
+      "mlbId": 807727,
+      "name": "Charles McAdoo",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 1,
+      "position": "LF",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 1200,
+        "open": 1200
+      },
+      "hr": {
+        "current": 700,
+        "open": 630
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1200,
+            "open": 1200
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 950,
+            "open": 950
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 700,
+            "open": 630
+          },
+          "caesars": {
+            "current": 425,
+            "open": 450
+          },
+          "betmgm": {
+            "current": 360,
+            "open": 380
+          },
+          "betrivers": {
+            "current": 600,
+            "open": 600
+          },
+          "fanatics": {
+            "current": 600,
+            "open": 525
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 10000,
+          "open": 10000
+        },
+        "laser105": {
+          "current": 2200,
+          "open": 2500
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 3500,
+          "open": 3500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1100,
+          "open": 1200
+        },
+        "hrr": {
+          "current": -210,
+          "open": 145
+        },
+        "rbi1": {
+          "current": 260,
+          "open": 250
+        },
+        "rbi2": {
+          "current": 1000,
+          "open": 800
+        },
+        "rbi3": {
+          "current": 8000,
+          "open": 8000
+        },
+        "tb2": {
+          "current": 170,
+          "open": 190
+        },
+        "tb3": {
+          "current": 370,
+          "open": 400
+        },
+        "tb4": {
+          "current": 550,
+          "open": 550
+        },
+        "tb5": {
+          "current": 1200,
+          "open": 1300
+        },
+        "singles": {
+          "current": 120,
+          "open": 135
+        },
+        "doubles": {
+          "current": 470,
+          "open": 550
+        },
+        "triples": {
+          "current": 4000,
+          "open": 5000
+        },
+        "hits1": {
+          "current": -155,
+          "open": -140
+        },
+        "hits2": {
+          "current": 390,
+          "open": 480
+        },
+        "runs1": {
+          "current": 145,
+          "open": 185
+        },
+        "runs2": {
+          "current": 1100,
+          "open": 1700
+        },
+        "sb1": {
+          "current": 920,
+          "open": 920
+        },
+        "sb2": {
+          "current": 8000,
+          "open": 8000
+        }
+      },
+      "fhrBaselineDeltaPct": -20.500139964542317,
+      "hrBaselineDeltaPct": -21.90417819828965,
+      "hrPicks": 23,
+      "picksByMarket": {
+        "home_runs": 23,
+        "hits": 21,
+        "runs": 7,
+        "stolen_bases": 4,
+        "singles": 1,
+        "doubles": 1,
+        "triples": 1,
+        "rbi": 1,
+        "hits_runs_rbi": 3,
+        "bases": 3
+      },
+      "windows": {
+        "season": {
+          "bbe": 7,
+          "pa": 12,
+          "avg": 0.2,
+          "hr": 1,
+          "avgEv": 87,
+          "maxEv": 107.7,
+          "hardHitPct": 28.57142857142857,
+          "barrelPct": 0,
+          "sweetSpotPct": 28.57142857142857,
+          "avgBatSpeed": 72.14444444444445,
+          "hardSwingRate": 0.3125,
+          "squaredUpPct": 0.18181818181818182,
+          "blastPct": 0.09090909090909091,
+          "avgSwingLength": 7.550000000000001,
+          "avgAttackAngle": 11.58982986557022,
+          "idealAttackAngleRate": null,
+          "avgTilt": 28.133932240322302,
+          "avgLa": 25.142857142857142,
+          "fbRate": 0.2857142857142857,
+          "onTimePct": null,
+          "missDistance": null,
+          "pullAirRate": 0
+        },
+        "l10": {
+          "bbe": 7,
+          "pa": 12,
+          "avg": 0.2,
+          "hr": 1,
+          "avgEv": 87,
+          "maxEv": 107.7,
+          "hardHitPct": 28.57142857142857,
+          "barrelPct": 0,
+          "sweetSpotPct": 28.57142857142857,
+          "avgBatSpeed": 72.14444444444445,
+          "hardSwingRate": 1,
+          "squaredUpPct": 0,
+          "blastPct": 0,
+          "avgSwingLength": 7.550000000000001,
+          "avgAttackAngle": 11.58982986557022,
+          "idealAttackAngleRate": null,
+          "avgTilt": 28.133932240322302,
+          "avgLa": 25.142857142857142,
+          "fbRate": 0.5,
+          "onTimePct": 1,
+          "missDistance": null,
+          "pullAirRate": 0
+        },
+        "l5": {
+          "bbe": 7,
+          "pa": 12,
+          "avg": 0.2,
+          "hr": 1,
+          "avgEv": 87,
+          "maxEv": 107.7,
+          "hardHitPct": 28.57142857142857,
+          "barrelPct": 0,
+          "sweetSpotPct": 28.57142857142857,
+          "avgBatSpeed": 72.14444444444445,
+          "hardSwingRate": 1,
+          "squaredUpPct": 0,
+          "blastPct": 0,
+          "avgSwingLength": 7.550000000000001,
+          "avgAttackAngle": 11.58982986557022,
+          "idealAttackAngleRate": null,
+          "avgTilt": 28.133932240322302,
+          "avgLa": 25.142857142857142,
+          "fbRate": 0.5,
+          "onTimePct": 1,
+          "missDistance": null,
+          "pullAirRate": 0
+        },
+        "l3": {
+          "bbe": 4,
+          "pa": 8,
+          "avg": 0.16666666666666666,
+          "hr": 0,
+          "avgEv": 88.5,
+          "maxEv": 107.7,
+          "hardHitPct": 25,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 73.36666666666667,
+          "hardSwingRate": 1,
+          "squaredUpPct": 0,
+          "blastPct": 0,
+          "avgSwingLength": 7.550000000000001,
+          "avgAttackAngle": 11.58982986557022,
+          "idealAttackAngleRate": null,
+          "avgTilt": 28.133932240322302,
+          "avgLa": 17.75,
+          "fbRate": 0.5,
+          "onTimePct": 1,
+          "missDistance": null,
+          "pullAirRate": 0
+        },
+        "l1": {
+          "bbe": 2,
+          "pa": 3,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 85.4,
+          "maxEv": 87.8,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 78.85,
+          "hardSwingRate": 1,
+          "squaredUpPct": 0,
+          "blastPct": 0,
+          "avgSwingLength": 7.550000000000001,
+          "avgAttackAngle": 11.58982986557022,
+          "idealAttackAngleRate": null,
+          "avgTilt": 28.133932240322302,
+          "avgLa": 31.5,
+          "fbRate": 0.5,
+          "onTimePct": 1,
+          "missDistance": null,
+          "pullAirRate": 0
+        }
+      },
+      "mm": {
+        "l1": -5,
+        "l3": -5,
+        "l5": -6,
+        "l10": -6
+      },
+      "paperRank": {
+        "l1": 15,
+        "l3": 15,
+        "l5": 16,
+        "l10": 16
+      },
+      "bookRank": {
+        "l1": 10,
+        "l3": 10,
+        "l5": 10,
+        "l10": 10
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": true,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6153846153846154,
+        "paToHr": null,
+        "hrToRbi": 0.44999999999999996,
+        "hrToRbi2": 1.375,
+        "hrToRbi3": 10.125,
+        "hrToHrr": 0.18452380952380953,
+        "hrToTb2": 0.3375,
+        "hrToTb3": 0.5875,
+        "hrToTb4": 0.8125,
+        "hrToTb5": 1.625,
+        "hrToTwoHr": 12.625,
+        "hrToMoneyline": 1.5,
+        "mgmToFanduel": 1.7391304347826086
+      }
+    },
+    {
+      "mlbId": 672960,
+      "name": "Kazuma Okamoto",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 5,
+      "position": "3B",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 850,
+        "open": 850
+      },
+      "hr": {
+        "current": 400,
+        "open": 400
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 850,
+            "open": 850
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1000,
+            "open": 1100
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 400,
+            "open": 400
+          },
+          "caesars": {
+            "current": 325,
+            "open": 340
+          },
+          "betmgm": {
+            "current": 340,
+            "open": 350
+          },
+          "betrivers": {
+            "current": 425,
+            "open": 430
+          },
+          "fanatics": {
+            "current": 390,
+            "open": 430
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 4500,
+          "open": 4000
+        },
+        "laser105": {
+          "current": 750,
+          "open": 850
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 1500,
+          "open": 1600
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 650,
+          "open": 750
+        },
+        "hrr": {
+          "current": -190,
+          "open": 135
+        },
+        "rbi1": {
+          "current": 190,
+          "open": 200
+        },
+        "rbi2": {
+          "current": 550,
+          "open": 600
+        },
+        "rbi3": {
+          "current": 5000,
+          "open": 4000
+        },
+        "tb2": {
+          "current": 150,
+          "open": 165
+        },
+        "tb3": {
+          "current": 270,
+          "open": 290
+        },
+        "tb4": {
+          "current": 340,
+          "open": 360
+        },
+        "tb5": {
+          "current": 850,
+          "open": 950
+        },
+        "singles": {
+          "current": 160,
+          "open": 180
+        },
+        "doubles": {
+          "current": 500,
+          "open": 550
+        },
+        "triples": {
+          "current": 10000,
+          "open": 10000
+        },
+        "hits1": {
+          "current": -145,
+          "open": -135
+        },
+        "hits2": {
+          "current": 430,
+          "open": 500
+        },
+        "runs1": {
+          "current": 145,
+          "open": 150
+        },
+        "runs2": {
+          "current": 1100,
+          "open": 1200
+        },
+        "sb1": {
+          "current": 1700,
+          "open": 2200
+        },
+        "sb2": {
+          "current": null,
+          "open": null
+        }
+      },
+      "fhrBaselineDeltaPct": -4.857836054848289,
+      "hrBaselineDeltaPct": -15.608102616569536,
+      "hrPicks": 114,
+      "picksByMarket": {
+        "home_runs": 114,
+        "hits": 10,
+        "runs": 1,
+        "stolen_bases": 0,
+        "singles": 1,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 2,
+        "hits_runs_rbi": 17,
+        "bases": 6
+      },
+      "windows": {
+        "season": {
+          "bbe": 72,
+          "pa": 119,
+          "avg": 0.2169811320754717,
+          "hr": 5,
+          "avgEv": 90.67916666666666,
+          "maxEv": 112.2,
+          "hardHitPct": 47.22222222222222,
+          "barrelPct": 0,
+          "sweetSpotPct": 31.944444444444443,
+          "avgBatSpeed": 70.68067226890753,
+          "hardSwingRate": 0.3425925925925926,
+          "squaredUpPct": 0.33974358974358976,
+          "blastPct": 0.16666666666666666,
+          "avgSwingLength": 7.985185185185188,
+          "avgAttackAngle": 16.097822973218864,
+          "idealAttackAngleRate": 0.5277777777777778,
+          "avgTilt": 34.92216752717686,
+          "avgLa": 19.09722222222222,
+          "fbRate": 0.3611111111111111,
+          "onTimePct": 0.641860465116279,
+          "missDistance": 4.022410742034483,
+          "pullAirRate": 0.22222222222222227
+        },
+        "l10": {
+          "bbe": 12,
+          "pa": 24,
+          "avg": 0.13636363636363635,
+          "hr": 0,
+          "avgEv": 84.325,
+          "maxEv": 103.9,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 16.666666666666664,
+          "avgBatSpeed": 70.35925925925926,
+          "hardSwingRate": 0.35135135135135137,
+          "squaredUpPct": 0.2916666666666667,
+          "blastPct": 0.041666666666666664,
+          "avgSwingLength": 7.905555555555556,
+          "avgAttackAngle": 15.259018902079257,
+          "idealAttackAngleRate": 0.48484848484848486,
+          "avgTilt": 36.66210107236597,
+          "avgLa": 32,
+          "fbRate": 0.5,
+          "onTimePct": 0.5957446808510638,
+          "missDistance": 5.3985292603333335,
+          "pullAirRate": 0.3
+        },
+        "l5": {
+          "bbe": 5,
+          "pa": 11,
+          "avg": 0.1111111111111111,
+          "hr": 0,
+          "avgEv": 81.14,
+          "maxEv": 97.7,
+          "hardHitPct": 20,
+          "barrelPct": 0,
+          "sweetSpotPct": 40,
+          "avgBatSpeed": 67.59230769230768,
+          "hardSwingRate": 0.2903225806451613,
+          "squaredUpPct": 0.3,
+          "blastPct": 0.05,
+          "avgSwingLength": 7.807692307692308,
+          "avgAttackAngle": 14.686239422754277,
+          "idealAttackAngleRate": 0.5555555555555556,
+          "avgTilt": 38.14917037255607,
+          "avgLa": 44.2,
+          "fbRate": 0.4444444444444444,
+          "onTimePct": 0.5882352941176471,
+          "missDistance": 5.105935734333333,
+          "pullAirRate": 0.2222222222222222
+        },
+        "l3": {
+          "bbe": 4,
+          "pa": 8,
+          "avg": 0.16666666666666666,
+          "hr": 0,
+          "avgEv": 76.99999999999999,
+          "maxEv": 90.1,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 67.565,
+          "hardSwingRate": 0.32142857142857145,
+          "squaredUpPct": 0.3333333333333333,
+          "blastPct": 0.05555555555555555,
+          "avgSwingLength": 7.600000000000001,
+          "avgAttackAngle": 11.178763637319545,
+          "idealAttackAngleRate": 0.6190476190476191,
+          "avgTilt": 38.7921849356476,
+          "avgLa": 40.75,
+          "fbRate": 0.5,
+          "onTimePct": 0.5862068965517241,
+          "missDistance": 6.138200962999999,
+          "pullAirRate": 0.25
+        },
+        "l1": {
+          "bbe": 2,
+          "pa": 4,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 85.35,
+          "maxEv": 85.8,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 69.99999999999999,
+          "hardSwingRate": 0.32142857142857145,
+          "squaredUpPct": 0.3333333333333333,
+          "blastPct": 0.05555555555555555,
+          "avgSwingLength": 7.6090909090909085,
+          "avgAttackAngle": 13.356818690982509,
+          "idealAttackAngleRate": 0.6190476190476191,
+          "avgTilt": 37.63394208131006,
+          "avgLa": 47,
+          "fbRate": 0.5,
+          "onTimePct": 0.5862068965517241,
+          "missDistance": 6.138200962999999,
+          "pullAirRate": 0.25
+        }
+      },
+      "mm": {
+        "l1": -11,
+        "l3": -10,
+        "l5": -11,
+        "l10": -11
+      },
+      "paperRank": {
+        "l1": 14,
+        "l3": 13,
+        "l5": 14,
+        "l10": 14
+      },
+      "bookRank": {
+        "l1": 3,
+        "l3": 3,
+        "l5": 3,
+        "l10": 3
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5263157894736842,
+        "paToHr": null,
+        "hrToRbi": 0.58,
+        "hrToRbi2": 1.3,
+        "hrToRbi3": 10.200000000000001,
+        "hrToHrr": 0.30526315789473685,
+        "hrToTb2": 0.5,
+        "hrToTb3": 0.74,
+        "hrToTb4": 0.8800000000000001,
+        "hrToTb5": 1.9000000000000001,
+        "hrToTwoHr": 9.200000000000001,
+        "hrToMoneyline": 1.5,
+        "mgmToFanduel": 1.1363636363636362
+      }
+    },
+    {
+      "mlbId": 702332,
+      "name": "Caleb Durbin",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 6,
+      "position": "3B",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 1400,
+        "open": 1600
+      },
+      "hr": {
+        "current": 800,
+        "open": 750
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1400,
+            "open": 1600
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1500,
+            "open": 1700
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 800,
+            "open": 750
+          },
+          "caesars": {
+            "current": 700,
+            "open": 700
+          },
+          "betmgm": {
+            "current": 575,
+            "open": 575
+          },
+          "betrivers": {
+            "current": 750,
+            "open": 750
+          },
+          "fanatics": {
+            "current": 650,
+            "open": 650
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 12500,
+          "open": 10000
+        },
+        "laser105": {
+          "current": 5000,
+          "open": 5000
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 3300,
+          "open": 3300
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1000,
+          "open": 1000
+        },
+        "hrr": {
+          "current": -260,
+          "open": 100
+        },
+        "rbi1": {
+          "current": 200,
+          "open": 210
+        },
+        "rbi2": {
+          "current": 750,
+          "open": 700
+        },
+        "rbi3": {
+          "current": 6500,
+          "open": 6000
+        },
+        "tb2": {
+          "current": 160,
+          "open": 170
+        },
+        "tb3": {
+          "current": 380,
+          "open": 390
+        },
+        "tb4": {
+          "current": 600,
+          "open": 600
+        },
+        "tb5": {
+          "current": 1300,
+          "open": 1200
+        },
+        "singles": {
+          "current": -125,
+          "open": -120
+        },
+        "doubles": {
+          "current": 500,
+          "open": 550
+        },
+        "triples": {
+          "current": 6500,
+          "open": 7000
+        },
+        "hits1": {
+          "current": -185,
+          "open": -185
+        },
+        "hits2": {
+          "current": 290,
+          "open": 310
+        },
+        "runs1": {
+          "current": 150,
+          "open": 135
+        },
+        "runs2": {
+          "current": 1100,
+          "open": 1000
+        },
+        "sb1": {
+          "current": 400,
+          "open": 550
+        },
+        "sb2": {
+          "current": 3500,
+          "open": 5000
+        }
+      },
+      "fhrBaselineDeltaPct": -33.04594047963016,
+      "hrBaselineDeltaPct": -24.64893559784071,
+      "hrPicks": 8,
+      "picksByMarket": {
+        "home_runs": 8,
+        "hits": 8,
+        "runs": 0,
+        "stolen_bases": 2,
+        "singles": 8,
+        "doubles": 26,
+        "triples": 2,
+        "rbi": 1,
+        "hits_runs_rbi": 63,
+        "bases": 5
+      },
+      "windows": {
+        "season": {
+          "bbe": 230,
+          "pa": 310,
+          "avg": 0.2318840579710145,
+          "hr": 8,
+          "avgEv": 81.35065502183414,
+          "maxEv": 107.9,
+          "hardHitPct": 25.327510917030565,
+          "barrelPct": 0.8695652173913043,
+          "sweetSpotPct": 28.82096069868996,
+          "avgBatSpeed": 66.24176245210732,
+          "hardSwingRate": 0.06535947712418301,
+          "squaredUpPct": 0.27455919395465994,
+          "blastPct": 0.07052896725440806,
+          "avgSwingLength": 6.852054794520548,
+          "avgAttackAngle": 6.182466205817081,
+          "idealAttackAngleRate": 0.6339869281045751,
+          "avgTilt": 30.294783531705292,
+          "avgLa": 11.541484716157205,
+          "fbRate": 0.16228070175438597,
+          "onTimePct": 0.7479338842975206,
+          "missDistance": 2.1575889184189188,
+          "pullAirRate": 0.17982456140350878
+        },
+        "l10": {
+          "bbe": 23,
+          "pa": 36,
+          "avg": 0.2,
+          "hr": 1,
+          "avgEv": 79.85217391304347,
+          "maxEv": 103.4,
+          "hardHitPct": 30.434782608695656,
+          "barrelPct": 8.695652173913043,
+          "sweetSpotPct": 30.434782608695656,
+          "avgBatSpeed": 67.52686567164177,
+          "hardSwingRate": 0.1232876712328767,
+          "squaredUpPct": 0.1896551724137931,
+          "blastPct": 0.05172413793103448,
+          "avgSwingLength": 6.968656716417909,
+          "avgAttackAngle": 7.1941520988973515,
+          "idealAttackAngleRate": 0.6567164179104478,
+          "avgTilt": 31.410126015209965,
+          "avgLa": 16.565217391304348,
+          "fbRate": 0.17857142857142858,
+          "onTimePct": 0.75,
+          "missDistance": 2.1532336840588235,
+          "pullAirRate": 0.21428571428571427
+        },
+        "l5": {
+          "bbe": 12,
+          "pa": 21,
+          "avg": 0.15789473684210525,
+          "hr": 0,
+          "avgEv": 76.29166666666667,
+          "maxEv": 103.4,
+          "hardHitPct": 25,
+          "barrelPct": 8.333333333333332,
+          "sweetSpotPct": 25,
+          "avgBatSpeed": 67.47843137254901,
+          "hardSwingRate": 0.12962962962962962,
+          "squaredUpPct": 0.15,
+          "blastPct": 0.025,
+          "avgSwingLength": 6.950980392156862,
+          "avgAttackAngle": 7.298914272541587,
+          "idealAttackAngleRate": 0.6470588235294118,
+          "avgTilt": 31.220150864858365,
+          "avgLa": 22.416666666666668,
+          "fbRate": 0.1875,
+          "onTimePct": 0.7586206896551724,
+          "missDistance": 2.133492518875,
+          "pullAirRate": 0.3125
+        },
+        "l3": {
+          "bbe": 4,
+          "pa": 9,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 65.35,
+          "maxEv": 74.1,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 25,
+          "avgBatSpeed": 66.4709677419355,
+          "hardSwingRate": 0.13953488372093023,
+          "squaredUpPct": 0.125,
+          "blastPct": 0.03125,
+          "avgSwingLength": 6.848387096774193,
+          "avgAttackAngle": 5.52802708763687,
+          "idealAttackAngleRate": 0.6,
+          "avgTilt": 31.96166831615213,
+          "avgLa": 34,
+          "fbRate": 0.15384615384615385,
+          "onTimePct": 0.7555555555555555,
+          "missDistance": 2.04556687125,
+          "pullAirRate": 0.3076923076923077
+        },
+        "l1": {
+          "bbe": 2,
+          "pa": 4,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 57.8,
+          "maxEv": 67.2,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 68.66666666666667,
+          "hardSwingRate": 0.17142857142857143,
+          "squaredUpPct": 0.16666666666666666,
+          "blastPct": 0.041666666666666664,
+          "avgSwingLength": 6.933333333333334,
+          "avgAttackAngle": 8.027108426657898,
+          "idealAttackAngleRate": 0.6666666666666666,
+          "avgTilt": 32.10725356765003,
+          "avgLa": 10,
+          "fbRate": 0.08333333333333333,
+          "onTimePct": 0.75,
+          "missDistance": 1.2569131366363637,
+          "pullAirRate": 0.25
+        }
+      },
+      "mm": {
+        "l1": 2,
+        "l3": 2,
+        "l5": 2,
+        "l10": 3
+      },
+      "paperRank": {
+        "l1": 12,
+        "l3": 12,
+        "l5": 12,
+        "l10": 11
+      },
+      "bookRank": {
+        "l1": 14,
+        "l3": 14,
+        "l5": 14,
+        "l10": 14
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": true,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6,
+        "paToHr": null,
+        "hrToRbi": 0.3333333333333333,
+        "hrToRbi2": 0.9444444444444444,
+        "hrToRbi3": 7.333333333333333,
+        "hrToHrr": 0.15384615384615383,
+        "hrToTb2": 0.28888888888888886,
+        "hrToTb3": 0.5333333333333333,
+        "hrToTb4": 0.7777777777777778,
+        "hrToTb5": 1.5555555555555556,
+        "hrToTwoHr": 14,
+        "hrToMoneyline": 1.222222222222222,
+        "mgmToFanduel": 1.3333333333333333
+      }
+    },
+    {
+      "mlbId": 807799,
+      "name": "Masataka Yoshida",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 5,
+      "position": "DH",
+      "bats": "L",
+      "projected": false,
+      "fhr": {
+        "current": 1000,
+        "open": 1000
+      },
+      "hr": {
+        "current": 600,
+        "open": 520
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1000,
+            "open": 1000
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1300,
+            "open": 1000
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 600,
+            "open": 520
+          },
+          "caesars": {
+            "current": 425,
+            "open": 400
+          },
+          "betmgm": {
+            "current": 525,
+            "open": 475
+          },
+          "betrivers": {
+            "current": 550,
+            "open": 525
+          },
+          "fanatics": {
+            "current": 550,
+            "open": 525
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 8000,
+          "open": 7500
+        },
+        "laser105": {
+          "current": 2000,
+          "open": 1700
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 2700,
+          "open": 2500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 750,
+          "open": 650
+        },
+        "hrr": {
+          "current": -340,
+          "open": -160
+        },
+        "rbi1": {
+          "current": 170,
+          "open": 170
+        },
+        "rbi2": {
+          "current": 550,
+          "open": 600
+        },
+        "rbi3": {
+          "current": 4500,
+          "open": 4000
+        },
+        "tb2": {
+          "current": 110,
+          "open": -115
+        },
+        "tb3": {
+          "current": 270,
+          "open": 200
+        },
+        "tb4": {
+          "current": 430,
+          "open": 350
+        },
+        "tb5": {
+          "current": 900,
+          "open": 700
+        },
+        "singles": {
+          "current": -140,
+          "open": -170
+        },
+        "doubles": {
+          "current": 370,
+          "open": 300
+        },
+        "triples": {
+          "current": 6500,
+          "open": 7000
+        },
+        "hits1": {
+          "current": -250,
+          "open": -320
+        },
+        "hits2": {
+          "current": 220,
+          "open": 170
+        },
+        "runs1": {
+          "current": 120,
+          "open": -110
+        },
+        "runs2": {
+          "current": 850,
+          "open": 600
+        },
+        "sb1": {
+          "current": 1260,
+          "open": 920
+        },
+        "sb2": {
+          "current": null,
+          "open": 12500
+        }
+      },
+      "fhrBaselineDeltaPct": -33.01829187352324,
+      "hrBaselineDeltaPct": -35.32488986784141,
+      "hrPicks": 48,
+      "picksByMarket": {
+        "home_runs": 48,
+        "hits": 68,
+        "runs": 0,
+        "stolen_bases": 0,
+        "singles": 3,
+        "doubles": 2,
+        "triples": 1,
+        "rbi": 7,
+        "hits_runs_rbi": 95,
+        "bases": 31
+      },
+      "windows": {
+        "season": {
+          "bbe": 198,
+          "pa": 251,
+          "avg": 0.26576576576576577,
+          "hr": 5,
+          "avgEv": 88.29848484848492,
+          "maxEv": 108.6,
+          "hardHitPct": 36.36363636363637,
+          "barrelPct": 2.0202020202020203,
+          "sweetSpotPct": 30.303030303030305,
+          "avgBatSpeed": 70.56937172774865,
+          "hardSwingRate": 0.18895348837209303,
+          "squaredUpPct": 0.4217687074829932,
+          "blastPct": 0.14625850340136054,
+          "avgSwingLength": 7.03793103448276,
+          "avgAttackAngle": 7.296373408612463,
+          "idealAttackAngleRate": null,
+          "avgTilt": 33.66558431155534,
+          "avgLa": 9.909090909090908,
+          "fbRate": 0.25380710659898476,
+          "onTimePct": 0.6794520547945205,
+          "missDistance": 2.7167741892045454,
+          "pullAirRate": 0.17258883248730958
+        },
+        "l10": {
+          "bbe": 28,
+          "pa": 37,
+          "avg": 0.3125,
+          "hr": 1,
+          "avgEv": 87.85357142857143,
+          "maxEv": 108.4,
+          "hardHitPct": 35.714285714285715,
+          "barrelPct": 7.142857142857142,
+          "sweetSpotPct": 32.142857142857146,
+          "avgBatSpeed": 71.69107142857146,
+          "hardSwingRate": 0.3333333333333333,
+          "squaredUpPct": 0.3541666666666667,
+          "blastPct": 0.10416666666666667,
+          "avgSwingLength": 7.003571428571427,
+          "avgAttackAngle": 7.353591408467211,
+          "idealAttackAngleRate": null,
+          "avgTilt": 34.7056556869957,
+          "avgLa": 6.357142857142857,
+          "fbRate": 0.23333333333333334,
+          "onTimePct": 0.6323529411764706,
+          "missDistance": 3.2173117454545452,
+          "pullAirRate": 0.16666666666666666
+        },
+        "l5": {
+          "bbe": 14,
+          "pa": 20,
+          "avg": 0.3125,
+          "hr": 0,
+          "avgEv": 90.79285714285716,
+          "maxEv": 108.4,
+          "hardHitPct": 42.857142857142854,
+          "barrelPct": 7.142857142857142,
+          "sweetSpotPct": 28.57142857142857,
+          "avgBatSpeed": 72.29615384615386,
+          "hardSwingRate": 0.3333333333333333,
+          "squaredUpPct": 0.34615384615384615,
+          "blastPct": 0.11538461538461539,
+          "avgSwingLength": 7.196153846153846,
+          "avgAttackAngle": 10.239017851936723,
+          "idealAttackAngleRate": null,
+          "avgTilt": 34.28430133467744,
+          "avgLa": 3.7857142857142856,
+          "fbRate": 0.1875,
+          "onTimePct": 0.6,
+          "missDistance": 3.439741643,
+          "pullAirRate": 0.1875
+        },
+        "l3": {
+          "bbe": 9,
+          "pa": 13,
+          "avg": 0.3,
+          "hr": 0,
+          "avgEv": 92.68888888888891,
+          "maxEv": 108.4,
+          "hardHitPct": 44.44444444444444,
+          "barrelPct": 11.11111111111111,
+          "sweetSpotPct": 44.44444444444444,
+          "avgBatSpeed": 71.93684210526317,
+          "hardSwingRate": 0.3333333333333333,
+          "squaredUpPct": 0.2777777777777778,
+          "blastPct": 0.05555555555555555,
+          "avgSwingLength": 7.2631578947368425,
+          "avgAttackAngle": 10.870448551210337,
+          "idealAttackAngleRate": null,
+          "avgTilt": 35.108159484175395,
+          "avgLa": 3,
+          "fbRate": 0.2222222222222222,
+          "onTimePct": 0.48,
+          "missDistance": 2.6963501626666666,
+          "pullAirRate": 0.2222222222222222
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 5,
+          "avg": 0.2,
+          "hr": 0,
+          "avgEv": 88.56666666666666,
+          "maxEv": 95.7,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 71.28750000000001,
+          "hardSwingRate": 0.34782608695652173,
+          "squaredUpPct": 0.29411764705882354,
+          "blastPct": 0.058823529411764705,
+          "avgSwingLength": 6.9624999999999995,
+          "avgAttackAngle": 6.271232903288442,
+          "idealAttackAngleRate": null,
+          "avgTilt": 33.44692439203564,
+          "avgLa": -3.3333333333333335,
+          "fbRate": 0.2222222222222222,
+          "onTimePct": 0.5,
+          "missDistance": 2.6963501626666666,
+          "pullAirRate": 0.2222222222222222
+        }
+      },
+      "mm": {
+        "l1": -1,
+        "l3": 0,
+        "l5": 0,
+        "l10": 0
+      },
+      "paperRank": {
+        "l1": 8,
+        "l3": 7,
+        "l5": 7,
+        "l10": 7
+      },
+      "bookRank": {
+        "l1": 7,
+        "l3": 7,
+        "l5": 7,
+        "l10": 7
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": true,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6363636363636365,
+        "paToHr": null,
+        "hrToRbi": 0.38571428571428573,
+        "hrToRbi2": 0.9285714285714285,
+        "hrToRbi3": 6.571428571428571,
+        "hrToHrr": 0.18487394957983191,
+        "hrToTb2": 0.3,
+        "hrToTb3": 0.5285714285714285,
+        "hrToTb4": 0.757142857142857,
+        "hrToTb5": 1.4285714285714284,
+        "hrToTwoHr": 11.571428571428571,
+        "hrToMoneyline": 1.2142857142857142,
+        "mgmToFanduel": 1.12
+      }
+    },
+    {
+      "mlbId": 543807,
+      "name": "George Springer",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 4,
+      "position": "DH",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 950,
+        "open": 950
+      },
+      "hr": {
+        "current": 450,
+        "open": 450
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 950,
+            "open": 950
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1100,
+            "open": 1100
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 450,
+            "open": 450
+          },
+          "caesars": {
+            "current": 380,
+            "open": 360
+          },
+          "betmgm": {
+            "current": 450,
+            "open": 450
+          },
+          "betrivers": {
+            "current": 425,
+            "open": 425
+          },
+          "fanatics": {
+            "current": 430,
+            "open": 450
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 6500,
+          "open": 6000
+        },
+        "laser105": {
+          "current": 1200,
+          "open": 1100
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 1500,
+          "open": 1500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 700,
+          "open": 750
+        },
+        "hrr": {
+          "current": -240,
+          "open": 105
+        },
+        "rbi1": {
+          "current": 175,
+          "open": 180
+        },
+        "rbi2": {
+          "current": 600,
+          "open": 600
+        },
+        "rbi3": {
+          "current": 5500,
+          "open": 5000
+        },
+        "tb2": {
+          "current": 135,
+          "open": 140
+        },
+        "tb3": {
+          "current": 270,
+          "open": 280
+        },
+        "tb4": {
+          "current": 370,
+          "open": 390
+        },
+        "tb5": {
+          "current": 900,
+          "open": 950
+        },
+        "singles": {
+          "current": 120,
+          "open": 125
+        },
+        "doubles": {
+          "current": 440,
+          "open": 450
+        },
+        "triples": {
+          "current": 8000,
+          "open": 8000
+        },
+        "hits1": {
+          "current": -175,
+          "open": -170
+        },
+        "hits2": {
+          "current": 330,
+          "open": 350
+        },
+        "runs1": {
+          "current": 130,
+          "open": 140
+        },
+        "runs2": {
+          "current": 1000,
+          "open": 1100
+        },
+        "sb1": {
+          "current": 750,
+          "open": 850
+        },
+        "sb2": {
+          "current": 8000,
+          "open": 10000
+        }
+      },
+      "fhrBaselineDeltaPct": 8.667950807527045,
+      "hrBaselineDeltaPct": -14.758522903943971,
+      "hrPicks": 22,
+      "picksByMarket": {
+        "home_runs": 22,
+        "hits": 14,
+        "runs": 1,
+        "stolen_bases": 3,
+        "singles": 1,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 1,
+        "hits_runs_rbi": 9,
+        "bases": 6
+      },
+      "windows": {
+        "season": {
+          "bbe": 77,
+          "pa": 112,
+          "avg": 0.23711340206185566,
+          "hr": 2,
+          "avgEv": 87.34285714285713,
+          "maxEv": 107.7,
+          "hardHitPct": 35.064935064935064,
+          "barrelPct": 0,
+          "sweetSpotPct": 31.16883116883117,
+          "avgBatSpeed": 69.72943925233642,
+          "hardSwingRate": 0.34408602150537637,
+          "squaredUpPct": 0.25477707006369427,
+          "blastPct": 0.12101910828025478,
+          "avgSwingLength": 7.290909090909091,
+          "avgAttackAngle": 7.382285994125254,
+          "idealAttackAngleRate": 0.553763440860215,
+          "avgTilt": 32.969564977571935,
+          "avgLa": 16.051948051948052,
+          "fbRate": 0.3116883116883117,
+          "onTimePct": 0.7277777777777777,
+          "missDistance": 1.7344461302727272,
+          "pullAirRate": 0.24675324675324675
+        },
+        "l10": {
+          "bbe": 17,
+          "pa": 21,
+          "avg": 0.2,
+          "hr": 0,
+          "avgEv": 81.4470588235294,
+          "maxEv": 107.7,
+          "hardHitPct": 23.52941176470588,
+          "barrelPct": 0,
+          "sweetSpotPct": 11.76470588235294,
+          "avgBatSpeed": 70.88333333333333,
+          "hardSwingRate": 0.5384615384615384,
+          "squaredUpPct": 0.18181818181818182,
+          "blastPct": 0.09090909090909091,
+          "avgSwingLength": 7.221428571428571,
+          "avgAttackAngle": 7.771079214342132,
+          "idealAttackAngleRate": 0.625,
+          "avgTilt": 31.576193893054405,
+          "avgLa": 0.9411764705882353,
+          "fbRate": 0.25,
+          "onTimePct": 0.6857142857142857,
+          "missDistance": 5.584671237999999,
+          "pullAirRate": 0.08333333333333333
+        },
+        "l5": {
+          "bbe": 8,
+          "pa": 10,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 75.425,
+          "maxEv": 92.1,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 68.48888888888888,
+          "hardSwingRate": 0.5217391304347826,
+          "squaredUpPct": 0.10526315789473684,
+          "blastPct": 0,
+          "avgSwingLength": 7.216666666666667,
+          "avgAttackAngle": 8.26043798532935,
+          "idealAttackAngleRate": 0.4375,
+          "avgTilt": 32.326899566737254,
+          "avgLa": -6,
+          "fbRate": 0.25,
+          "onTimePct": 0.5833333333333334,
+          "missDistance": 4.375579449599999,
+          "pullAirRate": 0.125
+        },
+        "l3": {
+          "bbe": 3,
+          "pa": 5,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 78.16666666666667,
+          "maxEv": 90.4,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 64.3125,
+          "hardSwingRate": 0.5882352941176471,
+          "squaredUpPct": 0.15384615384615385,
+          "blastPct": 0,
+          "avgSwingLength": 7.1375,
+          "avgAttackAngle": 6.482076077480379,
+          "idealAttackAngleRate": 0.5,
+          "avgTilt": 33.2242171928406,
+          "avgLa": -1,
+          "fbRate": 0.4,
+          "onTimePct": 0.6470588235294118,
+          "missDistance": 4.8605400329999995,
+          "pullAirRate": 0.2
+        },
+        "l1": {
+          "bbe": 1,
+          "pa": 3,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 80.6,
+          "maxEv": 80.6,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 62.8,
+          "hardSwingRate": 0.5882352941176471,
+          "squaredUpPct": 0.15384615384615385,
+          "blastPct": 0,
+          "avgSwingLength": 7.38,
+          "avgAttackAngle": 5.815518209387532,
+          "idealAttackAngleRate": 0.5,
+          "avgTilt": 36.26728871631762,
+          "avgLa": 72,
+          "fbRate": 0.4,
+          "onTimePct": 0.6470588235294118,
+          "missDistance": 4.8605400329999995,
+          "pullAirRate": 0.2
+        }
+      },
+      "mm": {
+        "l1": -10,
+        "l3": -8,
+        "l5": -7,
+        "l10": -7
+      },
+      "paperRank": {
+        "l1": 16,
+        "l3": 14,
+        "l5": 13,
+        "l10": 13
+      },
+      "bookRank": {
+        "l1": 6,
+        "l3": 6,
+        "l5": 6,
+        "l10": 6
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5238095238095237,
+        "paToHr": null,
+        "hrToRbi": 0.5,
+        "hrToRbi2": 1.272727272727273,
+        "hrToRbi3": 10.181818181818183,
+        "hrToHrr": 0.25757575757575757,
+        "hrToTb2": 0.4272727272727273,
+        "hrToTb3": 0.6727272727272727,
+        "hrToTb4": 0.8545454545454546,
+        "hrToTb5": 1.8181818181818181,
+        "hrToTwoHr": 12,
+        "hrToMoneyline": 1.4545454545454546,
+        "mgmToFanduel": 1
+      }
+    },
+    {
+      "mlbId": 676391,
+      "name": "Ernie Clement",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 2,
+      "position": "2B",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 1300,
+        "open": 1300
+      },
+      "hr": {
+        "current": 750,
+        "open": 830
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1300,
+            "open": 1300
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1300,
+            "open": 2200
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 750,
+            "open": 830
+          },
+          "caesars": {
+            "current": 700,
+            "open": 850
+          },
+          "betmgm": {
+            "current": 650,
+            "open": 800
+          },
+          "betrivers": {
+            "current": 750,
+            "open": 700
+          },
+          "fanatics": {
+            "current": 700,
+            "open": 750
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 12500,
+          "open": 12500
+        },
+        "laser105": {
+          "current": 6000,
+          "open": 6000
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 3500,
+          "open": 3500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1100,
+          "open": 1500
+        },
+        "hrr": {
+          "current": -270,
+          "open": 130
+        },
+        "rbi1": {
+          "current": 220,
+          "open": 260
+        },
+        "rbi2": {
+          "current": 900,
+          "open": 950
+        },
+        "rbi3": {
+          "current": 8000,
+          "open": 8000
+        },
+        "tb2": {
+          "current": 130,
+          "open": 170
+        },
+        "tb3": {
+          "current": 300,
+          "open": 400
+        },
+        "tb4": {
+          "current": 500,
+          "open": 650
+        },
+        "tb5": {
+          "current": 1100,
+          "open": 1500
+        },
+        "singles": {
+          "current": -120,
+          "open": 105
+        },
+        "doubles": {
+          "current": 360,
+          "open": 440
+        },
+        "triples": {
+          "current": 5500,
+          "open": 6000
+        },
+        "hits1": {
+          "current": -220,
+          "open": -165
+        },
+        "hits2": {
+          "current": 260,
+          "open": 350
+        },
+        "runs1": {
+          "current": 150,
+          "open": 210
+        },
+        "runs2": {
+          "current": 1200,
+          "open": 1900
+        },
+        "sb1": {
+          "current": 800,
+          "open": 1000
+        },
+        "sb2": {
+          "current": 10000,
+          "open": 12500
+        }
+      },
+      "fhrBaselineDeltaPct": -34.939293941846714,
+      "hrBaselineDeltaPct": -29.51318737579204,
+      "hrPicks": 19,
+      "picksByMarket": {
+        "home_runs": 19,
+        "hits": 37,
+        "runs": 4,
+        "stolen_bases": 1,
+        "singles": 7,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 1,
+        "hits_runs_rbi": 42,
+        "bases": 8
+      },
+      "windows": {
+        "season": {
+          "bbe": 121,
+          "pa": 146,
+          "avg": 0.2536231884057971,
+          "hr": 4,
+          "avgEv": 85.42416666666665,
+          "maxEv": 103.3,
+          "hardHitPct": 23.333333333333332,
+          "barrelPct": 0.8264462809917356,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 65.52892857142857,
+          "hardSwingRate": 0.019455252918287938,
+          "squaredUpPct": 0.3623853211009174,
+          "blastPct": 0.06422018348623854,
+          "avgSwingLength": 7.023255813953487,
+          "avgAttackAngle": 10.602813131782854,
+          "idealAttackAngleRate": 0.6303501945525292,
+          "avgTilt": 31.31976234787848,
+          "avgLa": 19.55,
+          "fbRate": 0.32231404958677684,
+          "onTimePct": 0.6652542372881356,
+          "missDistance": 2.104756262354839,
+          "pullAirRate": 0.29752066115702475
+        },
+        "l10": {
+          "bbe": 21,
+          "pa": 24,
+          "avg": 0.125,
+          "hr": 1,
+          "avgEv": 86.4095238095238,
+          "maxEv": 102.4,
+          "hardHitPct": 14.285714285714285,
+          "barrelPct": 4.761904761904762,
+          "sweetSpotPct": 28.57142857142857,
+          "avgBatSpeed": 65.94750000000002,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.5357142857142857,
+          "blastPct": 0.10714285714285714,
+          "avgSwingLength": 7.0075,
+          "avgAttackAngle": 11.186919839307876,
+          "idealAttackAngleRate": 0.4838709677419355,
+          "avgTilt": 31.14917295017158,
+          "avgLa": 28.285714285714285,
+          "fbRate": 0.3333333333333333,
+          "onTimePct": 0.4883720930232558,
+          "missDistance": 1.8452970050000002,
+          "pullAirRate": 0.16666666666666669
+        },
+        "l5": {
+          "bbe": 12,
+          "pa": 14,
+          "avg": 0.07142857142857142,
+          "hr": 0,
+          "avgEv": 86.51666666666667,
+          "maxEv": 102.3,
+          "hardHitPct": 16.666666666666664,
+          "barrelPct": 0,
+          "sweetSpotPct": 25,
+          "avgBatSpeed": 66.5125,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.5238095238095238,
+          "blastPct": 0.14285714285714285,
+          "avgSwingLength": 6.916666666666668,
+          "avgAttackAngle": 9.405611825112448,
+          "idealAttackAngleRate": 0.4230769230769231,
+          "avgTilt": 34.13678144165102,
+          "avgLa": 21.166666666666668,
+          "fbRate": 0.3076923076923077,
+          "onTimePct": 0.4,
+          "missDistance": 1.8452970050000002,
+          "pullAirRate": 0.23076923076923078
+        },
+        "l3": {
+          "bbe": 7,
+          "pa": 8,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 85.60000000000001,
+          "maxEv": 102.3,
+          "hardHitPct": 28.57142857142857,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 65.71818181818183,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.4,
+          "blastPct": 0.13333333333333333,
+          "avgSwingLength": 6.8,
+          "avgAttackAngle": 7.112405806436558,
+          "idealAttackAngleRate": 0.5882352941176471,
+          "avgTilt": 34.439684455410045,
+          "avgLa": 18.428571428571427,
+          "fbRate": 0.25,
+          "onTimePct": 0.2727272727272727,
+          "missDistance": 2.0838471914285717,
+          "pullAirRate": 0.125
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 3,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 76.33333333333333,
+          "maxEv": 87.1,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 68.42500000000001,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.38461538461538464,
+          "blastPct": 0.15384615384615385,
+          "avgSwingLength": 7.175,
+          "avgAttackAngle": 9.522013921502154,
+          "idealAttackAngleRate": 0.5454545454545454,
+          "avgTilt": 34.23243822508562,
+          "avgLa": 0.3333333333333333,
+          "fbRate": 0.2857142857142857,
+          "onTimePct": 0.25,
+          "missDistance": 2.0838471914285717,
+          "pullAirRate": 0
+        }
+      },
+      "mm": {
+        "l1": 2,
+        "l3": 1,
+        "l5": 2,
+        "l10": 2
+      },
+      "paperRank": {
+        "l1": 10,
+        "l3": 11,
+        "l5": 10,
+        "l10": 10
+      },
+      "bookRank": {
+        "l1": 12,
+        "l3": 12,
+        "l5": 12,
+        "l10": 12
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6071428571428571,
+        "paToHr": null,
+        "hrToRbi": 0.3764705882352941,
+        "hrToRbi2": 1.176470588235294,
+        "hrToRbi3": 9.529411764705882,
+        "hrToHrr": 0.16122004357298475,
+        "hrToTb2": 0.27058823529411763,
+        "hrToTb3": 0.47058823529411764,
+        "hrToTb4": 0.7058823529411765,
+        "hrToTb5": 1.411764705882353,
+        "hrToTwoHr": 14.823529411764707,
+        "hrToMoneyline": 1.411764705882353,
+        "mgmToFanduel": 1.1333333333333333
+      }
+    },
+    {
+      "mlbId": 575929,
+      "name": "Willson Contreras",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 4,
+      "position": "1B",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 700,
+        "open": 700
+      },
+      "hr": {
+        "current": 360,
+        "open": 330
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 700,
+            "open": 700
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 700,
+            "open": 650
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 360,
+            "open": 330
+          },
+          "caesars": {
+            "current": 280,
+            "open": 255
+          },
+          "betmgm": {
+            "current": 280,
+            "open": 280
+          },
+          "betrivers": {
+            "current": 280,
+            "open": 310
+          },
+          "fanatics": {
+            "current": 390,
+            "open": 340
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 3500,
+          "open": 3000
+        },
+        "laser105": {
+          "current": 550,
+          "open": 500
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 1200,
+          "open": 1100
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 500,
+          "open": 450
+        },
+        "hrr": {
+          "current": -320,
+          "open": -130
+        },
+        "rbi1": {
+          "current": 145,
+          "open": 145
+        },
+        "rbi2": {
+          "current": 470,
+          "open": 400
+        },
+        "rbi3": {
+          "current": 3300,
+          "open": 3500
+        },
+        "tb2": {
+          "current": 110,
+          "open": 110
+        },
+        "tb3": {
+          "current": 210,
+          "open": 210
+        },
+        "tb4": {
+          "current": 290,
+          "open": 270
+        },
+        "tb5": {
+          "current": 650,
+          "open": 600
+        },
+        "singles": {
+          "current": -105,
+          "open": 115
+        },
+        "doubles": {
+          "current": 410,
+          "open": 450
+        },
+        "triples": {
+          "current": 6500,
+          "open": 6500
+        },
+        "hits1": {
+          "current": -220,
+          "open": -200
+        },
+        "hits2": {
+          "current": 250,
+          "open": 270
+        },
+        "runs1": {
+          "current": -105,
+          "open": -115
+        },
+        "runs2": {
+          "current": 600,
+          "open": 550
+        },
+        "sb1": {
+          "current": 1100,
+          "open": 920
+        },
+        "sb2": {
+          "current": null,
+          "open": 12500
+        }
+      },
+      "fhrBaselineDeltaPct": -11.466409558053632,
+      "hrBaselineDeltaPct": -16.495173092128326,
+      "hrPicks": 351,
+      "picksByMarket": {
+        "home_runs": 351,
+        "hits": 23,
+        "runs": 2,
+        "stolen_bases": 0,
+        "singles": 1,
+        "doubles": 0,
+        "triples": 0,
+        "rbi": 20,
+        "hits_runs_rbi": 44,
+        "bases": 25
+      },
+      "windows": {
+        "season": {
+          "bbe": 189,
+          "pa": 330,
+          "avg": 0.27956989247311825,
+          "hr": 16,
+          "avgEv": 90.47248677248675,
+          "maxEv": 114.9,
+          "hardHitPct": 45.5026455026455,
+          "barrelPct": 2.1164021164021163,
+          "sweetSpotPct": 37.56613756613756,
+          "avgBatSpeed": 74.22154340836016,
+          "hardSwingRate": 0.6996402877697842,
+          "squaredUpPct": 0.2506393861892583,
+          "blastPct": 0.1585677749360614,
+          "avgSwingLength": 7.869444444444442,
+          "avgAttackAngle": 11.315237888047383,
+          "idealAttackAngleRate": 0.4802158273381295,
+          "avgTilt": 35.332738157750605,
+          "avgLa": 16.80952380952381,
+          "fbRate": 0.2712765957446808,
+          "onTimePct": 0.593698175787728,
+          "missDistance": 4.325032919974874,
+          "pullAirRate": 0.23404255319148937
+        },
+        "l10": {
+          "bbe": 17,
+          "pa": 31,
+          "avg": 0.20833333333333334,
+          "hr": 1,
+          "avgEv": 88.6058823529412,
+          "maxEv": 114.9,
+          "hardHitPct": 35.294117647058826,
+          "barrelPct": 11.76470588235294,
+          "sweetSpotPct": 29.411764705882355,
+          "avgBatSpeed": 74.52999999999999,
+          "hardSwingRate": 0.6862745098039216,
+          "squaredUpPct": 0.26666666666666666,
+          "blastPct": 0.16666666666666666,
+          "avgSwingLength": 7.5219999999999985,
+          "avgAttackAngle": 7.228885167447952,
+          "idealAttackAngleRate": 0.44680851063829785,
+          "avgTilt": 34.793172067924075,
+          "avgLa": 27.88235294117647,
+          "fbRate": 0.47058823529411764,
+          "onTimePct": 0.515625,
+          "missDistance": 5.206749108137931,
+          "pullAirRate": 0.23529411764705882
+        },
+        "l5": {
+          "bbe": 8,
+          "pa": 15,
+          "avg": 0.09090909090909091,
+          "hr": 0,
+          "avgEv": 80.725,
+          "maxEv": 103.3,
+          "hardHitPct": 25,
+          "barrelPct": 0,
+          "sweetSpotPct": 12.5,
+          "avgBatSpeed": 72.752,
+          "hardSwingRate": 0.7,
+          "squaredUpPct": 0.2,
+          "blastPct": 0.2,
+          "avgSwingLength": 7.576000000000001,
+          "avgAttackAngle": 9.281289856522758,
+          "idealAttackAngleRate": 0.2857142857142857,
+          "avgTilt": 34.566456448228365,
+          "avgLa": 24.375,
+          "fbRate": 0.3333333333333333,
+          "onTimePct": 0.42857142857142855,
+          "missDistance": 7.412087171076923,
+          "pullAirRate": 0.1111111111111111
+        },
+        "l3": {
+          "bbe": 6,
+          "pa": 12,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 76.60000000000001,
+          "maxEv": 103.3,
+          "hardHitPct": 16.666666666666664,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 72.75555555555555,
+          "hardSwingRate": 0.6896551724137931,
+          "squaredUpPct": 0.2,
+          "blastPct": 0.2,
+          "avgSwingLength": 7.811111111111111,
+          "avgAttackAngle": 11.872391617974626,
+          "idealAttackAngleRate": 0.3,
+          "avgTilt": 35.12728941168044,
+          "avgLa": 33.166666666666664,
+          "fbRate": 0.3333333333333333,
+          "onTimePct": 0.45161290322580644,
+          "missDistance": 7.932035902909091,
+          "pullAirRate": 0.1111111111111111
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 4,
+          "avg": 0,
+          "hr": 0,
+          "avgEv": 78.83333333333333,
+          "maxEv": 83,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 76.44444444444444,
+          "hardSwingRate": 0.7391304347826086,
+          "squaredUpPct": 0.13333333333333333,
+          "blastPct": 0.13333333333333333,
+          "avgSwingLength": 8.044444444444444,
+          "avgAttackAngle": 14.202817073180844,
+          "idealAttackAngleRate": 0.3076923076923077,
+          "avgTilt": 36.84550387880388,
+          "avgLa": 55.333333333333336,
+          "fbRate": 0.3333333333333333,
+          "onTimePct": 0.375,
+          "missDistance": 8.567300622000001,
+          "pullAirRate": 0.16666666666666666
+        }
+      },
+      "mm": {
+        "l1": -2,
+        "l3": -2,
+        "l5": -2,
+        "l10": -1
+      },
+      "paperRank": {
+        "l1": 4,
+        "l3": 4,
+        "l5": 4,
+        "l10": 3
+      },
+      "bookRank": {
+        "l1": 2,
+        "l3": 2,
+        "l5": 2,
+        "l10": 2
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5750000000000001,
+        "paToHr": null,
+        "hrToRbi": 0.5326086956521738,
+        "hrToRbi2": 1.2391304347826086,
+        "hrToRbi3": 7.391304347826087,
+        "hrToHrr": 0.28532608695652173,
+        "hrToTb2": 0.4565217391304348,
+        "hrToTb3": 0.6739130434782609,
+        "hrToTb4": 0.8478260869565218,
+        "hrToTb5": 1.6304347826086956,
+        "hrToTwoHr": 7.826086956521739,
+        "hrToMoneyline": 1.3043478260869565,
+        "mgmToFanduel": 1.2105263157894737
+      }
+    },
+    {
+      "mlbId": 680776,
+      "name": "Jarren Duran",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 7,
+      "position": "LF",
+      "bats": "L",
+      "projected": false,
+      "fhr": {
+        "current": 850,
+        "open": 850
+      },
+      "hr": {
+        "current": 440,
+        "open": 420
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 850,
+            "open": 850
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 950,
+            "open": 1000
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 440,
+            "open": 420
+          },
+          "caesars": {
+            "current": 360,
+            "open": 340
+          },
+          "betmgm": {
+            "current": 425,
+            "open": 425
+          },
+          "betrivers": {
+            "current": 350,
+            "open": 350
+          },
+          "fanatics": {
+            "current": 430,
+            "open": 430
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 7000,
+          "open": 4500
+        },
+        "laser105": {
+          "current": 700,
+          "open": 700
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 1600,
+          "open": 1600
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 550,
+          "open": 550
+        },
+        "hrr": {
+          "current": -280,
+          "open": -120
+        },
+        "rbi1": {
+          "current": 160,
+          "open": 160
+        },
+        "rbi2": {
+          "current": 500,
+          "open": 500
+        },
+        "rbi3": {
+          "current": 4000,
+          "open": 3300
+        },
+        "tb2": {
+          "current": 115,
+          "open": 105
+        },
+        "tb3": {
+          "current": 230,
+          "open": 210
+        },
+        "tb4": {
+          "current": 350,
+          "open": 300
+        },
+        "tb5": {
+          "current": 750,
+          "open": 650
+        },
+        "singles": {
+          "current": 110,
+          "open": 105
+        },
+        "doubles": {
+          "current": 360,
+          "open": 370
+        },
+        "triples": {
+          "current": 2700,
+          "open": 2200
+        },
+        "hits1": {
+          "current": -210,
+          "open": -220
+        },
+        "hits2": {
+          "current": 290,
+          "open": 250
+        },
+        "runs1": {
+          "current": 120,
+          "open": 110
+        },
+        "runs2": {
+          "current": 950,
+          "open": 750
+        },
+        "sb1": {
+          "current": 470,
+          "open": 490
+        },
+        "sb2": {
+          "current": 4000,
+          "open": 4000
+        }
+      },
+      "fhrBaselineDeltaPct": -19.4322064118344,
+      "hrBaselineDeltaPct": -27.35318258056075,
+      "hrPicks": 229,
+      "picksByMarket": {
+        "home_runs": 229,
+        "hits": 13,
+        "runs": 1,
+        "stolen_bases": 3,
+        "singles": 0,
+        "doubles": 0,
+        "triples": 0,
+        "rbi": 5,
+        "hits_runs_rbi": 15,
+        "bases": 8
+      },
+      "windows": {
+        "season": {
+          "bbe": 226,
+          "pa": 356,
+          "avg": 0.19692307692307692,
+          "hr": 15,
+          "avgEv": 90.06933333333328,
+          "maxEv": 114.7,
+          "hardHitPct": 40.44444444444444,
+          "barrelPct": 2.2123893805309733,
+          "sweetSpotPct": 30.973451327433626,
+          "avgBatSpeed": 73.16791604197898,
+          "hardSwingRate": 0.5256198347107438,
+          "squaredUpPct": 0.2777777777777778,
+          "blastPct": 0.17149758454106281,
+          "avgSwingLength": 7.51761006289308,
+          "avgAttackAngle": 4.379352698156486,
+          "idealAttackAngleRate": 0.43636363636363634,
+          "avgTilt": 29.77907128845063,
+          "avgLa": 13.721238938053098,
+          "fbRate": 0.2168141592920354,
+          "onTimePct": 0.5793528505392912,
+          "missDistance": 2.608688367061947,
+          "pullAirRate": 0.1725663716814159
+        },
+        "l10": {
+          "bbe": 25,
+          "pa": 35,
+          "avg": 0.3,
+          "hr": 3,
+          "avgEv": 92.33999999999997,
+          "maxEv": 111.4,
+          "hardHitPct": 60,
+          "barrelPct": 12,
+          "sweetSpotPct": 28.000000000000004,
+          "avgBatSpeed": 72.31562499999998,
+          "hardSwingRate": 0.5972222222222222,
+          "squaredUpPct": 0.43478260869565216,
+          "blastPct": 0.32608695652173914,
+          "avgSwingLength": 7.329687499999999,
+          "avgAttackAngle": 3.7021606304617847,
+          "idealAttackAngleRate": 0.39705882352941174,
+          "avgTilt": 30.002549513223993,
+          "avgLa": 9.92,
+          "fbRate": 0.20689655172413793,
+          "onTimePct": 0.6625,
+          "missDistance": 1.8642465002258066,
+          "pullAirRate": 0.20689655172413793
+        },
+        "l5": {
+          "bbe": 13,
+          "pa": 20,
+          "avg": 0.17647058823529413,
+          "hr": 1,
+          "avgEv": 96.25384615384617,
+          "maxEv": 110.3,
+          "hardHitPct": 69.23076923076923,
+          "barrelPct": 7.6923076923076925,
+          "sweetSpotPct": 23.076923076923077,
+          "avgBatSpeed": 73.29722222222222,
+          "hardSwingRate": 0.5813953488372093,
+          "squaredUpPct": 0.43333333333333335,
+          "blastPct": 0.36666666666666664,
+          "avgSwingLength": 7.53611111111111,
+          "avgAttackAngle": 5.41547439561195,
+          "idealAttackAngleRate": 0.4358974358974359,
+          "avgTilt": 28.57454004667398,
+          "avgLa": 10.692307692307692,
+          "fbRate": 0.11764705882352941,
+          "onTimePct": 0.6808510638297872,
+          "missDistance": 2.5996879721333337,
+          "pullAirRate": 0.23529411764705882
+        },
+        "l3": {
+          "bbe": 9,
+          "pa": 11,
+          "avg": 0.2,
+          "hr": 0,
+          "avgEv": 94.65555555555557,
+          "maxEv": 110.3,
+          "hardHitPct": 66.66666666666666,
+          "barrelPct": 0,
+          "sweetSpotPct": 22.22222222222222,
+          "avgBatSpeed": 73.815,
+          "hardSwingRate": 0.6071428571428571,
+          "squaredUpPct": 0.4,
+          "blastPct": 0.3,
+          "avgSwingLength": 7.7700000000000005,
+          "avgAttackAngle": 7.717534389285561,
+          "idealAttackAngleRate": 0.5454545454545454,
+          "avgTilt": 30.17800485747447,
+          "avgLa": 17.88888888888889,
+          "fbRate": 0.09090909090909091,
+          "onTimePct": 0.6333333333333333,
+          "missDistance": 3.4031685466666666,
+          "pullAirRate": 0.2727272727272727
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 4,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 98.23333333333333,
+          "maxEv": 104,
+          "hardHitPct": 66.66666666666666,
+          "barrelPct": 0,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 74.87142857142858,
+          "hardSwingRate": 0.56,
+          "squaredUpPct": 0.35294117647058826,
+          "blastPct": 0.29411764705882354,
+          "avgSwingLength": 7.528571428571428,
+          "avgAttackAngle": 4.780866951796312,
+          "idealAttackAngleRate": 0.5625,
+          "avgTilt": 29.335109976091598,
+          "avgLa": -5.666666666666667,
+          "fbRate": 0,
+          "onTimePct": 0.6296296296296297,
+          "missDistance": 3.4031685466666666,
+          "pullAirRate": 0.25
+        }
+      },
+      "mm": {
+        "l1": -1,
+        "l3": 0,
+        "l5": 2,
+        "l10": 1
+      },
+      "paperRank": {
+        "l1": 6,
+        "l3": 5,
+        "l5": 3,
+        "l10": 4
+      },
+      "bookRank": {
+        "l1": 5,
+        "l3": 5,
+        "l5": 5,
+        "l10": 5
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5684210526315789,
+        "paToHr": null,
+        "hrToRbi": 0.48148148148148145,
+        "hrToRbi2": 1.1111111111111112,
+        "hrToRbi3": 7.592592592592592,
+        "hrToHrr": 0.25132275132275134,
+        "hrToTb2": 0.39814814814814814,
+        "hrToTb3": 0.611111111111111,
+        "hrToTb4": 0.8333333333333334,
+        "hrToTb5": 1.574074074074074,
+        "hrToTwoHr": 13.148148148148147,
+        "hrToMoneyline": 1.2037037037037035,
+        "mgmToFanduel": 1.0285714285714285
+      }
+    },
+    {
+      "mlbId": 677800,
+      "name": "Wilyer Abreu",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 3,
+      "position": "RF",
+      "bats": "L",
+      "projected": false,
+      "fhr": {
+        "current": 500,
+        "open": 500
+      },
+      "hr": {
+        "current": 310,
+        "open": 310
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 500,
+            "open": 500
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 575,
+            "open": 750
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 310,
+            "open": 310
+          },
+          "caesars": {
+            "current": 255,
+            "open": 255
+          },
+          "betmgm": {
+            "current": 250,
+            "open": 270
+          },
+          "betrivers": {
+            "current": 250,
+            "open": 300
+          },
+          "fanatics": {
+            "current": 310,
+            "open": 310
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 2700,
+          "open": 2700
+        },
+        "laser105": {
+          "current": 600,
+          "open": 600
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 1100,
+          "open": 1100
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 430,
+          "open": 410
+        },
+        "hrr": {
+          "current": -330,
+          "open": -140
+        },
+        "rbi1": {
+          "current": 130,
+          "open": 125
+        },
+        "rbi2": {
+          "current": 420,
+          "open": 360
+        },
+        "rbi3": {
+          "current": 3000,
+          "open": 2700
+        },
+        "tb2": {
+          "current": -115,
+          "open": -110
+        },
+        "tb3": {
+          "current": 170,
+          "open": 175
+        },
+        "tb4": {
+          "current": 240,
+          "open": 240
+        },
+        "tb5": {
+          "current": 500,
+          "open": 550
+        },
+        "singles": {
+          "current": 120,
+          "open": 125
+        },
+        "doubles": {
+          "current": 310,
+          "open": 310
+        },
+        "triples": {
+          "current": 3300,
+          "open": 3500
+        },
+        "hits1": {
+          "current": -240,
+          "open": -230
+        },
+        "hits2": {
+          "current": 230,
+          "open": 240
+        },
+        "runs1": {
+          "current": -115,
+          "open": -110
+        },
+        "runs2": {
+          "current": 550,
+          "open": 650
+        },
+        "sb1": {
+          "current": 680,
+          "open": 750
+        },
+        "sb2": {
+          "current": 8000,
+          "open": 10000
+        }
+      },
+      "fhrBaselineDeltaPct": -39.30151650556015,
+      "hrBaselineDeltaPct": -37.54150930275771,
+      "hrPicks": 1611,
+      "picksByMarket": {
+        "home_runs": 1611,
+        "hits": 45,
+        "runs": 2,
+        "stolen_bases": 0,
+        "singles": 0,
+        "doubles": 6,
+        "triples": 0,
+        "rbi": 17,
+        "hits_runs_rbi": 249,
+        "bases": 152
+      },
+      "windows": {
+        "season": {
+          "bbe": 235,
+          "pa": 350,
+          "avg": 0.22580645161290322,
+          "hr": 16,
+          "avgEv": 90.4641025641026,
+          "maxEv": 113.1,
+          "hardHitPct": 45.72649572649573,
+          "barrelPct": 4.25531914893617,
+          "sweetSpotPct": 38.034188034188034,
+          "avgBatSpeed": 72.52441176470585,
+          "hardSwingRate": 0.4019448946515397,
+          "squaredUpPct": 0.3044397463002114,
+          "blastPct": 0.15644820295983086,
+          "avgSwingLength": 7.2614285714285725,
+          "avgAttackAngle": 9.283427421134505,
+          "idealAttackAngleRate": 0.4764991896272286,
+          "avgTilt": 33.51898375247652,
+          "avgLa": 20.47008547008547,
+          "fbRate": 0.4034334763948498,
+          "onTimePct": 0.6306306306306306,
+          "missDistance": 2.0458531384601226,
+          "pullAirRate": 0.18454935622317595
+        },
+        "l10": {
+          "bbe": 25,
+          "pa": 35,
+          "avg": 0.38461538461538464,
+          "hr": 5,
+          "avgEv": 92.74400000000001,
+          "maxEv": 109.3,
+          "hardHitPct": 60,
+          "barrelPct": 20,
+          "sweetSpotPct": 44,
+          "avgBatSpeed": 72.32799999999999,
+          "hardSwingRate": 0.39655172413793105,
+          "squaredUpPct": 0.4523809523809524,
+          "blastPct": 0.2857142857142857,
+          "avgSwingLength": 7.211999999999998,
+          "avgAttackAngle": 8.662216224257898,
+          "idealAttackAngleRate": 0.5471698113207547,
+          "avgTilt": 33.002133012855964,
+          "avgLa": 23.2,
+          "fbRate": 0.5,
+          "onTimePct": 0.6764705882352942,
+          "missDistance": 2.7460929025238094,
+          "pullAirRate": 0.21428571428571427
+        },
+        "l5": {
+          "bbe": 12,
+          "pa": 19,
+          "avg": 0.3333333333333333,
+          "hr": 1,
+          "avgEv": 91.55833333333335,
+          "maxEv": 105.3,
+          "hardHitPct": 66.66666666666666,
+          "barrelPct": 8.333333333333332,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 71.136,
+          "hardSwingRate": 0.45454545454545453,
+          "squaredUpPct": 0.4583333333333333,
+          "blastPct": 0.25,
+          "avgSwingLength": 7.332000000000002,
+          "avgAttackAngle": 9.852885893172328,
+          "idealAttackAngleRate": 0.5384615384615384,
+          "avgTilt": 34.05403866872539,
+          "avgLa": 24.416666666666668,
+          "fbRate": 0.42857142857142855,
+          "onTimePct": 0.6756756756756757,
+          "missDistance": 3.7787240692307695,
+          "pullAirRate": 0.35714285714285715
+        },
+        "l3": {
+          "bbe": 6,
+          "pa": 10,
+          "avg": 0.16666666666666666,
+          "hr": 1,
+          "avgEv": 82.48333333333332,
+          "maxEv": 102.8,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 74,
+          "hardSwingRate": 0.38461538461538464,
+          "squaredUpPct": 0.4444444444444444,
+          "blastPct": 0.2222222222222222,
+          "avgSwingLength": 7.538461538461538,
+          "avgAttackAngle": 9.418996152524668,
+          "idealAttackAngleRate": 0.6875,
+          "avgTilt": 34.31096248576412,
+          "avgLa": 28,
+          "fbRate": 0.36363636363636365,
+          "onTimePct": 0.75,
+          "missDistance": 3.6475066324000003,
+          "pullAirRate": 0.36363636363636365
+        },
+        "l1": {
+          "bbe": 1,
+          "pa": 3,
+          "avg": 0.5,
+          "hr": 1,
+          "avgEv": 96,
+          "maxEv": 96,
+          "hardHitPct": 100,
+          "barrelPct": 0,
+          "sweetSpotPct": 100,
+          "avgBatSpeed": 74.32499999999999,
+          "hardSwingRate": 0.391304347826087,
+          "squaredUpPct": 0.4117647058823529,
+          "blastPct": 0.23529411764705882,
+          "avgSwingLength": 7.8999999999999995,
+          "avgAttackAngle": 16.9409550350391,
+          "idealAttackAngleRate": 0.6363636363636364,
+          "avgTilt": 33.18082628179205,
+          "avgLa": 32,
+          "fbRate": 0.3,
+          "onTimePct": 0.72,
+          "missDistance": 3.8717348125,
+          "pullAirRate": 0.4
+        }
+      },
+      "mm": {
+        "l1": 0,
+        "l3": 0,
+        "l5": -1,
+        "l10": -1
+      },
+      "paperRank": {
+        "l1": 1,
+        "l3": 1,
+        "l5": 2,
+        "l10": 2
+      },
+      "bookRank": {
+        "l1": 1,
+        "l3": 1,
+        "l5": 1,
+        "l10": 1
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6833333333333333,
+        "paToHr": null,
+        "hrToRbi": 0.5609756097560976,
+        "hrToRbi2": 1.268292682926829,
+        "hrToRbi3": 7.560975609756097,
+        "hrToHrr": 0.3178122690317812,
+        "hrToTb2": 0.45599151643690355,
+        "hrToTb3": 0.6585365853658537,
+        "hrToTb4": 0.8292682926829268,
+        "hrToTb5": 1.4634146341463414,
+        "hrToTwoHr": 6.829268292682927,
+        "hrToMoneyline": 1.292682926829268,
+        "mgmToFanduel": 1.1714285714285715
+      }
+    },
+    {
+      "mlbId": 655316,
+      "name": "Andruw Monasterio",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 8,
+      "position": "SS",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 1300,
+        "open": 1300
+      },
+      "hr": {
+        "current": 630,
+        "open": 630
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1300,
+            "open": 1300
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1700,
+            "open": 1700
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 630,
+            "open": 630
+          },
+          "caesars": {
+            "current": 625,
+            "open": 450
+          },
+          "betmgm": {
+            "current": 700,
+            "open": 725
+          },
+          "betrivers": {
+            "current": 550,
+            "open": 540
+          },
+          "fanatics": {
+            "current": 550,
+            "open": 600
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 10000,
+          "open": 8000
+        },
+        "laser105": {
+          "current": 3000,
+          "open": 3000
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 2500,
+          "open": 2500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 800,
+          "open": 800
+        },
+        "hrr": {
+          "current": -220,
+          "open": 115
+        },
+        "rbi1": {
+          "current": 200,
+          "open": 200
+        },
+        "rbi2": {
+          "current": 700,
+          "open": 700
+        },
+        "rbi3": {
+          "current": 6000,
+          "open": 6000
+        },
+        "tb2": {
+          "current": 170,
+          "open": 170
+        },
+        "tb3": {
+          "current": 370,
+          "open": 370
+        },
+        "tb4": {
+          "current": 550,
+          "open": 500
+        },
+        "tb5": {
+          "current": 1200,
+          "open": 1200
+        },
+        "singles": {
+          "current": 110,
+          "open": 115
+        },
+        "doubles": {
+          "current": 490,
+          "open": 500
+        },
+        "triples": {
+          "current": 10000,
+          "open": 8000
+        },
+        "hits1": {
+          "current": -160,
+          "open": -160
+        },
+        "hits2": {
+          "current": 370,
+          "open": 380
+        },
+        "runs1": {
+          "current": 165,
+          "open": 145
+        },
+        "runs2": {
+          "current": 1200,
+          "open": 1000
+        },
+        "sb1": {
+          "current": 750,
+          "open": 750
+        },
+        "sb2": {
+          "current": 10000,
+          "open": 10000
+        }
+      },
+      "fhrBaselineDeltaPct": -14.28019323671498,
+      "hrBaselineDeltaPct": -23.27819152441837,
+      "hrPicks": 25,
+      "picksByMarket": {
+        "home_runs": 25,
+        "hits": 16,
+        "runs": 1,
+        "stolen_bases": 0,
+        "singles": 0,
+        "doubles": 4,
+        "triples": 0,
+        "rbi": 1,
+        "hits_runs_rbi": 15,
+        "bases": 3
+      },
+      "windows": {
+        "season": {
+          "bbe": 113,
+          "pa": 156,
+          "avg": 0.25874125874125875,
+          "hr": 1,
+          "avgEv": 85.49469026548674,
+          "maxEv": 107.5,
+          "hardHitPct": 30.973451327433626,
+          "barrelPct": 2.6548672566371683,
+          "sweetSpotPct": 41.5929203539823,
+          "avgBatSpeed": 66.99756944444437,
+          "hardSwingRate": 0.02380952380952381,
+          "squaredUpPct": 0.3253588516746411,
+          "blastPct": 0.10526315789473684,
+          "avgSwingLength": 6.591588785046729,
+          "avgAttackAngle": 6.9854646950159,
+          "idealAttackAngleRate": null,
+          "avgTilt": 33.23027395862723,
+          "avgLa": 20.442477876106196,
+          "fbRate": 0.26785714285714285,
+          "onTimePct": 0.7020408163265306,
+          "missDistance": 2.128212431444444,
+          "pullAirRate": 0.2589285714285714
+        },
+        "l10": {
+          "bbe": 26,
+          "pa": 35,
+          "avg": 0.3225806451612903,
+          "hr": 0,
+          "avgEv": 86.11538461538461,
+          "maxEv": 106.2,
+          "hardHitPct": 19.230769230769234,
+          "barrelPct": 3.8461538461538463,
+          "sweetSpotPct": 38.46153846153847,
+          "avgBatSpeed": 67.38225806451614,
+          "hardSwingRate": 0.027777777777777776,
+          "squaredUpPct": 0.3050847457627119,
+          "blastPct": 0.11864406779661017,
+          "avgSwingLength": 6.5677419354838715,
+          "avgAttackAngle": 6.3885011526842534,
+          "idealAttackAngleRate": null,
+          "avgTilt": 33.64096260179604,
+          "avgLa": 16.692307692307693,
+          "fbRate": 0.1935483870967742,
+          "onTimePct": 0.5783132530120482,
+          "missDistance": 2.5993384544444447,
+          "pullAirRate": 0.3225806451612903
+        },
+        "l5": {
+          "bbe": 9,
+          "pa": 14,
+          "avg": 0.25,
+          "hr": 0,
+          "avgEv": 81.58888888888889,
+          "maxEv": 106.2,
+          "hardHitPct": 11.11111111111111,
+          "barrelPct": 0,
+          "sweetSpotPct": 44.44444444444444,
+          "avgBatSpeed": 66.80499999999999,
+          "hardSwingRate": 0.05263157894736842,
+          "squaredUpPct": 0.3125,
+          "blastPct": 0.09375,
+          "avgSwingLength": 6.784999999999999,
+          "avgAttackAngle": 7.961039613196104,
+          "idealAttackAngleRate": null,
+          "avgTilt": 34.682586325361804,
+          "avgLa": 25.333333333333332,
+          "fbRate": 0.16666666666666666,
+          "onTimePct": 0.5681818181818182,
+          "missDistance": 2.420223789272727,
+          "pullAirRate": 0.3888888888888889
+        },
+        "l3": {
+          "bbe": 6,
+          "pa": 9,
+          "avg": 0.125,
+          "hr": 0,
+          "avgEv": 81.34999999999998,
+          "maxEv": 106.2,
+          "hardHitPct": 16.666666666666664,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 65.47857142857143,
+          "hardSwingRate": 0.05,
+          "squaredUpPct": 0.25,
+          "blastPct": 0.125,
+          "avgSwingLength": 6.571428571428571,
+          "avgAttackAngle": 5.226795943615171,
+          "idealAttackAngleRate": null,
+          "avgTilt": 36.70009305869404,
+          "avgLa": 22.666666666666668,
+          "fbRate": 0.1111111111111111,
+          "onTimePct": 0.48,
+          "missDistance": 3.071520675,
+          "pullAirRate": 0.3333333333333333
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 4,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 74.33333333333333,
+          "maxEv": 78.1,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 66.66666666666666,
+          "avgBatSpeed": 70.65,
+          "hardSwingRate": 0.05263157894736842,
+          "squaredUpPct": 0.25,
+          "blastPct": 0.125,
+          "avgSwingLength": 6.85,
+          "avgAttackAngle": 3.936186141116215,
+          "idealAttackAngleRate": null,
+          "avgTilt": 39.452193980381075,
+          "avgLa": 17,
+          "fbRate": 0.1111111111111111,
+          "onTimePct": 0.5238095238095238,
+          "missDistance": 3.194516676,
+          "pullAirRate": 0.3333333333333333
+        }
+      },
+      "mm": {
+        "l1": 2,
+        "l3": 1,
+        "l5": 1,
+        "l10": 1
+      },
+      "paperRank": {
+        "l1": 7,
+        "l3": 8,
+        "l5": 8,
+        "l10": 8
+      },
+      "bookRank": {
+        "l1": 9,
+        "l3": 9,
+        "l5": 9,
+        "l10": 9
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5214285714285715,
+        "paToHr": null,
+        "hrToRbi": 0.410958904109589,
+        "hrToRbi2": 1.095890410958904,
+        "hrToRbi3": 8.356164383561643,
+        "hrToHrr": 0.199252801992528,
+        "hrToTb2": 0.3698630136986301,
+        "hrToTb3": 0.6438356164383561,
+        "hrToTb4": 0.8904109589041095,
+        "hrToTb5": 1.780821917808219,
+        "hrToTwoHr": 13.835616438356164,
+        "hrToMoneyline": 1.2328767123287672,
+        "mgmToFanduel": 0.9125000000000001
+      }
+    },
+    {
+      "mlbId": 665926,
+      "name": "Andrés Giménez",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 6,
+      "position": "SS",
+      "bats": "L",
+      "projected": false,
+      "fhr": {
+        "current": 2500,
+        "open": 2500
+      },
+      "hr": {
+        "current": 1000,
+        "open": 1100
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 2500,
+            "open": 2500
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 3500,
+            "open": 3500
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 1000,
+            "open": 1100
+          },
+          "caesars": {
+            "current": 850,
+            "open": 950
+          },
+          "betmgm": {
+            "current": 725,
+            "open": 725
+          },
+          "betrivers": {
+            "current": 1200,
+            "open": 1200
+          },
+          "fanatics": {
+            "current": 900,
+            "open": 1000
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 17500,
+          "open": 22500
+        },
+        "laser105": {
+          "current": 6000,
+          "open": 6500
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 4500,
+          "open": 4500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 1500,
+          "open": 1900
+        },
+        "hrr": {
+          "current": -220,
+          "open": 155
+        },
+        "rbi1": {
+          "current": 270,
+          "open": 320
+        },
+        "rbi2": {
+          "current": 1000,
+          "open": 1400
+        },
+        "rbi3": {
+          "current": 10000,
+          "open": 10000
+        },
+        "tb2": {
+          "current": 180,
+          "open": 210
+        },
+        "tb3": {
+          "current": 450,
+          "open": 550
+        },
+        "tb4": {
+          "current": 750,
+          "open": 950
+        },
+        "tb5": {
+          "current": 1700,
+          "open": 2200
+        },
+        "singles": {
+          "current": -115,
+          "open": 100
+        },
+        "doubles": {
+          "current": 500,
+          "open": 550
+        },
+        "triples": {
+          "current": 6000,
+          "open": 6000
+        },
+        "hits1": {
+          "current": -175,
+          "open": -150
+        },
+        "hits2": {
+          "current": 330,
+          "open": 430
+        },
+        "runs1": {
+          "current": 200,
+          "open": 220
+        },
+        "runs2": {
+          "current": 1700,
+          "open": 2000
+        },
+        "sb1": {
+          "current": 640,
+          "open": 750
+        },
+        "sb2": {
+          "current": 6500,
+          "open": 8000
+        }
+      },
+      "fhrBaselineDeltaPct": 9.435889675002846,
+      "hrBaselineDeltaPct": -10.226079103144297,
+      "hrPicks": 19,
+      "picksByMarket": {
+        "home_runs": 19,
+        "hits": 44,
+        "runs": 4,
+        "stolen_bases": 4,
+        "singles": 4,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 4,
+        "hits_runs_rbi": 65,
+        "bases": 22
+      },
+      "windows": {
+        "season": {
+          "bbe": 81,
+          "pa": 105,
+          "avg": 0.20618556701030927,
+          "hr": 2,
+          "avgEv": 80.67500000000003,
+          "maxEv": 105.8,
+          "hardHitPct": 22.5,
+          "barrelPct": 0,
+          "sweetSpotPct": 23.75,
+          "avgBatSpeed": 61.957894736842114,
+          "hardSwingRate": 0.0375,
+          "squaredUpPct": 0.3333333333333333,
+          "blastPct": 0.06666666666666667,
+          "avgSwingLength": 6.80483870967742,
+          "avgAttackAngle": 8.060552012779244,
+          "idealAttackAngleRate": 0.4875,
+          "avgTilt": 33.35825769148766,
+          "avgLa": 7.8375,
+          "fbRate": 0.1728395061728395,
+          "onTimePct": 0.6928104575163399,
+          "missDistance": 2.1666394213333335,
+          "pullAirRate": 0.0740740740740741
+        },
+        "l10": {
+          "bbe": 13,
+          "pa": 19,
+          "avg": 0.2222222222222222,
+          "hr": 0,
+          "avgEv": 84.98461538461538,
+          "maxEv": 103.7,
+          "hardHitPct": 30.76923076923077,
+          "barrelPct": 0,
+          "sweetSpotPct": 38.46153846153847,
+          "avgBatSpeed": 63.56590909090908,
+          "hardSwingRate": 0.047619047619047616,
+          "squaredUpPct": 0.2857142857142857,
+          "blastPct": 0.07142857142857142,
+          "avgSwingLength": 6.834090909090907,
+          "avgAttackAngle": 9.759538435837321,
+          "idealAttackAngleRate": 0.55,
+          "avgTilt": 33.637945030012,
+          "avgLa": 17.384615384615383,
+          "fbRate": 0.26666666666666666,
+          "onTimePct": 0.6086956521739131,
+          "missDistance": 4.214747182666667,
+          "pullAirRate": 0.13333333333333333
+        },
+        "l5": {
+          "bbe": 6,
+          "pa": 11,
+          "avg": 0.18181818181818182,
+          "hr": 0,
+          "avgEv": 85.8,
+          "maxEv": 99.1,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 63.66923076923077,
+          "hardSwingRate": 0.058823529411764705,
+          "squaredUpPct": 0.3,
+          "blastPct": 0.1,
+          "avgSwingLength": 6.888461538461538,
+          "avgAttackAngle": 9.375826146331708,
+          "idealAttackAngleRate": 0.46875,
+          "avgTilt": 33.436534380048855,
+          "avgLa": 21.333333333333332,
+          "fbRate": 0.3,
+          "onTimePct": 0.5526315789473685,
+          "missDistance": 4.214747182666667,
+          "pullAirRate": 0.1
+        },
+        "l3": {
+          "bbe": 3,
+          "pa": 8,
+          "avg": 0.125,
+          "hr": 0,
+          "avgEv": 88.5,
+          "maxEv": 98.8,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 0,
+          "sweetSpotPct": 66.66666666666666,
+          "avgBatSpeed": 62.35714285714287,
+          "hardSwingRate": 0.07692307692307693,
+          "squaredUpPct": 0.23076923076923078,
+          "blastPct": 0.07692307692307693,
+          "avgSwingLength": 6.857142857142857,
+          "avgAttackAngle": 8.714278704727572,
+          "idealAttackAngleRate": 0.45,
+          "avgTilt": 33.96621455827268,
+          "avgLa": 26.666666666666668,
+          "fbRate": 0.4,
+          "onTimePct": 0.5333333333333333,
+          "missDistance": 4.415599555142857,
+          "pullAirRate": 0
+        },
+        "l1": {
+          "bbe": 2,
+          "pa": 3,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 85.6,
+          "maxEv": 98.8,
+          "hardHitPct": 50,
+          "barrelPct": 0,
+          "sweetSpotPct": 50,
+          "avgBatSpeed": 59.7,
+          "hardSwingRate": 0.05,
+          "squaredUpPct": 0.16666666666666666,
+          "blastPct": 0.08333333333333333,
+          "avgSwingLength": 6.140000000000001,
+          "avgAttackAngle": -1.4759092692860534,
+          "idealAttackAngleRate": 0.4166666666666667,
+          "avgTilt": 37.28990184917465,
+          "avgLa": 30.5,
+          "fbRate": 0.6666666666666666,
+          "onTimePct": 0.5,
+          "missDistance": 3.815197467,
+          "pullAirRate": 0
+        }
+      },
+      "mm": {
+        "l1": -1,
+        "l3": -1,
+        "l5": -1,
+        "l10": -1
+      },
+      "paperRank": {
+        "l1": 17,
+        "l3": 17,
+        "l5": 17,
+        "l10": 17
+      },
+      "bookRank": {
+        "l1": 16,
+        "l3": 16,
+        "l5": 16,
+        "l10": 16
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.4230769230769231,
+        "paToHr": null,
+        "hrToRbi": 0.33636363636363636,
+        "hrToRbi2": 1,
+        "hrToRbi3": 9.181818181818182,
+        "hrToHrr": 0.1322314049586777,
+        "hrToTb2": 0.2545454545454545,
+        "hrToTb3": 0.5,
+        "hrToTb4": 0.7727272727272727,
+        "hrToTb5": 1.6363636363636365,
+        "hrToTwoHr": 16,
+        "hrToMoneyline": 1.4545454545454546,
+        "mgmToFanduel": 1.3333333333333333
+      }
+    },
+    {
+      "mlbId": 665489,
+      "name": "Vladimir Guerrero Jr.",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 3,
+      "position": "1B",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 800,
+        "open": 800
+      },
+      "hr": {
+        "current": 430,
+        "open": 430
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 800,
+            "open": 800
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1000,
+            "open": 1100
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 430,
+            "open": 430
+          },
+          "caesars": {
+            "current": 360,
+            "open": 360
+          },
+          "betmgm": {
+            "current": 450,
+            "open": 475
+          },
+          "betrivers": {
+            "current": 400,
+            "open": 430
+          },
+          "fanatics": {
+            "current": 410,
+            "open": 430
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 5000,
+          "open": 6500
+        },
+        "laser105": {
+          "current": 650,
+          "open": 700
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 1400,
+          "open": 1500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 700,
+          "open": 750
+        },
+        "hrr": {
+          "current": -290,
+          "open": -115
+        },
+        "rbi1": {
+          "current": 170,
+          "open": 190
+        },
+        "rbi2": {
+          "current": 600,
+          "open": 650
+        },
+        "rbi3": {
+          "current": 6000,
+          "open": 5000
+        },
+        "tb2": {
+          "current": 115,
+          "open": 110
+        },
+        "tb3": {
+          "current": 240,
+          "open": 240
+        },
+        "tb4": {
+          "current": 340,
+          "open": 340
+        },
+        "tb5": {
+          "current": 750,
+          "open": 750
+        },
+        "singles": {
+          "current": -105,
+          "open": -110
+        },
+        "doubles": {
+          "current": 390,
+          "open": 370
+        },
+        "triples": {
+          "current": 10000,
+          "open": 10000
+        },
+        "hits1": {
+          "current": -220,
+          "open": -230
+        },
+        "hits2": {
+          "current": 260,
+          "open": 250
+        },
+        "runs1": {
+          "current": 125,
+          "open": 115
+        },
+        "runs2": {
+          "current": 900,
+          "open": 800
+        },
+        "sb1": {
+          "current": 850,
+          "open": 880
+        },
+        "sb2": {
+          "current": 10000,
+          "open": 10000
+        }
+      },
+      "fhrBaselineDeltaPct": -13.471594555111071,
+      "hrBaselineDeltaPct": -25.067625598998262,
+      "hrPicks": 51,
+      "picksByMarket": {
+        "home_runs": 51,
+        "hits": 51,
+        "runs": 1,
+        "stolen_bases": 7,
+        "singles": 29,
+        "doubles": 1,
+        "triples": 0,
+        "rbi": 5,
+        "hits_runs_rbi": 29,
+        "bases": 8
+      },
+      "windows": {
+        "season": {
+          "bbe": 78,
+          "pa": 115,
+          "avg": 0.2736842105263158,
+          "hr": 2,
+          "avgEv": 92.34102564102564,
+          "maxEv": 115.7,
+          "hardHitPct": 46.15384615384615,
+          "barrelPct": 1.282051282051282,
+          "sweetSpotPct": 28.205128205128204,
+          "avgBatSpeed": 75.23232323232321,
+          "hardSwingRate": 0.6358695652173914,
+          "squaredUpPct": 0.3108108108108108,
+          "blastPct": 0.21621621621621623,
+          "avgSwingLength": 7.536842105263159,
+          "avgAttackAngle": 0.9093564888128313,
+          "idealAttackAngleRate": 0.3478260869565217,
+          "avgTilt": 29.029487220883023,
+          "avgLa": 10.346153846153847,
+          "fbRate": 0.2564102564102564,
+          "onTimePct": 0.573170731707317,
+          "missDistance": 2.03590891588,
+          "pullAirRate": 0.1282051282051282
+        },
+        "l10": {
+          "bbe": 14,
+          "pa": 24,
+          "avg": 0.2857142857142857,
+          "hr": 0,
+          "avgEv": 90.5357142857143,
+          "maxEv": 107.2,
+          "hardHitPct": 35.714285714285715,
+          "barrelPct": 7.142857142857142,
+          "sweetSpotPct": 21.428571428571427,
+          "avgBatSpeed": 74.6904761904762,
+          "hardSwingRate": 0.5217391304347826,
+          "squaredUpPct": 0.25,
+          "blastPct": 0.0625,
+          "avgSwingLength": 7.516666666666667,
+          "avgAttackAngle": 0.7321632800717894,
+          "idealAttackAngleRate": 0.38095238095238093,
+          "avgTilt": 28.336637299240856,
+          "avgLa": 17.214285714285715,
+          "fbRate": 0.1111111111111111,
+          "onTimePct": 0.4642857142857143,
+          "missDistance": 2.6196241131428573,
+          "pullAirRate": 0.1111111111111111
+        },
+        "l5": {
+          "bbe": 5,
+          "pa": 11,
+          "avg": 0.2,
+          "hr": 0,
+          "avgEv": 86.2,
+          "maxEv": 103.4,
+          "hardHitPct": 20,
+          "barrelPct": 20,
+          "sweetSpotPct": 40,
+          "avgBatSpeed": 74.64666666666668,
+          "hardSwingRate": 0.47368421052631576,
+          "squaredUpPct": 0.2,
+          "blastPct": 0.06666666666666667,
+          "avgSwingLength": 7.506666666666667,
+          "avgAttackAngle": -1.6087263042784072,
+          "idealAttackAngleRate": 0.3333333333333333,
+          "avgTilt": 28.11852022798975,
+          "avgLa": 17.6,
+          "fbRate": 0.125,
+          "onTimePct": 0.35,
+          "missDistance": 1.610062861333333,
+          "pullAirRate": 0.125
+        },
+        "l3": {
+          "bbe": 5,
+          "pa": 7,
+          "avg": 0.2857142857142857,
+          "hr": 0,
+          "avgEv": 86.2,
+          "maxEv": 103.4,
+          "hardHitPct": 20,
+          "barrelPct": 20,
+          "sweetSpotPct": 40,
+          "avgBatSpeed": 71.55,
+          "hardSwingRate": 0.47368421052631576,
+          "squaredUpPct": 0.2,
+          "blastPct": 0.06666666666666667,
+          "avgSwingLength": 6.95,
+          "avgAttackAngle": -7.1079377340789955,
+          "idealAttackAngleRate": 0.3333333333333333,
+          "avgTilt": 29.046053690067925,
+          "avgLa": 17.6,
+          "fbRate": 0.125,
+          "onTimePct": 0.35,
+          "missDistance": 1.610062861333333,
+          "pullAirRate": 0.125
+        },
+        "l1": {
+          "bbe": 2,
+          "pa": 3,
+          "avg": 0.3333333333333333,
+          "hr": 0,
+          "avgEv": 94.80000000000001,
+          "maxEv": 103.4,
+          "hardHitPct": 50,
+          "barrelPct": 50,
+          "sweetSpotPct": 100,
+          "avgBatSpeed": 70.16666666666667,
+          "hardSwingRate": 0.5,
+          "squaredUpPct": 0.14285714285714285,
+          "blastPct": 0.07142857142857142,
+          "avgSwingLength": 7.633333333333333,
+          "avgAttackAngle": -0.5408442875527463,
+          "idealAttackAngleRate": 0.4,
+          "avgTilt": 29.86051620563403,
+          "avgLa": 16,
+          "fbRate": 0.16666666666666666,
+          "onTimePct": 0.3333333333333333,
+          "missDistance": 1.610062861333333,
+          "pullAirRate": 0.16666666666666666
+        }
+      },
+      "mm": {
+        "l1": 2,
+        "l3": 2,
+        "l5": 3,
+        "l10": 3
+      },
+      "paperRank": {
+        "l1": 2,
+        "l3": 2,
+        "l5": 1,
+        "l10": 1
+      },
+      "bookRank": {
+        "l1": 4,
+        "l3": 4,
+        "l5": 4,
+        "l10": 4
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.5888888888888888,
+        "paToHr": null,
+        "hrToRbi": 0.509433962264151,
+        "hrToRbi2": 1.3207547169811322,
+        "hrToRbi3": 11.50943396226415,
+        "hrToHrr": 0.25374105400130126,
+        "hrToTb2": 0.4056603773584906,
+        "hrToTb3": 0.6415094339622642,
+        "hrToTb4": 0.8301886792452831,
+        "hrToTb5": 1.6037735849056605,
+        "hrToTwoHr": 9.622641509433963,
+        "hrToMoneyline": 1.509433962264151,
+        "mgmToFanduel": 0.9636363636363636
+      }
+    },
+    {
+      "mlbId": 678882,
+      "name": "Ceddanne Rafaela",
+      "team": "BOS",
+      "opponent": "TOR",
+      "battingOrder": 2,
+      "position": "CF",
+      "bats": "R",
+      "projected": false,
+      "fhr": {
+        "current": 1000,
+        "open": 950
+      },
+      "hr": {
+        "current": 630,
+        "open": 600
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 1000,
+            "open": 950
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 1100,
+            "open": 1100
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 630,
+            "open": 600
+          },
+          "caesars": {
+            "current": 450,
+            "open": 425
+          },
+          "betmgm": {
+            "current": 375,
+            "open": 375
+          },
+          "betrivers": {
+            "current": 440,
+            "open": 525
+          },
+          "fanatics": {
+            "current": 600,
+            "open": 550
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 8000,
+          "open": 7500
+        },
+        "laser105": {
+          "current": 3000,
+          "open": 2700
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 3000,
+          "open": 2700
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 850,
+          "open": 750
+        },
+        "hrr": {
+          "current": -310,
+          "open": -125
+        },
+        "rbi1": {
+          "current": 195,
+          "open": 185
+        },
+        "rbi2": {
+          "current": 650,
+          "open": 650
+        },
+        "rbi3": {
+          "current": 6000,
+          "open": 6000
+        },
+        "tb2": {
+          "current": 120,
+          "open": 115
+        },
+        "tb3": {
+          "current": 270,
+          "open": 260
+        },
+        "tb4": {
+          "current": 450,
+          "open": 450
+        },
+        "tb5": {
+          "current": 900,
+          "open": 850
+        },
+        "singles": {
+          "current": -140,
+          "open": -140
+        },
+        "doubles": {
+          "current": 390,
+          "open": 390
+        },
+        "triples": {
+          "current": 4000,
+          "open": 3500
+        },
+        "hits1": {
+          "current": -240,
+          "open": -240
+        },
+        "hits2": {
+          "current": 220,
+          "open": 220
+        },
+        "runs1": {
+          "current": 120,
+          "open": 120
+        },
+        "runs2": {
+          "current": 800,
+          "open": 800
+        },
+        "sb1": {
+          "current": 580,
+          "open": 520
+        },
+        "sb2": {
+          "current": 5500,
+          "open": 4500
+        }
+      },
+      "fhrBaselineDeltaPct": -19.88421494934404,
+      "hrBaselineDeltaPct": -17.786388239817796,
+      "hrPicks": 149,
+      "picksByMarket": {
+        "home_runs": 149,
+        "hits": 142,
+        "runs": 2,
+        "stolen_bases": 12,
+        "singles": 4,
+        "doubles": 19,
+        "triples": 12,
+        "rbi": 2,
+        "hits_runs_rbi": 260,
+        "bases": 50
+      },
+      "windows": {
+        "season": {
+          "bbe": 271,
+          "pa": 349,
+          "avg": 0.290519877675841,
+          "hr": 11,
+          "avgEv": 85.78289962825276,
+          "maxEv": 109.9,
+          "hardHitPct": 31.970260223048324,
+          "barrelPct": 2.214022140221402,
+          "sweetSpotPct": 38.28996282527881,
+          "avgBatSpeed": 67.26203438395417,
+          "hardSwingRate": 0.06935483870967742,
+          "squaredUpPct": 0.34012219959266804,
+          "blastPct": 0.0855397148676171,
+          "avgSwingLength": 7.017499999999997,
+          "avgAttackAngle": 5.784469624969071,
+          "idealAttackAngleRate": 0.5403225806451613,
+          "avgTilt": 32.46490708837953,
+          "avgLa": 11.12267657992565,
+          "fbRate": 0.241635687732342,
+          "onTimePct": 0.6202898550724638,
+          "missDistance": 2.5716253253797468,
+          "pullAirRate": 0.15241635687732338
+        },
+        "l10": {
+          "bbe": 33,
+          "pa": 39,
+          "avg": 0.3142857142857143,
+          "hr": 4,
+          "avgEv": 88.28787878787878,
+          "maxEv": 104.2,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 12.121212121212121,
+          "sweetSpotPct": 39.39393939393939,
+          "avgBatSpeed": 66.61927710843374,
+          "hardSwingRate": 0.0425531914893617,
+          "squaredUpPct": 0.37333333333333335,
+          "blastPct": 0.09333333333333334,
+          "avgSwingLength": 6.973493975903617,
+          "avgAttackAngle": 7.130325291658275,
+          "idealAttackAngleRate": 0.532608695652174,
+          "avgTilt": 31.386326540361402,
+          "avgLa": 19.757575757575758,
+          "fbRate": 0.325,
+          "onTimePct": 0.5909090909090909,
+          "missDistance": 2.6281102191599994,
+          "pullAirRate": 0.14999999999999997
+        },
+        "l5": {
+          "bbe": 18,
+          "pa": 18,
+          "avg": 0.3125,
+          "hr": 1,
+          "avgEv": 88.4388888888889,
+          "maxEv": 104.2,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 5.555555555555555,
+          "sweetSpotPct": 33.33333333333333,
+          "avgBatSpeed": 67.15625,
+          "hardSwingRate": 0.017241379310344827,
+          "squaredUpPct": 0.41304347826086957,
+          "blastPct": 0.13043478260869565,
+          "avgSwingLength": 7.23125,
+          "avgAttackAngle": 8.810344681648564,
+          "idealAttackAngleRate": 0.5818181818181818,
+          "avgTilt": 31.91058354958129,
+          "avgLa": 13.777777777777779,
+          "fbRate": 0.34615384615384615,
+          "onTimePct": 0.640625,
+          "missDistance": 3.2769877306666664,
+          "pullAirRate": 0.15384615384615385
+        },
+        "l3": {
+          "bbe": 12,
+          "pa": 12,
+          "avg": 0.3,
+          "hr": 1,
+          "avgEv": 87.99999999999999,
+          "maxEv": 104.2,
+          "hardHitPct": 33.33333333333333,
+          "barrelPct": 8.333333333333332,
+          "sweetSpotPct": 25,
+          "avgBatSpeed": 69.5578947368421,
+          "hardSwingRate": 0.02564102564102564,
+          "squaredUpPct": 0.5333333333333333,
+          "blastPct": 0.2,
+          "avgSwingLength": 7.463157894736843,
+          "avgAttackAngle": 11.19075304631402,
+          "idealAttackAngleRate": 0.6153846153846154,
+          "avgTilt": 32.74822341254494,
+          "avgLa": 15.75,
+          "fbRate": 0.35,
+          "onTimePct": 0.6046511627906976,
+          "missDistance": 3.7392702183333335,
+          "pullAirRate": 0.15
+        },
+        "l1": {
+          "bbe": 5,
+          "pa": 5,
+          "avg": 0.25,
+          "hr": 1,
+          "avgEv": 89.1,
+          "maxEv": 101.8,
+          "hardHitPct": 40,
+          "barrelPct": 20,
+          "sweetSpotPct": 20,
+          "avgBatSpeed": 71.5142857142857,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.6,
+          "blastPct": 0.25,
+          "avgSwingLength": 7.6571428571428575,
+          "avgAttackAngle": 14.411725370752885,
+          "idealAttackAngleRate": 0.625,
+          "avgTilt": 36.2617618813022,
+          "avgLa": 20.4,
+          "fbRate": 0.42857142857142855,
+          "onTimePct": 0.6129032258064516,
+          "missDistance": 3.2036630501818184,
+          "pullAirRate": 0.21428571428571427
+        }
+      },
+      "mm": {
+        "l1": 3,
+        "l3": 2,
+        "l5": 2,
+        "l10": 2
+      },
+      "paperRank": {
+        "l1": 5,
+        "l3": 6,
+        "l5": 6,
+        "l10": 6
+      },
+      "bookRank": {
+        "l1": 8,
+        "l3": 8,
+        "l5": 8,
+        "l10": 8
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": true,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.6636363636363637,
+        "paToHr": null,
+        "hrToRbi": 0.4041095890410959,
+        "hrToRbi2": 1.0273972602739725,
+        "hrToRbi3": 8.356164383561643,
+        "hrToHrr": 0.18117543084401236,
+        "hrToTb2": 0.3013698630136986,
+        "hrToTb3": 0.5068493150684931,
+        "hrToTb4": 0.7534246575342465,
+        "hrToTb5": 1.36986301369863,
+        "hrToTwoHr": 11.095890410958905,
+        "hrToMoneyline": 1.3013698630136987,
+        "mgmToFanduel": 1.5368421052631578
+      }
+    },
+    {
+      "mlbId": 664770,
+      "name": "Nathan Lukes",
+      "team": "TOR",
+      "opponent": "BOS",
+      "battingOrder": 9,
+      "position": "RF",
+      "bats": "L",
+      "projected": false,
+      "fhr": {
+        "current": 4500,
+        "open": 4000
+      },
+      "hr": {
+        "current": 1400,
+        "open": 1400
+      },
+      "marketBooks": {
+        "fhr": {
+          "fanduel": {
+            "current": 4500,
+            "open": 4000
+          },
+          "caesars": {
+            "current": null,
+            "open": null
+          },
+          "fanatics": {
+            "current": 3500,
+            "open": 3500
+          }
+        },
+        "hr": {
+          "fanduel": {
+            "current": 1400,
+            "open": 1400
+          },
+          "caesars": {
+            "current": 1100,
+            "open": 950
+          },
+          "betmgm": {
+            "current": 900,
+            "open": 900
+          },
+          "betrivers": {
+            "current": 1300,
+            "open": 1300
+          },
+          "fanatics": {
+            "current": 1200,
+            "open": 1000
+          }
+        }
+      },
+      "markets": {
+        "hr2": {
+          "current": 40000,
+          "open": 40000
+        },
+        "laser105": {
+          "current": 10000,
+          "open": 10000
+        },
+        "laser110": {
+          "current": null,
+          "open": null
+        },
+        "moonshot": {
+          "current": 7500,
+          "open": 7500
+        },
+        "pa1": {
+          "current": null,
+          "open": null
+        },
+        "hrMl": {
+          "current": 2500,
+          "open": 2500
+        },
+        "hrr": {
+          "current": -210,
+          "open": 150
+        },
+        "rbi1": {
+          "current": 290,
+          "open": 310
+        },
+        "rbi2": {
+          "current": 1100,
+          "open": 1300
+        },
+        "rbi3": {
+          "current": 3500,
+          "open": 4000
+        },
+        "tb2": {
+          "current": 220,
+          "open": 240
+        },
+        "tb3": {
+          "current": 650,
+          "open": 700
+        },
+        "tb4": {
+          "current": 1200,
+          "open": 1300
+        },
+        "tb5": {
+          "current": 2700,
+          "open": 3000
+        },
+        "singles": {
+          "current": -115,
+          "open": -105
+        },
+        "doubles": {
+          "current": 600,
+          "open": 650
+        },
+        "triples": {
+          "current": 7500,
+          "open": 7500
+        },
+        "hits1": {
+          "current": -160,
+          "open": -145
+        },
+        "hits2": {
+          "current": 410,
+          "open": 440
+        },
+        "runs1": {
+          "current": 220,
+          "open": 240
+        },
+        "runs2": {
+          "current": 2000,
+          "open": 2000
+        },
+        "sb1": {
+          "current": 1500,
+          "open": 1500
+        },
+        "sb2": {
+          "current": null,
+          "open": null
+        }
+      },
+      "fhrBaselineDeltaPct": 137.64013968020583,
+      "hrBaselineDeltaPct": 20.468423002319696,
+      "hrPicks": 2,
+      "picksByMarket": {
+        "home_runs": 2,
+        "hits": 24,
+        "runs": 1,
+        "stolen_bases": 1,
+        "singles": 8,
+        "doubles": 2,
+        "triples": 0,
+        "rbi": 1,
+        "hits_runs_rbi": 9,
+        "bases": 15
+      },
+      "windows": {
+        "season": {
+          "bbe": 34,
+          "pa": 54,
+          "avg": 0.1276595744680851,
+          "hr": 0,
+          "avgEv": 80.12352941176471,
+          "maxEv": 96.6,
+          "hardHitPct": 8.823529411764707,
+          "barrelPct": 0,
+          "sweetSpotPct": 26.47058823529412,
+          "avgBatSpeed": 63.13902439024393,
+          "hardSwingRate": 0.056338028169014086,
+          "squaredUpPct": 0.35185185185185186,
+          "blastPct": 0,
+          "avgSwingLength": 6.573076923076924,
+          "avgAttackAngle": 8.825474365363466,
+          "idealAttackAngleRate": 0.4788732394366197,
+          "avgTilt": 28.29037236035814,
+          "avgLa": 6.294117647058823,
+          "fbRate": 0.08823529411764706,
+          "onTimePct": 0.6,
+          "missDistance": 3.412745105,
+          "pullAirRate": 0.029411764705882342
+        },
+        "l10": {
+          "bbe": 12,
+          "pa": 19,
+          "avg": 0.1875,
+          "hr": 0,
+          "avgEv": 82.93333333333332,
+          "maxEv": 96,
+          "hardHitPct": 16.666666666666664,
+          "barrelPct": 0,
+          "sweetSpotPct": 25,
+          "avgBatSpeed": 61.72692307692307,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.5454545454545454,
+          "blastPct": 0,
+          "avgSwingLength": 6.573076923076924,
+          "avgAttackAngle": 8.825474365363466,
+          "idealAttackAngleRate": 0.5555555555555556,
+          "avgTilt": 28.29037236035814,
+          "avgLa": 7.916666666666667,
+          "fbRate": 0.1111111111111111,
+          "onTimePct": 0.65,
+          "missDistance": 4.116534273,
+          "pullAirRate": 0.1111111111111111
+        },
+        "l5": {
+          "bbe": 9,
+          "pa": 10,
+          "avg": 0.2222222222222222,
+          "hr": 0,
+          "avgEv": 79.37777777777777,
+          "maxEv": 95.8,
+          "hardHitPct": 11.11111111111111,
+          "barrelPct": 0,
+          "sweetSpotPct": 11.11111111111111,
+          "avgBatSpeed": 59.88000000000001,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.5454545454545454,
+          "blastPct": 0,
+          "avgSwingLength": 6.58,
+          "avgAttackAngle": 5.3813922657204625,
+          "idealAttackAngleRate": 0.5555555555555556,
+          "avgTilt": 29.15942096846205,
+          "avgLa": 8,
+          "fbRate": 0.1111111111111111,
+          "onTimePct": 0.5625,
+          "missDistance": 4.116534273,
+          "pullAirRate": 0.1111111111111111
+        },
+        "l3": {
+          "bbe": 5,
+          "pa": 5,
+          "avg": 0.25,
+          "hr": 0,
+          "avgEv": 68.47999999999999,
+          "maxEv": 94.3,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 20,
+          "avgBatSpeed": 67.53333333333335,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.5,
+          "blastPct": 0,
+          "avgSwingLength": 6.933333333333333,
+          "avgAttackAngle": 7.730091731812041,
+          "idealAttackAngleRate": 0.5,
+          "avgTilt": 28.099093371534735,
+          "avgLa": 6.2,
+          "fbRate": 0,
+          "onTimePct": 0.5833333333333334,
+          "missDistance": 4.27489594,
+          "pullAirRate": 0
+        },
+        "l1": {
+          "bbe": 3,
+          "pa": 3,
+          "avg": 0.5,
+          "hr": 0,
+          "avgEv": 76.2,
+          "maxEv": 94.3,
+          "hardHitPct": 0,
+          "barrelPct": 0,
+          "sweetSpotPct": 0,
+          "avgBatSpeed": 67.35,
+          "hardSwingRate": 0,
+          "squaredUpPct": 0.5,
+          "blastPct": 0,
+          "avgSwingLength": 7,
+          "avgAttackAngle": 4.05060610539576,
+          "idealAttackAngleRate": 0.5,
+          "avgTilt": 30.93679223171565,
+          "avgLa": -21,
+          "fbRate": 0,
+          "onTimePct": 0.5833333333333334,
+          "missDistance": 4.27489594,
+          "pullAirRate": 0
+        }
+      },
+      "mm": {
+        "l1": 0,
+        "l3": 0,
+        "l5": 0,
+        "l10": 0
+      },
+      "paperRank": {
+        "l1": 18,
+        "l3": 18,
+        "l5": 18,
+        "l10": 18
+      },
+      "bookRank": {
+        "l1": 18,
+        "l3": 18,
+        "l5": 18,
+        "l10": 18
+      },
+      "contextReset": false,
+      "boardMetrics": {
+        "isPowerCandidate": false,
+        "fdCaesarsFhrGap": null,
+        "fhrToHr": 0.32608695652173914,
+        "paToHr": null,
+        "hrToRbi": 0.26,
+        "hrToRbi2": 0.8,
+        "hrToRbi3": 2.4,
+        "hrToHrr": 0.09841269841269842,
+        "hrToTb2": 0.21333333333333332,
+        "hrToTb3": 0.5,
+        "hrToTb4": 0.8666666666666666,
+        "hrToTb5": 1.8666666666666667,
+        "hrToTwoHr": 26.733333333333334,
+        "hrToMoneyline": 1.7333333333333332,
+        "mgmToFanduel": 1.5
+      }
+    }
+  ],
+  "warnings": []
+}
