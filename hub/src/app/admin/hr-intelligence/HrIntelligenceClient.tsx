@@ -68,9 +68,9 @@ function SignalCard({ player, role, score, kind }: { player: HrIntelPlayerResult
   </article>
 }
 
-function WatchRow({ player, rank, lane }: { player: HrIntelPlayerResult; rank: number; lane: 'candidate' | 'contrarian' | 'companion' }) {
-  const score = player.selectionScore
-  const label = lane === 'candidate' ? player.candidateArchetype : lane === 'contrarian' ? 'next relational read' : 'independent companion'
+function WatchRow({ player, rank, lane }: { player: HrIntelPlayerResult; rank: number; lane: 'candidate' | 'contrarian' | 'companion' | 'calibrated' }) {
+  const score = lane === 'calibrated' ? player.calibratedAnytimeScore : player.selectionScore
+  const label = lane === 'candidate' ? player.candidateArchetype : lane === 'contrarian' ? 'next relational read' : lane === 'calibrated' ? 'chronological anytime model' : 'independent companion'
   return <div className={styles.pairRow}>
     <b className={styles.pairRank}>{rank}</b>
     <div className={styles.pairPlayers}>
@@ -98,7 +98,7 @@ function PlayerBoardRow({ player, expanded, onToggle }: { player: HrIntelPlayerR
       <span><small>Anytime</small><strong>{odds(player.hr.current)}</strong><i>{signed(player.movement.hrImpliedPoints, ' pp')}</i></span>
       <span><small>Public</small><strong>{player.hrPicks ?? 'N/A'}</strong><i>#{player.publicRank ?? 'N/A'}</i></span>
       <span><small>Contact</small><strong>{signed(player.contactAcceleration, '%')}</strong><i>MM {player.mm?.l10 ?? 'N/A'}</i></span>
-      <span><small>Relational read</small><strong>{player.selectionScore.toFixed(1)} / {player.decoyRiskScore.toFixed(1)}</strong><i>{player.candidateArchetype} / decoy risk</i></span>
+      <span><small>Relational read</small><strong>{player.selectionScore.toFixed(1)} / {player.calibratedAnytimeScore.toFixed(1)}</strong><i>{player.candidateArchetype} / calibrated</i></span>
       <ChevronDown size={16} className={expanded ? styles.rotated : ''} />
     </button>
     {expanded ? <PlayerDetail player={player} /> : null}
@@ -118,6 +118,7 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
   const diagnosticCandidates = game.recommendation.fhrShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const contrarianWatch = game.recommendation.contrarianWatchMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const companionWatch = game.recommendation.companionShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
+  const calibratedWatch = game.recommendation.calibratedAnytimeShortlistMlbIds.map(id => playersById.get(id)).filter((player): player is HrIntelPlayerResult => !!player)
   const away = game.players.filter(player => player.team === game.awayTeam).sort((a, b) => a.battingOrder - b.battingOrder)
   const home = game.players.filter(player => player.team === game.homeTeam).sort((a, b) => a.battingOrder - b.battingOrder)
 
@@ -160,6 +161,10 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
 
     <div className={styles.candidateGrid}>
       <section className={styles.panel}>
+        <header><div><span>CHRONOLOGICAL MODEL</span><h3>Anytime HR board shortlist</h3></div><small>Frozen through August 8 and measured on later slates. This ranks the complete board and remains separate from the publication gate.</small></header>
+        <div className={styles.pairList}>{calibratedWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="calibrated" />)}</div>
+      </section>
+      <section className={styles.panel}>
         <header><div><span>PUBLICATION GATE</span><h3>{game.recommendation.publicationEligible ? 'Validated candidate set' : 'No wager set published'}</h3></div><small>A player appears here only after its rule survives chronological discovery, calibration, and untouched holdout.</small></header>
         <div className={styles.pairList}>{publishedCandidates.length ? publishedCandidates.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="candidate" />) : <p className={styles.missing}>{game.recommendation.publicationReason}</p>}</div>
       </section>
@@ -179,6 +184,20 @@ function GameAnalysis({ game }: { game: HrIntelGameResult }) {
         <header><div><span>COMPANION DIAGNOSTIC</span><h3>{game.recommendation.companionRecipe}</h3></div><small>Market relationships for multi-HR research. No companion is published without walk-forward support.</small></header>
         <div className={styles.pairList}>{companionWatch.map((player, index) => <WatchRow key={player.mlbId} player={player} rank={index + 1} lane="companion" />)}</div>
         <div className={styles.pairEvidence}><span>Multi-HR read: <b>{game.recommendation.multiHrRead}</b></span><span>Published companion: <b>{game.recommendation.anytimeCompanionMlbId == null ? 'None qualified' : getPlayer(game.recommendation.anytimeCompanionMlbId)?.name}</b></span><span>Data state: <b>{game.recommendation.dataComplete ? 'Complete' : 'Partial'}</b></span></div>
+        <header><div><span>PAIR TERMINAL</span><h3>Lowest-exposure relational pairs</h3></div><small>Ranks anchor and companion combinations using calibrated player probability, derivative-market similarity, public exposure, RBI exposure, and team shape.</small></header>
+        <div className={styles.pairList}>{game.pairs.slice(0, 3).map((pair, index) => {
+          const anchor = getPlayer(pair.anchorMlbId)
+          const companion = getPlayer(pair.companionMlbId)
+          if (!anchor || !companion) return null
+          return <div className={styles.pairRow} key={`${pair.anchorMlbId}-${pair.companionMlbId}`}>
+            <b className={styles.pairRank}>{index + 1}</b>
+            <div className={styles.pairPlayers}>
+              <span><PlayerAvatar headshot={mlbHeadshot(anchor.mlbId)} teamLogo={getTeamLogoUrl(anchor.team)} teamAbbr={anchor.team} name={anchor.name} size={31} /><span><b>{anchor.name}</b><small>FHR anchor</small></span></span>
+              <span><PlayerAvatar headshot={mlbHeadshot(companion.mlbId)} teamLogo={getTeamLogoUrl(companion.team)} teamAbbr={companion.team} name={companion.name} size={31} /><span><b>{companion.name}</b><small>Anytime companion</small></span></span>
+            </div>
+            <div className={styles.pairScore}><strong>{pair.score.toFixed(1)}</strong><small>synergy {pair.synergy.toFixed(1)}</small></div>
+          </div>
+        })}</div>
       </section>
 
       <section className={styles.panel}>

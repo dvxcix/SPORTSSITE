@@ -59,6 +59,7 @@ process.stdout.write(`${JSON.stringify({
   game: game.gameKey,
   noHr: game.noHr,
   diagnostics: game.diagnostics,
+  recommendation: game.recommendation,
   warnings: game.warnings,
   actual: game.validation,
   rows,

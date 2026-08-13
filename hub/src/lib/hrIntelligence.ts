@@ -11,6 +11,17 @@ export type HrIntelMetricWindow = {
   barrelPct: number | null
   sweetSpotPct: number | null
   avgBatSpeed: number | null
+  hardSwingRate?: number | null
+  squaredUpPct?: number | null
+  blastPct?: number | null
+  avgSwingLength?: number | null
+  avgAttackAngle?: number | null
+  idealAttackAngleRate?: number | null
+  avgTilt?: number | null
+  avgLa?: number | null
+  fbRate?: number | null
+  onTimePct?: number | null
+  missDistance?: number | null
   pullAirRate: number | null
 }
 
@@ -50,6 +61,23 @@ export type HrIntelPlayerInput = {
   paperRank: Record<HrIntelWindow, number | null> | null
   bookRank: Record<HrIntelWindow, number | null> | null
   contextReset: boolean
+  boardMetrics: {
+    isPowerCandidate: boolean
+    fdCaesarsFhrGap?: number | null
+    fhrToHr?: number | null
+    paToHr: number | null
+    hrToRbi: number | null
+    hrToRbi2?: number | null
+    hrToRbi3?: number | null
+    hrToHrr?: number | null
+    hrToTb2?: number | null
+    hrToTb3?: number | null
+    hrToTb4?: number | null
+    hrToTb5?: number | null
+    hrToTwoHr?: number | null
+    hrToMoneyline: number | null
+    mgmToFanduel: number | null
+  }
 }
 
 export type HrIntelEvidence = {
@@ -67,11 +95,31 @@ export type HrIntelPlayerResult = HrIntelPlayerInput & {
   anytimeScore: number
   advertisedScore: number
   selectionScore: number
+  regimeScore: number
+  calibratedAnytimeScore: number
   decoyRiskScore: number
   cashStackSupportScore: number
   alternativePathScore: number
   tieBreakScore: number
   crossBookSupportScore: number
+  structuralPowerScore: number
+  isPowerCandidate: boolean
+  ratios: {
+    fdCaesarsFhrGap: number | null
+    fhrToHr: number | null
+    paToHr: number | null
+    hrToRbi: number | null
+    hrToRbi2: number | null
+    hrToRbi3: number | null
+    hrToHrr: number | null
+    hrToTb2: number | null
+    hrToTb3: number | null
+    hrToTb4: number | null
+    hrToTb5: number | null
+    hrToTwoHr: number | null
+    hrToMoneyline: number | null
+    mgmToFanduel: number | null
+  }
   candidateArchetype: 'protected' | 'containment' | 'tie-break' | 'market-confirmed' | 'none'
   qualifiedLanes: HrIntelQualifiedLane[]
   archetypeScores: {
@@ -117,6 +165,7 @@ export type HrIntelQualifiedLane =
   | 'active-confirmation'
   | 'form-backed-promotion'
   | 'hidden-derivative'
+  | 'structural-power-pair'
 
 export type HrIntelPairResult = {
   anchorMlbId: number
@@ -160,6 +209,7 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     fhrCandidateMlbIds: number[]
     anytimeCandidateMlbIds: number[]
     fhrShortlistMlbIds: number[]
+    calibratedAnytimeShortlistMlbIds: number[]
     companionShortlistMlbIds: number[]
     contradictionWatchMlbId: number | null
     contrarianWatchMlbIds: number[]
@@ -197,6 +247,12 @@ export type HrIntelGameResult = Omit<HrIntelGameInput, 'players'> & {
     boardProfile: HrIntelBoardProfile
     fhrClusterPct: number
     movementActivityPct: number
+    publicConcentrationPct: number
+    redirectedExposurePct: number
+    powerCandidatePct: number
+    hiddenPowerPct: number
+    automaticCashSupportPct: number
+    paperBookDisagreementPct: number
     pairCount: number
   }
   validation?: {
@@ -238,6 +294,25 @@ const GUARANTEED_HR_CASH_MARKETS = ['rbi1', 'tb2', 'tb3', 'tb4', 'hits1', 'runs1
 // are useful as exposure-diversion evidence, not direct home-run confirmation.
 const ALTERNATIVE_PATH_MARKETS = ['rbi2', 'rbi3', 'tb5', 'singles', 'doubles', 'triples', 'hits2', 'runs2', 'sb1', 'sb2']
 const BOOKS: HrIntelBook[] = ['fanduel', 'caesars', 'betmgm', 'betrivers', 'fanatics']
+
+// Frozen on 2026-08-08 and evaluated only against 2026-08-09 through
+// 2026-08-12. This is a diagnostic ranker, not a publication rule. Keeping
+// the coefficients here makes production use exactly the same feature vector
+// as the chronological audit instead of rebuilding a second approximation.
+const CALIBRATED_ANYTIME_INTERCEPT = -5.050686917804455
+const CALIBRATED_ANYTIME_COEFFICIENTS = [
+  0.000927761230879286, -0.004635442746133856, -0.006128953010040216, 0.0020710125252618706,
+  0.014678901477405975, 0.0020710125252618706, 0.020146952542841445, 0.012527008364287598,
+  -0.01635349201269106, 0.0028774507035637465, 0.005812970920780734, -0.0018678667122628478,
+  0.0031612413684166843, -0.003898897439894011, 0.009402942760551125, 0.010852119444763298,
+  0.0475541050300414, -0.039872600558372114, -0.0023303377743187957, 0.0020932586017074232,
+  -0.01020733593418594, 0.009530240410986716, -0.000650847222360502, 0.0045725257526499545,
+  0.051643938495624736, -0.005287197261433143, -0.01619976931689527, 0.03748626425849725,
+  0.037424095291147326, 0.032487933383372844, 0.00021121288378136936, -0.44217860628052,
+  -0.06728845973261764, -1.1894552899922513, 2.0493699220531583, -0.30623323465208707,
+  -0.6284268422953887, 0.594700925867777, 0.18404958360404305, -0.4345262653085439,
+  -0.3345776717038623, 0, -0.5033556197834146,
+] as const
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 const round1 = (value: number) => Math.round(value * 10) / 10
@@ -362,6 +437,13 @@ function contactAcceleration(player: HrIntelPlayerInput) {
       normalizedDelta(recent.barrelPct, season.barrelPct, 12),
       normalizedDelta(recent.sweetSpotPct, season.sweetSpotPct, 20),
       normalizedDelta(recent.avgBatSpeed, season.avgBatSpeed, 4),
+      normalizedDelta(recent.hardSwingRate ?? null, season.hardSwingRate ?? null, 18),
+      normalizedDelta(recent.squaredUpPct ?? null, season.squaredUpPct ?? null, 18),
+      normalizedDelta(recent.blastPct ?? null, season.blastPct ?? null, 12),
+      normalizedDelta(season.avgSwingLength ?? null, recent.avgSwingLength ?? null, 1.2),
+      normalizedDelta(recent.idealAttackAngleRate ?? null, season.idealAttackAngleRate ?? null, 18),
+      normalizedDelta(recent.onTimePct ?? null, season.onTimePct ?? null, 18),
+      normalizedDelta(season.missDistance ?? null, recent.missDistance ?? null, 5),
       normalizedDelta(recent.pullAirRate, season.pullAirRate, 0.15),
     ].filter((value): value is number => value != null)
     if (!metrics.length) continue
@@ -564,6 +646,20 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       ]
     })
     const crossBookSupport = mean(crossBookViability) ?? 0.35
+    const {
+      fdCaesarsFhrGap, fhrToHr, paToHr, hrToRbi, hrToRbi2, hrToRbi3,
+      hrToHrr, hrToTb2, hrToTb3, hrToTb4, hrToTb5, hrToTwoHr,
+      hrToMoneyline, mgmToFanduel, isPowerCandidate,
+    } = player.boardMetrics
+    const ratioCoherence = mean([
+      fhrToHr == null ? null : clamp((0.55 - Math.abs(fhrToHr - 1.2)) / 0.55),
+      paToHr == null ? null : clamp((0.50 - Math.abs(paToHr - 0.345)) / 0.50),
+      hrToRbi == null ? null : clamp((0.50 - Math.abs(hrToRbi - 0.355)) / 0.50),
+      hrToHrr == null ? null : clamp((0.55 - Math.abs(hrToHrr - 1.1)) / 0.55),
+      hrToTb4 == null ? null : clamp((0.75 - Math.abs(hrToTb4 - 1.55)) / 0.75),
+      hrToMoneyline == null ? null : clamp((0.80 - Math.abs(hrToMoneyline - 1.35)) / 0.80),
+      mgmToFanduel == null ? null : clamp((0.45 - Math.abs(mgmToFanduel - 0.96)) / 0.45),
+    ].filter((value): value is number => value != null)) ?? 0.35
 
     const advertisedScore = round1(100 * (
       (publicPct ?? 0.45) * 0.42 +
@@ -654,6 +750,16 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       crossBookSupport * 0.16 + paperStrength * 0.13 + clamp((acceleration + 1) / 2) * 0.12 +
       powerSupport * 0.09 + cashStackSupport * 0.08 - clamp(decoyRiskScore / 100 - 0.72, 0, 1) * 0.12,
     )
+    const structuralPowerScore = 100 * clamp(
+      paperStrength * 0.24 +
+      (isPowerCandidate ? 1 : 0) * 0.20 +
+      ratioCoherence * 0.16 +
+      concealment * 0.13 +
+      clamp((acceleration + 1) / 2) * 0.08 +
+      crossBookSupport * 0.07 +
+      (player.picksByMarket.rbi === 0 ? 1 : 0) * 0.07 +
+      quietSignal(fhrMove, 0.8) * 0.05,
+    )
     const archetypes = [
       { name: 'containment' as const, score: containmentScore },
       { name: 'tie-break' as const, score: tieScore },
@@ -672,11 +778,31 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       anytimeScore,
       advertisedScore,
       selectionScore: round1(selectionScore),
+      regimeScore: 0,
+      calibratedAnytimeScore: 0,
       decoyRiskScore: round1(decoyRiskScore),
       cashStackSupportScore: round1(cashStackSupport * 100),
       alternativePathScore: round1(alternativePathScore * 100),
       tieBreakScore: round1(tieBreakScore),
       crossBookSupportScore: round1(crossBookSupport * 100),
+      structuralPowerScore: round1(structuralPowerScore),
+      isPowerCandidate,
+      ratios: {
+        fdCaesarsFhrGap: fdCaesarsFhrGap == null ? null : round3(fdCaesarsFhrGap),
+        fhrToHr: fhrToHr == null ? null : round3(fhrToHr),
+        paToHr: paToHr == null ? null : round3(paToHr),
+        hrToRbi: hrToRbi == null ? null : round3(hrToRbi),
+        hrToRbi2: hrToRbi2 == null ? null : round3(hrToRbi2),
+        hrToRbi3: hrToRbi3 == null ? null : round3(hrToRbi3),
+        hrToHrr: hrToHrr == null ? null : round3(hrToHrr),
+        hrToTb2: hrToTb2 == null ? null : round3(hrToTb2),
+        hrToTb3: hrToTb3 == null ? null : round3(hrToTb3),
+        hrToTb4: hrToTb4 == null ? null : round3(hrToTb4),
+        hrToTb5: hrToTb5 == null ? null : round3(hrToTb5),
+        hrToTwoHr: hrToTwoHr == null ? null : round3(hrToTwoHr),
+        hrToMoneyline: hrToMoneyline == null ? null : round3(hrToMoneyline),
+        mgmToFanduel: mgmToFanduel == null ? null : round3(mgmToFanduel),
+      },
       candidateArchetype,
       qualifiedLanes: [],
       archetypeScores: {
@@ -717,6 +843,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
         { key: 'archetype', label: 'Candidate lane', value: `${candidateArchetype} | ${round1(selectionScore)}`, tone: candidateArchetype === 'none' ? 'neutral' : 'positive' },
         { key: 'cash-stack', label: 'Automatic HR payoff stack', value: `${round1(cashStackSupport * 100)}%`, tone: cashStackSupport >= 0.6 ? 'positive' : 'neutral' },
         { key: 'cross-book', label: 'Cross-book support', value: `${round1(crossBookSupport * 100)}%`, tone: crossBookSupport >= 0.65 ? 'positive' : 'neutral' },
+        { key: 'power-structure', label: 'Power structure', value: `${isPowerCandidate ? 'PWR' : 'No PWR'} | FHR/HR ${fhrToHr == null ? 'Missing' : round3(fhrToHr)} | PA/HR ${paToHr == null ? 'Missing' : round3(paToHr)} | HR/RBI ${hrToRbi == null ? 'Missing' : round3(hrToRbi)} | HR/HRR ${hrToHrr == null ? 'Missing' : round3(hrToHrr)} | HR/TB4 ${hrToTb4 == null ? 'Missing' : round3(hrToTb4)} | HR/ML ${hrToMoneyline == null ? 'Missing' : round3(hrToMoneyline)} | M/F ${mgmToFanduel == null ? 'Missing' : round3(mgmToFanduel)}`, tone: isPowerCandidate && structuralPowerScore >= 65 ? 'positive' : 'neutral' },
       ],
     }
   })
@@ -789,6 +916,116 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     movementActivityPct,
   )
   const noHrPct = noHrImpliedPct == null ? null : noHrImpliedPct * 100
+  const publicShares = results.map(player => player.publicSharePct ?? 0)
+  const publicConcentrationPct = publicShares.reduce((sum, share) => sum + share * share, 0) / 100
+  const redirectedExposurePct = mean(results.map(player => player.publicPattern.redirectedExposureScore)) ?? 0
+  const powerCandidatePct = results.length ? results.filter(player => player.isPowerCandidate).length / results.length * 100 : 0
+  const hiddenPowerPct = mean(results.map(player => player.movement.hiddenPowerContradiction)) ?? 0
+  const automaticCashSupportPct = mean(results.map(player => player.cashStackSupportScore)) ?? 0
+  const paperBookDisagreementPct = mean(results.map(player => {
+    const paper = meanRank(player.paperRank)
+    const book = meanRank(player.bookRank)
+    return paper == null || book == null ? null : Math.min(100, Math.abs(book - paper) / Math.max(1, results.length - 1) * 100)
+  })) ?? 0
+
+  // Every component below is ranked inside this game's 18-player board. This
+  // prevents a raw score or price from carrying the same meaning across quiet,
+  // clustered, heavily promoted, and low-HR environments.
+  const relative = (player: HrIntelPlayerResult, getter: (candidate: HrIntelPlayerResult) => number) =>
+    percentile(getter(player), results.map(getter)) ?? 0.5
+  const effectiveProfile: HrIntelBoardProfile = noHrPct != null && noHrPct >= 20
+    ? 'low-hr'
+    : fhrClusterPct >= 45 || powerCandidatePct >= 38
+      ? 'clustered'
+      : movementActivityPct >= 50 || publicConcentrationPct >= 18
+        ? 'active'
+        : movementActivityPct <= 25 && redirectedExposurePct >= 48
+          ? 'quiet'
+          : boardProfile
+
+  for (const player of results) {
+    const protectedRank = relative(player, candidate => candidate.archetypeScores.protected)
+    const containmentRank = relative(player, candidate => candidate.archetypeScores.containment)
+    const tieRank = relative(player, candidate => candidate.tieBreakScore)
+    const confirmedRank = relative(player, candidate => candidate.archetypeScores.marketConfirmed)
+    const structuralRank = relative(player, candidate => candidate.structuralPowerScore)
+    const contradictionRank = relative(player, candidate => candidate.contradictionScore)
+    const formRank = relative(player, candidate => candidate.formSupportScore)
+    const concealmentRank = 1 - relative(player, candidate => candidate.hrPicks ?? 0)
+    const redirectRank = relative(player, candidate => candidate.publicPattern.redirectedExposureScore ?? 0)
+    const decoySafety = 1 - relative(player, candidate => candidate.decoyRiskScore)
+    const score = effectiveProfile === 'clustered'
+      ? tieRank * 0.21 + structuralRank * 0.24 + contradictionRank * 0.14 + concealmentRank * 0.13 + redirectRank * 0.10 + formRank * 0.08 + decoySafety * 0.10
+      : effectiveProfile === 'active'
+        ? confirmedRank * 0.20 + structuralRank * 0.20 + contradictionRank * 0.13 + concealmentRank * 0.12 + redirectRank * 0.12 + formRank * 0.11 + decoySafety * 0.12
+        : effectiveProfile === 'quiet'
+          ? protectedRank * 0.20 + containmentRank * 0.15 + structuralRank * 0.20 + contradictionRank * 0.16 + concealmentRank * 0.12 + redirectRank * 0.10 + formRank * 0.07
+          : effectiveProfile === 'low-hr'
+            ? structuralRank * 0.27 + containmentRank * 0.18 + protectedRank * 0.14 + redirectRank * 0.11 + concealmentRank * 0.10 + formRank * 0.10 + decoySafety * 0.10
+            : structuralRank * 0.22 + protectedRank * 0.15 + confirmedRank * 0.13 + contradictionRank * 0.14 + concealmentRank * 0.11 + redirectRank * 0.10 + formRank * 0.08 + decoySafety * 0.07
+    player.regimeScore = round1(score * 100)
+  }
+  const calibratedFeatureVector = (player: HrIntelPlayerResult) => [
+    player.selectionScore, player.regimeScore, player.anytimeScore, player.fhrScore, player.modelFhrScore,
+    player.contradictionScore, player.structuralPowerScore, player.archetypeScores.protected,
+    player.archetypeScores.containment, player.tieBreakScore, player.archetypeScores.marketConfirmed,
+    player.advertisedScore, 100 - player.decoyRiskScore, player.cashStackSupportScore,
+    player.alternativePathScore, player.crossBookSupportScore, player.contactAcceleration,
+    player.fhrRank == null ? 0 : 19 - player.fhrRank, player.hrRank == null ? 0 : 19 - player.hrRank,
+    player.publicRank ?? 0, player.publicPattern.redirectedExposureScore ?? 0,
+    player.publicPattern.crossMarketDivergencePct ?? 0, player.fhrBaselineDeltaPct ?? 0,
+    player.hrBaselineDeltaPct ?? 0, player.movement.fhrImpliedPoints ?? 0,
+    player.movement.hrImpliedPoints ?? 0, player.movement.powerShortened, player.movement.powerLengthened,
+    player.movement.nonPowerShortened, player.movement.nonPowerLengthened,
+    player.movement.hiddenPowerContradiction, player.isPowerCandidate ? 1 : 0, 10 - player.battingOrder,
+    player.ratios.paToHr ?? 0, player.ratios.hrToRbi ?? 0, player.ratios.hrToHrr ?? 0,
+    player.ratios.hrToTb4 ?? 0, player.ratios.hrToMoneyline ?? 0, player.ratios.mgmToFanduel ?? 0,
+    effectiveProfile === 'clustered' ? 1 : 0, effectiveProfile === 'active' ? 1 : 0,
+    effectiveProfile === 'quiet' ? 1 : 0, effectiveProfile === 'low-hr' ? 1 : 0,
+  ]
+  for (const player of results) {
+    const logit = calibratedFeatureVector(player).reduce(
+      (total, feature, index) => total + feature * (CALIBRATED_ANYTIME_COEFFICIENTS[index] ?? 0),
+      CALIBRATED_ANYTIME_INTERCEPT,
+    )
+    player.calibratedAnytimeScore = round1(100 / (1 + Math.exp(-Math.max(-25, Math.min(25, logit)))))
+  }
+  const calibratedAnytimeRanked = [...results].sort((left, right) =>
+    right.calibratedAnytimeScore - left.calibratedAnytimeScore ||
+    right.structuralPowerScore - left.structuralPowerScore ||
+    left.battingOrder - right.battingOrder,
+  )
+  const resultById = new Map(results.map(player => [player.mlbId, player]))
+  for (const pair of pairs) {
+    const anchor = resultById.get(pair.anchorMlbId)
+    const companion = resultById.get(pair.companionMlbId)
+    if (!anchor || !companion) continue
+    const ratioSimilarity = mean([
+      anchor.ratios.paToHr != null && companion.ratios.paToHr != null
+        ? clamp(1 - Math.abs(anchor.ratios.paToHr - companion.ratios.paToHr) / 0.08) : null,
+      anchor.ratios.hrToRbi != null && companion.ratios.hrToRbi != null
+        ? clamp(1 - Math.abs(anchor.ratios.hrToRbi - companion.ratios.hrToRbi) / 0.08) : null,
+      anchor.ratios.hrToMoneyline != null && companion.ratios.hrToMoneyline != null
+        ? clamp(1 - Math.abs(anchor.ratios.hrToMoneyline - companion.ratios.hrToMoneyline) / 0.30) : null,
+    ].filter((value): value is number => value != null)) ?? 0
+    const derivativeSimilarity = mean([
+      anchor.ratios.hrToHrr != null && companion.ratios.hrToHrr != null
+        ? clamp(1 - Math.abs(anchor.ratios.hrToHrr - companion.ratios.hrToHrr) / 0.30) : null,
+      anchor.ratios.hrToTb4 != null && companion.ratios.hrToTb4 != null
+        ? clamp(1 - Math.abs(anchor.ratios.hrToTb4 - companion.ratios.hrToTb4) / 0.35) : null,
+    ].filter((value): value is number => value != null)) ?? 0
+    const quietPair = clamp(1 - ((anchor.publicSharePct ?? 0) + (companion.publicSharePct ?? 0)) / 14)
+    const zeroRbiPair = anchor.picksByMarket.rbi === 0 && companion.picksByMarket.rbi === 0 ? 1 : 0
+    const sameTeam = anchor.team === companion.team ? 1 : 0
+    pair.score = round1(
+      anchor.calibratedAnytimeScore * 0.38 + companion.calibratedAnytimeScore * 0.38 +
+      ratioSimilarity * 8 + derivativeSimilarity * 7 + quietPair * 6 + zeroRbiPair * 4 + sameTeam * 1.5,
+    )
+    pair.anchorScore = anchor.calibratedAnytimeScore
+    pair.companionScore = companion.calibratedAnytimeScore
+    pair.synergy = round1(ratioSimilarity * 8 + derivativeSimilarity * 7 + quietPair * 6 + zeroRbiPair * 4 + sameTeam * 1.5)
+  }
+  pairs.sort((left, right) => right.score - left.score)
   const selectionRanked = [...results].sort((left, right) => {
     const adjusted = (player: HrIntelPlayerResult) => player.selectionScore -
       (player.candidateArchetype === 'market-confirmed' ? 0.08 : 0.18) * player.decoyRiskScore
@@ -819,6 +1056,107 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
   const contactPercentile = (player: HrIntelPlayerResult) => percentile(player.contactAcceleration, contactValues) ?? 0.5
   const baselineCamouflage = (player: HrIntelPlayerResult) => Math.max(0, 1 - Math.min(1, Math.abs(player.fhrBaselineDeltaPct ?? 0) * 0.03))
 
+  const rankWindows: HrIntelWindow[] = ['l1', 'l3', 'l5', 'l10']
+  const ratioPairSimilarity = (
+    left: HrIntelPlayerResult,
+    right: HrIntelPlayerResult,
+    key: keyof HrIntelPlayerResult['ratios'],
+    tolerance: number,
+  ) => {
+    const a = left.ratios[key]
+    const b = right.ratios[key]
+    if (a == null || b == null) return null
+    return clamp(1 - Math.abs(a - b) / tolerance)
+  }
+  const pairWindowLeadership = (teamPlayers: HrIntelPlayerResult[], left: HrIntelPlayerResult, right: HrIntelPlayerResult) => {
+    const scores = rankWindows.map(window => {
+      const ranked = teamPlayers
+        .filter(player => player.paperRank?.[window] != null)
+        .sort((a, b) => (a.paperRank?.[window] ?? 99) - (b.paperRank?.[window] ?? 99))
+      if (ranked.length < 2) return null
+      const top = new Set(ranked.slice(0, 2).map(player => player.mlbId))
+      if (top.has(left.mlbId) && top.has(right.mlbId)) return 1
+      if (top.has(left.mlbId) || top.has(right.mlbId)) return 0.45
+      return 0
+    }).filter(value => value != null) as number[]
+    return {
+      strength: mean(scores) ?? 0,
+      jointLeaderWindows: scores.filter(value => value === 1).length,
+    }
+  }
+
+  // Resolve all same-team PWR combinations from the exact board. Averages are
+  // intentionally not used as a gate: a short-window paper signal can be the
+  // part the market is reacting to, and averaging L1/L3/L5/L10 erased it.
+  const structuralPowerPairs = [...new Set(results.map(player => player.team))].flatMap(team => {
+    const teamPlayers = results.filter(player => player.team === team)
+    const powerPlayers = teamPlayers.filter(player => player.isPowerCandidate)
+    const candidates: Array<{ players: [HrIntelPlayerResult, HrIntelPlayerResult]; score: number }> = []
+    for (let i = 0; i < powerPlayers.length; i += 1) {
+      for (let j = i + 1; j < powerPlayers.length; j += 1) {
+        const left = powerPlayers[i]
+        const right = powerPlayers[j]
+        const leadership = pairWindowLeadership(teamPlayers, left, right)
+        const ratioSimilarity = mean([
+          ratioPairSimilarity(left, right, 'paToHr', 0.08),
+          ratioPairSimilarity(left, right, 'hrToRbi', 0.08),
+          ratioPairSimilarity(left, right, 'hrToMoneyline', 0.30),
+          ratioPairSimilarity(left, right, 'mgmToFanduel', 0.28),
+          ratioPairSimilarity(left, right, 'fhrToHr', 0.25),
+        ].filter((value): value is number => value != null)) ?? 0
+        const fhrRankGap = left.fhrRank == null || right.fhrRank == null ? 99 : Math.abs(left.fhrRank - right.fhrRank)
+        const fhrPriceGap = left.fhr.current == null || right.fhr.current == null ? 9999 : Math.abs(left.fhr.current - right.fhr.current)
+        const clusterAlignment = mean([
+          clamp(1 - fhrRankGap / 4),
+          clamp(1 - fhrPriceGap / 700),
+        ]) ?? 0
+        const zeroRbiExposure = left.picksByMarket.rbi === 0 && right.picksByMarket.rbi === 0
+        const combinedShare = (left.publicSharePct ?? 100) + (right.publicSharePct ?? 100)
+        const quietExposure = clamp(1 - combinedShare / 12)
+        const publicTail = mean([
+          left.publicRank == null ? null : clamp((left.publicRank - 6) / 10),
+          right.publicRank == null ? null : clamp((right.publicRank - 6) / 10),
+        ].filter((value): value is number => value != null)) ?? 0
+        const derivativeAlignment = mean([
+          ratioPairSimilarity(left, right, 'hrToHrr', 0.30),
+          ratioPairSimilarity(left, right, 'hrToTb4', 0.35),
+          ratioPairSimilarity(left, right, 'hrToTwoHr', 0.55),
+        ].filter((value): value is number => value != null)) ?? 0
+        const baselineAlignment = left.fhrBaselineDeltaPct == null || right.fhrBaselineDeltaPct == null
+          ? 0.35
+          : clamp(1 - Math.abs(left.fhrBaselineDeltaPct - right.fhrBaselineDeltaPct) / 18)
+        const intradayCamouflage = mean([left, right].map(player => {
+          const fhr = Math.abs(player.movement.fhrImpliedPoints ?? 0)
+          const hr = player.movement.hrImpliedPoints ?? 0
+          return clamp((1 - fhr / 1.5) * 0.45 + clamp(-hr / 2.5) * 0.55)
+        })) ?? 0
+        const score = 100 * clamp(
+          leadership.strength * 0.05 +
+          (leadership.jointLeaderWindows > 0 ? 1 : 0) * 0.03 +
+          ratioSimilarity * 0.20 +
+          derivativeAlignment * 0.16 +
+          clusterAlignment * 0.16 +
+          quietExposure * 0.14 +
+          publicTail * 0.10 +
+          (zeroRbiExposure ? 1 : 0) * 0.10 +
+          baselineAlignment * 0.03 +
+          intradayCamouflage * 0.03,
+        )
+        const gate = ratioSimilarity >= 0.58 && derivativeAlignment >= 0.72 &&
+          clusterAlignment >= 0.25 && quietExposure >= 0.35 && publicTail >= 0.30 &&
+          zeroRbiExposure
+        if (gate) candidates.push({ players: [left, right], score: round1(score) })
+      }
+    }
+    return candidates
+  }).sort((left, right) => right.score - left.score)
+  const structuralPowerPair = structuralPowerPairs[0] ?? null
+  const structuralPowerCandidates = structuralPowerPair
+    ? structuralPowerPair.players
+        .sort((left, right) => left.battingOrder - right.battingOrder)
+        .map(player => markLane(player, 'structural-power-pair'))
+    : []
+
   // In a broad board release, generic row scores create false positives. Use
   // complementary game-level roles instead: a quiet unique FHR anchor and a
   // tied companion whose anytime rank improves relative to its FHR rank.
@@ -847,8 +1185,9 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     .flatMap(cluster => {
       const maxShare = Math.max(...cluster.map(player => player.publicSharePct ?? 0))
       if (maxShare > 25) return []
-      const scored = cluster.map((player, index) => {
-        const peer = cluster[index === 0 ? 1 : 0]
+      const scored = cluster.filter(player => player.contactAcceleration >= 0).map((player, index, eligible) => {
+        if (eligible.length !== 2) return { player, edge: -99 }
+        const peer = eligible[index === 0 ? 1 : 0]
         const playerFhr = player.movement.fhrImpliedPoints ?? 0
         const peerFhr = peer.movement.fhrImpliedPoints ?? 0
         const playerHr = player.movement.hrImpliedPoints ?? 0
@@ -935,6 +1274,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
   ).map(player => markLane(player, 'hidden-derivative'))
 
   const independentlyQualified = selectDistinct([
+    structuralPowerCandidates,
     tieClusterWinner ? [tieClusterWinner] : [],
     protectedFhrDivergence,
     roleResetProtection,
@@ -944,21 +1284,36 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
     hiddenDerivative,
   ], results.length)
   const relationalRoleCandidates = selectDistinct([concealedAnchors, tiedCompanions], results.length)
-  const fhrCandidates = boardReleaseRegime && concealedAnchors.length
+  // Lanes are independent evidence, not mutually exclusive outcomes. The old
+  // resolver stopped as soon as one lane produced a player. That correctly
+  // found an anchor such as Chase or Ozzie, but silently discarded Jo/Olson
+  // and every other independently qualified companion on the same board.
+  // Preserve lane priority for FHR ordering while retaining the complete,
+  // deduplicated anytime candidate set for the game-level read.
+  const fhrCandidates = structuralPowerCandidates.length
+    ? structuralPowerCandidates.slice(0, 1)
+    : boardReleaseRegime && concealedAnchors.length
     ? concealedAnchors.slice(0, 1)
     : containmentTail
     ? [containmentTail]
     : selectDistinct([tieClusterWinner ? [tieClusterWinner] : [], protectedFhrDivergence], results.length)
-  const anytimeCandidates = boardReleaseRegime && relationalRoleCandidates.length
-    ? relationalRoleCandidates
-    : containmentTail ? [containmentTail] : independentlyQualified
+  const anytimeCandidates = selectDistinct([
+    structuralPowerCandidates,
+    boardReleaseRegime ? relationalRoleCandidates : [],
+    containmentTail ? [containmentTail] : [],
+    independentlyQualified,
+  ], results.length)
   const diagnosticLeader = anytimeCandidates[0] ?? selectionRanked[0] ?? null
   const secondDiagnostic = anytimeCandidates[1] ?? selectionRanked.find(player => player.mlbId !== diagnosticLeader?.mlbId) ?? null
   const diagnosticRead = { lane: 'relational' as const, player: diagnosticLeader, ranked: selectionRanked }
-  const fhrRecipe = boardReleaseRegime && concealedAnchors.length
+  const fhrRecipe = structuralPowerCandidates.length
+    ? 'Same-team paper leaders with aligned PWR and derivative-market structure'
+    : boardReleaseRegime && concealedAnchors.length
     ? 'Concealed FHR anchor in a broad board release'
     : 'Diagnostic tie resolution and protected-divergence hypotheses'
-  const companionRecipe = boardReleaseRegime && tiedCompanions.length
+  const companionRecipe = structuralPowerCandidates.length
+    ? 'Quiet same-team PWR companion with matched PA/HR, HR/RBI, and HR/ML ratios'
+    : boardReleaseRegime && tiedCompanions.length
     ? 'Tied companion with stronger anytime positioning'
     : 'Diagnostic anytime-HR hypotheses; no pair is published without validation'
   const primaryIds = new Set(fhrCandidates.map(player => player.mlbId))
@@ -1051,6 +1406,7 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       fhrCandidateMlbIds: publishedFhrCandidates.map(player => player.mlbId),
       anytimeCandidateMlbIds: publishedAnytimeCandidates.map(player => player.mlbId),
       fhrShortlistMlbIds: fhrShortlist.map(player => player.mlbId),
+      calibratedAnytimeShortlistMlbIds: calibratedAnytimeRanked.slice(0, 3).map(player => player.mlbId),
       companionShortlistMlbIds: companionShortlist.map(player => player.mlbId),
       contradictionWatchMlbId: contradictionWatch?.mlbId ?? null,
       contrarianWatchMlbIds: contrarianWatch.map(player => player.mlbId),
@@ -1078,9 +1434,15 @@ export function analyzeHrGame(input: HrIntelGameInput): HrIntelGameResult {
       picksCoveragePct: round1(picksCoveragePct),
       crossMarketPicksCoveragePct: round1(crossMarketPicksCoveragePct),
       noHrImpliedPct: noHrImpliedPct == null ? null : round1(noHrImpliedPct * 100),
-      boardProfile,
+      boardProfile: effectiveProfile,
       fhrClusterPct: round1(fhrClusterPct),
       movementActivityPct: round1(movementActivityPct),
+      publicConcentrationPct: round1(publicConcentrationPct),
+      redirectedExposurePct: round1(redirectedExposurePct),
+      powerCandidatePct: round1(powerCandidatePct),
+      hiddenPowerPct: round1(hiddenPowerPct),
+      automaticCashSupportPct: round1(automaticCashSupportPct),
+      paperBookDisagreementPct: round1(paperBookDisagreementPct),
       pairCount: pairs.length,
     },
     warnings: [...new Set(warnings)],

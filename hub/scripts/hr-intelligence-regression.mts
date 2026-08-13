@@ -53,6 +53,9 @@ function player(overrides: Partial<HrIntelPlayerInput> & Pick<HrIntelPlayerInput
     paperRank: { l1: 10, l3: 10, l5: 10, l10: 10 },
     bookRank: { l1: 10, l3: 10, l5: 10, l10: 10 },
     contextReset: false,
+    boardMetrics: {
+      isPowerCandidate: false, paToHr: 0.35, hrToRbi: 0.35, hrToMoneyline: 1.35, mgmToFanduel: 1,
+    },
     ...rest,
   }
 }
@@ -147,6 +150,57 @@ assert.equal(missingExposure.recommendation.dataComplete, false, 'Missing exposu
 assert.equal(missingExposure.recommendation.fhrAnchorMlbId, null, 'Missing exposure must never publish an exact FHR call')
 assert.deepEqual(missingExposure.recommendation.fhrCandidateMlbIds, [], 'Missing exposure must leave the published set empty')
 assert.ok(missingExposure.recommendation.fhrShortlistMlbIds.length > 0, 'Diagnostic hypotheses must remain inspectable when publication is withheld')
+
+const beavers = player({
+  mlbId: 81, name: 'Dylan Beavers', team: 'BAL', battingOrder: 5,
+  fhr: { current: 1200, open: 1200 }, hr: { current: 700, open: 680 },
+  hrPicks: 10,
+  markets: {
+    ...neutralMarkets,
+    pa1: { current: 2200, open: 2200 }, hrMl: { current: 950, open: 950 },
+    rbi1: { current: 170, open: 185 }, rbi2: { current: 550, open: 600 },
+    doubles: { current: 400, open: 380 }, tb4: { current: 500, open: 490 },
+  },
+  picksByMarket: { home_runs: 10, hits: 4, runs: 2, stolen_bases: 0, singles: 2, doubles: 2, triples: 0, rbi: 0, hits_runs_rbi: 35, bases: 19 },
+  mm: { l1: 3, l3: 6, l5: 1, l10: 6 },
+  paperRank: { l1: 2, l3: 1, l5: 2, l10: 1 }, bookRank: { l1: 11, l3: 11, l5: 11, l10: 11 },
+  boardMetrics: { isPowerCandidate: true, fhrToHr: 0.615, paToHr: 0.35, hrToRbi: 0.34, hrToHrr: 0.239, hrToTb4: 0.75, hrToTwoHr: 12.625, hrToMoneyline: 1.31, mgmToFanduel: 1.03 },
+})
+const taveras = player({
+  mlbId: 82, name: 'Leody Taveras', team: 'BAL', battingOrder: 7,
+  fhr: { current: 1500, open: 1500 }, hr: { current: 680, open: 630 },
+  hrPicks: 7,
+  markets: {
+    ...neutralMarkets,
+    pa1: { current: 2200, open: 2200 }, hrMl: { current: 1000, open: 1000 },
+    rbi1: { current: 190, open: 175 }, doubles: { current: 400, open: 340 },
+    tb4: { current: 490, open: 450 },
+  },
+  picksByMarket: { home_runs: 7, hits: 12, runs: 0, stolen_bases: 2, singles: 4, doubles: 0, triples: 0, rbi: 0, hits_runs_rbi: 5, bases: 8 },
+  mm: { l1: -1, l3: -1, l5: 2, l10: -3 },
+  paperRank: { l1: 1, l3: 2, l5: 1, l10: 2 }, bookRank: { l1: 9, l3: 9, l5: 9, l10: 9 },
+  boardMetrics: { isPowerCandidate: true, fhrToHr: 0.488, paToHr: 0.34, hrToRbi: 0.37, hrToHrr: 0.256, hrToTb4: 0.756, hrToTwoHr: 12.949, hrToMoneyline: 1.41, mgmToFanduel: 0.89 },
+})
+const balMinFillers = Array.from({ length: 16 }, (_, index) => player({
+  mlbId: 83 + index, name: `BAL-MIN Player ${index + 1}`, team: index < 7 ? 'BAL' : 'MIN',
+  battingOrder: index < 7 ? index + 1 : index - 6,
+  fhr: { current: 650 + index * 110, open: 650 + index * 110 },
+  hr: { current: 360 + index * 45, open: 360 + index * 45 }, hrPicks: 45 + index * 6,
+  paperRank: { l1: 3 + index, l3: 3 + index, l5: 3 + index, l10: 3 + index },
+  bookRank: { l1: 1 + index, l3: 1 + index, l5: 1 + index, l10: 1 + index },
+}))
+const balMin = analyzeHrGame({
+  ...game, gamePk: 999008, gameKey: 'BAL@MIN', awayTeam: 'BAL', homeTeam: 'MIN',
+  players: [beavers, taveras, ...balMinFillers],
+})
+assert.deepEqual(balMin.recommendation.fhrShortlistMlbIds, [beavers.mlbId], 'The earlier-hitting BAL structural anchor must lead the diagnostic FHR read')
+assert.deepEqual(balMin.recommendation.companionShortlistMlbIds, [taveras.mlbId], 'The aligned low-exposure BAL PWR companion must survive')
+assert.ok(
+  balMin.players.find((candidate: { mlbId: number; isPowerCandidate: boolean }) => candidate.mlbId === beavers.mlbId)?.isPowerCandidate &&
+  balMin.players.find((candidate: { mlbId: number; isPowerCandidate: boolean }) => candidate.mlbId === taveras.mlbId)?.isPowerCandidate,
+  'Both BAL structural candidates must reproduce the Dugout PWR gate',
+)
+assert.ok(!balMin.recommendation.fhrCandidateMlbIds.length, 'A new structural pattern remains diagnostic until walk-forward validation')
 
 const ruiz = player({
   mlbId: 101, name: 'Esteury Ruiz', team: 'MIA', battingOrder: 9,

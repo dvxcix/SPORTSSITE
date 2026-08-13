@@ -109,6 +109,17 @@ function metricWindow(bundle: FieldBundle, window: 'season' | HrIntelWindow): Hr
     barrelPct: finite(pitch?.barrelPct ?? statcast?.barrelPct),
     sweetSpotPct: finite(pitch?.sweetSpotPct ?? statcast?.sweetSpotPct),
     avgBatSpeed: finite(pitch?.avgBatSpeed ?? statcast?.avgBatSpeed),
+    hardSwingRate: finite(statcast?.hardSwingRate),
+    squaredUpPct: finite(statcast?.squaredUpPct),
+    blastPct: finite(statcast?.blastPct),
+    avgSwingLength: finite(statcast?.avgSwingLength),
+    avgAttackAngle: finite(statcast?.avgAttackAngle),
+    idealAttackAngleRate: finite(statcast?.idealAttackAngleRate),
+    avgTilt: finite(statcast?.avgTilt),
+    avgLa: finite(statcast?.avgLa),
+    fbRate: finite(statcast?.fbRate),
+    onTimePct: finite(statcast?.onTimePct),
+    missDistance: finite(statcast?.missDistance),
     pullAirRate: finite(statcast?.pullAirRate),
   }
 }
@@ -173,6 +184,23 @@ function playerInput(
     paperRank: bundle.ppRkByWindow ?? null,
     bookRank: bundle.bkRkByWindow ?? null,
     contextReset: false,
+    boardMetrics: {
+      isPowerCandidate: computeDugoutSpecsValue('is_pwr', props, bundle.fhrAvg, bundle.saAvg) === 1,
+      fdCaesarsFhrGap: computeDugoutSpecsValue('div', props, bundle.fhrAvg, bundle.saAvg),
+      fhrToHr: computeDugoutSpecsValue('fhr_div_sa', props, bundle.fhrAvg, bundle.saAvg),
+      paToHr: computeDugoutSpecsValue('pa1_div_sa', props, bundle.fhrAvg, bundle.saAvg),
+      hrToRbi: computeDugoutSpecsValue('sa_div_rbi', props, bundle.fhrAvg, bundle.saAvg),
+      hrToRbi2: computeDugoutSpecsValue('sa_div_rbi2', props, bundle.fhrAvg, bundle.saAvg),
+      hrToRbi3: computeDugoutSpecsValue('sa_div_rbi3', props, bundle.fhrAvg, bundle.saAvg),
+      hrToHrr: computeDugoutSpecsValue('sa_div_hrr', props, bundle.fhrAvg, bundle.saAvg),
+      hrToTb2: computeDugoutSpecsValue('sa_div_tb', props, bundle.fhrAvg, bundle.saAvg),
+      hrToTb3: computeDugoutSpecsValue('sa_div_tb3', props, bundle.fhrAvg, bundle.saAvg),
+      hrToTb4: computeDugoutSpecsValue('sa_div_tb4', props, bundle.fhrAvg, bundle.saAvg),
+      hrToTb5: computeDugoutSpecsValue('sa_div_tb5', props, bundle.fhrAvg, bundle.saAvg),
+      hrToTwoHr: computeDugoutSpecsValue('sa_div_hr2', props, bundle.fhrAvg, bundle.saAvg),
+      hrToMoneyline: computeDugoutSpecsValue('sa_div_ml', props, bundle.fhrAvg, bundle.saAvg),
+      mgmToFanduel: computeDugoutSpecsValue('m_div_f', props, bundle.fhrAvg, bundle.saAvg),
+    },
   }
 }
 
