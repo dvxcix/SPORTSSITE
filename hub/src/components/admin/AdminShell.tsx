@@ -12,6 +12,7 @@ const LABELS: Record<string, string> = {
   'fanduel-import': 'FanDuel markets', 'mgm-import': 'BetMGM odds',
   'pikkit-import': 'Pikkit import', 'social-platforms': 'Connected accounts',
   'site-banner': 'Site banner', changelog: 'Changelog',
+  'market-dna': 'Market DNA',
 }
 
 function titleForPath(path: string) {

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Activity, AlertTriangle, AtSign, Award, Bell, BookOpen, Bot, Briefcase,
-  Calendar, ChevronDown, ChevronRight, CreditCard, FileText, Flag,
+  Calendar, ChevronDown, ChevronRight, CreditCard, Dna, FileText, Flag,
   LayoutDashboard, Megaphone, MessageSquare, Palette, Radio, Settings,
   Shield, ShoppingBag, Smile, Sparkles, Upload, Users, X, Zap,
   type LucideIcon,
@@ -34,6 +34,7 @@ const NAV: NavItem[] = [
   { href: '/admin/creators', icon: Zap, label: 'Creator applications' },
   { href: '/admin/monetization', icon: CreditCard, label: 'Monetization' },
   { href: '/admin/pikkit-import', icon: Upload, label: 'Pikkit import' },
+  { href: '/admin/market-dna', icon: Dna, label: 'Market DNA' },
   { href: '/admin/fanduel-import', icon: Upload, label: 'FanDuel markets' },
   { href: '/admin/mgm-import', icon: Upload, label: 'BetMGM odds' },
   { href: '/admin/ads', icon: Megaphone, label: 'Ads' },
