@@ -11,11 +11,11 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import type {
   HistoricalMatch, MarketDnaAnalysis, MarketDnaGame, MarketDnaGameAnalysis,
-  MarketDnaGameComponents, MarketDnaGameRank, MarketDnaPlayer,
+  MarketDnaGameComponents, MarketDnaGameRank, MarketDnaPlayer, MarketDnaSlateAudit,
 } from '@/lib/marketDna'
 
 type Slate = { date: string; games: MarketDnaGame[] }
-type ViewMode = 'game' | 'player'
+type ViewMode = 'slate' | 'game' | 'player'
 
 const odds = (value: number | null | undefined) => value == null ? '—' : `${value > 0 ? '+' : ''}${Math.round(value)}`
 const pct = (value: number | null, digits = 0) => value == null ? '—' : `${(value * 100).toFixed(digits)}%`
@@ -91,11 +91,17 @@ function RankRow({ entry }: { entry: MarketDnaGameRank }) {
     </button>
     {open ? <div className="space-y-4 bg-black/20 px-4 pb-4 pt-1">
       <ComponentBars components={entry.components} />
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryMetric label="Own matched profile" value={pct(entry.historical.samePlayerHrRate)} detail={`${entry.historical.samePlayerSample} same-player comparisons`} />
+        <SummaryMetric label="Own baseline" value={pct(entry.historical.samePlayerBaselineHrRate)} detail={entry.historical.samePlayerLift == null ? 'No stable self-lift yet' : `${entry.historical.samePlayerLift.toFixed(2)}x profile lift`} />
+        <SummaryMetric label="Blended analog rate" value={pct(entry.historical.profileProbability)} detail={`${entry.historical.sample} nearest league profiles`} />
+        <SummaryMetric label="Evidence confidence" value={pct(entry.historical.confidence)} detail="Similarity, coverage and sample depth" />
+      </div>
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-lime-400/15 bg-lime-400/[.04] p-3"><p className="text-[9px] font-black uppercase tracking-wider text-lime-300">What separates</p><ul className="mt-2 space-y-1 text-xs text-zinc-300">{entry.signals.map(signal => <li key={signal}>• {signal}</li>)}</ul></div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3"><p className="text-[9px] font-black uppercase tracking-wider text-zinc-500">Checks against the read</p>{entry.contradictions.length ? <ul className="mt-2 space-y-1 text-xs text-zinc-400">{entry.contradictions.map(item => <li key={item}>• {item}</li>)}</ul> : <p className="mt-2 text-xs text-zinc-500">No major captured contradiction.</p>}</div>
       </div>
-      <div className="flex flex-wrap gap-2 text-[10px] text-zinc-500"><span>Historical HR: {pct(entry.historical.matchedHrRate)}</span><span>·</span><span>Lift: {entry.historical.lift == null ? '—' : `${entry.historical.lift.toFixed(2)}x`}</span><span>·</span><span>{entry.historical.sample} nearest profiles</span>{entry.outcome ? <><span>·</span><strong className={entry.outcome.hr ? 'text-lime-300' : 'text-zinc-600'}>{entry.outcome.hr ? `${entry.outcome.hr} HR · ${entry.outcome.rbi} RBI · ${entry.outcome.tb} TB${entry.outcome.hrMlWon ? ' · HR/ML' : ''}` : 'No HR'}</strong></> : null}</div>
+      <div className="flex flex-wrap gap-2 text-[10px] text-zinc-500"><span>Analog HR: {pct(entry.historical.matchedHrRate)}</span><span>·</span><span>Game-relative lift: {entry.historical.lift == null ? '—' : `${entry.historical.lift.toFixed(2)}x`}</span><span>·</span><span>Multi-RBI HR shape: {pct(entry.historical.settlementShape.multiRbiHrRate)}</span><span>·</span><span>5+ TB HR shape: {pct(entry.historical.settlementShape.fivePlusTbHrRate)}</span>{entry.outcome ? <><span>·</span><strong className={entry.outcome.hr ? 'text-lime-300' : 'text-zinc-600'}>{entry.outcome.hr ? `${entry.outcome.hr} HR · ${entry.outcome.rbi} RBI · ${entry.outcome.tb} TB${entry.outcome.hrMlWon ? ' · HR/ML' : ''}` : 'No HR'}</strong></> : null}</div>
     </div> : null}
   </div>
 }
@@ -132,6 +138,44 @@ function GameAnalysisPanel({ analysis }: { analysis: MarketDnaGameAnalysis }) {
   </div>
 }
 
+function SlateAuditPanel({ audit }: { audit: MarketDnaSlateAudit }) {
+  const { summary } = audit
+  return <div className="space-y-5">
+    <section className="rounded-3xl border border-lime-400/20 bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.14),transparent_40%),rgba(9,9,11,.92)] p-5 sm:p-6">
+      <p className="text-[10px] font-black uppercase tracking-[.2em] text-lime-300">Final-slate validation</p>
+      <h2 className="mt-1 text-2xl font-black text-white">Every game, every actual homer rank</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">Each board is scored from information available before first pitch. Results are joined afterward so a miss stays visible instead of being rewritten.</p>
+    </section>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <SummaryMetric label="Games with HR" value={`${summary.gamesWithHomeRun}`} detail={`${summary.completedGames} final boards`} />
+      <SummaryMetric label="#1 contained HR" value={`${summary.leaderHitGames}/${summary.gamesWithHomeRun}`} detail="At least one actual homer ranked first" tone="text-lime-300" />
+      <SummaryMetric label="Top two contained HR" value={`${summary.topTwoHitGames}/${summary.gamesWithHomeRun}`} detail="At least one actual homer in the top two" />
+      <SummaryMetric label="Perfect separation" value={`${summary.perfectSeparationGames}/${summary.gamesWithHomeRun}`} detail="Every homer above every non-homer" />
+      <SummaryMetric label="Average best rank" value={summary.averageBestHomerRank == null ? '—' : summary.averageBestHomerRank.toFixed(2)} detail="Best actual homer in each game" />
+    </div>
+    <section className="grid gap-4 lg:grid-cols-2">
+      {audit.games.map(analysis => {
+        const isFinal = /final/i.test(analysis.game.status)
+        const homerIds = new Set(analysis.actualHomeRuns.map(result => result.mlbId))
+        const homerScores = analysis.ranking.filter(entry => homerIds.has(entry.player.mlbId)).map(entry => entry.score)
+        const nonHomerScores = analysis.ranking.filter(entry => !homerIds.has(entry.player.mlbId)).map(entry => entry.score)
+        const perfect = homerScores.length > 0 && nonHomerScores.length > 0 && Math.min(...homerScores) > Math.max(...nonHomerScores)
+        return <article key={analysis.game.gamePk} className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/70">
+          <div className="flex items-center gap-3 border-b border-zinc-800 p-4">
+            <div className="flex -space-x-1"><TeamLogo logo={getTeamLogoUrl(analysis.game.awayAbbr)} name={analysis.game.awayAbbr} size={32} /><TeamLogo logo={getTeamLogoUrl(analysis.game.homeAbbr)} name={analysis.game.homeAbbr} size={32} /></div>
+            <div className="min-w-0 flex-1"><p className="text-sm font-black text-white">{analysis.game.awayAbbr} at {analysis.game.homeAbbr}</p><p className="text-[10px] text-zinc-600">{analysis.score ? `${analysis.game.awayAbbr} ${analysis.score.away} · ${analysis.game.homeAbbr} ${analysis.score.home}` : analysis.game.status}</p></div>
+            <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${!isFinal ? 'border-cyan-400/25 bg-cyan-400/10 text-cyan-300' : perfect ? 'border-lime-400/30 bg-lime-400/10 text-lime-300' : analysis.actualHomeRuns.length ? 'border-amber-400/25 bg-amber-400/10 text-amber-300' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>{!isFinal ? 'Awaiting final' : analysis.actualHomeRuns.length ? perfect ? 'Perfect separation' : 'Miss exposed' : 'No HR'}</span>
+          </div>
+          <div className="space-y-3 p-4">
+            {analysis.actualHomeRuns.length ? <div className="space-y-2">{analysis.actualHomeRuns.map(result => <div key={`${result.mlbId}-${result.name}`} className="flex items-center gap-3 rounded-xl border border-lime-400/15 bg-lime-400/[.04] p-2.5"><PlayerAvatar headshot={result.mlbId ? mlbHeadshot(result.mlbId) : null} teamLogo={getTeamLogoUrl(result.team)} teamAbbr={result.team} name={result.name} size={36} /><div className="min-w-0 flex-1"><strong className="text-xs text-white">{result.name}</strong><p className="text-[9px] text-zinc-500">{result.homeRuns} HR · {result.rbis} RBI · {result.totalBases} TB{result.hrMlWon ? ' · HR/ML' : ''}</p></div><span className="text-lg font-black text-lime-300">#{result.pregameRank ?? '—'}</span></div>)}</div> : <p className="rounded-xl border border-zinc-800 bg-black/20 p-3 text-xs text-zinc-500">{isFinal ? 'No home run recorded.' : 'Outcome is not scored until the game is final.'}</p>}
+            <div><p className="mb-2 text-[9px] font-black uppercase tracking-wider text-zinc-600">Pregame top three</p><div className="grid gap-2 sm:grid-cols-3">{analysis.ranking.slice(0, 3).map(entry => <div key={entry.player.mlbId} className={`rounded-lg border p-2 ${homerIds.has(entry.player.mlbId) ? 'border-lime-400/30 bg-lime-400/10' : 'border-zinc-800 bg-black/25'}`}><p className="truncate text-[10px] font-black text-white">{entry.rank}. {entry.player.name}</p><p className="text-[9px] text-zinc-600">{entry.score.toFixed(1)}</p></div>)}</div></div>
+          </div>
+        </article>
+      })}
+    </section>
+  </div>
+}
+
 function PlayerAnalysisPanel({ analysis }: { analysis: MarketDnaAnalysis }) {
   return <div className="space-y-5">
     <section className="overflow-hidden rounded-3xl border border-lime-400/20 bg-zinc-950/80"><div className="flex flex-wrap items-center gap-4 border-b border-zinc-800 p-5"><PlayerAvatar headshot={mlbHeadshot(analysis.player.mlbId)} teamLogo={getTeamLogoUrl(analysis.player.team)} teamAbbr={analysis.player.team} name={analysis.player.name} size={58} /><div className="min-w-0 flex-1"><p className="text-[10px] font-black uppercase tracking-[.2em] text-lime-300">Captured market fingerprint</p><h2 className="truncate text-2xl font-black text-white">{analysis.player.name}</h2><p className="text-xs text-zinc-500">{analysis.player.team} #{analysis.player.battingOrder} · {analysis.stage === 'frozen_close' ? 'Frozen at first pitch' : 'Current pregame profile'}</p></div><strong className="text-2xl text-lime-300">{pct(analysis.read.nearestSimilarity)}</strong></div><div className="p-5"><MarketStrip player={analysis.player} /></div></section>
@@ -150,6 +194,7 @@ export function MarketDnaLab() {
   const [mode, setMode] = useState<ViewMode>('game')
   const [playerAnalysis, setPlayerAnalysis] = useState<MarketDnaAnalysis | null>(null)
   const [gameAnalysis, setGameAnalysis] = useState<MarketDnaGameAnalysis | null>(null)
+  const [slateAudit, setSlateAudit] = useState<MarketDnaSlateAudit | null>(null)
   const [loadingSlate, setLoadingSlate] = useState(true)
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
   const [error, setError] = useState('')
@@ -171,21 +216,24 @@ export function MarketDnaLab() {
     return (selectedGame?.players ?? []).filter(player => !normalized || `${player.name} ${player.team} ${player.position}`.toLowerCase().includes(normalized))
   }, [query, selectedGame])
 
-  function resetAnalysis() { setPlayerAnalysis(null); setGameAnalysis(null); setError('') }
+  function resetAnalysis() { setPlayerAnalysis(null); setGameAnalysis(null); setSlateAudit(null); setError('') }
   function chooseGame(game: MarketDnaGame) { setSelectedGamePk(game.gamePk); setSelectedPlayer(game.players[0] ?? null); setQuery(''); resetAnalysis() }
   function changeDate(value: string) { setLoadingSlate(true); setSlate(null); setSelectedGamePk(null); setSelectedPlayer(null); resetAnalysis(); setDate(value) }
 
   async function runAnalysis() {
-    if (!selectedGame || (mode === 'player' && !selectedPlayer)) return
+    if ((mode !== 'slate' && !selectedGame) || (mode === 'player' && !selectedPlayer)) return
     setLoadingAnalysis(true); resetAnalysis()
     try {
-      const body = mode === 'game'
-        ? { mode: 'game', date, gamePk: selectedGame.gamePk }
-        : { mode: 'player', date, gamePk: selectedGame.gamePk, mlbId: selectedPlayer!.mlbId }
+      const body = mode === 'slate'
+        ? { mode: 'slate', date }
+        : mode === 'game'
+          ? { mode: 'game', date, gamePk: selectedGame!.gamePk }
+          : { mode: 'player', date, gamePk: selectedGame!.gamePk, mlbId: selectedPlayer!.mlbId }
       const response = await fetch('/api/admin/market-dna', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Market DNA analysis failed.')
-      if (mode === 'game') setGameAnalysis(data as MarketDnaGameAnalysis)
+      if (mode === 'slate') setSlateAudit(data as MarketDnaSlateAudit)
+      else if (mode === 'game') setGameAnalysis(data as MarketDnaGameAnalysis)
       else setPlayerAnalysis(data as MarketDnaAnalysis)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Market DNA analysis failed.') }
     finally { setLoadingAnalysis(false) }
@@ -199,12 +247,12 @@ export function MarketDnaLab() {
 
     {!loadingSlate && slate ? <div className="grid gap-5 xl:grid-cols-[330px_minmax(0,1fr)]">
       <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
-        <div className="grid grid-cols-2 rounded-xl border border-zinc-800 bg-zinc-950 p-1"><button onClick={() => { setMode('game'); resetAnalysis() }} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-black ${mode === 'game' ? 'bg-lime-400 text-black' : 'text-zinc-500'}`}><BarChart3 size={14} />Game rank</button><button onClick={() => { setMode('player'); resetAnalysis() }} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-black ${mode === 'player' ? 'bg-lime-400 text-black' : 'text-zinc-500'}`}><Fingerprint size={14} />Player DNA</button></div>
+        <div className="grid grid-cols-3 rounded-xl border border-zinc-800 bg-zinc-950 p-1"><button onClick={() => { setMode('slate'); resetAnalysis() }} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-[11px] font-black ${mode === 'slate' ? 'bg-lime-400 text-black' : 'text-zinc-500'}`}><ShieldCheck size={13} />Date audit</button><button onClick={() => { setMode('game'); resetAnalysis() }} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-[11px] font-black ${mode === 'game' ? 'bg-lime-400 text-black' : 'text-zinc-500'}`}><BarChart3 size={13} />Game rank</button><button onClick={() => { setMode('player'); resetAnalysis() }} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-[11px] font-black ${mode === 'player' ? 'bg-lime-400 text-black' : 'text-zinc-500'}`}><Fingerprint size={13} />Player DNA</button></div>
         <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/70"><div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3"><div><p className="text-xs font-black text-white">Games</p><p className="text-[10px] text-zinc-600">{slate.games.length} captured</p></div><Database size={16} className="text-lime-300" /></div><div className="max-h-72 space-y-1 overflow-y-auto p-2">{slate.games.map(game => <button key={game.gamePk} onClick={() => chooseGame(game)} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${selectedGamePk === game.gamePk ? 'border-lime-400/40 bg-lime-400/10' : 'border-transparent hover:border-zinc-800 hover:bg-zinc-900'}`}><div className="flex -space-x-1"><TeamLogo logo={getTeamLogoUrl(game.awayAbbr)} name={game.awayAbbr} size={28} /><TeamLogo logo={getTeamLogoUrl(game.homeAbbr)} name={game.homeAbbr} size={28} /></div><div className="min-w-0 flex-1"><p className="text-xs font-black text-white">{game.awayAbbr} at {game.homeAbbr}</p><p className="truncate text-[9px] uppercase tracking-wide text-zinc-600">{game.status} · {game.players.length}/18 profiles</p></div>{game.lineupConfirmed ? <Check size={13} className="text-lime-400" /> : <CircleDot size={13} className="text-amber-400" />}</button>)}</div></section>
-        {mode === 'player' ? <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/70"><div className="border-b border-zinc-800 p-3"><label className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-black/30 px-3"><Search size={14} className="text-zinc-600" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a player" className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white outline-none" /></label></div><div className="max-h-[52vh] space-y-2 overflow-y-auto p-2">{visiblePlayers.map(player => <PlayerButton key={`${player.team}-${player.mlbId}`} player={player} selected={selectedPlayer?.mlbId === player.mlbId} onSelect={() => { setSelectedPlayer(player); resetAnalysis() }} />)}</div></section> : <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="flex items-center gap-2 text-xs font-black text-white"><Gauge size={15} className="text-lime-300" />Game-first reducer</p><p className="mt-2 text-[11px] leading-5 text-zinc-500">Compares all 18 across headline prices, payoff markets, movement, history, Statcast, lineup traffic and public leverage.</p></div>}
-        <button onClick={runAnalysis} disabled={!selectedGame || (mode === 'player' && !selectedPlayer) || loadingAnalysis} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 text-sm font-black text-black shadow-[0_0_28px_rgba(163,230,53,.2)] transition hover:bg-lime-300 disabled:opacity-40">{loadingAnalysis ? <><LoaderCircle size={17} className="animate-spin" />Analyzing the archive</> : mode === 'game' ? <><Sparkles size={17} />Rank all 18 profiles</> : <><Fingerprint size={17} />Run player match</>}</button>
+        {mode === 'player' ? <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/70"><div className="border-b border-zinc-800 p-3"><label className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-black/30 px-3"><Search size={14} className="text-zinc-600" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a player" className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white outline-none" /></label></div><div className="max-h-[52vh] space-y-2 overflow-y-auto p-2">{visiblePlayers.map(player => <PlayerButton key={`${player.team}-${player.mlbId}`} player={player} selected={selectedPlayer?.mlbId === player.mlbId} onSelect={() => { setSelectedPlayer(player); resetAnalysis() }} />)}</div></section> : <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><p className="flex items-center gap-2 text-xs font-black text-white"><Gauge size={15} className="text-lime-300" />{mode === 'slate' ? 'Leakage-proof scorecard' : 'Game-first reducer'}</p><p className="mt-2 text-[11px] leading-5 text-zinc-500">{mode === 'slate' ? 'Runs every complete board on the date, then joins outcomes afterward and exposes every miss.' : 'Compares all 18 across prices, settlement markets, each player’s history, league analogs, Statcast, lineup traffic and public leverage.'}</p></div>}
+        <button onClick={runAnalysis} disabled={(mode !== 'slate' && !selectedGame) || (mode === 'player' && !selectedPlayer) || loadingAnalysis} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 text-sm font-black text-black shadow-[0_0_28px_rgba(163,230,53,.2)] transition hover:bg-lime-300 disabled:opacity-40">{loadingAnalysis ? <><LoaderCircle size={17} className="animate-spin" />Analyzing the archive</> : mode === 'slate' ? <><ShieldCheck size={17} />Audit every game</> : mode === 'game' ? <><Sparkles size={17} />Rank all 18 profiles</> : <><Fingerprint size={17} />Run player match</>}</button>
       </aside>
-      <main className="min-w-0">{gameAnalysis ? <GameAnalysisPanel analysis={gameAnalysis} /> : playerAnalysis ? <PlayerAnalysisPanel analysis={playerAnalysis} /> : <div className="grid min-h-[620px] place-items-center rounded-3xl border border-dashed border-zinc-800 bg-[radial-gradient(circle_at_center,rgba(163,230,53,.05),transparent_45%)] p-8 text-center"><div className="max-w-md"><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-lime-400/20 bg-lime-400/10 text-lime-300">{mode === 'game' ? <BarChart3 size={28} /> : <Fingerprint size={28} />}</span><h2 className="mt-5 text-xl font-black text-white">{mode === 'game' ? 'Reveal the complete game hierarchy' : 'Inspect one player profile'}</h2><p className="mt-2 text-sm leading-6 text-zinc-500">{mode === 'game' ? 'Rank every captured player together and see exactly where the strongest complete market profile separates.' : 'Compare one captured profile with previous settled player-games without using this game’s result.'}</p><div className="mt-5 flex flex-wrap justify-center gap-2 text-[10px] font-bold text-zinc-500"><span className="rounded-full border border-zinc-800 px-3 py-1.5"><Activity size={11} className="mr-1 inline" />Pregame only</span><span className="rounded-full border border-zinc-800 px-3 py-1.5"><ShieldCheck size={11} className="mr-1 inline" />Outcome isolated</span><span className="rounded-full border border-zinc-800 px-3 py-1.5"><Gauge size={11} className="mr-1 inline" />Full market</span></div></div></div>}</main>
+      <main className="min-w-0">{slateAudit ? <SlateAuditPanel audit={slateAudit} /> : gameAnalysis ? <GameAnalysisPanel analysis={gameAnalysis} /> : playerAnalysis ? <PlayerAnalysisPanel analysis={playerAnalysis} /> : <div className="grid min-h-[620px] place-items-center rounded-3xl border border-dashed border-zinc-800 bg-[radial-gradient(circle_at_center,rgba(163,230,53,.05),transparent_45%)] p-8 text-center"><div className="max-w-md"><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-lime-400/20 bg-lime-400/10 text-lime-300">{mode === 'slate' ? <ShieldCheck size={28} /> : mode === 'game' ? <BarChart3 size={28} /> : <Fingerprint size={28} />}</span><h2 className="mt-5 text-xl font-black text-white">{mode === 'slate' ? 'Audit the complete date' : mode === 'game' ? 'Reveal the complete game hierarchy' : 'Inspect one player profile'}</h2><p className="mt-2 text-sm leading-6 text-zinc-500">{mode === 'slate' ? 'Run every completed 18-player board and see the true pregame rank of every actual homer.' : mode === 'game' ? 'Rank every captured player together and see exactly where the strongest complete market profile separates.' : 'Compare one captured profile with previous settled player-games without using this game’s result.'}</p><div className="mt-5 flex flex-wrap justify-center gap-2 text-[10px] font-bold text-zinc-500"><span className="rounded-full border border-zinc-800 px-3 py-1.5"><Activity size={11} className="mr-1 inline" />Pregame only</span><span className="rounded-full border border-zinc-800 px-3 py-1.5"><ShieldCheck size={11} className="mr-1 inline" />Outcome isolated</span><span className="rounded-full border border-zinc-800 px-3 py-1.5"><Gauge size={11} className="mr-1 inline" />Full market</span></div></div></div>}</main>
     </div> : null}
   </div>
 }

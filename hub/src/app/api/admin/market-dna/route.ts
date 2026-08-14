@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { analyzeMarketDna, analyzeMarketDnaGame, buildMarketDnaSlate } from '@/lib/marketDna'
+import { analyzeMarketDna, analyzeMarketDnaGame, analyzeMarketDnaSlate, buildMarketDnaSlate } from '@/lib/marketDna'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -34,12 +34,13 @@ export async function POST(request: Request) {
   const date = typeof body?.date === 'string' ? body.date : ''
   const gamePk = Number(body?.gamePk)
   const mlbId = Number(body?.mlbId)
-  const mode = body?.mode === 'game' ? 'game' : 'player'
-  if (!DATE_RE.test(date) || !Number.isFinite(gamePk) || (mode === 'player' && !Number.isFinite(mlbId))) {
-    return NextResponse.json({ error: mode === 'game' ? 'A valid date and game are required.' : 'A valid date, game and player are required.' }, { status: 400 })
+  const mode = body?.mode === 'slate' ? 'slate' : body?.mode === 'game' ? 'game' : 'player'
+  if (!DATE_RE.test(date) || (mode !== 'slate' && !Number.isFinite(gamePk)) || (mode === 'player' && !Number.isFinite(mlbId))) {
+    return NextResponse.json({ error: mode === 'slate' ? 'A valid date is required.' : mode === 'game' ? 'A valid date and game are required.' : 'A valid date, game and player are required.' }, { status: 400 })
   }
   try {
     const slate = await buildMarketDnaSlate(date)
+    if (mode === 'slate') return NextResponse.json(await analyzeMarketDnaSlate(date, slate.games))
     const game = slate.games.find(candidate => candidate.gamePk === gamePk)
     if (!game) return NextResponse.json({ error: 'That game is not present on the captured slate.' }, { status: 404 })
     if (mode === 'game') return NextResponse.json(await analyzeMarketDnaGame(game))

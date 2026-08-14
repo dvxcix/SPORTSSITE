@@ -19,6 +19,7 @@
     "test:browser:production": "node scripts/browser-smoke.mjs --production",
     "test:hr-intelligence": "node --experimental-strip-types scripts/hr-intelligence-regression.mts",
     "audit:hr-intelligence:selectors": "tsx scripts/hr-intelligence-game-selectors.mts",
+    "audit:market-dna": "tsx scripts/audit-market-dna-date.mts",
     "desktop:dev": "npm run dev --workspace @slipsurge/desktop",
     "desktop:build": "npm run build --workspace @slipsurge/desktop",
     "desktop:publish-update": "node scripts/publish-desktop-update.mjs",
