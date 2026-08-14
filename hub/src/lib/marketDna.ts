@@ -1,6 +1,8 @@
 import { normName } from '@slipsurge/core/nameNorm'
 import { computeDugoutSpecsValue, type FieldBundle, type OddsProps } from '@slipsurge/core/matrixEngine'
 import { fetchHistoricalGameBundles } from '@/lib/matrixBacktest'
+import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
+import { fetchHrFeed } from '@/lib/hrFeed'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY
@@ -66,9 +68,17 @@ export type MarketDnaPlayer = {
     fhrVsAveragePct: number | null
     hrVsAveragePct: number | null
     fhrToHr: number | null
+    mgmToFd: number | null
+    paToHr: number | null
     hrToRbi: number | null
     hrToRbi2: number | null
+    hrToRbi3: number | null
+    hrToHrr: number | null
+    hrToTb2: number | null
+    hrToTb3: number | null
     hrToTb4: number | null
+    hrToTb5: number | null
+    hrToHr2: number | null
     hrToHrMl: number | null
     precisionHrScore: number | null
     avgEvL5: number | null
@@ -139,6 +149,60 @@ export type MarketDnaAnalysis = {
   }
 }
 
+export type MarketDnaGameComponents = {
+  market: number
+  settlement: number
+  movement: number
+  historical: number
+  statcast: number
+  traffic: number
+  publicLeverage: number
+}
+
+export type MarketDnaGameRank = {
+  rank: number
+  score: number
+  gapFromLeader: number
+  player: MarketDnaPlayer
+  components: MarketDnaGameComponents
+  signals: string[]
+  contradictions: string[]
+  historical: {
+    matchedHrRate: number | null
+    poolHrRate: number | null
+    lift: number | null
+    nearestSimilarity: number | null
+    sample: number
+  }
+  outcome: (MlbBatterOutcome & {
+    firstHr: boolean
+    hrMlWon: boolean
+    hrEvents: number
+  }) | null
+}
+
+export type MarketDnaGameAnalysis = {
+  generatedAt: string
+  stage: 'current' | 'frozen_close'
+  game: MarketDnaGame
+  ranking: MarketDnaGameRank[]
+  separation: number
+  sourceRows: number
+  outcomeAvailable: boolean
+  score: { away: number; home: number } | null
+  actualHomeRuns: Array<{
+    mlbId: number | null
+    name: string
+    team: string
+    firstHr: boolean
+    homeRuns: number
+    rbis: number
+    totalBases: number
+    hrMlWon: boolean
+    pregameRank: number | null
+  }>
+}
+
 type HistoricalRow = Record<string, unknown> & {
   player_name: string
   name_norm: string | null
@@ -164,6 +228,8 @@ type Feature = {
   scale: number
   weight: number
 }
+
+type GameHistoryEvidence = MarketDnaGameRank['historical']
 
 const HISTORICAL_SELECT = [
   'player_name', 'name_norm', 'team_abbr', 'game_date', 'game_pk', 'did_hr', 'did_double', 'did_triple',
@@ -238,9 +304,17 @@ function buildPlayerProfile(
       fhrVsAveragePct: ratio(bundle, 'fhr_pct'),
       hrVsAveragePct: ratio(bundle, 'sa_pct'),
       fhrToHr: ratio(bundle, 'fhr_div_sa'),
+      mgmToFd: ratio(bundle, 'm_div_f'),
+      paToHr: ratio(bundle, 'pa1_div_sa'),
       hrToRbi: ratio(bundle, 'sa_div_rbi'),
       hrToRbi2: ratio(bundle, 'sa_div_rbi2'),
+      hrToRbi3: ratio(bundle, 'sa_div_rbi3'),
+      hrToHrr: ratio(bundle, 'sa_div_hrr'),
+      hrToTb2: ratio(bundle, 'sa_div_tb'),
+      hrToTb3: ratio(bundle, 'sa_div_tb3'),
       hrToTb4: ratio(bundle, 'sa_div_tb4'),
+      hrToTb5: ratio(bundle, 'sa_div_tb5'),
+      hrToHr2: ratio(bundle, 'sa_div_hr2'),
       hrToHrMl: ratio(bundle, 'sa_div_ml'),
       precisionHrScore: asNumber(bundle.precisionHrScore),
       avgEvL5: asNumber(l5?.avgEv),
@@ -328,6 +402,12 @@ function featuresFor(player: MarketDnaPlayer, row: HistoricalRow): Feature[] {
   const market = (key: string) => marketByKey(player, key)?.current ?? null
   const move = (key: string) => marketByKey(player, key)?.probabilityMove ?? null
   const historicalHr = historicalPrice(row, 'odds_hr_close', 'fd_hr', 'odds_hr_best')
+  const historicalRbi = historicalPrice(row, 'odds_rbi_close', 'odds_rbi1_best', 'odds_rbi_best')
+  const historicalHrProbability = implied(historicalHr)
+  const historicalRbiProbability = implied(historicalRbi)
+  const historicalHrToRbi = historicalHrProbability != null && historicalRbiProbability
+    ? historicalHrProbability / historicalRbiProbability
+    : null
   const feature = (label: string, category: Feature['category'], current: number | null, historical: number | null, scale: number, weight: number): Feature => ({ label, category, current, historical, scale, weight })
   return [
     feature('Anytime HR price', 'market', implied(market('hr')), implied(historicalHr), 0.08, 2.5),
@@ -345,15 +425,236 @@ function featuresFor(player: MarketDnaPlayer, row: HistoricalRow): Feature[] {
     feature('Single price', 'market', implied(market('single')), implied(historicalPrice(row, 'odds_singles_best')), 0.15, 0.7),
     feature('2+ HR price', 'market', implied(market('hr2')), implied(historicalPrice(row, 'odds_hr15_best')), 0.035, 0.7),
     feature('Anytime HR movement', 'movement', move('hr'), historicalProbabilityMove(row), 4, 1.35),
-    feature('FHR vs player baseline', 'structure', player.metrics.fhrVsAveragePct == null ? null : player.metrics.fhrVsAveragePct * 100, asNumber(row.fhr_div_pct), 25, 1.15),
-    feature('HR vs player baseline', 'structure', player.metrics.hrVsAveragePct == null ? null : player.metrics.hrVsAveragePct * 100, asNumber(row.hr_div_pct), 25, 1.15),
-    feature('HR to RBI ratio', 'structure', player.metrics.hrToRbi, asNumber(row.hr_rbi_ratio), 0.55, 1.25),
+    feature('FHR vs player baseline', 'structure', player.metrics.fhrVsAveragePct, asNumber(row.fhr_div_pct), 25, 1.15),
+    feature('HR vs player baseline', 'structure', player.metrics.hrVsAveragePct, asNumber(row.hr_div_pct), 25, 1.15),
+    feature('HR to RBI ratio', 'structure', player.metrics.hrToRbi, historicalHrToRbi, 0.35, 1.25),
     feature('Batting order', 'context', player.battingOrder, asNumber(row.batting_order), 3, 0.8),
     feature('Barrel rate', 'statcast', player.metrics.barrelL10, asNumber(row.brl_pct), 15, 1.15),
     feature('Hard-hit rate', 'statcast', player.metrics.hardHitL5, asNumber(row.hard_hit_pct), 22, 1),
     feature('Exit velocity', 'statcast', player.metrics.avgEvL5, asNumber(row.exit_velo), 8, 0.8),
     feature('Launch angle', 'statcast', player.metrics.avgLaL5, asNumber(row.launch_angle), 14, 0.55),
   ]
+}
+
+function average(values: Array<number | null | undefined>, fallback = 50) {
+  const clean = values.filter((value): value is number => value != null && Number.isFinite(value))
+  return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : fallback
+}
+
+function percentileMap(players: MarketDnaPlayer[], getter: (player: MarketDnaPlayer) => number | null, higher = true) {
+  const values = players.map(getter).filter((value): value is number => value != null && Number.isFinite(value))
+  const result = new Map<number, number>()
+  if (!values.length) return result
+  for (const value of values) {
+    if (result.has(value)) continue
+    const below = values.filter(other => higher ? other < value : other > value).length
+    const equal = values.filter(other => other === value).length
+    result.set(value, values.length === 1 ? 50 : ((below + (equal - 1) / 2) / (values.length - 1)) * 100)
+  }
+  return result
+}
+
+function percentileFor(player: MarketDnaPlayer, getter: (candidate: MarketDnaPlayer) => number | null, players: MarketDnaPlayer[], higher = true) {
+  const value = getter(player)
+  return value == null ? 50 : percentileMap(players, getter, higher).get(value) ?? 50
+}
+
+function marketProbability(player: MarketDnaPlayer, key: string) {
+  return implied(marketByKey(player, key)?.current ?? null)
+}
+
+function marketMove(player: MarketDnaPlayer, key: string) {
+  return marketByKey(player, key)?.probabilityMove ?? null
+}
+
+function previousBatters(game: MarketDnaGame, player: MarketDnaPlayer) {
+  const lineup = game.players.filter(candidate => candidate.team === player.team)
+  const byOrder = new Map(lineup.map(candidate => [candidate.battingOrder, candidate]))
+  return [1, 2, 3].map(offset => byOrder.get(((player.battingOrder - offset - 1 + 9) % 9) + 1)).filter((candidate): candidate is MarketDnaPlayer => Boolean(candidate))
+}
+
+function buildHistoryEvidence(player: MarketDnaPlayer, rows: HistoricalRow[]): GameHistoryEvidence {
+  const hrOdds = marketByKey(player, 'hr')?.current
+  if (hrOdds == null) return { matchedHrRate: null, poolHrRate: rate(rows), lift: null, nearestSimilarity: null, sample: 0 }
+  const lowOdds = Math.max(100, hrOdds * 0.42)
+  const highOdds = Math.min(6000, hrOdds * 2.35 + 100)
+  const eligible = rows.filter(row => {
+    const price = historicalPrice(row, 'odds_hr_close', 'odds_hr_best')
+    const order = asNumber(row.batting_order)
+    return price != null && price >= lowOdds && price <= highOdds && order != null && Math.abs(order - player.battingOrder) <= 3
+  })
+  const scored = eligible.map(row => ({ row, match: scoreMatch(player, row) }))
+    .filter((entry): entry is { row: HistoricalRow; match: HistoricalMatch } => entry.match != null)
+    .sort((a, b) => b.match.similarity - a.match.similarity)
+  const nearest = scored.slice(0, 25)
+  const matchedRate = rate(nearest.map(entry => entry.row))
+  const poolRate = rate(eligible)
+  const lift = matchedRate != null && poolRate != null && poolRate > 0 ? matchedRate / poolRate : null
+  return {
+    matchedHrRate: matchedRate,
+    poolHrRate: poolRate,
+    lift,
+    nearestSimilarity: nearest[0]?.match.similarity ?? null,
+    sample: nearest.length,
+  }
+}
+
+export function rankMarketDnaGameProfiles(
+  game: MarketDnaGame,
+  evidenceByMlbId: Record<number, GameHistoryEvidence> = {},
+): MarketDnaGameRank[] {
+  const players = game.players
+  const allHrPicks = players.reduce((sum, player) => sum + (player.picks.home_runs ?? 0), 0)
+  const preliminary = players.map(player => {
+    const evidence = evidenceByMlbId[player.mlbId] ?? { matchedHrRate: null, poolHrRate: null, lift: null, nearestSimilarity: null, sample: 0 }
+    const p = (key: string) => percentileFor(player, candidate => marketProbability(candidate, key), players)
+    const metric = (getter: (candidate: MarketDnaPlayer) => number | null, higher = true) => percentileFor(player, getter, players, higher)
+
+    const market = average([
+      p('fhr'), p('hr'), metric(candidate => candidate.metrics.fhrToHr, false),
+      metric(candidate => candidate.metrics.fhrVsAveragePct, false),
+      metric(candidate => candidate.metrics.hrVsAveragePct, false),
+    ])
+    const settlement = average([
+      p('hrMl'), p('rbi1'), p('rbi2'), p('rbi3'), p('tb4'), p('tb5'), p('hrr'),
+      metric(candidate => candidate.metrics.hrToRbi, false),
+      metric(candidate => candidate.metrics.hrToRbi2, false),
+      metric(candidate => candidate.metrics.hrToRbi3, false),
+      metric(candidate => candidate.metrics.hrToHrr, false),
+      metric(candidate => candidate.metrics.hrToHrMl, false),
+    ])
+    const secondaryMove = average(['hrMl', 'rbi1', 'rbi2', 'rbi3', 'tb4', 'tb5', 'hrr'].map(key => marketMove(player, key)), 0)
+    const powerMove = average([marketMove(player, 'fhr'), marketMove(player, 'hr')], 0)
+    const contrast = secondaryMove - powerMove
+    const movement = average([
+      metric(candidate => average(['hrMl', 'rbi1', 'rbi2', 'rbi3', 'tb4', 'tb5', 'hrr'].map(key => marketMove(candidate, key)), 0)),
+      metric(candidate => {
+        const secondary = average(['hrMl', 'rbi1', 'rbi2', 'rbi3', 'tb4', 'tb5', 'hrr'].map(key => marketMove(candidate, key)), 0)
+        return secondary - average([marketMove(candidate, 'fhr'), marketMove(candidate, 'hr')], 0)
+      }),
+    ])
+    const historical = evidence.lift == null
+      ? 50
+      : clamp(50 + (evidence.lift - 1) * 38 + ((evidence.nearestSimilarity ?? .5) - .5) * 20, 0, 100)
+    const launchShape = player.metrics.avgLaL5 == null ? null : 100 - Math.min(100, Math.abs(player.metrics.avgLaL5 - 22) * 5)
+    const statcast = average([
+      metric(candidate => candidate.metrics.avgEvL5),
+      metric(candidate => candidate.metrics.hardHitL5),
+      metric(candidate => candidate.metrics.barrelL10),
+      metric(candidate => candidate.metrics.pullAirL5),
+      launchShape,
+    ])
+    const trafficPlayers = previousBatters(game, player)
+    const trafficRaw = average(trafficPlayers.flatMap(candidate => [
+      marketProbability(candidate, 'hits1'), marketProbability(candidate, 'runs1'), marketProbability(candidate, 'hrr'),
+    ]), .25)
+    const traffic = percentileFor(player, candidate => {
+      const preceding = previousBatters(game, candidate)
+      return average(preceding.flatMap(previous => [marketProbability(previous, 'hits1'), marketProbability(previous, 'runs1'), marketProbability(previous, 'hrr')]), .25)
+    }, players)
+    const hrPickShare = allHrPicks > 0 ? (player.picks.home_runs ?? 0) / allHrPicks : null
+    const publicLeverage = hrPickShare == null
+      ? 50
+      : clamp((market / 100) * 70 + (1 - hrPickShare) * 30, 0, 100)
+    const components = { market, settlement, movement, historical, statcast, traffic, publicLeverage }
+    const coherence = Math.sqrt(Math.max(0, market * settlement))
+    const score = market * .25 + settlement * .25 + coherence * .08 + movement * .07 + historical * .14 + statcast * .10 + traffic * .06 + publicLeverage * .05
+    const signals: string[] = []
+    const contradictions: string[] = []
+    if (market >= 75) signals.push('Top-tier FHR and anytime market position')
+    if (settlement >= 70) signals.push('RBI, total-base and team-win stack separates')
+    if (contrast > .2) signals.push('Secondary settlement markets strengthened more than headline power')
+    if (historical >= 65) signals.push('Comparable archived profiles cleared HR above their pool')
+    if (statcast >= 70) signals.push('Recent contact shape supports the price structure')
+    if (traffic >= 70) signals.push('Preceding lineup slots carry strong on-base and run pricing')
+    if (publicLeverage >= 72 && allHrPicks > 0) signals.push('Market strength exceeds public HR share')
+    if (player.metrics.avgLaL5 != null && (player.metrics.avgLaL5 < 8 || player.metrics.avgLaL5 > 38)) contradictions.push('Recent launch shape is outside the strongest HR band')
+    if (statcast < 35) contradictions.push('Recent Statcast support is weak')
+    if (marketMove(player, 'hr') != null && marketMove(player, 'hr')! < -1) contradictions.push('Anytime price moved materially longer')
+    if (!signals.length) signals.push('Composite strength comes from several moderate edges')
+    return { rank: 0, score, gapFromLeader: 0, player, components, signals, contradictions, historical: evidence, outcome: null, trafficRaw }
+  })
+  const sorted = preliminary.sort((a, b) => b.score - a.score)
+  const leader = sorted[0]?.score ?? 0
+  return sorted.map((entry, index) => ({
+    rank: index + 1,
+    score: Math.round(entry.score * 10) / 10,
+    gapFromLeader: Math.round((leader - entry.score) * 10) / 10,
+    player: entry.player,
+    components: entry.components,
+    signals: entry.signals,
+    contradictions: entry.contradictions,
+    historical: entry.historical,
+    outcome: null,
+  }))
+}
+
+async function fetchGameScore(gamePk: number) {
+  try {
+    const response = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
+    if (!response.ok) return null
+    const body = await response.json()
+    return {
+      away: Number(body?.liveData?.linescore?.teams?.away?.runs ?? 0),
+      home: Number(body?.liveData?.linescore?.teams?.home?.runs ?? 0),
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketDnaGameAnalysis> {
+  const hrPrices = game.players.map(player => marketByKey(player, 'hr')?.current).filter((value): value is number => value != null)
+  if (!hrPrices.length) throw new Error('This game has no captured Anytime HR market.')
+  const query = `/rest/v1/player_outcomes?select=${HISTORICAL_SELECT}&game_date=lt.${game.players[0]?.gameDate}&odds_hr_best=not.is.null&odds_hr_best=gte.${Math.max(100, Math.floor(Math.min(...hrPrices) * .42))}&odds_hr_best=lte.${Math.min(6000, Math.ceil(Math.max(...hrPrices) * 2.35 + 100))}&batting_order=gte.1&batting_order=lte.9&order=game_date.desc`
+  const rows = await mpGetAll(query, 15_000)
+  const evidenceByMlbId: Record<number, GameHistoryEvidence> = {}
+  for (const player of game.players) evidenceByMlbId[player.mlbId] = buildHistoryEvidence(player, rows)
+  let ranking = rankMarketDnaGameProfiles(game, evidenceByMlbId)
+
+  const gameStarted = game.players.some(player => player.gameStarted)
+  const outcomeAvailable = gameStarted
+  let score: { away: number; home: number } | null = null
+  let actualHomeRuns: MarketDnaGameAnalysis['actualHomeRuns'] = []
+  if (outcomeAvailable) {
+    const ref = [{ gamePk: game.gamePk, status: { abstractGameState: /final/i.test(game.status) ? 'Final' : 'Live' } }]
+    const [outcomesByGame, hrResult, gameScore] = await Promise.all([fetchBoxscoreOutcomes(ref), fetchHrFeed(ref), fetchGameScore(game.gamePk)])
+    score = gameScore
+    const outcomes = outcomesByGame[game.gamePk] ?? {}
+    const firstHrId = hrResult.hrFeed.find(event => event.game_pk === game.gamePk && event.is_first_hr_of_game)?.mlb_id ?? null
+    const hrCountById = new Map<number, number>()
+    for (const event of hrResult.hrFeed.filter(event => event.game_pk === game.gamePk && event.mlb_id != null)) hrCountById.set(event.mlb_id!, (hrCountById.get(event.mlb_id!) ?? 0) + 1)
+    const winningTeam = score == null || score.away === score.home ? null : score.away > score.home ? game.awayAbbr : game.homeAbbr
+    ranking = ranking.map(entry => {
+      const result = outcomes[entry.player.mlbId]
+      return {
+        ...entry,
+        outcome: result ? { ...result, firstHr: entry.player.mlbId === firstHrId, hrMlWon: result.hr > 0 && entry.player.team === winningTeam, hrEvents: hrCountById.get(entry.player.mlbId) ?? result.hr } : null,
+      }
+    })
+    actualHomeRuns = ranking.filter(entry => (entry.outcome?.hr ?? 0) > 0).map(entry => ({
+      mlbId: entry.player.mlbId,
+      name: entry.player.name,
+      team: entry.player.team,
+      firstHr: Boolean(entry.outcome?.firstHr),
+      homeRuns: entry.outcome?.hr ?? 0,
+      rbis: entry.outcome?.rbi ?? 0,
+      totalBases: entry.outcome?.tb ?? 0,
+      hrMlWon: Boolean(entry.outcome?.hrMlWon),
+      pregameRank: entry.rank,
+    }))
+  }
+  return {
+    generatedAt: new Date().toISOString(),
+    stage: gameStarted ? 'frozen_close' : 'current',
+    game,
+    ranking,
+    separation: ranking.length > 1 ? Math.round((ranking[0].score - ranking[1].score) * 10) / 10 : 0,
+    sourceRows: rows.length,
+    outcomeAvailable,
+    score,
+    actualHomeRuns,
+  }
 }
 
 function scoreMatch(player: MarketDnaPlayer, row: HistoricalRow): HistoricalMatch | null {
