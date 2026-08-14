@@ -3,6 +3,7 @@ import { computeDugoutSpecsValue, type FieldBundle, type OddsProps } from '@slip
 import { fetchHistoricalGameBundles } from '@/lib/matrixBacktest'
 import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
 import { fetchHrFeed } from '@/lib/hrFeed'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY
@@ -98,6 +99,7 @@ export type MarketDnaGame = {
   status: string
   gameDate: string
   lineupConfirmed: boolean
+  noHr: { current: number | null; open: number | null; probabilityMove: number | null }
   players: MarketDnaPlayer[]
 }
 
@@ -257,6 +259,31 @@ type Feature = {
 
 type GameHistoryEvidence = MarketDnaGameRank['historical']
 
+type CanonicalFeatureVector = Record<string, number>
+
+type ArchivedProfileRow = {
+  game_date: string
+  game_pk: number
+  mlb_id: number
+  player_name: string
+  name_norm: string
+  team_abbr: string
+  batting_order: number
+  profile: MarketDnaPlayer
+  feature_vector: CanonicalFeatureVector
+  did_hr: boolean
+  home_runs: number
+  hits: number
+  runs: number
+  rbis: number
+  total_bases: number
+  stolen_bases: number
+  did_double: boolean
+  did_triple: boolean
+  first_hr: boolean
+  hr_ml_won: boolean
+}
+
 const HISTORICAL_SELECT = [
   'player_name', 'name_norm', 'team_abbr', 'game_date', 'game_pk', 'did_hr', 'did_double', 'did_triple',
   'hits', 'rbis', 'runs', 'total_bases', 'stolen_bases', 'batting_order',
@@ -376,6 +403,11 @@ export async function buildMarketDnaSlate(date: string): Promise<{ date: string;
         status: game.game.status,
         gameDate: game.game.gameDate,
         lineupConfirmed: game.game.awayLineupConfirmed && game.game.homeLineupConfirmed,
+        noHr: {
+          current: game.noHr.current,
+          open: game.noHr.open,
+          probabilityMove: probabilityMove(game.noHr.current, game.noHr.open),
+        },
         players,
       }
     }),
@@ -507,6 +539,108 @@ function previousBatters(game: MarketDnaGame, player: MarketDnaPlayer) {
   return [1, 2, 3].map(offset => byOrder.get(((player.battingOrder - offset - 1 + 9) % 9) + 1)).filter((candidate): candidate is MarketDnaPlayer => Boolean(candidate))
 }
 
+function normalizedSigned(value: number | null, scale: number, center = 0) {
+  return value == null ? null : clamp(.5 + Math.atan((value - center) / scale) / Math.PI)
+}
+
+function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaGame): CanonicalFeatureVector {
+  const vector: CanonicalFeatureVector = {}
+  const put = (key: string, value: number | null | undefined) => {
+    if (value != null && Number.isFinite(value)) vector[key] = clamp(value)
+  }
+  put('game.noHr.probability', implied(game.noHr.current))
+  put('game.noHr.movement', normalizedSigned(game.noHr.probabilityMove, 2.5))
+  for (const market of player.markets) {
+    put(`market.${market.key}.probability`, implied(market.current))
+    put(`market.${market.key}.rank`, percentileFor(player, candidate => marketProbability(candidate, market.key), game.players) / 100)
+    put(`market.${market.key}.movement`, normalizedSigned(market.probabilityMove, 2.5))
+  }
+  const totalByPick = Object.fromEntries(PICK_KEYS.map(key => [key, game.players.reduce((sum, candidate) => sum + (candidate.picks[key] ?? 0), 0)])) as Record<string, number>
+  for (const key of PICK_KEYS) {
+    const total = totalByPick[key]
+    put(`public.${key}.share`, total > 0 ? (player.picks[key] ?? 0) / total : null)
+    put(`public.${key}.rank`, percentileFor(player, candidate => candidate.picks[key] ?? 0, game.players) / 100)
+  }
+  const metricScales: Record<keyof MarketDnaPlayer['metrics'], [number, number]> = {
+    fhrVsAveragePct: [25, 0], hrVsAveragePct: [25, 0], fhrToHr: [.5, 1], mgmToFd: [.35, 1],
+    paToHr: [.7, 1], hrToRbi: [.5, 1], hrToRbi2: [.8, 1], hrToRbi3: [1.2, 1],
+    hrToHrr: [.5, 1], hrToTb2: [.5, 1], hrToTb3: [.6, 1], hrToTb4: [.8, 1],
+    hrToTb5: [1, 1], hrToHr2: [1, 1], hrToHrMl: [.5, 1], precisionHrScore: [1, 0],
+    avgEvL5: [8, 88], avgLaL5: [14, 22], hardHitL5: [20, 40], barrelL10: [10, 10],
+    pullAirL5: [18, 25], batSpeedL5: [8, 70],
+  }
+  for (const key of Object.keys(metricScales) as Array<keyof MarketDnaPlayer['metrics']>) {
+    const [scale, center] = metricScales[key]
+    put(`metric.${key}.value`, normalizedSigned(player.metrics[key], scale, center))
+    put(`metric.${key}.rank`, percentileFor(player, candidate => candidate.metrics[key], game.players) / 100)
+  }
+  put('context.battingOrder', (player.battingOrder - 1) / 8)
+  const preceding = previousBatters(game, player)
+  put('context.traffic', average(preceding.flatMap(candidate => [marketProbability(candidate, 'hits1'), marketProbability(candidate, 'runs1'), marketProbability(candidate, 'hrr')]), .25))
+  return vector
+}
+
+function canonicalFeatureWeight(key: string) {
+  if (key === 'context.battingOrder') return .45
+  if (key === 'context.traffic') return .9
+  if (key.endsWith('.rank')) return 1.25
+  if (key.endsWith('.movement')) return 1.05
+  if (key.startsWith('public.')) return .8
+  if (key.startsWith('metric.')) return 1.05
+  if (/rbi|tb4|tb5|hrr|hrMl|pa1|laser|moonshot/.test(key)) return 1.2
+  if (/fhr|\.hr\./.test(key)) return 1.45
+  return 1
+}
+
+function canonicalSimilarity(current: CanonicalFeatureVector, historical: CanonicalFeatureVector) {
+  let similarity = 0
+  let weight = 0
+  let possibleWeight = 0
+  const keys = new Set([...Object.keys(current), ...Object.keys(historical)])
+  for (const key of keys) {
+    const featureWeight = canonicalFeatureWeight(key)
+    possibleWeight += featureWeight
+    if (current[key] == null || historical[key] == null) continue
+    similarity += (1 - Math.abs(current[key] - historical[key])) * featureWeight
+    weight += featureWeight
+  }
+  return {
+    similarity: weight ? clamp(similarity / weight) : 0,
+    coverage: possibleWeight ? clamp(weight / possibleWeight) : 0,
+  }
+}
+
+function gameFeatureSignature(vectors: CanonicalFeatureVector[]) {
+  const signature: CanonicalFeatureVector = {}
+  const keys = new Set(vectors.flatMap(vector => Object.keys(vector)))
+  for (const key of keys) {
+    if (key.endsWith('.rank') || key === 'context.battingOrder') continue
+    const values = vectors.map(vector => vector[key]).filter((value): value is number => value != null)
+    if (values.length < Math.max(6, vectors.length / 2)) continue
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+    const variance = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length
+    signature[`game.mean.${key}`] = mean
+    signature[`game.spread.${key}`] = clamp(Math.sqrt(variance) * 2)
+    signature[`game.high.${key}`] = Math.max(...values)
+    signature[`game.low.${key}`] = Math.min(...values)
+  }
+  return signature
+}
+
+function selectComparableGameRows(game: MarketDnaGame, rows: ArchivedProfileRow[]) {
+  if (!rows.length) return rows
+  const currentSignature = gameFeatureSignature(game.players.map(player => canonicalFeatureVector(player, game)))
+  const byGame = new Map<number, ArchivedProfileRow[]>()
+  for (const row of rows) byGame.set(row.game_pk, [...(byGame.get(row.game_pk) ?? []), row])
+  return [...byGame.values()]
+    .filter(gameRows => gameRows.length >= 18)
+    .map(gameRows => ({ gameRows, ...canonicalSimilarity(currentSignature, gameFeatureSignature(gameRows.map(row => row.feature_vector))) }))
+    .filter(entry => entry.coverage >= .45)
+    .sort((a, b) => (b.similarity * b.coverage) - (a.similarity * a.coverage))
+    .slice(0, 72)
+    .flatMap(entry => entry.gameRows)
+}
+
 function weightedRate(
   entries: Array<{ row: HistoricalRow; match: HistoricalMatch }>,
   predicate: (row: HistoricalRow) => boolean,
@@ -598,6 +732,78 @@ function buildHistoryEvidence(
       multiRbiHrRate: hrOutcomeRate(row => (row.rbis ?? 0) >= 2),
       fivePlusTbHrRate: hrOutcomeRate(row => (row.total_bases ?? 0) >= 5),
       soloOrOneRbiHrRate: hrOutcomeRate(row => (row.rbis ?? 0) <= 1),
+    },
+  }
+}
+
+function buildCanonicalHistoryEvidence(
+  player: MarketDnaPlayer,
+  game: MarketDnaGame,
+  rows: ArchivedProfileRow[],
+  baselineRows: ArchivedProfileRow[] = rows,
+): GameHistoryEvidence {
+  if (!rows.length) return emptyHistoryEvidence(null)
+  const current = canonicalFeatureVector(player, game)
+  const scored = rows.map(row => ({ row, ...canonicalSimilarity(current, row.feature_vector) }))
+    .filter(entry => entry.coverage >= .55)
+    .sort((a, b) => (b.similarity * b.coverage) - (a.similarity * a.coverage))
+  const nearest = scored.slice(0, 60)
+  const samePlayerPool = baselineRows.filter(row => row.name_norm === player.nameNorm)
+  const samePlayer = scored.filter(entry => entry.row.name_norm === player.nameNorm).slice(0, 24)
+  const poolHrRate = rows.filter(row => row.did_hr).length / rows.length
+  const samePlayerBaselineHrRate = samePlayerPool.length ? samePlayerPool.filter(row => row.did_hr).length / samePlayerPool.length : null
+  const posterior = (
+    entries: typeof nearest,
+    prior: number | null,
+    priorWeight: number,
+  ) => {
+    let hits = (prior ?? 0) * priorWeight
+    let weight = prior == null ? 0 : priorWeight
+    for (const entry of entries) {
+      const sampleWeight = Math.max(.05, Math.pow(entry.similarity, 4) * entry.coverage)
+      hits += entry.row.did_hr ? sampleWeight : 0
+      weight += sampleWeight
+    }
+    return weight ? hits / weight : null
+  }
+  const matchedHrRate = nearest.length ? nearest.filter(entry => entry.row.did_hr).length / nearest.length : null
+  const analogPosterior = posterior(nearest, poolHrRate, 10)
+  const samePlayerPosterior = posterior(samePlayer, samePlayerBaselineHrRate, 5)
+  const samePlayerWeight = samePlayer.length ? clamp(samePlayer.length / 14, .2, .55) : 0
+  const profileProbability = analogPosterior == null
+    ? samePlayerPosterior
+    : samePlayerPosterior == null
+      ? analogPosterior
+      : analogPosterior * (1 - samePlayerWeight) + samePlayerPosterior * samePlayerWeight
+  const lift = profileProbability != null && poolHrRate > 0 ? profileProbability / poolHrRate : null
+  const samePlayerLift = samePlayerPosterior != null && samePlayerBaselineHrRate != null && samePlayerBaselineHrRate > 0
+    ? samePlayerPosterior / samePlayerBaselineHrRate
+    : null
+  const nearestHr = nearest.filter(entry => entry.row.did_hr)
+  const shapeRate = (predicate: (row: ArchivedProfileRow) => boolean) => nearestHr.length
+    ? nearestHr.filter(entry => predicate(entry.row)).length / nearestHr.length
+    : null
+  const topSimilarity = nearest[0]?.similarity ?? null
+  const confidence = clamp(
+    average(nearest.slice(0, 20).map(entry => entry.similarity * entry.coverage), 0)
+      * (Math.min(1, nearest.length / 45) * .7 + Math.min(1, samePlayer.length / 12) * .3),
+  )
+  return {
+    matchedHrRate,
+    poolHrRate,
+    lift,
+    nearestSimilarity: topSimilarity,
+    sample: nearest.length,
+    samePlayerHrRate: samePlayerPosterior,
+    samePlayerBaselineHrRate,
+    samePlayerLift,
+    samePlayerSample: samePlayer.length,
+    profileProbability,
+    confidence,
+    settlementShape: {
+      multiRbiHrRate: shapeRate(row => row.rbis >= 2),
+      fivePlusTbHrRate: shapeRate(row => row.total_bases >= 5),
+      soloOrOneRbiHrRate: shapeRate(row => row.rbis <= 1),
     },
   }
 }
@@ -719,9 +925,37 @@ async function loadHistoricalRowsForGames(games: MarketDnaGame[]) {
   return mpGetAll(query, 20_000)
 }
 
-function rankGameWithHistory(game: MarketDnaGame, rows: HistoricalRow[]) {
+async function loadCanonicalArchiveForGames(games: MarketDnaGame[]) {
+  const cutoff = games.map(game => game.gameDate).sort()[0]
+  const admin = createAdminClient()
+  const rows: ArchivedProfileRow[] = []
+  const pageSize = 1000
+  for (let offset = 0; offset < 25_000; offset += pageSize) {
+    const { data, error } = await admin
+      .from('market_dna_profile_archive')
+      .select('game_date,game_pk,mlb_id,player_name,name_norm,team_abbr,batting_order,profile,feature_vector,did_hr,home_runs,hits,runs,rbis,total_bases,stolen_bases,did_double,did_triple,first_hr,hr_ml_won')
+      .lt('game_date', cutoff)
+      .order('game_date', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+    if (error) {
+      if (/does not exist|schema cache/i.test(error.message)) return []
+      throw new Error(`Canonical Market DNA archive could not be loaded: ${error.message}`)
+    }
+    const page = (data ?? []) as unknown as ArchivedProfileRow[]
+    rows.push(...page)
+    if (page.length < pageSize) break
+  }
+  return rows
+}
+
+function rankGameWithHistory(game: MarketDnaGame, rows: HistoricalRow[], canonicalRows: ArchivedProfileRow[]) {
   const evidenceByMlbId: Record<number, GameHistoryEvidence> = {}
-  for (const player of game.players) evidenceByMlbId[player.mlbId] = buildHistoryEvidence(player, rows, game)
+  const comparableGameRows = canonicalRows.length >= 180 ? selectComparableGameRows(game, canonicalRows) : []
+  for (const player of game.players) {
+    evidenceByMlbId[player.mlbId] = canonicalRows.length >= 180
+      ? buildCanonicalHistoryEvidence(player, game, comparableGameRows, canonicalRows)
+      : buildHistoryEvidence(player, rows, game)
+  }
   return rankMarketDnaGameProfiles(game, evidenceByMlbId)
 }
 
@@ -776,9 +1010,65 @@ function buildGameAnalysis(
   }
 }
 
+export async function archiveMarketDnaDate(date: string) {
+  const slate = await buildMarketDnaSlate(date)
+  const games = slate.games.filter(game => game.players.length >= 18 && /final/i.test(game.status))
+  if (!games.length) return { date, games: 0, players: 0, skipped: slate.games.length }
+  const refs = games.map(game => ({ gamePk: game.gamePk, status: { abstractGameState: 'Final' } }))
+  const [outcomesByGame, hrResult, scores] = await Promise.all([
+    fetchBoxscoreOutcomes(refs),
+    fetchHrFeed(refs),
+    Promise.all(games.map(game => fetchGameScore(game.gamePk))),
+  ])
+  const archiveRows = games.flatMap((game, index) => {
+    const outcomes = outcomesByGame[game.gamePk] ?? {}
+    const firstHrId = hrResult.hrFeed.find(event => event.game_pk === game.gamePk && event.is_first_hr_of_game)?.mlb_id ?? null
+    const score = scores[index]
+    const winningTeam = score == null || score.away === score.home ? null : score.away > score.home ? game.awayAbbr : game.homeAbbr
+    return game.players.map(player => {
+      const outcome = outcomes[player.mlbId]
+      return {
+        game_date: date,
+        game_pk: game.gamePk,
+        game_key: game.gameKey,
+        mlb_id: player.mlbId,
+        player_name: player.name,
+        name_norm: player.nameNorm,
+        team_abbr: player.team,
+        opponent_abbr: player.opponent,
+        batting_order: player.battingOrder,
+        profile: player,
+        feature_vector: canonicalFeatureVector(player, game),
+        did_hr: (outcome?.hr ?? 0) > 0,
+        home_runs: outcome?.hr ?? 0,
+        hits: outcome?.h ?? 0,
+        runs: outcome?.runs ?? 0,
+        rbis: outcome?.rbi ?? 0,
+        total_bases: outcome?.tb ?? 0,
+        stolen_bases: outcome?.sb ?? 0,
+        did_double: (outcome?.doubles ?? 0) > 0,
+        did_triple: (outcome?.triples ?? 0) > 0,
+        first_hr: player.mlbId === firstHrId,
+        hr_ml_won: (outcome?.hr ?? 0) > 0 && player.team === winningTeam,
+        source_version: 'canonical-v1',
+        updated_at: new Date().toISOString(),
+      }
+    })
+  })
+  const admin = createAdminClient()
+  for (let index = 0; index < archiveRows.length; index += 250) {
+    const { error } = await admin
+      .from('market_dna_profile_archive')
+      .upsert(archiveRows.slice(index, index + 250), { onConflict: 'game_pk,mlb_id' })
+    if (error) throw new Error(`Canonical Market DNA archive write failed: ${error.message}`)
+  }
+  return { date, games: games.length, players: archiveRows.length, skipped: slate.games.length - games.length }
+}
+
 export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketDnaGameAnalysis> {
-  const rows = await loadHistoricalRowsForGames([game])
-  let ranking = rankGameWithHistory(game, rows)
+  const canonicalRows = await loadCanonicalArchiveForGames([game])
+  const rows = canonicalRows.length >= 180 ? [] : await loadHistoricalRowsForGames([game])
+  let ranking = rankGameWithHistory(game, rows, canonicalRows)
 
   const gameStarted = game.players.some(player => player.gameStarted)
   let score: { away: number; home: number } | null = null
@@ -788,13 +1078,14 @@ export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketD
     score = gameScore
     ranking = attachGameOutcomes(game, ranking, outcomesByGame[game.gamePk] ?? {}, hrResult.hrFeed, score)
   }
-  return buildGameAnalysis(game, ranking, rows.length, score)
+  return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, score)
 }
 
 export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]): Promise<MarketDnaSlateAudit> {
   const capturedGames = games.filter(game => game.players.length >= 18)
   if (!capturedGames.length) throw new Error('No complete 18-player boards were captured for this date.')
-  const rows = await loadHistoricalRowsForGames(capturedGames)
+  const canonicalRows = await loadCanonicalArchiveForGames(capturedGames)
+  const rows = canonicalRows.length >= 180 ? [] : await loadHistoricalRowsForGames(capturedGames)
   const refs = capturedGames.map(game => ({
     gamePk: game.gamePk,
     status: { abstractGameState: game.players.some(player => player.gameStarted) ? (/final/i.test(game.status) ? 'Final' : 'Live') : 'Preview' },
@@ -805,9 +1096,9 @@ export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]
     Promise.all(capturedGames.map(game => fetchGameScore(game.gamePk))),
   ])
   const analyses = capturedGames.map((game, index) => {
-    let ranking = rankGameWithHistory(game, rows)
+    let ranking = rankGameWithHistory(game, rows, canonicalRows)
     if (game.players.some(player => player.gameStarted)) ranking = attachGameOutcomes(game, ranking, outcomesByGame[game.gamePk] ?? {}, hrResult.hrFeed, scores[index])
-    return buildGameAnalysis(game, ranking, rows.length, scores[index])
+    return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, scores[index])
   })
   const completed = analyses.filter(analysis => /final/i.test(analysis.game.status))
   const withHr = completed.filter(analysis => analysis.actualHomeRuns.length > 0)
