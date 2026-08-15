@@ -196,10 +196,10 @@ function GameAnalysisPanel({ analysis, liveGame }: { analysis: MarketDnaGameAnal
     {validation ? <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-black text-white">Held-out validation</p><p className="text-[10px] text-zinc-600">Games from {validation.cutoff} forward were excluded from that validation model.</p></div><span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-2.5 py-1 text-[9px] font-black uppercase text-lime-300">{analysis.reducer?.version}</span></div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryMetric label="Learned top one" value={pct(validation.learnedTopOne)} detail={`${validation.gamesWithHr} held-out games with HR`} />
-        <SummaryMetric label="Learned top two" value={pct(validation.learnedTopTwo)} detail={`Market top two: ${pct(validation.marketTopTwo)}`} tone="text-lime-300" />
+        <SummaryMetric label="Dual-lane top one" value={pct(validation.dualLaneTopOne)} detail={`Learned top one: ${pct(validation.learnedTopOne)}`} />
+        <SummaryMetric label="Dual-lane pair" value={pct(validation.dualLaneTopTwo)} detail={`Learned top two: ${pct(validation.learnedTopTwo)}`} tone="text-lime-300" />
         <SummaryMetric label="Learned top three" value={pct(validation.learnedTopThree)} detail="At least one realized HR contained" />
-        <SummaryMetric label="Average HR rank" value={validation.averageLearnedHomerRank?.toFixed(2) ?? '—'} detail={`Market baseline: ${validation.averageMarketHomerRank?.toFixed(2) ?? '—'}`} />
+        <SummaryMetric label="Average HR rank" value={validation.averageDualLaneHomerRank?.toFixed(2) ?? '—'} detail={`Learned: ${validation.averageLearnedHomerRank?.toFixed(2) ?? '—'} · market: ${validation.averageMarketHomerRank?.toFixed(2) ?? '—'}`} />
       </div>
     </section> : null}
 

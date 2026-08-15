@@ -14,8 +14,11 @@ export type MarketDnaRankerValidation = {
   learnedTopOne: number
   learnedTopTwo: number
   learnedTopThree: number
+  dualLaneTopOne: number
+  dualLaneTopTwo: number
   averageMarketHomerRank: number | null
   averageLearnedHomerRank: number | null
+  averageDualLaneHomerRank: number | null
 }
 
 type BoostNode = {
@@ -27,7 +30,7 @@ type BoostNode = {
 }
 
 export type MarketDnaRankerArtifact = {
-  version: 'game-relative-gbdt-v2'
+  version: 'game-relative-gbdt-v3'
   trainedThrough: string
   trainingRows: number
   featureNames: string[]
@@ -61,6 +64,11 @@ function derivedVector(row: MarketDnaRankerRow) {
   const ordinaryRank = avg(['market.hits1.rank', 'market.hits2.rank', 'market.single.rank', 'market.double.rank', 'market.runs1.rank'])
   const statcastRank = avg(['metric.avgEvL5.rank', 'metric.hardHitL5.rank', 'metric.barrelL10.rank', 'metric.pullAirL5.rank'])
   const publicHr = featureValue(row, 'public.home_runs.share')
+  const fhrBaseline = featureValue(row, 'metric.fhrVsAveragePct.value')
+  const hrBaseline = featureValue(row, 'metric.hrVsAveragePct.value')
+  const baselineGap = featureValue(row, 'structure.fhrHrBaselineGap')
+  const mm = featureValue(row, 'metric.mmL1.value')
+  const publicResidual = featureValue(row, 'public.home_runs.hiddenResidual')
   return [
     headlineMove, ordinaryMove, payoffMove,
     headlineMove - ordinaryMove + .5, headlineMove - payoffMove + .5,
@@ -69,7 +77,11 @@ function derivedVector(row: MarketDnaRankerRow) {
     publicHr, powerRank - publicHr + .5,
     featureValue(row, 'context.traffic'),
     featureValue(row, 'market.hr.probability'), featureValue(row, 'market.fhr.probability'),
-    featureValue(row, 'metric.fhrVsAveragePct.value'), featureValue(row, 'metric.hrVsAveragePct.value'),
+    fhrBaseline, hrBaseline,
+    baselineGap, Math.abs(fhrBaseline - hrBaseline),
+    mm, publicResidual,
+    featureValue(row, 'context.adjacentPowerPressure'),
+    featureValue(row, 'context.fhrClusterDensity'),
   ]
 }
 
@@ -77,8 +89,35 @@ const DERIVED_NAMES = [
   'd.headlineMove', 'd.ordinaryMove', 'd.payoffMove', 'd.headlineVsOrdinary', 'd.headlineVsPayoff',
   'd.powerRank', 'd.settlementRank', 'd.ordinaryRank', 'd.statcastRank', 'd.settlementVsPower',
   'd.statcastVsPower', 'd.publicHr', 'd.powerVsPublic', 'd.traffic', 'd.hrProbability', 'd.fhrProbability',
-  'd.fhrBaseline', 'd.hrBaseline',
+  'd.fhrBaseline', 'd.hrBaseline', 'd.baselineGap', 'd.baselineAbsGap', 'd.mmL1',
+  'd.publicResidual', 'd.adjacentPowerPressure', 'd.fhrClusterDensity',
 ]
+
+export function scoreMarketDnaLaneVector(featureVector: Record<string, number>) {
+  const row: MarketDnaRankerRow = { game_date: '', game_pk: 0, mlb_id: 0, did_hr: false, feature_vector: featureVector }
+  const avg = (keys: string[]) => mean(keys.map(key => featureValue(row, key)))
+  const power = avg(['market.fhr.rank', 'market.hr.rank'])
+  const settlement = avg(['market.hrMl.rank', 'market.rbi1.rank', 'market.rbi2.rank', 'market.rbi3.rank', 'market.tb4.rank', 'market.tb5.rank', 'market.hrr.rank'])
+  const statcast = avg(['metric.avgEvL5.rank', 'metric.hardHitL5.rank', 'metric.barrelL10.rank', 'metric.pullAirL5.rank'])
+  const payoffMove = avg(['market.hrMl.movement', 'market.rbi1.movement', 'market.rbi2.movement', 'market.rbi3.movement', 'market.tb4.movement', 'market.tb5.movement', 'market.hrr.movement'])
+  const headlineMove = avg(['market.fhr.movement', 'market.hr.movement'])
+  const fhrBaseline = featureValue(row, 'metric.fhrVsAveragePct.value')
+  const hrBaseline = featureValue(row, 'metric.hrVsAveragePct.value')
+  const baselineGap = featureVector['structure.fhrHrBaselineGap'] ?? clamp(.5 + (fhrBaseline - hrBaseline), 0, 1)
+  const anchorDirection = 1 - baselineGap
+  const companionDirection = baselineGap
+  const hiddenResidual = featureValue(row, 'public.home_runs.hiddenResidual')
+  const mmPositive = featureValue(row, 'metric.mmL1.positive')
+  const adjacency = featureValue(row, 'context.adjacentPowerPressure')
+  const cluster = featureValue(row, 'context.fhrClusterDensity')
+  const traffic = featureValue(row, 'context.traffic')
+  const movementCoherence = clamp(.5 + (payoffMove - headlineMove), 0, 1)
+  const deepButViable = clamp((featureValue(row, 'market.hr.rank') + (1 - featureValue(row, 'market.fhr.rank'))) / 2, 0, 1)
+  return {
+    anchor: clamp(power * .25 + settlement * .17 + statcast * .15 + traffic * .09 + anchorDirection * .13 + movementCoherence * .09 + hiddenResidual * .06 + cluster * .06, 0, 1),
+    companion: clamp(settlement * .20 + statcast * .17 + companionDirection * .17 + hiddenResidual * .15 + mmPositive * .09 + adjacency * .08 + deepButViable * .08 + movementCoherence * .06, 0, 1),
+  }
+}
 
 function buildFeatureSpace(rows: MarketDnaRankerRow[]) {
   const coverage = new Map<string, number>()
@@ -199,21 +238,43 @@ function scoreWithCore(core: ReturnType<typeof trainCore>, row: MarketDnaRankerR
 
 function validate(core: ReturnType<typeof trainCore>, rows: MarketDnaRankerRow[], cutoff: string): MarketDnaRankerValidation {
   const games = groupCompleteGames(rows).filter(game => game.some(row => row.did_hr))
-  let marketTopOne = 0, marketTopTwo = 0, learnedTopOne = 0, learnedTopTwo = 0, learnedTopThree = 0
-  let marketRankSum = 0, learnedRankSum = 0, homerCount = 0
+  let marketTopOne = 0, marketTopTwo = 0, learnedTopOne = 0, learnedTopTwo = 0, learnedTopThree = 0, dualLaneTopOne = 0, dualLaneTopTwo = 0
+  let marketRankSum = 0, learnedRankSum = 0, dualLaneRankSum = 0, homerCount = 0
   for (const game of games) {
     const actualIds = new Set(game.filter(row => row.did_hr).map(row => row.mlb_id))
     const market = [...game].sort((a, b) => featureValue(b, 'market.hr.probability') - featureValue(a, 'market.hr.probability'))
     const learned = [...game].sort((a, b) => scoreWithCore(core, b) - scoreWithCore(core, a))
+    const learnedScores = new Map(learned.map((row, index) => [rowKey(row), learned.length <= 1 ? 1 : 1 - index / (learned.length - 1)]))
+    const lanes = game.map(row => {
+      const lane = scoreMarketDnaLaneVector(row.feature_vector)
+      const learnedRelative = learnedScores.get(rowKey(row)) ?? .5
+      return {
+        row,
+        anchor: learnedRelative * .52 + lane.anchor * .48,
+        companion: learnedRelative * .25 + lane.companion * .75,
+      }
+    })
+    const anchor = [...lanes].sort((a, b) => b.anchor - a.anchor)[0]
+    const companion = [...lanes].filter(entry => entry.row.mlb_id !== anchor?.row.mlb_id).sort((a, b) => b.companion - a.companion)[0]
+    const selectedIds = new Set([anchor?.row.mlb_id, companion?.row.mlb_id].filter((id): id is number => id != null))
+    const dualLane = [...lanes].sort((a, b) => {
+      const aSelected = selectedIds.has(a.row.mlb_id) ? 1 : 0
+      const bSelected = selectedIds.has(b.row.mlb_id) ? 1 : 0
+      return bSelected - aSelected || Math.max(b.anchor, b.companion) - Math.max(a.anchor, a.companion)
+    }).map(entry => entry.row)
     const marketRanks = [...actualIds].map(id => market.findIndex(row => row.mlb_id === id) + 1)
     const learnedRanks = [...actualIds].map(id => learned.findIndex(row => row.mlb_id === id) + 1)
+    const dualLaneRanks = [...actualIds].map(id => dualLane.findIndex(row => row.mlb_id === id) + 1)
     if (Math.min(...marketRanks) <= 1) marketTopOne++
     if (Math.min(...marketRanks) <= 2) marketTopTwo++
     if (Math.min(...learnedRanks) <= 1) learnedTopOne++
     if (Math.min(...learnedRanks) <= 2) learnedTopTwo++
     if (Math.min(...learnedRanks) <= 3) learnedTopThree++
+    if (Math.min(...dualLaneRanks) <= 1) dualLaneTopOne++
+    if (Math.min(...dualLaneRanks) <= 2) dualLaneTopTwo++
     marketRankSum += marketRanks.reduce((sum, rank) => sum + rank, 0)
     learnedRankSum += learnedRanks.reduce((sum, rank) => sum + rank, 0)
+    dualLaneRankSum += dualLaneRanks.reduce((sum, rank) => sum + rank, 0)
     homerCount += actualIds.size
   }
   const count = games.length
@@ -225,8 +286,11 @@ function validate(core: ReturnType<typeof trainCore>, rows: MarketDnaRankerRow[]
     learnedTopOne: count ? learnedTopOne / count : 0,
     learnedTopTwo: count ? learnedTopTwo / count : 0,
     learnedTopThree: count ? learnedTopThree / count : 0,
+    dualLaneTopOne: count ? dualLaneTopOne / count : 0,
+    dualLaneTopTwo: count ? dualLaneTopTwo / count : 0,
     averageMarketHomerRank: homerCount ? marketRankSum / homerCount : null,
     averageLearnedHomerRank: homerCount ? learnedRankSum / homerCount : null,
+    averageDualLaneHomerRank: homerCount ? dualLaneRankSum / homerCount : null,
   }
 }
 
@@ -242,7 +306,7 @@ export function trainMarketDnaRanker(rows: MarketDnaRankerRow[], targetDate: str
   }
   const core = trainCore(priorRows)
   return {
-    version: 'game-relative-gbdt-v2',
+    version: 'game-relative-gbdt-v3',
     trainedThrough: dates.at(-1)!,
     trainingRows: core.trainingRows,
     featureNames: core.featureNames,
