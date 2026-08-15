@@ -4,6 +4,12 @@ import { fetchHistoricalGameBundles } from '@/lib/matrixBacktest'
 import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  scoreMarketDnaVector,
+  trainMarketDnaRanker,
+  type MarketDnaRankerArtifact,
+  type MarketDnaRankerValidation,
+} from '@/lib/marketDnaRanker'
 
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY
@@ -164,6 +170,8 @@ export type MarketDnaGameComponents = {
 export type MarketDnaGameRank = {
   rank: number
   score: number
+  profileScore: number
+  learnedProbability: number | null
   gapFromLeader: number
   player: MarketDnaPlayer
   components: MarketDnaGameComponents
@@ -214,6 +222,20 @@ export type MarketDnaGameAnalysis = {
     hrMlWon: boolean
     pregameRank: number | null
   }>
+  candidateLanes: Array<{
+    lane: 'concealed_settlement' | 'redirected_power'
+    label: string
+    score: number
+    learnedRank: number
+    player: MarketDnaPlayer
+    reasons: string[]
+  }>
+  reducer: {
+    version: string
+    trainedThrough: string
+    trainingRows: number
+    validation: MarketDnaRankerValidation | null
+  } | null
 }
 
 export type MarketDnaSlateAudit = {
@@ -225,6 +247,7 @@ export type MarketDnaSlateAudit = {
     gamesWithHomeRun: number
     leaderHitGames: number
     topTwoHitGames: number
+    lanePairHitGames: number
     perfectSeparationGames: number
     averageBestHomerRank: number | null
     averageAllHomerRank: number | null
@@ -543,7 +566,7 @@ function normalizedSigned(value: number | null, scale: number, center = 0) {
   return value == null ? null : clamp(.5 + Math.atan((value - center) / scale) / Math.PI)
 }
 
-function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaGame): CanonicalFeatureVector {
+export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaGame): CanonicalFeatureVector {
   const vector: CanonicalFeatureVector = {}
   const put = (key: string, value: number | null | undefined) => {
     if (value != null && Number.isFinite(value)) vector[key] = clamp(value)
@@ -886,13 +909,28 @@ export function rankMarketDnaGameProfiles(
     if (statcast < 35) contradictions.push('Recent Statcast support is weak')
     if (marketMove(player, 'hr') != null && marketMove(player, 'hr')! < -1) contradictions.push('Anytime price moved materially longer')
     if (!signals.length) signals.push('Composite strength comes from several moderate edges')
-    return { rank: 0, score, gapFromLeader: 0, player, components, signals, contradictions, historical: evidence, outcome: null, trafficRaw }
+    return {
+      rank: 0,
+      score,
+      profileScore: score,
+      learnedProbability: null,
+      gapFromLeader: 0,
+      player,
+      components,
+      signals,
+      contradictions,
+      historical: evidence,
+      outcome: null,
+      trafficRaw,
+    }
   })
   const sorted = preliminary.sort((a, b) => b.score - a.score)
   const leader = sorted[0]?.score ?? 0
   return sorted.map((entry, index) => ({
     rank: index + 1,
     score: Math.round(entry.score * 10) / 10,
+    profileScore: Math.round(entry.profileScore * 10) / 10,
+    learnedProbability: entry.learnedProbability,
     gapFromLeader: Math.round((leader - entry.score) * 10) / 10,
     player: entry.player,
     components: entry.components,
@@ -959,6 +997,129 @@ function rankGameWithHistory(game: MarketDnaGame, rows: HistoricalRow[], canonic
   return rankMarketDnaGameProfiles(game, evidenceByMlbId)
 }
 
+async function loadOrTrainMarketDnaRanker(
+  targetDate: string,
+  rows: ArchivedProfileRow[],
+): Promise<MarketDnaRankerArtifact | null> {
+  if (rows.length < 900) return null
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('market_dna_ranker_models')
+    .select('artifact')
+    .eq('target_date', targetDate)
+    .maybeSingle()
+  if (error && !/does not exist|schema cache/i.test(error.message)) {
+    throw new Error(`Market DNA reducer could not be loaded: ${error.message}`)
+  }
+  if (data?.artifact) return data.artifact as MarketDnaRankerArtifact
+
+  const artifact = trainMarketDnaRanker(rows, targetDate)
+  if (!error) {
+    const { error: writeError } = await admin.from('market_dna_ranker_models').upsert({
+      target_date: targetDate,
+      trained_through: artifact.trainedThrough,
+      model_version: artifact.version,
+      training_rows: artifact.trainingRows,
+      validation: artifact.validation,
+      artifact,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'target_date' })
+    if (writeError) throw new Error(`Market DNA reducer could not be stored: ${writeError.message}`)
+  }
+  return artifact
+}
+
+function applyLearnedGameRanking(
+  game: MarketDnaGame,
+  ranking: MarketDnaGameRank[],
+  artifact: MarketDnaRankerArtifact | null,
+) {
+  if (!artifact) return ranking
+  const scored = ranking.map(entry => {
+    const learned = scoreMarketDnaVector(artifact, canonicalFeatureVector(entry.player, game))
+    return {
+      ...entry,
+      score: learned.probability * 100,
+      learnedProbability: learned.probability,
+    }
+  }).sort((a, b) => b.score - a.score || b.profileScore - a.profileScore)
+  const leader = scored[0]?.score ?? 0
+  return scored.map((entry, index) => ({
+    ...entry,
+    rank: index + 1,
+    score: Math.round(entry.score * 10) / 10,
+    gapFromLeader: Math.round((leader - entry.score) * 10) / 10,
+  }))
+}
+
+function buildCandidateLanes(ranking: MarketDnaGameRank[]): MarketDnaGameAnalysis['candidateLanes'] {
+  const percentile = (values: number[], value: number) => values.length <= 1
+    ? 50
+    : values.filter(candidate => candidate <= value).length / values.length * 100
+  const prices = (key: string) => ranking
+    .map(entry => marketByKey(entry.player, key)?.current)
+    .filter((value): value is number => value != null)
+  const hrOdds = prices('hr')
+  const fhrOdds = prices('fhr')
+  const pickTotal = ranking.reduce((sum, entry) => sum + (entry.player.picks.home_runs ?? 0), 0)
+  const scored = ranking.map(entry => {
+    const hr = marketByKey(entry.player, 'hr')
+    const fhr = marketByKey(entry.player, 'fhr')
+    const moves = [hr?.probabilityMove, fhr?.probabilityMove].filter((value): value is number => value != null)
+    const headlineMove = average(moves, 0)
+    const deepPrice = average([
+      hr?.current == null ? null : percentile(hrOdds, hr.current),
+      fhr?.current == null ? null : percentile(fhrOdds, fhr.current),
+    ], 50)
+    const publicQuiet = pickTotal > 0
+      ? clamp((1 - ((entry.player.picks.home_runs ?? 0) / pickTotal) * 8) * 100, 0, 100)
+      : 50
+    const concealed = entry.components.settlement * .28
+      + entry.components.historical * .18
+      + entry.components.traffic * .20
+      + entry.components.statcast * .10
+      + entry.components.publicLeverage * .12
+      + (100 - entry.components.market) * .12
+    const redirected = Math.max(0, headlineMove) * 12
+      + deepPrice * .22
+      + publicQuiet * .22
+      + entry.components.statcast * .16
+      + entry.components.historical * .08
+      + entry.components.publicLeverage * .10
+    return { entry, concealed, redirected, headlineMove, deepPrice, publicQuiet }
+  })
+  const concealed = [...scored].sort((a, b) => b.concealed - a.concealed)[0]
+  const redirected = [...scored]
+    .filter(candidate => candidate.entry.player.mlbId !== concealed?.entry.player.mlbId)
+    .sort((a, b) => b.redirected - a.redirected)[0]
+  const lanes: MarketDnaGameAnalysis['candidateLanes'] = []
+  if (concealed) lanes.push({
+    lane: 'concealed_settlement',
+    label: 'Concealed settlement',
+    score: Math.round(concealed.concealed * 10) / 10,
+    learnedRank: concealed.entry.rank,
+    player: concealed.entry.player,
+    reasons: [
+      'RBI, total-base and team-result pricing carries more support than the headline HR position.',
+      'Lineup traffic and historical profile evidence reinforce the settlement shape.',
+      concealed.entry.components.market < 50 ? 'Headline power remains comparatively under-advertised.' : 'Headline power remains viable without being the only source of support.',
+    ],
+  })
+  if (redirected) lanes.push({
+    lane: 'redirected_power',
+    label: 'Redirected power',
+    score: Math.round(redirected.redirected * 10) / 10,
+    learnedRank: redirected.entry.rank,
+    player: redirected.entry.player,
+    reasons: [
+      `The player sits in the deeper power-price tier while the captured headline move is ${redirected.headlineMove >= 0 ? 'shorter' : 'longer'}.`,
+      'Public quiet, price depth and Statcast support separate this lane from the visible favorites.',
+      'This lane is evaluated independently from the broad complete-profile leaderboard.',
+    ],
+  })
+  return lanes
+}
+
 function attachGameOutcomes(
   game: MarketDnaGame,
   ranking: MarketDnaGameRank[],
@@ -984,6 +1145,7 @@ function buildGameAnalysis(
   ranking: MarketDnaGameRank[],
   sourceRows: number,
   score: { away: number; home: number } | null,
+  artifact: MarketDnaRankerArtifact | null,
 ): MarketDnaGameAnalysis {
   const outcomeAvailable = game.players.some(player => player.gameStarted)
   const actualHomeRuns = ranking.filter(entry => (entry.outcome?.hr ?? 0) > 0).map(entry => ({
@@ -997,6 +1159,7 @@ function buildGameAnalysis(
     hrMlWon: Boolean(entry.outcome?.hrMlWon),
     pregameRank: entry.rank,
   }))
+  const candidateLanes = buildCandidateLanes(ranking)
   return {
     generatedAt: new Date().toISOString(),
     stage: outcomeAvailable ? 'frozen_close' : 'current',
@@ -1007,6 +1170,13 @@ function buildGameAnalysis(
     outcomeAvailable,
     score,
     actualHomeRuns,
+    candidateLanes,
+    reducer: artifact ? {
+      version: artifact.version,
+      trainedThrough: artifact.trainedThrough,
+      trainingRows: artifact.trainingRows,
+      validation: artifact.validation,
+    } : null,
   }
 }
 
@@ -1068,7 +1238,8 @@ export async function archiveMarketDnaDate(date: string) {
 export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketDnaGameAnalysis> {
   const canonicalRows = await loadCanonicalArchiveForGames([game])
   const rows = canonicalRows.length >= 180 ? [] : await loadHistoricalRowsForGames([game])
-  let ranking = rankGameWithHistory(game, rows, canonicalRows)
+  const artifact = await loadOrTrainMarketDnaRanker(game.gameDate, canonicalRows)
+  let ranking = applyLearnedGameRanking(game, rankGameWithHistory(game, rows, canonicalRows), artifact)
 
   const gameStarted = game.players.some(player => player.gameStarted)
   let score: { away: number; home: number } | null = null
@@ -1078,7 +1249,7 @@ export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketD
     score = gameScore
     ranking = attachGameOutcomes(game, ranking, outcomesByGame[game.gamePk] ?? {}, hrResult.hrFeed, score)
   }
-  return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, score)
+  return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, score, artifact)
 }
 
 export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]): Promise<MarketDnaSlateAudit> {
@@ -1086,6 +1257,7 @@ export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]
   if (!capturedGames.length) throw new Error('No complete 18-player boards were captured for this date.')
   const canonicalRows = await loadCanonicalArchiveForGames(capturedGames)
   const rows = canonicalRows.length >= 180 ? [] : await loadHistoricalRowsForGames(capturedGames)
+  const artifact = await loadOrTrainMarketDnaRanker(date, canonicalRows)
   const refs = capturedGames.map(game => ({
     gamePk: game.gamePk,
     status: { abstractGameState: game.players.some(player => player.gameStarted) ? (/final/i.test(game.status) ? 'Final' : 'Live') : 'Preview' },
@@ -1096,9 +1268,9 @@ export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]
     Promise.all(capturedGames.map(game => fetchGameScore(game.gamePk))),
   ])
   const analyses = capturedGames.map((game, index) => {
-    let ranking = rankGameWithHistory(game, rows, canonicalRows)
+    let ranking = applyLearnedGameRanking(game, rankGameWithHistory(game, rows, canonicalRows), artifact)
     if (game.players.some(player => player.gameStarted)) ranking = attachGameOutcomes(game, ranking, outcomesByGame[game.gamePk] ?? {}, hrResult.hrFeed, scores[index])
-    return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, scores[index])
+    return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, scores[index], artifact)
   })
   const completed = analyses.filter(analysis => /final/i.test(analysis.game.status))
   const withHr = completed.filter(analysis => analysis.actualHomeRuns.length > 0)
@@ -1118,6 +1290,10 @@ export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]
       gamesWithHomeRun: withHr.length,
       leaderHitGames: withHr.filter(analysis => analysis.actualHomeRuns.some(result => result.pregameRank === 1)).length,
       topTwoHitGames: withHr.filter(analysis => analysis.actualHomeRuns.some(result => (result.pregameRank ?? 99) <= 2)).length,
+      lanePairHitGames: withHr.filter(analysis => {
+        const actualIds = new Set(analysis.actualHomeRuns.map(result => result.mlbId))
+        return analysis.candidateLanes.some(candidate => actualIds.has(candidate.player.mlbId))
+      }).length,
       perfectSeparationGames,
       averageBestHomerRank: bestRanks.length ? bestRanks.reduce((sum, rank) => sum + rank, 0) / bestRanks.length : null,
       averageAllHomerRank: allRanks.length ? allRanks.reduce((sum, rank) => sum + rank, 0) / allRanks.length : null,

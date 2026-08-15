@@ -8,6 +8,11 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
 const slate = await buildMarketDnaSlate(date)
 const audit = await analyzeMarketDnaSlate(date, slate.games)
 
+if (process.argv.includes('--summary')) {
+  console.log(JSON.stringify({ date, summary: audit.summary }, null, 2))
+  process.exit(0)
+}
+
 console.log(JSON.stringify({
   date,
   summary: audit.summary,
