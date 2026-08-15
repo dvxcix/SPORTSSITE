@@ -4306,6 +4306,17 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-return-player,.dugout-header-help{display:none!important}
           .dugout-table-tour{right:12px!important;bottom:96px!important}
         }
+        /* The website should follow the browser's normal vertical document
+           scroll at laptop and desktop widths. The bounded two-axis board is
+           reserved for the native desktop app, whose outer shell is itself a
+           fixed-height workspace. Without this override, a web user entering
+           the table traps the wheel inside a viewport-sized nested scroller
+           and the page feels frozen. */
+        @media(min-width:641px){
+          html[data-platform='web'] .dugout-board-scroll{max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;scrollbar-gutter:auto!important}
+          html[data-platform='web'] .dg-team-banner{top:auto!important}
+          html[data-platform='web'] .dugout-dense-table tr > th{top:auto!important}
+        }
         @media (prefers-reduced-motion:reduce){.dugout-board-enter,.dugout-dense-table [data-tutorial-active=true],.dugout-tour-icon{animation:none}}
       `}</style>
     </div>

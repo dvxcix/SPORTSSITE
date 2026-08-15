@@ -235,14 +235,28 @@ export function PitcherReportClient() {
 
   useEffect(() => {
     if (!starterPickerOpen) return
+    const mobileQuery = window.matchMedia('(max-width: 640px)')
     const previousOverflow = document.body.style.overflow
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setStarterPickerOpen(false)
     }
-    document.body.style.overflow = 'hidden'
+    let locked = false
+    const syncScrollLock = () => {
+      if (mobileQuery.matches && !locked) {
+        document.body.style.overflow = 'hidden'
+        locked = true
+      } else if (!mobileQuery.matches && locked) {
+        document.body.style.overflow = previousOverflow
+        locked = false
+      }
+    }
+
+    syncScrollLock()
+    mobileQuery.addEventListener('change', syncScrollLock)
     window.addEventListener('keydown', closeOnEscape)
     return () => {
-      document.body.style.overflow = previousOverflow
+      mobileQuery.removeEventListener('change', syncScrollLock)
+      if (locked) document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', closeOnEscape)
     }
   }, [starterPickerOpen])

@@ -224,14 +224,28 @@ export function BatterCostClient({ date }: { date: string }) {
 
   useEffect(() => {
     if (!expandedPlayerKey && !filtersOpen) return
+    const mobileQuery = window.matchMedia('(max-width: 640px)')
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { setExpandedPlayerKey(null); setFiltersOpen(false) }
     }
     const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    let locked = false
+    const syncScrollLock = () => {
+      if (mobileQuery.matches && !locked) {
+        document.body.style.overflow = 'hidden'
+        locked = true
+      } else if (!mobileQuery.matches && locked) {
+        document.body.style.overflow = previousOverflow
+        locked = false
+      }
+    }
+
+    syncScrollLock()
+    mobileQuery.addEventListener('change', syncScrollLock)
     window.addEventListener('keydown', closeOnEscape)
     return () => {
-      document.body.style.overflow = previousOverflow
+      mobileQuery.removeEventListener('change', syncScrollLock)
+      if (locked) document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', closeOnEscape)
     }
   }, [expandedPlayerKey, filtersOpen])
@@ -469,9 +483,13 @@ export function BatterCostClient({ date }: { date: string }) {
               >
                 <td
                   className="batter-cost-player-cell w-[172px] min-w-[172px] max-w-[172px] sm:w-[156px] sm:min-w-[156px] sm:max-w-[156px]"
-                  onClick={() => setExpandedPlayerKey(`${b.mlb_id}_${b.gameKey}`)}
+                  onClick={() => {
+                    if (window.matchMedia('(max-width: 640px)').matches) {
+                      setExpandedPlayerKey(`${b.mlb_id}_${b.gameKey}`)
+                    }
+                  }}
                   onKeyDown={event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
+                    if ((event.key === 'Enter' || event.key === ' ') && window.matchMedia('(max-width: 640px)').matches) {
                       event.preventDefault()
                       setExpandedPlayerKey(`${b.mlb_id}_${b.gameKey}`)
                     }

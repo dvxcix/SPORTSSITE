@@ -106,9 +106,26 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // Keep the page behind the mobile drawer stationary while it is open.
   useEffect(() => {
     if (!open) return
+    const mobileQuery = window.matchMedia('(max-width: 767px)')
     const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = previousOverflow }
+    let locked = false
+
+    const syncScrollLock = () => {
+      if (mobileQuery.matches && !locked) {
+        document.body.style.overflow = 'hidden'
+        locked = true
+      } else if (!mobileQuery.matches && locked) {
+        document.body.style.overflow = previousOverflow
+        locked = false
+      }
+    }
+
+    syncScrollLock()
+    mobileQuery.addEventListener('change', syncScrollLock)
+    return () => {
+      mobileQuery.removeEventListener('change', syncScrollLock)
+      if (locked) document.body.style.overflow = previousOverflow
+    }
   }, [open])
 
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
