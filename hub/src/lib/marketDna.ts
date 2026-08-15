@@ -74,6 +74,9 @@ export type MarketDnaPlayer = {
   metrics: {
     fhrVsAveragePct: number | null
     hrVsAveragePct: number | null
+    fhrDelta: number | null
+    fhrWeightedDelta: number | null
+    hrDelta: number | null
     fhrToHr: number | null
     mgmToFd: number | null
     paToHr: number | null
@@ -357,6 +360,21 @@ function buildPlayerProfile(
   const l5 = bundle.statcastWindows?.l5
   const l10 = bundle.statcastWindows?.l10
   const started = !/preview|scheduled|pre-game|warmup/i.test(`${game.game.abstractStatus} ${game.game.status}`)
+  const fhrCurrent = currentPrice(props, 'fhr')
+  const hrCurrent = currentPrice(props, 'sa')
+  const fhrAverage = asNumber(bundle.fhrAvg?.fd)
+  const hrAverage = asNumber(bundle.saAvg?.fd) ?? asNumber(bundle.saAvg?.cz)
+  const fhrDelta = fhrCurrent != null && fhrAverage != null ? fhrCurrent - fhrAverage : null
+  const hrDelta = hrCurrent != null && hrAverage != null ? hrCurrent - hrAverage : null
+  const lineupsConfirmed = game.game.awayLineupConfirmed && game.game.homeLineupConfirmed
+  const boardRank = lineupsConfirmed
+    ? (team === game.game.homeAbbr ? 9 : 0) + player.batting_order
+    : null
+  const fhrWeightedDelta = fhrDelta == null
+    ? null
+    : boardRank == null
+      ? fhrDelta
+      : fhrDelta * (0.75 + ((boardRank - 1) / 17) * 0.75)
   return {
     name: player.name,
     nameNorm: normName(player.name),
@@ -379,6 +397,9 @@ function buildPlayerProfile(
     metrics: {
       fhrVsAveragePct: ratio(bundle, 'fhr_pct'),
       hrVsAveragePct: ratio(bundle, 'sa_pct'),
+      fhrDelta,
+      fhrWeightedDelta,
+      hrDelta,
       fhrToHr: ratio(bundle, 'fhr_div_sa'),
       mgmToFd: ratio(bundle, 'm_div_f'),
       paToHr: ratio(bundle, 'pa1_div_sa'),
@@ -584,7 +605,8 @@ export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaG
     put(`public.${key}.share`, total > 0 ? (player.picks[key] ?? 0) / total : null)
     put(`public.${key}.rank`, percentileFor(player, candidate => candidate.picks[key] ?? 0, game.players) / 100)
   }
-  const metricScales: Record<keyof MarketDnaPlayer['metrics'], [number, number]> = {
+  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta'>
+  const metricScales: Record<SimilarityMetric, [number, number]> = {
     fhrVsAveragePct: [25, 0], hrVsAveragePct: [25, 0], fhrToHr: [.5, 1], mgmToFd: [.35, 1],
     paToHr: [.7, 1], hrToRbi: [.5, 1], hrToRbi2: [.8, 1], hrToRbi3: [1.2, 1],
     hrToHrr: [.5, 1], hrToTb2: [.5, 1], hrToTb3: [.6, 1], hrToTb4: [.8, 1],
@@ -592,7 +614,7 @@ export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaG
     avgEvL5: [8, 88], avgLaL5: [14, 22], hardHitL5: [20, 40], barrelL10: [10, 10],
     pullAirL5: [18, 25], batSpeedL5: [8, 70],
   }
-  for (const key of Object.keys(metricScales) as Array<keyof MarketDnaPlayer['metrics']>) {
+  for (const key of Object.keys(metricScales) as SimilarityMetric[]) {
     const [scale, center] = metricScales[key]
     put(`metric.${key}.value`, normalizedSigned(player.metrics[key], scale, center))
     put(`metric.${key}.rank`, percentileFor(player, candidate => candidate.metrics[key], game.players) / 100)

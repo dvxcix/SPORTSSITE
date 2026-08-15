@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
 import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
+import { getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -664,16 +665,6 @@ function oddsHeat(v: number | null, all: (number | null)[], rgb: string = '20,14
 // by percentage would treat those as equally significant; ranking by the
 // actual point swing (against the pool's own point swings — teammates for
 // HR%, whole game for FHR%) doesn't.
-function shadeColor(pct: number | null, delta: number | null, deltaPool: (number | null)[]): React.CSSProperties {
-  if (pct == null) return { color: 'var(--text-3)' }
-  const mags = deltaPool.filter((x): x is number => x != null).map(x => Math.abs(x))
-  const maxMag = mags.length ? Math.max(...mags) : 0
-  const intensity = maxMag > 0 && delta != null ? Math.min(Math.abs(delta) / maxMag, 1) : 0
-  if (Math.abs(pct) < 0.03) return { color: '#eab308', fontWeight: 700 }
-  const alpha = 0.55 + intensity * 0.45
-  return { color: pct < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
-}
-
 // ─── MLB assets ───────────────────────────────────────────────────────────────
 const TEAM_IDS: Record<string, number> = {
   ARI:109,AZ:109,ATL:144,BAL:110,BOS:111,CHC:112,CWS:145,CIN:113,CLE:114,COL:115,
@@ -1481,8 +1472,8 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         {row.div != null ? (row.div >= 0 ? '+' : '') + (row.div * 100).toFixed(1) : '—'}
       </td>
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.fhr_div_sa, g('fhr_div_sa')) }}>{f2(row.fhr_div_sa)}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.fhr_pct, row.fhr_delta_weighted, g('fhr_delta_weighted')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
-      <td style={{ ...STD, width: 36, minWidth: 36, ...shadeColor(row.sa_pct, row.sa_delta, gTeam('sa_delta')) }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...getDugoutPercentStyle(row.fhr_pct, row.fhr_delta_weighted, g('fhr_delta_weighted')) }}>{row.fhr_pct != null ? `${(row.fhr_pct * 100).toFixed(1)}%` : '—'}</td>
+      <td style={{ ...STD, width: 36, minWidth: 36, ...getDugoutPercentStyle(row.sa_pct, row.sa_delta, gTeam('sa_delta')) }}>{row.sa_pct  != null ? `${(row.sa_pct  * 100).toFixed(1)}%` : '—'}</td>
 
       <td style={SDIV_D} />
 

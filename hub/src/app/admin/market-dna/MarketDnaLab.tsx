@@ -9,6 +9,7 @@ import {
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
+import { getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 import type {
   HistoricalMatch, MarketDnaAnalysis, MarketDnaGame, MarketDnaGameAnalysis,
   MarketDnaGameComponents, MarketDnaGameRank, MarketDnaPlayer, MarketDnaSlateAudit,
@@ -78,15 +79,52 @@ function PlayerButton({ player, selected, onSelect }: { player: MarketDnaPlayer;
   </button>
 }
 
-function RankRow({ entry }: { entry: MarketDnaGameRank }) {
+function livePlayer(player: MarketDnaPlayer, game: MarketDnaGame | null | undefined) {
+  return game?.players.find(candidate => candidate.mlbId === player.mlbId) ?? player
+}
+
+function DugoutSignals({ player, pool, compact = false }: { player: MarketDnaPlayer; pool: MarketDnaPlayer[]; compact?: boolean }) {
+  const teamPool = pool.filter(candidate => candidate.team === player.team)
+  const fhrStyle = getDugoutPercentStyle(
+    player.metrics.fhrVsAveragePct,
+    player.metrics.fhrWeightedDelta,
+    pool.map(candidate => candidate.metrics.fhrWeightedDelta),
+  )
+  const hrStyle = getDugoutPercentStyle(
+    player.metrics.hrVsAveragePct,
+    player.metrics.hrDelta,
+    teamPool.map(candidate => candidate.metrics.hrDelta),
+  )
+  const publicHrPicks = player.picks.home_runs ?? 0
+
+  return <div className={`grid grid-cols-3 gap-1.5 ${compact ? 'min-w-[206px]' : 'w-full max-w-md gap-2'}`}>
+    <div className={`rounded-lg border border-zinc-800 bg-black/30 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+      <p className="text-[8px] font-black uppercase tracking-wider text-zinc-600">FHR%</p>
+      <p className={compact ? 'text-xs' : 'text-base'} style={fhrStyle}>{pct(player.metrics.fhrVsAveragePct, 1)}</p>
+    </div>
+    <div className={`rounded-lg border border-zinc-800 bg-black/30 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+      <p className="text-[8px] font-black uppercase tracking-wider text-zinc-600">HR%</p>
+      <p className={compact ? 'text-xs' : 'text-base'} style={hrStyle}>{pct(player.metrics.hrVsAveragePct, 1)}</p>
+    </div>
+    <div className={`rounded-lg border border-amber-400/15 bg-amber-400/[.04] ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+      <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider text-zinc-600"><span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(253,224,71,.8)]" />Public HR</p>
+      <p className={`${compact ? 'text-xs' : 'text-base'} font-black text-amber-200`}>{publicHrPicks.toLocaleString()}</p>
+    </div>
+  </div>
+}
+
+function RankRow({ entry, game }: { entry: MarketDnaGameRank; game?: MarketDnaGame | null }) {
   const [open, setOpen] = useState(entry.rank <= 2)
+  const player = livePlayer(entry.player, game)
+  const pool = game?.players ?? [entry.player]
   return <div className="border-b border-zinc-800/70 last:border-0">
-    <button onClick={() => setOpen(value => !value)} className="grid w-full gap-3 px-3 py-4 text-left transition hover:bg-white/[.025] sm:grid-cols-[44px_minmax(210px,1fr)_85px_100px_100px_28px] sm:items-center sm:px-4">
+    <button onClick={() => setOpen(value => !value)} className="grid w-full gap-3 px-3 py-4 text-left transition hover:bg-white/[.025] xl:grid-cols-[44px_minmax(190px,1fr)_72px_206px_78px_78px_28px] xl:items-center xl:px-4">
       <span className={`grid h-9 w-9 place-items-center rounded-xl border text-xs font-black ${entry.rank === 1 ? 'border-lime-400/40 bg-lime-400/15 text-lime-300' : 'border-zinc-800 bg-zinc-900 text-zinc-500'}`}>{entry.rank}</span>
       <div className="flex min-w-0 items-center gap-3"><PlayerAvatar headshot={mlbHeadshot(entry.player.mlbId)} teamLogo={getTeamLogoUrl(entry.player.team)} teamAbbr={entry.player.team} name={entry.player.name} size={42} /><div className="min-w-0"><strong className="block truncate text-sm text-white">{entry.player.name}</strong><p className="text-[10px] font-bold uppercase tracking-wide text-zinc-600">{entry.player.team} · #{entry.player.battingOrder} · {entry.player.position}</p></div></div>
       <div><p className="text-[9px] font-black uppercase text-zinc-600">Learned</p><p className="text-lg font-black text-lime-300">{entry.score.toFixed(1)}</p></div>
-      <div><p className="text-[9px] font-black uppercase text-zinc-600">FHR</p><p className="text-sm font-black text-white">{odds(market(entry.player, 'fhr')?.current)}</p></div>
-      <div><p className="text-[9px] font-black uppercase text-zinc-600">Anytime</p><p className="text-sm font-black text-white">{odds(market(entry.player, 'hr')?.current)}</p></div>
+      <DugoutSignals player={player} pool={pool} compact />
+      <div><p className="text-[9px] font-black uppercase text-zinc-600">FHR</p><p className="text-sm font-black text-white">{odds(market(player, 'fhr')?.current)}</p></div>
+      <div><p className="text-[9px] font-black uppercase text-zinc-600">Anytime</p><p className="text-sm font-black text-white">{odds(market(player, 'hr')?.current)}</p></div>
       <ChevronDown size={15} className={`text-zinc-600 transition ${open ? 'rotate-180' : ''}`} />
     </button>
     {open ? <div className="space-y-4 bg-black/20 px-4 pb-4 pt-1">
@@ -106,16 +144,20 @@ function RankRow({ entry }: { entry: MarketDnaGameRank }) {
   </div>
 }
 
-function GameAnalysisPanel({ analysis }: { analysis: MarketDnaGameAnalysis }) {
+function GameAnalysisPanel({ analysis, liveGame }: { analysis: MarketDnaGameAnalysis; liveGame?: MarketDnaGame | null }) {
   const leader = analysis.ranking[0]
   const validation = analysis.reducer?.validation
   if (!leader) return null
+  const signalPool = liveGame?.players ?? analysis.game.players
+  const liveLeader = livePlayer(leader.player, liveGame)
   return <div className="space-y-5">
     {analysis.candidateLanes.length ? <section className="overflow-hidden rounded-3xl border border-lime-400/25 bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.14),transparent_44%),rgba(9,9,11,.92)]">
       <div className="border-b border-zinc-800 px-4 py-4 sm:px-5"><p className="text-xs font-black text-white">Game-specific market lanes</p><p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">Two different structures are reduced independently across all 18 players. These cards prevent a broad probability favorite from burying a quieter settlement or redirected-price profile.</p></div>
       <div className="grid gap-3 p-4 lg:grid-cols-2">{analysis.candidateLanes.map(candidate => {
         const result = analysis.actualHomeRuns.find(outcome => outcome.mlbId === candidate.player.mlbId)
+        const candidatePlayer = livePlayer(candidate.player, liveGame)
         return <article key={candidate.lane} className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+          <div className="mb-3"><DugoutSignals player={candidatePlayer} pool={signalPool} /></div>
           <div className="flex items-center gap-3"><PlayerAvatar headshot={mlbHeadshot(candidate.player.mlbId)} teamLogo={getTeamLogoUrl(candidate.player.team)} teamAbbr={candidate.player.team} name={candidate.player.name} size={48} /><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[.16em] text-lime-300">{candidate.label}</p><h3 className="truncate text-base font-black text-white">{candidate.player.name}</h3><p className="text-[10px] text-zinc-500">{candidate.player.team} #{candidate.player.battingOrder} · learned rank #{candidate.learnedRank}</p></div><div className="text-right"><p className="text-xl font-black text-lime-300">{candidate.score.toFixed(1)}</p><p className="text-[8px] font-black uppercase text-zinc-600">lane score</p></div></div>
           <ul className="mt-3 space-y-1.5 text-[11px] leading-5 text-zinc-400">{candidate.reasons.map(reason => <li key={reason}>• {reason}</li>)}</ul>
           {result ? <p className="mt-3 rounded-lg border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] font-black text-lime-300">Postgame: {result.homeRuns} HR · {result.rbis} RBI · {result.totalBases} TB{result.hrMlWon ? ' · HR/ML' : ''}</p> : null}
@@ -128,7 +170,7 @@ function GameAnalysisPanel({ analysis }: { analysis: MarketDnaGameAnalysis }) {
         <div className="min-w-0 flex-1"><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Learned HR likelihood leader</p><h2 className="truncate text-2xl font-black text-white sm:text-3xl">{leader.player.name}</h2><p className="mt-1 text-xs text-zinc-500">{leader.player.team} #{leader.player.battingOrder} · all 18 compared · {analysis.stage === 'frozen_close' ? 'frozen at first pitch' : 'current pregame capture'}</p><p className="mt-2 text-[10px] text-zinc-600">This is the learned probability lens. The game-specific lanes above are scored separately.</p></div>
         <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-3 text-right"><p className="text-[9px] font-black uppercase tracking-wider text-cyan-300">Learned rank</p><p className="text-3xl font-black text-white">#1</p><p className="text-[10px] text-zinc-500">{leader.score.toFixed(1)} score</p></div>
       </div>
-      <div className="space-y-4 p-5 sm:p-6"><ComponentBars components={leader.components} /><MarketStrip player={leader.player} /></div>
+      <div className="space-y-4 p-5 sm:p-6"><ComponentBars components={leader.components} /><DugoutSignals player={liveLeader} pool={signalPool} /><MarketStrip player={liveLeader} /></div>
     </section>
 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -155,7 +197,7 @@ function GameAnalysisPanel({ analysis }: { analysis: MarketDnaGameAnalysis }) {
 
     <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/70">
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3"><div><p className="text-xs font-black text-white">All 18, learned together</p><p className="text-[10px] text-zinc-600">Pregame game-relative rank first. Broad evidence remains visible. Outcomes attach afterward.</p></div><Trophy size={17} className="text-lime-300" /></div>
-      {analysis.ranking.map(entry => <RankRow key={entry.player.mlbId} entry={entry} />)}
+      {analysis.ranking.map(entry => <RankRow key={entry.player.mlbId} entry={entry} game={liveGame ?? analysis.game} />)}
     </section>
   </div>
 }
@@ -231,6 +273,47 @@ export function MarketDnaLab() {
       .catch(caught => { if (caught instanceof Error && caught.name !== 'AbortError') setError(caught.message) })
       .finally(() => setLoadingSlate(false))
     return () => controller.abort()
+  }, [date])
+
+  useEffect(() => {
+    if (date !== todayEt()) return
+    let active = true
+    const refresh = async () => {
+      try {
+        const response = await fetch(`/api/admin/market-dna?date=${date}`, { cache: 'no-store' })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Could not refresh live Dugout signals.')
+        if (!active) return
+        const nextSlate = data as Slate
+        setSlate(nextSlate)
+        setSelectedPlayer(current => {
+          if (!current) return current
+          const game = nextSlate.games.find(candidate => candidate.gamePk === current.gamePk)
+          return game?.players.find(candidate => candidate.mlbId === current.mlbId) ?? current
+        })
+        setGameAnalysis(current => {
+          if (!current) return current
+          const game = nextSlate.games.find(candidate => candidate.gamePk === current.game.gamePk)
+          if (!game) return current
+          const resolve = (player: MarketDnaPlayer) => livePlayer(player, game)
+          return {
+            ...current,
+            game,
+            ranking: current.ranking.map(entry => ({ ...entry, player: resolve(entry.player) })),
+            candidateLanes: current.candidateLanes.map(candidate => ({ ...candidate, player: resolve(candidate.player) })),
+          }
+        })
+        setPlayerAnalysis(current => {
+          if (!current) return current
+          const game = nextSlate.games.find(candidate => candidate.gamePk === current.player.gamePk)
+          return game ? { ...current, player: livePlayer(current.player, game) } : current
+        })
+      } catch {
+        // Keep the last successful board visible. The next interval retries.
+      }
+    }
+    const interval = window.setInterval(refresh, 30_000)
+    return () => { active = false; window.clearInterval(interval) }
   }, [date])
 
   const selectedGame = slate?.games.find(game => game.gamePk === selectedGamePk) ?? null
