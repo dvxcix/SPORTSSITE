@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
+import { getTodaysMatchups, isPregame, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
 import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'
@@ -31,13 +31,56 @@ export const GET = withPipelineHealth('scrape-fanduel', run, { allowSecondarySec
 //                    is what let a full slate blow past the time budget
 //                    when it all ran sequentially in one loop.
 async function postImport(json: unknown, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
-  const res = await fetch(`${PLATFORM_URL}/api/admin/fanduel-import`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
-    body: JSON.stringify({ json, gameDate, homeTeam, awayTeam, gameKey, isOpening: true }),
-    signal: AbortSignal.timeout(45_000),
-  })
-  return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+  const scrapes = Array.isArray(json) ? json : [json]
+  const batches: unknown[][] = []
+  let current: unknown[] = []
+  const maxBatchBytes = 2_000_000
+
+  // Visiting every tab can exceed a serverless request-body limit on a deep
+  // event. Chunk by encoded size without splitting a tab, then merge the
+  // importer summaries so the existing missing-market retry still works.
+  for (const scrape of scrapes) {
+    const candidate = [...current, scrape]
+    const bytes = new TextEncoder().encode(JSON.stringify(candidate)).byteLength
+    if (current.length && bytes > maxBatchBytes) {
+      batches.push(current)
+      current = [scrape]
+    } else {
+      current = candidate
+    }
+  }
+  if (current.length) batches.push(current)
+
+  const results = await Promise.all(batches.map(async batch => {
+    const res = await fetch(`${PLATFORM_URL}/api/admin/fanduel-import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
+      body: JSON.stringify({ json: batch, gameDate, homeTeam, awayTeam, gameKey, isOpening: true }),
+      signal: AbortSignal.timeout(45_000),
+    })
+    return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+  }))
+
+  const marketSummary: Record<string, number> = {}
+  for (const result of results) {
+    for (const [market, count] of Object.entries(result.body?.marketSummary ?? {})) {
+      if (typeof count === 'number') marketSummary[market] = (marketSummary[market] ?? 0) + count
+    }
+  }
+  const failed = results.find(result => !result.ok)
+  return {
+    ok: !failed,
+    status: failed?.status ?? 200,
+    body: {
+      ok: !failed,
+      batches: batches.length,
+      marketSummary,
+      rowsImported: results.reduce((sum, result) => sum + (result.body?.rowsImported ?? 0), 0),
+      rawTabsArchived: results.reduce((sum, result) => sum + (result.body?.rawTabsArchived ?? 0), 0),
+      rawOutcomesArchived: results.reduce((sum, result) => sum + (result.body?.rawOutcomesArchived ?? 0), 0),
+      errors: results.filter(result => !result.ok).map(result => result.body?.error ?? `HTTP ${result.status}`),
+    },
+  }
 }
 
 async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
@@ -131,6 +174,14 @@ async function run(req: Request) {
   const date = url.searchParams.get('date') || (dayAhead ? addDaysToDateStr(todayEt, 1) : todayEt)
   const games = await getTodaysMatchups(date)
   if (!games.length) return NextResponse.json({ date, games: 0, results: [] })
+  // The archive is pregame-only. The scheduled intraday sweep used to keep
+  // every game on the date in scope even after first pitch; any live page
+  // FanDuel still exposed could therefore leak live prices into what should
+  // be opening/closing history. Freeze eligibility at the schedule status.
+  const pregameGames = games.filter(game => isPregame(game.status))
+  const skippedAlreadyLive = games
+    .filter(game => !isPregame(game.status))
+    .map(game => game.gameKey)
 
   // Real incident (2026-08-07/08): findAndClickGame matches purely on team
   // NAME, with zero date awareness — legIndexFor only disambiguates a same-
@@ -156,13 +207,13 @@ async function run(req: Request) {
   // actually "today."
   const isFutureDate = date > todayEt
   let skippedAmbiguous: string[] = []
-  let effectiveGames = games
+  let effectiveGames = pregameGames
   if (isFutureDate) {
     const todaysGames = await getTodaysMatchups(todayEt)
     const todaysPairs = new Set(todaysGames.map(g => `${g.awayTeamId}@${g.homeTeamId}`))
-    const ambiguous = games.filter(g => todaysPairs.has(`${g.awayTeamId}@${g.homeTeamId}`))
+    const ambiguous = pregameGames.filter(g => todaysPairs.has(`${g.awayTeamId}@${g.homeTeamId}`))
     skippedAmbiguous = ambiguous.map(g => g.gameKey)
-    effectiveGames = games.filter(g => !todaysPairs.has(`${g.awayTeamId}@${g.homeTeamId}`))
+    effectiveGames = pregameGames.filter(g => !todaysPairs.has(`${g.awayTeamId}@${g.homeTeamId}`))
   }
 
   const gamePkParam = url.searchParams.get('gamePk')
@@ -171,6 +222,9 @@ async function run(req: Request) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in ${date}'s matchups` }, { status: 404 })
+    if (!isPregame(g.status)) {
+      return NextResponse.json({ date, gamePk, skipped: 'game already started; FanDuel archive is pregame-only' })
+    }
     if (!effectiveGames.includes(g)) {
       return NextResponse.json({ date, gamePk, skipped: 'ambiguous team pair also plays today — see route.ts comment' })
     }
@@ -178,8 +232,8 @@ async function run(req: Request) {
     return NextResponse.json({ date, gamePk, result })
   }
 
-  if (!effectiveGames.length) return NextResponse.json({ date, games: games.length, skippedAmbiguous, results: [] })
+  if (!effectiveGames.length) return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results: [] })
   const extraQuery = `&date=${date}${dryRun ? '&dryRun=1' : ''}`
   const results = await fanOutToSelf('/api/cron/scrape-fanduel', effectiveGames.map(g => g.gamePk), extraQuery)
-  return NextResponse.json({ date, games: games.length, skippedAmbiguous, results })
+  return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results })
 }

@@ -4,6 +4,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { normName } from '@slipsurge/core/nameNorm'
 import { safeApiError } from '@/lib/safeApiError'
 import { FANDUEL_FIRST_PA_HR_SECTION_RE } from '@/lib/scrapers/fanduelMarkets'
+import {
+  buildFanduelArchiveRows,
+  type FanduelCaptureRow,
+  type FanduelOutcomeRow,
+  type FanduelScrapeResult,
+} from '@/lib/scrapers/fanduelArchive'
 
 // Full franchise names as they appear in FanDuel's own event.title (e.g.
 // "Colorado Rockies @ San Francisco Giants Player Combos Odds") — used to
@@ -140,9 +146,6 @@ async function requireAdmin(req: Request) {
   return {}
 }
 
-type ScrapeOutcome = { selection: string; odds: string; parts: string[]; market_hint?: string | null }
-type ScrapeResult = { sections: Record<string, ScrapeOutcome[]>; event?: { title?: string } }
-
 function parseOdds(odds: string): number | null {
   if (/^even$/i.test(odds)) return 100
   const n = parseInt(odds, 10)
@@ -171,7 +174,7 @@ export async function POST(req: Request) {
   // Accept either one scrape object (one tab) or the __fdAllScrapes array
   // (multiple tabs pasted at once) — FHR/PA1/HR-ML often live on different
   // tabs than Laser/Moonshot, so most real imports will be the array form.
-  const scrapes: ScrapeResult[] = Array.isArray(parsed) ? parsed : [parsed as ScrapeResult]
+  const scrapes: FanduelScrapeResult[] = Array.isArray(parsed) ? parsed : [parsed as FanduelScrapeResult]
   if (!scrapes.length || !scrapes.every(s => s && typeof s.sections === 'object')) {
     return NextResponse.json({ error: 'No "sections" object found — paste the exact scraper output' }, { status: 400 })
   }
@@ -198,6 +201,8 @@ export async function POST(req: Request) {
   const byGame = new Map<string, Map<string, { player_name: string; cols: Record<string, any> }>>()
   const gamesDetected = new Set<string>()
   const marketSummary: Record<string, number> = {}
+  const archiveCaptures: FanduelCaptureRow[] = []
+  const archiveOutcomes: FanduelOutcomeRow[] = []
 
   for (const scrape of scrapes) {
     const detected = detectGameFromTitle(scrape.event?.title)
@@ -209,6 +214,9 @@ export async function POST(req: Request) {
     // case this was built for.
     const thisGameKey = detected && detected.gameKey !== selectedPairKey ? detected.gameKey : fallbackGameKey
     gamesDetected.add(thisGameKey)
+    const archived = buildFanduelArchiveRows(scrape, { gameDate, gameKey: thisGameKey })
+    archiveCaptures.push(archived.capture)
+    archiveOutcomes.push(...archived.outcomes)
     const byPlayer = byGame.get(thisGameKey) ?? new Map()
     byGame.set(thisGameKey, byPlayer)
 
@@ -247,7 +255,7 @@ export async function POST(req: Request) {
           // outcomes use "Player - Single/Walk/Out" (or generic Ball/Hit)
           // and must fail closed even if FanDuel supplies a malformed label.
           if (single.market === 'pa1' && (/\s+-\s+/.test(rawName) || /^(?:ball|hit|strike|strikeout|any other outcome|over|under)\b/i.test(rawName))) continue
-          const odds = parseOdds(o.odds)
+          const odds = parseOdds(o.odds ?? '')
           if (odds == null) continue
           if (single.market === 'fhr' && /^no home run$/i.test(rawName)) {
             const gameRow = byPlayer.get(GAME_LEVEL_NAME_NORM) ?? { player_name: GAME_LEVEL_LABEL, cols: {} }
@@ -273,10 +281,10 @@ export async function POST(req: Request) {
         const partnersByPlayer = new Map<string, { player_name: string; entries: { partner: string; price: number }[] }>()
         for (const o of outcomes) {
           const names = (o.selection || '').split('&').map(s => s.trim()).filter(Boolean)
-          const odds = parseOdds(o.odds)
-          if (names.length !== 2 || odds == null) continue
-          for (let i = 0; i < 2; i++) {
-            const rawName = names[i], partner = names[1 - i]
+          const odds = parseOdds(o.odds ?? '')
+          const [first, second] = names
+          if (!first || !second || names.length !== 2 || odds == null) continue
+          for (const [rawName, partner] of [[first, second], [second, first]] as const) {
             const nn = normName(rawName)
             if (!nn) continue
             if (!partnersByPlayer.has(nn)) partnersByPlayer.set(nn, { player_name: rawName, entries: [] })
@@ -299,12 +307,34 @@ export async function POST(req: Request) {
   }
 
   const totalPlayers = [...byGame.values()].reduce((sum, m) => sum + m.size, 0)
-  if (!totalPlayers) {
-    return NextResponse.json({ error: 'Parsed the JSON but found none of the target markets (FHR, No HR, Laser 105/110, Moonshot, 1st PA HR, HR/ML Parlay, Combine-for-HR) — check you pasted the right tab(s)' }, { status: 400 })
+  if (!archiveCaptures.length) {
+    return NextResponse.json({ error: 'Parsed the JSON but found no FanDuel tab captures' }, { status: 400 })
   }
 
   const admin = createAdminClient()
   let openingSaved = false
+
+  // Archive before reducing. Deterministic keys make a repeated POST
+  // idempotent, while later scrapes remain distinct historical captures.
+  for (let i = 0; i < archiveCaptures.length; i += 100) {
+    const { error } = await admin
+      .from('fanduel_market_captures')
+      .upsert(archiveCaptures.slice(i, i + 100), {
+        onConflict: 'capture_key',
+        ignoreDuplicates: true,
+      })
+    if (error) return safeApiError('admin-fanduel-import', error, 'FanDuel raw capture archive failed')
+  }
+
+  for (let i = 0; i < archiveOutcomes.length; i += 500) {
+    const { error } = await admin
+      .from('fanduel_market_outcomes')
+      .upsert(archiveOutcomes.slice(i, i + 500), {
+        onConflict: 'outcome_key',
+        ignoreDuplicates: true,
+      })
+    if (error) return safeApiError('admin-fanduel-import', error, 'FanDuel outcome archive failed')
+  }
 
   for (const [thisGameKey, byPlayer] of byGame.entries()) {
     if (!byPlayer.size) continue
@@ -358,6 +388,8 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     rowsImported: totalPlayers,
+    rawTabsArchived: archiveCaptures.length,
+    rawOutcomesArchived: archiveOutcomes.length,
     marketSummary,
     openingSaved,
     wasOpeningPaste: !!isOpening,

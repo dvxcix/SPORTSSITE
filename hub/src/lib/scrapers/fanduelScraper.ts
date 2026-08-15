@@ -56,14 +56,11 @@ export async function runFanduelScrape(): Promise<any[]> {
     return tabs.sort((a, b) => a.index - b.index)
   }
 
-  // FanDuel can relocate the same batter market between Batter Props,
-  // Game Props, and Popular without changing the event. Visit all three;
-  // the importer performs the exact market-name filtering. Only categories
-  // that cannot contain a batter HR market remain excluded.
-  const SKIP = ['pitcher props', 'futures']
-  function wantTab(label: string) {
-    const lo = label.toLowerCase()
-    return !SKIP.some(s => lo.includes(s))
+  // The archive is intentionally market-agnostic. Visit every event tab,
+  // including Plate Appearance, Player Combos, and Pitcher Props, so a new
+  // ratio can be built later without changing and rerunning the scraper.
+  function wantTab(_label: string) {
+    return true
   }
 
   function getCollapsedSections() {
