@@ -95,12 +95,12 @@ function livePlayer(player: MarketDnaPlayer, game: MarketDnaGame | null | undefi
 function DugoutSignals({ player, pool, compact = false }: { player: MarketDnaPlayer; pool: MarketDnaPlayer[]; compact?: boolean }) {
   const teamPool = pool.filter(candidate => candidate.team === player.team)
   const fhrStyle = getDugoutPercentStyle(
-    player.metrics.fhrVsAveragePct,
+    player.metrics.dugoutFhrPct,
     player.metrics.fhrWeightedDelta,
     pool.map(candidate => candidate.metrics.fhrWeightedDelta),
   )
   const hrStyle = getDugoutPercentStyle(
-    player.metrics.hrVsAveragePct,
+    player.metrics.dugoutHrPct,
     player.metrics.hrDelta,
     teamPool.map(candidate => candidate.metrics.hrDelta),
   )
@@ -109,11 +109,11 @@ function DugoutSignals({ player, pool, compact = false }: { player: MarketDnaPla
   return <div className={`grid grid-cols-4 gap-1.5 ${compact ? 'min-w-[276px]' : 'w-full max-w-xl gap-2'}`}>
     <div className={`rounded-lg border border-zinc-800 bg-black/30 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
       <p className="text-[8px] font-black uppercase tracking-wider text-zinc-600">FHR%</p>
-      <p className={compact ? 'text-xs' : 'text-base'} style={fhrStyle}>{pct(player.metrics.fhrVsAveragePct, 1)}</p>
+      <p className={compact ? 'text-xs' : 'text-base'} style={fhrStyle}>{pct(player.metrics.dugoutFhrPct, 1)}</p>
     </div>
     <div className={`rounded-lg border border-zinc-800 bg-black/30 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
       <p className="text-[8px] font-black uppercase tracking-wider text-zinc-600">HR%</p>
-      <p className={compact ? 'text-xs' : 'text-base'} style={hrStyle}>{pct(player.metrics.hrVsAveragePct, 1)}</p>
+      <p className={compact ? 'text-xs' : 'text-base'} style={hrStyle}>{pct(player.metrics.dugoutHrPct, 1)}</p>
     </div>
     <div className={`rounded-lg border border-amber-400/15 bg-amber-400/[.04] ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
       <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider text-zinc-600"><span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(253,224,71,.8)]" />Public HR</p>

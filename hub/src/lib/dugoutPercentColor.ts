@@ -1,5 +1,13 @@
 import type { CSSProperties } from 'react'
 
+/** Exact raw decimal displayed by The Dugout after its UI multiplies by 100. */
+export function computeDugoutPercentValue(
+  current: number | null,
+  average: number | null,
+): number | null {
+  return current != null && average ? (current - average) / average : null
+}
+
 /** Canonical FHR% / HR% presentation shared with The Dugout. */
 export function getDugoutPercentStyle(
   pct: number | null,

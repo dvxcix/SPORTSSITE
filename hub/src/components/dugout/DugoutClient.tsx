@@ -21,7 +21,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
 import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
-import { getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
+import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -526,13 +526,11 @@ export function buildBatterRow(
     // average is missing.
     fhr_pct: (() => {
       const avgFd = fhrAvgEntry?.fd
-      return fhr_fd != null && avgFd ? (fhr_fd - avgFd) / avgFd : null
+      return computeDugoutPercentValue(fhr_fd, avgFd ?? null)
     })(),
     sa_pct: (() => {
       const av = saAvgEntry ?? {}
-      if (sa_fd != null && av.fd) return (sa_fd - av.fd) / av.fd
-      if (sa_fd != null && av.cz) return (sa_fd - av.cz) / av.cz
-      return null
+      return computeDugoutPercentValue(sa_fd, av.fd ?? av.cz ?? null)
     })(),
     // Raw odds-POINT delta (current − own average), not the percentage —
     // used to weight the shade heat-map's intensity instead of fhr_pct/

@@ -2,6 +2,7 @@ import { normName } from '@slipsurge/core/nameNorm'
 import { computeDugoutSpecsValue, type FieldBundle, type OddsProps } from '@slipsurge/core/matrixEngine'
 import { fetchHistoricalGameBundles } from '@/lib/matrixBacktest'
 import { attachCanonicalMmToBundles } from '@/lib/hrIntelligenceData'
+import { computeDugoutPercentValue } from '@/lib/dugoutPercentColor'
 import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -75,6 +76,8 @@ export type MarketDnaPlayer = {
   metrics: {
     fhrVsAveragePct: number | null
     hrVsAveragePct: number | null
+    dugoutFhrPct: number | null
+    dugoutHrPct: number | null
     fhrDelta: number | null
     fhrWeightedDelta: number | null
     hrDelta: number | null
@@ -399,6 +402,8 @@ function buildPlayerProfile(
     metrics: {
       fhrVsAveragePct: ratio(bundle, 'fhr_pct'),
       hrVsAveragePct: ratio(bundle, 'sa_pct'),
+      dugoutFhrPct: computeDugoutPercentValue(fhrCurrent, fhrAverage),
+      dugoutHrPct: computeDugoutPercentValue(hrCurrent, hrAverage),
       fhrDelta,
       fhrWeightedDelta,
       hrDelta,
@@ -609,7 +614,7 @@ export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaG
     put(`public.${key}.share`, total > 0 ? (player.picks[key] ?? 0) / total : null)
     put(`public.${key}.rank`, percentileFor(player, candidate => candidate.picks[key] ?? 0, game.players) / 100)
   }
-  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta' | 'mmL1'>
+  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'dugoutFhrPct' | 'dugoutHrPct' | 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta' | 'mmL1'>
   const metricScales: Record<SimilarityMetric, [number, number]> = {
     fhrVsAveragePct: [25, 0], hrVsAveragePct: [25, 0], fhrToHr: [.5, 1], mgmToFd: [.35, 1],
     paToHr: [.7, 1], hrToRbi: [.5, 1], hrToRbi2: [.8, 1], hrToRbi3: [1.2, 1],
