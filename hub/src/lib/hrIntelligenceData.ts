@@ -303,6 +303,31 @@ function attachMm(
   }
 }
 
+// Market DNA and HR Intelligence both need the exact MM values shown by
+// The Dugout. Keep the cache reads and whole-game ranking pass here so every
+// admin surface receives the same l1/l3/l5/l10 values without recreating MM.
+export async function attachCanonicalMmToBundles(gameBundles: GameBundles[], date: string): Promise<void> {
+  const pitcherIds = [...new Set(gameBundles
+    .flatMap(bundle => [bundle.game.homePitcher?.id, bundle.game.awayPitcher?.id])
+    .filter((id): id is number => !!id))]
+  const admin = createAdminClient()
+  const [pitcherRows, edgeResult] = await Promise.all([
+    fetchPitcherMix(pitcherIds, date),
+    admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data')
+      .eq('game_date', date).order('mlb_id').order('role'),
+  ])
+  if (edgeResult.error) throw new Error(`Matchup-edge query failed: ${edgeResult.error.message}`)
+
+  const batterEdges: Record<number, MatchupEdgeData> = {}
+  const pitcherEdges: Record<number, MatchupEdgeData> = {}
+  for (const row of (edgeResult.data ?? []) as EdgeRow[]) {
+    if (row.role === 'batter') batterEdges[row.mlb_id] = row.data
+    else pitcherEdges[row.mlb_id] = row.data
+  }
+  const pitcherMap = buildPitcherMap(pitcherRows)
+  for (const bundle of gameBundles) attachMm(bundle, pitcherMap, batterEdges, pitcherEdges)
+}
+
 function analyzeBundle(gameBundle: GameBundles, slateDate: string): HrIntelGameResult {
   const { game } = gameBundle
   const warnings: string[] = [...gameBundle.sourceWarnings]
@@ -419,14 +444,10 @@ function attachValidation(
 export async function buildHrIntelligenceSlate(date: string, gamePk?: number): Promise<HrIntelligenceSlate> {
   const allBundles = await fetchHistoricalGameBundles(date)
   const bundles = gamePk == null ? allBundles : allBundles.filter(bundle => bundle.game.gamePk === gamePk)
-  const pitcherIds = [...new Set(bundles.flatMap(bundle => [bundle.game.homePitcher?.id, bundle.game.awayPitcher?.id]).filter((id): id is number => !!id))]
-  const admin = createAdminClient()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const outcomeBundles = date < today ? bundles : bundles.filter(bundle => bundle.game.status === 'Final')
-  const [pitcherRows, edgeResult, outcomeResult, boxscoreOutcomes] = await Promise.all([
-    fetchPitcherMix(pitcherIds, date),
-    admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data')
-      .eq('game_date', date).order('mlb_id').order('role'),
+  const [, outcomeResult, boxscoreOutcomes] = await Promise.all([
+    attachCanonicalMmToBundles(bundles, date),
     outcomeBundles.length
       ? fetchHrFeed(outcomeBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
       : Promise.resolve({ hrFeed: [], pitcherIdByName: {}, completedGamePks: [], failures: [] }),
@@ -434,16 +455,6 @@ export async function buildHrIntelligenceSlate(date: string, gamePk?: number): P
       ? fetchBoxscoreOutcomes(outcomeBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
       : Promise.resolve({} as Record<number, Record<number, MlbBatterOutcome>>),
   ])
-  if (edgeResult.error) throw new Error(`Matchup-edge query failed: ${edgeResult.error.message}`)
-
-  const batterEdges: Record<number, MatchupEdgeData> = {}
-  const pitcherEdges: Record<number, MatchupEdgeData> = {}
-  for (const row of (edgeResult.data ?? []) as EdgeRow[]) {
-    if (row.role === 'batter') batterEdges[row.mlb_id] = row.data
-    else pitcherEdges[row.mlb_id] = row.data
-  }
-  const pitcherMap = buildPitcherMap(pitcherRows)
-  for (const bundle of bundles) attachMm(bundle, pitcherMap, batterEdges, pitcherEdges)
   const eventsByGame = new Map<number, HrFeedEvent[]>()
   for (const event of outcomeResult.hrFeed) {
     const events = eventsByGame.get(event.game_pk) ?? []

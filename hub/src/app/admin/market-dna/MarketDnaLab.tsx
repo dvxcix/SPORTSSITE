@@ -71,11 +71,20 @@ function MarketStrip({ player }: { player: MarketDnaPlayer }) {
   </div>
 }
 
+function MmL1Value({ value, showLabel = false }: { value: number | null; showLabel?: boolean }) {
+  const color = value == null ? '#71717a' : value > 3 ? '#4ade80' : value < -3 ? '#f87171' : '#f4f4f5'
+  const display = value == null ? '—' : `${value > 0 ? '+' : ''}${value}`
+  return <span className="inline-flex items-center gap-1.5 font-bold" style={{ color }}>
+    {showLabel ? <span className="text-[8px] font-black uppercase tracking-wider text-zinc-600">MM · Last 1</span> : null}
+    <span>{display}</span>
+  </span>
+}
+
 function PlayerButton({ player, selected, onSelect }: { player: MarketDnaPlayer; selected: boolean; onSelect: () => void }) {
   return <button onClick={onSelect} className={`group flex min-h-16 w-full items-center gap-3 rounded-xl border p-2.5 text-left transition ${selected ? 'border-lime-400/70 bg-lime-400/10' : 'border-zinc-800 bg-zinc-950/70 hover:border-zinc-700 hover:bg-zinc-900'}`}>
     <PlayerAvatar headshot={mlbHeadshot(player.mlbId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.name} size={38} />
     <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[10px] font-black text-zinc-600">{player.battingOrder}</span><strong className="truncate text-xs text-white">{player.name}</strong></div><p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600">{player.position} · {player.team} · HR {odds(market(player, 'hr')?.current)}</p></div>
-    <ChevronRight size={14} className={selected ? 'text-lime-300' : 'text-zinc-700'} />
+    <span className="flex shrink-0 items-center gap-2 text-[10px]"><MmL1Value value={player.metrics.mmL1} showLabel /><ChevronRight size={14} className={selected ? 'text-lime-300' : 'text-zinc-700'} /></span>
   </button>
 }
 
@@ -97,7 +106,7 @@ function DugoutSignals({ player, pool, compact = false }: { player: MarketDnaPla
   )
   const publicHrPicks = player.picks.home_runs ?? 0
 
-  return <div className={`grid grid-cols-3 gap-1.5 ${compact ? 'min-w-[206px]' : 'w-full max-w-md gap-2'}`}>
+  return <div className={`grid grid-cols-4 gap-1.5 ${compact ? 'min-w-[276px]' : 'w-full max-w-xl gap-2'}`}>
     <div className={`rounded-lg border border-zinc-800 bg-black/30 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
       <p className="text-[8px] font-black uppercase tracking-wider text-zinc-600">FHR%</p>
       <p className={compact ? 'text-xs' : 'text-base'} style={fhrStyle}>{pct(player.metrics.fhrVsAveragePct, 1)}</p>
@@ -110,6 +119,10 @@ function DugoutSignals({ player, pool, compact = false }: { player: MarketDnaPla
       <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider text-zinc-600"><span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(253,224,71,.8)]" />Public HR</p>
       <p className={`${compact ? 'text-xs' : 'text-base'} font-black text-amber-200`}>{publicHrPicks.toLocaleString()}</p>
     </div>
+    <div className={`rounded-lg border border-zinc-800 bg-black/30 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+      <p className="text-[8px] font-black uppercase tracking-wider text-zinc-600">MM · Last 1</p>
+      <p className={compact ? 'text-xs' : 'text-base'}><MmL1Value value={player.metrics.mmL1} /></p>
+    </div>
   </div>
 }
 
@@ -118,7 +131,7 @@ function RankRow({ entry, game }: { entry: MarketDnaGameRank; game?: MarketDnaGa
   const player = livePlayer(entry.player, game)
   const pool = game?.players ?? [entry.player]
   return <div className="border-b border-zinc-800/70 last:border-0">
-    <button onClick={() => setOpen(value => !value)} className="grid w-full gap-3 px-3 py-4 text-left transition hover:bg-white/[.025] xl:grid-cols-[44px_minmax(190px,1fr)_72px_206px_78px_78px_28px] xl:items-center xl:px-4">
+    <button onClick={() => setOpen(value => !value)} className="grid w-full gap-3 px-3 py-4 text-left transition hover:bg-white/[.025] xl:grid-cols-[44px_minmax(190px,1fr)_72px_276px_78px_78px_28px] xl:items-center xl:px-4">
       <span className={`grid h-9 w-9 place-items-center rounded-xl border text-xs font-black ${entry.rank === 1 ? 'border-lime-400/40 bg-lime-400/15 text-lime-300' : 'border-zinc-800 bg-zinc-900 text-zinc-500'}`}>{entry.rank}</span>
       <div className="flex min-w-0 items-center gap-3"><PlayerAvatar headshot={mlbHeadshot(entry.player.mlbId)} teamLogo={getTeamLogoUrl(entry.player.team)} teamAbbr={entry.player.team} name={entry.player.name} size={42} /><div className="min-w-0"><strong className="block truncate text-sm text-white">{entry.player.name}</strong><p className="text-[10px] font-bold uppercase tracking-wide text-zinc-600">{entry.player.team} · #{entry.player.battingOrder} · {entry.player.position}</p></div></div>
       <div><p className="text-[9px] font-black uppercase text-zinc-600">Learned</p><p className="text-lg font-black text-lime-300">{entry.score.toFixed(1)}</p></div>

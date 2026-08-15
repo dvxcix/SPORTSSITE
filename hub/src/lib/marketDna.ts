@@ -1,6 +1,7 @@
 import { normName } from '@slipsurge/core/nameNorm'
 import { computeDugoutSpecsValue, type FieldBundle, type OddsProps } from '@slipsurge/core/matrixEngine'
 import { fetchHistoricalGameBundles } from '@/lib/matrixBacktest'
+import { attachCanonicalMmToBundles } from '@/lib/hrIntelligenceData'
 import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -77,6 +78,7 @@ export type MarketDnaPlayer = {
     fhrDelta: number | null
     fhrWeightedDelta: number | null
     hrDelta: number | null
+    mmL1: number | null
     fhrToHr: number | null
     mgmToFd: number | null
     paToHr: number | null
@@ -400,6 +402,7 @@ function buildPlayerProfile(
       fhrDelta,
       fhrWeightedDelta,
       hrDelta,
+      mmL1: asNumber(bundle.mmByWindow?.l1),
       fhrToHr: ratio(bundle, 'fhr_div_sa'),
       mgmToFd: ratio(bundle, 'm_div_f'),
       paToHr: ratio(bundle, 'pa1_div_sa'),
@@ -426,6 +429,7 @@ function buildPlayerProfile(
 
 export async function buildMarketDnaSlate(date: string): Promise<{ date: string; games: MarketDnaGame[] }> {
   const bundles = await fetchHistoricalGameBundles(date)
+  await attachCanonicalMmToBundles(bundles, date)
   return {
     date,
     games: bundles.map(game => {
@@ -605,7 +609,7 @@ export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaG
     put(`public.${key}.share`, total > 0 ? (player.picks[key] ?? 0) / total : null)
     put(`public.${key}.rank`, percentileFor(player, candidate => candidate.picks[key] ?? 0, game.players) / 100)
   }
-  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta'>
+  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta' | 'mmL1'>
   const metricScales: Record<SimilarityMetric, [number, number]> = {
     fhrVsAveragePct: [25, 0], hrVsAveragePct: [25, 0], fhrToHr: [.5, 1], mgmToFd: [.35, 1],
     paToHr: [.7, 1], hrToRbi: [.5, 1], hrToRbi2: [.8, 1], hrToRbi3: [1.2, 1],
