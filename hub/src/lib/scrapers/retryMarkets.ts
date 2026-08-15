@@ -12,7 +12,13 @@
 // Shared by scrape-fanduel's own same-request retry (scrapeOneGame) and
 // dispatch-scrapes' queued 5-minute-later retry so both react to the exact
 // same signal — one list, not two that can drift apart.
-export const RETRY_MARKETS = ['fhr_fd', 'rbi3_fd', 'combo1_min', 'combo2_min', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'pa1_fd'] as const
+// PA1 HR is intentionally not a retry trigger. FanDuel stopped offering the
+// standalone "home run in first plate appearance" market on 2026-08-13 and
+// replaced it with a combined Double/Triple/Home Run outcome. The scraper
+// still visits the Plate Appearance tab and the importer will capture PA1 HR
+// automatically if the standalone market returns, but an expected zero must
+// not double every Browserbase scrape or push a game over its time budget.
+export const RETRY_MARKETS = ['fhr_fd', 'rbi3_fd', 'combo1_min', 'combo2_min', 'laser105_fd', 'laser110_fd', 'moonshot_fd'] as const
 export type RetryMarket = typeof RETRY_MARKETS[number]
 
 export function missingMarkets(counts: Partial<Record<string, number>>): RetryMarket[] {
