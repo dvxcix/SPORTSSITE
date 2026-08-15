@@ -114,6 +114,7 @@ export type MarketDnaGame = {
   status: string
   gameDate: string
   lineupConfirmed: boolean
+  sourceWarnings?: string[]
   noHr: { current: number | null; open: number | null; probabilityMove: number | null }
   players: MarketDnaPlayer[]
 }
@@ -461,6 +462,7 @@ export async function buildMarketDnaSlate(date: string): Promise<{ date: string;
         status: game.game.status,
         gameDate: game.game.gameDate,
         lineupConfirmed: game.game.awayLineupConfirmed && game.game.homeLineupConfirmed,
+        sourceWarnings: game.sourceWarnings,
         noHr: {
           current: game.noHr.current,
           open: game.noHr.open,
@@ -1293,6 +1295,10 @@ function buildGameAnalysis(
 
 export async function archiveMarketDnaDate(date: string) {
   const slate = await buildMarketDnaSlate(date)
+  const sourceWarnings = [...new Set(slate.games.flatMap(game => game.sourceWarnings ?? []))]
+  if (sourceWarnings.length) {
+    throw new Error(`Market DNA archive refused incomplete source data: ${sourceWarnings.join(' ')}`)
+  }
   const games = slate.games.filter(game => game.players.length >= 18 && /final/i.test(game.status))
   if (!games.length) return { date, games: 0, players: 0, skipped: slate.games.length }
   const refs = games.map(game => ({ gamePk: game.gamePk, status: { abstractGameState: 'Final' } }))
