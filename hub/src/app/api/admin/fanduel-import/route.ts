@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normName } from '@slipsurge/core/nameNorm'
 import { safeApiError } from '@/lib/safeApiError'
+import { FANDUEL_FIRST_PA_HR_SECTION_RE } from '@/lib/scrapers/fanduelMarkets'
 
 // Full franchise names as they appear in FanDuel's own event.title (e.g.
 // "Colorado Rockies @ San Francisco Giants Player Combos Odds") — used to
@@ -67,7 +68,11 @@ const SECTION_MAP: Array<{ re: RegExp; col: string; market: string }> = [
   { re: /laser.*\(?\s*110/i, col: 'laser110_fd', market: 'laser110' },
   { re: /laser.*\(?\s*105/i, col: 'laser105_fd', market: 'laser105' },
   { re: /moonshot/i, col: 'moonshot_fd', market: 'moonshot' },
-  { re: /first plate appearance/i, col: 'pa1_fd', market: 'pa1' },
+  // FanDuel changed this heading from "First Plate Appearance" to
+  // "1st Plate Appearance" on 2026-08-13. Accept both spellings (and the
+  // compact "First/1st PA" form) so a copy change cannot silently zero the
+  // entire market again.
+  { re: FANDUEL_FIRST_PA_HR_SECTION_RE, col: 'pa1_fd', market: 'pa1' },
   { re: /home run.*moneyline parlay/i, col: 'hr_ml_fd', market: 'hrMl' },
   // Everything below is ALSO already live from BDL — same "opening baseline
   // only, never clobber a live BDL value" rule applies to these as the
@@ -136,7 +141,7 @@ async function requireAdmin(req: Request) {
   return {}
 }
 
-type ScrapeOutcome = { selection: string; odds: string; parts: string[] }
+type ScrapeOutcome = { selection: string; odds: string; parts: string[]; market_hint?: string | null }
 type ScrapeResult = { sections: Record<string, ScrapeOutcome[]>; event?: { title?: string } }
 
 function parseOdds(odds: string): number | null {
@@ -216,7 +221,13 @@ export async function POST(req: Request) {
     }
 
     for (const [sectionName, outcomes] of Object.entries(scrape.sections || {})) {
-      const single = SECTION_MAP.find(m => m.re.test(sectionName))
+      // Most FanDuel layouts expose the market in the section heading. Some
+      // layouts only repeat it in each outcome's aria-label (`market_hint`),
+      // especially while the accordion is being progressively rendered.
+      // Match either source instead of discarding a healthy scrape merely
+      // because the section resolver returned "(ungrouped)".
+      const marketLabels = [sectionName, ...outcomes.map(outcome => outcome.market_hint ?? '')]
+      const single = SECTION_MAP.find(m => marketLabels.some(label => m.re.test(label)))
       if (single) {
         let count = 0
         for (const o of outcomes) {
