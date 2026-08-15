@@ -30,7 +30,7 @@ export const GET = withPipelineHealth('scrape-fanduel', run, { allowSecondarySec
 //                    slowest single game, not the sum of every game, which
 //                    is what let a full slate blow past the time budget
 //                    when it all ran sequentially in one loop.
-async function postImport(json: any, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
+async function postImport(json: unknown, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
   const res = await fetch(`${PLATFORM_URL}/api/admin/fanduel-import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -62,6 +62,20 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
 
     const scrapes = await bb.page.evaluate(runFanduelScrape)
     if (!scrapes.length) return { gameKey: g.gameKey, error: 'no tabs scraped' }
+
+    // Labels only, no prices or member data. This makes a sportsbook copy or
+    // tab-placement change diagnosable from production logs instead of
+    // presenting as a mysteriously empty database column.
+    const discoveryLabels = Array.from(new Set(scrapes.flatMap(scrape => [
+      ...Object.keys(scrape.sections ?? {}),
+      ...(Object.values(scrape.sections ?? {}) as Array<Array<{ market_hint?: string | null }>>).flatMap(outcomes =>
+        Array.isArray(outcomes) ? outcomes.map(outcome => outcome?.market_hint).filter(Boolean) : []),
+    ]))).filter(label => /home\s*run|plate\s+appearance|\b(?:first|1st)\s+pa\b/i.test(String(label)))
+    console.info('[scrape-fanduel] market discovery', {
+      gameKey: g.gameKey,
+      tabs: scrapes.map(scrape => scrape.active_tab?.label).filter(Boolean),
+      labels: discoveryLabels.slice(0, 100),
+    })
 
     if (dryRun) return { gameKey: g.gameKey, tabsScraped: scrapes.length, dryRun: true, scrapes }
 

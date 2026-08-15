@@ -68,10 +68,9 @@ const SECTION_MAP: Array<{ re: RegExp; col: string; market: string }> = [
   { re: /laser.*\(?\s*110/i, col: 'laser110_fd', market: 'laser110' },
   { re: /laser.*\(?\s*105/i, col: 'laser105_fd', market: 'laser105' },
   { re: /moonshot/i, col: 'moonshot_fd', market: 'moonshot' },
-  // FanDuel changed this heading from "First Plate Appearance" to
-  // "1st Plate Appearance" on 2026-08-13. Accept both spellings (and the
-  // compact "First/1st PA" form) so a copy change cannot silently zero the
-  // entire market again.
+  // Accept both First/1st and Plate Appearance/PA, but require "Home Run".
+  // FanDuel has a different first-PA result market (Single/Walk/Out/etc.)
+  // which must never populate this column.
   { re: FANDUEL_FIRST_PA_HR_SECTION_RE, col: 'pa1_fd', market: 'pa1' },
   { re: /home run.*moneyline parlay/i, col: 'hr_ml_fd', market: 'hrMl' },
   // Everything below is ALSO already live from BDL — same "opening baseline
@@ -226,15 +225,28 @@ export async function POST(req: Request) {
       // especially while the accordion is being progressively rendered.
       // Match either source instead of discarding a healthy scrape merely
       // because the section resolver returned "(ungrouped)".
-      const marketLabels = [sectionName, ...outcomes.map(outcome => outcome.market_hint ?? '')]
-      const single = SECTION_MAP.find(m => marketLabels.some(label => m.re.test(label)))
-      if (single) {
+      const sectionSingle = SECTION_MAP.find(m => m.re.test(sectionName))
+      const singleGroups = sectionSingle
+        ? [{ market: sectionSingle, outcomes }]
+        : SECTION_MAP.map(market => ({
+            market,
+            // An ungrouped section can contain several markets. Only import
+            // the outcomes whose own aria-label identifies this market.
+            outcomes: outcomes.filter(outcome => market.re.test(outcome.market_hint ?? '')),
+          })).filter(group => group.outcomes.length > 0)
+
+      if (singleGroups.length) {
+        for (const { market: single, outcomes: marketOutcomes } of singleGroups) {
         let count = 0
-        for (const o of outcomes) {
+        for (const o of marketOutcomes) {
           // "Home Run / Moneyline Parlay" selections look like "Player Name/Team ML" —
           // take the part before the slash as the player.
           const rawName = (o.selection || '').split('/')[0].trim()
           if (!rawName) continue
+          // A real PA1-HR selection is a player name. Result-of-first-PA
+          // outcomes use "Player - Single/Walk/Out" (or generic Ball/Hit)
+          // and must fail closed even if FanDuel supplies a malformed label.
+          if (single.market === 'pa1' && (/\s+-\s+/.test(rawName) || /^(?:ball|hit|strike|strikeout|any other outcome|over|under)\b/i.test(rawName))) continue
           const odds = parseOdds(o.odds)
           if (odds == null) continue
           if (single.market === 'fhr' && /^no home run$/i.test(rawName)) {
@@ -250,6 +262,7 @@ export async function POST(req: Request) {
           count++
         }
         marketSummary[single.col] = (marketSummary[single.col] ?? 0) + count
+        }
         continue
       }
 

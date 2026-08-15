@@ -12,5 +12,8 @@ for (const label of [
 
 assert.equal(isFanduelFirstPaHrSection('To Hit First Home Run'), false)
 assert.equal(isFanduelFirstPaHrSection('To Hit a Home Run'), false)
+assert.equal(isFanduelFirstPaHrSection('Result of 1st Plate Appearance'), false)
+assert.equal(isFanduelFirstPaHrSection('1st Plate Appearance Result'), false)
+assert.equal(isFanduelFirstPaHrSection('Player Result in First PA'), false)
 
 console.log('FanDuel market label regression checks passed')

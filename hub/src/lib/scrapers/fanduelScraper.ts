@@ -56,7 +56,11 @@ export async function runFanduelScrape(): Promise<any[]> {
     return tabs.sort((a, b) => a.index - b.index)
   }
 
-  const SKIP = ['pitcher props', 'game props', 'popular', 'futures']
+  // FanDuel can relocate the same batter market between Batter Props,
+  // Game Props, and Popular without changing the event. Visit all three;
+  // the importer performs the exact market-name filtering. Only categories
+  // that cannot contain a batter HR market remain excluded.
+  const SKIP = ['pitcher props', 'futures']
   function wantTab(label: string) {
     const lo = label.toLowerCase()
     return !SKIP.some(s => lo.includes(s))
