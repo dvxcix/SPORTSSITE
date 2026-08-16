@@ -8,6 +8,7 @@ import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
 import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
+import { fetchPikkitPublicPicks } from '@/lib/mlbPartyServer'
 import {
   type Matrix, type MatrixFactor, type MatrixTiebreaker,
   type FieldBundle, type PitchlogStatWindow, type DugoutSpecsAverages,
@@ -34,10 +35,6 @@ import {
 // of intentional duplication in the DATA-FETCHING layer only (never the
 // business logic) is the accepted tradeoff.
 
-const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
-const MP_KEY = process.env.MLB_PARTY_SERVICE_ROLE_KEY!
-const mpH = { apikey: MP_KEY, Authorization: `Bearer ${MP_KEY}`, 'Content-Type': 'application/json' }
-
 // PostgREST silently caps an unpaginated select at 1000 rows with no
 // ordering, so anything past that is effectively random which rows survive
 // — a real, previously-hit incident class in this codebase (see
@@ -60,28 +57,7 @@ async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ d
   return out
 }
 
-type MpRowsResult = { rows: any[]; error: string | null }
-
-async function mpGetAll(path: string): Promise<MpRowsResult> {
-  const PAGE = 1000
-  const out: any[] = []
-  for (let offset = 0; offset < 100_000; offset += PAGE) {
-    try {
-      const res = await fetch(`${MP_URL}${path}`, { headers: { ...mpH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store', signal: AbortSignal.timeout(20_000) })
-      if (!res.ok) {
-        const detail = (await res.text()).slice(0, 240)
-        return { rows: out, error: `mlb-party returned HTTP ${res.status}${detail ? `: ${detail}` : ''}` }
-      }
-      const page = await res.json()
-      if (!Array.isArray(page) || !page.length) break
-      out.push(...page)
-      if (page.length < PAGE) break
-    } catch (error) {
-      return { rows: out, error: error instanceof Error ? error.message : String(error) }
-    }
-  }
-  return { rows: out, error: null }
-}
+type PikkitRowsResult = { rows: Awaited<ReturnType<typeof fetchPikkitPublicPicks>>; error: string | null }
 
 // Exact copy of dugout/data/route.ts's own reshaping table — market_opening_
 // prices rows come back as `${market}:${book}` -> price; this maps that onto
@@ -117,7 +93,10 @@ export type GameBundles = {
 // same shape dugout/data/route.ts's own per-request bundle-building uses,
 // just independently reconstructed for an arbitrary historical date instead
 // of "today."
-export async function fetchHistoricalGameBundles(date: string): Promise<GameBundles[]> {
+export async function fetchHistoricalGameBundles(
+  date: string,
+  options: { requirePikkit?: boolean } = {},
+): Promise<GameBundles[]> {
   const admin = createAdminClient()
 
   const [games, snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, pikkitRowsResult] = await Promise.all([
@@ -146,9 +125,18 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
       (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows')
         .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
     ),
-    mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`),
+    fetchPikkitPublicPicks(date)
+      .then<PikkitRowsResult>(rows => ({ rows, error: null }))
+      .catch<PikkitRowsResult>(error => ({ rows: [], error: error instanceof Error ? error.message : String(error) })),
   ])
   const pikkitRows = pikkitRowsResult.rows
+
+  if (options.requirePikkit && pikkitRowsResult.error) {
+    throw new Error(`Real Pikkit exposure could not be loaded: ${pikkitRowsResult.error}`)
+  }
+  if (options.requirePikkit && pikkitRows.length === 0) {
+    throw new Error(`Real Pikkit exposure returned no rows for ${date}. Market DNA will not substitute zero picks.`)
+  }
 
   if (!games.length) return []
 

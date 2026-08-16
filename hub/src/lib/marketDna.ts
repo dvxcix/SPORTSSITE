@@ -439,7 +439,7 @@ function buildPlayerProfile(
 }
 
 export async function buildMarketDnaSlate(date: string): Promise<{ date: string; games: MarketDnaGame[] }> {
-  const bundles = await fetchHistoricalGameBundles(date)
+  const bundles = await fetchHistoricalGameBundles(date, { requirePikkit: true })
   await attachCanonicalMmToBundles(bundles, date)
   return {
     date,

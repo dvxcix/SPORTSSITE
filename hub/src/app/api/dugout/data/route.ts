@@ -28,6 +28,7 @@ import {
   groupTiedCandidates, filterTieGroups, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
 } from '@slipsurge/core/matrixEngine'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
+import { fetchPikkitPublicPicks } from '@/lib/mlbPartyServer'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -762,7 +763,11 @@ export async function GET(req: Request) {
     // the AZ@LAD game-key bug (a real upload "not showing"), but this one
     // was a straight truncation, unrelated to which game the picks belonged
     // to — any game whose rows happened to land past the cutoff lost them.
-    timed(reqId, 'pikkit', mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`, 300)),
+    // Market DNA and TheDugout must read the exact same exposure rows. This
+    // strict shared reader never converts a database/auth failure into an
+    // empty array, because zero picks is materially different from missing
+    // picks and silently changes every downstream rank.
+    timed(reqId, 'pikkit', fetchPikkitPublicPicks(date, 300)),
     // Below-Ultimate: still fetched whenever there's a featured game today
     // (near-always) so that one game's players get real data — the below-
     // Ultimate response gets POST-FILTERED down to just that game's players
@@ -1198,7 +1203,7 @@ export async function GET(req: Request) {
       for (const r of pikkit ?? []) {
         if (r.game_key && r.game_key !== gameKey) continue
         const nn = normName(r.player_name || '')
-        const market = r.prop_type || r.market
+        const market = r.prop_type
         if (!nn || !market) continue
         if (!pikkitByName[nn]) pikkitByName[nn] = {}
         const existing = pikkitByName[nn][market]
