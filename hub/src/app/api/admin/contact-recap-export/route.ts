@@ -23,12 +23,16 @@ export async function GET(request: Request) {
   const date = url.searchParams.get('date') ?? ''
   const kind = url.searchParams.get('kind') === 'near' ? 'near' : 'hr'
   const format: ContactRecapExportFormat = url.searchParams.get('format') === 'gif' ? 'gif' : 'mp4'
+  const startedAt = Date.now()
   try {
+    console.info('[contact-recap-export] started', { date, kind, format })
     const recap = await getDailyContactRecap(date)
     const selected = kind === 'near' ? recap.nearHomeRuns : recap.homeRuns
     const events = await enrichContactRecapMarkets(date, selected)
+    console.info('[contact-recap-export] data ready', { date, kind, format, events: events.length, elapsedMs: Date.now() - startedAt })
     const body = await renderContactRecap(events, format)
     const label = kind === 'near' ? 'near-home-runs' : 'home-runs'
+    console.info('[contact-recap-export] completed', { date, kind, format, events: events.length, bytes: body.length, elapsedMs: Date.now() - startedAt })
     return new NextResponse(new Uint8Array(body), { headers: {
       'Content-Type': format === 'mp4' ? 'video/mp4' : 'image/gif',
       'Content-Disposition': `attachment; filename="slipsurge-${date}-${label}.${format}"`,

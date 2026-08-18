@@ -1,11 +1,48 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarDays, Clapperboard, Download, Film, ImageIcon, LoaderCircle, Sparkles, Target, Video } from 'lucide-react'
+import { CalendarDays, Clapperboard, Film, ImageIcon, LoaderCircle, Sparkles, Target, Video } from 'lucide-react'
 import { ContactFlightStage } from '@/components/contact/ContactFlightStage'
 import type { DailyContactSlate } from '@/lib/contactRecapTypes'
 
 const todayEt = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+
+function ExportButton({ date, kind, format, primary = false }: { date: string; kind: 'hr' | 'near'; format: 'mp4' | 'gif'; primary?: boolean }) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [message, setMessage] = useState('')
+  const Icon = format === 'mp4' ? Video : ImageIcon
+  const download = async () => {
+    setStatus('loading'); setMessage('')
+    try {
+      const response = await fetch(`/api/admin/contact-recap-export?date=${date}&kind=${kind}&format=${format}`)
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null
+        throw new Error(body?.error || `Export failed with status ${response.status}.`)
+      }
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') ?? ''
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `slipsurge-${date}-${kind}.${format}`
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000)
+      setStatus('done')
+    } catch (reason) {
+      setStatus('error'); setMessage(reason instanceof Error ? reason.message : 'Could not create this export.')
+    }
+  }
+  const base = 'inline-flex min-w-32 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition disabled:cursor-wait disabled:opacity-70'
+  const tone = primary
+    ? kind === 'hr' ? 'bg-lime-400 text-black shadow-[0_0_24px_rgba(163,255,63,.18)] hover:bg-lime-300' : 'bg-orange-300 text-black hover:bg-orange-200'
+    : kind === 'hr' ? 'border border-white/10 bg-white/[.04] text-zinc-200 hover:bg-white/[.08]' : 'border border-orange-300/25 bg-orange-400/10 text-orange-200 hover:bg-orange-400/15'
+  return <div className="flex flex-col items-stretch gap-1.5">
+    <button className={`${base} ${tone}`} type="button" disabled={status === 'loading'} onClick={download}>
+      {status === 'loading' ? <LoaderCircle className="animate-spin" size={15}/> : <Icon size={15}/>}
+      {status === 'loading' ? 'Generating…' : status === 'done' ? 'Downloaded' : status === 'error' ? 'Try again' : format === 'mp4' ? 'Social MP4' : 'GIF'}
+    </button>
+    {message ? <span className="max-w-52 text-[10px] font-semibold leading-4 text-red-300">{message}</span> : null}
+  </div>
+}
 
 export function ContactRecapStudio() {
   const [date, setDate] = useState(todayEt)
@@ -30,8 +67,8 @@ export function ContactRecapStudio() {
 
     <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Games captured</span><strong className="mt-1 block text-2xl text-white">{data?.games.length ?? 0}</strong></div><div className="rounded-2xl border border-lime-400/15 bg-lime-400/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Home runs</span><strong className="mt-1 block text-2xl text-lime-300">{data?.homeRuns.length ?? 0}</strong></div><div className="rounded-2xl border border-orange-400/15 bg-orange-400/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Near home runs</span><strong className="mt-1 block text-2xl text-orange-300">{data?.nearHomeRuns.length ?? 0}</strong></div></div>
     {loading ? <div className="grid min-h-80 place-items-center rounded-3xl border border-zinc-800 bg-zinc-950"><LoaderCircle className="animate-spin text-lime-300" size={28}/></div> : error ? <div className="rounded-3xl border border-red-400/20 bg-red-400/5 p-6 text-sm text-red-300">{error}</div> : data ? <>
-      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Film size={18}/></span><div><h2 className="text-xl font-black text-white">Home Run Flight</h2><p className="text-xs text-zinc-500">Every confirmed homer with frozen pregame prices and qualifying power markets.</p></div><div className="ml-auto flex flex-wrap gap-2"><a className="inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black text-black shadow-[0_0_24px_rgba(163,255,63,.18)] transition hover:bg-lime-300" href={`/api/admin/contact-recap-export?date=${date}&kind=hr&format=mp4`} download><Video size={15}/> Social MP4</a><a className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-xs font-black text-zinc-200 transition hover:bg-white/[.08]" href={`/api/admin/contact-recap-export?date=${date}&kind=hr&format=gif`} download><ImageIcon size={15}/> GIF</a></div></div><ContactFlightStage events={data.homeRuns} title="Today's Home Runs" eyebrow="Game-by-game flight log" tone="home_run"/></section>
-      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-400/25 bg-orange-400/10 text-orange-300"><Target size={18}/></span><div><h2 className="text-xl font-black text-white">Near Home Run Flight</h2><p className="text-xs text-zinc-500">Would-have-left contacts with their actual single, double, or triple closing markets.</p></div><div className="ml-auto flex flex-wrap gap-2"><a className="inline-flex items-center gap-2 rounded-xl bg-orange-300 px-4 py-2.5 text-xs font-black text-black transition hover:bg-orange-200" href={`/api/admin/contact-recap-export?date=${date}&kind=near&format=mp4`} download><Video size={15}/> Social MP4</a><a className="inline-flex items-center gap-2 rounded-xl border border-orange-300/25 bg-orange-400/10 px-4 py-2.5 text-xs font-black text-orange-200 transition hover:bg-orange-400/15" href={`/api/admin/contact-recap-export?date=${date}&kind=near&format=gif`} download><Download size={15}/> GIF</a></div></div><ContactFlightStage events={data.nearHomeRuns} title="Today's Near Home Runs" eyebrow="Park-adjusted contact log" tone="near_hr"/></section>
+      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Film size={18}/></span><div><h2 className="text-xl font-black text-white">Home Run Flight</h2><p className="text-xs text-zinc-500">Every confirmed homer with frozen pregame prices and qualifying power markets.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="hr" format="mp4" primary/><ExportButton date={date} kind="hr" format="gif"/></div></div><ContactFlightStage events={data.homeRuns} title="Today's Home Runs" eyebrow="Game-by-game flight log" tone="home_run"/></section>
+      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-400/25 bg-orange-400/10 text-orange-300"><Target size={18}/></span><div><h2 className="text-xl font-black text-white">Near Home Run Flight</h2><p className="text-xs text-zinc-500">Would-have-left contacts with their actual single, double, or triple closing markets.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="near" format="mp4" primary/><ExportButton date={date} kind="near" format="gif"/></div></div><ContactFlightStage events={data.nearHomeRuns} title="Today's Near Home Runs" eyebrow="Park-adjusted contact log" tone="near_hr"/></section>
       <section className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[.035] p-4"><p className="flex items-center gap-2 text-xs font-black text-cyan-200"><Sparkles size={15}/> Data integrity</p><ul className="mt-2 space-y-1 text-[11px] leading-5 text-zinc-500">{data.dataNotes.map(note => <li key={note}>• {note}</li>)}</ul></section>
     </> : null}
   </div>

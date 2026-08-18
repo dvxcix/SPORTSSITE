@@ -1,8 +1,9 @@
 import { once } from 'node:events'
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
-import ffmpegPath from 'ffmpeg-static'
+import bundledFfmpegPath from 'ffmpeg-static'
 import sharp from 'sharp'
 import { MLB_PARK_SHAPES } from '@slipsurge/core/mlbParkShapes'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
@@ -16,6 +17,22 @@ const MOTION_FRAMES = 16
 const HOLD_FRAMES = 24
 
 export type ContactRecapExportFormat = 'mp4' | 'gif'
+
+function resolveFfmpegPath() {
+  const executable = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+  const candidates = [
+    join(process.cwd(), 'node_modules', 'ffmpeg-static', executable),
+    bundledFfmpegPath,
+    join('/var/task', 'node_modules', 'ffmpeg-static', executable),
+    join('/var/task/hub', 'node_modules', 'ffmpeg-static', executable),
+  ].filter((value): value is string => Boolean(value))
+  const resolved = candidates.find(candidate => existsSync(candidate))
+  if (!resolved) {
+    console.error('[contact-recap-export] ffmpeg binary missing', { cwd: process.cwd(), candidates })
+    throw new Error('The social video encoder is unavailable in this deployment.')
+  }
+  return resolved
+}
 
 const BOOK_ASSETS: Record<string, { path: string; mime: string }> = {
   fanduel: { path: 'sportsbooks/fanduel.ico', mime: 'image/x-icon' },
@@ -169,7 +186,7 @@ async function writeFrame(stream: NodeJS.WritableStream, frame: Buffer, copies =
 export async function renderContactRecap(events: DailyContactEvent[], format: ContactRecapExportFormat) {
   const selected = events.slice(0, 60)
   if (!selected.length) throw new Error('There are no captured events to export.')
-  if (!ffmpegPath) throw new Error('The social video encoder is unavailable.')
+  const ffmpegPath = resolveFfmpegPath()
   const args = ['-hide_banner', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(FPS), '-i', 'pipe:0', '-an']
   if (format === 'mp4') {
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-f', 'mp4', 'pipe:1')
@@ -177,6 +194,9 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
     args.push('-filter_complex', '[0:v]fps=12,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle', '-loop', '0', '-f', 'gif', 'pipe:1')
   }
   const encoder = spawn(ffmpegPath, args, { stdio: ['pipe', 'pipe', 'pipe'] })
+  const spawnFailure = new Promise<never>((_, reject) => {
+    encoder.once('error', error => reject(new Error(`Could not start the social video encoder: ${error.message}`)))
+  })
   const output: Buffer[] = []
   const errors: Buffer[] = []
   encoder.stdout.on('data', chunk => output.push(Buffer.from(chunk)))
@@ -199,7 +219,7 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
       if (finalFrame) await writeFrame(encoder.stdin, finalFrame, HOLD_FRAMES)
     }
     encoder.stdin.end()
-    const [exitCode] = await once(encoder, 'close') as [number]
+    const [exitCode] = await Promise.race([once(encoder, 'close'), spawnFailure]) as [number]
     if (exitCode !== 0) throw new Error(Buffer.concat(errors).toString('utf8') || `Video encoder exited with code ${exitCode}.`)
     return Buffer.concat(output)
   } catch (error) {
