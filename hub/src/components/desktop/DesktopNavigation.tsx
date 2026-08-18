@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
-  Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft,
+  Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft, Crosshair,
   ChevronRight, ShoppingBag, type LucideIcon,
 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
@@ -32,6 +32,7 @@ const intelligence: NavItem[] = [
   { href: '/weather-lab', label: 'Weather Lab', icon: CloudSun },
   { href: '/synergy', label: 'Synergy', icon: Link2 },
   { href: '/daily-recap', label: 'Daily Recap', icon: Flame },
+  { href: '/spray-charts', label: 'Spray Charts', icon: Crosshair, badge: 'ULT', ultimateOnly: true },
 ]
 
 const community: NavItem[] = [

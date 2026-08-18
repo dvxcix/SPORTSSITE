@@ -57,6 +57,7 @@ const nav: NavItem[] = [
   { href: '/odds-terminal', icon: ChartSpline, label: 'Odds Terminal', badge: 'ULT' },
   { href: '/synergy',     icon: Link2,         label: 'Synergy' },
   { href: '/daily-recap', icon: Flame,         label: 'Daily Recap' },
+  { href: '/spray-charts', icon: Crosshair,     label: 'Spray Charts', badge: 'ULT', ultimateOnly: true },
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
   null,
   { section: 'Connect' },

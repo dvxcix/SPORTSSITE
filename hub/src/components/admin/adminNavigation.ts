@@ -10,6 +10,7 @@ import {
   CreditCard,
   Dna,
   FileText,
+  Film,
   Flag,
   FlaskConical,
   Gauge,
@@ -90,6 +91,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: '/admin/market-dna', label: 'Market DNA', description: 'Historical player market-profile matching', icon: Dna, keywords: ['odds', 'fhr', 'home run', 'history', 'profiles'] },
       { href: '/admin/hr-intelligence', label: 'HR Intelligence', description: 'Role-aware pregame board analysis', icon: Crosshair, keywords: ['odds', 'fhr', 'home run', 'pairs'] },
       { href: '/admin/matrix-backtest', label: 'Matrix backtest', description: 'Historical Matrix validation', icon: FlaskConical, keywords: ['research', 'models'] },
+      { href: '/admin/contact-recap', label: 'Contact recap studio', description: 'Animated home run and near-home-run exports', icon: Film, keywords: ['spray', 'gif', 'daily recap', 'statcast'] },
     ],
   },
   {

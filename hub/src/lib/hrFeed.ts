@@ -15,6 +15,8 @@ export type HrFeedEvent = {
   exit_velocity: number | null
   launch_angle: number | null
   hit_distance: number | null
+  hc_x?: number | null
+  hc_y?: number | null
   hr_time: string | null
   rbi_on_play: number
   is_grand_slam: boolean
@@ -116,6 +118,8 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
             exit_velocity: hitEvent?.hitData?.launchSpeed ?? null,
             launch_angle: hitEvent?.hitData?.launchAngle ?? null,
             hit_distance: hitEvent?.hitData?.totalDistance ?? null,
+            hc_x: hitEvent?.hitData?.coordinates?.coordX ?? null,
+            hc_y: hitEvent?.hitData?.coordinates?.coordY ?? null,
             rbi_on_play: Number(p.result?.rbi ?? 0),
             is_grand_slam: Number(p.result?.rbi ?? 0) === 4,
             // Real wall-clock moment the HR happened — needed to sort
