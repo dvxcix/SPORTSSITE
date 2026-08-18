@@ -129,7 +129,7 @@ const getCachedPitchLog = unstable_cache(
       sprayRows: enrichedSprayRows,
     }
   },
-  ['player-pitch-log'],
+  ['player-pitch-log-v2'],
   { revalidate: 86400, tags: ['player-pitch-log'] }
 )
 

@@ -58,7 +58,8 @@ export function computeStatLine(rows: PitchLogRow[]) {
   // Savant's own bucket 6 = Barrel, straight off the raw payload — not a
   // reimplementation of their EV/LA formula, just reading the classification
   // they already computed on every in-play event.
-  const barrels = inPlay.filter(r => r.launch_speed_angle === 6)
+  const withBarrelClass = inPlay.filter((r): r is PitchLogRow & { launch_speed_angle: number } => r.launch_speed_angle != null)
+  const barrels = withBarrelClass.filter(r => r.launch_speed_angle === 6)
   const withXwoba = inPlay.filter((r): r is PitchLogRow & { xwoba: number } => r.xwoba != null)
   const outOfZone = rows.filter(r => r.zone != null && (r.zone as number) >= 11)
   const withBatSpeed = swings.filter((r): r is PitchLogRow & { bat_speed: number } => r.bat_speed != null)
@@ -101,7 +102,9 @@ export function computeStatLine(rows: PitchLogRow[]) {
     maxEv: withEv.length ? Math.max(...withEv.map(r => r.launch_speed)) : null,
     avgLa: withLa.length ? avg(withLa.map(r => r.launch_angle)) : null,
     hardHitPct: withEv.length ? (hardHit.length / withEv.length) * 100 : null,
-    barrelPct: inPlay.length ? (barrels.length / inPlay.length) * 100 : null,
+    // Do not turn missing Savant barrel classifications into a real 0%.
+    // The denominator is only batted balls with Savant's classification.
+    barrelPct: withBarrelClass.length ? (barrels.length / withBarrelClass.length) * 100 : null,
     // Statcast's own definition: batted balls hit at a launch angle between
     // 8-32° (the range that produces the best outcomes) as a share of every
     // batted ball with a measured launch angle — same withLa population

@@ -5,7 +5,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { Activity, BarChart3, Crosshair, Layers3, RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
-import { heat, SortableTH, type SortState, toggleSortState, cmpAny, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
+import { SortableTH, type SortState, toggleSortState, cmpAny, cmpNullsLast } from '@/components/pitcher-report/MatchupTables'
 import { HandBadge } from '@/components/players/PlayerPageClient'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { ZoneGrid, ChaseZoneStats, ZONE_METRICS, type ZoneMetricKey } from '@/components/players/ZoneGrid'
@@ -50,9 +50,39 @@ function sampleHeat(value: number | null, all: (number | null)[]): CSSProperties
   }
 }
 
+function signalHeat(value: number | null, all: (number | null)[], dir: 'hi' | 'lo'): CSSProperties {
+  if (value == null) return {}
+  const valid = all.filter((item): item is number => item != null && Number.isFinite(item))
+  if (valid.length < 3) return {}
+  const min = Math.min(...valid)
+  const max = Math.max(...valid)
+  if (max === min) return { background: 'rgba(57, 205, 255, 0.025)' }
+
+  let position = (value - min) / (max - min)
+  if (dir === 'lo') position = 1 - position
+
+  if (position > 0.66) {
+    const strength = (position - 0.66) / 0.34
+    return {
+      background: `rgba(180, 255, 77, ${(0.035 + strength * 0.145).toFixed(3)})`,
+      boxShadow: strength > 0.72 ? 'inset 0 0 0 1px rgba(180, 255, 77, 0.16)' : undefined,
+      color: strength > 0.82 ? 'var(--accent)' : 'var(--text-1)',
+    }
+  }
+  if (position < 0.33) {
+    const strength = (0.33 - position) / 0.33
+    return {
+      background: `rgba(255, 77, 106, ${(0.04 + strength * 0.16).toFixed(3)})`,
+      boxShadow: strength > 0.72 ? 'inset 0 0 0 1px rgba(255, 77, 106, 0.17)' : undefined,
+      color: 'var(--text-1)',
+    }
+  }
+  return { background: 'rgba(57, 205, 255, 0.025)' }
+}
+
 function relativeCellHeat(stats: StatLine, key: keyof StatLine, pool: (number | null)[], dir: 'hi' | 'lo'): CSSProperties {
   const value = heatValue(stats, key)
-  return VOLUME_KEYS.has(key) ? sampleHeat(value, pool) : heat(value, pool, dir)
+  return VOLUME_KEYS.has(key) ? sampleHeat(value, pool) : signalHeat(value, pool, dir)
 }
 
 function mixLabel(pitchTypes: Set<string>): string {
@@ -197,6 +227,10 @@ export function PitcherVsLineup({
     batterRows.filter(row => row.stats.pitches >= MIN_PITCHES_FOR_HEAT).map(row => heatValue(row.stats, column.key)),
   ])) as Record<string, (number | null)[]>
   const combinedBatterRows = batterRows.flatMap(row => row.filtered)
+  const selectedBatter = expandedBatterId == null
+    ? null
+    : batterRows.find(row => row.player.mlb_id === expandedBatterId) ?? null
+  const responseRows = selectedBatter?.filtered ?? combinedBatterRows
 
   const summary = [
     ['Pitches', String(pitcherStats.pitches), true],
@@ -276,7 +310,7 @@ export function PitcherVsLineup({
         </div>
 
         <div className={`${styles.subsectionHeader} ${styles.zoneHeader}`}>
-          <div><Crosshair size={15} /><span><strong>Zone matchup</strong><small>Pitcher command beside the current lineup&apos;s response.</small></span></div>
+          <div><Crosshair size={15} /><span><strong>Zone matchup</strong><small>{selectedBatter ? `${selectedBatter.player.name}'s response against this pitcher and active mix.` : `Pitcher command beside the full ${opposingTeamAbbr} lineup response. Select a batter below to isolate them.`}</small></span></div>
           <div className={styles.metricControl}>
             <span>Color by</span>
             {ZONE_METRICS.map(metric => <button key={metric.key} type="button" data-active={zoneMetric === metric.key} onClick={() => setZoneMetric(metric.key)}>{metric.label}</button>)}
@@ -284,12 +318,20 @@ export function PitcherVsLineup({
         </div>
         <div className={styles.zoneComparison}>
           <article className={styles.zoneCard} style={{ '--identity-color': pitcherTeamColor } as CSSProperties}>
-            <header><PlayerAvatar headshot={mlbHeadshot(pitcher.id)} teamLogo={getTeamLogoUrl(pitcherTeamAbbr)} teamAbbr={pitcherTeamAbbr} name={pitcher.name} size={34} /><span><small>PITCHER ZONE</small><strong>{pitcher.name}</strong></span></header>
+            <header><div className={styles.zoneIdentity}><PlayerAvatar headshot={mlbHeadshot(pitcher.id)} teamLogo={getTeamLogoUrl(pitcherTeamAbbr)} teamAbbr={pitcherTeamAbbr} name={pitcher.name} size={34} /><span><small>PITCHER ZONE</small><strong>{pitcher.name}</strong></span></div></header>
             <div className={styles.zoneContent}><ZoneGrid rows={pitcherWindowRows} metric={zoneMetric} dir={zoneMetricConfig.dir} cellSize={58} /><ChaseZoneStats rows={pitcherWindowRows} /></div>
           </article>
-          <article className={styles.zoneCard} style={{ '--identity-color': opponentColor } as CSSProperties}>
-            <header><TeamLogo logo={getTeamLogoUrl(opposingTeamAbbr)} name={opposingTeamName} size={34} /><span><small>LINEUP RESPONSE</small><strong>{opposingTeamAbbr} against this mix</strong></span></header>
-            <div className={styles.zoneContent}><ZoneGrid rows={combinedBatterRows} metric={zoneMetric} dir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'} cellSize={58} /><ChaseZoneStats rows={combinedBatterRows} /></div>
+          <article className={styles.zoneCard} data-focused={Boolean(selectedBatter)} style={{ '--identity-color': opponentColor } as CSSProperties}>
+            <header>
+              <div className={styles.zoneIdentity}>
+                {selectedBatter
+                  ? <PlayerAvatar headshot={mlbHeadshot(selectedBatter.player.mlb_id)} teamLogo={getTeamLogoUrl(selectedBatter.player.team)} teamAbbr={selectedBatter.player.team} name={selectedBatter.player.name} size={34} />
+                  : <TeamLogo logo={getTeamLogoUrl(opposingTeamAbbr)} name={opposingTeamName} size={34} />}
+                <span><small>{selectedBatter ? 'BATTER RESPONSE' : 'LINEUP RESPONSE'}</small><strong>{selectedBatter ? `${selectedBatter.player.name} vs ${pitcher.name}` : `${opposingTeamAbbr} vs ${pitcher.name}`}</strong></span>
+              </div>
+              {selectedBatter && <button className={styles.zoneReset} type="button" onClick={() => setExpandedBatterId(null)}><RotateCcw size={12} /> Team view</button>}
+            </header>
+            <div className={styles.zoneContent}><ZoneGrid rows={responseRows} metric={zoneMetric} dir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'} cellSize={58} /><ChaseZoneStats rows={responseRows} /></div>
           </article>
         </div>
       </section>
@@ -314,7 +356,7 @@ export function PitcherVsLineup({
         </div>
         <div className={styles.heatLegend}>
           <b>Lineup heat</b><span><i data-tone="strong" />Advantage</span><span><i data-tone="neutral" />Even</span><span><i data-tone="weak" />Concern</span>
-          <small>Every cell is relative to the other batters in this selected matchup and sample.</small>
+          <small>Select a batter row to compare that player against the pitcher above. Every cell is relative to this lineup and sample.</small>
         </div>
         <div className={styles.dataTableShell}>
           <table className={`${styles.dataTable} ${styles.batterTable}`}>
