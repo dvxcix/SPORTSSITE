@@ -13,7 +13,12 @@ export function withPipelineHealth(jobName: string, handler: RouteHandler, optio
     const runId = randomUUID()
     const startedAt = Date.now()
     const startedIso = new Date(startedAt).toISOString()
-    const details = { path: new URL(request.url).pathname }
+    const details = {
+      path: new URL(request.url).pathname,
+      trigger: request.headers.get('x-slipsurge-trigger') ?? 'scheduled',
+      deployment_id: process.env.VERCEL_DEPLOYMENT_ID ?? null,
+      git_sha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? null,
+    }
 
     // A serverless timeout terminates the process before the catch block can
     // close its ledger row. Expire abandoned runs when the next invocation

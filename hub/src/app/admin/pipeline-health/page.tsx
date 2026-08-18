@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/purity -- This dynamic server page intentionally calculates request-time pipeline freshness. */
 import Link from 'next/link'
-import { Activity, AlertTriangle, Bell, CheckCircle2, Clock3, Download, Gauge, Webhook, XCircle, type LucideIcon } from 'lucide-react'
+import { Activity, AlertTriangle, Bell, CheckCircle2, Clock3, Download, Gauge, RotateCcw, Webhook, XCircle, type LucideIcon } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
+import { PipelineRetryButton } from './PipelineRetryButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ type Run = {
   duration_ms: number | null
   http_status: number | null
   error: string | null
+  details: { deployment_id?: string | null; git_sha?: string | null; trigger?: string | null } | null
 }
 
 type DataEvidence = {
@@ -55,6 +57,14 @@ function durationLabel(ms: number | null) {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`
 }
 
+function nextRunLabel(schedule: string) {
+  const match = schedule.match(/Every (\d+) minutes?/i)
+  if (match) return `within ${match[1]}m`
+  if (/Every minute/i.test(schedule)) return 'within 1m'
+  if (/Daily/i.test(schedule)) return 'next daily window'
+  return 'event-driven'
+}
+
 export default async function PipelineHealthPage() {
   const admin = createAdminClient()
   const sinceYesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -76,9 +86,13 @@ export default async function PipelineHealthPage() {
     { count: pendingCreatorApplications },
     { count: openExports },
     { count: failedExports },
+    { count: activeRecapExports },
+    { count: failedRecapExports },
+    { count: pendingOperationalRetries },
+    { count: failedOperationalRetries },
   ] = await Promise.all([
-    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').order('started_at', { ascending: false }).limit(250),
-    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error').in('job_name', lowerFrequencyPipelineNames).order('started_at', { ascending: false }).limit(2_000),
+    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error,details').order('started_at', { ascending: false }).limit(250),
+    admin.from('pipeline_runs').select('id,job_name,status,started_at,finished_at,duration_ms,http_status,error,details').in('job_name', lowerFrequencyPipelineNames).order('started_at', { ascending: false }).limit(2_000),
     admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
     admin.from('provider_webhook_events').select('id', { count: 'exact', head: true }).eq('status', 'processing').lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString()),
     admin.from('notification_delivery_attempts').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('attempted_at', sinceYesterday),
@@ -86,6 +100,10 @@ export default async function PipelineHealthPage() {
     admin.from('creator_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     admin.from('data_export_requests').select('id', { count: 'exact', head: true }).in('status', ['queued', 'processing', 'ready']),
     admin.from('data_export_requests').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+    admin.from('contact_recap_export_jobs').select('id', { count: 'exact', head: true }).in('status', ['queued', 'running', 'retrying']),
+    admin.from('contact_recap_export_jobs').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+    admin.from('operational_retry_queue').select('id', { count: 'exact', head: true }).in('status', ['pending', 'processing']),
+    admin.from('operational_retry_queue').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
   ])
   const runs = [...((data ?? []) as Run[]), ...((lowerFrequencyData ?? []) as Run[])]
   const latest = new Map<string, Run>()
@@ -173,7 +191,7 @@ export default async function PipelineHealthPage() {
           <h1 className="text-2xl font-black text-white">Pipeline health</h1>
           <p className="mt-1 text-sm text-zinc-400">Live execution status for production-critical data, alerts and billing jobs.</p>
         </div>
-        <p className="text-xs text-zinc-500">Refreshes with the page</p>
+        <p className="text-right text-xs text-zinc-500">Release <span className="font-mono text-zinc-300">{process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ?? 'local'}</span><br/>Refreshes with the page</p>
       </div>
 
       {error && <div className="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"><XCircle size={16} /> Health data could not be loaded.</div>}
@@ -191,9 +209,14 @@ export default async function PipelineHealthPage() {
         <QueueCard icon={Download} label="Data exports" value={(openExports ?? 0) + (failedExports ?? 0)} detail={`${openExports ?? 0} open · ${failedExports ?? 0} failed`} tone={(failedExports ?? 0) > 0 ? 'danger' : 'neutral'} />
       </section>
 
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        <QueueCard icon={RotateCcw} label="Delivery replay queue" value={(pendingOperationalRetries ?? 0) + (failedOperationalRetries ?? 0)} detail={`${pendingOperationalRetries ?? 0} retrying · ${failedOperationalRetries ?? 0} exhausted`} tone={(failedOperationalRetries ?? 0) > 0 ? 'danger' : (pendingOperationalRetries ?? 0) > 0 ? 'warning' : 'success'}/>
+        <QueueCard icon={Download} label="Contact recap exports" value={(activeRecapExports ?? 0) + (failedRecapExports ?? 0)} detail={`${activeRecapExports ?? 0} active · ${failedRecapExports ?? 0} failed`} href="/admin/contact-recap" tone={(failedRecapExports ?? 0) > 0 ? 'danger' : (activeRecapExports ?? 0) > 0 ? 'warning' : 'success'}/>
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60">
-        <div className="grid grid-cols-[minmax(220px,1fr)_120px_130px_100px] gap-4 border-b border-zinc-800 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-          <span>Pipeline</span><span>Status</span><span>Last signal</span><span>Duration</span>
+        <div className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-zinc-800 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          <span>Pipeline</span><span>Status</span><span>Last signal</span><span>Next run</span><span>Action</span>
         </div>
         {rows.map(({ pipeline, run, evidence, state }) => {
           const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
@@ -202,11 +225,12 @@ export default async function PipelineHealthPage() {
           const signalAt = state === 'verified' ? evidence?.observedAt : run?.started_at ?? evidence?.observedAt
           const ageMinutes = run?.started_at ? Math.max(1, (Date.now() - new Date(run.started_at).getTime()) / 60_000) : 0
           return (
-            <div key={pipeline.name} className="grid grid-cols-[minmax(220px,1fr)_120px_130px_100px] gap-4 border-b border-zinc-800/70 px-5 py-4 text-sm last:border-0">
+            <div key={pipeline.name} className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-zinc-800/70 px-5 py-4 text-sm last:border-0">
               <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className="mt-1 truncate text-xs text-red-300" title={run.error}>{run.error}</div>}</div>
               <div className={`flex items-center gap-1.5 ${tone}`} title={state === 'verified' ? `Verified from ${evidence?.detail}` : undefined}><Icon size={14} />{statusLabel}</div>
               <div className="text-zinc-300">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
-              <div className="text-zinc-400">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms) : '—'}</div>
+              <div className="text-xs text-zinc-400"><span className="block">{nextRunLabel(pipeline.schedule)}</span><span className="text-zinc-600">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms) : 'No duration'}</span></div>
+              <PipelineRetryButton jobName={pipeline.name}/>
             </div>
           )
         })}

@@ -64,7 +64,7 @@ async function fetchWhopPage(url: string, apiKey: string): Promise<Response> {
   throw lastError instanceof Error ? lastError : new Error('Whop request failed')
 }
 
-export async function fetchAllWhopMemberships(apiKey: string, planId: string): Promise<{ memberships: WhopMembershipRecord[] } | { error: string }> {
+export async function fetchAllWhopMemberships(apiKey: string, planId: string): Promise<{ memberships: WhopMembershipRecord[]; pagesFetched: number } | { error: string }> {
   const candidates = [
     `https://api.whop.com/api/v2/memberships?plan_id=${planId}`,
     `https://api.whop.com/api/v2/memberships?plan=${planId}`,
@@ -95,25 +95,36 @@ export async function fetchAllWhopMemberships(apiKey: string, planId: string): P
   }
 
   const memberships = [...firstPage.memberships]
-  const totalPages = firstPage.totalPages
+  let totalPages = firstPage.totalPages
+  let pagesFetched = 1
 
-  const pageRequests: Promise<WhopMembershipRecord[]>[] = []
+  // Keep the read fail-closed, but fetch pages independently. A single slow
+  // page now gets its own retry budget and a useful page number in telemetry
+  // instead of cancelling every other in-flight request in Promise.all().
   for (let page = 2; page <= totalPages; page++) {
     const pageUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page}`
-    pageRequests.push((async () => {
+    try {
       const res = await fetchWhopPage(pageUrl, apiKey)
-      if (!res.ok) throw new Error(`${pageUrl} -> HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const pageBody = parseMembershipPage(await res.json().catch(() => null))
-      if (!pageBody) throw new Error(`${pageUrl} returned invalid JSON`)
-      return pageBody.memberships
-    })())
-  }
-  try {
-    for (const pageMemberships of await Promise.all(pageRequests)) memberships.push(...pageMemberships)
-  } catch (error) {
-    console.error('[whop-memberships] pagination failed', { type: error instanceof Error ? error.name : typeof error })
-    return { error: 'Whop memberships pagination failed' }
+      if (!pageBody) throw new Error('Invalid JSON')
+      memberships.push(...pageBody.memberships)
+      pagesFetched += 1
+      // Whop can add a page during a reconciliation. Honor a larger total
+      // reported by later responses without ever accepting a partial list.
+      totalPages = Math.max(totalPages, pageBody.totalPages)
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown failure'
+      console.error('[whop-memberships] pagination failed', { page, totalPages, reason })
+      return { error: `Whop memberships page ${page} of ${totalPages} failed after ${MAX_ATTEMPTS} attempts` }
+    }
   }
 
-  return { memberships }
+  const deduped = new Map<string, WhopMembershipRecord>()
+  for (const membership of memberships) {
+    const key = membership.id
+      ?? `${membership.metadata?.internal_user_id ?? 'unknown'}:${membership.renewal_period_end ?? membership.period_end ?? membership.expires_at ?? 'open'}:${membership.status ?? membership.valid_status ?? membership.valid ?? 'unknown'}`
+    deduped.set(key, membership)
+  }
+  return { memberships: [...deduped.values()], pagesFetched }
 }

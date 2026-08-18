@@ -26,6 +26,20 @@ async function run(req: Request) {
   const absoluteCutoff = new Date(now - 180 * 24 * 60 * 60 * 1000).toISOString()
   const telemetryCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
   const webhookCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const retryCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: expiredExports, error: expiredExportReadError } = await admin
+    .from('contact_recap_export_jobs')
+    .select('id,storage_path')
+    .eq('status', 'completed')
+    .lt('expires_at', new Date(now).toISOString())
+    .limit(500)
+  if (expiredExportReadError) return safeApiError('prune-notifications', expiredExportReadError)
+  const exportPaths = (expiredExports ?? []).map(row => row.storage_path).filter((value): value is string => Boolean(value))
+  if (exportPaths.length) {
+    const { error: storageError } = await admin.storage.from('contact-recap-exports').remove(exportPaths)
+    if (storageError) return safeApiError('prune-notifications', storageError)
+  }
 
   const results = await Promise.all([
     admin.from('notifications').delete({ count: 'exact' }).eq('type', 'lineup_confirmed').lt('created_at', lineupCutoff),
@@ -34,6 +48,10 @@ async function run(req: Request) {
     admin.from('notification_delivery_attempts').delete({ count: 'exact' }).lt('attempted_at', telemetryCutoff),
     admin.from('pipeline_runs').delete({ count: 'exact' }).lt('started_at', telemetryCutoff),
     admin.from('provider_webhook_events').delete({ count: 'exact' }).lt('received_at', webhookCutoff),
+    expiredExports?.length
+      ? admin.from('contact_recap_export_jobs').update({ status: 'expired', storage_path: null, updated_at: new Date(now).toISOString() }).in('id', expiredExports.map(row => row.id))
+      : Promise.resolve({ error: null, count: 0 }),
+    admin.from('operational_retry_queue').delete({ count: 'exact' }).in('status', ['succeeded', 'failed']).lt('updated_at', retryCutoff),
   ])
   const failure = results.find(result => result.error)
   if (failure?.error) return safeApiError('prune-notifications', failure.error)
@@ -47,8 +65,10 @@ async function run(req: Request) {
       deliveryAttempts: results[3].count ?? 0,
       pipelineRuns: results[4].count ?? 0,
       webhookReceipts: results[5].count ?? 0,
+      expiredRecapExports: expiredExports?.length ?? 0,
+      operationalRetries: results[7].count ?? 0,
     },
-    cutoffs: { lineupCutoff, readCutoff, absoluteCutoff, telemetryCutoff, webhookCutoff },
+    cutoffs: { lineupCutoff, readCutoff, absoluteCutoff, telemetryCutoff, webhookCutoff, retryCutoff },
   })
 }
 

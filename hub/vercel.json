@@ -175,6 +175,14 @@
     {
       "path": "/api/cron/whop-reconcile",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/replay-operational-retries",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/process-contact-recap-exports",
+      "schedule": "* * * * *"
     }
   ]
 }

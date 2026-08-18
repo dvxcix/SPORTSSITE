@@ -1,12 +1,28 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarDays, Check, Clapperboard, Copy, Film, ImageIcon, LoaderCircle, Monitor, Smartphone, Sparkles, Square, Target, Video } from 'lucide-react'
+import { CalendarDays, Check, Clapperboard, Copy, Download, Film, ImageIcon, LoaderCircle, Monitor, RotateCcw, Smartphone, Sparkles, Square, Target, Trash2, Video } from 'lucide-react'
 import { ContactFlightStage } from '@/components/contact/ContactFlightStage'
 import type { DailyContactSlate } from '@/lib/contactRecapTypes'
 
 const todayEt = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 type ExportAspect = 'landscape' | 'square' | 'vertical'
+type ExportJob = {
+  id: string
+  recap_date: string
+  kind: 'hr' | 'near'
+  format: 'mp4' | 'gif'
+  aspect: ExportAspect
+  status: 'queued' | 'running' | 'retrying' | 'completed' | 'failed' | 'expired'
+  progress: number
+  stage: string
+  filename: string | null
+  byte_size: number | null
+  attempt_count: number
+  error: string | null
+  created_at: string
+  expires_at: string
+}
 
 function ExportButton({ date, kind, format, aspect, primary = false, activeExport, setActiveExport }: {
   date: string
@@ -26,19 +42,18 @@ function ExportButton({ date, kind, format, aspect, primary = false, activeExpor
     if (activeExport) return
     setActiveExport(exportKey); setStatus('loading'); setMessage('')
     try {
-      const response = await fetch(`/api/admin/contact-recap-export?date=${date}&kind=${kind}&format=${format}&aspect=${aspect}`)
+      const response = await fetch('/api/admin/contact-recap-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, kind, format, aspect }),
+      })
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { error?: string } | null
-        throw new Error(body?.error || `Export failed with status ${response.status}.`)
+        throw new Error(body?.error || `Could not queue export (${response.status}).`)
       }
-      const blob = await response.blob()
-      const disposition = response.headers.get('content-disposition') ?? ''
-      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `slipsurge-${date}-${kind}-${aspect}.${format}`
-      const objectUrl = URL.createObjectURL(blob)
-      const anchor = document.createElement('a')
-      anchor.href = objectUrl; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove()
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000)
       setStatus('done')
+      setMessage('Queued. You can leave this page while it renders.')
+      window.dispatchEvent(new Event('slipsurge:export-queued'))
     } catch (reason) {
       setStatus('error'); setMessage(reason instanceof Error ? reason.message : 'Could not create this export.')
     } finally {
@@ -52,10 +67,35 @@ function ExportButton({ date, kind, format, aspect, primary = false, activeExpor
   return <div className="flex flex-col items-stretch gap-1.5">
     <button className={`${base} ${tone}`} type="button" disabled={Boolean(activeExport)} onClick={download}>
       {isGenerating ? <LoaderCircle className="animate-spin" size={15}/> : <Icon size={15}/>}
-      {isGenerating ? `Generating ${format.toUpperCase()}…` : status === 'done' ? 'Downloaded' : status === 'error' ? 'Try again' : format === 'mp4' ? 'Social MP4' : 'GIF'}
+      {isGenerating ? `Queueing ${format.toUpperCase()}…` : status === 'done' ? 'Queued' : status === 'error' ? 'Try again' : format === 'mp4' ? 'Social MP4' : 'GIF'}
     </button>
     {message ? <span className="max-w-52 text-[10px] font-semibold leading-4 text-red-300">{message}</span> : null}
   </div>
+}
+
+function ExportQueue({ jobs, refresh }: { jobs: ExportJob[]; refresh: () => void }) {
+  if (!jobs.length) return null
+  const act = async (job: ExportJob, action: 'download' | 'retry' | 'delete') => {
+    if (action === 'download') {
+      const response = await fetch(`/api/admin/contact-recap-jobs/${job.id}`, { cache: 'no-store' })
+      const body = await response.json() as { downloadUrl?: string }
+      if (body.downloadUrl) window.location.assign(body.downloadUrl)
+      return
+    }
+    await fetch(`/api/admin/contact-recap-jobs/${job.id}`, { method: action === 'delete' ? 'DELETE' : 'POST' })
+    refresh()
+  }
+  return <section className="rounded-3xl border border-white/10 bg-zinc-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="text-sm font-black text-white">Export queue</h2><p className="mt-1 text-[11px] text-zinc-500">Renders continue after refreshes and deployments. Downloads remain private for seven days.</p></div><button type="button" onClick={refresh} className="rounded-xl border border-white/10 p-2 text-zinc-400 hover:text-white" aria-label="Refresh export queue"><RotateCcw size={15}/></button></div>
+    <div className="space-y-2">{jobs.slice(0, 8).map(job => {
+      const active = job.status === 'queued' || job.status === 'running' || job.status === 'retrying'
+      return <article key={job.id} className="grid gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3 sm:grid-cols-[minmax(0,1fr)_130px_auto] sm:items-center">
+        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="text-xs text-white">{job.kind === 'hr' ? 'Home Run Flight' : 'Near Home Run Flight'}</strong><span className="rounded-md bg-white/[.06] px-2 py-1 font-mono text-[9px] font-black uppercase text-zinc-400">{job.format} · {job.aspect}</span><span className={`text-[10px] font-black uppercase ${job.status === 'completed' ? 'text-lime-300' : job.status === 'failed' ? 'text-red-300' : 'text-cyan-300'}`}>{job.status}</span></div><p className="mt-1 truncate text-[11px] text-zinc-500">{job.recap_date} · {job.error || job.stage}</p></div>
+        <div><div className="mb-1 flex justify-between text-[9px] font-bold text-zinc-500"><span className="truncate">{job.stage}</span><span>{job.progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/[.06]"><div className={`h-full rounded-full transition-all ${job.status === 'failed' ? 'bg-red-400' : 'bg-lime-300'}`} style={{ width: `${job.progress}%` }}/></div></div>
+        <div className="flex justify-end gap-2">{job.status === 'completed' ? <button type="button" onClick={() => void act(job, 'download')} className="inline-flex items-center gap-1.5 rounded-xl bg-lime-300 px-3 py-2 text-[10px] font-black text-black"><Download size={13}/> Download</button> : null}{job.status === 'failed' ? <button type="button" onClick={() => void act(job, 'retry')} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/25 px-3 py-2 text-[10px] font-black text-amber-200"><RotateCcw size={13}/> Retry</button> : null}{!active ? <button type="button" onClick={() => void act(job, 'delete')} className="rounded-xl border border-white/10 p-2 text-zinc-500 hover:text-red-300" aria-label="Delete export"><Trash2 size={13}/></button> : null}</div>
+      </article>
+    })}</div>
+  </section>
 }
 
 function CaptionButton({ date, kind, data }: { date: string; kind: 'hr' | 'near'; data: DailyContactSlate }) {
@@ -94,6 +134,21 @@ export function ContactRecapStudio() {
   const [error, setError] = useState('')
   const [activeExport, setActiveExport] = useState<string | null>(null)
   const [aspect, setAspect] = useState<ExportAspect>('landscape')
+  const [jobs, setJobs] = useState<ExportJob[]>([])
+  const loadJobs = () => fetch('/api/admin/contact-recap-jobs', { cache: 'no-store' })
+    .then(response => response.ok ? response.json() : { jobs: [] })
+    .then(body => setJobs(body.jobs ?? []))
+  useEffect(() => {
+    const refresh = () => void loadJobs()
+    refresh()
+    window.addEventListener('slipsurge:export-queued', refresh)
+    return () => window.removeEventListener('slipsurge:export-queued', refresh)
+  }, [])
+  useEffect(() => {
+    if (!jobs.some(job => job.status === 'queued' || job.status === 'running' || job.status === 'retrying')) return
+    const timer = window.setTimeout(() => void loadJobs(), 2500)
+    return () => window.clearTimeout(timer)
+  }, [jobs])
   useEffect(() => {
     const controller = new AbortController()
     fetch(`/api/admin/contact-recap?date=${date}`, { signal: controller.signal })
@@ -111,6 +166,7 @@ export function ContactRecapStudio() {
     </section>
 
     <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Games captured</span><strong className="mt-1 block text-2xl text-white">{data?.games.length ?? 0}</strong></div><div className="rounded-2xl border border-lime-400/15 bg-lime-400/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Home runs</span><strong className="mt-1 block text-2xl text-lime-300">{data?.homeRuns.length ?? 0}</strong></div><div className="rounded-2xl border border-orange-400/15 bg-orange-400/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Near home runs</span><strong className="mt-1 block text-2xl text-orange-300">{data?.nearHomeRuns.length ?? 0}</strong></div></div>
+    <ExportQueue jobs={jobs} refresh={() => void loadJobs()}/>
     {loading ? <div className="grid min-h-80 place-items-center rounded-3xl border border-zinc-800 bg-zinc-950"><LoaderCircle className="animate-spin text-lime-300" size={28}/></div> : error ? <div className="rounded-3xl border border-red-400/20 bg-red-400/5 p-6 text-sm text-red-300">{error}</div> : data ? <>
       <section className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.015))] p-4 shadow-[inset_0_1px_rgba(255,255,255,.06)] lg:flex-row lg:items-center lg:justify-between">
         <div><p className="text-xs font-black text-white">Social canvas</p><p className="mt-1 text-[11px] leading-5 text-zinc-500">Choose the destination first. Every layout keeps the park, player, result, and market receipt readable.</p></div>

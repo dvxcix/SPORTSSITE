@@ -92,6 +92,24 @@ const nextConfig: NextConfig = {
       './public/logo.png',
       './public/sportsbooks/**/*',
     ],
+    '/api/admin/contact-recap-jobs': [
+      './node_modules/ffmpeg-static/**/*',
+      './node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf',
+      './public/logo.png',
+      './public/sportsbooks/**/*',
+    ],
+    '/api/admin/contact-recap-jobs/[id]': [
+      './node_modules/ffmpeg-static/**/*',
+      './node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf',
+      './public/logo.png',
+      './public/sportsbooks/**/*',
+    ],
+    '/api/cron/process-contact-recap-exports': [
+      './node_modules/ffmpeg-static/**/*',
+      './node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf',
+      './public/logo.png',
+      './public/sportsbooks/**/*',
+    ],
   },
 };
 

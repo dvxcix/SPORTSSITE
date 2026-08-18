@@ -227,8 +227,10 @@ test('billing reconciliation is bounded and avoids unchanged side effects', asyn
   const main = await read('src/lib/whopMainReconcile.ts')
   const addon = await read('src/lib/whopAddonReconcile.ts')
   assert.ok(fetcher.includes('AbortSignal.timeout(REQUEST_TIMEOUT_MS)'))
-  assert.ok(fetcher.includes('await Promise.all(pageRequests)'))
-  assert.ok(fetcher.includes('Whop memberships pagination failed'))
+  assert.ok(fetcher.includes('for (let page = 2; page <= totalPages; page++)'))
+  assert.ok(fetcher.includes('failed after ${MAX_ATTEMPTS} attempts'))
+  assert.ok(fetcher.includes('totalPages = Math.max(totalPages, pageBody.totalPages)'))
+  assert.ok(fetcher.includes('const deduped = new Map'))
   assert.ok(main.includes('if (unchanged) continue'))
   assert.ok(main.includes('if (accessChanged)'))
   assert.ok(main.includes('stopped before writes'))
@@ -470,6 +472,24 @@ test('site switches share contained geometry and accessible labels', async () =>
     assert.ok(!source.includes('translate-x-5'), `${file} retains fragile toggle geometry`)
     assert.ok(!source.includes("translateX(18px)"), `${file} retains an ad-hoc toggle`)
   }
+})
+
+test('contact recap exports are durable without a vulnerable workflow runtime', async () => {
+  const packageJson = await read('package.json')
+  const queue = await read('src/lib/contactRecapExportQueue.ts')
+  const createRoute = await read('src/app/api/admin/contact-recap-jobs/route.ts')
+  const replayRoute = await read('src/app/api/admin/contact-recap-jobs/[id]/route.ts')
+  const cronRoute = await read('src/app/api/cron/process-contact-recap-exports/route.ts')
+  const vercel = await read('vercel.json')
+  assert.ok(!packageJson.includes('"@workflow/'))
+  assert.ok(!packageJson.includes('"workflow"'))
+  assert.ok(queue.includes(".in('status', ['queued', 'retrying'])"))
+  assert.ok(queue.includes('attempt >= MAX_ATTEMPTS'))
+  assert.ok(queue.includes('Recovered after an interrupted render'))
+  assert.ok(createRoute.includes('after(async () =>'))
+  assert.ok(replayRoute.includes('after(async () =>'))
+  assert.ok(cronRoute.includes("withPipelineHealth('process-contact-recap-exports'"))
+  assert.ok(vercel.includes('/api/cron/process-contact-recap-exports'))
 })
 
 test('release workflow validates before publishing', async () => {

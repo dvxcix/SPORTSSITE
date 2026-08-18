@@ -4,6 +4,7 @@ import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import type { DiscordConfig } from '@/lib/supabase/types'
 import { safeErrorMetadata } from '@/lib/safeApiError'
+import { enqueueOperationalRetry } from '@/lib/operationalRetry'
 
 const API = 'https://discord.com/api/v10'
 
@@ -20,14 +21,19 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   // 429) — retry once after the server-specified cooldown instead of just
   // logging and dropping the call.
   for (let attempt = 0; attempt < 4; attempt++) {
-    res = await fetch(`${API}${path}`, { ...init, headers, signal: AbortSignal.timeout(12_000) })
-    if (res.status !== 429 && res.status < 500) return res
-    if (attempt === 3) break
-    const body = res.status === 429 ? await res.clone().json().catch(() => null) : null
-    const retryAfterMs = res.status === 429
-      ? Math.min(Number(body?.retry_after) || 1, 15) * 1000 + 100
-      : Math.min(500 * 2 ** attempt, 4_000)
-    await new Promise(r => setTimeout(r, retryAfterMs))
+    try {
+      res = await fetch(`${API}${path}`, { ...init, headers, signal: AbortSignal.timeout(12_000) })
+      if (res.status !== 429 && res.status < 500) return res
+      if (attempt === 3) break
+      const body = res.status === 429 ? await res.clone().json().catch(() => null) : null
+      const retryAfterMs = res.status === 429
+        ? Math.min(Number(body?.retry_after) || 1, 15) * 1000 + 100
+        : Math.min(500 * 2 ** attempt, 4_000)
+      await new Promise(r => setTimeout(r, retryAfterMs))
+    } catch (error) {
+      if (attempt === 3) throw error
+      await new Promise(r => setTimeout(r, Math.min(500 * 2 ** attempt, 4_000)))
+    }
   }
   return res as Response
 }
@@ -49,9 +55,13 @@ export async function postToChannel(channelId: string | null | undefined, payloa
   if (!channelId) return
   try {
     const res = await discordFetch(`/channels/${channelId}/messages`, { method: 'POST', body: JSON.stringify(payload) })
-    if (!res.ok) console.error('[discord] postToChannel failed', { status: res.status })
+    if (!res.ok) {
+      console.error('[discord] postToChannel failed', { status: res.status })
+      await enqueueOperationalRetry({ provider: 'discord', operation: 'post_channel_message', payload: { channelId, payload }, error: `Discord returned ${res.status}`, responseStatus: res.status })
+    }
   } catch (e) {
     console.error('[discord] postToChannel error', safeErrorMetadata(e))
+    await enqueueOperationalRetry({ provider: 'discord', operation: 'post_channel_message', payload: { channelId, payload }, error: e instanceof Error ? e.message : 'Discord request failed' })
   }
 }
 

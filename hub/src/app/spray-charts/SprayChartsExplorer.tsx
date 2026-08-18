@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
-import { CalendarDays, Crosshair, Flame, Layers3, LoaderCircle, RotateCcw, Sparkles, Target } from 'lucide-react'
+import { CalendarDays, Check, Crosshair, Download, Flame, Layers3, Link2, LoaderCircle, RotateCcw, Share2, Sparkles, Target } from 'lucide-react'
 import { ContactFlightStage } from '@/components/contact/ContactFlightStage'
 import { ParkFieldSvg } from '@/components/sports/ParkFieldSvg'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
@@ -16,6 +16,8 @@ type ChartView = 'points' | 'heat'
 const resultLabels: Record<ResultFilter, string> = {
   all: 'All contact', home_run: 'Home runs', near_hr: 'Near HR', single: 'Singles', double: 'Doubles', triple: 'Triples', out: 'Outs', other: 'Other BIP',
 }
+const todayEt = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+const isFinalStatus = (status: string) => /final|completed|game over/i.test(status)
 
 function resultColor(kind: ContactKind) {
   if (kind === 'home_run') return '#a3ff3f'
@@ -40,17 +42,26 @@ function fmt(value: number | null, suffix = '') {
   return value == null ? 'Not tracked' : `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`
 }
 
-export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
+export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPlayers = [], initialResult = 'all', initialView = 'points' }: {
+  initialDate: string
+  initialGamePk?: number
+  initialPlayers?: number[]
+  initialResult?: ResultFilter
+  initialView?: ChartView
+}) {
   const [date, setDate] = useState(initialDate)
   const [data, setData] = useState<DailyContactSlate | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [gamePk, setGamePk] = useState(0)
-  const [allPlayers, setAllPlayers] = useState(true)
-  const [playerIds, setPlayerIds] = useState<number[]>([])
-  const [result, setResult] = useState<ResultFilter>('all')
-  const [view, setView] = useState<ChartView>('points')
+  const [gamePk, setGamePk] = useState(initialGamePk)
+  const [allPlayers, setAllPlayers] = useState(initialPlayers.length === 0)
+  const [playerIds, setPlayerIds] = useState<number[]>(initialPlayers)
+  const [result, setResult] = useState<ResultFilter>(initialResult)
+  const [view, setView] = useState<ChartView>(initialView)
   const [selectedId, setSelectedId] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [lastUpdatedAt, setLastUpdatedAt] = useState('')
+  const parkStageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -66,20 +77,44 @@ export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
       })
       .then(payload => {
         setData(payload)
+        setLastUpdatedAt(new Date().toISOString())
         setGamePk(current => {
           if (current && payload.games.some(game => game.gamePk === current)) return current
           const firstWithContact = payload.games.find(game => payload.contacts.some(event => event.gamePk === game.gamePk))
           return firstWithContact?.gamePk ?? payload.games[0]?.gamePk ?? 0
         })
-        if (!background) { setAllPlayers(true); setPlayerIds([]); setSelectedId('') }
+        if (!background && !initialGamePk && !initialPlayers.length) { setAllPlayers(true); setPlayerIds([]); setSelectedId('') }
+        return payload
       })
       .catch(fetchError => { if (fetchError.name !== 'AbortError' && !background) setError(fetchError.message) })
       .finally(() => { if (!controller.signal.aborted && !background) setLoading(false) })
-    void load().then(() => {
-      if (!controller.signal.aborted) timer = window.setInterval(() => { void load(true) }, 30_000)
-    })
-    return () => { controller.abort(); if (timer) window.clearInterval(timer) }
-  }, [date])
+    const scheduleRefresh = () => {
+      if (controller.signal.aborted || date !== todayEt() || document.visibilityState !== 'visible') return
+      timer = window.setTimeout(async () => {
+        const payload = await load(true).catch(() => null)
+        if (!controller.signal.aborted && payload && payload.games.some(game => !isFinalStatus(game.status))) scheduleRefresh()
+      }, 30_000)
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && date === todayEt()) {
+        if (timer) window.clearTimeout(timer)
+        void load(true).then(scheduleRefresh)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    void load().then(scheduleRefresh)
+    return () => { controller.abort(); if (timer) window.clearTimeout(timer); document.removeEventListener('visibilitychange', onVisibility) }
+  }, [date, initialGamePk, initialPlayers.length])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    params.set('date', date)
+    if (gamePk) params.set('game', String(gamePk))
+    if (!allPlayers && playerIds.length) params.set('players', playerIds.join(','))
+    if (result !== 'all') params.set('result', result)
+    if (view !== 'points') params.set('view', view)
+    window.history.replaceState(null, '', `${window.location.pathname}?${params}`)
+  }, [allPlayers, date, gamePk, playerIds, result, view])
 
   const game = data?.games.find(candidate => candidate.gamePk === gamePk) ?? null
   const gameEvents = useMemo(() => data?.contacts.filter(event => event.gamePk === gamePk) ?? [], [data, gamePk])
@@ -123,6 +158,52 @@ export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
   const selectedFlightPath = selected
     ? `M125 203 Q${(125 + (selected.hcX - 125) * .34).toFixed(1)} ${Math.max(24, Math.min(selected.hcY, 203) - 72).toFixed(1)} ${selected.hcX.toFixed(1)} ${selected.hcY.toFixed(1)}`
     : ''
+
+  const emptyMessage = !data?.games.length
+    ? 'This slate is not available yet.'
+    : game && !gameEvents.length && /pre|warmup|scheduled/i.test(game.status)
+      ? 'Batted-ball tracking begins at first pitch.'
+      : game && !gameEvents.length && isFinalStatus(game.status)
+        ? 'No official batted-ball coordinates were captured for this game.'
+        : game && !gameEvents.length
+          ? 'Waiting for the first official batted-ball coordinate.'
+          : 'No contact matches these filters.'
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(window.location.href)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
+  const share = async () => {
+    if (navigator.share) await navigator.share({ title: 'SlipSurge Spray Chart', text: game ? `${game.awayName} at ${game.homeName}` : 'SlipSurge Spray Chart', url: window.location.href })
+    else await copyLink()
+  }
+  const downloadPng = async () => {
+    const svg = parkStageRef.current?.querySelector('svg')
+    if (!svg) return
+    const clone = svg.cloneNode(true) as SVGElement
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    const serialized = new XMLSerializer().serializeToString(clone)
+    const image = new window.Image()
+    const objectUrl = URL.createObjectURL(new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' }))
+    image.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 1600; canvas.height = 1600
+      const context = canvas.getContext('2d')
+      if (!context) return
+      context.fillStyle = '#05080d'; context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(blob => {
+        if (!blob) return
+        const href = URL.createObjectURL(blob)
+        const anchor = document.createElement('a')
+        anchor.href = href; anchor.download = `slipsurge-spray-${date}-${gamePk || 'slate'}.png`; anchor.click()
+        window.setTimeout(() => URL.revokeObjectURL(href), 5000)
+      }, 'image/png')
+      URL.revokeObjectURL(objectUrl)
+    }
+    image.src = objectUrl
+  }
 
   return <main className={styles.page}>
     <header className={styles.hero}>
@@ -174,9 +255,9 @@ export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
       </section>
 
       <section className={styles.chartCard}>
-        <header><div><p>{game?.parkTeamAbbr === 'MLB' ? 'NEUTRAL VENUE VIEW' : 'EXACT PARK VIEW'}</p><h2>{game?.venueName ?? 'MLB ballpark'}</h2></div><div className={styles.stats}><span><b>{totals.contact}</b> BBE</span><span><b>{totals.hr}</b> HR</span><span><b>{totals.near}</b> near</span><span><b>{totals.contact ? Math.round(totals.hard / totals.contact * 100) : 0}%</b> hard hit</span></div></header>
+        <header><div><p>{game?.parkTeamAbbr === 'MLB' ? 'NEUTRAL VENUE VIEW' : 'EXACT PARK VIEW'}</p><h2>{game?.venueName ?? 'MLB ballpark'}</h2><small className={styles.syncState}>{date === todayEt() && game && !isFinalStatus(game.status) ? 'Live refresh on' : 'Frozen view'}{lastUpdatedAt ? ` · updated ${new Date(lastUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</small></div><div className={styles.shareActions}><button type="button" onClick={() => void copyLink()}>{copied ? <Check size={13}/> : <Link2 size={13}/>} {copied ? 'Copied' : 'Copy link'}</button><button type="button" onClick={() => void share()}><Share2 size={13}/> Share</button><button type="button" onClick={() => void downloadPng()}><Download size={13}/> PNG</button></div><div className={styles.stats}><span><b>{totals.contact}</b> BBE</span><span><b>{totals.hr}</b> HR</span><span><b>{totals.near}</b> near</span><span><b>{totals.contact ? Math.round(totals.hard / totals.contact * 100) : 0}%</b> hard hit</span></div></header>
         <div className={styles.workspace}>
-          <div className={styles.parkStage}>
+          <div className={styles.parkStage} ref={parkStageRef}>
             {parkLogo ? <Image className={styles.watermark} src={parkLogo} alt="" width={150} height={150}/> : null}
             {game ? <ParkFieldSvg primary={parkPrimary} secondary={parkSecondary} teamAbbr={game.parkTeamAbbr} className={styles.field} ariaLabel={`Batted-ball spray chart at ${game.venueName}`}>
               <defs><filter id="slate-spray-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="1.8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
@@ -196,7 +277,7 @@ export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
                 </g>
               })}
             </ParkFieldSvg> : null}
-            {!visible.length ? <div className={styles.empty}>No contact matches these filters.</div> : null}
+            {!visible.length ? <div className={styles.empty}>{emptyMessage}</div> : null}
           </div>
           <aside className={styles.inspector} aria-live="polite">
             {selected ? <><div className={styles.inspectIdentity}><span style={{ '--team': getTeamColor(selected.batterTeam) } as CSSProperties}><Image src={mlbHeadshot(selected.batterId)} alt="" width={58} height={58}/></span><div><small>{eventLabel(selected)}</small><h3>{selected.batterName}</h3><p>{selected.batterTeam} · off {selected.pitcherName}</p></div></div><div className={styles.inspectMetrics}><span><small>Exit velocity</small><b>{fmt(selected.exitVelocity, ' mph')}</b></span><span><small>Distance</small><b>{fmt(selected.distance, ' ft')}</b></span><span><small>Launch angle</small><b>{fmt(selected.launchAngle, '°')}</b></span><span><small>Game moment</small><b>{selected.half} {selected.inning ?? '-'}</b></span></div>{selected.coordinateSource === 'bearing_projection' ? <p className={styles.disclosure}>Landing point projected from the recorded distance and bearing.</p> : selected.coordinateSource === 'mlb_live' ? <p className={styles.official}>Official MLB live-game coordinate</p> : <p className={styles.official}>Official Statcast landing coordinate</p>}</> : <p>Select a marker to inspect the contact.</p>}
