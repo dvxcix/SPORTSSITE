@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarDays, Clapperboard, Film, ImageIcon, LoaderCircle, Sparkles, Target, Video } from 'lucide-react'
+import { CalendarDays, Check, Clapperboard, Copy, Film, ImageIcon, LoaderCircle, Sparkles, Target, Video } from 'lucide-react'
 import { ContactFlightStage } from '@/components/contact/ContactFlightStage'
 import type { DailyContactSlate } from '@/lib/contactRecapTypes'
 
@@ -56,6 +56,35 @@ function ExportButton({ date, kind, format, primary = false, activeExport, setAc
   </div>
 }
 
+function CaptionButton({ date, kind, data }: { date: string; kind: 'hr' | 'near'; data: DailyContactSlate }) {
+  const [copied, setCopied] = useState(false)
+  const events = kind === 'hr' ? data.homeRuns : data.nearHomeRuns
+  const copy = async () => {
+    const names = events.slice(0, 6).map(event => event.batterName).join(', ')
+    const remainder = events.length > 6 ? ` + ${events.length - 6} more` : ''
+    const gameCount = new Set(events.map(event => event.gamePk)).size
+    const label = kind === 'hr' ? 'home run flight log' : 'near-home-run flight log'
+    const caption = `SlipSurge ${label} · ${date}\n${events.length} event${events.length === 1 ? '' : 's'} across ${gameCount} game${gameCount === 1 ? '' : 's'}.${names ? `\n${names}${remainder}` : ''}\n\nslipsurge.com`
+    try {
+      await navigator.clipboard.writeText(caption)
+    } catch {
+      const fallback = document.createElement('textarea')
+      fallback.value = caption
+      fallback.style.position = 'fixed'
+      fallback.style.opacity = '0'
+      document.body.appendChild(fallback)
+      fallback.select()
+      document.execCommand('copy')
+      fallback.remove()
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1800)
+  }
+  return <button type="button" onClick={copy} disabled={!events.length} className="inline-flex min-w-32 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-xs font-black text-zinc-200 transition hover:border-lime-300/30 hover:bg-white/[.08] disabled:cursor-not-allowed disabled:opacity-40">
+    {copied ? <Check size={15} className="text-lime-300"/> : <Copy size={15}/>} {copied ? 'Caption copied' : 'Copy caption'}
+  </button>
+}
+
 export function ContactRecapStudio() {
   const [date, setDate] = useState(todayEt)
   const [data, setData] = useState<DailyContactSlate | null>(null)
@@ -82,6 +111,7 @@ export function ContactRecapStudio() {
     {loading ? <div className="grid min-h-80 place-items-center rounded-3xl border border-zinc-800 bg-zinc-950"><LoaderCircle className="animate-spin text-lime-300" size={28}/></div> : error ? <div className="rounded-3xl border border-red-400/20 bg-red-400/5 p-6 text-sm text-red-300">{error}</div> : data ? <>
       <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Film size={18}/></span><div><h2 className="text-xl font-black text-white">Home Run Flight</h2><p className="text-xs text-zinc-500">Every confirmed homer with frozen pregame prices and qualifying power markets. {data.homeRuns.length} events · about {data.homeRuns.length * 2}s.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="hr" format="mp4" primary activeExport={activeExport} setActiveExport={setActiveExport}/><ExportButton date={date} kind="hr" format="gif" activeExport={activeExport} setActiveExport={setActiveExport}/></div></div><ContactFlightStage events={data.homeRuns} title="Today's Home Runs" eyebrow="Game-by-game flight log" tone="home_run"/></section>
       <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-400/25 bg-orange-400/10 text-orange-300"><Target size={18}/></span><div><h2 className="text-xl font-black text-white">Near Home Run Flight</h2><p className="text-xs text-zinc-500">Would-have-left contacts with their actual single, double, or triple closing markets. {data.nearHomeRuns.length} events · about {data.nearHomeRuns.length * 2}s.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="near" format="mp4" primary activeExport={activeExport} setActiveExport={setActiveExport}/><ExportButton date={date} kind="near" format="gif" activeExport={activeExport} setActiveExport={setActiveExport}/></div></div><ContactFlightStage events={data.nearHomeRuns} title="Today's Near Home Runs" eyebrow="Park-adjusted contact log" tone="near_hr"/></section>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-300/15 bg-[linear-gradient(135deg,rgba(163,255,63,.06),rgba(255,255,255,.025))] p-4 shadow-[inset_0_1px_rgba(255,255,255,.05)]"><div><p className="text-xs font-black text-white">Social publishing kit</p><p className="mt-1 text-[11px] text-zinc-500">Copy a clean caption, then pair it with the sharper MP4 export.</p></div><div className="flex flex-wrap gap-2"><CaptionButton date={date} kind="hr" data={data}/><CaptionButton date={date} kind="near" data={data}/></div></div>
       <p className="rounded-xl border border-white/5 bg-white/[.025] px-4 py-3 text-[11px] text-zinc-500">MP4 is recommended for social posts and keeps the sharpest motion at a smaller file size. GIF is best for embeds and may take longer on large slates.</p>
       <section className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[.035] p-4"><p className="flex items-center gap-2 text-xs font-black text-cyan-200"><Sparkles size={15}/> Data integrity</p><ul className="mt-2 space-y-1 text-[11px] leading-5 text-zinc-500">{data.dataNotes.map(note => <li key={note}>• {note}</li>)}</ul></section>
     </> : null}

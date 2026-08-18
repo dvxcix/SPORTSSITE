@@ -120,6 +120,9 @@ export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
   const flightEvents = useMemo(() => selected
     ? [selected, ...visible.filter(event => event.id !== selected.id)]
     : visible, [selected, visible])
+  const selectedFlightPath = selected
+    ? `M125 203 Q${(125 + (selected.hcX - 125) * .34).toFixed(1)} ${Math.max(24, Math.min(selected.hcY, 203) - 72).toFixed(1)} ${selected.hcX.toFixed(1)} ${selected.hcY.toFixed(1)}`
+    : ''
 
   return <main className={styles.page}>
     <header className={styles.hero}>
@@ -177,6 +180,11 @@ export function SprayChartsExplorer({ initialDate }: { initialDate: string }) {
             {parkLogo ? <Image className={styles.watermark} src={parkLogo} alt="" width={150} height={150}/> : null}
             {game ? <ParkFieldSvg primary={parkPrimary} secondary={parkSecondary} teamAbbr={game.parkTeamAbbr} className={styles.field} ariaLabel={`Batted-ball spray chart at ${game.venueName}`}>
               <defs><filter id="slate-spray-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="1.8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+              {selected ? <g key={`selected-flight-${selected.id}`} className={styles.selectedFlight}>
+                <path d={selectedFlightPath} pathLength="1" fill="none" stroke={resultColor(selected.kind)} strokeWidth="1.6" strokeLinecap="round" filter="url(#slate-spray-glow)"/>
+                <circle cx={selected.hcX} cy={selected.hcY} r="5.5" fill="none" stroke={resultColor(selected.kind)} strokeWidth=".9"/>
+                <circle r="2.8" fill={resultColor(selected.kind)} stroke="#fff" strokeWidth=".65" filter="url(#slate-spray-glow)"><animateMotion dur="1.1s" fill="freeze" path={selectedFlightPath}/></circle>
+              </g> : null}
               {visible.map(event => {
                 const active = selected?.id === event.id
                 const color = resultColor(event.kind)

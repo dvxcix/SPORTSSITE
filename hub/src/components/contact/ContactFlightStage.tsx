@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Gauge, Maximize2, Pause, Play, RotateCcw } from 'lucide-react'
 import { ParkFieldSvg } from '@/components/sports/ParkFieldSvg'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamColor, getTeamLogoUrl, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
@@ -21,6 +21,8 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [replay, setReplay] = useState(0)
+  const [speed, setSpeed] = useState(1)
+  const shellRef = useRef<HTMLElement>(null)
   const currentIndex = events.length ? index % events.length : 0
   const current = events[currentIndex]
 
@@ -29,14 +31,24 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
     const timer = window.setTimeout(() => {
       setIndex(value => (value + 1) % events.length)
       setReplay(value => value + 1)
-    }, 3200)
+    }, 3200 / speed)
     return () => window.clearTimeout(timer)
-  }, [events.length, currentIndex, playing, replay])
+  }, [events.length, currentIndex, playing, replay, speed])
 
   const games = useMemo(() => Array.from(new Map(events.map(event => [event.gamePk, event.game])).values()), [events])
   const seek = (next: number) => {
     setIndex((next + events.length) % events.length)
     setReplay(value => value + 1)
+  }
+  const cycleSpeed = () => setSpeed(value => value === .75 ? 1 : value === 1 ? 1.5 : .75)
+  const enterTheater = async () => {
+    if (!shellRef.current || !document.fullscreenEnabled) return
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen()
+      else await shellRef.current.requestFullscreen()
+    } catch {
+      // Fullscreen can be denied by browser or device policy; the replay remains usable inline.
+    }
   }
 
   if (!current) {
@@ -67,10 +79,11 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
     current.kind === 'near_hr' && current.parksHrCount != null ? `${current.parksHrCount} parks` : null,
   ].filter((badge): badge is string => Boolean(badge))
 
-  return <section className={styles.shell}>
+  return <section className={styles.shell} ref={shellRef} style={{ '--park-primary': primary, '--park-secondary': secondary, '--flight-accent': stroke } as CSSProperties}>
     <header className={styles.topbar}><div><p className={styles.eyebrow}>{eyebrow}</p><h2 className={styles.title}>{title}</h2></div><span className={styles.count}>{events.length} event{events.length === 1 ? '' : 's'}</span></header>
     <div className={styles.stage} key={`${current.id}:${replay}`}>
       <div className={styles.grid} />
+      <div className={styles.aurora} />
       <div className={styles.scorebug}>
         {awayLogo ? <Image src={awayLogo} alt={current.game.awayName} width={30} height={30} /> : null}
         <div><span className={styles.gameNumber}>Game {current.game.gameIndex + 1}</span><b>{current.game.awayTeam} {current.game.awayScore ?? ''} vs {current.game.homeTeam} {current.game.homeScore ?? ''}</b><span>{current.game.venueName}</span></div>
@@ -80,7 +93,13 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
       {parkLogo ? <Image className={styles.parkLogo} src={parkLogo} alt="" width={120} height={120} /> : null}
       <ParkFieldSvg primary={primary} secondary={secondary} teamAbbr={current.game.parkTeamAbbr} className={styles.park} ariaLabel={`${current.batterName} contact at ${current.game.venueName}`}>
         <defs><filter id={`contact-glow-${svgId}`} x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <path className={styles.flightGlow} d={path} fill="none" stroke={stroke} strokeWidth="5.5" strokeLinecap="round" opacity=".18" filter={`url(#contact-glow-${svgId})`} />
         <path className={styles.flight} d={path} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" filter={`url(#contact-glow-${svgId})`} />
+        <circle className={styles.runner} r="3.1" fill={stroke} stroke="#fff" strokeWidth=".8" filter={`url(#contact-glow-${svgId})`}>
+          <animateMotion dur={`${1.2 / speed}s`} fill="freeze" path={path} keyPoints="0;1" keyTimes="0;1" calcMode="spline" keySplines=".16 1 .3 1" />
+        </circle>
+        <circle className={styles.landingRingOne} cx={current.hcX} cy={current.hcY} r="4.2" fill="none" stroke={stroke} strokeWidth="1" />
+        <circle className={styles.landingRingTwo} cx={current.hcX} cy={current.hcY} r="4.2" fill="none" stroke={stroke} strokeWidth=".8" />
         <circle className={styles.ball} cx={current.hcX} cy={current.hcY} r="4.2" fill={stroke} stroke="#fff" strokeWidth="1" filter={`url(#contact-glow-${svgId})`} />
       </ParkFieldSvg>
       <div className={styles.identity}>
@@ -96,9 +115,17 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
       <button className={styles.control} type="button" onClick={() => seek(currentIndex - 1)} aria-label="Previous event"><ChevronLeft size={16}/></button>
       <button className={styles.control} type="button" onClick={() => setPlaying(value => !value)} aria-label={playing ? 'Pause recap' : 'Play recap'}>{playing ? <Pause size={15}/> : <Play size={15}/>}</button>
       <button className={styles.control} type="button" onClick={() => setReplay(value => value + 1)} aria-label="Replay event"><RotateCcw size={15}/></button>
+      <button className={`${styles.control} ${styles.speed}`} type="button" onClick={cycleSpeed} aria-label={`Playback speed ${speed} times`} title="Playback speed"><Gauge size={14}/><span>{speed}x</span></button>
       <div className={styles.progress}><span style={{ width: `${((currentIndex + 1) / events.length) * 100}%` }}/></div><span className={styles.counter}>{currentIndex + 1} / {events.length}</span>
+      <button className={styles.control} type="button" onClick={enterTheater} aria-label="Open theater mode" title="Theater mode"><Maximize2 size={15}/></button>
       <button className={styles.control} type="button" onClick={() => seek(currentIndex + 1)} aria-label="Next event"><ChevronRight size={16}/></button>
     </div>
+    <div className={styles.eventRail} aria-label="Contact replay timeline">{events.map((event, eventIndex) => {
+      const logo = getTeamLogoUrl(event.batterTeam)
+      return <button type="button" data-active={eventIndex === currentIndex} key={event.id} onClick={() => seek(eventIndex)} aria-label={`Replay ${event.batterName}, ${eventName(event.result)}`}>
+        <span>{logo ? <Image src={logo} alt="" width={18} height={18}/> : eventIndex + 1}</span><b>{event.batterName}</b><small>{eventName(event.result)}</small>
+      </button>
+    })}</div>
     <div className={styles.gameRail}>{games.map(game => {
       const first = events.findIndex(event => event.gamePk === game.gamePk)
       const away = getTeamLogoUrl(game.awayTeam)

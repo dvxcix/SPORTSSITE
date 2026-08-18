@@ -68,6 +68,16 @@ function resultLabel(event: DailyContactEvent) {
   return event.result.replaceAll('_', ' ').toUpperCase()
 }
 
+function flightPoint(event: DailyContactEvent, progress: number) {
+  const value = Math.max(0, Math.min(1, progress))
+  const controlX = 125 + (event.hcX - 125) * .34
+  const controlY = Math.max(22, event.hcY - 78)
+  return {
+    x: ((1 - value) ** 2 * 125) + (2 * (1 - value) * value * controlX) + (value ** 2 * event.hcX),
+    y: ((1 - value) ** 2 * 203) + (2 * (1 - value) * value * controlY) + (value ** 2 * event.hcY),
+  }
+}
+
 async function remoteDataUri(url?: string) {
   if (!url) return ''
   try {
@@ -159,15 +169,16 @@ function specialCards(quotes: ContactMarketQuote[], assets: FrameAssets, x: numb
   }).join('')
 }
 
-function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAssets) {
+function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAssets, eventIndex: number, eventTotal: number) {
   const progress = 1 - Math.pow(1 - rawProgress, 3)
   const park = MLB_PARK_SHAPES[event.game.parkTeamAbbr]
   const primary = getTeamColor(event.game.parkTeamAbbr)
   const secondary = getTeamSecondaryColor(event.game.parkTeamAbbr)
   const accent = event.kind === 'home_run' ? '#a3ff3f' : '#ff9f43'
   const controlY = Math.max(22, event.hcY - 78)
-  const cx = 125 + (event.hcX - 125) * progress
-  const cy = ((1 - progress) ** 2 * 203) + (2 * (1 - progress) * progress * controlY) + (progress ** 2 * event.hcY)
+  const currentPoint = flightPoint(event, progress)
+  const cx = currentPoint.x
+  const cy = currentPoint.y
   const parkPath = park?.outfield ?? 'M125 220 L45 135 A105 105 0 0 1 205 135 Z'
   const parkTransform = park?.transform ? ` transform="${esc(park.transform)}"` : ''
   const badges = [
@@ -196,26 +207,38 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
   const batterLabel = compactText(event.batterName, 29)
   const batterTitleSize = batterLabel.length > 25 ? 27 : batterLabel.length > 21 ? 30 : 34
   const matchupLabel = compactText(`${event.batterTeam}  ·  ${event.half} ${event.inning ?? '-'}  ·  off ${event.pitcherName}`, 58)
+  const tailMarkup = Array.from({ length: 6 }, (_, index) => {
+    const point = flightPoint(event, Math.max(0, progress - ((index + 1) * .018)))
+    const opacity = Math.max(.03, .34 - index * .05)
+    return `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${Math.max(1.2, 3.2 - index * .32).toFixed(1)}" fill="${accent}" fill-opacity="${opacity.toFixed(2)}" filter="url(#glow)"/>`
+  }).join('')
+  const landingProgress = Math.max(0, Math.min(1, (rawProgress - .78) / .22))
+  const landingRings = landingProgress > 0
+    ? `<circle cx="${event.hcX}" cy="${event.hcY}" r="${(5 + landingProgress * 13).toFixed(1)}" fill="none" stroke="${accent}" stroke-width="1.2" stroke-opacity="${(.64 * (1 - landingProgress)).toFixed(2)}"/><circle cx="${event.hcX}" cy="${event.hcY}" r="${(4 + landingProgress * 7).toFixed(1)}" fill="none" stroke="#fff" stroke-width=".65" stroke-opacity="${(.48 * (1 - landingProgress)).toFixed(2)}"/>`
+    : ''
+  const sequenceProgress = Math.max(0, Math.min(1, (eventIndex + rawProgress) / Math.max(1, eventTotal)))
+  const sequenceLabel = `${String(eventIndex + 1).padStart(2, '0')} / ${String(eventTotal).padStart(2, '0')}`
 
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <style>.eyebrow{font:800 13px Geist,sans-serif;letter-spacing:2.2px;fill:${accent}}.title{font:900 34px Geist,sans-serif;fill:#fff}.subtitle{font:650 15px Geist,sans-serif;fill:#9aa8bb}.body{font:650 14px Geist,sans-serif;fill:#d7dee8}.meta{font:800 10px Geist,sans-serif;letter-spacing:1.5px;fill:#718096}.muted{font:650 13px Geist,sans-serif;fill:#8290a3}.book{font:750 9px Geist,sans-serif;fill:#8190a3}.price{font:900 18px Geist,sans-serif;fill:#fff}.specialLabel{font:750 9px Geist,sans-serif;fill:#8fa0b4}.specialPrice{font:900 14px Geist,sans-serif;fill:#a3ff3f}.metricLabel{font:800 9px Geist,sans-serif;letter-spacing:1.4px;fill:#718096}.metricValue{font:900 21px Geist,sans-serif;fill:#fff}.badge{font:850 10px Geist,sans-serif;letter-spacing:1px}.score{font:850 15px Geist,sans-serif;fill:#fff}.brand{font:900 20px Geist,sans-serif;fill:#fff}.brandSmall{font:750 10px Geist,sans-serif;letter-spacing:1.7px;fill:#a3ff3f}.card{fill:#111820;stroke:#fff;stroke-opacity:.09}</style>
-    <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111b18"/><stop offset=".39" stop-color="#070c11"/><stop offset="1" stop-color="#020407"/></linearGradient><linearGradient id="panel" x2="1" y2="1"><stop stop-color="#10171d"/><stop offset="1" stop-color="#080d13"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="logoGlow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="2.4" flood-color="${secondary}" flood-opacity=".9"/></filter><pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern><clipPath id="avatar"><rect x="45" y="449" width="110" height="110" rx="22"/></clipPath></defs>
-    <rect width="1280" height="720" fill="url(#bg)"/><rect width="1280" height="720" fill="url(#grid)"/><circle cx="140" cy="-30" r="250" fill="#a3ff3f" fill-opacity=".035"/>
+    <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111b18"/><stop offset=".39" stop-color="#070c11"/><stop offset="1" stop-color="#020407"/></linearGradient><linearGradient id="panel" x2="1" y2="1"><stop stop-color="#121b22"/><stop offset=".48" stop-color="#0b1118"/><stop offset="1" stop-color="#060a0f"/></linearGradient><linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".095"/><stop offset=".32" stop-color="#fff" stop-opacity=".018"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><radialGradient id="parkAura"><stop stop-color="${primary}" stop-opacity=".16"/><stop offset="1" stop-color="${primary}" stop-opacity="0"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="logoGlow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="2.4" flood-color="${secondary}" flood-opacity=".9"/></filter><pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern><clipPath id="avatar"><rect x="45" y="449" width="110" height="110" rx="22"/></clipPath></defs>
+    <rect width="1280" height="720" fill="url(#bg)"/><rect width="1280" height="720" fill="url(#grid)"/><circle cx="140" cy="-30" r="250" fill="#a3ff3f" fill-opacity=".04"/><ellipse cx="640" cy="254" rx="340" ry="260" fill="url(#parkAura)"/><path d="M-60 245 L540 -55 L740 -55 L140 245 Z" fill="url(#glass)" opacity=".42"/>
     <rect x="28" y="24" width="1224" height="70" rx="20" fill="#080e13" stroke="#fff" stroke-opacity=".1"/>
     ${assets.brandLogo ? `<image href="${assets.brandLogo}" x="43" y="35" width="48" height="48"/>` : ''}<text x="102" y="53" class="brand">SlipSurge</text><text x="102" y="73" class="brandSmall">CONTACT RECAP</text>
     ${assets.awayLogo ? `<image href="${assets.awayLogo}" x="488" y="40" width="39" height="39"/>` : ''}<text x="541" y="55" class="score">${esc(event.game.awayTeam)} ${event.game.awayScore ?? '-'}</text><text x="632" y="55" class="muted">at</text><text x="666" y="55" class="score">${esc(event.game.homeTeam)} ${event.game.homeScore ?? '-'}</text>${assets.homeLogo ? `<image href="${assets.homeLogo}" x="756" y="40" width="39" height="39"/>` : ''}<text x="541" y="76" class="meta">GAME ${event.game.gameIndex + 1}  &#8226;  ${esc(venueLabel)}</text>
-    <text x="1220" y="53" text-anchor="end" class="brandSmall">${esc(event.gameDate)}</text><text x="1220" y="75" text-anchor="end" class="muted">SLIPSURGE.COM</text>
-    <g transform="translate(455 82) scale(1.48)"><g${parkTransform}><path d="${esc(parkPath)}" fill="${primary}" fill-opacity=".32" stroke="${primary}" stroke-opacity=".9" stroke-width="1.65"/></g>${assets.parkLogo ? `<image href="${assets.parkLogo}" x="102.5" y="63" width="45" height="45" preserveAspectRatio="xMidYMid meet" opacity=".95" filter="url(#logoGlow)"/>` : ''}${infieldDetail(secondary)}<path d="${flightPath}" pathLength="1" fill="none" stroke="${accent}" stroke-width="2.25" stroke-linecap="round" stroke-dasharray="${progress} 1" filter="url(#glow)"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rawProgress >= 1 ? 4.9 : 3.6}" fill="${accent}" stroke="#fff" stroke-width="1" filter="url(#glow)"/></g>
+    <text x="1220" y="53" text-anchor="end" class="brandSmall">${esc(event.gameDate)}</text><text x="1220" y="75" text-anchor="end" class="muted">SLIPSURGE.COM  &#8226;  ${sequenceLabel}</text>
+    <g transform="translate(455 82) scale(1.48)"><g${parkTransform}><path d="${esc(parkPath)}" fill="${primary}" fill-opacity=".34" stroke="${primary}" stroke-opacity=".95" stroke-width="1.65"/></g>${assets.parkLogo ? `<image href="${assets.parkLogo}" x="102.5" y="63" width="45" height="45" preserveAspectRatio="xMidYMid meet" opacity=".95" filter="url(#logoGlow)"/>` : ''}${infieldDetail(secondary)}<path d="${flightPath}" pathLength="1" fill="none" stroke="${accent}" stroke-opacity=".16" stroke-width="6.5" stroke-linecap="round" stroke-dasharray="${progress} 1" filter="url(#glow)"/><path d="${flightPath}" pathLength="1" fill="none" stroke="${accent}" stroke-width="2.25" stroke-linecap="round" stroke-dasharray="${progress} 1" filter="url(#glow)"/>${tailMarkup}${landingRings}<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rawProgress >= 1 ? 4.9 : 3.6}" fill="${accent}" stroke="#fff" stroke-width="1" filter="url(#glow)"/></g>
     <rect x="28" y="397" width="190" height="24" rx="12" fill="${accent}" fill-opacity=".08" stroke="${accent}" stroke-opacity=".22"/><text x="123" y="413" text-anchor="middle" class="badge" fill="${accent}">${sourceLabel}</text>
-    <rect x="28" y="430" width="672" height="264" rx="26" fill="url(#panel)" fill-opacity=".97" stroke="#fff" stroke-opacity=".1"/>
+    <rect x="28" y="430" width="672" height="264" rx="26" fill="url(#panel)" fill-opacity=".97" stroke="#fff" stroke-opacity=".11"/><path d="M54 431 H674 Q698 431 698 455" fill="none" stroke="#fff" stroke-opacity=".08"/>
     <rect x="45" y="449" width="110" height="110" rx="22" fill="${getTeamColor(event.batterTeam)}" fill-opacity=".45" stroke="${accent}" stroke-opacity=".55"/>${assets.headshot ? `<image href="${assets.headshot}" x="45" y="449" width="110" height="110" preserveAspectRatio="xMidYMax meet" clip-path="url(#avatar)"/>` : ''}${assets.batterLogo ? `<circle cx="145" cy="549" r="18" fill="#05090d" stroke="#fff" stroke-opacity=".14"/><image href="${assets.batterLogo}" x="133" y="537" width="24" height="24"/>` : ''}
     <text x="174" y="459" class="eyebrow">${esc(event.kind === 'home_run' ? 'HOME RUN FLIGHT' : 'NEAR HOME RUN FLIGHT')}</text><text x="174" y="497" class="title" style="font-size:${batterTitleSize}px">${esc(batterLabel)}</text><text x="174" y="525" class="subtitle">${esc(matchupLabel)}</text><text x="174" y="555" class="body">${esc(resultLabel(event))}</text>
     ${badgeMarkup}
     ${[['EXIT VELO', metric(event.exitVelocity, ' mph')], ['DISTANCE', metric(event.distance, ' ft')], ['LAUNCH', metric(event.launchAngle, '°')], ['PARKS', event.kind === 'near_hr' && event.parksHrCount != null ? `${event.parksHrCount}/30` : event.game.parkTeamAbbr]].map((item,index) => `<rect x="${174 + index * 123}" y="599" width="113" height="64" rx="15" fill="#0b1118" stroke="#fff" stroke-opacity=".08"/><text x="${188 + index * 123}" y="620" class="metricLabel">${item[0]}</text><text x="${188 + index * 123}" y="648" class="metricValue">${esc(item[1])}</text>`).join('')}
-    <rect x="720" y="430" width="532" height="264" rx="26" fill="url(#panel)" fill-opacity=".98" stroke="#fff" stroke-opacity=".1"/>
+    <rect x="720" y="430" width="532" height="264" rx="26" fill="url(#panel)" fill-opacity=".98" stroke="#fff" stroke-opacity=".11"/><path d="M746 431 H1226 Q1250 431 1250 455" fill="none" stroke="#fff" stroke-opacity=".08"/>
     <text x="744" y="459" class="eyebrow">PREGAME MARKET RECEIPT</text><text x="744" y="483" class="subtitle">${esc(event.marketContext?.primaryLabel ?? 'Captured market')}  &#8226;  frozen before first pitch</text>
     ${quoteCards(primaryQuotes, assets, 744, 503)}
     ${specials.length ? `<text x="744" y="${specialY - 13}" class="meta">QUALIFYING MARKETS</text>${specialCards(visibleSpecials, assets, 744, specialY)}${hiddenSpecialCount ? `<text x="1228" y="${specialMoreY}" text-anchor="end" class="meta">+${hiddenSpecialCount} MORE SETTLED MARKETS</text>` : ''}` : ''}
+    <rect x="0" y="716" width="1280" height="4" fill="#fff" fill-opacity=".05"/><rect x="0" y="716" width="${(1280 * sequenceProgress).toFixed(1)}" height="4" fill="${accent}" filter="url(#glow)"/>
   </svg>`)
 }
 
@@ -277,12 +300,13 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
   const bookLogos: Record<string, string> = {}
   await Promise.all(Object.entries(BOOK_ASSETS).map(async ([book, asset]) => { bookLogos[book] = await localDataUri(asset.path, asset.mime) }))
   try {
-    for (const event of selected) {
+    for (let eventIndex = 0; eventIndex < selected.length; eventIndex += 1) {
+      const event = selected[eventIndex]
       const assets = await buildAssets(event, cache, brandLogo, bookLogos)
       let finalFrame: Buffer | null = null
       for (let index = 0; index < MOTION_FRAMES; index += 1) {
         const progress = index / (MOTION_FRAMES - 1)
-        const frame = await sharp(frameSvg(event, progress, assets)).png({ compressionLevel: 3 }).toBuffer()
+        const frame = await sharp(frameSvg(event, progress, assets, eventIndex, selected.length)).png({ compressionLevel: 3 }).toBuffer()
         finalFrame = frame
         await writeFrame(encoder.stdin, frame)
       }
