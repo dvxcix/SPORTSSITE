@@ -48,9 +48,16 @@ const events = Array.from({ length: eventCount }, (_, index) => ({
   game: { ...event.game, gameIndex: index },
 }))
 
-for (const format of ['mp4', 'gif'] as const) {
-  const body = await renderContactRecap(events, format)
-  const path = join(tmpdir(), `slipsurge-contact-recap-smoke.${format}`)
+const exports = [
+  { format: 'mp4', aspect: 'landscape' },
+  { format: 'mp4', aspect: 'square' },
+  { format: 'mp4', aspect: 'vertical' },
+  { format: 'gif', aspect: 'vertical' },
+] as const
+
+for (const { format, aspect } of exports) {
+  const body = await renderContactRecap(events, format, aspect)
+  const path = join(tmpdir(), `slipsurge-contact-recap-smoke-${aspect}.${format}`)
   await writeFile(path, body)
-  console.log(`${format} ${events.length} events ${body.length} bytes ${path}`)
+  console.log(`${aspect} ${format} ${events.length} events ${body.length} bytes ${path}`)
 }

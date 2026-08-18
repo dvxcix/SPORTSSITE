@@ -18,6 +18,7 @@ const HOLD_FRAMES = 20
 const SAND_DIAMOND = 'M163.9,166.7l-1-1c-5-16-20-27.7-37.7-27.7s-32.7,11.7-37.7,27.7l-1,1l32.7,32.7c-0.5,0.9-0.7,1.9-0.7,3c0,3.7,3,6.7,6.7,6.7s6.7-3,6.7-6.7c0-1.1-0.3-2.1-0.7-3L163.9,166.7z M122.5,154.7c0.8,0.5,1.7,0.8,2.7,0.8s1.9-0.3,2.7-0.8l16.8,16.8c-1.6,1.6-1.6,4.1,0,5.6l2.5,2.5l-17.7,17.7c-1.2-1-2.7-1.6-4.3-1.6s-3.2,0.6-4.3,1.6l-17.7-17.7l2.5-2.5c1.6-1.5,1.6-4,0-5.6L122.5,154.7z'
 
 export type ContactRecapExportFormat = 'mp4' | 'gif'
+export type ContactRecapExportAspect = 'landscape' | 'square' | 'vertical'
 
 function resolveFfmpegPath() {
   const executable = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
@@ -279,13 +280,25 @@ async function runFfmpeg(ffmpegPath: string, args: string[]) {
   if (exitCode !== 0) throw new Error(encoderFailureMessage(errors, `Video encoder exited with code ${exitCode}.`))
 }
 
-export async function renderContactRecap(events: DailyContactEvent[], format: ContactRecapExportFormat) {
+async function reframeVideo(ffmpegPath: string, sourcePath: string, targetPath: string, aspect: Exclude<ContactRecapExportAspect, 'landscape'>) {
+  const filter = aspect === 'square'
+    ? '[0:v]split=2[bg][fg];[bg]scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080,boxblur=24:2,eq=brightness=-0.34:saturation=0.85[back];[fg]scale=1040:-2:flags=lanczos[front];[back][front]overlay=20:(H-h)/2,setsar=1[out]'
+    : '[0:v]split=4[bg][top][left][right];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.38:saturation=0.78[back];[top]crop=1280:430:0:0,scale=1040:-2:flags=lanczos[topv];[left]crop=672:264:28:430,scale=1040:-2:flags=lanczos[leftv];[right]crop=532:264:720:430,scale=1040:-2:flags=lanczos[rightv];[back][topv]overlay=20:80[a];[a][leftv]overlay=20:590[b];[b][rightv]overlay=20:1080,setsar=1[out]'
+  await runFfmpeg(ffmpegPath, [
+    '-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath,
+    '-filter_complex', filter, '-map', '[out]', '-an', '-c:v', 'libx264',
+    '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', targetPath,
+  ])
+}
+
+export async function renderContactRecap(events: DailyContactEvent[], format: ContactRecapExportFormat, aspect: ContactRecapExportAspect = 'landscape') {
   const selected = events.slice(0, 60)
   if (!selected.length) throw new Error('There are no captured events to export.')
   const ffmpegPath = resolveFfmpegPath()
   const workDir = await mkdtemp(join(tmpdir(), 'slipsurge-contact-'))
   const sourcePath = join(workDir, 'source.mp4')
-  const finalPath = format === 'mp4' ? sourcePath : join(workDir, 'recap.gif')
+  const socialVideoPath = aspect === 'landscape' ? sourcePath : join(workDir, `recap-${aspect}.mp4`)
+  const finalPath = format === 'mp4' ? socialVideoPath : join(workDir, `recap-${aspect}.gif`)
   const palettePath = join(workDir, 'palette.png')
   const args = ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'image2pipe', '-vcodec', 'png', '-r', String(FPS), '-i', 'pipe:0', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', sourcePath]
   const encoder = spawn(ffmpegPath, args, { stdio: ['pipe', 'ignore', 'pipe'] })
@@ -315,10 +328,12 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
     encoder.stdin.end()
     const [exitCode] = await Promise.race([once(encoder, 'close'), spawnFailure]) as [number]
     if (exitCode !== 0) throw new Error(encoderFailureMessage(errors, `Video encoder exited with code ${exitCode}.`))
+    if (aspect !== 'landscape') await reframeVideo(ffmpegPath, sourcePath, socialVideoPath, aspect)
     if (format === 'gif') {
-      const filters = 'fps=12,scale=960:-1:flags=lanczos'
-      await runFfmpeg(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath, '-vf', `${filters},palettegen=max_colors=160:stats_mode=diff`, palettePath])
-      await runFfmpeg(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath, '-i', palettePath, '-lavfi', `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`, '-loop', '0', finalPath])
+      const scale = aspect === 'vertical' ? '540:-2' : aspect === 'square' ? '800:-2' : '960:-2'
+      const filters = `fps=12,scale=${scale}:flags=lanczos`
+      await runFfmpeg(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', socialVideoPath, '-vf', `${filters},palettegen=max_colors=160:stats_mode=diff`, palettePath])
+      await runFfmpeg(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', socialVideoPath, '-i', palettePath, '-lavfi', `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`, '-loop', '0', finalPath])
     }
     return await readFile(finalPath)
   } catch (error) {

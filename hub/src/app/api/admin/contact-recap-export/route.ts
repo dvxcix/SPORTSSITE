@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getDailyContactRecap } from '@/lib/dailyContactRecap'
 import { enrichContactRecapMarkets } from '@/lib/contactRecapMarkets'
-import { renderContactRecap, type ContactRecapExportFormat } from '@/lib/contactRecapGif'
+import { renderContactRecap, type ContactRecapExportAspect, type ContactRecapExportFormat } from '@/lib/contactRecapGif'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,23 +23,25 @@ export async function GET(request: Request) {
   const date = url.searchParams.get('date') ?? ''
   const kind = url.searchParams.get('kind') === 'near' ? 'near' : 'hr'
   const format: ContactRecapExportFormat = url.searchParams.get('format') === 'gif' ? 'gif' : 'mp4'
+  const requestedAspect = url.searchParams.get('aspect')
+  const aspect: ContactRecapExportAspect = requestedAspect === 'square' || requestedAspect === 'vertical' ? requestedAspect : 'landscape'
   const startedAt = Date.now()
   try {
-    console.info('[contact-recap-export] started', { date, kind, format })
+    console.info('[contact-recap-export] started', { date, kind, format, aspect })
     const recap = await getDailyContactRecap(date)
     const selected = kind === 'near' ? recap.nearHomeRuns : recap.homeRuns
     const events = await enrichContactRecapMarkets(date, selected)
-    console.info('[contact-recap-export] data ready', { date, kind, format, events: events.length, elapsedMs: Date.now() - startedAt })
-    const body = await renderContactRecap(events, format)
+    console.info('[contact-recap-export] data ready', { date, kind, format, aspect, events: events.length, elapsedMs: Date.now() - startedAt })
+    const body = await renderContactRecap(events, format, aspect)
     const label = kind === 'near' ? 'near-home-runs' : 'home-runs'
-    console.info('[contact-recap-export] completed', { date, kind, format, events: events.length, bytes: body.length, elapsedMs: Date.now() - startedAt })
+    console.info('[contact-recap-export] completed', { date, kind, format, aspect, events: events.length, bytes: body.length, elapsedMs: Date.now() - startedAt })
     return new NextResponse(new Uint8Array(body), { headers: {
       'Content-Type': format === 'mp4' ? 'video/mp4' : 'image/gif',
-      'Content-Disposition': `attachment; filename="slipsurge-${date}-${label}.${format}"`,
+      'Content-Disposition': `attachment; filename="slipsurge-${date}-${label}-${aspect}.${format}"`,
       'Cache-Control': 'private, no-store',
     } })
   } catch (error) {
-    console.error('[contact-recap-export] render failed', { date, kind, format, error: error instanceof Error ? error.message : String(error) })
+    console.error('[contact-recap-export] render failed', { date, kind, format, aspect, error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Could not render the contact recap.' }, { status: 400 })
   }
 }

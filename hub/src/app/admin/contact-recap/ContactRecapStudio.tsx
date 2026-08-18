@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarDays, Check, Clapperboard, Copy, Film, ImageIcon, LoaderCircle, Sparkles, Target, Video } from 'lucide-react'
+import { CalendarDays, Check, Clapperboard, Copy, Film, ImageIcon, LoaderCircle, Monitor, Smartphone, Sparkles, Square, Target, Video } from 'lucide-react'
 import { ContactFlightStage } from '@/components/contact/ContactFlightStage'
 import type { DailyContactSlate } from '@/lib/contactRecapTypes'
 
 const todayEt = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+type ExportAspect = 'landscape' | 'square' | 'vertical'
 
-function ExportButton({ date, kind, format, primary = false, activeExport, setActiveExport }: {
+function ExportButton({ date, kind, format, aspect, primary = false, activeExport, setActiveExport }: {
   date: string
   kind: 'hr' | 'near'
   format: 'mp4' | 'gif'
+  aspect: ExportAspect
   primary?: boolean
   activeExport: string | null
   setActiveExport: (value: string | null) => void
@@ -18,20 +20,20 @@ function ExportButton({ date, kind, format, primary = false, activeExport, setAc
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const Icon = format === 'mp4' ? Video : ImageIcon
-  const exportKey = `${kind}:${format}`
+  const exportKey = `${kind}:${format}:${aspect}`
   const isGenerating = activeExport === exportKey
   const download = async () => {
     if (activeExport) return
     setActiveExport(exportKey); setStatus('loading'); setMessage('')
     try {
-      const response = await fetch(`/api/admin/contact-recap-export?date=${date}&kind=${kind}&format=${format}`)
+      const response = await fetch(`/api/admin/contact-recap-export?date=${date}&kind=${kind}&format=${format}&aspect=${aspect}`)
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { error?: string } | null
         throw new Error(body?.error || `Export failed with status ${response.status}.`)
       }
       const blob = await response.blob()
       const disposition = response.headers.get('content-disposition') ?? ''
-      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `slipsurge-${date}-${kind}.${format}`
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `slipsurge-${date}-${kind}-${aspect}.${format}`
       const objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = objectUrl; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove()
@@ -91,6 +93,7 @@ export function ContactRecapStudio() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeExport, setActiveExport] = useState<string | null>(null)
+  const [aspect, setAspect] = useState<ExportAspect>('landscape')
   useEffect(() => {
     const controller = new AbortController()
     fetch(`/api/admin/contact-recap?date=${date}`, { signal: controller.signal })
@@ -109,8 +112,22 @@ export function ContactRecapStudio() {
 
     <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Games captured</span><strong className="mt-1 block text-2xl text-white">{data?.games.length ?? 0}</strong></div><div className="rounded-2xl border border-lime-400/15 bg-lime-400/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Home runs</span><strong className="mt-1 block text-2xl text-lime-300">{data?.homeRuns.length ?? 0}</strong></div><div className="rounded-2xl border border-orange-400/15 bg-orange-400/[.04] p-4"><span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Near home runs</span><strong className="mt-1 block text-2xl text-orange-300">{data?.nearHomeRuns.length ?? 0}</strong></div></div>
     {loading ? <div className="grid min-h-80 place-items-center rounded-3xl border border-zinc-800 bg-zinc-950"><LoaderCircle className="animate-spin text-lime-300" size={28}/></div> : error ? <div className="rounded-3xl border border-red-400/20 bg-red-400/5 p-6 text-sm text-red-300">{error}</div> : data ? <>
-      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Film size={18}/></span><div><h2 className="text-xl font-black text-white">Home Run Flight</h2><p className="text-xs text-zinc-500">Every confirmed homer with frozen pregame prices and qualifying power markets. {data.homeRuns.length} events · about {data.homeRuns.length * 2}s.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="hr" format="mp4" primary activeExport={activeExport} setActiveExport={setActiveExport}/><ExportButton date={date} kind="hr" format="gif" activeExport={activeExport} setActiveExport={setActiveExport}/></div></div><ContactFlightStage events={data.homeRuns} title="Today's Home Runs" eyebrow="Game-by-game flight log" tone="home_run"/></section>
-      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-400/25 bg-orange-400/10 text-orange-300"><Target size={18}/></span><div><h2 className="text-xl font-black text-white">Near Home Run Flight</h2><p className="text-xs text-zinc-500">Would-have-left contacts with their actual single, double, or triple closing markets. {data.nearHomeRuns.length} events · about {data.nearHomeRuns.length * 2}s.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="near" format="mp4" primary activeExport={activeExport} setActiveExport={setActiveExport}/><ExportButton date={date} kind="near" format="gif" activeExport={activeExport} setActiveExport={setActiveExport}/></div></div><ContactFlightStage events={data.nearHomeRuns} title="Today's Near Home Runs" eyebrow="Park-adjusted contact log" tone="near_hr"/></section>
+      <section className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.015))] p-4 shadow-[inset_0_1px_rgba(255,255,255,.06)] lg:flex-row lg:items-center lg:justify-between">
+        <div><p className="text-xs font-black text-white">Social canvas</p><p className="mt-1 text-[11px] leading-5 text-zinc-500">Choose the destination first. Every layout keeps the park, player, result, and market receipt readable.</p></div>
+        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/35 p-1" role="group" aria-label="Social export aspect ratio">
+          {([
+            { value: 'landscape', label: 'Feed', ratio: '16:9', icon: Monitor },
+            { value: 'square', label: 'Square', ratio: '1:1', icon: Square },
+            { value: 'vertical', label: 'Story', ratio: '9:16', icon: Smartphone },
+          ] as const).map(option => {
+            const Icon = option.icon
+            const active = aspect === option.value
+            return <button key={option.value} type="button" disabled={Boolean(activeExport)} aria-pressed={active} onClick={() => setAspect(option.value)} className={`flex min-w-24 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-left transition ${active ? 'bg-lime-300 text-black shadow-[0_0_24px_rgba(163,255,63,.2)]' : 'text-zinc-400 hover:bg-white/[.06] hover:text-white'}`}><Icon size={15}/><span><strong className="block text-[11px] font-black leading-3">{option.label}</strong><small className={`text-[9px] font-bold ${active ? 'text-black/60' : 'text-zinc-600'}`}>{option.ratio}</small></span></button>
+          })}
+        </div>
+      </section>
+      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Film size={18}/></span><div><h2 className="text-xl font-black text-white">Home Run Flight</h2><p className="text-xs text-zinc-500">Every confirmed homer with frozen pregame prices and qualifying power markets. {data.homeRuns.length} events · about {data.homeRuns.length * 2}s.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="hr" format="mp4" aspect={aspect} primary activeExport={activeExport} setActiveExport={setActiveExport}/><ExportButton date={date} kind="hr" format="gif" aspect={aspect} activeExport={activeExport} setActiveExport={setActiveExport}/></div></div><ContactFlightStage events={data.homeRuns} title="Today's Home Runs" eyebrow="Game-by-game flight log" tone="home_run"/></section>
+      <section className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-400/25 bg-orange-400/10 text-orange-300"><Target size={18}/></span><div><h2 className="text-xl font-black text-white">Near Home Run Flight</h2><p className="text-xs text-zinc-500">Would-have-left contacts with their actual single, double, or triple closing markets. {data.nearHomeRuns.length} events · about {data.nearHomeRuns.length * 2}s.</p></div><div className="ml-auto flex flex-wrap items-start gap-2"><ExportButton date={date} kind="near" format="mp4" aspect={aspect} primary activeExport={activeExport} setActiveExport={setActiveExport}/><ExportButton date={date} kind="near" format="gif" aspect={aspect} activeExport={activeExport} setActiveExport={setActiveExport}/></div></div><ContactFlightStage events={data.nearHomeRuns} title="Today's Near Home Runs" eyebrow="Park-adjusted contact log" tone="near_hr"/></section>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lime-300/15 bg-[linear-gradient(135deg,rgba(163,255,63,.06),rgba(255,255,255,.025))] p-4 shadow-[inset_0_1px_rgba(255,255,255,.05)]"><div><p className="text-xs font-black text-white">Social publishing kit</p><p className="mt-1 text-[11px] text-zinc-500">Copy a clean caption, then pair it with the sharper MP4 export.</p></div><div className="flex flex-wrap gap-2"><CaptionButton date={date} kind="hr" data={data}/><CaptionButton date={date} kind="near" data={data}/></div></div>
       <p className="rounded-xl border border-white/5 bg-white/[.025] px-4 py-3 text-[11px] text-zinc-500">MP4 is recommended for social posts and keeps the sharpest motion at a smaller file size. GIF is best for embeds and may take longer on large slates.</p>
       <section className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[.035] p-4"><p className="flex items-center gap-2 text-xs font-black text-cyan-200"><Sparkles size={15}/> Data integrity</p><ul className="mt-2 space-y-1 text-[11px] leading-5 text-zinc-500">{data.dataNotes.map(note => <li key={note}>• {note}</li>)}</ul></section>
