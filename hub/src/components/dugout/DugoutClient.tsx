@@ -1469,7 +1469,13 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <td style={{ ...STD, width: 52, minWidth: 52, padding: '2px 4px' }}>
         {row.mechanics_index != null ? (
           <Tooltip
-            content={`HR Mechanics Index ${Math.round(row.mechanics_index)} · #${row.mechanics_rank ?? '—'} of 18 · ${row.mechanics_window.toUpperCase()} · ${Math.round(row.mechanics_confidence ?? 0)}% confidence`}
+            content={{
+              kind: 'stat',
+              eyebrow: 'SlipSurge Batter Score',
+              title: `Score ${Math.round(row.mechanics_index)}`,
+              description: `Ranks #${row.mechanics_rank ?? '—'} of 18 for the selected ${row.mechanics_window.toUpperCase()} window.`,
+              icon: <Activity size={16} />,
+            }}
             containerClassName="w-full h-full flex items-center justify-center"
           >
             <span style={{ display: 'inline-flex', cursor: 'help' }}>
@@ -2460,7 +2466,7 @@ function renderDugoutColumns(
 // the tooltip text each column's real header (H()/BL() inside GameTable)
 // already uses, so the panel reads consistently with the board itself.
 const DUGOUT_COLUMN_LABELS: Record<string, string> = {
-  mechanics_index: 'HR Mechanics Index',
+  mechanics_index: 'SlipSurge Batter Score',
   pk: 'Community HR pick count',
   fhr_fd: 'FanDuel First HR', fhr_cz: 'Caesars First HR', fhr_fan: 'Fanatics First HR',
   div: 'FD−CZ implied diff', fhr_div_sa: 'FHR ÷ Anytime HR implied',
@@ -2825,7 +2831,7 @@ export function getDugoutHeaderCells(
   const headerCells = (
     <>
       <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
-      {H('INDEX', 'HR Mechanics Index for the selected Last 1/3/5/10 window', 52, 'mechanics_index')}
+      {H('INDEX', 'SlipSurge Batter Score for the selected Last 1/3/5/10 window', 52, 'mechanics_index')}
       <th style={SDIV_H} />
       {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
