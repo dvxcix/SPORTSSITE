@@ -21,9 +21,9 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [replay, setReplay] = useState(0)
-  const current = events[index]
+  const currentIndex = events.length ? index % events.length : 0
+  const current = events[currentIndex]
 
-  useEffect(() => { if (index >= events.length) setIndex(0) }, [events.length, index])
   useEffect(() => {
     if (!playing || events.length < 2) return
     const timer = window.setTimeout(() => {
@@ -31,7 +31,7 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
       setReplay(value => value + 1)
     }, 3200)
     return () => window.clearTimeout(timer)
-  }, [events.length, index, playing, replay])
+  }, [events.length, currentIndex, playing, replay])
 
   const games = useMemo(() => Array.from(new Map(events.map(event => [event.gamePk, event.game])).values()), [events])
   const seek = (next: number) => {
@@ -49,7 +49,7 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
   const batterLogo = getTeamLogoUrl(current.batterTeam)
   const homeLogo = getTeamLogoUrl(current.game.homeTeam)
   const awayLogo = getTeamLogoUrl(current.game.awayTeam)
-  const stroke = current.kind === 'home_run' ? '#a3ff3f' : current.kind === 'near_hr' ? '#ff9f43' : '#47d9ff'
+  const stroke = current.kind === 'home_run' ? '#a3ff3f' : current.kind === 'near_hr' ? '#ff9f43' : current.kind === 'hit' ? '#47d9ff' : current.kind === 'out' ? '#8b96aa' : '#b894ff'
   const controlX = 125 + (current.hcX - 125) * .34
   const controlY = Math.max(24, Math.min(current.hcY, 203) - 72)
   const path = `M125 203 Q${controlX.toFixed(1)} ${controlY.toFixed(1)} ${current.hcX.toFixed(1)} ${current.hcY.toFixed(1)}`
@@ -88,11 +88,11 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
       <div className={styles.metrics}><div className={styles.metric}><span>Exit velo</span><strong>{fmt(current.exitVelocity, ' mph')}</strong></div><div className={styles.metric}><span>Distance</span><strong>{fmt(current.distance, ' ft')}</strong></div><div className={styles.metric}><span>Launch</span><strong>{fmt(current.launchAngle, '°')}</strong></div></div>
     </div>
     <div className={styles.controls}>
-      <button className={styles.control} type="button" onClick={() => seek(index - 1)} aria-label="Previous event"><ChevronLeft size={16}/></button>
+      <button className={styles.control} type="button" onClick={() => seek(currentIndex - 1)} aria-label="Previous event"><ChevronLeft size={16}/></button>
       <button className={styles.control} type="button" onClick={() => setPlaying(value => !value)} aria-label={playing ? 'Pause recap' : 'Play recap'}>{playing ? <Pause size={15}/> : <Play size={15}/>}</button>
       <button className={styles.control} type="button" onClick={() => setReplay(value => value + 1)} aria-label="Replay event"><RotateCcw size={15}/></button>
-      <div className={styles.progress}><span style={{ width: `${((index + 1) / events.length) * 100}%` }}/></div><span className={styles.counter}>{index + 1} / {events.length}</span>
-      <button className={styles.control} type="button" onClick={() => seek(index + 1)} aria-label="Next event"><ChevronRight size={16}/></button>
+      <div className={styles.progress}><span style={{ width: `${((currentIndex + 1) / events.length) * 100}%` }}/></div><span className={styles.counter}>{currentIndex + 1} / {events.length}</span>
+      <button className={styles.control} type="button" onClick={() => seek(currentIndex + 1)} aria-label="Next event"><ChevronRight size={16}/></button>
     </div>
     <div className={styles.gameRail}>{games.map(game => {
       const first = events.findIndex(event => event.gamePk === game.gamePk)

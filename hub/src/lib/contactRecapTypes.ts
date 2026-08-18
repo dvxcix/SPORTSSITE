@@ -1,5 +1,5 @@
-export type ContactKind = 'home_run' | 'near_hr' | 'hit' | 'out'
-export type CoordinateSource = 'statcast' | 'bearing_projection'
+export type ContactKind = 'home_run' | 'near_hr' | 'hit' | 'out' | 'other'
+export type CoordinateSource = 'statcast' | 'mlb_live' | 'bearing_projection'
 
 export type DailyContactGame = {
   gamePk: number

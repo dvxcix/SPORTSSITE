@@ -2,7 +2,7 @@ import 'server-only'
 
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { fetchHrFeed, type HrFeedEvent } from '@/lib/hrFeed'
+import { fetchHrFeed, type MlbContactFeedEvent } from '@/lib/hrFeed'
 import { fetchMlbPartyRows } from '@/lib/mlbPartyServer'
 import { getMLBSchedule, type MLBGame } from '@slipsurge/core/mlb-api'
 import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
@@ -93,13 +93,17 @@ function gameFromSchedule(game: MLBGame, gameIndex: number): DailyContactGame {
   }
 }
 
-function sameMetrics(pitch: PitchRow, detail: { exit_velocity: number | null; launch_angle: number | null; hit_distance: number | null }) {
+function sameMetricValues(values: { exitVelocity: number | null; launchAngle: number | null; distance: number | null }, detail: { exit_velocity: number | null; launch_angle: number | null; hit_distance: number | null }) {
   const comparisons = [
-    [pitch.launch_speed, detail.exit_velocity, 0.35],
-    [pitch.launch_angle, detail.launch_angle, 0.5],
-    [pitch.hit_distance, detail.hit_distance, 3],
+    [values.exitVelocity, detail.exit_velocity, 0.35],
+    [values.launchAngle, detail.launch_angle, 0.5],
+    [values.distance, detail.hit_distance, 3],
   ].filter(([left, right]) => left != null && right != null)
   return comparisons.length >= 2 && comparisons.every(([left, right, tolerance]) => Math.abs(Number(left) - Number(right)) <= Number(tolerance))
+}
+
+function sameMetrics(pitch: PitchRow, detail: { exit_velocity: number | null; launch_angle: number | null; hit_distance: number | null }) {
+  return sameMetricValues({ exitVelocity: pitch.launch_speed, launchAngle: pitch.launch_angle, distance: pitch.hit_distance }, detail)
 }
 
 function projectedCoordinate(bearing: number | null, distance: number | null) {
@@ -115,7 +119,19 @@ function resultKind(row: PitchRow, near: NearHrRow | null): ContactKind {
   if (row.is_home_run || row.events === 'home_run') return 'home_run'
   if (near) return 'near_hr'
   if (['single', 'double', 'triple'].includes(row.events ?? '')) return 'hit'
-  return 'out'
+  if (['field_out', 'force_out', 'fielders_choice_out', 'grounded_into_double_play', 'double_play', 'triple_play', 'sac_bunt', 'sac_fly'].includes(row.events ?? '')) return 'out'
+  return 'other'
+}
+
+function liveResultKind(row: MlbContactFeedEvent): ContactKind {
+  if (row.event_type === 'home_run') return 'home_run'
+  if (['single', 'double', 'triple'].includes(row.event_type)) return 'hit'
+  if (['field_out', 'force_out', 'fielders_choice_out', 'grounded_into_double_play', 'double_play', 'triple_play', 'sac_bunt', 'sac_fly'].includes(row.event_type)) return 'out'
+  return 'other'
+}
+
+function contactKey(gamePk: number, batterId: number, atBatIndex: number) {
+  return `${gamePk}:${batterId}:${atBatIndex}`
 }
 
 function eventId(gamePk: number, batterId: number, atBatIndex: number, pitchNumber: number) {
@@ -154,6 +170,7 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
   pitchRows.forEach(row => { ids.add(Number(row.batter_id)); if (row.pitcher_id) ids.add(Number(row.pitcher_id)) })
   nearRows.forEach(row => { if (row.batter_id) ids.add(Number(row.batter_id)); if (row.pitcher_id) ids.add(Number(row.pitcher_id)) })
   hrResult.hrFeed.forEach(row => { if (row.mlb_id) ids.add(row.mlb_id); if (row.pitcher_mlb_id) ids.add(row.pitcher_mlb_id) })
+  hrResult.contactFeed.forEach(row => { if (row.batter_mlb_id) ids.add(row.batter_mlb_id); if (row.pitcher_mlb_id) ids.add(row.pitcher_mlb_id) })
   const { data: playersData } = ids.size
     ? await admin.from('players').select('mlb_id,full_name,current_team_abbr').in('mlb_id', Array.from(ids))
     : { data: [] as PlayerRow[] }
@@ -204,6 +221,43 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
       bbType: row.bb_type ?? null, parksHrCount: near?.parks_hr_count ?? null, parkHrList: near?.park_hr_list ?? null,
       game,
     })
+  }
+
+  // player_pitch_log is the postgame Savant source of truth. MLB Gameday
+  // supplies official fair-ball coordinates during live and just-completed
+  // games. Merge only plate appearances absent from Savant so the historical
+  // row automatically takes precedence once the daily sync lands.
+  const existingContactKeys = new Set(contacts.map(row => contactKey(row.gamePk, row.batterId, row.atBatIndex)))
+  for (const live of hrResult.contactFeed) {
+    if (!live.batter_mlb_id || live.hc_x == null || live.hc_y == null) continue
+    const key = contactKey(live.game_pk, live.batter_mlb_id, live.ab_index)
+    if (existingContactKeys.has(key)) continue
+    const game = gameByPk.get(live.game_pk)
+    if (!game) continue
+    const batter = players.get(live.batter_mlb_id)
+    const pitcher = live.pitcher_mlb_id ? players.get(live.pitcher_mlb_id) : null
+    const batterTeam = (live.half ?? '').toLowerCase().startsWith('top') ? game.awayTeam : game.homeTeam
+    const hr = hrResult.hrFeed.find(candidate => candidate.game_pk === live.game_pk && candidate.ab_index === live.ab_index) ?? null
+    const nearIndex = nearRows.findIndex((candidate, index) => !usedNear.has(index)
+      && Number(candidate.batter_id) === live.batter_mlb_id
+      && (!candidate.game_pk || Number(candidate.game_pk) === live.game_pk)
+      && sameMetricValues({ exitVelocity: live.exit_velocity, launchAngle: live.launch_angle, distance: live.hit_distance }, candidate))
+    const near = nearIndex >= 0 ? nearRows[nearIndex] : null
+    if (nearIndex >= 0) usedNear.add(nearIndex)
+    contacts.push({
+      id: eventId(live.game_pk, live.batter_mlb_id, live.ab_index, live.pitch_number),
+      kind: near ? 'near_hr' : liveResultKind(live), gamePk: live.game_pk, gameIndex: game.gameIndex, gameDate: date,
+      eventTime: live.event_time, atBatIndex: live.ab_index, pitchNumber: live.pitch_number,
+      batterId: live.batter_mlb_id, batterName: batter?.full_name ?? live.batter_name ?? `Player ${live.batter_mlb_id}`,
+      batterTeam, pitcherId: live.pitcher_mlb_id, pitcherName: pitcher?.full_name ?? live.pitcher_name ?? 'Pitcher',
+      pitcherTeam: batterTeam === game.homeTeam ? game.awayTeam : game.homeTeam,
+      inning: live.inning ?? null, half: live.half ?? '', result: live.event_type, description: live.desc,
+      rbi: live.rbi_on_play, isFirstHr: hr?.is_first_hr_of_game ?? false, isGrandSlam: hr?.is_grand_slam ?? false,
+      exitVelocity: live.exit_velocity, launchAngle: live.launch_angle, distance: live.hit_distance, hitBearing: near?.hit_bearing ?? null,
+      hcX: live.hc_x, hcY: live.hc_y, coordinateSource: 'mlb_live', pitchType: live.pitch_type,
+      pitchSpeed: live.pitch_speed, bbType: live.bb_type, parksHrCount: near?.parks_hr_count ?? null, parkHrList: near?.park_hr_list ?? null, game,
+    })
+    existingContactKeys.add(key)
   }
 
   // Current-day official HR and near-HR results can arrive before the
@@ -259,6 +313,7 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
     dataNotes: [
       'Home runs use official MLB play-by-play and Statcast measurements.',
       'Official hc_x/hc_y coordinates are used whenever captured.',
+      'Live and recently completed games merge official MLB Gameday contact until the postgame Savant sync is available.',
       'Unsynced near-home-run points use the recorded Statcast bearing and distance and are labeled as projections.',
     ],
   }
