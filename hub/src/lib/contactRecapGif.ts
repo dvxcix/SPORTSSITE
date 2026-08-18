@@ -1,18 +1,14 @@
 import { once } from 'node:events'
 import { existsSync } from 'node:fs'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 import bundledFfmpegPath from 'ffmpeg-static'
-import sharp from 'sharp'
 import { MLB_PARK_SHAPES } from '@slipsurge/core/mlbParkShapes'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamColor, getTeamLogoPngUrl, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
 import type { ContactMarketQuote, DailyContactEvent } from '@/lib/contactRecapTypes'
-
-sharp.cache(false)
-sharp.concurrency(1)
 
 const W = 1280
 const H = 720
@@ -83,14 +79,31 @@ async function localDataUri(path: string, mime: string) {
   } catch { return '' }
 }
 
-async function embeddedFontCss() {
-  const path = join(process.cwd(), 'node_modules', 'next', 'dist', 'compiled', '@vercel', 'og', 'Geist-Regular.ttf')
-  const encoded = (await readFile(path)).toString('base64')
-  return `@font-face{font-family:GeistExport;src:url(data:font/ttf;base64,${encoded}) format('truetype');font-style:normal;font-weight:100 900}`
+async function loadSharpWithBundledFont() {
+  const fontPath = join(process.cwd(), 'node_modules', 'next', 'dist', 'compiled', '@vercel', 'og', 'Geist-Regular.ttf')
+  const configDir = join(tmpdir(), 'slipsurge-fontconfig')
+  const configPath = join(configDir, 'fonts.conf')
+  const cacheDir = join(configDir, 'cache')
+  const runtimeFontPath = join(configDir, 'Geist-Regular.ttf')
+  const xmlPath = (value: string) => esc(value.replaceAll('\\', '/'))
+  await mkdir(cacheDir, { recursive: true })
+  await writeFile(runtimeFontPath, await readFile(fontPath))
+  await writeFile(configPath, `<?xml version="1.0"?>
+<fontconfig>
+  <dir>${xmlPath(configDir)}</dir>
+  <cachedir>${xmlPath(cacheDir)}</cachedir>
+  <alias><family>sans-serif</family><prefer><family>Geist</family></prefer></alias>
+  <alias><family>GeistExport</family><prefer><family>Geist</family></prefer></alias>
+</fontconfig>`)
+  process.env.FONTCONFIG_FILE = configPath
+  process.env.FONTCONFIG_PATH = configDir
+  const sharp = (await import('sharp')).default
+  sharp.cache(false)
+  sharp.concurrency(1)
+  return sharp
 }
 
 type FrameAssets = {
-  fontCss: string
   brandLogo: string
   headshot: string
   batterLogo: string
@@ -146,7 +159,7 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
   const specialLimit = primaryQuotes.length > 3 ? 2 : 4
 
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <style>${assets.fontCss}.eyebrow{font:800 13px GeistExport;letter-spacing:2.2px;fill:${accent}}.title{font:900 34px GeistExport;fill:#fff}.subtitle{font:650 15px GeistExport;fill:#9aa8bb}.body{font:650 14px GeistExport;fill:#d7dee8}.meta{font:800 10px GeistExport;letter-spacing:1.5px;fill:#718096}.muted{font:650 13px GeistExport;fill:#8290a3}.book{font:750 9px GeistExport;fill:#8190a3}.price{font:900 18px GeistExport;fill:#fff}.specialLabel{font:750 9px GeistExport;fill:#8fa0b4}.specialPrice{font:900 14px GeistExport;fill:#a3ff3f}.metricLabel{font:800 9px GeistExport;letter-spacing:1.4px;fill:#718096}.metricValue{font:900 21px GeistExport;fill:#fff}.badge{font:850 10px GeistExport;letter-spacing:1px}.score{font:850 15px GeistExport;fill:#fff}.brand{font:900 20px GeistExport;fill:#fff}.brandSmall{font:750 10px GeistExport;letter-spacing:1.7px;fill:#a3ff3f}.card{fill:#111820;stroke:#fff;stroke-opacity:.09}</style>
+    <style>.eyebrow{font:800 13px Geist,sans-serif;letter-spacing:2.2px;fill:${accent}}.title{font:900 34px Geist,sans-serif;fill:#fff}.subtitle{font:650 15px Geist,sans-serif;fill:#9aa8bb}.body{font:650 14px Geist,sans-serif;fill:#d7dee8}.meta{font:800 10px Geist,sans-serif;letter-spacing:1.5px;fill:#718096}.muted{font:650 13px Geist,sans-serif;fill:#8290a3}.book{font:750 9px Geist,sans-serif;fill:#8190a3}.price{font:900 18px Geist,sans-serif;fill:#fff}.specialLabel{font:750 9px Geist,sans-serif;fill:#8fa0b4}.specialPrice{font:900 14px Geist,sans-serif;fill:#a3ff3f}.metricLabel{font:800 9px Geist,sans-serif;letter-spacing:1.4px;fill:#718096}.metricValue{font:900 21px Geist,sans-serif;fill:#fff}.badge{font:850 10px Geist,sans-serif;letter-spacing:1px}.score{font:850 15px Geist,sans-serif;fill:#fff}.brand{font:900 20px Geist,sans-serif;fill:#fff}.brandSmall{font:750 10px Geist,sans-serif;letter-spacing:1.7px;fill:#a3ff3f}.card{fill:#111820;stroke:#fff;stroke-opacity:.09}</style>
     <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111b18"/><stop offset=".39" stop-color="#070c11"/><stop offset="1" stop-color="#020407"/></linearGradient><linearGradient id="panel" x2="1" y2="1"><stop stop-color="#10171d"/><stop offset="1" stop-color="#080d13"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern><clipPath id="avatar"><rect x="45" y="420" width="122" height="122" rx="24"/></clipPath></defs>
     <rect width="1280" height="720" fill="url(#bg)"/><rect width="1280" height="720" fill="url(#grid)"/><circle cx="140" cy="-30" r="250" fill="#a3ff3f" fill-opacity=".035"/>
     <rect x="28" y="24" width="1224" height="70" rx="20" fill="#080e13" stroke="#fff" stroke-opacity=".1"/>
@@ -166,14 +179,14 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
   </svg>`)
 }
 
-async function buildAssets(event: DailyContactEvent, cache: Map<string, string>, fontCss: string, brandLogo: string, bookLogos: Record<string, string>): Promise<FrameAssets> {
+async function buildAssets(event: DailyContactEvent, cache: Map<string, string>, brandLogo: string, bookLogos: Record<string, string>): Promise<FrameAssets> {
   const load = async (url?: string) => {
     if (!url) return ''
     if (!cache.has(url)) cache.set(url, await remoteDataUri(url))
     return cache.get(url) ?? ''
   }
   return {
-    fontCss, brandLogo, bookLogos,
+    brandLogo, bookLogos,
     headshot: await load(mlbHeadshot(event.batterId)),
     batterLogo: await load(getTeamLogoPngUrl(event.batterTeam)),
     homeLogo: await load(getTeamLogoPngUrl(event.game.homeTeam)),
@@ -218,13 +231,13 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
   const errors: Buffer[] = []
   encoder.stderr.on('data', chunk => errors.push(Buffer.from(chunk)))
   const cache = new Map<string, string>()
-  const fontCss = await embeddedFontCss()
+  const sharp = await loadSharpWithBundledFont()
   const brandLogo = await localDataUri('logo.png', 'image/png')
   const bookLogos: Record<string, string> = {}
   await Promise.all(Object.entries(BOOK_ASSETS).map(async ([book, asset]) => { bookLogos[book] = await localDataUri(asset.path, asset.mime) }))
   try {
     for (const event of selected) {
-      const assets = await buildAssets(event, cache, fontCss, brandLogo, bookLogos)
+      const assets = await buildAssets(event, cache, brandLogo, bookLogos)
       let finalFrame: Buffer | null = null
       for (let index = 0; index < MOTION_FRAMES; index += 1) {
         const progress = index / (MOTION_FRAMES - 1)
