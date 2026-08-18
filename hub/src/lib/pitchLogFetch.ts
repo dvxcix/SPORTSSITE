@@ -63,18 +63,26 @@ export async function fetchPlayerPitchRows(admin: AdminClient, mlbId: number, ro
 // coordinates in this compact query so the full matchup payload does not
 // repeat mostly-null coordinate keys across thousands of pitch rows.
 export async function fetchPlayerSprayRows(admin: AdminClient, mlbId: number): Promise<Record<string, any>[]> {
-  const { data, error } = await admin
-    .from('player_pitch_log')
-    .select(SPRAY_LOG_SELECT_COLS)
-    .eq('batter_id', mlbId)
-    .eq('is_in_play', true)
-    .not('hc_x', 'is', null)
-    .not('hc_y', 'is', null)
-    .order('game_date', { ascending: false })
-    .order('game_pk', { ascending: false })
-    .order('at_bat_index', { ascending: false })
-  if (error) throw error
-  return data ?? []
+  const rows: Record<string, any>[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from('player_pitch_log')
+      .select(SPRAY_LOG_SELECT_COLS)
+      .eq('batter_id', mlbId)
+      .eq('is_in_play', true)
+      .not('hc_x', 'is', null)
+      .not('hc_y', 'is', null)
+      .order('game_date', { ascending: false })
+      .order('game_pk', { ascending: false })
+      .order('at_bat_index', { ascending: false })
+      .order('pitch_number', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    if (!data?.length) break
+    rows.push(...data)
+    if (data.length < PAGE_SIZE) break
+  }
+  return rows
 }
 
 // Every home run a player has hit/allowed this season — a small subset by

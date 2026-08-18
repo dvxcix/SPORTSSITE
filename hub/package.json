@@ -20,6 +20,7 @@
     "test:hr-intelligence": "node --experimental-strip-types scripts/hr-intelligence-regression.mts",
     "test:fanduel-markets": "node --experimental-strip-types scripts/fanduel-market-regression.mts",
     "test:fanduel-archive": "node --experimental-strip-types scripts/fanduel-archive-regression.mts",
+    "test:statcast-mappers": "node scripts/statcast-mapper-contract.test.mjs",
     "audit:hr-intelligence:selectors": "tsx scripts/hr-intelligence-game-selectors.mts",
     "audit:market-dna": "tsx scripts/audit-market-dna-date.mts",
     "backfill:market-dna": "tsx scripts/backfill-market-dna-archive.mts",

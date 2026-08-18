@@ -137,11 +137,16 @@ async function syncPitchLogForDate(date) {
     is_whiff: WHIFF_DESCRIPTIONS.has(r.description),
     is_home_run: r.events === 'home_run',
     launch_speed: numOrNull(r.launch_speed), launch_angle: numOrNull(r.launch_angle),
+    hc_x: numOrNull(r.hc_x), hc_y: numOrNull(r.hc_y),
+    hit_distance: numOrNull(r.hit_distance_sc), bb_type: r.bb_type || null,
     xwoba: numOrNull(r.estimated_woba_using_speedangle),
     bat_speed: numOrNull(r.bat_speed),
     plate_x: numOrNull(r.plate_x), plate_z: numOrNull(r.plate_z),
     stand: r.stand || null, p_throws: r.p_throws || null,
     run_value: numOrNull(r.delta_run_exp),
+    attack_angle: numOrNull(r.attack_angle), swing_length: numOrNull(r.swing_length),
+    swing_path_tilt: numOrNull(r.swing_path_tilt), attack_direction: numOrNull(r.attack_direction),
+    launch_speed_angle: intOrNull(r.launch_speed_angle),
     raw: r,
   }))
 

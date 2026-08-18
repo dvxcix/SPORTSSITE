@@ -39,6 +39,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'savant-sync-pitch-arsenal-details', label: 'Pitch arsenal detail', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-pitch-log', label: 'Pitch logs', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'pitch-log-freshness-check', label: 'Pitch-log freshness check', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
+  { name: 'statcast-integrity-check', label: 'Full-season Statcast integrity', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-affinity', label: 'Pitch affinity metrics', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'dugout-statcast-precompute', label: 'Dugout Statcast cache', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'dugout-matchup-edge-precompute', label: 'Dugout matchup cache', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },

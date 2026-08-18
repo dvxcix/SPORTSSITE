@@ -97,6 +97,10 @@
       "schedule": "30 11 * * *"
     },
     {
+      "path": "/api/cron/statcast-integrity-check",
+      "schedule": "45 11 * * *"
+    },
+    {
       "path": "/api/cron/savant-sync-affinity",
       "schedule": "15 10 * * *"
     },

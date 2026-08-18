@@ -11,6 +11,7 @@ import type { ContactKind, DailyContactEvent, DailyContactGame, DailyContactSlat
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const SPECIAL_VENUES = new Set([5340, 5355, 5445])
+const CONTACT_PAGE_SIZE = 1000
 const PITCH_SELECT = [
   'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'events', 'description',
   'is_in_play', 'is_home_run', 'launch_speed', 'launch_angle', 'hc_x', 'hc_y', 'hit_distance',
@@ -158,17 +159,26 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
   const games = schedule.slice().sort((a, b) => a.gameDate.localeCompare(b.gameDate) || a.gamePk - b.gamePk).map(gameFromSchedule)
   const gameByPk = new Map(games.map(game => [game.gamePk, game]))
   const admin = createAdminClient()
-  const { data: pitchData, error: pitchError } = await admin
-    .from('player_pitch_log')
-    .select(PITCH_SELECT)
-    .eq('game_date', date)
-    .eq('is_in_play', true)
-    .order('game_pk', { ascending: true })
-    .order('at_bat_index', { ascending: true })
-    .order('pitch_number', { ascending: true })
-    .limit(1000)
-  if (pitchError) throw pitchError
-  const pitchRows = (pitchData ?? []) as unknown as PitchRow[]
+  // PostgREST caps a response at 1,000 rows even when a larger limit is
+  // requested. Large slates and extra-inning games can exceed that ceiling,
+  // so page the complete date deterministically instead of silently dropping
+  // late games from Contact Recap and exported media.
+  const pitchRows: PitchRow[] = []
+  for (let from = 0; ; from += CONTACT_PAGE_SIZE) {
+    const { data: pitchData, error: pitchError } = await admin
+      .from('player_pitch_log')
+      .select(PITCH_SELECT)
+      .eq('game_date', date)
+      .eq('is_in_play', true)
+      .order('game_pk', { ascending: true })
+      .order('at_bat_index', { ascending: true })
+      .order('pitch_number', { ascending: true })
+      .range(from, from + CONTACT_PAGE_SIZE - 1)
+    if (pitchError) throw pitchError
+    const page = (pitchData ?? []) as unknown as PitchRow[]
+    pitchRows.push(...page)
+    if (page.length < CONTACT_PAGE_SIZE) break
+  }
 
   const hrResult = await fetchHrFeed(schedule)
   const ids = new Set<number>()

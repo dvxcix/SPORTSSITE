@@ -25,6 +25,20 @@ type DataEvidence = {
   currentOutput?: boolean
 }
 
+type IntegrityRun = {
+  status: 'healthy' | 'warning' | 'failed'
+  through_date: string
+  summary: { failures?: number; warnings?: number } | null
+  checks: {
+    pitch_log?: { rows?: number; games?: number; fair_balls?: number; home_runs?: number; source_unavailable_fair_ball_metrics?: Record<string, number> }
+    game_coverage?: { scheduled_games_without_pitch_log?: number }
+    home_run_enrichment?: { missing_optional_detail_events?: number }
+    category_freshness?: { stale_categories?: number }
+    official_schedule?: { source_available?: boolean; final_games?: number; final_games_without_pitch_log?: number; missing_game_pks?: number[] }
+  } | null
+  created_at: string
+}
+
 function easternDateOffset(days: number) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -106,6 +120,15 @@ export default async function PipelineHealthPage() {
     admin.from('operational_retry_queue').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
   ])
   const runs = [...((data ?? []) as Run[]), ...((lowerFrequencyData ?? []) as Run[])]
+  const { data: integrityData } = await admin
+    .from('statcast_integrity_runs')
+    .select('status,through_date,summary,checks,created_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const integrity = integrityData as IntegrityRun | null
+  const sourceUnavailable = Object.values(integrity?.checks?.pitch_log?.source_unavailable_fair_ball_metrics ?? {})
+    .reduce((sum, value) => sum + Number(value || 0), 0)
   const latest = new Map<string, Run>()
   for (const run of runs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())) {
     if (!latest.has(run.job_name)) latest.set(run.job_name, run)
@@ -140,6 +163,9 @@ export default async function PipelineHealthPage() {
   const { data: seasonAverageOutput } = await admin.from('dugout_season_avg_precomputed').select('game_date').eq('game_date', currentMlbDate).limit(1)
   if (seasonAverageOutput?.length) {
     dataEvidence.set('dugout-season-avg-precompute', { observedAt: null, detail: `${currentMlbDate} season-average cache`, currentOutput: true })
+  }
+  if (integrity?.created_at) {
+    dataEvidence.set('statcast-integrity-check', { observedAt: integrity.created_at, detail: `Full-season audit through ${integrity.through_date}` })
   }
 
   const now = new Date()
@@ -214,6 +240,31 @@ export default async function PipelineHealthPage() {
         <QueueCard icon={Download} label="Contact recap exports" value={(activeRecapExports ?? 0) + (failedRecapExports ?? 0)} detail={`${activeRecapExports ?? 0} active · ${failedRecapExports ?? 0} failed`} href="/admin/contact-recap" tone={(failedRecapExports ?? 0) > 0 ? 'danger' : (activeRecapExports ?? 0) > 0 ? 'warning' : 'success'}/>
       </div>
 
+      {integrity && (
+        <section className={`mb-6 rounded-2xl border p-5 ${integrity.status === 'failed' ? 'border-red-500/30 bg-red-500/8' : integrity.status === 'warning' ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/25 bg-emerald-500/8'}`}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">Canonical data audit</div>
+              <h2 className="mt-1 text-lg font-black text-white">Statcast integrity through {integrity.through_date}</h2>
+              <p className="mt-1 text-sm text-zinc-300">Every completed game, pitch event, source-to-column mapping, classification flag, and Statcast category is reconciled.</p>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${integrity.status === 'failed' ? 'bg-red-500/15 text-red-300' : integrity.status === 'warning' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{integrity.status}</span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <IntegrityMetric label="Pitch events" value={integrity.checks?.pitch_log?.rows ?? 0} />
+            <IntegrityMetric label="Games" value={integrity.checks?.pitch_log?.games ?? 0} />
+            <IntegrityMetric label="Fair balls" value={integrity.checks?.pitch_log?.fair_balls ?? 0} />
+            <IntegrityMetric label="Home runs" value={integrity.checks?.pitch_log?.home_runs ?? 0} />
+            <IntegrityMetric label="Source unavailable" value={sourceUnavailable} />
+            <IntegrityMetric label="Pipeline gaps" value={integrity.summary?.failures ?? 0} danger={(integrity.summary?.failures ?? 0) > 0} />
+          </div>
+          <div className="mt-3 space-y-1 text-xs text-zinc-500">
+            <p>Official MLB final-game gaps: {integrity.checks?.official_schedule?.final_games_without_pitch_log ?? 0}. Stored schedule gaps: {integrity.checks?.game_coverage?.scheduled_games_without_pitch_log ?? 0}.</p>
+            <p>Source unavailable counts are genuine MLB/Statcast omissions, displayed as unavailable rather than zero. Optional Savant HR-detail gaps: {integrity.checks?.home_run_enrichment?.missing_optional_detail_events ?? 0}. These never remove canonical MLB home-run events.</p>
+          </div>
+        </section>
+      )}
+
       <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/60">
         <div className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-zinc-800 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
           <span>Pipeline</span><span>Status</span><span>Last signal</span><span>Next run</span><span>Action</span>
@@ -237,6 +288,10 @@ export default async function PipelineHealthPage() {
       </div>
     </div>
   )
+}
+
+function IntegrityMetric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
+  return <div className="rounded-xl border border-white/8 bg-black/20 px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p><p className={`mt-1 text-xl font-black ${danger ? 'text-red-300' : 'text-white'}`}>{value.toLocaleString()}</p></div>
 }
 
 function QueueCard({ icon: Icon, label, value, detail, tone, href }: {
