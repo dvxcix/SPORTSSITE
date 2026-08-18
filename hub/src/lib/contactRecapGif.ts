@@ -1,6 +1,7 @@
 import { once } from 'node:events'
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 import bundledFfmpegPath from 'ffmpeg-static'
@@ -9,6 +10,9 @@ import { MLB_PARK_SHAPES } from '@slipsurge/core/mlbParkShapes'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamColor, getTeamLogoPngUrl, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
 import type { ContactMarketQuote, DailyContactEvent } from '@/lib/contactRecapTypes'
+
+sharp.cache(false)
+sharp.concurrency(1)
 
 const W = 1280
 const H = 720
@@ -183,23 +187,35 @@ async function writeFrame(stream: NodeJS.WritableStream, frame: Buffer, copies =
   }
 }
 
+function encoderFailureMessage(errors: Buffer[], fallback: string) {
+  return Buffer.concat(errors).toString('utf8').trim() || fallback
+}
+
+async function runFfmpeg(ffmpegPath: string, args: string[]) {
+  const process = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] })
+  const errors: Buffer[] = []
+  process.stderr.on('data', chunk => errors.push(Buffer.from(chunk)))
+  const spawnFailure = new Promise<never>((_, reject) => {
+    process.once('error', error => reject(new Error(`Could not start the social video encoder: ${error.message}`)))
+  })
+  const [exitCode] = await Promise.race([once(process, 'close'), spawnFailure]) as [number]
+  if (exitCode !== 0) throw new Error(encoderFailureMessage(errors, `Video encoder exited with code ${exitCode}.`))
+}
+
 export async function renderContactRecap(events: DailyContactEvent[], format: ContactRecapExportFormat) {
   const selected = events.slice(0, 60)
   if (!selected.length) throw new Error('There are no captured events to export.')
   const ffmpegPath = resolveFfmpegPath()
-  const args = ['-hide_banner', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(FPS), '-i', 'pipe:0', '-an']
-  if (format === 'mp4') {
-    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-f', 'mp4', 'pipe:1')
-  } else {
-    args.push('-filter_complex', '[0:v]fps=12,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle', '-loop', '0', '-f', 'gif', 'pipe:1')
-  }
-  const encoder = spawn(ffmpegPath, args, { stdio: ['pipe', 'pipe', 'pipe'] })
+  const workDir = await mkdtemp(join(tmpdir(), 'slipsurge-contact-'))
+  const sourcePath = join(workDir, 'source.mp4')
+  const finalPath = format === 'mp4' ? sourcePath : join(workDir, 'recap.gif')
+  const palettePath = join(workDir, 'palette.png')
+  const args = ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'image2pipe', '-vcodec', 'png', '-r', String(FPS), '-i', 'pipe:0', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', sourcePath]
+  const encoder = spawn(ffmpegPath, args, { stdio: ['pipe', 'ignore', 'pipe'] })
   const spawnFailure = new Promise<never>((_, reject) => {
     encoder.once('error', error => reject(new Error(`Could not start the social video encoder: ${error.message}`)))
   })
-  const output: Buffer[] = []
   const errors: Buffer[] = []
-  encoder.stdout.on('data', chunk => output.push(Buffer.from(chunk)))
   encoder.stderr.on('data', chunk => errors.push(Buffer.from(chunk)))
   const cache = new Map<string, string>()
   const fontCss = await embeddedFontCss()
@@ -212,7 +228,7 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
       let finalFrame: Buffer | null = null
       for (let index = 0; index < MOTION_FRAMES; index += 1) {
         const progress = index / (MOTION_FRAMES - 1)
-        const frame = await sharp(frameSvg(event, progress, assets)).ensureAlpha().raw().toBuffer()
+        const frame = await sharp(frameSvg(event, progress, assets)).png({ compressionLevel: 3 }).toBuffer()
         finalFrame = frame
         await writeFrame(encoder.stdin, frame)
       }
@@ -220,11 +236,18 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
     }
     encoder.stdin.end()
     const [exitCode] = await Promise.race([once(encoder, 'close'), spawnFailure]) as [number]
-    if (exitCode !== 0) throw new Error(Buffer.concat(errors).toString('utf8') || `Video encoder exited with code ${exitCode}.`)
-    return Buffer.concat(output)
+    if (exitCode !== 0) throw new Error(encoderFailureMessage(errors, `Video encoder exited with code ${exitCode}.`))
+    if (format === 'gif') {
+      const filters = 'fps=12,scale=960:-1:flags=lanczos'
+      await runFfmpeg(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath, '-vf', `${filters},palettegen=max_colors=160:stats_mode=diff`, palettePath])
+      await runFfmpeg(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath, '-i', palettePath, '-lavfi', `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`, '-loop', '0', finalPath])
+    }
+    return await readFile(finalPath)
   } catch (error) {
     encoder.kill('SIGKILL')
     throw error
+  } finally {
+    await rm(workDir, { recursive: true, force: true })
   }
 }
 

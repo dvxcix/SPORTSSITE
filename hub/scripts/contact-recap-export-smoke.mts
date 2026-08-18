@@ -35,9 +35,18 @@ const event: DailyContactEvent = {
   },
 }
 
+const eventCount = Math.max(1, Number(process.env.CONTACT_RECAP_SMOKE_EVENTS ?? 1))
+const events = Array.from({ length: eventCount }, (_, index) => ({
+  ...event,
+  id: `smoke-${index + 1}`,
+  gameIndex: index,
+  batterName: `Elly De La Cruz ${index + 1}`,
+  game: { ...event.game, gameIndex: index },
+}))
+
 for (const format of ['mp4', 'gif'] as const) {
-  const body = await renderContactRecap([event], format)
+  const body = await renderContactRecap(events, format)
   const path = join(tmpdir(), `slipsurge-contact-recap-smoke.${format}`)
   await writeFile(path, body)
-  console.log(`${format} ${body.length} ${path}`)
+  console.log(`${format} ${events.length} events ${body.length} bytes ${path}`)
 }
