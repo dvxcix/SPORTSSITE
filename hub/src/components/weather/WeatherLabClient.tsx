@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor, isDarkTeamLogo, LOGO_WHITE_FILTER } from '@slipsurge/core/mlbTeamColors'
 import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore, type ParkRoof } from '@slipsurge/core/mlbParks'
-import { MLB_PARK_SHAPES } from '@slipsurge/core/mlbParkShapes'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
+import { ParkFieldSvg } from '@/components/sports/ParkFieldSvg'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { DateButtonNavigator } from '@/components/product/DateButtonNavigator'
 import { PageState } from '@/components/layout/PageState'
@@ -43,90 +43,14 @@ export interface WeatherGame {
   hours: HourEntry[]
 }
 
-// The pitcher's mound/rubber, foul lines, bases, and home plate — every one
-// of the 30 realsports.io source diagrams draws these at the exact same
-// standard coordinates regardless of park (it's a shared template, only the
-// outfield/infield-dirt outlines actually differ per stadium), and always
-// in the plain untransformed 0-250 space even for parks whose outfield path
-// uses a matrix transform (CIN, NYM, SD). Two of the 30 source files
-// happened to bake the home-plate marker directly into their infield_sand
-// path instead of keeping it as this separate group (Arizona, Houston),
-// which is why only those two showed a plate/bases detail before this was
-// added uniformly — not an intentional per-park choice, just inconsistent
-// source markup. Rendering it once, universally, fixes that for every park.
-// The small sand-diamond patch immediately around home plate/the mound —
-// MIA/DET/MIN/CWS's source diagrams happened to use this exact shape as
-// their "infield_sand" path, while other parks (PIT, NYM, TB, BAL, etc.)
-// got a large custom trace of that park's real infield-grass boundary
-// instead. Rendered here as one fixed, standard-coordinate shape (same
-// space as the bases/mound below) so every park gets the same recognizable
-// sand patch regardless of what that park's own infield path looked like —
-// consistency over per-park authenticity, since that's what reads clearly
-// at this size.
-const SAND_DIAMOND = 'M163.9,166.7l-1-1c-5-16-20-27.7-37.7-27.7s-32.7,11.7-37.7,27.7l-1,1l32.7,32.7c-0.5,0.9-0.7,1.9-0.7,3c0,3.7,3,6.7,6.7,6.7s6.7-3,6.7-6.7c0-1.1-0.3-2.1-0.7-3L163.9,166.7z M122.5,154.7c0.8,0.5,1.7,0.8,2.7,0.8s1.9-0.3,2.7-0.8l16.8,16.8c-1.6,1.6-1.6,4.1,0,5.6l2.5,2.5l-17.7,17.7c-1.2-1-2.7-1.6-4.3-1.6s-3.2,0.6-4.3,1.6l-17.7-17.7l2.5-2.5c1.6-1.5,1.6-4,0-5.6L122.5,154.7z'
-
-// The pitcher's mound/rubber, foul lines, bases, and home plate — every one
-// of the 30 realsports.io source diagrams draws these at the exact same
-// standard coordinates regardless of park (it's a shared template, only the
-// outfield outline actually differs per stadium), and always in the plain
-// untransformed 0-250 space even for parks whose outfield path uses a
-// matrix transform (CIN, NYM, SD). Two of the 30 source files happened to
-// bake the home-plate marker directly into their infield_sand path instead
-// of keeping it as this separate group (Arizona, Houston), which is why
-// only those two showed a plate/bases detail before this was added
-// uniformly — not an intentional per-park choice, just inconsistent source
-// markup. Rendering it once, universally, fixes that for every park.
-function InfieldDetail({ secondary }: { secondary: string }) {
-  return (
-    <>
-      <path d={SAND_DIAMOND} fill={secondary} fillOpacity={0.8} stroke={secondary} strokeOpacity={1} strokeWidth={0.75} />
-      <g fill="none" stroke="#fff" strokeWidth={0.75} opacity={0.85}>
-        <path d="M122.5,174.7c-1.5,1.5-1.5,3.9,0,5.4s3.9,1.5,5.4,0c1.5-1.5,1.5-3.9,0-5.4C126.5,173.2,124,173.2,122.5,174.7z" fill="#fff" />
-        <path d="M123.2,176.6h4v1.6h-4V176.6z" fill="#fff" />
-        <path d="M125.2,203.2l-97.1-97.1" />
-        <path d="M125.2,203.2l97.1-97.2" />
-        <rect x="99.2" y="175.1" width="3" height="3" transform="matrix(0.7073 -0.7069 0.7069 0.7073 -95.3473 122.8833)" fill="#fff" />
-        <rect x="148.1" y="175.2" width="3" height="3" transform="matrix(0.7073 -0.7069 0.7069 0.7073 -81.1078 157.4629)" fill="#fff" />
-        <rect x="123.7" y="148.6" width="3" height="3" transform="matrix(0.707 -0.7073 0.7073 0.707 -69.4796 132.5406)" fill="#fff" />
-        <polygon points="126.7,201.8 125.2,203.4 123.7,201.8 123.7,200.3 126.7,200.3" fill="#fff" />
-      </g>
-    </>
-  )
-}
-
-// Real traced park outline when we have one for this team (see
-// mlbParkShapes.ts); otherwise a generic "fan" shape — home plate at the
-// bottom point opening out toward the outfield — so the page still reads
-// as a ballpark and gives the wind arrow something to sit inside for teams
-// we haven't traced yet. Two-tone: outfield in the home team's primary
-// color, sand diamond in their secondary — a lot more distinctive per-card
-// than every park sharing one site-wide accent color.
 export function ParkShape({ primary, secondary, teamAbbr }: { primary: string; secondary: string; teamAbbr: string }) {
-  const real = MLB_PARK_SHAPES[teamAbbr.toUpperCase()]
-
-  if (real) {
-    return (
-      <svg viewBox={real.viewBox} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        <g transform={real.transform}>
-          <path d={real.outfield} fill={primary} fillOpacity={0.32} stroke={primary} strokeOpacity={0.75} strokeWidth={1.5} />
-        </g>
-        <InfieldDetail secondary={secondary} />
-      </svg>
-    )
-  }
-
   return (
-    <svg viewBox="0 0 250 250" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-      <path
-        d="M125 220 L60 150 A 95 95 0 0 1 190 150 Z"
-        fill={primary}
-        fillOpacity={0.32}
-        stroke={primary}
-        strokeOpacity={0.75}
-        strokeWidth={1.5}
-      />
-      <InfieldDetail secondary={secondary} />
-    </svg>
+    <ParkFieldSvg
+      primary={primary}
+      secondary={secondary}
+      teamAbbr={teamAbbr}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+    />
   )
 }
 

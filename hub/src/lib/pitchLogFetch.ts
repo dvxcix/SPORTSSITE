@@ -6,7 +6,12 @@ export const PITCH_LOG_SELECT_COLS = [
   'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'zone', 'plate_x', 'plate_z',
   'balls', 'strikes', 'inning', 'events', 'description', 'is_in_play', 'is_swing', 'is_whiff', 'is_home_run',
   'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed', 'velocity', 'spin_rate',
-  'raw',
+  'attack_angle', 'swing_length', 'swing_path_tilt', 'attack_direction', 'launch_speed_angle',
+].join(', ')
+
+export const SPRAY_LOG_SELECT_COLS = [
+  'game_pk', 'game_date', 'pitcher_id', 'pitch_type', 'p_throws', 'events', 'is_in_play', 'is_home_run',
+  'launch_speed', 'launch_angle', 'hc_x', 'hc_y', 'hit_distance', 'bb_type', 'inning', 'at_bat_index', 'pitch_number',
 ].join(', ')
 
 // Real incident (2026-07-24, 57014 statement-timeout alert on this exact
@@ -52,6 +57,24 @@ export async function fetchPlayerPitchRows(admin: AdminClient, mlbId: number, ro
     if (data.length < PAGE_SIZE) break
   }
   return rows
+}
+
+// A batter produces far fewer balls in play than pitches seen. Keep spray
+// coordinates in this compact query so the full matchup payload does not
+// repeat mostly-null coordinate keys across thousands of pitch rows.
+export async function fetchPlayerSprayRows(admin: AdminClient, mlbId: number): Promise<Record<string, any>[]> {
+  const { data, error } = await admin
+    .from('player_pitch_log')
+    .select(SPRAY_LOG_SELECT_COLS)
+    .eq('batter_id', mlbId)
+    .eq('is_in_play', true)
+    .not('hc_x', 'is', null)
+    .not('hc_y', 'is', null)
+    .order('game_date', { ascending: false })
+    .order('game_pk', { ascending: false })
+    .order('at_bat_index', { ascending: false })
+  if (error) throw error
+  return data ?? []
 }
 
 // Every home run a player has hit/allowed this season — a small subset by
@@ -102,8 +125,9 @@ export async function fetchPlayerGameDates(admin: AdminClient, mlbId: number, ro
   return Array.from(dates).sort()
 }
 
-// Attaches opponent identity + the couple raw-JSONB Savant fields every
-// consumer of this table wants displayed. Generalized to enrich rows from
+// Attaches opponent identity and game context. The Savant fields consumed
+// by player tools are materialized columns, so this hot path never needs to
+// detoast the full raw JSONB pitch payload. Generalized to enrich rows from
 // many players against one shared, pre-batched opponents/games lookup —
 // the single-player route does its own one-off lookup; the bulk Synergy
 // route batches this once across ~150 players instead of per player.
@@ -111,22 +135,31 @@ export function enrichPitchRows(
   rows: Record<string, any>[],
   opponentKey: 'batter_id' | 'pitcher_id',
   opponents: Record<number, { full_name: string | null; current_team_abbr: string | null }>,
-  gameInfo: Record<string, { day_night: string | null; venue_name: string | null }>,
+  gameInfo: Record<string, {
+    day_night: string | null
+    venue_name: string | null
+    venue_id?: number | null
+    home_team_id?: number | null
+    home_team?: string | null
+    away_team_id?: number | null
+    away_team?: string | null
+  }>,
 ): Record<string, any>[] {
   return rows.map(r => {
     const opp = opponents[r[opponentKey]]
-    const raw = r.raw ?? {}
+    const game = gameInfo[r.game_pk]
     return {
       ...r,
       opponent_id: r[opponentKey],
       opponent_name: opp?.full_name ?? `Player ${r[opponentKey]}`,
       opponent_team: opp?.current_team_abbr ?? null,
-      day_night: gameInfo[r.game_pk]?.day_night ?? null,
-      venue_name: gameInfo[r.game_pk]?.venue_name ?? null,
-      swing_length: raw.swing_length !== undefined && raw.swing_length !== '' ? Number(raw.swing_length) : null,
-      attack_angle: raw.attack_angle !== undefined && raw.attack_angle !== '' ? Number(raw.attack_angle) : null,
-      hit_distance: raw.hit_distance_sc !== undefined && raw.hit_distance_sc !== '' ? Number(raw.hit_distance_sc) : null,
-      bb_type: raw.bb_type || null,
+      day_night: game?.day_night ?? null,
+      venue_name: game?.venue_name ?? null,
+      venue_id: game?.venue_id ?? null,
+      home_team_id: game?.home_team_id ?? null,
+      home_team: game?.home_team ?? null,
+      away_team_id: game?.away_team_id ?? null,
+      away_team: game?.away_team ?? null,
       // Swing "tilt" and horizontal attack direction — same raw Statcast
       // bat-tracking payload as swing_length/attack_angle above, just never
       // pulled out before now. launch_speed_angle is Savant's OWN official
@@ -134,10 +167,6 @@ export function enrichPitchRows(
       // event — using it directly means Barrel% doesn't need us to
       // reimplement Savant's EV/LA barrel formula ourselves, just count
       // bucket 6.
-      swing_path_tilt: raw.swing_path_tilt !== undefined && raw.swing_path_tilt !== '' ? Number(raw.swing_path_tilt) : null,
-      attack_direction: raw.attack_direction !== undefined && raw.attack_direction !== '' ? Number(raw.attack_direction) : null,
-      launch_speed_angle: raw.launch_speed_angle !== undefined && raw.launch_speed_angle !== '' ? Number(raw.launch_speed_angle) : null,
-      raw: undefined,
     }
   })
 }

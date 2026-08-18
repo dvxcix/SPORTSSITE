@@ -10,6 +10,7 @@ import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } fr
 import { MIN_PITCHES_FOR_HEAT } from '@slipsurge/core/batterStatsEngine'
 import { PitchZoneHeatmap, type PitcherPitchRow } from './PitchZoneHeatmap'
 import { BatterMatchupExplorer, type BatterPitchRow } from './BatterMatchupExplorer'
+import { BattedBallSprayChart, type SprayPitchRow } from './BattedBallSprayChart'
 import type { PlayerTodayContext } from '@slipsurge/core/mlbSchedule'
 import entityStyles from '@/components/product/EntityPage.module.css'
 
@@ -553,7 +554,11 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   // Loaded separately from the rest of the page — this payload (every pitch
   // thrown/seen this season) is far heavier than everything else combined,
   // so it shouldn't block the initial render.
-  const [pitchLog, setPitchLog] = useState<{ pitcherRows: PitcherPitchRow[]; batterRows: BatterPitchRow[] } | null>(null)
+  const [pitchLog, setPitchLog] = useState<{
+    pitcherRows: PitcherPitchRow[]
+    batterRows: BatterPitchRow[]
+    sprayRows: SprayPitchRow[]
+  } | null>(null)
   // undefined = still loading, null = not in today's schedule at all —
   // distinct from "loaded, no context" so the cards don't flash a default
   // before this arrives.
@@ -569,8 +574,8 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   useEffect(() => {
     fetch(`/api/players/${mlbId}/pitch-log`)
       .then(r => r.json())
-      .then(d => setPitchLog({ pitcherRows: d.pitcherRows ?? [], batterRows: d.batterRows ?? [] }))
-      .catch(() => setPitchLog({ pitcherRows: [], batterRows: [] }))
+      .then(d => setPitchLog({ pitcherRows: d.pitcherRows ?? [], batterRows: d.batterRows ?? [], sprayRows: d.sprayRows ?? [] }))
+      .catch(() => setPitchLog({ pitcherRows: [], batterRows: [], sprayRows: [] }))
   }, [mlbId])
 
   useEffect(() => {
@@ -722,6 +727,12 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
             teamAbbr: todayContext.opponentTeam, teamName: todayContext.opponentTeamName,
             lineupIds: todayContext.opponentLineup.map(p => p.mlb_id), confirmed: todayContext.lineupConfirmed,
           } : null}
+        />
+      )}
+      {isBatter && pitchLog && pitchLog.sprayRows.length > 0 && (
+        <BattedBallSprayChart
+          rows={pitchLog.sprayRows}
+          playerName={player.full_name ?? `Player ${player.mlb_id}`}
         />
       )}
       {isBatter && pitchLog && pitchLog.batterRows.length > 0 && (
