@@ -177,14 +177,21 @@ function DateStrip({ date, onChange }: { date: string; onChange: (d: string) => 
 }
 
 // ─── page ────────────────────────────────────────────────────────────────
-export function PitcherReportClient() {
+type PitcherReportClientProps = {
+  date?: string
+  gameKey?: string | null
+  embedded?: boolean
+}
+
+export function PitcherReportClient({ date: controlledDate, gameKey, embedded = false }: PitcherReportClientProps = {}) {
   // Deep-link support (Dugout's opposing-pitcher chip links here with both
   // params) — date picks the right slate, pitcherId auto-selects that exact
   // starter once his game's data loads instead of defaulting to whoever's
   // first in the list.
   const searchParams = useSearchParams()
   const linkedPitcherId = searchParams.get('pitcherId')
-  const [date, setDate] = useState<string>(() => searchParams.get('date') || localToday())
+  const [internalDate, setInternalDate] = useState<string>(() => searchParams.get('date') || localToday())
+  const date = controlledDate ?? internalDate
   const [data, setData] = useState<DugoutData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -205,6 +212,7 @@ export function PitcherReportClient() {
     if (!data) return []
     const out: StarterOption[] = []
     for (const g of data.games) {
+      if (gameKey && g.gameKey !== gameKey) continue
       if (g.awayPitcher) {
         out.push({
           key: `${g.gameKey}-away`, gameKey: g.gameKey, gamePk: g.gamePk, gameDate: g.gameDate, pitcher: g.awayPitcher,
@@ -223,10 +231,11 @@ export function PitcherReportClient() {
       }
     }
     return out
-  }, [data])
+  }, [data, gameKey])
 
   useEffect(() => {
-    if (selectedKey || !starters.length) return
+    if (selectedKey && starters.some(starter => starter.key === selectedKey)) return
+    if (!starters.length) { setSelectedKey(null); return }
     const linked = linkedPitcherId ? starters.find(s => String(s.pitcher.id) === linkedPitcherId) : null
     setSelectedKey((linked ?? starters[0]).key)
   }, [starters, selectedKey, linkedPitcherId])
@@ -397,7 +406,7 @@ export function PitcherReportClient() {
 
   return (
     <div>
-      <DateButtonNavigator date={date} today={localToday()} onChange={setDate} />
+      {!embedded && <DateButtonNavigator date={date} today={localToday()} onChange={setInternalDate} />}
 
       {loading ? (
         <PageState compact kind="loading" title="Loading probable starters" message="Preparing pitch mixes and opponent lineups." />

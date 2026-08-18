@@ -132,7 +132,14 @@ function MovementChart({ series, mode, windowHours, activeLineId, pinnedLineIds,
   </div>
 }
 
-export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
+type OddsTerminalClientProps = {
+  initialDate: string
+  embedded?: boolean
+  selectedGamePk?: number | null
+  onGameChange?: (gamePk: number) => void
+}
+
+export function OddsTerminalClient({ initialDate, embedded = false, selectedGamePk, onGameChange }: OddsTerminalClientProps) {
   const router = useRouter()
   const [date, setDate] = useState(initialDate)
   const [games, setGames] = useState<Game[]>([])
@@ -163,6 +170,11 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
   const [loading, setLoading] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const selectedGamePkRef = useRef(selectedGamePk)
+  const onGameChangeRef = useRef(onGameChange)
+
+  useEffect(() => { selectedGamePkRef.current = selectedGamePk }, [selectedGamePk])
+  useEffect(() => { onGameChangeRef.current = onGameChange }, [onGameChange])
 
   useEffect(() => {
     let cancelled = false
@@ -170,7 +182,16 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
     fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' }).then(async response => {
       if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Could not load the slate.')
       return response.json()
-    }).then(data => { if (!cancelled) { const next = data.games ?? []; setGames(next); setGamePk(next[0]?.gamePk ?? null) } }).catch(e => !cancelled && setError(e.message)).finally(() => !cancelled && setLoading(false))
+    }).then(data => {
+      if (cancelled) return
+      const next: Game[] = data.games ?? []
+      const requestedGamePk = selectedGamePkRef.current
+      const requested = requestedGamePk != null ? next.find(game => game.gamePk === requestedGamePk) : null
+      const nextGamePk = requested?.gamePk ?? next[0]?.gamePk ?? null
+      setGames(next)
+      setGamePk(nextGamePk)
+      if (nextGamePk != null && nextGamePk !== requestedGamePk) onGameChangeRef.current?.(nextGamePk)
+    }).catch(e => !cancelled && setError(e.message)).finally(() => !cancelled && setLoading(false))
     return () => { cancelled = true }
   }, [date, reloadKey])
 
@@ -278,6 +299,7 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
   const currentMarketLabel = MARKETS.find(([key]) => key === market)?.[1] ?? 'Select market'
   const dateStrip = [-3,-2,-1,0,1,2,3].map(n => offsetDate(date, n))
   const chooseDate = (next: string) => { setDate(next); router.replace(`/odds-terminal?date=${next}`) }
+  const chooseGame = (nextGamePk: number) => { setGamePk(nextGamePk); onGameChange?.(nextGamePk) }
   const historical = date < todayET()
   const hasHistory = snapshots.length > 0
   const resetView = () => {
@@ -310,25 +332,25 @@ export function OddsTerminalClient({ initialDate }: { initialDate: string }) {
   const toggleLineFocus = (id: string) => setActiveLineId(current => current === id ? null : id)
   const togglePinnedLine = (id: string) => setPinnedLineIds(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next })
 
-  return <div className={styles.page}>
-    <header className={styles.hero}>
+  return <div className={`${styles.page} ${embedded ? styles.embedded : ''}`}>
+    {!embedded && <header className={styles.hero}>
       <div className={styles.heroIcon}><Activity size={22}/><span/></div>
       <div><div className={styles.eyebrow}><span>ULTIMATE</span> ODDS HISTORY</div><h1>Odds Movement Terminal</h1><p>Compare captured prices by player, market, sportsbook, and time.</p></div>
       <div className={styles.liveBadge}><i/>{historyLoading ? 'SYNCING' : historical ? 'ARCHIVED HISTORY' : 'LIVE HISTORY'}</div>
-    </header>
+    </header>}
 
-    <div className={styles.dateStrip}>
+    {!embedded && <div className={styles.dateStrip}>
       <button onClick={() => chooseDate(offsetDate(date,-1))} aria-label="Previous date"><ChevronLeft size={17}/></button>
       {dateStrip.map(value => <button key={value} data-active={value===date} onClick={() => chooseDate(value)}><small>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'})}</small><strong>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})}</strong></button>)}
       <button onClick={() => chooseDate(offsetDate(date,1))} aria-label="Next date"><ChevronRight size={17}/></button>
-    </div>
+    </div>}
 
     {error && <div className={styles.error}><AlertCircle size={16}/><span>{error}</span><button type="button" onClick={()=>setReloadKey(value=>value+1)}><RefreshCw size={13}/>RETRY</button></div>}
-    <section className={styles.gameRail} aria-label="Select game">
-      {loading ? Array.from({length:6},(_,i)=><div className={styles.gameSkeleton} key={i}/>) : games.map(g => <button key={g.gamePk} data-active={g.gamePk===gamePk} onClick={() => setGamePk(g.gamePk)} aria-label={`${g.awayAbbr} at ${g.homeAbbr}`}>
+    {!embedded && <section className={styles.gameRail} aria-label="Select game">
+      {loading ? Array.from({length:6},(_,i)=><div className={styles.gameSkeleton} key={i}/>) : games.map(g => <button key={g.gamePk} data-active={g.gamePk===gamePk} onClick={() => chooseGame(g.gamePk)} aria-label={`${g.awayAbbr} at ${g.homeAbbr}`}>
         <span style={{'--team':getTeamColor(g.awayAbbr)} as CSSProperties}><img src={getTeamLogoUrl(g.awayAbbr)} alt=""/></span><b>VS</b><span style={{'--team':getTeamColor(g.homeAbbr)} as CSSProperties}><img src={getTeamLogoUrl(g.homeAbbr)} alt=""/></span><small>{g.status === 'Final' ? 'FINAL' : new Date(g.gameDate).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small>
       </button>)}
-    </section>
+    </section>}
 
     {game && <>
       <section className={styles.matchupHeader}>

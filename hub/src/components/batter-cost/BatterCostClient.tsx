@@ -181,7 +181,12 @@ function pctColor(pct: number | null, maxAbs: number): React.CSSProperties {
   return { color: pct < 0 ? `rgba(74,222,128,${alpha})` : `rgba(248,113,113,${alpha})`, fontWeight: 700 }
 }
 
-export function BatterCostClient({ date }: { date: string }) {
+type BatterCostClientProps = {
+  date: string
+  gameKey?: string | null
+}
+
+export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   // Keyed by mlb_id+gameKey, not mlb_id alone — a doubleheader batter has
@@ -354,6 +359,7 @@ export function BatterCostClient({ date }: { date: string }) {
     // re-sorts visually "stop working" (React reconciling the duplicate-key
     // rows unpredictably instead of just reordering two distinct nodes).
     for (const g of data.games) {
+      if (gameKey && g.gameKey !== gameKey) continue
       const gamePk = g.gamePk != null ? Number(g.gamePk) : null
       // The page's own schedule day, NOT g.gameDate (MLB's raw first-pitch
       // timestamp) — for a late-night West Coast game, slicing that
@@ -365,7 +371,7 @@ export function BatterCostClient({ date }: { date: string }) {
       addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, date)
     }
     return out
-  }, [data, fhrAvgMap, saAvgMap, communityPicksMap, date])
+  }, [data, fhrAvgMap, saAvgMap, communityPicksMap, date, gameKey])
 
   const maxAbsByMarket = useMemo(() => {
     const m: Record<string, number> = {}

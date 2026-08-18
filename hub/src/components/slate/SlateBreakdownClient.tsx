@@ -16,7 +16,14 @@ import controls from '@/components/product/ResearchControls.module.css'
 // per-game rule).
 type SlateGame = TodayGame & { locked?: boolean }
 
-export function SlateBreakdownClient({ date }: { date: string }) {
+type SlateBreakdownClientProps = {
+  date: string
+  embedded?: boolean
+  selectedGameKey?: string | null
+  onGameChange?: (gameKey: string) => void
+}
+
+export function SlateBreakdownClient({ date, embedded = false, selectedGameKey, onGameChange }: SlateBreakdownClientProps) {
   const [games, setGames] = useState<SlateGame[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeGameKey, setActiveGameKeyState] = useState<string | null>(null)
@@ -29,14 +36,21 @@ export function SlateBreakdownClient({ date }: { date: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const initialGameParamRef = useRef(searchParams.get('game'))
+  const selectedGameKeyRef = useRef(selectedGameKey)
+  const onGameChangeRef = useRef(onGameChange)
+
+  useEffect(() => { selectedGameKeyRef.current = selectedGameKey }, [selectedGameKey])
+  useEffect(() => { onGameChangeRef.current = onGameChange }, [onGameChange])
 
   const setActiveGameKey = useCallback((gameKey: string | null) => {
     setActiveGameKeyState(gameKey)
+    if (gameKey) onGameChange?.(gameKey)
+    if (embedded) return
     const params = new URLSearchParams(searchParams.toString())
     if (gameKey) params.set('game', gameKey)
     else params.delete('game')
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [pathname, router, searchParams])
+  }, [embedded, onGameChange, pathname, router, searchParams])
 
   useEffect(() => {
     setGames(null)
@@ -46,10 +60,13 @@ export function SlateBreakdownClient({ date }: { date: string }) {
       .then(r => r.json())
       .then(d => {
         setGames(d.games ?? [])
-        const restored = initialGameParamRef.current
-          ? d.games?.find((g: SlateGame) => g.gameKey === initialGameParamRef.current)
+        const restoredKey = selectedGameKeyRef.current ?? initialGameParamRef.current
+        const restored = restoredKey
+          ? d.games?.find((g: SlateGame) => g.gameKey === restoredKey)
           : null
-        setActiveGameKeyState((restored ?? d.games?.[0])?.gameKey ?? null)
+        const nextKey = (restored ?? d.games?.[0])?.gameKey ?? null
+        setActiveGameKeyState(nextKey)
+        if (nextKey && nextKey !== selectedGameKeyRef.current) onGameChangeRef.current?.(nextKey)
       })
       .catch(() => setError('Failed to load the schedule for this date.'))
   }, [date])
@@ -58,14 +75,15 @@ export function SlateBreakdownClient({ date }: { date: string }) {
   if (!games) return <PageState kind="loading" title="Loading slate" message="Preparing every matchup on the board." />
   if (!games.length) return <PageState kind="empty" title="No games scheduled" message="Choose another date to review a different slate." />
 
-  const activeGame = games.find(g => g.gameKey === activeGameKey) ?? games[0]
+  const effectiveGameKey = selectedGameKey ?? activeGameKey
+  const activeGame = games.find(g => g.gameKey === effectiveGameKey) ?? games[0]
   const featuredGame = games.find(g => !g.locked)
 
   return (
     <div>
-      <div className={controls.scrollRail} aria-label="Choose a game">
+      {!embedded && <div className={controls.scrollRail} aria-label="Choose a game">
         {games.map(g => {
-          const isActive = g.gameKey === activeGameKey
+          const isActive = g.gameKey === effectiveGameKey
           return (
             <button
               key={g.gameKey}
@@ -86,7 +104,7 @@ export function SlateBreakdownClient({ date }: { date: string }) {
             </button>
           )
         })}
-      </div>
+      </div>}
 
       {activeGame && (
         activeGame.locked
