@@ -2831,7 +2831,16 @@ export function getDugoutHeaderCells(
   const headerCells = (
     <>
       <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
-      {H('INDEX', 'SlipSurge Batter Score for the selected Last 1/3/5/10 window', 52, 'mechanics_index')}
+      {H(
+        <img
+          src="/logo.png"
+          alt="SlipSurge Batter Score"
+          style={{ display: 'inline-block', width: 14, height: 14, objectFit: 'contain', verticalAlign: 'middle' }}
+        />,
+        'SlipSurge Batter Score for the selected Last 1/3/5/10 window',
+        52,
+        'mechanics_index',
+      )}
       <th style={SDIV_H} />
       {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
