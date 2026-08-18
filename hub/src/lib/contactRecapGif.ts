@@ -15,6 +15,7 @@ const H = 720
 const FPS = 20
 const MOTION_FRAMES = 16
 const HOLD_FRAMES = 24
+const SAND_DIAMOND = 'M163.9,166.7l-1-1c-5-16-20-27.7-37.7-27.7s-32.7,11.7-37.7,27.7l-1,1l32.7,32.7c-0.5,0.9-0.7,1.9-0.7,3c0,3.7,3,6.7,6.7,6.7s6.7-3,6.7-6.7c0-1.1-0.3-2.1-0.7-3L163.9,166.7z M122.5,154.7c0.8,0.5,1.7,0.8,2.7,0.8s1.9-0.3,2.7-0.8l16.8,16.8c-1.6,1.6-1.6,4.1,0,5.6l2.5,2.5l-17.7,17.7c-1.2-1-2.7-1.6-4.3-1.6s-3.2,0.6-4.3,1.6l-17.7-17.7l2.5-2.5c1.6-1.5,1.6-4,0-5.6L122.5,154.7z'
 
 export type ContactRecapExportFormat = 'mp4' | 'gif'
 
@@ -107,9 +108,14 @@ type FrameAssets = {
   brandLogo: string
   headshot: string
   batterLogo: string
+  parkLogo: string
   homeLogo: string
   awayLogo: string
   bookLogos: Record<string, string>
+}
+
+function infieldDetail(secondary: string) {
+  return `<path d="${SAND_DIAMOND}" fill="${secondary}" fill-opacity=".8" stroke="${secondary}" stroke-opacity="1" stroke-width=".75"/><g fill="none" stroke="#fff" stroke-width=".75" opacity=".88"><path d="M122.5,174.7c-1.5,1.5-1.5,3.9,0,5.4s3.9,1.5,5.4,0c1.5-1.5,1.5-3.9,0-5.4C126.5,173.2,124,173.2,122.5,174.7z" fill="#fff"/><path d="M123.2,176.6h4v1.6h-4V176.6z" fill="#fff"/><path d="M125.2,203.2l-97.1-97.1"/><path d="M125.2,203.2l97.1-97.2"/><rect x="99.2" y="175.1" width="3" height="3" transform="matrix(.7073 -.7069 .7069 .7073 -95.3473 122.8833)" fill="#fff"/><rect x="148.1" y="175.2" width="3" height="3" transform="matrix(.7073 -.7069 .7069 .7073 -81.1078 157.4629)" fill="#fff"/><rect x="123.7" y="148.6" width="3" height="3" transform="matrix(.707 -.7073 .7073 .707 -69.4796 132.5406)" fill="#fff"/><polygon points="126.7,201.8 125.2,203.4 123.7,201.8 123.7,200.3 126.7,200.3" fill="#fff"/></g>`
 }
 
 function quoteCards(quotes: ContactMarketQuote[], assets: FrameAssets, x: number, y: number) {
@@ -160,13 +166,13 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
 
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <style>.eyebrow{font:800 13px Geist,sans-serif;letter-spacing:2.2px;fill:${accent}}.title{font:900 34px Geist,sans-serif;fill:#fff}.subtitle{font:650 15px Geist,sans-serif;fill:#9aa8bb}.body{font:650 14px Geist,sans-serif;fill:#d7dee8}.meta{font:800 10px Geist,sans-serif;letter-spacing:1.5px;fill:#718096}.muted{font:650 13px Geist,sans-serif;fill:#8290a3}.book{font:750 9px Geist,sans-serif;fill:#8190a3}.price{font:900 18px Geist,sans-serif;fill:#fff}.specialLabel{font:750 9px Geist,sans-serif;fill:#8fa0b4}.specialPrice{font:900 14px Geist,sans-serif;fill:#a3ff3f}.metricLabel{font:800 9px Geist,sans-serif;letter-spacing:1.4px;fill:#718096}.metricValue{font:900 21px Geist,sans-serif;fill:#fff}.badge{font:850 10px Geist,sans-serif;letter-spacing:1px}.score{font:850 15px Geist,sans-serif;fill:#fff}.brand{font:900 20px Geist,sans-serif;fill:#fff}.brandSmall{font:750 10px Geist,sans-serif;letter-spacing:1.7px;fill:#a3ff3f}.card{fill:#111820;stroke:#fff;stroke-opacity:.09}</style>
-    <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111b18"/><stop offset=".39" stop-color="#070c11"/><stop offset="1" stop-color="#020407"/></linearGradient><linearGradient id="panel" x2="1" y2="1"><stop stop-color="#10171d"/><stop offset="1" stop-color="#080d13"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern><clipPath id="avatar"><rect x="45" y="449" width="110" height="110" rx="22"/></clipPath></defs>
+    <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111b18"/><stop offset=".39" stop-color="#070c11"/><stop offset="1" stop-color="#020407"/></linearGradient><linearGradient id="panel" x2="1" y2="1"><stop stop-color="#10171d"/><stop offset="1" stop-color="#080d13"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="logoGlow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="2.4" flood-color="${secondary}" flood-opacity=".9"/></filter><pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern><clipPath id="avatar"><rect x="45" y="449" width="110" height="110" rx="22"/></clipPath></defs>
     <rect width="1280" height="720" fill="url(#bg)"/><rect width="1280" height="720" fill="url(#grid)"/><circle cx="140" cy="-30" r="250" fill="#a3ff3f" fill-opacity=".035"/>
     <rect x="28" y="24" width="1224" height="70" rx="20" fill="#080e13" stroke="#fff" stroke-opacity=".1"/>
     ${assets.brandLogo ? `<image href="${assets.brandLogo}" x="43" y="35" width="48" height="48"/>` : ''}<text x="102" y="53" class="brand">SlipSurge</text><text x="102" y="73" class="brandSmall">CONTACT RECAP</text>
     ${assets.awayLogo ? `<image href="${assets.awayLogo}" x="488" y="40" width="39" height="39"/>` : ''}<text x="541" y="55" class="score">${esc(event.game.awayTeam)} ${event.game.awayScore ?? '-'}</text><text x="632" y="55" class="muted">at</text><text x="666" y="55" class="score">${esc(event.game.homeTeam)} ${event.game.homeScore ?? '-'}</text>${assets.homeLogo ? `<image href="${assets.homeLogo}" x="756" y="40" width="39" height="39"/>` : ''}<text x="541" y="76" class="meta">GAME ${event.game.gameIndex + 1}  &#8226;  ${esc(event.game.venueName).toUpperCase()}</text>
     <text x="1220" y="53" text-anchor="end" class="brandSmall">${esc(event.gameDate)}</text><text x="1220" y="75" text-anchor="end" class="muted">SLIPSURGE.COM</text>
-    <g transform="translate(455 82) scale(1.48)"><g${parkTransform}><path d="${esc(parkPath)}" fill="${primary}" fill-opacity=".32" stroke="${primary}" stroke-opacity=".9" stroke-width="1.65"/></g><path d="M163.9 166.7l-1-1c-5-16-20-27.7-37.7-27.7s-32.7 11.7-37.7 27.7l-1 1 32.7 32.7 6 6 6-6z" fill="${secondary}" fill-opacity=".72"/><path d="M125 203L28 106M125 203L222 106" stroke="#fff" stroke-opacity=".58" stroke-width=".7"/><path d="${flightPath}" pathLength="1" fill="none" stroke="${accent}" stroke-width="2.25" stroke-linecap="round" stroke-dasharray="${progress} 1" filter="url(#glow)"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rawProgress >= 1 ? 4.9 : 3.6}" fill="${accent}" stroke="#fff" stroke-width="1" filter="url(#glow)"/></g>
+    <g transform="translate(455 82) scale(1.48)"><g${parkTransform}><path d="${esc(parkPath)}" fill="${primary}" fill-opacity=".32" stroke="${primary}" stroke-opacity=".9" stroke-width="1.65"/></g>${assets.parkLogo ? `<image href="${assets.parkLogo}" x="102.5" y="63" width="45" height="45" preserveAspectRatio="xMidYMid meet" opacity=".95" filter="url(#logoGlow)"/>` : ''}${infieldDetail(secondary)}<path d="${flightPath}" pathLength="1" fill="none" stroke="${accent}" stroke-width="2.25" stroke-linecap="round" stroke-dasharray="${progress} 1" filter="url(#glow)"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rawProgress >= 1 ? 4.9 : 3.6}" fill="${accent}" stroke="#fff" stroke-width="1" filter="url(#glow)"/></g>
     <rect x="28" y="430" width="672" height="264" rx="26" fill="url(#panel)" fill-opacity=".97" stroke="#fff" stroke-opacity=".1"/>
     <rect x="45" y="449" width="110" height="110" rx="22" fill="${getTeamColor(event.batterTeam)}" fill-opacity=".45" stroke="${accent}" stroke-opacity=".55"/>${assets.headshot ? `<image href="${assets.headshot}" x="45" y="449" width="110" height="110" preserveAspectRatio="xMidYMax meet" clip-path="url(#avatar)"/>` : ''}${assets.batterLogo ? `<circle cx="145" cy="549" r="18" fill="#05090d" stroke="#fff" stroke-opacity=".14"/><image href="${assets.batterLogo}" x="133" y="537" width="24" height="24"/>` : ''}
     <text x="174" y="459" class="eyebrow">${esc(event.kind === 'home_run' ? 'HOME RUN FLIGHT' : 'NEAR HOME RUN FLIGHT')}</text><text x="174" y="497" class="title">${esc(event.batterName)}</text><text x="174" y="525" class="subtitle">${esc(event.batterTeam)}  &#8226;  ${esc(event.half)} ${event.inning ?? '-'}  &#8226;  off ${esc(event.pitcherName)}</text><text x="174" y="555" class="body">${esc(resultLabel(event))}</text>
@@ -189,6 +195,7 @@ async function buildAssets(event: DailyContactEvent, cache: Map<string, string>,
     brandLogo, bookLogos,
     headshot: await load(mlbHeadshot(event.batterId)),
     batterLogo: await load(getTeamLogoPngUrl(event.batterTeam)),
+    parkLogo: await load(getTeamLogoPngUrl(event.game.parkTeamAbbr)),
     homeLogo: await load(getTeamLogoPngUrl(event.game.homeTeam)),
     awayLogo: await load(getTeamLogoPngUrl(event.game.awayTeam)),
   }
