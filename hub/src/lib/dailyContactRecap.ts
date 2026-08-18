@@ -10,6 +10,7 @@ import { normName } from '@slipsurge/core/nameNorm'
 import type { ContactKind, DailyContactEvent, DailyContactGame, DailyContactSlate } from '@/lib/contactRecapTypes'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const SPECIAL_VENUES = new Set([5340, 5355, 5445])
 const PITCH_SELECT = [
   'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'events', 'description',
   'is_in_play', 'is_home_run', 'launch_speed', 'launch_angle', 'hc_x', 'hc_y', 'hit_distance',
@@ -71,6 +72,7 @@ function canonicalAbbr(value?: string | null) {
 function gameFromSchedule(game: MLBGame, gameIndex: number): DailyContactGame {
   const homeId = game.teams.home.team.id
   const awayId = game.teams.away.team.id
+  const venueId = game.venue?.id ?? null
   const homeTeam = canonicalAbbr(game.teams.home.team.abbreviation ?? mlbTeamAbbrById(homeId))
   const awayTeam = canonicalAbbr(game.teams.away.team.abbreviation ?? mlbTeamAbbrById(awayId))
   return {
@@ -79,9 +81,12 @@ function gameFromSchedule(game: MLBGame, gameIndex: number): DailyContactGame {
     gameDate: game.gameDate,
     startTime: game.gameDate,
     status: game.status.detailedState,
-    venueId: game.venue?.id ?? null,
+    venueId,
     venueName: game.venue?.name ?? 'MLB ballpark',
-    parkTeamAbbr: homeTeam,
+    // Neutral and showcase venues must never borrow the nominal home
+    // club's field outline or watermark. The generic MLB field is honest
+    // until an exact venue trace is available.
+    parkTeamAbbr: venueId != null && SPECIAL_VENUES.has(venueId) ? 'MLB' : homeTeam,
     homeTeamId: homeId,
     homeTeam,
     homeName: game.teams.home.team.name,
