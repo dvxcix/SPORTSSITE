@@ -13,8 +13,8 @@ import type { ContactMarketQuote, DailyContactEvent } from '@/lib/contactRecapTy
 const W = 1280
 const H = 720
 const FPS = 20
-const MOTION_FRAMES = 16
-const HOLD_FRAMES = 24
+const MOTION_FRAMES = 20
+const HOLD_FRAMES = 20
 const SAND_DIAMOND = 'M163.9,166.7l-1-1c-5-16-20-27.7-37.7-27.7s-32.7,11.7-37.7,27.7l-1,1l32.7,32.7c-0.5,0.9-0.7,1.9-0.7,3c0,3.7,3,6.7,6.7,6.7s6.7-3,6.7-6.7c0-1.1-0.3-2.1-0.7-3L163.9,166.7z M122.5,154.7c0.8,0.5,1.7,0.8,2.7,0.8s1.9-0.3,2.7-0.8l16.8,16.8c-1.6,1.6-1.6,4.1,0,5.6l2.5,2.5l-17.7,17.7c-1.2-1-2.7-1.6-4.3-1.6s-3.2,0.6-4.3,1.6l-17.7-17.7l2.5-2.5c1.6-1.5,1.6-4,0-5.6L122.5,154.7z'
 
 export type ContactRecapExportFormat = 'mp4' | 'gif'
@@ -56,6 +56,11 @@ function american(value: number) {
 
 function metric(value: number | null, suffix: string) {
   return value == null ? '-' : `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`
+}
+
+function compactText(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value
+  return `${value.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`
 }
 
 function resultLabel(event: DailyContactEvent) {
@@ -131,8 +136,22 @@ function quoteCards(quotes: ContactMarketQuote[], assets: FrameAssets, x: number
   }).join('')
 }
 
-function specialCards(quotes: ContactMarketQuote[], assets: FrameAssets, x: number, y: number, limit = 4) {
-  return quotes.slice(0, limit).map((quote, index) => {
+function prioritizedSpecialQuotes(quotes: ContactMarketQuote[]) {
+  const firstByMarket: ContactMarketQuote[] = []
+  const additionalBooks: ContactMarketQuote[] = []
+  const seen = new Set<string>()
+  for (const quote of quotes) {
+    if (seen.has(quote.marketKey)) additionalBooks.push(quote)
+    else {
+      seen.add(quote.marketKey)
+      firstByMarket.push(quote)
+    }
+  }
+  return [...firstByMarket, ...additionalBooks]
+}
+
+function specialCards(quotes: ContactMarketQuote[], assets: FrameAssets, x: number, y: number) {
+  return quotes.map((quote, index) => {
     const cardX = x + (index % 2) * 238
     const cardY = y + Math.floor(index / 2) * 52
     const logo = assets.bookLogos[quote.book]
@@ -154,15 +173,29 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
   const badges = [
     event.isFirstHr ? 'FIRST HR' : '',
     event.isGrandSlam ? 'GRAND SLAM' : '',
-    Number(event.exitVelocity) >= 110 ? 'LASER 110+' : Number(event.exitVelocity) >= 105 ? 'LASER 105+' : '',
-    Number(event.distance) >= 420 ? 'MOONSHOT 420+' : '',
   ].filter(Boolean)
   const flightPath = `M125 203 Q${(125 + (event.hcX - 125) * .34).toFixed(1)} ${controlY.toFixed(1)} ${event.hcX.toFixed(1)} ${event.hcY.toFixed(1)}`
   const primaryQuotes = event.marketContext?.primary ?? []
   const specials = event.marketContext?.specials ?? []
-  const badgeMarkup = badges.map((badge, index) => `<rect x="45" y="${581 + index * 27}" width="${Math.max(116, badge.length * 8 + 26)}" height="22" rx="11" fill="${accent}" fill-opacity=".11" stroke="${accent}" stroke-opacity=".35"/><text x="58" y="${597 + index * 27}" class="badge" fill="${accent}">${esc(badge)}</text>`).join('')
-  const specialY = primaryQuotes.length > 3 ? 647 : 568
+  const specialY = primaryQuotes.length > 3 ? 647 : 584
   const specialLimit = primaryQuotes.length > 3 ? 2 : 4
+  const visibleSpecials = prioritizedSpecialQuotes(specials).slice(0, specialLimit)
+  const hiddenSpecialCount = Math.max(0, new Set(specials.map(quote => quote.marketKey)).size - new Set(visibleSpecials.map(quote => quote.marketKey)).size)
+  const specialMoreY = specialY - 13
+  const badgeKeys = new Set(specials.map(quote => quote.marketKey))
+  if (badgeKeys.has('pa1')) badges.push('1ST PA HR')
+  if (badgeKeys.has('hr2')) badges.push('2+ HOME RUNS')
+  if (badgeKeys.has('hrMl')) badges.push('HR + TEAM WIN')
+  if (Number(event.exitVelocity) >= 110) badges.push('LASER 110+')
+  else if (Number(event.exitVelocity) >= 105) badges.push('LASER 105+')
+  if (Number(event.distance) >= 420) badges.push('MOONSHOT 420+')
+  const visibleBadges = badges.slice(0, 4)
+  const badgeMarkup = visibleBadges.map((badge, index) => `<rect x="${174 + index * 118}" y="565" width="110" height="22" rx="11" fill="${accent}" fill-opacity=".11" stroke="${accent}" stroke-opacity=".35"/><text x="${229 + index * 118}" y="580" text-anchor="middle" class="badge" fill="${accent}">${esc(compactText(badge, 15))}</text>`).join('')
+  const sourceLabel = event.coordinateSource === 'statcast' ? 'OFFICIAL STATCAST' : event.coordinateSource === 'mlb_live' ? 'MLB LIVE COORDINATE' : 'PROJECTED LANDING POINT'
+  const venueLabel = compactText(event.game.venueName.toUpperCase(), 34)
+  const batterLabel = compactText(event.batterName, 29)
+  const batterTitleSize = batterLabel.length > 25 ? 27 : batterLabel.length > 21 ? 30 : 34
+  const matchupLabel = compactText(`${event.batterTeam}  ·  ${event.half} ${event.inning ?? '-'}  ·  off ${event.pitcherName}`, 58)
 
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <style>.eyebrow{font:800 13px Geist,sans-serif;letter-spacing:2.2px;fill:${accent}}.title{font:900 34px Geist,sans-serif;fill:#fff}.subtitle{font:650 15px Geist,sans-serif;fill:#9aa8bb}.body{font:650 14px Geist,sans-serif;fill:#d7dee8}.meta{font:800 10px Geist,sans-serif;letter-spacing:1.5px;fill:#718096}.muted{font:650 13px Geist,sans-serif;fill:#8290a3}.book{font:750 9px Geist,sans-serif;fill:#8190a3}.price{font:900 18px Geist,sans-serif;fill:#fff}.specialLabel{font:750 9px Geist,sans-serif;fill:#8fa0b4}.specialPrice{font:900 14px Geist,sans-serif;fill:#a3ff3f}.metricLabel{font:800 9px Geist,sans-serif;letter-spacing:1.4px;fill:#718096}.metricValue{font:900 21px Geist,sans-serif;fill:#fff}.badge{font:850 10px Geist,sans-serif;letter-spacing:1px}.score{font:850 15px Geist,sans-serif;fill:#fff}.brand{font:900 20px Geist,sans-serif;fill:#fff}.brandSmall{font:750 10px Geist,sans-serif;letter-spacing:1.7px;fill:#a3ff3f}.card{fill:#111820;stroke:#fff;stroke-opacity:.09}</style>
@@ -170,18 +203,19 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
     <rect width="1280" height="720" fill="url(#bg)"/><rect width="1280" height="720" fill="url(#grid)"/><circle cx="140" cy="-30" r="250" fill="#a3ff3f" fill-opacity=".035"/>
     <rect x="28" y="24" width="1224" height="70" rx="20" fill="#080e13" stroke="#fff" stroke-opacity=".1"/>
     ${assets.brandLogo ? `<image href="${assets.brandLogo}" x="43" y="35" width="48" height="48"/>` : ''}<text x="102" y="53" class="brand">SlipSurge</text><text x="102" y="73" class="brandSmall">CONTACT RECAP</text>
-    ${assets.awayLogo ? `<image href="${assets.awayLogo}" x="488" y="40" width="39" height="39"/>` : ''}<text x="541" y="55" class="score">${esc(event.game.awayTeam)} ${event.game.awayScore ?? '-'}</text><text x="632" y="55" class="muted">at</text><text x="666" y="55" class="score">${esc(event.game.homeTeam)} ${event.game.homeScore ?? '-'}</text>${assets.homeLogo ? `<image href="${assets.homeLogo}" x="756" y="40" width="39" height="39"/>` : ''}<text x="541" y="76" class="meta">GAME ${event.game.gameIndex + 1}  &#8226;  ${esc(event.game.venueName).toUpperCase()}</text>
+    ${assets.awayLogo ? `<image href="${assets.awayLogo}" x="488" y="40" width="39" height="39"/>` : ''}<text x="541" y="55" class="score">${esc(event.game.awayTeam)} ${event.game.awayScore ?? '-'}</text><text x="632" y="55" class="muted">at</text><text x="666" y="55" class="score">${esc(event.game.homeTeam)} ${event.game.homeScore ?? '-'}</text>${assets.homeLogo ? `<image href="${assets.homeLogo}" x="756" y="40" width="39" height="39"/>` : ''}<text x="541" y="76" class="meta">GAME ${event.game.gameIndex + 1}  &#8226;  ${esc(venueLabel)}</text>
     <text x="1220" y="53" text-anchor="end" class="brandSmall">${esc(event.gameDate)}</text><text x="1220" y="75" text-anchor="end" class="muted">SLIPSURGE.COM</text>
     <g transform="translate(455 82) scale(1.48)"><g${parkTransform}><path d="${esc(parkPath)}" fill="${primary}" fill-opacity=".32" stroke="${primary}" stroke-opacity=".9" stroke-width="1.65"/></g>${assets.parkLogo ? `<image href="${assets.parkLogo}" x="102.5" y="63" width="45" height="45" preserveAspectRatio="xMidYMid meet" opacity=".95" filter="url(#logoGlow)"/>` : ''}${infieldDetail(secondary)}<path d="${flightPath}" pathLength="1" fill="none" stroke="${accent}" stroke-width="2.25" stroke-linecap="round" stroke-dasharray="${progress} 1" filter="url(#glow)"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rawProgress >= 1 ? 4.9 : 3.6}" fill="${accent}" stroke="#fff" stroke-width="1" filter="url(#glow)"/></g>
+    <rect x="28" y="397" width="190" height="24" rx="12" fill="${accent}" fill-opacity=".08" stroke="${accent}" stroke-opacity=".22"/><text x="123" y="413" text-anchor="middle" class="badge" fill="${accent}">${sourceLabel}</text>
     <rect x="28" y="430" width="672" height="264" rx="26" fill="url(#panel)" fill-opacity=".97" stroke="#fff" stroke-opacity=".1"/>
     <rect x="45" y="449" width="110" height="110" rx="22" fill="${getTeamColor(event.batterTeam)}" fill-opacity=".45" stroke="${accent}" stroke-opacity=".55"/>${assets.headshot ? `<image href="${assets.headshot}" x="45" y="449" width="110" height="110" preserveAspectRatio="xMidYMax meet" clip-path="url(#avatar)"/>` : ''}${assets.batterLogo ? `<circle cx="145" cy="549" r="18" fill="#05090d" stroke="#fff" stroke-opacity=".14"/><image href="${assets.batterLogo}" x="133" y="537" width="24" height="24"/>` : ''}
-    <text x="174" y="459" class="eyebrow">${esc(event.kind === 'home_run' ? 'HOME RUN FLIGHT' : 'NEAR HOME RUN FLIGHT')}</text><text x="174" y="497" class="title">${esc(event.batterName)}</text><text x="174" y="525" class="subtitle">${esc(event.batterTeam)}  &#8226;  ${esc(event.half)} ${event.inning ?? '-'}  &#8226;  off ${esc(event.pitcherName)}</text><text x="174" y="555" class="body">${esc(resultLabel(event))}</text>
+    <text x="174" y="459" class="eyebrow">${esc(event.kind === 'home_run' ? 'HOME RUN FLIGHT' : 'NEAR HOME RUN FLIGHT')}</text><text x="174" y="497" class="title" style="font-size:${batterTitleSize}px">${esc(batterLabel)}</text><text x="174" y="525" class="subtitle">${esc(matchupLabel)}</text><text x="174" y="555" class="body">${esc(resultLabel(event))}</text>
     ${badgeMarkup}
-    ${[['EXIT VELO', metric(event.exitVelocity, ' mph')], ['DISTANCE', metric(event.distance, ' ft')], ['LAUNCH', metric(event.launchAngle, '°')], ['PARKS', event.kind === 'near_hr' && event.parksHrCount != null ? `${event.parksHrCount}/30` : event.game.parkTeamAbbr]].map((item,index) => `<rect x="${174 + index * 123}" y="582" width="113" height="75" rx="15" fill="#0b1118" stroke="#fff" stroke-opacity=".08"/><text x="${188 + index * 123}" y="604" class="metricLabel">${item[0]}</text><text x="${188 + index * 123}" y="635" class="metricValue">${esc(item[1])}</text>`).join('')}
+    ${[['EXIT VELO', metric(event.exitVelocity, ' mph')], ['DISTANCE', metric(event.distance, ' ft')], ['LAUNCH', metric(event.launchAngle, '°')], ['PARKS', event.kind === 'near_hr' && event.parksHrCount != null ? `${event.parksHrCount}/30` : event.game.parkTeamAbbr]].map((item,index) => `<rect x="${174 + index * 123}" y="599" width="113" height="64" rx="15" fill="#0b1118" stroke="#fff" stroke-opacity=".08"/><text x="${188 + index * 123}" y="620" class="metricLabel">${item[0]}</text><text x="${188 + index * 123}" y="648" class="metricValue">${esc(item[1])}</text>`).join('')}
     <rect x="720" y="430" width="532" height="264" rx="26" fill="url(#panel)" fill-opacity=".98" stroke="#fff" stroke-opacity=".1"/>
     <text x="744" y="459" class="eyebrow">PREGAME MARKET RECEIPT</text><text x="744" y="483" class="subtitle">${esc(event.marketContext?.primaryLabel ?? 'Captured market')}  &#8226;  frozen before first pitch</text>
     ${quoteCards(primaryQuotes, assets, 744, 503)}
-    ${specials.length ? `<text x="744" y="${specialY - 13}" class="meta">QUALIFYING MARKETS</text>${specialCards(specials, assets, 744, specialY, specialLimit)}` : ''}
+    ${specials.length ? `<text x="744" y="${specialY - 13}" class="meta">QUALIFYING MARKETS</text>${specialCards(visibleSpecials, assets, 744, specialY)}${hiddenSpecialCount ? `<text x="1228" y="${specialMoreY}" text-anchor="end" class="meta">+${hiddenSpecialCount} MORE SETTLED MARKETS</text>` : ''}` : ''}
   </svg>`)
 }
 

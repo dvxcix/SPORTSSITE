@@ -394,6 +394,7 @@ const [durbinOutcome] = buildRealizedHrOutcomes(bosTor, [{
   inning: 8,
   half: 'top',
   is_first_hr_of_game: true,
+  batter_pa_number: 4,
   ab_index: 55,
   desc: 'Caleb Durbin hits a grand slam.',
   exit_velocity: 102,

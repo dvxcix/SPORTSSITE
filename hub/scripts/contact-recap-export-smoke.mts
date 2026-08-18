@@ -6,7 +6,7 @@ import type { DailyContactEvent } from '../src/lib/contactRecapTypes'
 
 const event: DailyContactEvent = {
   id: 'smoke', kind: 'home_run', gamePk: 1, gameIndex: 0, gameDate: '2026-08-17',
-  eventTime: '2026-08-17T23:00:00Z', atBatIndex: 1, pitchNumber: 4,
+  eventTime: '2026-08-17T23:00:00Z', atBatIndex: 1, plateAppearanceNumber: 1, pitchNumber: 4,
   batterId: 680757, batterName: 'Elly De La Cruz', batterTeam: 'CIN',
   pitcherId: 543243, pitcherName: 'Test Pitcher', pitcherTeam: 'STL',
   inning: 1, half: 'Top', result: 'home_run', description: 'Home run', rbi: 3,
@@ -31,6 +31,10 @@ const event: DailyContactEvent = {
       { marketKey: 'laser105', marketLabel: 'Laser 105+', book: 'fanduel', bookLabel: 'FanDuel', odds: 1400 },
       { marketKey: 'laser110', marketLabel: 'Laser 110+', book: 'fanduel', bookLabel: 'FanDuel', odds: 2600 },
       { marketKey: 'moonshot', marketLabel: 'Moonshot 420+', book: 'fanduel', bookLabel: 'FanDuel', odds: 2200 },
+      { marketKey: 'pa1', marketLabel: '1st PA Home Run', book: 'fanduel', bookLabel: 'FanDuel', odds: 1800 },
+      { marketKey: 'hr2', marketLabel: '2+ Home Runs', book: 'fanduel', bookLabel: 'FanDuel', odds: 7500 },
+      { marketKey: 'hrMl', marketLabel: 'HR + Team Win', book: 'fanduel', bookLabel: 'FanDuel', odds: 700 },
+      { marketKey: 'rbi3', marketLabel: '3+ RBI', book: 'fanduel', bookLabel: 'FanDuel', odds: 1400 },
     ],
   },
 }

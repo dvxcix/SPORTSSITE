@@ -47,6 +47,7 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
   const primary = getTeamColor(current.game.parkTeamAbbr)
   const secondary = getTeamSecondaryColor(current.game.parkTeamAbbr)
   const batterLogo = getTeamLogoUrl(current.batterTeam)
+  const parkLogo = getTeamLogoUrl(current.game.parkTeamAbbr)
   const homeLogo = getTeamLogoUrl(current.game.homeTeam)
   const awayLogo = getTeamLogoUrl(current.game.awayTeam)
   const stroke = current.kind === 'home_run' ? '#a3ff3f' : current.kind === 'near_hr' ? '#ff9f43' : current.kind === 'hit' ? '#47d9ff' : current.kind === 'out' ? '#8b96aa' : '#b894ff'
@@ -54,9 +55,13 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
   const controlY = Math.max(24, Math.min(current.hcY, 203) - 72)
   const path = `M125 203 Q${controlX.toFixed(1)} ${controlY.toFixed(1)} ${current.hcX.toFixed(1)} ${current.hcY.toFixed(1)}`
   const svgId = current.id.replace(/[^a-zA-Z0-9_-]/g, '-')
+  const marketKeys = new Set(current.marketContext?.specials.map(quote => quote.marketKey) ?? [])
   const badges = [
     current.isFirstHr ? 'First HR' : null,
     current.isGrandSlam ? 'Grand slam' : null,
+    marketKeys.has('pa1') ? '1st PA HR' : null,
+    marketKeys.has('hr2') ? '2+ home runs' : null,
+    marketKeys.has('hrMl') ? 'HR + team win' : null,
     Number(current.exitVelocity) >= 110 ? '110+ laser' : Number(current.exitVelocity) >= 105 ? '105+ laser' : null,
     Number(current.distance) >= 420 ? 'Moonshot' : null,
     current.kind === 'near_hr' && current.parksHrCount != null ? `${current.parksHrCount} parks` : null,
@@ -72,7 +77,7 @@ export function ContactFlightStage({ events, title, eyebrow, tone = 'home_run' }
         {homeLogo ? <Image src={homeLogo} alt={current.game.homeName} width={30} height={30} /> : null}
       </div>
       {current.coordinateSource === 'bearing_projection' ? <div className={styles.projection}>Distance and bearing projection using official contact metrics</div> : null}
-      {homeLogo ? <Image className={styles.parkLogo} src={homeLogo} alt="" width={120} height={120} /> : null}
+      {parkLogo ? <Image className={styles.parkLogo} src={parkLogo} alt="" width={120} height={120} /> : null}
       <ParkFieldSvg primary={primary} secondary={secondary} teamAbbr={current.game.parkTeamAbbr} className={styles.park} ariaLabel={`${current.batterName} contact at ${current.game.venueName}`}>
         <defs><filter id={`contact-glow-${svgId}`} x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
         <path className={styles.flight} d={path} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" filter={`url(#contact-glow-${svgId})`} />

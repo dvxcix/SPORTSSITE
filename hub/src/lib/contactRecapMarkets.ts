@@ -51,20 +51,36 @@ function actualMarket(event: DailyContactEvent) {
   return { key: '', label: 'Near Home Run' }
 }
 
-function specialMarkets(event: DailyContactEvent) {
+function specialMarkets(event: DailyContactEvent, homeRunCount: number, hrMlWon: boolean) {
   if (event.kind !== 'home_run') return [] as Array<{ key: string; label: string }>
   const markets: Array<{ key: string; label: string }> = []
   if (event.isFirstHr) markets.push({ key: 'fhr', label: 'First Home Run' })
+  if (event.plateAppearanceNumber === 1) markets.push({ key: 'pa1', label: '1st PA Home Run' })
+  if (homeRunCount >= 2) markets.push({ key: 'hr2', label: '2+ Home Runs' })
+  if (hrMlWon) markets.push({ key: 'hrMl', label: 'HR + Team Win' })
   if (Number(event.exitVelocity) >= 105) markets.push({ key: 'laser105', label: 'Laser 105+' })
   if (Number(event.exitVelocity) >= 110) markets.push({ key: 'laser110', label: 'Laser 110+' })
   if (Number(event.distance) >= 420) markets.push({ key: 'moonshot', label: 'Moonshot 420+' })
+  markets.push({ key: 'rbi', label: '1+ RBI' })
+  if (event.rbi >= 2) markets.push({ key: 'rbi2', label: '2+ RBI' })
   if (event.rbi >= 3) markets.push({ key: 'rbi3', label: '3+ RBI' })
-  else if (event.rbi >= 2) markets.push({ key: 'rbi2', label: '2+ RBI' })
+  markets.push(
+    { key: 'hrr', label: '1+ Hit + Run + RBI' },
+    { key: 'tb', label: '2+ Total Bases' },
+    { key: 'tb3', label: '3+ Total Bases' },
+    { key: 'tb4', label: '4+ Total Bases' },
+  )
   return markets
 }
 
 export async function enrichContactRecapMarkets(date: string, events: DailyContactEvent[]) {
   if (!events.length) return events
+  const hrCountByPlayerGame = new Map<string, number>()
+  for (const event of events) {
+    if (event.kind !== 'home_run') continue
+    const key = `${event.gamePk}:${event.batterId}`
+    hrCountByPlayerGame.set(key, (hrCountByPlayerGame.get(key) ?? 0) + 1)
+  }
   const admin = createAdminClient()
   const gamePks = Array.from(new Set(events.map(event => String(event.gamePk))))
   const [matchups, snapshotResult, gapResult] = await Promise.all([
@@ -117,7 +133,13 @@ export async function enrichContactRecapMarkets(date: string, events: DailyConta
 
     const actual = actualMarket(event)
     const primary = actual.key ? quoteList(entry, actual.key, actual.label) : []
-    const specials = specialMarkets(event).flatMap(market => quoteList(entry, market.key, market.label))
+    const winningTeam = event.game.status.toLowerCase().includes('final')
+      && event.game.homeScore != null && event.game.awayScore != null && event.game.homeScore !== event.game.awayScore
+      ? event.game.homeScore > event.game.awayScore ? event.game.homeTeam : event.game.awayTeam
+      : null
+    const homeRunCount = hrCountByPlayerGame.get(`${event.gamePk}:${event.batterId}`) ?? 0
+    const specials = specialMarkets(event, homeRunCount, event.batterTeam === winningTeam)
+      .flatMap(market => quoteList(entry, market.key, market.label))
     const context: ContactMarketContext = {
       primaryLabel: actual.label,
       primary,

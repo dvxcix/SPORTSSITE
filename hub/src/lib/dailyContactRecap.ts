@@ -209,7 +209,8 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
       id: eventId(gamePk, Number(row.batter_id), Number(row.at_bat_index ?? 0), Number(row.pitch_number ?? 0)),
       kind: resultKind(row, near), gamePk, gameIndex: game.gameIndex, gameDate: date,
       eventTime: hr?.hr_time ?? near?.captured_at ?? null,
-      atBatIndex: Number(row.at_bat_index ?? 0), pitchNumber: Number(row.pitch_number ?? 0),
+      atBatIndex: Number(row.at_bat_index ?? 0), plateAppearanceNumber: hr?.batter_pa_number ?? null,
+      pitchNumber: Number(row.pitch_number ?? 0),
       batterId: Number(row.batter_id), batterName: batter?.full_name ?? near?.batter_name ?? hr?.player_name ?? `Player ${row.batter_id}`,
       batterTeam: resolvedBatterTeam,
       pitcherId: row.pitcher_id ? Number(row.pitcher_id) : hr?.pitcher_mlb_id ?? null,
@@ -252,7 +253,8 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
     contacts.push({
       id: eventId(live.game_pk, live.batter_mlb_id, live.ab_index, live.pitch_number),
       kind: near ? 'near_hr' : liveResultKind(live), gamePk: live.game_pk, gameIndex: game.gameIndex, gameDate: date,
-      eventTime: live.event_time, atBatIndex: live.ab_index, pitchNumber: live.pitch_number,
+      eventTime: live.event_time, atBatIndex: live.ab_index, plateAppearanceNumber: hr?.batter_pa_number ?? null,
+      pitchNumber: live.pitch_number,
       batterId: live.batter_mlb_id, batterName: batter?.full_name ?? live.batter_name ?? `Player ${live.batter_mlb_id}`,
       batterTeam, pitcherId: live.pitcher_mlb_id, pitcherName: pitcher?.full_name ?? live.pitcher_name ?? 'Pitcher',
       pitcherTeam: batterTeam === game.homeTeam ? game.awayTeam : game.homeTeam,
@@ -278,7 +280,8 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
     const batterTeam = (hr.half ?? '').toLowerCase().startsWith('top') ? game.awayTeam : game.homeTeam
     contacts.push({
       id: eventId(hr.game_pk, hr.mlb_id, hr.ab_index, 0), kind: 'home_run', gamePk: hr.game_pk, gameIndex: game.gameIndex,
-      gameDate: date, eventTime: hr.hr_time, atBatIndex: hr.ab_index, pitchNumber: 0,
+      gameDate: date, eventTime: hr.hr_time, atBatIndex: hr.ab_index, plateAppearanceNumber: hr.batter_pa_number,
+      pitchNumber: 0,
       batterId: hr.mlb_id, batterName: hr.player_name, batterTeam,
       pitcherId: hr.pitcher_mlb_id, pitcherName: hr.pitcher_name ?? 'Pitcher', pitcherTeam: batterTeam === game.homeTeam ? game.awayTeam : game.homeTeam,
       inning: hr.inning ?? null, half: hr.half ?? '', result: 'home_run', description: hr.desc, rbi: hr.rbi_on_play,
@@ -298,7 +301,8 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
     const batterTeam = (near.half_inning ?? '').toLowerCase().startsWith('top') ? game.awayTeam : game.homeTeam
     contacts.push({
       id: eventId(game.gamePk, near.batter_id, 9000 + index, 0), kind: 'near_hr', gamePk: game.gamePk, gameIndex: game.gameIndex,
-      gameDate: date, eventTime: near.captured_at, atBatIndex: 9000 + index, pitchNumber: 0,
+      gameDate: date, eventTime: near.captured_at, atBatIndex: 9000 + index, plateAppearanceNumber: null,
+      pitchNumber: 0,
       batterId: near.batter_id, batterName: near.batter_name, batterTeam,
       pitcherId: near.pitcher_id ?? hrResult.pitcherIdByName[normName(near.pitcher_name ?? '')] ?? null,
       pitcherName: near.pitcher_name ?? 'Pitcher', pitcherTeam: batterTeam === game.homeTeam ? game.awayTeam : game.homeTeam,

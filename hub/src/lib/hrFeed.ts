@@ -10,6 +10,7 @@ export type HrFeedEvent = {
   inning: number | undefined
   half: string | undefined
   is_first_hr_of_game: boolean
+  batter_pa_number: number
   ab_index: number
   desc: string
   exit_velocity: number | null
@@ -191,6 +192,15 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
           const pname = p.matchup?.pitcher?.fullName
           if (pid && pname) pitcherIdByName[normName(pname)] = pid
         }
+        const paNumberByPlay = new Map<MlbPlay, number>()
+        const paCountByBatter = new Map<number, number>()
+        for (const play of plays) {
+          const batterId = play.matchup?.batter?.id
+          if (!batterId) continue
+          const paNumber = (paCountByBatter.get(batterId) ?? 0) + 1
+          paCountByBatter.set(batterId, paNumber)
+          paNumberByPlay.set(play, paNumber)
+        }
         contactResults[index] = parseMlbContactEvents(pk, plays)
         results[index] = plays
           .filter(p => p.result?.eventType === 'home_run')
@@ -206,6 +216,7 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
               inning: p.about?.inning,
               half: p.about?.halfInning,
               is_first_hr_of_game: false, // filled below
+              batter_pa_number: paNumberByPlay.get(p) ?? 0,
               ab_index: p.atBatIndex ?? 0,
               desc: p.result?.description || '',
               exit_velocity: hitEvent?.hitData?.launchSpeed ?? null,

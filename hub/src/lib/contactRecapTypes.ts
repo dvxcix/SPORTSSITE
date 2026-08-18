@@ -43,6 +43,7 @@ export type DailyContactEvent = {
   gameDate: string
   eventTime: string | null
   atBatIndex: number
+  plateAppearanceNumber: number | null
   pitchNumber: number
   batterId: number
   batterName: string
