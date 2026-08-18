@@ -1,18 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { TeamLogo } from '@/components/sports/PlayerAvatar'
-import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { useState, type CSSProperties } from 'react'
+import { ArrowRight, Check, Crosshair } from 'lucide-react'
+import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
+import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import type { TodayGame } from '@slipsurge/core/mlbSchedule'
-import { PitcherVsLineup } from './PitcherVsLineup'
-
-const tabStyle = (active: boolean): React.CSSProperties => ({
-  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-  padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 800,
-  border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-  background: active ? 'var(--accent-dim)' : 'var(--surface)',
-  color: active ? 'var(--accent)' : 'var(--text-2)', borderRadius: 10,
-})
+import { PitcherVsLineup } from './PitcherVsLineupExperience'
+import styles from './MatchupExperience.module.css'
 
 // One game, one pitching direction shown at a time — both starters' full
 // matchup breakdowns loading simultaneously would mean ~25+ concurrent
@@ -23,23 +18,54 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
 export function GameMatchup({ game }: { game: TodayGame }) {
   const [side, setSide] = useState<'away' | 'home'>(game.awayPitcher ? 'away' : 'home')
 
+  const directions = [
+    { key: 'away' as const, pitcher: game.awayPitcher, pitcherTeam: game.awayAbbr, opponent: game.homeAbbr, confirmed: game.homeLineupConfirmed },
+    { key: 'home' as const, pitcher: game.homePitcher, pitcherTeam: game.homeAbbr, opponent: game.awayAbbr, confirmed: game.awayLineupConfirmed },
+  ]
+
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <button style={tabStyle(side === 'away')} onClick={() => setSide('away')}>
-          <TeamLogo logo={getTeamLogoUrl(game.awayAbbr)} name={game.awayAbbr} size={20} />
-          {game.awayAbbr} pitching
-        </button>
-        <button style={tabStyle(side === 'home')} onClick={() => setSide('home')}>
-          <TeamLogo logo={getTeamLogoUrl(game.homeAbbr)} name={game.homeAbbr} size={20} />
-          {game.homeAbbr} pitching
-        </button>
+    <div className={styles.experience}>
+      <div className={styles.directionPicker} aria-label="Choose pitching matchup">
+        {directions.map(direction => {
+          const active = side === direction.key
+          return (
+            <button
+              key={direction.key}
+              type="button"
+              className={styles.directionButton}
+              data-active={active}
+              disabled={!direction.pitcher}
+              onClick={() => setSide(direction.key)}
+              aria-pressed={active}
+              style={{ '--matchup-team': getTeamColor(direction.pitcherTeam) } as CSSProperties}
+            >
+              <span className={styles.directionTeam}>
+                <TeamLogo logo={getTeamLogoUrl(direction.pitcherTeam)} name={direction.pitcherTeam} size={32} />
+                <small>{direction.pitcherTeam} starter</small>
+              </span>
+              {direction.pitcher ? (
+                <span className={styles.directionPitcher}>
+                  <PlayerAvatar headshot={mlbHeadshot(direction.pitcher.id)} teamLogo={getTeamLogoUrl(direction.pitcherTeam)} teamAbbr={direction.pitcherTeam} name={direction.pitcher.name} size={38} />
+                  <span><strong>{direction.pitcher.name}</strong><small>{direction.pitcher.hand}HP</small></span>
+                </span>
+              ) : (
+                <span className={styles.directionPitcher}><Crosshair size={18} /><span><strong>Starter TBD</strong><small>Awaiting matchup</small></span></span>
+              )}
+              <span className={styles.directionOpponent}>
+                <ArrowRight size={14} />
+                <TeamLogo logo={getTeamLogoUrl(direction.opponent)} name={direction.opponent} size={28} />
+                <span><strong>{direction.opponent}</strong><small>{direction.confirmed ? 'Confirmed lineup' : 'Projected lineup'}</small></span>
+              </span>
+              {active && <Check className={styles.directionCheck} size={15} />}
+            </button>
+          )
+        })}
       </div>
 
       {side === 'away' ? (
         game.awayPitcher ? (
           <PitcherVsLineup
-            key={`${game.gameKey}-away`}
+            key={`${game.gameKey}-away-${game.awayPitcher.id}`}
             pitcher={game.awayPitcher}
             pitcherTeamAbbr={game.awayAbbr}
             pitcherTeamId={game.awayTeamId}
@@ -49,12 +75,12 @@ export function GameMatchup({ game }: { game: TodayGame }) {
             lineupConfirmed={game.homeLineupConfirmed}
           />
         ) : (
-          <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 24, textAlign: 'center' }}>No probable starter announced yet for {game.awayAbbr}.</div>
+          <div className={styles.emptyMatchup}>No probable starter announced yet for {game.awayAbbr}.</div>
         )
       ) : (
         game.homePitcher ? (
           <PitcherVsLineup
-            key={`${game.gameKey}-home`}
+            key={`${game.gameKey}-home-${game.homePitcher.id}`}
             pitcher={game.homePitcher}
             pitcherTeamAbbr={game.homeAbbr}
             pitcherTeamId={game.homeTeamId}
@@ -64,7 +90,7 @@ export function GameMatchup({ game }: { game: TodayGame }) {
             lineupConfirmed={game.awayLineupConfirmed}
           />
         ) : (
-          <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 24, textAlign: 'center' }}>No probable starter announced yet for {game.homeAbbr}.</div>
+          <div className={styles.emptyMatchup}>No probable starter announced yet for {game.homeAbbr}.</div>
         )
       )}
     </div>
