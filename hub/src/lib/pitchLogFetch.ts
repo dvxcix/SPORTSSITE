@@ -6,7 +6,7 @@ export const PITCH_LOG_SELECT_COLS = [
   'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'zone', 'plate_x', 'plate_z',
   'balls', 'strikes', 'inning', 'events', 'description', 'is_in_play', 'is_swing', 'is_whiff', 'is_home_run',
   'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed', 'velocity', 'spin_rate',
-  'attack_angle', 'swing_length', 'swing_path_tilt', 'attack_direction', 'launch_speed_angle',
+  'attack_angle', 'swing_length', 'swing_path_tilt', 'attack_direction', 'launch_speed_angle', 'bb_type',
 ].join(', ')
 
 export const SPRAY_LOG_SELECT_COLS = [

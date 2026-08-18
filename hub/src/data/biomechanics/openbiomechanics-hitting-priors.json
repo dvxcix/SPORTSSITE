@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "hr-mechanics-2026.08.18.1",
+  "generatedAt": "2026-08-18T20:19:03.376Z",
+  "source": {
+    "project": "Driveline OpenBiomechanics Project",
+    "repository": "https://github.com/drivelineresearch/openbiomechanics",
+    "revision": "ba585d40fa3b3260c16fc618892ec0a0d87d37a4",
+    "license": "Licensed use; upstream public data is CC BY-NC-SA 4.0 and code is MIT",
+    "importantLimit": "Anonymous laboratory swings calibrate population priors only. Full-body values are never imputed as measurements for MLB players."
+  },
+  "samples": {
+    "poiSwings": 677,
+    "metadataRows": 677,
+    "hittraxRows": 604,
+    "transferRows": 677,
+    "distanceRows": 604
+  },
+  "observablePriors": {
+    "batSpeedMph": {
+      "p10": 59.9752,
+      "median": 66.5624,
+      "p90": 72.01975999999999
+    },
+    "attackAngleDegrees": {
+      "p10": -3.31802,
+      "median": 4.4269,
+      "p90": 10.68712
+    },
+    "exitVelocityPerBatSpeed": {
+      "p10": 1.2546219986331832,
+      "median": 1.3668739417337055,
+      "p90": 1.4489861213224888
+    }
+  },
+  "models": {
+    "exitVelocityTransfer": {
+      "target": "exitVelocityMph",
+      "features": [
+        "batSpeed",
+        "attackAngle",
+        "attackAngleSquared"
+      ],
+      "intercept": 19.010215920145267,
+      "coefficients": {
+        "batSpeed": 1.0499665465592052,
+        "attackAngle": 0.13028486692388044,
+        "attackAngleSquared": 0.004010730177416409
+      },
+      "training": {
+        "n": 677,
+        "mae": 4.609480245209173,
+        "rmse": 9.41798987938829,
+        "r2": 0.23431831107381285
+      },
+      "groupedAthleteCv": {
+        "mae": 4.661083694904347,
+        "rmse": 8.098196340068563,
+        "r2": 0.3629783102307268
+      }
+    },
+    "carryDistance": {
+      "target": "distanceFeet",
+      "features": [
+        "exitVelocity",
+        "launchAngle",
+        "launchAngleSquared",
+        "exitVelocityLaunchAngle"
+      ],
+      "intercept": 18.555322596185533,
+      "coefficients": {
+        "exitVelocity": 0.883559440186775,
+        "launchAngle": -7.22666425426312,
+        "launchAngleSquared": -0.07976836035309921,
+        "exitVelocityLaunchAngle": 0.19776793807418316
+      },
+      "training": {
+        "n": 604,
+        "mae": 22.980689899068423,
+        "rmse": 32.01202176849893,
+        "r2": 0.9221714406429979
+      },
+      "groupedAthleteCv": {
+        "mae": 23.618385051729128,
+        "rmse": 32.78494087862674,
+        "r2": 0.913597936794528
+      }
+    }
+  },
+  "latentAssociations": [
+    {
+      "feature": "hand_speed_mag_seq_max_x",
+      "r": 0.22539552125951035,
+      "n": 677
+    },
+    {
+      "feature": "upper_arm_speed_mag_seq_max_x",
+      "r": 0.21517359371138753,
+      "n": 677
+    },
+    {
+      "feature": "max_cog_velo_x",
+      "r": 0.19824625928382814,
+      "n": 677
+    },
+    {
+      "feature": "x_factor_fp_x",
+      "r": -0.18825639305168507,
+      "n": 677
+    },
+    {
+      "feature": "torso_angular_velocity_seq_max_x",
+      "r": 0.18424776592333092,
+      "n": 677
+    },
+    {
+      "feature": "x_factor_hs_x",
+      "r": -0.10638463031639443,
+      "n": 677
+    },
+    {
+      "feature": "torso_pelvis_swing_max_x",
+      "r": -0.10272547411728153,
+      "n": 677
+    },
+    {
+      "feature": "pelvis_angular_velocity_seq_max_x",
+      "r": 0.09956103804980378,
+      "n": 677
+    },
+    {
+      "feature": "lead_wrist_swing_max_x",
+      "r": 0.056807136635840715,
+      "n": 677
+    },
+    {
+      "feature": "bat_torso_angle_connection_x",
+      "r": -0.023788521104926703,
+      "n": 677
+    }
+  ]
+}

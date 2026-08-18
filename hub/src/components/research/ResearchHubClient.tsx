@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  Dna,
   FlaskConical,
   Gauge,
   LayoutDashboard,
@@ -40,13 +41,18 @@ const OddsTerminalClient = dynamic(
   () => import('@/components/odds-terminal/OddsTerminalClient').then(module => module.OddsTerminalClient),
   { loading: () => <PanelLoader label="Loading movement history" /> },
 )
+const MechanicsLab = dynamic(
+  () => import('@/components/research/MechanicsLab').then(module => module.MechanicsLab),
+  { loading: () => <PanelLoader label="Building mechanics field" /> },
+)
 
 type ResearchGame = TodayGame & { locked?: boolean }
-type ResearchView = 'matchups' | 'board' | 'movement'
+type ResearchView = 'matchups' | 'mechanics' | 'board' | 'movement'
 type MatchupDetail = 'overview' | 'pitcher'
 
 const VIEWS: { key: ResearchView; label: string; shortLabel: string; description: string; icon: typeof Swords }[] = [
   { key: 'matchups', label: 'Matchups', shortLabel: 'Matchups', description: 'Starters, pitch mix, and lineup form', icon: Swords },
+  { key: 'mechanics', label: 'HR Mechanics', shortLabel: 'Mechanics', description: 'Swing readiness and contact formation', icon: Dna },
   { key: 'board', label: 'Market Board', shortLabel: 'Board', description: 'Opening prices, current prices, and movement', icon: LayoutDashboard },
   { key: 'movement', label: 'Odds Movement', shortLabel: 'Movement', description: 'Captured sportsbook history before first pitch', icon: Activity },
 ]
@@ -278,6 +284,15 @@ export function ResearchHubClient({ initialDate, initialGameKey, initialView, in
                       : <PitcherReportClient date={date} gameKey={selectedGame.gameKey} embedded />}
                   </div>
                 </>
+              )}
+
+              {view === 'mechanics' && (
+                <MechanicsLab
+                  date={date}
+                  gamePk={selectedGame.gamePk}
+                  awayTeam={selectedGame.awayAbbr}
+                  homeTeam={selectedGame.homeAbbr}
+                />
               )}
 
               {view === 'board' && (
