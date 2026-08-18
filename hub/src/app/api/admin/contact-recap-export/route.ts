@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getDailyContactRecap } from '@/lib/dailyContactRecap'
-import { renderContactRecapGif } from '@/lib/contactRecapGif'
+import { enrichContactRecapMarkets } from '@/lib/contactRecapMarkets'
+import { renderContactRecap, type ContactRecapExportFormat } from '@/lib/contactRecapGif'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,15 +22,20 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const date = url.searchParams.get('date') ?? ''
   const kind = url.searchParams.get('kind') === 'near' ? 'near' : 'hr'
+  const format: ContactRecapExportFormat = url.searchParams.get('format') === 'gif' ? 'gif' : 'mp4'
   try {
     const recap = await getDailyContactRecap(date)
-    const body = await renderContactRecapGif(kind === 'near' ? recap.nearHomeRuns : recap.homeRuns)
+    const selected = kind === 'near' ? recap.nearHomeRuns : recap.homeRuns
+    const events = await enrichContactRecapMarkets(date, selected)
+    const body = await renderContactRecap(events, format)
+    const label = kind === 'near' ? 'near-home-runs' : 'home-runs'
     return new NextResponse(new Uint8Array(body), { headers: {
-      'Content-Type': 'image/gif',
-      'Content-Disposition': `attachment; filename="slipsurge-${date}-${kind === 'near' ? 'near-home-runs' : 'home-runs'}.gif"`,
+      'Content-Type': format === 'mp4' ? 'video/mp4' : 'image/gif',
+      'Content-Disposition': `attachment; filename="slipsurge-${date}-${label}.${format}"`,
       'Cache-Control': 'private, no-store',
     } })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Could not render the GIF.' }, { status: 400 })
+    console.error('[contact-recap-export] render failed', { date, kind, format, error: error instanceof Error ? error.message : String(error) })
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Could not render the contact recap.' }, { status: 400 })
   }
 }

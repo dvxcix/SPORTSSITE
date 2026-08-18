@@ -1,6 +1,21 @@
 export type ContactKind = 'home_run' | 'near_hr' | 'hit' | 'out' | 'other'
 export type CoordinateSource = 'statcast' | 'mlb_live' | 'bearing_projection'
 
+export type ContactMarketQuote = {
+  marketKey: string
+  marketLabel: string
+  book: string
+  bookLabel: string
+  odds: number
+}
+
+export type ContactMarketContext = {
+  primaryLabel: string
+  primary: ContactMarketQuote[]
+  specials: ContactMarketQuote[]
+  frozenAt: string | null
+}
+
 export type DailyContactGame = {
   gamePk: number
   gameIndex: number
@@ -55,6 +70,7 @@ export type DailyContactEvent = {
   parksHrCount: number | null
   parkHrList: string | null
   game: DailyContactGame
+  marketContext?: ContactMarketContext
 }
 
 export type DailyContactSlate = {
