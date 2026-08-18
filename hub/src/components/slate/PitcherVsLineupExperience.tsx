@@ -359,7 +359,7 @@ function BatterRow({ player, stats, loaded, allByCol, expanded, onToggle, filter
 }) {
   return (
     <>
-      <tr data-expanded={expanded} onClick={onToggle} style={{ opacity: loaded ? 1 : 0.48 }}>
+      <tr data-expanded={expanded} onClick={onToggle} style={{ opacity: loaded ? 1 : 0.68 }}>
         <td>
           <div className={styles.batterIdentity}>
             <span className={styles.expandMark}>{expanded ? '−' : '+'}</span>
