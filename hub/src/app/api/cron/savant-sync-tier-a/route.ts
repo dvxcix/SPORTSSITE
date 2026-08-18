@@ -40,11 +40,17 @@ async function run(req: Request) {
     // even after real production runs.
     const resultKey = `${category.name}:${category.target}`
     const entityId = resultKey
-    const { data: job } = await admin
+    const { data: job, error: jobError } = await admin
       .from('sync_state')
       .select('last_synced_at')
       .eq('source', 'savant_csv').eq('entity_type', 'savant_category').eq('entity_id', entityId).eq('season', season)
       .maybeSingle()
+
+    if (jobError) {
+      console.error('[savant-sync-tier-a] state query failed', { resultKey, code: jobError.code })
+      results[resultKey] = { error: 'state query failed' }
+      continue
+    }
 
     if (job?.last_synced_at && new Date(job.last_synced_at).getTime() > staleBefore) {
       results[resultKey] = { skipped: true }
@@ -55,10 +61,11 @@ async function run(req: Request) {
       const result = await upsertSavantCategory(admin, category, season)
       results[resultKey] = result
       if (result.rows > 0) {
-        await admin.from('sync_state').upsert({
+        const { error: stateError } = await admin.from('sync_state').upsert({
           source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season,
           status: 'statcast_complete', last_synced_at: new Date().toISOString(),
         }, { onConflict: 'source,entity_type,entity_id,season' })
+        if (stateError) throw new Error('Savant category completion-state write failed')
       } else {
         // Confirmed live: Savant can return HTTP 200 with an empty CSV for a
         // category — the same "success-shaped failure" already found and
@@ -68,20 +75,29 @@ async function run(req: Request) {
         // it as 'error' (no last_synced_at stamp) so the very next run
         // tries again instead of waiting out the staleness window.
         console.error('[savant-sync-tier-a] empty category response, not marking complete', resultKey)
-        await admin.from('sync_state').upsert({
+        results[resultKey] = { error: 'empty category response' }
+        const { error: stateError } = await admin.from('sync_state').upsert({
           source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
         }, { onConflict: 'source,entity_type,entity_id,season' })
+        if (stateError) throw new Error('Savant category error-state write failed')
       }
     } catch (e) {
       console.error('[savant-sync-tier-a] category failed', { resultKey, type: e instanceof Error ? e.name : typeof e })
       results[resultKey] = { error: 'sync failed' }
-      await admin.from('sync_state').upsert({
+      const { error: stateError } = await admin.from('sync_state').upsert({
         source: 'savant_csv', entity_type: 'savant_category', entity_id: entityId, season, status: 'error',
       }, { onConflict: 'source,entity_type,entity_id,season' })
+      if (stateError) console.error('[savant-sync-tier-a] could not mark category failed', { resultKey, code: stateError.code })
     }
   }
 
-  return NextResponse.json({ season, results })
+  const failures = Object.entries(results)
+    .filter(([, result]) => 'error' in result)
+    .map(([category, result]) => ({ category, error: 'error' in result ? result.error : 'sync failed' }))
+  return NextResponse.json(
+    { ok: failures.length === 0, season, results, failures },
+    { status: failures.length ? 503 : 200 }
+  )
 }
 
 export const GET = withPipelineHealth('savant-sync-tier-a', run)

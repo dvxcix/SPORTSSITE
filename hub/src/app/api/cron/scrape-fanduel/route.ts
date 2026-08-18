@@ -7,7 +7,7 @@ import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/platform'
 import { addDaysToDateStr } from '@/lib/balldontlie'
-import { missingMarkets } from '@/lib/scrapers/retryMarkets'
+import { missingCoreMarkets } from '@/lib/scrapers/retryMarkets'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
@@ -146,12 +146,12 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
   const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
   if (dryRun || 'error' in first) return first
-  const missing = missingMarkets(first.imported?.body?.marketSummary ?? {})
+  const missing = missingCoreMarkets(first.imported?.body?.marketSummary ?? {})
   if (!missing.length) return first
 
   const retry = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
   if ('error' in retry) return { ...first, retriedFor: missing, retryError: retry.error }
-  const stillMissing = missingMarkets(retry.imported?.body?.marketSummary ?? {})
+  const stillMissing = missingCoreMarkets(retry.imported?.body?.marketSummary ?? {})
   return { ...retry, retriedFor: missing, stillMissing: stillMissing.length ? stillMissing : undefined }
 }
 

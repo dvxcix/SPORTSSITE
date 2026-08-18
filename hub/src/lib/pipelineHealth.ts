@@ -15,6 +15,18 @@ export function withPipelineHealth(jobName: string, handler: RouteHandler, optio
     const startedIso = new Date(startedAt).toISOString()
     const details = { path: new URL(request.url).pathname }
 
+    // A serverless timeout terminates the process before the catch block can
+    // close its ledger row. Expire abandoned runs when the next invocation
+    // starts so the admin dashboard never reports a days-old job as running.
+    const abandonedBefore = new Date(startedAt - 15 * 60_000).toISOString()
+    const { error: abandonedError } = await admin.from('pipeline_runs').update({
+      status: 'failed',
+      finished_at: startedIso,
+      error: 'Execution ended without a completion signal (timeout or termination)',
+      details: { ...details, recovered_by_run_id: runId },
+    }).eq('job_name', jobName).eq('status', 'running').lt('started_at', abandonedBefore)
+    if (abandonedError) console.error(`[pipeline-health] could not expire abandoned ${jobName} runs`, { code: abandonedError.code })
+
     const { error: startError } = await admin.from('pipeline_runs').insert({
       job_name: jobName, run_id: runId, status: 'running',
       started_at: startedIso, details,

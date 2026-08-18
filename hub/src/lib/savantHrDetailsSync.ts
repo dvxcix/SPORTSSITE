@@ -121,7 +121,7 @@ async function seedPendingBatters(admin: AdminClient, season: number) {
 
     if (error) {
       console.error('[savant-hr-details] seed query failed', { code: error.code })
-      return
+      throw new Error('Savant HR details seed query failed')
     }
     if (!page?.length) break
     rows.push(...page)
@@ -131,12 +131,13 @@ async function seedPendingBatters(admin: AdminClient, season: number) {
   const qualifying = rows.filter(r => Number((r.metrics as any)?.hr_total) > 0)
   if (!qualifying.length) return
 
-  await admin.from('sync_state').upsert(
+  const { error: seedError } = await admin.from('sync_state').upsert(
     qualifying.map(r => ({
       source: SOURCE, entity_type: ENTITY_TYPE, entity_id: String(r.mlb_id), season, status: 'pending',
     })),
     { onConflict: 'source,entity_type,entity_id,season', ignoreDuplicates: true }
   )
+  if (seedError) throw new Error('Savant HR details seed write failed')
 }
 
 // Claims up to BATCH_SIZE pending/error/stale-claimed batter jobs — same
@@ -157,7 +158,7 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
   // longest-stale batters win the claim instead of losing to the same
   // subset every single day — see BATCH_SIZE's own comment for the real
   // starvation incident this fixes.
-  const { data: jobs } = await admin
+  const { data: jobs, error: jobsError } = await admin
     .from('sync_state')
     .select('entity_id')
     .eq('source', SOURCE).eq('entity_type', ENTITY_TYPE).eq('season', season)
@@ -165,13 +166,16 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
     .order('last_synced_at', { ascending: true, nullsFirst: true })
     .limit(BATCH_SIZE)
 
+  if (jobsError) throw new Error('Savant HR details claim query failed')
+
   const claimedIds = (jobs ?? []).map(j => j.entity_id)
   if (!claimedIds.length) return { claimed: 0, results: {} }
 
-  await admin.from('sync_state').upsert(
+  const { error: claimError } = await admin.from('sync_state').upsert(
     claimedIds.map(id => ({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: id, season, status: 'claimed', claimed_at: new Date().toISOString() })),
     { onConflict: 'source,entity_type,entity_id,season' }
   )
+  if (claimError) throw new Error('Savant HR details claim write failed')
 
   // Fetch every claimed batter concurrently — the slow part was never the
   // fetches, it was doing a Supabase round-trip per player sequentially.
@@ -202,10 +206,11 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
         const pid = Number(e.pitcher_id)
         if (pid && !pitcherStubs.has(pid)) pitcherStubs.set(pid, e.pitcher_name || `Player ${pid}`)
       }
-      await admin.from('players').upsert(
+      const { error: pitcherError } = await admin.from('players').upsert(
         Array.from(pitcherStubs, ([mlb_id, full_name]) => ({ mlb_id, full_name })),
         { onConflict: 'mlb_id', ignoreDuplicates: true }
       )
+      if (pitcherError) throw pitcherError
 
       const upsertRows = allEvents.map(e => ({
         game_pk: Number(e.game_pk), play_id: e.play_id, play_url: e.play_url || null,
@@ -246,7 +251,10 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
       results[f.idStr] = { error: f.error ?? writeFailed }
       errorRows.push({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: f.idStr, season, status: 'error' })
     }
-    if (errorRows.length) await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
+    if (errorRows.length) {
+      const { error } = await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
+      if (error) throw new Error('Savant HR details error-state write failed')
+    }
     return { claimed: claimedIds.length, results }
   }
 
@@ -260,8 +268,14 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
     }
   }
 
-  if (completeRows.length) await admin.from('sync_state').upsert(completeRows, { onConflict: 'source,entity_type,entity_id,season' })
-  if (errorRows.length) await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
+  if (completeRows.length) {
+    const { error } = await admin.from('sync_state').upsert(completeRows, { onConflict: 'source,entity_type,entity_id,season' })
+    if (error) throw new Error('Savant HR details completion-state write failed')
+  }
+  if (errorRows.length) {
+    const { error } = await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
+    if (error) throw new Error('Savant HR details error-state write failed')
+  }
 
   return { claimed: claimedIds.length, results }
 }

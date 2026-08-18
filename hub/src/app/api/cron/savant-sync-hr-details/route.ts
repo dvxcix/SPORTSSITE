@@ -32,7 +32,13 @@ async function run(req: Request) {
 
   const admin = createAdminClient()
   const result = await syncHrDetailBatch(admin, currentSeason())
-  return NextResponse.json(result)
+  const failures = Object.entries(result.results)
+    .filter(([, item]) => 'error' in item)
+    .map(([playerId, item]) => ({ playerId, error: 'error' in item ? item.error : 'sync failed' }))
+  return NextResponse.json(
+    { ok: failures.length === 0, ...result, failures },
+    { status: failures.length ? 503 : 200 }
+  )
 }
 
 export const GET = withPipelineHealth('savant-sync-hr-details', run)

@@ -133,18 +133,27 @@ export async function updateSession(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
+          )
+          Object.entries(headers).forEach(([name, value]) =>
+            supabaseResponse.headers.set(name, value)
           )
         },
       },
     }
   )
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // getClaims validates the access-token signature locally against the
+  // project's published signing keys and only reaches Auth when a refresh is
+  // actually needed. getUser made every page and parallel API request hit the
+  // Auth service, multiplying refresh-token rotation races during a normal
+  // page load. This is Supabase's current SSR proxy contract.
+  const { data: authData, error: authError } = await supabase.auth.getClaims()
+  const userId = typeof authData?.claims?.sub === 'string' ? authData.claims.sub : null
 
   // Real incident (confirmed via Vercel logs: ~44 users/week hitting this):
   // @supabase/ssr rotates the refresh token on every use, so when a page
@@ -174,9 +183,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if (user && request.nextUrl.pathname.startsWith('/api/admin/')) {
+  if (userId && request.nextUrl.pathname.startsWith('/api/admin/')) {
     const [{ data: profile }, { data: assurance }] = await Promise.all([
-      supabase.from('users').select('account_type').eq('id', user.id).maybeSingle(),
+      supabase.from('users').select('account_type').eq('id', userId).maybeSingle(),
       supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
     ])
     if (profile?.account_type !== 'admin') {
@@ -213,7 +222,7 @@ export async function updateSession(request: NextRequest) {
     pathname === p
   ) || isPublicCreatorRoute || isPublicBlogRoute
 
-  if (!user && !isAuthRoute && !isPublicRoute) {
+  if (!userId && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.searchParams.set('next', request.nextUrl.pathname)
@@ -232,7 +241,7 @@ export async function updateSession(request: NextRequest) {
   // place) — otherwise a not-yet-onboarded user could get stuck unable
   // to even sign out.
   if (
-    user &&
+    userId &&
     !isAuthRoute &&
     !request.nextUrl.pathname.startsWith('/api/') &&
     request.nextUrl.pathname !== '/onboarding'
@@ -240,7 +249,7 @@ export async function updateSession(request: NextRequest) {
     const { data: profile } = await supabase
       .from('users')
       .select('onboarding_completed_at')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle()
     if (!profile?.onboarding_completed_at) {
       const url = request.nextUrl.clone()

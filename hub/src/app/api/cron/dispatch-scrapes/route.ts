@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
 import { PLATFORM_URL } from '@/lib/platform'
-import { missingMarkets } from '@/lib/scrapers/retryMarkets'
+import { missingOpeningMarkets } from '@/lib/scrapers/retryMarkets'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 
@@ -42,21 +42,12 @@ export const GET = withPipelineHealth('dispatch-scrapes', run)
 // genuinely never gets an FHR market (or one already past its window)
 // doesn't loop forever.
 //
-// Real gap (2026-07-25): FHR had this check, nothing else did — confirmed
-// live across a full day's slate, TWO distinct silent tab-scrape misses:
-// (1) fhr_fd/rbi3_fd/combo1_min/combo2_min all zero together on 7 games,
-// (2) laser105_fd/laser110_fd/moonshot_fd/pa1_fd all zero together on 2
-// games (one game hit both) — see lib/scrapers/retryMarkets.ts for the
-// full list and why each entry on it is a safe zero-means-miss signal.
-//
-// scrape-fanduel/route.ts's own scrapeOneGame now does ONE same-request
-// retry itself the moment it sees any of these at zero — this queue-based
-// retry is the SECOND layer, for whatever's still missing after that (the
-// market genuinely isn't posted yet, not just a one-off tab glitch) —
-// waits 5 real minutes rather than immediately hammering the same still-
-// not-ready page again. Capped at one retry (retry_count) so a game that
-// genuinely never gets a market (or one already past its window) doesn't
-// loop forever.
+// Some FanDuel tabs can silently miss even when the rest of the event is
+// healthy. scrape-fanduel performs one immediate retry only for core markets
+// that should exist on every complete event. This dispatcher adds a single
+// delayed retry for those core markets plus FHR, which may simply not have
+// been posted at the first lineup-triggered capture. Optional or discontinued
+// markets never trigger a full-event retry. See lib/scrapers/retryMarkets.ts.
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
@@ -88,19 +79,17 @@ async function run(req: Request) {
         signal: AbortSignal.timeout(55_000),
       })
       const body = await res.json().catch(() => null)
-      // scrape-fanduel's own scrapeOneGame already retried once same-request
-      // — `stillMissing` is what survived THAT retry. Fall back to deriving
-      // it from marketSummary directly for an older/error-shaped response
-      // that never got that far.
-      const stillMissing: string[] = body?.result?.stillMissing
-        ?? missingMarkets(body?.result?.imported?.body?.marketSummary ?? {})
+      // The same-request retry only checks markets that must exist on every
+      // healthy event. The delayed opening retry has one additional concern:
+      // FHR may not have been posted yet. Always derive this queue's decision
+      // from the FINAL capture so a surviving core-market miss cannot mask a
+      // simultaneously absent FHR market.
+      const stillMissing = missingOpeningMarkets(body?.result?.imported?.body?.marketSummary ?? {})
       return { gamePk: row.game_pk, status: res.status, stillMissing, retryCount: row.retry_count }
     })
   )
 
-  const fulfilled = results
-    .map(r => r.status === 'fulfilled' ? r.value : null)
-    .filter((r): r is { gamePk: number; status: number; stillMissing: string[]; retryCount: number } => r !== null)
+  const fulfilled = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : [])
 
   const needsRetry = fulfilled.filter(r => r.status === 200 && r.retryCount < 1 && r.stillMissing.length > 0)
   if (needsRetry.length) {

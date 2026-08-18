@@ -88,10 +88,11 @@ export default async function AdminDashboard() {
   const pipelineRows = TRACKED_PIPELINES.map(pipeline => {
     const run = latestRuns.get(pipeline.name)
     const ageMinutes = run ? (Date.now() - new Date(run.started_at).getTime()) / 60_000 : Infinity
-    const state = !run ? 'unknown' : run.status === 'failed' ? 'failed' : ageMinutes > pipeline.staleAfterMinutes ? 'stale' : run.status
+    const timedOut = run?.status === 'running' && ageMinutes > Math.min(10, pipeline.staleAfterMinutes)
+    const state = !run ? 'unknown' : timedOut ? 'timed_out' : run.status === 'failed' ? 'failed' : ageMinutes > pipeline.staleAfterMinutes ? 'stale' : run.status
     return { pipeline, run, state }
   })
-  const pipelineIssues = pipelineRows.filter(row => ['failed', 'stale'].includes(row.state)).length
+  const pipelineIssues = pipelineRows.filter(row => ['failed', 'stale', 'timed_out'].includes(row.state)).length
   const pipelineHealthy = pipelineRows.filter(row => row.state === 'succeeded' || row.state === 'running').length
   const actionTotal = (reportCount ?? 0) + (creatorCount ?? 0) + (deletionCount ?? 0) + (webhookFailures ?? 0) + (pushFailures ?? 0) + pipelineIssues
 

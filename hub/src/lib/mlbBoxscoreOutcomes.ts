@@ -16,6 +16,22 @@ type MlbGameRef = {
   status?: { abstractGameState?: string }
 }
 
+type MlbBoxscorePlayer = {
+  person?: { id?: number }
+  stats?: {
+    batting?: {
+      hits?: number
+      doubles?: number
+      triples?: number
+      homeRuns?: number
+      rbi?: number
+      runs?: number
+      totalBases?: number
+      stolenBases?: number
+    }
+  }
+}
+
 export async function fetchBoxscoreOutcomes(
   mlbGames: MlbGameRef[],
 ): Promise<Record<number, Record<number, MlbBatterOutcome>>> {
@@ -42,7 +58,7 @@ export async function fetchBoxscoreOutcomes(
       const byMlbId: Record<number, MlbBatterOutcome> = {}
       for (const side of ['home', 'away'] as const) {
         const players = teams[side]?.players ?? {}
-        for (const player of Object.values(players) as any[]) {
+        for (const player of Object.values(players) as MlbBoxscorePlayer[]) {
           const mlbId = player?.person?.id
           const batting = player?.stats?.batting
           if (!mlbId || !batting) continue
