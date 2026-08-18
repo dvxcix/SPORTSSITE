@@ -1,0 +1,5 @@
+.scoreRing{--ring:#a6ff3f;display:grid;width:78px;height:78px;flex:0 0 auto;place-items:center;border-radius:50%;background:radial-gradient(circle,#0b1118 57%,transparent 59%),conic-gradient(var(--ring) var(--score),#1b2430 0);box-shadow:0 0 24px color-mix(in srgb,var(--ring) 18%,transparent)}
+.scoreRing[data-tone=elite]{--ring:#a6ff3f}.scoreRing[data-tone=positive]{--ring:#49d9ff}.scoreRing[data-tone=cold]{--ring:#ff6e82}.scoreRing[data-tone=neutral]{--ring:#a6ff3f}
+.scoreRing span{text-align:center}.scoreRing strong,.scoreRing small{display:block}.scoreRing strong{color:#f7f9ff;font:950 20px var(--font-mono,monospace)}.scoreRing small{margin-top:2px;color:#8996ab;font:800 6px var(--font-mono,monospace);letter-spacing:.08em}
+.scoreRing[data-size=small]{width:44px;height:44px}.scoreRing[data-size=small] strong{font-size:11px}.scoreRing[data-size=small] small{font-size:5px}
+

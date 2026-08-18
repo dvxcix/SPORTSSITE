@@ -153,6 +153,7 @@ export default async function PipelineHealthPage() {
     { job: 'dugout-statcast-precompute', field: 'computed_at', detail: 'Dugout Statcast cache', query: admin.from('dugout_statcast_precomputed').select('computed_at').eq('game_date', currentMlbDate).order('computed_at', { ascending: false }).limit(1) },
     { job: 'dugout-matchup-edge-precompute', field: 'computed_at', detail: 'Dugout matchup cache', query: admin.from('dugout_matchup_edge_precomputed').select('computed_at').eq('game_date', currentMlbDate).order('computed_at', { ascending: false }).limit(1) },
     { job: 'dugout-pitchlog-stat-precompute', field: 'updated_at', detail: 'Dugout pitch-log cache', query: admin.from('dugout_pitchlog_stat_precomputed').select('updated_at').eq('game_date', currentMlbDate).order('updated_at', { ascending: false }).limit(1) },
+    { job: 'research-mechanics-precompute', field: 'computed_at', detail: 'HR mechanics window cache', query: admin.from('research_mechanics_snapshots').select('computed_at').eq('game_date', currentMlbDate).order('computed_at', { ascending: false }).limit(1) },
   ]
   const freshnessResults = await Promise.all(freshnessSources.map(async source => ({ source, result: await source.query })))
   const dataEvidence = new Map<string, DataEvidence>()

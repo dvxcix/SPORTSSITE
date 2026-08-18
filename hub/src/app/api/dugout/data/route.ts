@@ -29,6 +29,8 @@ import {
 } from '@slipsurge/core/matrixEngine'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 import { fetchPikkitPublicPicks } from '@/lib/mlbPartyServer'
+import { HR_MECHANICS_MODEL_VERSION, MECHANICS_WINDOWS, type GameMechanicsResult, type GameMechanicsWindows } from '@/lib/hrMechanics'
+import { compactMechanicsByPlayer, type CompactMechanicsWindows } from '@/lib/hrMechanicsCache'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -750,7 +752,7 @@ export async function GET(req: Request) {
   // one (if any) is still the dominant cost.
   const [
     statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, outcomesByGamePk,
-    matrixPitchRowsByBatter, precomputedStatcastRows, precomputedPitchlogRows, precomputedMatchupEdgeRows,
+    matrixPitchRowsByBatter, precomputedStatcastRows, precomputedPitchlogRows, precomputedMatchupEdgeRows, mechanicsSnapshotRows,
     batSideEntries, gapOddsResult, gapOddsOpeningResult, pitcherHandEntries, pitcherSplits, freezeResult,
   ] = await Promise.all([
     timed(reqId, 'statSplits', fetchStatSplits()),
@@ -873,6 +875,20 @@ export async function GET(req: Request) {
         return [] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[]
       }
     })() : Promise.resolve([] as { mlb_id: number; role: 'batter' | 'pitcher'; data: any }[])),
+    // HR Mechanics is Ultimate-only and already precomputed by the daily
+    // mechanics job (plus lineup-triggered refreshes). The Dugout reads the
+    // exact persisted Research payload; it never reimplements the index in
+    // this request or in the browser.
+    timed(reqId, 'mechanicsSnapshots', isUltimate && admin && gamePksToday.length ? (async () => {
+      const { data, error } = await admin
+        .from('research_mechanics_snapshots')
+        .select('game_pk,window_games,payload')
+        .eq('game_date', date)
+        .eq('model_version', HR_MECHANICS_MODEL_VERSION)
+        .in('game_pk', gamePksToday)
+      if (error) throw error
+      return (data ?? []) as { game_pk: number; window_games: number; payload: GameMechanicsResult }[]
+    })() : Promise.resolve([] as { game_pk: number; window_games: number; payload: GameMechanicsResult }[])),
     // MLB's schedule?hydrate=lineups CONFIRMED-lineup player objects carry
     // only id/name/position — no batSide at all. Batch-fetch real batSide
     // for every confirmed-lineup player via the people endpoint, which does
@@ -966,6 +982,26 @@ export async function GET(req: Request) {
   const precomputedStatcastByBatter: Record<number, Partial<Record<'L' | 'R', Record<StatcastWindow, StatcastLine>>>> = {}
   for (const row of precomputedStatcastRows) {
     (precomputedStatcastByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
+  }
+
+  const mechanicsRowsByGame = new Map<number, Map<number, GameMechanicsResult>>()
+  for (const row of mechanicsSnapshotRows) {
+    const byWindow = mechanicsRowsByGame.get(Number(row.game_pk)) ?? new Map<number, GameMechanicsResult>()
+    byWindow.set(Number(row.window_games), row.payload)
+    mechanicsRowsByGame.set(Number(row.game_pk), byWindow)
+  }
+  const mechanicsForGame = (gamePk: number, lineupIds: number[]): Record<number, CompactMechanicsWindows> => {
+    const byWindow = mechanicsRowsByGame.get(gamePk)
+    if (!byWindow || lineupIds.length !== 18) return {}
+    const expected = [...lineupIds].sort((a, b) => a - b).join(',')
+    const complete = MECHANICS_WINDOWS.every(window => {
+      const payload = byWindow.get(window)
+      return payload && [...payload.players.map(player => player.playerId)].sort((a, b) => a - b).join(',') === expected
+    })
+    if (!complete) return {}
+    return compactMechanicsByPlayer(Object.fromEntries(
+      MECHANICS_WINDOWS.map(window => [window, byWindow.get(window)!]),
+    ) as GameMechanicsWindows)
   }
   const pitcherMap = needsMm ? buildPitcherMap(pitcherSplits) : {}
 
@@ -1247,6 +1283,7 @@ export async function GET(req: Request) {
     // instead of three separate inline copies.
     const homePHand = (awayPitcher?.hand as 'L' | 'R') || 'R'
     const awayPHand = (homePitcher?.hand as 'L' | 'R') || 'R'
+    const mechanicsByPlayer = mechanicsForGame(g.gamePk, [...awayLineup, ...homeLineup].map(player => player.mlb_id))
 
     // 'mm' dugout_specs support (see needsMm above) — ranked across the
     // WHOLE GAME (both lineups combined), matching exactly how the live
@@ -1467,7 +1504,7 @@ export async function GET(req: Request) {
               ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return { ...p, props, matrixMatches, statcast: statcastWindows, mechanics: mechanicsByPlayer[p.mlb_id] ?? null, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
@@ -1486,7 +1523,7 @@ export async function GET(req: Request) {
               ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return { ...p, props, matrixMatches, statcast: statcastWindows, mechanics: mechanicsByPlayer[p.mlb_id] ?? null, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
     }
   }))

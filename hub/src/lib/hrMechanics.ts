@@ -339,7 +339,13 @@ function scorePlayer(
   }
 }
 
-export async function computeGameMechanics(game: TodayGame, gameDate: string, window: MechanicsWindow): Promise<GameMechanicsResult> {
+export type GameMechanicsWindows = Record<MechanicsWindow, GameMechanicsResult>
+
+// Load the shared 18-player inputs once, then score every supported recency
+// window from that same immutable field. The daily precompute and lineup
+// refresh both need L1/L3/L5/L10; doing four independent passes previously
+// repeated the same Statcast query and both pitchers' full pitch-log reads.
+export async function computeGameMechanicsWindows(game: TodayGame, gameDate: string): Promise<GameMechanicsWindows> {
   const admin = createAdminClient()
   const lineup = [...game.awayLineup.slice(0, 9), ...game.homeLineup.slice(0, 9)]
   const ids = lineup.map(player => player.mlb_id)
@@ -353,32 +359,41 @@ export async function computeGameMechanics(game: TodayGame, gameDate: string, wi
     pitcher.id,
     await fetchPlayerPitchRows(admin, pitcher.id, 'pitcher') as PitchLogRow[],
   )))
-  const players = lineup.map(player => {
-    const away = player.team === game.awayAbbr
-    const pitcher = away ? game.homePitcher : game.awayPitcher
-    const opponent = away ? game.homeAbbr : game.awayAbbr
-    const stat = statMap.get(`${player.mlb_id}:${pitcher?.hand ?? 'R'}`) ?? rows.find(row => row.mlb_id === player.mlb_id)
-    return scorePlayer(player, opponent, pitcher, stat, pitcher ? pitcherRows.get(pitcher.id) ?? [] : [], window, gameDate)
-  }).sort((a, b) => b.scores.overall - a.scores.overall || a.battingOrder - b.battingOrder)
-    .map((player, index) => ({ ...player, rank: index + 1 }))
-  const sourceDates = players.map(player => player.metrics.sourceComputedAt?.slice(0, 10)).filter((value): value is string => Boolean(value)).sort()
-  return {
-    modelVersion: HR_MECHANICS_MODEL_VERSION,
-    gameDate,
-    gamePk: game.gamePk,
-    gameKey: game.gameKey,
-    window,
-    lineupConfirmed: game.awayLineupConfirmed && game.homeLineupConfirmed,
-    sourceThroughDate: sourceDates.at(-1) ?? null,
-    calibration: {
-      label: 'Driveline OpenBiomechanics calibrated',
-      swings: priors.samples.transferRows,
-      trajectoryContacts: priors.samples.distanceRows,
-      transferMaeMph: round(priors.models.exitVelocityTransfer.groupedAthleteCv.mae),
-      carryMaeFeet: round(priors.models.carryDistance.groupedAthleteCv.mae),
-      repository: priors.source.repository,
-      limitation: priors.source.importantLimit,
-    },
-    players,
+  const calibration = {
+    label: 'Driveline OpenBiomechanics calibrated',
+    swings: priors.samples.transferRows,
+    trajectoryContacts: priors.samples.distanceRows,
+    transferMaeMph: round(priors.models.exitVelocityTransfer.groupedAthleteCv.mae),
+    carryMaeFeet: round(priors.models.carryDistance.groupedAthleteCv.mae),
+    repository: priors.source.repository,
+    limitation: priors.source.importantLimit,
   }
+
+  return Object.fromEntries(MECHANICS_WINDOWS.map(window => {
+    const players = lineup.map(player => {
+      const away = player.team === game.awayAbbr
+      const pitcher = away ? game.homePitcher : game.awayPitcher
+      const opponent = away ? game.homeAbbr : game.awayAbbr
+      const stat = statMap.get(`${player.mlb_id}:${pitcher?.hand ?? 'R'}`) ?? rows.find(row => row.mlb_id === player.mlb_id)
+      return scorePlayer(player, opponent, pitcher, stat, pitcher ? pitcherRows.get(pitcher.id) ?? [] : [], window, gameDate)
+    }).sort((a, b) => b.scores.overall - a.scores.overall || a.battingOrder - b.battingOrder)
+      .map((player, index) => ({ ...player, rank: index + 1 }))
+    const sourceDates = players.map(player => player.metrics.sourceComputedAt?.slice(0, 10)).filter((value): value is string => Boolean(value)).sort()
+    const result: GameMechanicsResult = {
+      modelVersion: HR_MECHANICS_MODEL_VERSION,
+      gameDate,
+      gamePk: game.gamePk,
+      gameKey: game.gameKey,
+      window,
+      lineupConfirmed: game.awayLineupConfirmed && game.homeLineupConfirmed,
+      sourceThroughDate: sourceDates.at(-1) ?? null,
+      calibration,
+      players,
+    }
+    return [window, result]
+  })) as GameMechanicsWindows
+}
+
+export async function computeGameMechanics(game: TodayGame, gameDate: string, window: MechanicsWindow): Promise<GameMechanicsResult> {
+  return (await computeGameMechanicsWindows(game, gameDate))[window]
 }

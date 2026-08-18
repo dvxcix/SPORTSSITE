@@ -121,6 +121,10 @@
       "schedule": "35 10 * * *"
     },
     {
+      "path": "/api/cron/research-mechanics-precompute",
+      "schedule": "38 10 * * *"
+    },
+    {
       "path": "/api/cron/nfl-sync-teams",
       "schedule": "40 10 * * *"
     },

@@ -8,9 +8,10 @@ import { postAlert, anytimeHrOddsLine } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/platform'
 import type { BDLPropMap } from '@/lib/balldontlie'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { getGameMechanicsWindows } from '@/lib/hrMechanicsCache'
 
 export const revalidate = 0
-export const maxDuration = 60
+export const maxDuration = 120
 export const GET = withPipelineHealth('lineup-confirmed', run)
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -114,6 +115,7 @@ async function run(req: Request) {
   // query picks the game up again, since scrape_dispatch_queue is one row
   // per game_pk and the initial confirm already claimed it.
   const scrapeRequeues: { game_pk: number; ready_at: string; dispatched_at: null; retry_count: number }[] = []
+  const mechanicsRefreshGamePks = new Set<number>()
 
   for (const g of games) {
     const sides: { side: 'home' | 'away'; abbr: string; confirmed: boolean; lineup: LineupPlayer[] }[] = [
@@ -133,6 +135,13 @@ async function run(req: Request) {
     const isFullyConfirmedNow = g.homeLineupConfirmed && g.awayLineupConfirmed
     if (!wasFullyConfirmed && isFullyConfirmedNow && isPregame(g.status)) {
       scrapeQueueInserts.push({ game_pk: g.gamePk, ready_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() })
+      // Ignore a brand-new state table baseline (both rows absent); the daily
+      // precompute owns that bulk case. A real projected -> confirmed change
+      // gets an immediate exact-18 refresh so The Dugout never keeps scores
+      // for a projected player who was not actually posted in the lineup.
+      if (lineupStateByKey.has(`${g.gamePk}-home`) || lineupStateByKey.has(`${g.gamePk}-away`)) {
+        mechanicsRefreshGamePks.add(g.gamePk)
+      }
     }
     for (const s of sides) {
       const key = `${g.gamePk}-${s.side}`
@@ -177,6 +186,7 @@ async function run(req: Request) {
         })
         if (isPregame(g.status)) {
           scrapeRequeues.push({ game_pk: g.gamePk, ready_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), dispatched_at: null, retry_count: 0 })
+          mechanicsRefreshGamePks.add(g.gamePk)
         }
       }
     }
@@ -194,7 +204,18 @@ async function run(req: Request) {
   if (scrapeQueueInserts.length) await admin.from('scrape_dispatch_queue').upsert(scrapeQueueInserts, { onConflict: 'game_pk', ignoreDuplicates: true })
   if (scrapeRequeues.length) await admin.from('scrape_dispatch_queue').upsert(scrapeRequeues, { onConflict: 'game_pk' })
 
-  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length, scrapesRequeued: scrapeRequeues.length })
+  const mechanicsRefreshGames = games.filter(game => mechanicsRefreshGamePks.has(game.gamePk))
+  const mechanicsRefreshes = await Promise.allSettled(
+    mechanicsRefreshGames.map(game => getGameMechanicsWindows(game, date)),
+  )
+  mechanicsRefreshes.forEach((result, index) => {
+    if (result.status === 'rejected') console.error('[lineup-confirmed] mechanics refresh failed', {
+      gamePk: mechanicsRefreshGames[index]?.gamePk ?? null,
+      type: result.reason instanceof Error ? result.reason.name : typeof result.reason,
+    })
+  })
+
+  return NextResponse.json({ ok: true, games: games.length, lineupEvents, statusEvents, notified, scrapesQueued: scrapeQueueInserts.length, scrapesRequeued: scrapeRequeues.length, mechanicsRefreshed: mechanicsRefreshes.filter(result => result.status === 'fulfilled').length })
 }
 
 const lineupSignature = (lineup: LineupPlayer[]) => lineup.map(p => p.mlb_id).sort((a, b) => a - b).join(',')

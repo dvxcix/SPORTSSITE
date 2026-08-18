@@ -22,6 +22,14 @@ import { Switch } from '@/components/ui/Switch'
 import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
+import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
+
+type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
+  index: number
+  rank: number
+  confidence: number
+  trend: number
+}>>
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -269,6 +277,7 @@ export function buildBatterRow(
   // day approximation).
   const statSeason = player.statcast?.season ?? null
   const statRecent = player.statcast?.[statcastWindow] ?? null
+  const mechanicsRecent = player.mechanics?.[statcastWindow] ?? null
   const s_spd = statSeason?.avgBatSpeed ?? null
   const r_spd = statRecent?.avgBatSpeed ?? null
   const d_spd = r_spd != null && s_spd != null ? r_spd - s_spd : null
@@ -519,6 +528,11 @@ export function buildBatterRow(
     position:      player.position as string,
     bats:          player.bats    as string,
     team:          player.team    as string,
+    mechanics_index: (mechanicsRecent?.index ?? null) as number | null,
+    mechanics_rank: (mechanicsRecent?.rank ?? null) as number | null,
+    mechanics_confidence: (mechanicsRecent?.confidence ?? null) as number | null,
+    mechanics_trend: (mechanicsRecent?.trend ?? null) as number | null,
+    mechanics_window: statcastWindow,
     fhr_fd, fhr_cz, fhr_fan, div, fhr_div_sa,
     // Shade %: today's price vs own season-average price (negative = cheaper
     // than usual = book conviction). Ported exactly from mlb-party: FHR% only
@@ -1449,6 +1463,24 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         </div>
       </td>
 
+      {/* Exact shared Research mechanics index for the selected L1/L3/L5/L10
+          window. The value and 18-player rank are server-computed together;
+          this cell only renders the canonical snapshot. */}
+      <td style={{ ...STD, width: 52, minWidth: 52, padding: '2px 4px' }}>
+        {row.mechanics_index != null ? (
+          <Tooltip
+            content={`HR Mechanics Index ${Math.round(row.mechanics_index)} · #${row.mechanics_rank ?? '—'} of 18 · ${row.mechanics_window.toUpperCase()} · ${Math.round(row.mechanics_confidence ?? 0)}% confidence`}
+            containerClassName="w-full h-full flex items-center justify-center"
+          >
+            <span style={{ display: 'inline-flex', cursor: 'help' }}>
+              <MechanicsScoreRing score={row.mechanics_index} label="INDEX" size="small" />
+            </span>
+          </Tooltip>
+        ) : <span style={{ color: 'var(--text-4)' }}>—</span>}
+      </td>
+
+      <td style={SDIV_D} />
+
       {/* pk */}
       <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
         {row.pk?.picks != null ? (
@@ -2202,6 +2234,8 @@ const HL_SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7']
 type DugoutColSlot = { type: 'player' } | { type: 'divider' } | { type: 'col'; key: string; group: string }
 const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'player' },
+  { type: 'col', key: 'mechanics_index', group: 'mechanics' },
+  { type: 'divider' },
   { type: 'col', key: 'pk', group: 'picks' },
   { type: 'divider' },
   { type: 'col', key: 'fhr_fd', group: 'fhr' },
@@ -2308,12 +2342,12 @@ const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
 // customize panel's per-section hide toggles iterate over — NOT a
 // constraint on display order, which is fully free (see
 // resolveDugoutColumns/DUGOUT_COLUMN_LAYOUT's own comment).
-const DUGOUT_GROUP_ORDER = ['picks', 'fhr', 'hr', 'props', 'ranks', 'batspeed', 'barrel'] as const
+const DUGOUT_GROUP_ORDER = ['mechanics', 'picks', 'fhr', 'hr', 'props', 'ranks', 'batspeed', 'barrel'] as const
 const DUGOUT_ALL_COLUMNS = DUGOUT_COLUMN_LAYOUT.filter((s): s is Extract<DugoutColSlot, { type: 'col' }> => s.type === 'col')
 // Human labels for the customize panel's group toggles — the terse internal
 // group keys above (fhr/hr/props/...) aren't fit to show a member.
 export const DUGOUT_GROUP_LABELS: Record<string, string> = {
-  picks: 'Community Picks', fhr: 'First HR', hr: 'HR & Related', props: 'Hits, Runs & Bases',
+  mechanics: 'HR Mechanics', picks: 'Community Picks', fhr: 'First HR', hr: 'HR & Related', props: 'Hits, Runs & Bases',
   ranks: 'Rank / Composite Scores', batspeed: 'Bat Tracking', barrel: 'Batted Ball (Statcast)',
 }
 
@@ -2348,12 +2382,26 @@ export function resolveDugoutColumns(prefs: DugoutColumnPrefs | null | undefined
   // already supported there; only this sort (and the Statcast banner's
   // colSpan, fixed separately) assumed sections stayed contiguous blocks.
   const orderRank = new Map((prefs?.columnOrder ?? []).map((k, i) => [k, i]))
-  return [...visible].sort((a, b) => {
+  const ordered = [...visible].sort((a, b) => {
     const ra = orderRank.has(a.key) ? orderRank.get(a.key)! : Infinity
     const rb = orderRank.has(b.key) ? orderRank.get(b.key)! : Infinity
     if (ra !== rb) return ra - rb
-    return 0 // both unranked (or tied) — stable sort keeps DUGOUT_ALL_COLUMNS' default relative order
+    return 0 // both unranked (or tied) - stable sort keeps DUGOUT_ALL_COLUMNS' default relative order
   })
+  // Existing members may have a complete saved order from before this
+  // column existed. Unranked additions would otherwise fall at the very end
+  // of their table. Insert this new canonical field immediately before PK
+  // for those older preferences; once they explicitly reorder it, preserve
+  // their chosen absolute position like every other column.
+  if (!(prefs?.columnOrder ?? []).includes('mechanics_index')) {
+    const mechanicsIndex = ordered.findIndex(column => column.key === 'mechanics_index')
+    const picksIndex = ordered.findIndex(column => column.key === 'pk')
+    if (mechanicsIndex >= 0 && picksIndex >= 0) {
+      const [mechanics] = ordered.splice(mechanicsIndex, 1)
+      ordered.splice(ordered.findIndex(column => column.key === 'pk'), 0, mechanics)
+    }
+  }
+  return ordered
 }
 
 // Turns headerCells'/BatterRowEl's own unmodified JSX fragment (still the
@@ -2412,6 +2460,7 @@ function renderDugoutColumns(
 // the tooltip text each column's real header (H()/BL() inside GameTable)
 // already uses, so the panel reads consistently with the board itself.
 const DUGOUT_COLUMN_LABELS: Record<string, string> = {
+  mechanics_index: 'HR Mechanics Index',
   pk: 'Community HR pick count',
   fhr_fd: 'FanDuel First HR', fhr_cz: 'Caesars First HR', fhr_fan: 'Fanatics First HR',
   div: 'FD−CZ implied diff', fhr_div_sa: 'FHR ÷ Anytime HR implied',
@@ -2486,7 +2535,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   })
   const applyPreset = (preset: 'compact' | 'markets' | 'power' | 'statcast') => {
     const presetColumns: Record<typeof preset, string[]> = {
-      compact: ['pk', 'fhr_fd', 'fhr_cz', 'div', 'sa_fd', 'sa_cz', 'paper', 'bk_rk', 'pp_rk', 'mm'],
+      compact: ['mechanics_index', 'pk', 'fhr_fd', 'fhr_cz', 'div', 'sa_fd', 'sa_cz', 'paper', 'bk_rk', 'pp_rk', 'mm'],
       markets: DUGOUT_ALL_COLUMNS.filter(col => ['picks', 'fhr', 'hr', 'props', 'ranks'].includes(col.group)).map(col => col.key),
       power: ['pk', 'fhr_fd', 'sa_fd', 'laser105_fd', 'laser110_fd', 'moonshot_fd', 'paper', 'bk_rk', 'pp_rk', 'mm', 's_spd', 'r_spd', 'd_spd', 's_brl', 'r_brl', 'd_brl', 's_hh', 'r_hh', 'd_hh', 's_ev', 'r_ev', 'd_ev', 's_la', 'r_la', 'd_la', 's_hr'],
       statcast: DUGOUT_ALL_COLUMNS.filter(col => ['ranks', 'batspeed', 'barrel'].includes(col.group)).map(col => col.key),
@@ -2776,6 +2825,8 @@ export function getDugoutHeaderCells(
   const headerCells = (
     <>
       <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
+      {H('INDEX', 'HR Mechanics Index for the selected Last 1/3/5/10 window', 52, 'mechanics_index')}
+      <th style={SDIV_H} />
       {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
       {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
@@ -3032,20 +3083,61 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     return { active: true, dir: activeSortKeys[idx].dir, rank: stickyMode && activeSortKeys.length > 1 ? idx + 1 : undefined }
   }
 
+  // Daily and confirmed-lineup jobs normally attach all four server-side
+  // windows to the main Dugout payload. This selected-game fallback covers a
+  // newly announced lineup, an older date that predates the cache, or a cache
+  // row invalidated by a scratch. The canonical server service still computes
+  // and persists the four windows; no model math is duplicated in the client.
+  const lineupMechanicsKey = [...(game.awayLineup ?? []), ...(game.homeLineup ?? [])]
+    .slice(0, 18)
+    .map((player: any) => Number(player.mlb_id) || 0)
+    .join(':')
+  const [mechanicsFallback, setMechanicsFallback] = useState<Record<number, DugoutMechanicsWindows>>({})
+  useEffect(() => {
+    const players = [...(game.awayLineup ?? []), ...(game.homeLineup ?? [])].slice(0, 18)
+    const hasEveryWindow = players.length === 18 && players.every((player: any) =>
+      player.mechanics?.l1 && player.mechanics?.l3 && player.mechanics?.l5 && player.mechanics?.l10,
+    )
+    if (hasEveryWindow || players.some((player: any) => !Number(player.mlb_id))) {
+      setMechanicsFallback({})
+      return
+    }
+
+    const controller = new AbortController()
+    setMechanicsFallback({})
+    const params = new URLSearchParams({ date, gamePk: String(game.gamePk), compact: '1' })
+    fetch(`/api/research/mechanics?${params}`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+      .then(async response => response.ok ? response.json() : null)
+      .then(payload => {
+        if (!controller.signal.aborted && payload?.players) {
+          setMechanicsFallback(payload.players as Record<number, DugoutMechanicsWindows>)
+        }
+      })
+      .catch(() => { /* The precomputed payload remains authoritative if fallback is unavailable. */ })
+    return () => controller.abort()
+  }, [date, game.gamePk, lineupMechanicsKey])
+
   const { homeRows, awayRows, pool } = useMemo(() => {
     const ap = game.awayPitcher
     const hp = game.homePitcher
+    const withMechanics = (player: any) => mechanicsFallback[player.mlb_id]
+      ? { ...player, mechanics: { ...(player.mechanics ?? {}), ...mechanicsFallback[player.mlb_id] } }
+      : player
     const homeRows = game.homeLineup.map((p: any) =>
-      buildBatterRow(p, ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, ap?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
+      buildBatterRow(withMechanics(p), ap?.hand || 'R', ap?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, ap?.matchupEdge ?? null, statcastWindow, true, !!game.homeLineupConfirmed)
     )
     const awayRows = game.awayLineup.map((p: any) =>
-      buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
+      buildBatterRow(withMechanics(p), hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
     )
     const pool = [...homeRows, ...awayRows]
     computePaperScores(pool)
     computeMmRanks(pool)
     return { homeRows, awayRows, pool }
-  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, statcastWindow])
+  }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, statcastWindow, mechanicsFallback])
 
   // Erased rows are filtered AFTER sorting — order among survivors stays
   // exactly what it would've been with nobody erased, just with the erased

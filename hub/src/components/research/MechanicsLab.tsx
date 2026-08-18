@@ -5,27 +5,13 @@ import { AlertTriangle, Atom, CheckCircle2, ChevronRight, Dna, Gauge, Orbit, Ref
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import type { GameMechanicsResult, MechanicsPlayer, MechanicsWindow } from '@/lib/hrMechanics'
+import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import styles from './MechanicsLab.module.css'
 
 const WINDOWS: MechanicsWindow[] = [1, 3, 5, 10]
 const PITCH_COLORS: Record<string, string> = {
   FF: '#ff5f6d', SI: '#ff9f43', FC: '#f4c95d', SL: '#a970ff', ST: '#cf6cff',
   CU: '#42d6a4', KC: '#28bfa2', CH: '#4eb8ff', FS: '#27d4ef', SV: '#ff75b5',
-}
-
-function scoreTone(score: number) {
-  if (score >= 70) return 'elite'
-  if (score >= 58) return 'positive'
-  if (score < 40) return 'cold'
-  return 'neutral'
-}
-
-function ScoreRing({ score, label, size = 'large' }: { score: number; label: string; size?: 'large' | 'small' }) {
-  return (
-    <div className={styles.scoreRing} data-size={size} data-tone={scoreTone(score)} style={{ '--score': `${score * 3.6}deg` } as CSSProperties}>
-      <span><strong>{Math.round(score)}</strong><small>{label}</small></span>
-    </div>
-  )
 }
 
 function PlayerIdentity({ player, compact = false }: { player: MechanicsPlayer; compact?: boolean }) {
@@ -67,7 +53,7 @@ function PlayerRow({ player, active, onClick }: { player: MechanicsPlayer; activ
       <span className={styles.rank}>{player.rank.toString().padStart(2, '0')}</span>
       <PlayerIdentity player={player} compact />
       <span className={styles.miniScores}><i style={{ width: `${player.scores.overall}%` }} /><small>{player.scores.trend >= 55 ? 'RISING' : player.scores.trend <= 42 ? 'COOLING' : 'STABLE'}</small></span>
-      <ScoreRing score={player.scores.overall} label="INDEX" size="small" />
+      <MechanicsScoreRing score={player.scores.overall} label="INDEX" size="small" />
       <ChevronRight size={15} />
     </button>
   )
@@ -129,7 +115,7 @@ export function MechanicsLab({ date, gamePk, awayTeam, homeTeam }: { date: strin
           <div className={styles.leaderTop}><span>#{selected.rank} COMPLETE GAME PROFILE</span><b>{result.lineupConfirmed ? 'CONFIRMED LINEUP' : 'PROJECTED LINEUP'}</b></div>
           <div className={styles.leaderMain}>
             <PlayerIdentity player={selected} />
-            <ScoreRing score={selected.scores.overall} label="READINESS" />
+            <MechanicsScoreRing score={selected.scores.overall} label="READINESS" />
           </div>
           <div className={styles.componentGrid}>
             {[
