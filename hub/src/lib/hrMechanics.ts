@@ -81,6 +81,7 @@ export type MechanicsPlayer = {
   pitcherName: string | null
   pitcherHand: string | null
   projected: boolean
+  lineupStatus: 'confirmed' | 'projected' | 'candidate'
   rank: number
   scores: MechanicsScores
   metrics: {
@@ -222,6 +223,7 @@ function scorePlayer(
   pitcherRows: PitchLogRow[],
   window: MechanicsWindow,
   cutoffDate: string,
+  lineupStatus: MechanicsPlayer['lineupStatus'],
 ): Omit<MechanicsPlayer, 'rank'> {
   const recent = stat?.windows?.[`l${window}`] ?? {}
   const season = stat?.windows?.season ?? {}
@@ -314,6 +316,7 @@ function scorePlayer(
     pitcherName: pitcher?.name ?? null,
     pitcherHand: pitcher?.hand ?? null,
     projected: player.projected,
+    lineupStatus,
     scores: {
       overall: round(overall), powerFormation: round(powerFormation), transferEfficiency: round(transferEfficiency),
       planeMatch: round(planeMatch), timing: round(timing), trajectory: round(trajectory),
@@ -353,8 +356,18 @@ export async function computeGameMechanicsWindows(
   options: { strictPregameFeatures?: boolean; useTargetPregameCache?: boolean } = {},
 ): Promise<GameMechanicsWindows> {
   const admin = createAdminClient()
-  const lineup = [...game.awayLineup.slice(0, 9), ...game.homeLineup.slice(0, 9)]
+  const awayPool = game.awayCandidates?.length ? game.awayCandidates : game.awayLineup
+  const homePool = game.homeCandidates?.length ? game.homeCandidates : game.homeLineup
+  const lineup = [...awayPool, ...homePool]
   const ids = lineup.map(player => player.mlb_id)
+  const confirmedIds = new Set([
+    ...game.awayLineup.filter(player => !player.projected).map(player => player.mlb_id),
+    ...game.homeLineup.filter(player => !player.projected).map(player => player.mlb_id),
+  ])
+  const primaryIds = new Set([
+    ...game.awayLineup.slice(0, 9).map(player => player.mlb_id),
+    ...game.homeLineup.slice(0, 9).map(player => player.mlb_id),
+  ])
   const start = new Date(`${gameDate}T12:00:00Z`)
   start.setUTCDate(start.getUTCDate() - 14)
   const statQuery = options.strictPregameFeatures && !options.useTargetPregameCache
@@ -393,7 +406,12 @@ export async function computeGameMechanicsWindows(
       const pitcher = away ? game.homePitcher : game.awayPitcher
       const opponent = away ? game.homeAbbr : game.awayAbbr
       const stat = statMap.get(`${player.mlb_id}:${pitcher?.hand ?? 'R'}`) ?? rows.find(row => row.mlb_id === player.mlb_id)
-      return scorePlayer(player, opponent, pitcher, stat, pitcher ? pitcherRows.get(pitcher.id) ?? [] : [], window, gameDate)
+      const lineupStatus: MechanicsPlayer['lineupStatus'] = confirmedIds.has(player.mlb_id)
+        ? 'confirmed'
+        : primaryIds.has(player.mlb_id) && !(game.awayLineupConfirmed && game.homeLineupConfirmed)
+          ? 'projected'
+          : 'candidate'
+      return scorePlayer(player, opponent, pitcher, stat, pitcher ? pitcherRows.get(pitcher.id) ?? [] : [], window, gameDate, lineupStatus)
     }).sort((a, b) => b.scores.overall - a.scores.overall || a.battingOrder - b.battingOrder)
       .map((player, index) => ({ ...player, rank: index + 1 }))
     const result: GameMechanicsResult = {

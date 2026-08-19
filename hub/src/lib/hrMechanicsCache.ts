@@ -29,15 +29,15 @@ type SnapshotRow = {
 const inFlight = new Map<string, Promise<{ results: GameMechanicsWindows; cache: 'miss' | 'refresh' }>>()
 
 export function mechanicsLineupSignature(game: Pick<TodayGame,
-  'awayPitcher' | 'homePitcher' | 'awayLineupConfirmed' | 'homeLineupConfirmed' | 'awayLineup' | 'homeLineup'
+  'awayPitcher' | 'homePitcher' | 'awayLineupConfirmed' | 'homeLineupConfirmed' | 'awayLineup' | 'homeLineup' | 'awayCandidates' | 'homeCandidates'
 >) {
   return [
     game.awayPitcher?.id ?? 0,
     game.homePitcher?.id ?? 0,
     Number(game.awayLineupConfirmed),
     Number(game.homeLineupConfirmed),
-    ...game.awayLineup.slice(0, 9).map(player => player.mlb_id),
-    ...game.homeLineup.slice(0, 9).map(player => player.mlb_id),
+    ...(game.awayCandidates?.length ? game.awayCandidates : game.awayLineup).map(player => player.mlb_id),
+    ...(game.homeCandidates?.length ? game.homeCandidates : game.homeLineup).map(player => player.mlb_id),
   ].join(':')
 }
 
@@ -65,7 +65,7 @@ export function compactMechanicsByPlayer(results: GameMechanicsWindows): Record<
 
 // Canonical snapshot service for Research, The Dugout, cron precompute and
 // confirmed-lineup refreshes. A valid cache entry requires all four windows
-// and the exact ordered 18-player/pitcher signature. Concurrent first loads
+// and the exact ordered active-candidate/pitcher signature. Concurrent first loads
 // share one promise so a busy slate cannot stampede the pitch-log source.
 export async function getGameMechanicsWindows(
   game: TodayGame,

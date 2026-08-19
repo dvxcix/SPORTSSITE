@@ -20,10 +20,12 @@ export async function GET(req: Request) {
   if (gate.error) return gate.error
   const tier = gate.tier!
   const isAdvancedPlus = hasTierAccess(tier, 'advanced')
+  const isUltimate = hasTierAccess(tier, 'ultimate')
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || undefined
-  const games = await getTodaysMatchups(date)
+  const includeCandidates = isUltimate && searchParams.get('research') === '1'
+  const games = await getTodaysMatchups(date, { includeCandidates })
 
   if (isAdvancedPlus) {
     return NextResponse.json({ games: games.map(g => ({ ...g, locked: false })) })

@@ -27,9 +27,10 @@ async function run(req: Request) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const requestedGamePk = Number(searchParams.get('gamePk')) || null
-  const schedule = await getTodaysMatchups(date)
+  const schedule = await getTodaysMatchups(date, { includeCandidates: true })
   const games = schedule.filter(game =>
-    game.awayLineup.length >= 9 && game.homeLineup.length >= 9
+    (game.awayCandidates?.length || game.awayLineup.length) > 0
+    && (game.homeCandidates?.length || game.homeLineup.length) > 0
     && (!requestedGamePk || game.gamePk === requestedGamePk),
   )
 

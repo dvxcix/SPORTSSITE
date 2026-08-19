@@ -617,6 +617,10 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  // Research is already Ultimate-gated at the page. This flag only asks
+  // the canonical Dugout pipeline to expose the game-relative values it
+  // already computes, rather than recreating MM/ranks in a second route.
+  const includeResearch = isUltimate && searchParams.get('research') === '1'
 
   // One full-Ultimate-depth game per day for every below-Ultimate signed-in
   // member (see lib/featuredGame.ts) — a "sneak peek" so Free/Basic/Advanced
@@ -689,7 +693,7 @@ export async function GET(req: Request) {
   // by the same computeMmByWindowForGame pass — so this one gate covers all
   // three and nobody else pays for it.
   const MM_RANK_FIELDS = new Set(['mm', 'bk_rk', 'pp_rk', 'precision_hr_score'])
-  const needsMm = userMatrices.some(m =>
+  const needsMm = includeResearch || userMatrices.some(m =>
     m.factors.some(f => f.category === 'dugout_specs' && MM_RANK_FIELDS.has(f.field_key))
     || m.pipeline_steps.some(s => s.category === 'dugout_specs' && MM_RANK_FIELDS.has(s.field_key)))
 
@@ -1235,7 +1239,7 @@ export async function GET(req: Request) {
     // when this caller actually has Matrices to evaluate.
     let gameTotalPicksByMarket: Record<string, number> = {}
     const pikkitByName: Record<string, Record<string, any>> = {}
-    if (userMatrices.length) {
+    if (includeResearch || userMatrices.length) {
       for (const r of pikkit ?? []) {
         if (r.game_key && r.game_key !== gameKey) continue
         const nn = normName(r.player_name || '')
@@ -1504,7 +1508,17 @@ export async function GET(req: Request) {
               ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, mechanics: mechanicsByPlayer[p.mlb_id] ?? null, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return {
+          ...p, props, matrixMatches, statcast: statcastWindows,
+          mechanics: mechanicsByPlayer[p.mlb_id] ?? null,
+          matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null,
+          research: includeResearch ? {
+            communityPicks: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
+            mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
+            bookRankByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
+            paperRankByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
+          } : null,
+        }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
@@ -1523,7 +1537,17 @@ export async function GET(req: Request) {
               ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, mechanics: mechanicsByPlayer[p.mlb_id] ?? null, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return {
+          ...p, props, matrixMatches, statcast: statcastWindows,
+          mechanics: mechanicsByPlayer[p.mlb_id] ?? null,
+          matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null,
+          research: includeResearch ? {
+            communityPicks: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
+            mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
+            bookRankByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
+            paperRankByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
+          } : null,
+        }
       }),
     }
   }))

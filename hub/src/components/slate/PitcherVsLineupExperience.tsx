@@ -27,6 +27,16 @@ type StatLine = ReturnType<typeof computeStatLine>
 type RecencyKey = typeof PITCHER_RECENCY[number]['key']
 type BatterScopeKey = typeof BATTER_SCOPES[number]['key']
 
+export type MatchupResearchContext = {
+  pitcherId: number
+  pitcherName: string
+  pitcherTeamAbbr: string
+  opposingTeamAbbr: string
+  selectedBatterId: number | null
+  batterScope: BatterScopeKey
+  pitchTypes: string[]
+}
+
 const OUTCOME_COUNTS = new Set<keyof StatLine>(['hits', 'singles', 'doubles', 'triples', 'hr', 'bb', 'k'])
 const VOLUME_KEYS = new Set<keyof StatLine>(['pitches', 'usage', 'pa'])
 
@@ -105,6 +115,8 @@ export function PitcherVsLineup({
   opposingTeamAbbr,
   opposingTeamName,
   lineupConfirmed,
+  selectedBatterId,
+  onResearchContextChange,
 }: {
   pitcher: ProbablePitcher
   pitcherTeamAbbr: string
@@ -113,6 +125,8 @@ export function PitcherVsLineup({
   opposingTeamAbbr: string
   opposingTeamName: string
   lineupConfirmed: boolean
+  selectedBatterId?: number | null
+  onResearchContextChange?: (context: MatchupResearchContext) => void
 }) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRowsById, setBatterRowsById] = useState<Record<number, PitchLogRow[]>>({})
@@ -158,6 +172,39 @@ export function PitcherVsLineup({
       .then(data => setTeamPitcherIds(new Set((data.pitchers ?? []).map((item: TeamPitcher) => item.id))))
       .catch(() => setTeamPitcherIds(new Set()))
   }, [batterScope, pitcherTeamId, teamPitcherIds])
+
+  const callbackPitchTypes = pinnedPitches.size > 0
+    ? [...pinnedPitches].sort()
+    : pitchMix(pitcherRows ?? []).map(item => item.pitchType).sort()
+  const callbackPitchKey = callbackPitchTypes.join(',')
+  const activeExpandedBatterId = selectedBatterId === undefined ? expandedBatterId : selectedBatterId
+
+  function updateExpandedBatter(nextBatterId: number | null) {
+    setExpandedBatterId(nextBatterId)
+    if (selectedBatterId !== undefined) {
+      onResearchContextChange?.({
+        pitcherId: pitcher.id,
+        pitcherName: pitcher.name,
+        pitcherTeamAbbr,
+        opposingTeamAbbr,
+        selectedBatterId: nextBatterId,
+        batterScope,
+        pitchTypes: callbackPitchKey ? callbackPitchKey.split(',') : [],
+      })
+    }
+  }
+
+  useEffect(() => {
+    onResearchContextChange?.({
+      pitcherId: pitcher.id,
+      pitcherName: pitcher.name,
+      pitcherTeamAbbr,
+      opposingTeamAbbr,
+      selectedBatterId: activeExpandedBatterId,
+      batterScope,
+      pitchTypes: callbackPitchKey ? callbackPitchKey.split(',') : [],
+    })
+  }, [activeExpandedBatterId, batterScope, callbackPitchKey, onResearchContextChange, opposingTeamAbbr, pitcher.id, pitcher.name, pitcherTeamAbbr])
 
   if (pitcherRows === null) {
     return <div className={styles.emptyMatchup}>Loading {pitcher.name}&apos;s matchup workspace.</div>
@@ -227,9 +274,9 @@ export function PitcherVsLineup({
     batterRows.filter(row => row.stats.pitches >= MIN_PITCHES_FOR_HEAT).map(row => heatValue(row.stats, column.key)),
   ])) as Record<string, (number | null)[]>
   const combinedBatterRows = batterRows.flatMap(row => row.filtered)
-  const selectedBatter = expandedBatterId == null
+  const selectedBatter = activeExpandedBatterId == null
     ? null
-    : batterRows.find(row => row.player.mlb_id === expandedBatterId) ?? null
+    : batterRows.find(row => row.player.mlb_id === activeExpandedBatterId) ?? null
   const responseRows = selectedBatter?.filtered ?? combinedBatterRows
 
   const summary = [
@@ -329,7 +376,7 @@ export function PitcherVsLineup({
                   : <TeamLogo logo={getTeamLogoUrl(opposingTeamAbbr)} name={opposingTeamName} size={34} />}
                 <span><small>{selectedBatter ? 'BATTER RESPONSE' : 'LINEUP RESPONSE'}</small><strong>{selectedBatter ? `${selectedBatter.player.name} vs ${pitcher.name}` : `${opposingTeamAbbr} vs ${pitcher.name}`}</strong></span>
               </div>
-              {selectedBatter && <button className={styles.zoneReset} type="button" onClick={() => setExpandedBatterId(null)}><RotateCcw size={12} /> Team view</button>}
+              {selectedBatter && <button className={styles.zoneReset} type="button" onClick={() => updateExpandedBatter(null)}><RotateCcw size={12} /> Team view</button>}
             </header>
             <div className={styles.zoneContent}><ZoneGrid rows={responseRows} metric={zoneMetric} dir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'} cellSize={58} /><ChaseZoneStats rows={responseRows} /></div>
           </article>
@@ -372,8 +419,8 @@ export function PitcherVsLineup({
                   stats={row.stats}
                   loaded={row.loaded}
                   allByCol={allByCol}
-                  expanded={expandedBatterId === row.player.mlb_id}
-                  onToggle={() => setExpandedBatterId(current => current === row.player.mlb_id ? null : row.player.mlb_id)}
+                  expanded={activeExpandedBatterId === row.player.mlb_id}
+                  onToggle={() => updateExpandedBatter(activeExpandedBatterId === row.player.mlb_id ? null : row.player.mlb_id)}
                   filteredRows={row.filtered}
                   zoneMetric={zoneMetric}
                   zoneDir={zoneMetricConfig.dir === 'hi' ? 'lo' : 'hi'}

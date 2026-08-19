@@ -6,7 +6,7 @@ import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import type { TodayGame } from '@slipsurge/core/mlbSchedule'
-import { PitcherVsLineup } from './PitcherVsLineupExperience'
+import { PitcherVsLineup, type MatchupResearchContext } from './PitcherVsLineupExperience'
 import styles from './MatchupExperience.module.css'
 
 // One game, one pitching direction shown at a time — both starters' full
@@ -15,8 +15,21 @@ import styles from './MatchupExperience.module.css'
 // selected. A 2-way tab keeps only one side's worth of network/render work
 // live, and lets the page stay readable instead of showing both 9-batter
 // tables stacked at once.
-export function GameMatchup({ game }: { game: TodayGame }) {
-  const [side, setSide] = useState<'away' | 'home'>(game.awayPitcher ? 'away' : 'home')
+export function GameMatchup({ game, selectedBatterId, onResearchContextChange }: {
+  game: TodayGame
+  selectedBatterId?: number | null
+  onResearchContextChange?: (context: MatchupResearchContext) => void
+}) {
+  const [manualChoice, setManualChoice] = useState<{ side: 'away' | 'home'; forBatter: number | null }>({
+    side: game.awayPitcher ? 'away' : 'home',
+    forBatter: null,
+  })
+  const homePool = game.homeCandidates?.length ? game.homeCandidates : game.homeLineup
+  const awayPool = game.awayCandidates?.length ? game.awayCandidates : game.awayLineup
+  const batterSide = selectedBatterId != null && homePool.some(player => player.mlb_id === selectedBatterId)
+    ? 'away'
+    : selectedBatterId != null && awayPool.some(player => player.mlb_id === selectedBatterId) ? 'home' : null
+  const side = manualChoice.forBatter === (selectedBatterId ?? null) ? manualChoice.side : batterSide ?? manualChoice.side
 
   const directions = [
     { key: 'away' as const, pitcher: game.awayPitcher, pitcherTeam: game.awayAbbr, opponent: game.homeAbbr, confirmed: game.homeLineupConfirmed },
@@ -35,7 +48,7 @@ export function GameMatchup({ game }: { game: TodayGame }) {
               className={styles.directionButton}
               data-active={active}
               disabled={!direction.pitcher}
-              onClick={() => setSide(direction.key)}
+              onClick={() => setManualChoice({ side: direction.key, forBatter: selectedBatterId ?? null })}
               aria-pressed={active}
               style={{ '--matchup-team': getTeamColor(direction.pitcherTeam) } as CSSProperties}
             >
@@ -73,6 +86,8 @@ export function GameMatchup({ game }: { game: TodayGame }) {
             opposingTeamAbbr={game.homeAbbr}
             opposingTeamName={game.homeTeam}
             lineupConfirmed={game.homeLineupConfirmed}
+            selectedBatterId={selectedBatterId}
+            onResearchContextChange={onResearchContextChange}
           />
         ) : (
           <div className={styles.emptyMatchup}>No probable starter announced yet for {game.awayAbbr}.</div>
@@ -88,6 +103,8 @@ export function GameMatchup({ game }: { game: TodayGame }) {
             opposingTeamAbbr={game.awayAbbr}
             opposingTeamName={game.awayTeam}
             lineupConfirmed={game.awayLineupConfirmed}
+            selectedBatterId={selectedBatterId}
+            onResearchContextChange={onResearchContextChange}
           />
         ) : (
           <div className={styles.emptyMatchup}>No probable starter announced yet for {game.homeAbbr}.</div>

@@ -24,11 +24,11 @@ export async function GET(req: Request) {
   const window = validWindow(searchParams.get('window'))
   if (!gamePk) return NextResponse.json({ error: 'A valid gamePk is required.' }, { status: 400 })
 
-  const games = await getTodaysMatchups(date)
+  const games = await getTodaysMatchups(date, { includeCandidates: true })
   const game = games.find(candidate => candidate.gamePk === gamePk)
   if (!game) return NextResponse.json({ error: 'That game is unavailable for the selected date.' }, { status: 404 })
-  if (game.awayLineup.length < 9 || game.homeLineup.length < 9) {
-    return NextResponse.json({ error: 'Both nine-player lineups are required for a mechanics comparison.' }, { status: 409 })
+  if (!(game.awayCandidates?.length || game.awayLineup.length) || !(game.homeCandidates?.length || game.homeLineup.length)) {
+    return NextResponse.json({ error: 'Both teams need an active batter pool for a mechanics comparison.' }, { status: 409 })
   }
 
   try {

@@ -37,7 +37,13 @@ export type TodayGame = {
   homeTeamId: number | null; awayTeamId: number | null
   homePitcher: ProbablePitcher | null; awayPitcher: ProbablePitcher | null
   homeLineup: LineupPlayer[]; awayLineup: LineupPlayer[]
+  // Full active position-player pools. These remain available after a
+  // confirmed nine-player lineup posts so pregame research can retain
+  // scores for odds-backed bench candidates without presenting them as
+  // confirmed starters.
+  homeCandidates?: LineupPlayer[]; awayCandidates?: LineupPlayer[]
   homeLineupConfirmed: boolean; awayLineupConfirmed: boolean
+  venueId?: number | null; venueName?: string | null
   // MLB's own detailedState (e.g. "Scheduled", "Pre-Game", "Warmup",
   // "In Progress", "Delayed Start", "Postponed", "Final") — used by the
   // lineup-confirmed cron to also catch postponements/delays, not just
@@ -61,7 +67,7 @@ export const isPregame = (status: string) => !/in progress|final|postpon|cancel/
 async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: string): Promise<LineupPlayer[]> {
   try {
     const res = await fetch(`https://statsapi.mlb.com/api/v1/teams/${teamId}/roster?rosterType=Active`, {
-      cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
+      next: { revalidate: 300 }, headers: { 'User-Agent': 'SlipSurge/1.0' },
     })
     if (!res.ok) return []
     const roster: any[] = (await res.json()).roster ?? []
@@ -75,7 +81,7 @@ async function fetchProjectedLineup(teamId: number, teamAbbr: string, teamName: 
     if (ids.length) {
       try {
         const peopleRes = await fetch(`https://statsapi.mlb.com/api/v1/people?personIds=${ids.join(',')}`, {
-          cache: 'no-store', headers: { 'User-Agent': 'SlipSurge/1.0' },
+          next: { revalidate: 300 }, headers: { 'User-Agent': 'SlipSurge/1.0' },
         })
         if (peopleRes.ok) {
           for (const person of (await peopleRes.json()).people ?? []) {
@@ -129,7 +135,7 @@ export async function fetchScheduleWithRetry(
   return []
 }
 
-export async function getTodaysMatchups(date?: string): Promise<TodayGame[]> {
+export async function getTodaysMatchups(date?: string, options: { includeCandidates?: boolean } = {}): Promise<TodayGame[]> {
   const d = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
   let mlbGames: any[] = []
@@ -208,14 +214,32 @@ export async function getTodaysMatchups(date?: string): Promise<TodayGame[]> {
     let awayLineup = mkLineup(g.lineups?.awayPlayers || [], awayAbbr, awayTeam)
     const homeTeamId = g.teams?.home?.team?.id ?? null
     const awayTeamId = g.teams?.away?.team?.id ?? null
-    if (!homeLineup.length && homeTeamId) homeLineup = await fetchProjectedLineup(homeTeamId, homeAbbr, homeTeam)
-    if (!awayLineup.length && awayTeamId) awayLineup = await fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam)
+    const [homeRoster, awayRoster] = await Promise.all([
+      homeTeamId && (!homeLineup.length || options.includeCandidates) ? fetchProjectedLineup(homeTeamId, homeAbbr, homeTeam) : Promise.resolve([]),
+      awayTeamId && (!awayLineup.length || options.includeCandidates) ? fetchProjectedLineup(awayTeamId, awayAbbr, awayTeam) : Promise.resolve([]),
+    ])
+    if (!homeLineup.length) homeLineup = homeRoster
+    if (!awayLineup.length) awayLineup = awayRoster
+
+    const mergeCandidates = (lineup: LineupPlayer[], roster: LineupPlayer[]) => {
+      const starters = new Set(lineup.filter(player => !player.projected).map(player => player.mlb_id))
+      return [
+        ...lineup,
+        ...roster
+          .filter(player => !starters.has(player.mlb_id) && !lineup.some(item => item.mlb_id === player.mlb_id))
+          .map((player, index) => ({ ...player, batting_order: lineup.length + index + 1, projected: true })),
+      ]
+    }
+    const homeCandidates = options.includeCandidates ? mergeCandidates(homeLineup, homeRoster) : undefined
+    const awayCandidates = options.includeCandidates ? mergeCandidates(awayLineup, awayRoster) : undefined
 
     return {
       gamePk: g.gamePk, gameKey, homeTeam, awayTeam, homeAbbr, awayAbbr, homeTeamId, awayTeamId,
-      homePitcher, awayPitcher, homeLineup, awayLineup,
+      homePitcher, awayPitcher, homeLineup, awayLineup, homeCandidates, awayCandidates,
       homeLineupConfirmed: (g.lineups?.homePlayers?.length ?? 0) > 0,
       awayLineupConfirmed: (g.lineups?.awayPlayers?.length ?? 0) > 0,
+      venueId: g.venue?.id ?? null,
+      venueName: g.venue?.name ?? null,
       status: g.status?.detailedState || g.status?.abstractGameState || 'Scheduled',
       abstractStatus: g.status?.abstractGameState || 'Preview',
       gameDate: g.gameDate,
