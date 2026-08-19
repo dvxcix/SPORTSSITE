@@ -19,6 +19,9 @@ console.log(JSON.stringify({
   games: audit.games.map(game => ({
     game: `${game.game.awayAbbr}@${game.game.homeAbbr}`,
     score: game.score,
+    projection: game.projection,
+    readState: game.readState,
+    candidates: game.candidates.map(entry => `${entry.tier}: ${entry.player.name} (${entry.score})`),
     topThree: game.ranking.slice(0, 3).map(entry => `${entry.rank}. ${entry.player.name} (${entry.score})`),
     homeRuns: game.actualHomeRuns.map(result => `${result.name} #${result.pregameRank} | ${result.homeRuns} HR, ${result.rbis} RBI, ${result.totalBases} TB${result.hrMlWon ? ', HR/ML' : ''}`),
   })),

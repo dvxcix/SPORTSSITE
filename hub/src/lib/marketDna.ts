@@ -6,10 +6,17 @@ import { computeDugoutPercentValue } from '@/lib/dugoutPercentColor'
 import { fetchBoxscoreOutcomes, type MlbBatterOutcome } from '@/lib/mlbBoxscoreOutcomes'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { computeGameMechanicsWindows, MECHANICS_WINDOWS, type GameMechanicsWindows } from '@/lib/hrMechanics'
+import { precomputeDugoutStatcastForDate } from '@/lib/dugoutStatcastPrecompute'
+import { precomputeDugoutPitchlogStatForDate } from '@/lib/dugoutPitchlogStatPrecompute'
+import { precomputeMatchupEdgeForDate } from '@/lib/dugoutMatchupEdgePrecompute'
 import {
+  projectMarketDnaGame,
   scoreMarketDnaLaneVector,
   scoreMarketDnaVector,
   trainMarketDnaRanker,
+  type MarketDnaGameProjection,
+  type MarketDnaLaneScores,
   type MarketDnaRankerArtifact,
   type MarketDnaRankerValidation,
 } from '@/lib/marketDnaRanker'
@@ -83,6 +90,9 @@ export type MarketDnaPlayer = {
     fhrWeightedDelta: number | null
     hrDelta: number | null
     mmL1: number | null
+    mmL3: number | null
+    mmL5: number | null
+    mmL10: number | null
     fhrToHr: number | null
     mgmToFd: number | null
     paToHr: number | null
@@ -103,6 +113,18 @@ export type MarketDnaPlayer = {
     barrelL10: number | null
     pullAirL5: number | null
     batSpeedL5: number | null
+    mechanics: Record<'l1' | 'l3' | 'l5' | 'l10', {
+      index: number
+      rank: number
+      confidence: number
+      power: number
+      transfer: number
+      plane: number
+      timing: number
+      trajectory: number
+      pitcher: number
+      trend: number
+    } | null>
   }
 }
 
@@ -173,6 +195,7 @@ export type MarketDnaGameComponents = {
   movement: number
   historical: number
   statcast: number
+  mechanics: number
   traffic: number
   publicLeverage: number
 }
@@ -182,8 +205,8 @@ export type MarketDnaGameRank = {
   score: number
   profileScore: number
   learnedProbability: number | null
-  laneScores: { anchor: number; companion: number }
-  selectedLane: 'anchor' | 'companion' | null
+  laneScores: MarketDnaLaneScores
+  selectedLane: 'primary' | 'secondary' | 'conditional' | null
   gapFromLeader: number
   player: MarketDnaPlayer
   components: MarketDnaGameComponents
@@ -234,8 +257,10 @@ export type MarketDnaGameAnalysis = {
     hrMlWon: boolean
     pregameRank: number | null
   }>
-  candidateLanes: Array<{
-    lane: 'concealed_settlement' | 'redirected_power'
+  projection: MarketDnaGameProjection | null
+  readState: 'clear' | 'conditional' | 'pass'
+  candidates: Array<{
+    tier: 'primary' | 'secondary' | 'conditional'
     label: string
     score: number
     learnedRank: number
@@ -259,7 +284,7 @@ export type MarketDnaSlateAudit = {
     gamesWithHomeRun: number
     leaderHitGames: number
     topTwoHitGames: number
-    lanePairHitGames: number
+    candidateCoverageGames: number
     perfectSeparationGames: number
     averageBestHomerRank: number | null
     averageAllHomerRank: number | null
@@ -359,6 +384,7 @@ function buildPlayerProfile(
   team: string,
   opponent: string,
   pitcher: { name: string; hand: string } | null,
+  mechanicsWindows: GameMechanicsWindows | null,
 ): MarketDnaPlayer {
   const props = bundle.props
   const markets = MARKET_DEFINITIONS.map(([key, label, market, open]) => {
@@ -386,6 +412,21 @@ function buildPlayerProfile(
     : boardRank == null
       ? fhrDelta
       : fhrDelta * (0.75 + ((boardRank - 1) / 17) * 0.75)
+  const mechanics = Object.fromEntries(MECHANICS_WINDOWS.map(window => {
+    const scored = mechanicsWindows?.[window]?.players.find(candidate => candidate.playerId === player.mlb_id)
+    return [`l${window}`, scored ? {
+      index: scored.scores.overall,
+      rank: scored.rank,
+      confidence: scored.scores.confidence,
+      power: scored.scores.powerFormation,
+      transfer: scored.scores.transferEfficiency,
+      plane: scored.scores.planeMatch,
+      timing: scored.scores.timing,
+      trajectory: scored.scores.trajectory,
+      pitcher: scored.scores.pitcherBreakdown,
+      trend: scored.scores.trend,
+    } : null]
+  })) as MarketDnaPlayer['metrics']['mechanics']
   return {
     name: player.name,
     nameNorm: normName(player.name),
@@ -414,6 +455,9 @@ function buildPlayerProfile(
       fhrWeightedDelta,
       hrDelta,
       mmL1: asNumber(bundle.mmByWindow?.l1),
+      mmL3: asNumber(bundle.mmByWindow?.l3),
+      mmL5: asNumber(bundle.mmByWindow?.l5),
+      mmL10: asNumber(bundle.mmByWindow?.l10),
       fhrToHr: ratio(bundle, 'fhr_div_sa'),
       mgmToFd: ratio(bundle, 'm_div_f'),
       paToHr: ratio(bundle, 'pa1_div_sa'),
@@ -434,24 +478,36 @@ function buildPlayerProfile(
       barrelL10: asNumber(l10?.barrelPct),
       pullAirL5: asNumber(l5?.pullAirRate),
       batSpeedL5: asNumber(l5?.avgBatSpeed),
+      mechanics,
     },
   }
 }
 
-export async function buildMarketDnaSlate(date: string): Promise<{ date: string; games: MarketDnaGame[] }> {
-  const bundles = await fetchHistoricalGameBundles(date, { requirePikkit: true })
-  await attachCanonicalMmToBundles(bundles, date)
+export async function buildMarketDnaSlate(
+  date: string,
+  options: { strictPregameFeatures?: boolean; useTargetPregameCache?: boolean } = {},
+): Promise<{ date: string; games: MarketDnaGame[] }> {
+  const bundles = await fetchHistoricalGameBundles(date, { requirePikkit: true, strictPregameFeatures: options.strictPregameFeatures })
+  await attachCanonicalMmToBundles(bundles, date, options)
+  const mechanicsByGame = new Map<number, GameMechanicsWindows | null>()
+  await Promise.all(bundles.map(async bundle => {
+    try {
+      mechanicsByGame.set(bundle.game.gamePk, await computeGameMechanicsWindows(bundle.game, date, options))
+    } catch {
+      mechanicsByGame.set(bundle.game.gamePk, null)
+    }
+  }))
   return {
     date,
     games: bundles.map(game => {
       const players = [
         ...game.game.awayLineup.flatMap(player => {
           const bundle = game.awayBundle.get(normName(player.name))
-          return bundle ? [buildPlayerProfile(date, game, player, bundle, game.game.awayAbbr, game.game.homeAbbr, game.game.homePitcher)] : []
+          return bundle ? [buildPlayerProfile(date, game, player, bundle, game.game.awayAbbr, game.game.homeAbbr, game.game.homePitcher, mechanicsByGame.get(game.game.gamePk) ?? null)] : []
         }),
         ...game.game.homeLineup.flatMap(player => {
           const bundle = game.homeBundle.get(normName(player.name))
-          return bundle ? [buildPlayerProfile(date, game, player, bundle, game.game.homeAbbr, game.game.awayAbbr, game.game.awayPitcher)] : []
+          return bundle ? [buildPlayerProfile(date, game, player, bundle, game.game.homeAbbr, game.game.awayAbbr, game.game.awayPitcher, mechanicsByGame.get(game.game.gamePk) ?? null)] : []
         }),
       ].filter(player => player.markets.some(market => market.current != null))
       return {
@@ -636,7 +692,7 @@ export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaG
     put('public.home_runs.hiddenResidual', normalizedSigned(expectedHrShare - actualHrShare, .035))
     put('public.home_runs.expectedActualRatio', normalizedSigned(Math.log((expectedHrShare + .005) / (actualHrShare + .005)), 1.25))
   }
-  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'dugoutFhrPct' | 'dugoutHrPct' | 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta' | 'mmL1'>
+  type SimilarityMetric = Exclude<keyof MarketDnaPlayer['metrics'], 'dugoutFhrPct' | 'dugoutHrPct' | 'fhrDelta' | 'fhrWeightedDelta' | 'hrDelta' | 'mmL1' | 'mmL3' | 'mmL5' | 'mmL10' | 'mechanics'>
   const metricScales: Record<SimilarityMetric, [number, number]> = {
     fhrVsAveragePct: [25, 0], hrVsAveragePct: [25, 0], fhrToHr: [.5, 1], mgmToFd: [.35, 1],
     paToHr: [.7, 1], hrToRbi: [.5, 1], hrToRbi2: [.8, 1], hrToRbi3: [1.2, 1],
@@ -650,10 +706,24 @@ export function canonicalFeatureVector(player: MarketDnaPlayer, game: MarketDnaG
     put(`metric.${key}.value`, normalizedSigned(player.metrics[key], scale, center))
     put(`metric.${key}.rank`, percentileFor(player, candidate => candidate.metrics[key], game.players) / 100)
   }
-  put('metric.mmL1.value', normalizedSigned(player.metrics.mmL1, 6))
-  put('metric.mmL1.rank', percentileFor(player, candidate => candidate.metrics.mmL1, game.players) / 100)
-  put('metric.mmL1.positive', player.metrics.mmL1 == null ? null : player.metrics.mmL1 > 0 ? 1 : player.metrics.mmL1 < 0 ? 0 : .5)
-  put('metric.mmL1.neutral', player.metrics.mmL1 == null ? null : Math.abs(player.metrics.mmL1) < .5 ? 1 : 0)
+  for (const window of [1, 3, 5, 10] as const) {
+    const mmKey = `mmL${window}` as 'mmL1' | 'mmL3' | 'mmL5' | 'mmL10'
+    const mm = player.metrics[mmKey]
+    put(`metric.mmL${window}.value`, normalizedSigned(mm, 6))
+    put(`metric.mmL${window}.rank`, percentileFor(player, candidate => candidate.metrics[mmKey], game.players) / 100)
+    put(`metric.mmL${window}.positive`, mm == null ? null : mm > 0 ? 1 : mm < 0 ? 0 : .5)
+    put(`metric.mmL${window}.neutral`, mm == null ? null : Math.abs(mm) < .5 ? 1 : 0)
+    const mechanics = player.metrics.mechanics[`l${window}`]
+    for (const key of ['index', 'confidence', 'power', 'transfer', 'plane', 'timing', 'trajectory', 'pitcher', 'trend'] as const) {
+      put(`mechanics.l${window}.${key}`, mechanics?.[key] == null ? null : mechanics[key] / 100)
+      put(`mechanics.l${window}.${key}.rank`, percentileFor(
+        player,
+        candidate => candidate.metrics.mechanics[`l${window}`]?.[key] ?? null,
+        game.players,
+      ) / 100)
+    }
+    put(`mechanics.l${window}.gameRank`, mechanics == null ? null : 1 - ((mechanics.rank - 1) / Math.max(1, game.players.length - 1)))
+  }
   const baselineGap = player.metrics.fhrVsAveragePct == null || player.metrics.hrVsAveragePct == null
     ? null
     : player.metrics.fhrVsAveragePct - player.metrics.hrVsAveragePct
@@ -969,6 +1039,14 @@ export function rankMarketDnaGameProfiles(
       metric(candidate => candidate.metrics.pullAirL5),
       launchShape,
     ])
+    const mechanics = average(([1, 3, 5, 10] as const).flatMap(window => {
+      const score = player.metrics.mechanics?.[`l${window}`]
+      return score ? [
+        metric(candidate => candidate.metrics.mechanics?.[`l${window}`]?.index ?? null),
+        metric(candidate => candidate.metrics.mechanics?.[`l${window}`]?.trajectory ?? null),
+        metric(candidate => candidate.metrics.mechanics?.[`l${window}`]?.power ?? null),
+      ] : []
+    }), 50)
     const trafficPlayers = previousBatters(game, player)
     const trafficRaw = average(trafficPlayers.flatMap(candidate => [
       marketProbability(candidate, 'hits1'), marketProbability(candidate, 'runs1'), marketProbability(candidate, 'hrr'),
@@ -986,9 +1064,9 @@ export function rankMarketDnaGameProfiles(
     const publicLeverage = publicResidual == null
       ? 50
       : publicResidual * .72 + market * .28
-    const components = { market, settlement, movement, historical, statcast, traffic, publicLeverage }
+    const components = { market, settlement, movement, historical, statcast, mechanics, traffic, publicLeverage }
     const coherence = Math.sqrt(Math.max(0, market * settlement))
-    const score = market * .20 + settlement * .20 + coherence * .06 + movement * .07 + historical * .24 + statcast * .10 + traffic * .07 + publicLeverage * .06
+    const score = market * .17 + settlement * .18 + coherence * .05 + movement * .06 + historical * .20 + statcast * .08 + mechanics * .14 + traffic * .06 + publicLeverage * .06
     const signals: string[] = []
     const contradictions: string[] = []
     if (market >= 75) signals.push('Top-tier FHR and anytime market position')
@@ -998,6 +1076,7 @@ export function rankMarketDnaGameProfiles(
     if (evidence.samePlayerLift != null && evidence.samePlayerLift >= 1.15) signals.push('This player has cleared HR above their own baseline in similar prior profiles')
     if ((evidence.settlementShape.multiRbiHrRate ?? 0) >= .45 && p('rbi2') >= 60) signals.push('Historical analogs and today\'s RBI ladder support a multi-RBI HR shape')
     if (statcast >= 70) signals.push('Recent contact shape supports the price structure')
+    if (mechanics >= 70) signals.push('SlipSurge Batter Score windows support the contact-to-flight shape')
     if (traffic >= 70) signals.push('Preceding lineup slots carry strong on-base and run pricing')
     if (publicLeverage >= 72 && allHrPicks > 0) signals.push('Market strength exceeds public HR share')
     if (player.metrics.avgLaL5 != null && (player.metrics.avgLaL5 < 8 || player.metrics.avgLaL5 > 38)) contradictions.push('Recent launch shape is outside the strongest HR band')
@@ -1009,7 +1088,7 @@ export function rankMarketDnaGameProfiles(
       score,
       profileScore: score,
       learnedProbability: null,
-      laneScores: { anchor: 0, companion: 0 },
+      laneScores: { market: 0, settlement: 0, mechanics: 0, leverage: 0, composite: 0 },
       selectedLane: null,
       gapFromLeader: 0,
       player,
@@ -1117,7 +1196,7 @@ async function loadOrTrainMarketDnaRanker(
   }, null)
   const modelUpdatedAt = typeof data?.updated_at === 'string' ? data.updated_at : null
   const archiveIsNewer = newestArchiveUpdate != null && (!modelUpdatedAt || newestArchiveUpdate > modelUpdatedAt)
-  if (storedArtifact?.version === 'game-relative-gbdt-v3' && !archiveIsNewer) return storedArtifact
+  if (storedArtifact?.version === 'game-first-gbdt-v4' && !archiveIsNewer) return storedArtifact
 
   const artifact = trainMarketDnaRanker(rows, targetDate)
   if (!error) {
@@ -1140,97 +1219,73 @@ function applyLearnedGameRanking(
   ranking: MarketDnaGameRank[],
   artifact: MarketDnaRankerArtifact | null,
 ) {
-  if (!artifact) return ranking
-  const validation = artifact.validation
-  const dualLaneAverage = validation?.averageDualLaneHomerRank ?? Number.POSITIVE_INFINITY
-  const learnedAverage = validation?.averageLearnedHomerRank ?? Number.POSITIVE_INFINITY
-  const dualLaneValidated = validation != null && (
-    validation.dualLaneTopTwo >= validation.learnedTopTwo
-    && dualLaneAverage <= learnedAverage
-    && (validation.dualLaneTopTwo > validation.learnedTopTwo || dualLaneAverage < learnedAverage)
-  )
+  if (!artifact) return { ranking, projection: null }
   const learnedRows = ranking.map(entry => {
     const vector = canonicalFeatureVector(entry.player, game)
     const learned = scoreMarketDnaVector(artifact, vector)
     return { entry, vector, learned, lane: scoreMarketDnaLaneVector(vector) }
   }).sort((a, b) => b.learned.rawScore - a.learned.rawScore)
+  const projection = projectMarketDnaGame(artifact, learnedRows.map(row => row.vector))
   const learnedRelative = new Map(learnedRows.map((row, index) => [
     row.entry.player.mlbId,
     learnedRows.length <= 1 ? 1 : 1 - index / (learnedRows.length - 1),
   ]))
-  const laneRows = learnedRows.map(row => {
+  const scored = learnedRows.map(row => {
     const relative = learnedRelative.get(row.entry.player.mlbId) ?? .5
     return {
-      ...row,
-      anchor: relative * .52 + row.lane.anchor * .48,
-      companion: relative * .25 + row.lane.companion * .75,
-    }
-  })
-  const anchor = dualLaneValidated
-    ? [...laneRows].sort((a, b) => b.anchor - a.anchor || b.entry.profileScore - a.entry.profileScore)[0]
-    : laneRows[0]
-  const companion = dualLaneValidated
-    ? [...laneRows].filter(row => row.entry.player.mlbId !== anchor?.entry.player.mlbId).sort((a, b) => b.companion - a.companion || b.entry.profileScore - a.entry.profileScore)[0]
-    : laneRows[1]
-  const selectedLaneById = new Map<number, 'anchor' | 'companion'>([
-    ...(anchor ? [[anchor.entry.player.mlbId, 'anchor'] as const] : []),
-    ...(companion ? [[companion.entry.player.mlbId, 'companion'] as const] : []),
-  ])
-  const scored = laneRows.map(row => {
-    const selectedLane = selectedLaneById.get(row.entry.player.mlbId) ?? null
-    const laneScore = dualLaneValidated
-      ? selectedLane === 'anchor' ? row.anchor : selectedLane === 'companion' ? row.companion : Math.max(row.anchor, row.companion) * .94
-      : row.learned.probability
-    return {
       ...row.entry,
-      score: laneScore * 100,
+      score: (relative * .44 + row.lane.composite * .56) * 100,
       learnedProbability: row.learned.probability,
-      laneScores: { anchor: row.anchor * 100, companion: row.companion * 100 },
-      selectedLane,
+      laneScores: {
+        market: row.lane.market * 100,
+        settlement: row.lane.settlement * 100,
+        mechanics: row.lane.mechanics * 100,
+        leverage: row.lane.leverage * 100,
+        composite: row.lane.composite * 100,
+      },
+      selectedLane: null,
     }
-  }).sort((a, b) => {
-    const selectedDifference = Number(b.selectedLane != null) - Number(a.selectedLane != null)
-    return selectedDifference || b.score - a.score || b.profileScore - a.profileScore
-  })
+  }).sort((a, b) => b.score - a.score || b.profileScore - a.profileScore)
   const leader = scored[0]?.score ?? 0
-  return scored.map((entry, index) => ({
+  return { ranking: scored.map((entry, index) => ({
     ...entry,
     rank: index + 1,
     score: Math.round(entry.score * 10) / 10,
     gapFromLeader: Math.round((leader - entry.score) * 10) / 10,
-  }))
+  })), projection }
 }
 
-function buildCandidateLanes(ranking: MarketDnaGameRank[]): MarketDnaGameAnalysis['candidateLanes'] {
-  const anchor = ranking.find(entry => entry.selectedLane === 'anchor') ?? [...ranking].sort((a, b) => b.laneScores.anchor - a.laneScores.anchor)[0]
-  const companion = ranking.find(entry => entry.selectedLane === 'companion')
-    ?? [...ranking].filter(entry => entry.player.mlbId !== anchor?.player.mlbId).sort((a, b) => b.laneScores.companion - a.laneScores.companion)[0]
-  const lanes: MarketDnaGameAnalysis['candidateLanes'] = []
-  if (anchor) lanes.push({
-    lane: 'concealed_settlement',
-    label: 'Anchor profile',
-    score: Math.round(anchor.laneScores.anchor * 10) / 10,
-    learnedRank: anchor.rank,
-    player: anchor.player,
-    reasons: [
-      'Headline power, settlement pricing and contact support form the strongest coherent lane.',
-      'FHR and anytime structure are evaluated together instead of treating one movement as decisive.',
-      'The complete game-relative profile supports this player over the surrounding advertised options.',
-    ],
+function buildCandidates(
+  ranking: MarketDnaGameRank[],
+  projection: MarketDnaGameProjection | null,
+): { candidates: MarketDnaGameAnalysis['candidates']; readState: MarketDnaGameAnalysis['readState'] } {
+  if (!ranking.length || !projection) return { candidates: [], readState: 'pass' }
+  if (projection.candidateLimit === 0) return { candidates: [], readState: projection.confidence >= .38 ? 'clear' : 'pass' }
+  const leaderGap = ranking[1] ? ranking[0].score - ranking[1].score : 0
+  const weakSeparation = leaderGap < 1.5 || ranking[0].laneScores.composite < 48
+  const selected = ranking
+    .slice(0, Math.min(projection.candidateLimit, ranking.length))
+    .filter((entry, index) => index === 0 || entry.gapFromLeader <= 16)
+  if (!selected.length) return { candidates: [], readState: 'pass' }
+  const readState: MarketDnaGameAnalysis['readState'] = weakSeparation || projection.confidence < .34 ? 'conditional' : 'clear'
+  const candidates = selected.map((entry, index) => {
+    const tier: 'primary' | 'secondary' | 'conditional' = index === 0 ? 'primary' : index === 1 ? 'secondary' : 'conditional'
+    return {
+      tier,
+      label: tier === 'primary' ? 'Primary game read' : tier === 'secondary' ? 'Secondary independent read' : 'Conditional extra-HR read',
+      score: entry.score,
+      learnedRank: entry.rank,
+      player: entry.player,
+      reasons: [
+        `Complete-board rank #${entry.rank}; market ${entry.laneScores.market.toFixed(0)}, settlement ${entry.laneScores.settlement.toFixed(0)}, mechanics ${entry.laneScores.mechanics.toFixed(0)}.`,
+        entry.laneScores.leverage >= 60
+          ? 'Implied HR share is stronger than public exposure after MM, movement and adjacent-lineup context.'
+          : 'The read is supported by the market-and-contact stack rather than public underexposure alone.',
+        `The game model projects ${projection.label} HR event${projection.label === '1' ? '' : 's'}; this card is independent and is not a forced companion.`,
+      ],
+    }
   })
-  if (companion) lanes.push({
-    lane: 'redirected_power',
-    label: 'Protected companion',
-    score: Math.round(companion.laneScores.companion * 10) / 10,
-    learnedRank: companion.rank,
-    player: companion.player,
-    reasons: [
-      'Expected-versus-actual public exposure is measured against the player’s implied HR share.',
-      'FHR/HR divergence, MM, adjacent lineup pressure and payoff markets are evaluated as a separate lane.',
-      'The companion can surface from a deeper rank without requiring the headline favorite profile.',
-    ],
-  })
-  return lanes
+  return { candidates, readState }
 }
 
 function attachGameOutcomes(
@@ -1259,6 +1314,7 @@ function buildGameAnalysis(
   sourceRows: number,
   score: { away: number; home: number } | null,
   artifact: MarketDnaRankerArtifact | null,
+  projection: MarketDnaGameProjection | null,
 ): MarketDnaGameAnalysis {
   const outcomeAvailable = game.players.some(player => player.gameStarted)
   const actualHomeRuns = ranking.filter(entry => (entry.outcome?.hr ?? 0) > 0).map(entry => ({
@@ -1272,7 +1328,7 @@ function buildGameAnalysis(
     hrMlWon: Boolean(entry.outcome?.hrMlWon),
     pregameRank: entry.rank,
   }))
-  const candidateLanes = buildCandidateLanes(ranking)
+  const { candidates, readState } = buildCandidates(ranking, projection)
   return {
     generatedAt: new Date().toISOString(),
     stage: outcomeAvailable ? 'frozen_close' : 'current',
@@ -1283,7 +1339,9 @@ function buildGameAnalysis(
     outcomeAvailable,
     score,
     actualHomeRuns,
-    candidateLanes,
+    projection,
+    readState,
+    candidates,
     reducer: artifact ? {
       version: artifact.version,
       trainedThrough: artifact.trainedThrough,
@@ -1294,7 +1352,15 @@ function buildGameAnalysis(
 }
 
 export async function archiveMarketDnaDate(date: string) {
-  const slate = await buildMarketDnaSlate(date)
+  // Rebuild the board-date caches first. Each precompute now has a hard D-1
+  // source boundary, so these same-date rows are both the freshest available
+  // pregame features and safe to grade after the game.
+  await Promise.all([
+    precomputeDugoutStatcastForDate(date),
+    precomputeDugoutPitchlogStatForDate(date),
+    precomputeMatchupEdgeForDate(date),
+  ])
+  const slate = await buildMarketDnaSlate(date, { strictPregameFeatures: true, useTargetPregameCache: true })
   const sourceWarnings = [...new Set(slate.games.flatMap(game => game.sourceWarnings ?? []))]
   if (sourceWarnings.length) {
     throw new Error(`Market DNA archive refused incomplete source data: ${sourceWarnings.join(' ')}`)
@@ -1337,7 +1403,7 @@ export async function archiveMarketDnaDate(date: string) {
         did_triple: (outcome?.triples ?? 0) > 0,
         first_hr: player.mlbId === firstHrId,
         hr_ml_won: (outcome?.hr ?? 0) > 0 && player.team === winningTeam,
-        source_version: 'canonical-v2-mm-public-lanes',
+        source_version: 'canonical-v3-strict-mechanics',
         updated_at: new Date().toISOString(),
       }
     })
@@ -1356,7 +1422,8 @@ export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketD
   const canonicalRows = await loadCanonicalArchiveForGames([game])
   const rows = canonicalRows.length >= 180 ? [] : await loadHistoricalRowsForGames([game])
   const artifact = await loadOrTrainMarketDnaRanker(game.gameDate, canonicalRows)
-  let ranking = applyLearnedGameRanking(game, rankGameWithHistory(game, rows, canonicalRows), artifact)
+  const learned = applyLearnedGameRanking(game, rankGameWithHistory(game, rows, canonicalRows), artifact)
+  let ranking = learned.ranking
 
   const gameStarted = game.players.some(player => player.gameStarted)
   let score: { away: number; home: number } | null = null
@@ -1366,7 +1433,7 @@ export async function analyzeMarketDnaGame(game: MarketDnaGame): Promise<MarketD
     score = gameScore
     ranking = attachGameOutcomes(game, ranking, outcomesByGame[game.gamePk] ?? {}, hrResult.hrFeed, score)
   }
-  return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, score, artifact)
+  return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, score, artifact, learned.projection)
 }
 
 export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]): Promise<MarketDnaSlateAudit> {
@@ -1385,9 +1452,10 @@ export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]
     Promise.all(capturedGames.map(game => fetchGameScore(game.gamePk))),
   ])
   const analyses = capturedGames.map((game, index) => {
-    let ranking = applyLearnedGameRanking(game, rankGameWithHistory(game, rows, canonicalRows), artifact)
+    const learned = applyLearnedGameRanking(game, rankGameWithHistory(game, rows, canonicalRows), artifact)
+    let ranking = learned.ranking
     if (game.players.some(player => player.gameStarted)) ranking = attachGameOutcomes(game, ranking, outcomesByGame[game.gamePk] ?? {}, hrResult.hrFeed, scores[index])
-    return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, scores[index], artifact)
+    return buildGameAnalysis(game, ranking, canonicalRows.length || rows.length, scores[index], artifact, learned.projection)
   })
   const completed = analyses.filter(analysis => /final/i.test(analysis.game.status))
   const withHr = completed.filter(analysis => analysis.actualHomeRuns.length > 0)
@@ -1407,9 +1475,9 @@ export async function analyzeMarketDnaSlate(date: string, games: MarketDnaGame[]
       gamesWithHomeRun: withHr.length,
       leaderHitGames: withHr.filter(analysis => analysis.actualHomeRuns.some(result => result.pregameRank === 1)).length,
       topTwoHitGames: withHr.filter(analysis => analysis.actualHomeRuns.some(result => (result.pregameRank ?? 99) <= 2)).length,
-      lanePairHitGames: withHr.filter(analysis => {
+      candidateCoverageGames: withHr.filter(analysis => {
         const actualIds = new Set(analysis.actualHomeRuns.map(result => result.mlbId))
-        return analysis.candidateLanes.some(candidate => actualIds.has(candidate.player.mlbId))
+        return analysis.candidates.some(candidate => actualIds.has(candidate.player.mlbId))
       }).length,
       perfectSeparationGames,
       averageBestHomerRank: bestRanks.length ? bestRanks.reduce((sum, rank) => sum + rank, 0) / bestRanks.length : null,

@@ -95,12 +95,43 @@ export type GameBundles = {
 // of "today."
 export async function fetchHistoricalGameBundles(
   date: string,
-  options: { requirePikkit?: boolean } = {},
+  options: { requirePikkit?: boolean; strictPregameFeatures?: boolean; useTargetPregameCache?: boolean } = {},
 ): Promise<GameBundles[]> {
   const admin = createAdminClient()
 
-  const [games, snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, pikkitRowsResult] = await Promise.all([
-    getTodaysMatchups(date),
+  const games = await getTodaysMatchups(date)
+  if (!games.length) return []
+  const batterIds = [...new Set(games.flatMap(game => [...game.homeLineup, ...game.awayLineup].map(player => player.mlb_id)))]
+  const featureStart = new Date(`${date}T12:00:00Z`)
+  featureStart.setUTCDate(featureStart.getUTCDate() - 14)
+  const featureStartDate = featureStart.toISOString().slice(0, 10)
+
+  // Historical rows may have been rewritten after the game by the daily
+  // self-heal. In strict audit mode, use the newest snapshot dated before
+  // the target game. That prior row may include the previous day's game,
+  // which is information that was legitimately available pregame.
+  const statcastRowsPromise = options.strictPregameFeatures && !options.useTargetPregameCache
+    ? selectAll<{ game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }>(
+      (from, to) => admin.from(DUGOUT_STATCAST_TABLE).select('game_date, mlb_id, pitcher_hand, windows')
+        .gte('game_date', featureStartDate).lt('game_date', date).in('mlb_id', batterIds)
+        .order('game_date', { ascending: false }).order('mlb_id').order('pitcher_hand').range(from, to)
+    )
+    : selectAll<{ game_date?: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }>(
+      (from, to) => admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows')
+        .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
+    )
+  const pitchlogRowsPromise = options.strictPregameFeatures && !options.useTargetPregameCache
+    ? selectAll<{ game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }>(
+      (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('game_date, mlb_id, pitcher_hand, windows')
+        .gte('game_date', featureStartDate).lt('game_date', date).in('mlb_id', batterIds)
+        .order('game_date', { ascending: false }).order('mlb_id').order('pitcher_hand').range(from, to)
+    )
+    : selectAll<{ game_date?: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }>(
+      (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows')
+        .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
+    )
+
+  const [snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, pikkitRowsResult] = await Promise.all([
     admin.from('pregame_odds_snapshots').select('game_pk, prop_map').eq('game_date', date).order('game_pk').then(r => r.data ?? []),
     selectAll<any>((from, to) => admin.from('fanduel_gap_odds')
       .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
@@ -117,14 +148,8 @@ export async function fetchHistoricalGameBundles(
         .eq('game_date', date).in('market_key', ['batter_first_home_run', 'batter_home_runs'])
         .order('market_key').order('name_norm').order('bookmaker').range(from, to)
     ),
-    selectAll<{ mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }>(
-      (from, to) => admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows')
-        .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
-    ),
-    selectAll<{ mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }>(
-      (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows')
-        .eq('game_date', date).order('mlb_id').order('pitcher_hand').range(from, to)
-    ),
+    statcastRowsPromise,
+    pitchlogRowsPromise,
     fetchPikkitPublicPicks(date)
       .then<PikkitRowsResult>(rows => ({ rows, error: null }))
       .catch<PikkitRowsResult>(error => ({ rows: [], error: error instanceof Error ? error.message : String(error) })),
@@ -137,8 +162,6 @@ export async function fetchHistoricalGameBundles(
   if (options.requirePikkit && pikkitRows.length === 0) {
     throw new Error(`Real Pikkit exposure returned no rows for ${date}. Market DNA will not substitute zero picks.`)
   }
-
-  if (!games.length) return []
 
   // Read-only: never touch pregame_odds_snapshots.is_frozen. A completed
   // game's row is permanently frozen already and never revisited by any
@@ -168,9 +191,15 @@ export async function fetchHistoricalGameBundles(
   }
 
   const statcastByBatter: Record<number, Partial<Record<'L' | 'R', Record<StatcastWindow, StatcastLine>>>> = {}
-  for (const row of statcastRows) (statcastByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
+  for (const row of statcastRows) {
+    const byHand = (statcastByBatter[row.mlb_id] ??= {})
+    if (!byHand[row.pitcher_hand]) byHand[row.pitcher_hand] = row.windows
+  }
   const pitchlogByBatter: Record<number, Partial<Record<'L' | 'R', Record<PitchlogStatWindow, BatterStats>>>> = {}
-  for (const row of pitchlogRows) (pitchlogByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
+  for (const row of pitchlogRows) {
+    const byHand = (pitchlogByBatter[row.mlb_id] ??= {})
+    if (!byHand[row.pitcher_hand]) byHand[row.pitcher_hand] = row.windows
+  }
 
   return games.map(game => {
     const gameKey = canonGameKey(game.gameKey)

@@ -3,22 +3,48 @@ export type MarketDnaRankerRow = {
   game_pk: number
   mlb_id: number
   did_hr: boolean
+  home_runs?: number
   feature_vector: Record<string, number>
+}
+
+export type MarketDnaLaneScores = {
+  market: number
+  settlement: number
+  mechanics: number
+  leverage: number
+  composite: number
+}
+
+export type MarketDnaGameProjection = {
+  bucket: 0 | 1 | 2 | 3
+  label: '0' | '1' | '2' | '3+'
+  probabilities: { zero: number; one: number; two: number; threePlus: number }
+  expectedHomeRuns: number
+  candidateLimit: number
+  confidence: number
 }
 
 export type MarketDnaRankerValidation = {
   cutoff: string
+  games: number
   gamesWithHr: number
+  noHrGames: number
   marketTopOne: number
   marketTopTwo: number
   learnedTopOne: number
   learnedTopTwo: number
   learnedTopThree: number
-  dualLaneTopOne: number
-  dualLaneTopTwo: number
+  gameFirstTopOne: number
+  gameFirstTopTwo: number
+  gameFirstTopThree: number
+  selectedGameCoverage: number
+  selectedPlayerPrecision: number
+  countBucketAccuracy: number
+  noHrAccuracy: number
+  countMae: number
   averageMarketHomerRank: number | null
   averageLearnedHomerRank: number | null
-  averageDualLaneHomerRank: number | null
+  averageGameFirstHomerRank: number | null
 }
 
 type BoostNode = {
@@ -29,15 +55,24 @@ type BoostNode = {
   leaf?: number
 }
 
+type GameCountModel = {
+  featureNames: string[]
+  centers: number[]
+  scales: number[]
+  weights: number[][]
+}
+
 export type MarketDnaRankerArtifact = {
-  version: 'game-relative-gbdt-v3'
+  version: 'game-first-gbdt-v4'
   trainedThrough: string
   trainingRows: number
+  trainingGames: number
   featureNames: string[]
   rawKeys: string[]
   centers: number[]
   scales: number[]
   trees: BoostNode[]
+  countModel: GameCountModel
   validation: MarketDnaRankerValidation | null
 }
 
@@ -59,63 +94,77 @@ function derivedVector(row: MarketDnaRankerRow) {
   const headlineMove = avg(['market.fhr.movement', 'market.hr.movement'])
   const ordinaryMove = avg(['market.hits1.movement', 'market.hits2.movement', 'market.single.movement', 'market.double.movement'])
   const payoffMove = avg(['market.hrMl.movement', 'market.rbi1.movement', 'market.rbi2.movement', 'market.rbi3.movement', 'market.tb4.movement', 'market.tb5.movement', 'market.hrr.movement'])
-  const powerRank = avg(['market.fhr.rank', 'market.hr.rank'])
-  const settlementRank = avg(['market.hrMl.rank', 'market.rbi1.rank', 'market.rbi2.rank', 'market.rbi3.rank', 'market.tb4.rank', 'market.tb5.rank', 'market.hrr.rank'])
+  const powerRank = avg(['market.laser105.rank', 'market.hrMl.rank', 'market.hr.rank', 'market.fhr.rank', 'market.tb5.rank'])
+  const settlementRank = avg(['market.hrMl.rank', 'market.rbi2.rank', 'market.rbi3.rank', 'market.tb4.rank', 'market.tb5.rank', 'market.hrr.rank'])
   const ordinaryRank = avg(['market.hits1.rank', 'market.hits2.rank', 'market.single.rank', 'market.double.rank', 'market.runs1.rank'])
   const statcastRank = avg(['metric.avgEvL5.rank', 'metric.hardHitL5.rank', 'metric.barrelL10.rank', 'metric.pullAirL5.rank'])
+  const mechanicsRank = avg(['mechanics.l3.gameRank', 'mechanics.l3.trajectory.rank', 'mechanics.l5.power.rank', 'mechanics.l10.gameRank'])
   const publicHr = featureValue(row, 'public.home_runs.share')
   const fhrBaseline = featureValue(row, 'metric.fhrVsAveragePct.value')
   const hrBaseline = featureValue(row, 'metric.hrVsAveragePct.value')
   const baselineGap = featureValue(row, 'structure.fhrHrBaselineGap')
-  const mm = featureValue(row, 'metric.mmL1.value')
+  const mm = avg(['metric.mmL1.value', 'metric.mmL3.value', 'metric.mmL5.value', 'metric.mmL10.value'])
   const publicResidual = featureValue(row, 'public.home_runs.hiddenResidual')
   return [
     headlineMove, ordinaryMove, payoffMove,
     headlineMove - ordinaryMove + .5, headlineMove - payoffMove + .5,
-    powerRank, settlementRank, ordinaryRank, statcastRank,
-    settlementRank - powerRank + .5, statcastRank - powerRank + .5,
-    publicHr, powerRank - publicHr + .5,
-    featureValue(row, 'context.traffic'),
+    powerRank, settlementRank, ordinaryRank, statcastRank, mechanicsRank,
+    settlementRank - powerRank + .5, mechanicsRank - powerRank + .5,
+    publicHr, powerRank - publicHr + .5, featureValue(row, 'context.traffic'),
     featureValue(row, 'market.hr.probability'), featureValue(row, 'market.fhr.probability'),
-    fhrBaseline, hrBaseline,
-    baselineGap, Math.abs(fhrBaseline - hrBaseline),
-    mm, publicResidual,
-    featureValue(row, 'context.adjacentPowerPressure'),
+    featureValue(row, 'market.laser105.probability'), featureValue(row, 'market.hrMl.probability'),
+    featureValue(row, 'market.tb5.probability'), featureValue(row, 'market.rbi3.probability'),
+    fhrBaseline, hrBaseline, baselineGap, Math.abs(fhrBaseline - hrBaseline),
+    mm, publicResidual, featureValue(row, 'context.adjacentPowerPressure'),
     featureValue(row, 'context.fhrClusterDensity'),
   ]
 }
 
 const DERIVED_NAMES = [
   'd.headlineMove', 'd.ordinaryMove', 'd.payoffMove', 'd.headlineVsOrdinary', 'd.headlineVsPayoff',
-  'd.powerRank', 'd.settlementRank', 'd.ordinaryRank', 'd.statcastRank', 'd.settlementVsPower',
-  'd.statcastVsPower', 'd.publicHr', 'd.powerVsPublic', 'd.traffic', 'd.hrProbability', 'd.fhrProbability',
-  'd.fhrBaseline', 'd.hrBaseline', 'd.baselineGap', 'd.baselineAbsGap', 'd.mmL1',
-  'd.publicResidual', 'd.adjacentPowerPressure', 'd.fhrClusterDensity',
+  'd.powerRank', 'd.settlementRank', 'd.ordinaryRank', 'd.statcastRank', 'd.mechanicsRank',
+  'd.settlementVsPower', 'd.mechanicsVsPower', 'd.publicHr', 'd.powerVsPublic', 'd.traffic',
+  'd.hrProbability', 'd.fhrProbability', 'd.laser105Probability', 'd.hrMlProbability',
+  'd.tb5Probability', 'd.rbi3Probability', 'd.fhrBaseline', 'd.hrBaseline', 'd.baselineGap',
+  'd.baselineAbsGap', 'd.mmWindows', 'd.publicResidual', 'd.adjacentPowerPressure', 'd.fhrClusterDensity',
 ]
 
-export function scoreMarketDnaLaneVector(featureVector: Record<string, number>) {
+export function scoreMarketDnaLaneVector(featureVector: Record<string, number>): MarketDnaLaneScores {
   const row: MarketDnaRankerRow = { game_date: '', game_pk: 0, mlb_id: 0, did_hr: false, feature_vector: featureVector }
   const avg = (keys: string[]) => mean(keys.map(key => featureValue(row, key)))
-  const power = avg(['market.fhr.rank', 'market.hr.rank'])
-  const settlement = avg(['market.hrMl.rank', 'market.rbi1.rank', 'market.rbi2.rank', 'market.rbi3.rank', 'market.tb4.rank', 'market.tb5.rank', 'market.hrr.rank'])
-  const statcast = avg(['metric.avgEvL5.rank', 'metric.hardHitL5.rank', 'metric.barrelL10.rank', 'metric.pullAirL5.rank'])
-  const payoffMove = avg(['market.hrMl.movement', 'market.rbi1.movement', 'market.rbi2.movement', 'market.rbi3.movement', 'market.tb4.movement', 'market.tb5.movement', 'market.hrr.movement'])
-  const headlineMove = avg(['market.fhr.movement', 'market.hr.movement'])
-  const fhrBaseline = featureValue(row, 'metric.fhrVsAveragePct.value')
-  const hrBaseline = featureValue(row, 'metric.hrVsAveragePct.value')
-  const baselineGap = featureVector['structure.fhrHrBaselineGap'] ?? clamp(.5 + (fhrBaseline - hrBaseline), 0, 1)
-  const anchorDirection = 1 - baselineGap
-  const companionDirection = baselineGap
+  const market = avg([
+    'market.laser105.rank', 'market.hrMl.rank', 'market.hr.rank', 'market.fhr.rank',
+    'market.tb5.rank', 'market.rbi3.rank', 'market.hr2.rank',
+  ])
+  const settlement = avg([
+    'market.hrMl.rank', 'market.rbi2.rank', 'market.rbi3.rank', 'market.tb4.rank',
+    'market.tb5.rank', 'market.hrr.rank', 'metric.hrToRbi.rank', 'metric.hrToTb4.rank',
+  ])
+  const mechanics = avg([
+    'mechanics.l3.gameRank', 'mechanics.l3.index.rank', 'mechanics.l3.trajectory.rank',
+    'mechanics.l5.power.rank', 'mechanics.l5.plane.rank', 'mechanics.l10.gameRank',
+    'metric.avgEvL5.rank', 'metric.hardHitL5.rank', 'metric.barrelL10.rank',
+  ])
   const hiddenResidual = featureValue(row, 'public.home_runs.hiddenResidual')
-  const mmPositive = featureValue(row, 'metric.mmL1.positive')
+  const expectedActual = featureValue(row, 'public.home_runs.expectedActualRatio')
+  const mm = avg(['metric.mmL1.rank', 'metric.mmL3.rank', 'metric.mmL5.rank', 'metric.mmL10.rank'])
+  const payoffMove = avg(['market.hrMl.movement', 'market.rbi2.movement', 'market.rbi3.movement', 'market.tb4.movement', 'market.tb5.movement'])
+  const headlineMove = avg(['market.fhr.movement', 'market.hr.movement'])
+  const divergence = featureValue(row, 'structure.fhrHrBaselineGap')
   const adjacency = featureValue(row, 'context.adjacentPowerPressure')
-  const cluster = featureValue(row, 'context.fhrClusterDensity')
   const traffic = featureValue(row, 'context.traffic')
-  const movementCoherence = clamp(.5 + (payoffMove - headlineMove), 0, 1)
-  const deepButViable = clamp((featureValue(row, 'market.hr.rank') + (1 - featureValue(row, 'market.fhr.rank'))) / 2, 0, 1)
+  const leverage = clamp(
+    hiddenResidual * .27 + expectedActual * .18 + mm * .16
+      + clamp(.5 + payoffMove - headlineMove, 0, 1) * .15
+      + divergence * .10 + adjacency * .07 + traffic * .07,
+    0, 1,
+  )
   return {
-    anchor: clamp(power * .25 + settlement * .17 + statcast * .15 + traffic * .09 + anchorDirection * .13 + movementCoherence * .09 + hiddenResidual * .06 + cluster * .06, 0, 1),
-    companion: clamp(settlement * .20 + statcast * .17 + companionDirection * .17 + hiddenResidual * .15 + mmPositive * .09 + adjacency * .08 + deepButViable * .08 + movementCoherence * .06, 0, 1),
+    market: clamp(market, 0, 1),
+    settlement: clamp(settlement, 0, 1),
+    mechanics: clamp(mechanics, 0, 1),
+    leverage,
+    composite: clamp(market * .30 + settlement * .25 + mechanics * .27 + leverage * .18, 0, 1),
   }
 }
 
@@ -142,14 +191,7 @@ function treeValue(tree: BoostNode, vector: number[]): number {
   return treeValue(vector[tree.feature!] <= tree.threshold! ? tree.left! : tree.right!, vector)
 }
 
-function fitNode(
-  indexes: number[],
-  vectors: number[][],
-  thresholds: number[][],
-  gradients: Float64Array,
-  hessians: Float64Array,
-  depth: number,
-): BoostNode {
+function fitNode(indexes: number[], vectors: number[][], thresholds: number[][], gradients: Float64Array, hessians: Float64Array, depth: number): BoostNode {
   let totalGradient = 0, totalHessian = 0
   for (const index of indexes) { totalGradient += gradients[index]; totalHessian += hessians[index] }
   const leaf = -totalGradient / (totalHessian + 4)
@@ -187,10 +229,112 @@ function fitNode(
   }
 }
 
+const GAME_KEYS = [
+  'game.noHr.probability', 'game.noHr.movement',
+  'market.hr.probability', 'market.fhr.probability', 'market.laser105.probability',
+  'market.hrMl.probability', 'market.rbi2.probability', 'market.rbi3.probability',
+  'market.tb4.probability', 'market.tb5.probability', 'market.hr2.probability',
+  'mechanics.l3.index', 'mechanics.l3.trajectory', 'mechanics.l5.power', 'mechanics.l10.index',
+  'metric.mmL1.value', 'metric.mmL3.value', 'metric.mmL5.value', 'metric.mmL10.value',
+]
+
+function gameFeatureVector(game: MarketDnaRankerRow[]) {
+  const result: number[] = []
+  for (const key of GAME_KEYS) {
+    const values = game.map(row => featureValue(row, key))
+    const center = mean(values)
+    result.push(center, Math.max(...values), Math.sqrt(mean(values.map(value => (value - center) ** 2))))
+  }
+  const hrShares = game.map(row => featureValue(row, 'public.home_runs.share'))
+  const hrProbabilities = game.map(row => featureValue(row, 'market.hr.probability'))
+  result.push(
+    hrShares.reduce((sum, value) => sum + value * value, 0),
+    Math.max(...hrShares),
+    hrProbabilities.reduce((sum, value) => sum + value, 0) / 3,
+  )
+  return result
+}
+
+const GAME_FEATURE_NAMES = [
+  ...GAME_KEYS.flatMap(key => [`${key}.mean`, `${key}.max`, `${key}.spread`]),
+  'game.publicHr.hhi', 'game.publicHr.max', 'game.hrProbability.sumScaled',
+]
+
+function homeRunCount(game: MarketDnaRankerRow[]) {
+  return game.reduce((sum, row) => sum + Math.max(0, row.home_runs ?? (row.did_hr ? 1 : 0)), 0)
+}
+
+function countBucket(game: MarketDnaRankerRow[]): 0 | 1 | 2 | 3 {
+  return Math.min(3, homeRunCount(game)) as 0 | 1 | 2 | 3
+}
+
+function softmax(logits: number[]) {
+  const max = Math.max(...logits)
+  const values = logits.map(value => Math.exp(clamp(value - max, -30, 30)))
+  const total = values.reduce((sum, value) => sum + value, 0)
+  return values.map(value => value / total)
+}
+
+function trainCountModel(games: MarketDnaRankerRow[][]): GameCountModel {
+  const raw = games.map(gameFeatureVector)
+  const centers = GAME_FEATURE_NAMES.map((_, index) => mean(raw.map(vector => vector[index])))
+  const scales = GAME_FEATURE_NAMES.map((_, index) => Math.max(.04, Math.sqrt(mean(raw.map(vector => (vector[index] - centers[index]) ** 2)))))
+  const vectors = raw.map(vector => [1, ...normalizeVector(vector, centers, scales)])
+  const labels = games.map(countBucket)
+  const counts = [0, 1, 2, 3].map(label => labels.filter(value => value === label).length)
+  const weights = Array.from({ length: 4 }, (_, label) => [Math.log((counts[label] + 1) / (games.length + 4)), ...Array(GAME_FEATURE_NAMES.length).fill(0)])
+  const classWeights = counts.map(count => Math.sqrt(games.length / Math.max(1, count)))
+  for (let iteration = 0; iteration < 550; iteration++) {
+    const gradients = weights.map(row => row.map(() => 0))
+    for (let index = 0; index < vectors.length; index++) {
+      const vector = vectors[index]
+      const probabilities = softmax(weights.map(row => row.reduce((sum, weight, feature) => sum + weight * vector[feature], 0)))
+      const sampleWeight = classWeights[labels[index]]
+      for (let label = 0; label < 4; label++) {
+        const error = (probabilities[label] - Number(labels[index] === label)) * sampleWeight
+        for (let feature = 0; feature < vector.length; feature++) gradients[label][feature] += error * vector[feature]
+      }
+    }
+    const learningRate = .12 / Math.sqrt(1 + iteration / 45)
+    for (let label = 0; label < 4; label++) {
+      for (let feature = 0; feature < weights[label].length; feature++) {
+        const regularization = feature === 0 ? 0 : .004 * weights[label][feature]
+        weights[label][feature] -= learningRate * (gradients[label][feature] / vectors.length + regularization)
+      }
+    }
+  }
+  return { featureNames: GAME_FEATURE_NAMES, centers, scales, weights }
+}
+
+function scoreCountModel(model: GameCountModel, rows: MarketDnaRankerRow[]) {
+  const vector = [1, ...normalizeVector(gameFeatureVector(rows), model.centers, model.scales)]
+  return softmax(model.weights.map(row => row.reduce((sum, weight, index) => sum + weight * vector[index], 0)))
+}
+
+export function projectMarketDnaGame(artifact: MarketDnaRankerArtifact, featureVectors: Record<string, number>[]): MarketDnaGameProjection {
+  const rows = featureVectors.map((feature_vector, index) => ({ game_date: '', game_pk: 0, mlb_id: index, did_hr: false, feature_vector }))
+  const probabilities = scoreCountModel(artifact.countModel, rows)
+  const bucket = probabilities.indexOf(Math.max(...probabilities)) as 0 | 1 | 2 | 3
+  const expectedHomeRuns = probabilities[1] + probabilities[2] * 2 + probabilities[3] * 3.6
+  const confidence = Math.max(...probabilities)
+  let candidateLimit: number = bucket
+  if (bucket === 0 && (probabilities[1] + probabilities[2] + probabilities[3]) >= .58) candidateLimit = 1
+  if (bucket === 3 && expectedHomeRuns >= 3.55) candidateLimit = 4
+  return {
+    bucket,
+    label: bucket === 3 ? '3+' : `${bucket}` as '0' | '1' | '2',
+    probabilities: { zero: probabilities[0], one: probabilities[1], two: probabilities[2], threePlus: probabilities[3] },
+    expectedHomeRuns,
+    candidateLimit,
+    confidence,
+  }
+}
+
 function trainCore(rows: MarketDnaRankerRow[]) {
-  const completeGames = groupCompleteGames(rows).filter(game => game.some(row => row.did_hr))
-  const trainingRows = completeGames.flat()
-  if (trainingRows.length < 900) throw new Error('Market DNA needs at least 50 complete historical games before training the learned reducer.')
+  const completeGames = groupCompleteGames(rows)
+  const gamesWithHr = completeGames.filter(game => game.some(row => row.did_hr))
+  const trainingRows = gamesWithHr.flat()
+  if (trainingRows.length < 900 || completeGames.length < 50) throw new Error('Market DNA needs at least 50 complete historical games before training the game-first reducer.')
   const { rawKeys, featureNames } = buildFeatureSpace(trainingRows)
   const rawVectors = trainingRows.map(row => rawVector(row, rawKeys))
   const centers = featureNames.map((_, index) => mean(rawVectors.map(vector => vector[index])))
@@ -199,7 +343,7 @@ function trainCore(rows: MarketDnaRankerRow[]) {
   const rowIndexes = new Map(trainingRows.map((row, index) => [rowKey(row), index]))
   const labels = trainingRows.map(row => row.did_hr ? 1 : 0)
   const sampleWeights = new Float64Array(trainingRows.length)
-  for (const game of completeGames) {
+  for (const game of gamesWithHr) {
     const positives = game.filter(row => row.did_hr)
     const negatives = game.filter(row => !row.did_hr)
     const positiveRaw = positives.map(row => Math.pow(Math.max(.08, 1 - featureValue(row, 'market.hr.probability')), 2))
@@ -228,7 +372,12 @@ function trainCore(rows: MarketDnaRankerRow[]) {
     trees.push(tree)
     for (const index of indexes) predictions[index] += .08 * treeValue(tree, vectors[index])
   }
-  return { rawKeys, featureNames, centers, scales, trees, trainingRows: trainingRows.length }
+  return {
+    rawKeys, featureNames, centers, scales, trees,
+    countModel: trainCountModel(completeGames),
+    trainingRows: trainingRows.length,
+    trainingGames: completeGames.length,
+  }
 }
 
 function scoreWithCore(core: ReturnType<typeof trainCore>, row: MarketDnaRankerRow) {
@@ -236,61 +385,79 @@ function scoreWithCore(core: ReturnType<typeof trainCore>, row: MarketDnaRankerR
   return core.trees.reduce((score, tree) => score + .08 * treeValue(tree, vector), 0)
 }
 
+function gameFirstScore(core: ReturnType<typeof trainCore>, game: MarketDnaRankerRow[]) {
+  const learned = [...game].sort((a, b) => scoreWithCore(core, b) - scoreWithCore(core, a))
+  const relative = new Map(learned.map((row, index) => [rowKey(row), learned.length <= 1 ? 1 : 1 - index / (learned.length - 1)]))
+  return [...game].map(row => {
+    const lanes = scoreMarketDnaLaneVector(row.feature_vector)
+    return { row, score: (relative.get(rowKey(row)) ?? .5) * .44 + lanes.composite * .56 }
+  }).sort((a, b) => b.score - a.score)
+}
+
 function validate(core: ReturnType<typeof trainCore>, rows: MarketDnaRankerRow[], cutoff: string): MarketDnaRankerValidation {
-  const games = groupCompleteGames(rows).filter(game => game.some(row => row.did_hr))
-  let marketTopOne = 0, marketTopTwo = 0, learnedTopOne = 0, learnedTopTwo = 0, learnedTopThree = 0, dualLaneTopOne = 0, dualLaneTopTwo = 0
-  let marketRankSum = 0, learnedRankSum = 0, dualLaneRankSum = 0, homerCount = 0
+  const games = groupCompleteGames(rows)
+  const gamesWithHr = games.filter(game => game.some(row => row.did_hr))
+  let marketTopOne = 0, marketTopTwo = 0, learnedTopOne = 0, learnedTopTwo = 0, learnedTopThree = 0
+  let gameFirstTopOne = 0, gameFirstTopTwo = 0, gameFirstTopThree = 0
+  let marketRankSum = 0, learnedRankSum = 0, gameFirstRankSum = 0, homerCount = 0
+  let countCorrect = 0, noHrCorrect = 0, countError = 0, selectedCovered = 0, selectedHits = 0, selectedPlayers = 0
   for (const game of games) {
     const actualIds = new Set(game.filter(row => row.did_hr).map(row => row.mlb_id))
     const market = [...game].sort((a, b) => featureValue(b, 'market.hr.probability') - featureValue(a, 'market.hr.probability'))
     const learned = [...game].sort((a, b) => scoreWithCore(core, b) - scoreWithCore(core, a))
-    const learnedScores = new Map(learned.map((row, index) => [rowKey(row), learned.length <= 1 ? 1 : 1 - index / (learned.length - 1)]))
-    const lanes = game.map(row => {
-      const lane = scoreMarketDnaLaneVector(row.feature_vector)
-      const learnedRelative = learnedScores.get(rowKey(row)) ?? .5
-      return {
-        row,
-        anchor: learnedRelative * .52 + lane.anchor * .48,
-        companion: learnedRelative * .25 + lane.companion * .75,
-      }
-    })
-    const anchor = [...lanes].sort((a, b) => b.anchor - a.anchor)[0]
-    const companion = [...lanes].filter(entry => entry.row.mlb_id !== anchor?.row.mlb_id).sort((a, b) => b.companion - a.companion)[0]
-    const selectedIds = new Set([anchor?.row.mlb_id, companion?.row.mlb_id].filter((id): id is number => id != null))
-    const dualLane = [...lanes].sort((a, b) => {
-      const aSelected = selectedIds.has(a.row.mlb_id) ? 1 : 0
-      const bSelected = selectedIds.has(b.row.mlb_id) ? 1 : 0
-      return bSelected - aSelected || Math.max(b.anchor, b.companion) - Math.max(a.anchor, a.companion)
-    }).map(entry => entry.row)
+    const gameFirst = gameFirstScore(core, game)
+    const probabilities = scoreCountModel(core.countModel, game)
+    const predictedBucket = probabilities.indexOf(Math.max(...probabilities)) as 0 | 1 | 2 | 3
+    const actualBucket = countBucket(game)
+    const expected = probabilities[1] + probabilities[2] * 2 + probabilities[3] * 3.6
+    countCorrect += Number(predictedBucket === actualBucket)
+    if (actualBucket === 0) noHrCorrect += Number(predictedBucket === 0)
+    countError += Math.abs(expected - homeRunCount(game))
+    let selectedCount: number = predictedBucket
+    if (predictedBucket === 0 && 1 - probabilities[0] >= .58) selectedCount = 1
+    if (predictedBucket === 3 && expected >= 3.55) selectedCount = 4
+    const selected = gameFirst.slice(0, selectedCount)
+    selectedPlayers += selected.length
+    const hits = selected.filter(entry => actualIds.has(entry.row.mlb_id)).length
+    selectedHits += hits
+    selectedCovered += Number(hits > 0 || (actualIds.size === 0 && selected.length === 0))
+    if (!actualIds.size) continue
     const marketRanks = [...actualIds].map(id => market.findIndex(row => row.mlb_id === id) + 1)
     const learnedRanks = [...actualIds].map(id => learned.findIndex(row => row.mlb_id === id) + 1)
-    const dualLaneRanks = [...actualIds].map(id => dualLane.findIndex(row => row.mlb_id === id) + 1)
+    const gameFirstRanks = [...actualIds].map(id => gameFirst.findIndex(entry => entry.row.mlb_id === id) + 1)
     if (Math.min(...marketRanks) <= 1) marketTopOne++
     if (Math.min(...marketRanks) <= 2) marketTopTwo++
     if (Math.min(...learnedRanks) <= 1) learnedTopOne++
     if (Math.min(...learnedRanks) <= 2) learnedTopTwo++
     if (Math.min(...learnedRanks) <= 3) learnedTopThree++
-    if (Math.min(...dualLaneRanks) <= 1) dualLaneTopOne++
-    if (Math.min(...dualLaneRanks) <= 2) dualLaneTopTwo++
+    if (Math.min(...gameFirstRanks) <= 1) gameFirstTopOne++
+    if (Math.min(...gameFirstRanks) <= 2) gameFirstTopTwo++
+    if (Math.min(...gameFirstRanks) <= 3) gameFirstTopThree++
     marketRankSum += marketRanks.reduce((sum, rank) => sum + rank, 0)
     learnedRankSum += learnedRanks.reduce((sum, rank) => sum + rank, 0)
-    dualLaneRankSum += dualLaneRanks.reduce((sum, rank) => sum + rank, 0)
+    gameFirstRankSum += gameFirstRanks.reduce((sum, rank) => sum + rank, 0)
     homerCount += actualIds.size
   }
-  const count = games.length
+  const hrCount = gamesWithHr.length
+  const noHrCount = games.length - hrCount
   return {
-    cutoff,
-    gamesWithHr: count,
-    marketTopOne: count ? marketTopOne / count : 0,
-    marketTopTwo: count ? marketTopTwo / count : 0,
-    learnedTopOne: count ? learnedTopOne / count : 0,
-    learnedTopTwo: count ? learnedTopTwo / count : 0,
-    learnedTopThree: count ? learnedTopThree / count : 0,
-    dualLaneTopOne: count ? dualLaneTopOne / count : 0,
-    dualLaneTopTwo: count ? dualLaneTopTwo / count : 0,
+    cutoff, games: games.length, gamesWithHr: hrCount, noHrGames: noHrCount,
+    marketTopOne: hrCount ? marketTopOne / hrCount : 0,
+    marketTopTwo: hrCount ? marketTopTwo / hrCount : 0,
+    learnedTopOne: hrCount ? learnedTopOne / hrCount : 0,
+    learnedTopTwo: hrCount ? learnedTopTwo / hrCount : 0,
+    learnedTopThree: hrCount ? learnedTopThree / hrCount : 0,
+    gameFirstTopOne: hrCount ? gameFirstTopOne / hrCount : 0,
+    gameFirstTopTwo: hrCount ? gameFirstTopTwo / hrCount : 0,
+    gameFirstTopThree: hrCount ? gameFirstTopThree / hrCount : 0,
+    selectedGameCoverage: games.length ? selectedCovered / games.length : 0,
+    selectedPlayerPrecision: selectedPlayers ? selectedHits / selectedPlayers : 0,
+    countBucketAccuracy: games.length ? countCorrect / games.length : 0,
+    noHrAccuracy: noHrCount ? noHrCorrect / noHrCount : 0,
+    countMae: games.length ? countError / games.length : 0,
     averageMarketHomerRank: homerCount ? marketRankSum / homerCount : null,
     averageLearnedHomerRank: homerCount ? learnedRankSum / homerCount : null,
-    averageDualLaneHomerRank: homerCount ? dualLaneRankSum / homerCount : null,
+    averageGameFirstHomerRank: homerCount ? gameFirstRankSum / homerCount : null,
   }
 }
 
@@ -306,14 +473,16 @@ export function trainMarketDnaRanker(rows: MarketDnaRankerRow[], targetDate: str
   }
   const core = trainCore(priorRows)
   return {
-    version: 'game-relative-gbdt-v3',
+    version: 'game-first-gbdt-v4',
     trainedThrough: dates.at(-1)!,
     trainingRows: core.trainingRows,
+    trainingGames: core.trainingGames,
     featureNames: core.featureNames,
     rawKeys: core.rawKeys,
     centers: core.centers,
     scales: core.scales,
     trees: core.trees,
+    countModel: core.countModel,
     validation: validationResult,
   }
 }

@@ -306,23 +306,53 @@ function attachMm(
 // Market DNA and HR Intelligence both need the exact MM values shown by
 // The Dugout. Keep the cache reads and whole-game ranking pass here so every
 // admin surface receives the same l1/l3/l5/l10 values without recreating MM.
-export async function attachCanonicalMmToBundles(gameBundles: GameBundles[], date: string): Promise<void> {
+export async function attachCanonicalMmToBundles(
+  gameBundles: GameBundles[],
+  date: string,
+  options: { strictPregameFeatures?: boolean; useTargetPregameCache?: boolean } = {},
+): Promise<void> {
   const pitcherIds = [...new Set(gameBundles
     .flatMap(bundle => [bundle.game.homePitcher?.id, bundle.game.awayPitcher?.id])
     .filter((id): id is number => !!id))]
   const admin = createAdminClient()
-  const [pitcherRows, edgeResult] = await Promise.all([
+  const allMlbIds = [...new Set(gameBundles.flatMap(bundle => [
+    ...bundle.game.homeLineup.map(player => player.mlb_id),
+    ...bundle.game.awayLineup.map(player => player.mlb_id),
+    bundle.game.homePitcher?.id,
+    bundle.game.awayPitcher?.id,
+  ].filter((id): id is number => Boolean(id))))]
+  const edgeStart = new Date(`${date}T12:00:00Z`)
+  edgeStart.setUTCDate(edgeStart.getUTCDate() - 14)
+  const edgeStartDate = edgeStart.toISOString().slice(0, 10)
+  const edgeRowsPromise = options.strictPregameFeatures && !options.useTargetPregameCache
+    ? (async () => {
+      const rows: Array<EdgeRow & { game_date: string }> = []
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await admin.from('dugout_matchup_edge_precomputed').select('game_date,mlb_id,role,data')
+          .gte('game_date', edgeStartDate).lt('game_date', date).in('mlb_id', allMlbIds)
+          .order('game_date', { ascending: false }).order('mlb_id').order('role').range(offset, offset + 999)
+        if (error) throw new Error(`Matchup-edge query failed: ${error.message}`)
+        if (!data?.length) break
+        rows.push(...data as Array<EdgeRow & { game_date: string }>)
+        if (data.length < 1000) break
+      }
+      return rows
+    })()
+    : admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data')
+      .eq('game_date', date).order('mlb_id').order('role').then(({ data, error }) => {
+        if (error) throw new Error(`Matchup-edge query failed: ${error.message}`)
+        return (data ?? []) as EdgeRow[]
+      })
+  const [pitcherRows, edgeRows] = await Promise.all([
     fetchPitcherMix(pitcherIds, date),
-    admin.from('dugout_matchup_edge_precomputed').select('mlb_id,role,data')
-      .eq('game_date', date).order('mlb_id').order('role'),
+    edgeRowsPromise,
   ])
-  if (edgeResult.error) throw new Error(`Matchup-edge query failed: ${edgeResult.error.message}`)
 
   const batterEdges: Record<number, MatchupEdgeData> = {}
   const pitcherEdges: Record<number, MatchupEdgeData> = {}
-  for (const row of (edgeResult.data ?? []) as EdgeRow[]) {
-    if (row.role === 'batter') batterEdges[row.mlb_id] = row.data
-    else pitcherEdges[row.mlb_id] = row.data
+  for (const row of edgeRows) {
+    if (row.role === 'batter' && !batterEdges[row.mlb_id]) batterEdges[row.mlb_id] = row.data
+    else if (row.role === 'pitcher' && !pitcherEdges[row.mlb_id]) pitcherEdges[row.mlb_id] = row.data
   }
   const pitcherMap = buildPitcherMap(pitcherRows)
   for (const bundle of gameBundles) attachMm(bundle, pitcherMap, batterEdges, pitcherEdges)
@@ -441,13 +471,17 @@ function attachValidation(
   }
 }
 
-export async function buildHrIntelligenceSlate(date: string, gamePk?: number): Promise<HrIntelligenceSlate> {
-  const allBundles = await fetchHistoricalGameBundles(date)
+export async function buildHrIntelligenceSlate(
+  date: string,
+  gamePk?: number,
+  options: { strictPregameFeatures?: boolean } = {},
+): Promise<HrIntelligenceSlate> {
+  const allBundles = await fetchHistoricalGameBundles(date, { strictPregameFeatures: options.strictPregameFeatures })
   const bundles = gamePk == null ? allBundles : allBundles.filter(bundle => bundle.game.gamePk === gamePk)
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const outcomeBundles = date < today ? bundles : bundles.filter(bundle => bundle.game.status === 'Final')
   const [, outcomeResult, boxscoreOutcomes] = await Promise.all([
-    attachCanonicalMmToBundles(bundles, date),
+    attachCanonicalMmToBundles(bundles, date, options),
     outcomeBundles.length
       ? fetchHrFeed(outcomeBundles.map(bundle => ({ gamePk: bundle.game.gamePk, status: { abstractGameState: 'Final' } })))
       : Promise.resolve({ hrFeed: [], pitcherIdByName: {}, completedGamePks: [], failures: [] }),

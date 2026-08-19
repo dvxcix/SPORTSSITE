@@ -29,6 +29,7 @@ type WindowMetrics = {
 }
 
 type StatcastPrecomputeRow = {
+  game_date?: string
   mlb_id: number
   pitcher_hand: string
   windows: Record<string, WindowMetrics>
@@ -345,14 +346,30 @@ export type GameMechanicsWindows = Record<MechanicsWindow, GameMechanicsResult>
 // window from that same immutable field. The daily precompute and lineup
 // refresh both need L1/L3/L5/L10; doing four independent passes previously
 // repeated the same Statcast query and both pitchers' full pitch-log reads.
-export async function computeGameMechanicsWindows(game: TodayGame, gameDate: string): Promise<GameMechanicsWindows> {
+export async function computeGameMechanicsWindows(
+  game: TodayGame,
+  gameDate: string,
+  options: { strictPregameFeatures?: boolean; useTargetPregameCache?: boolean } = {},
+): Promise<GameMechanicsWindows> {
   const admin = createAdminClient()
   const lineup = [...game.awayLineup.slice(0, 9), ...game.homeLineup.slice(0, 9)]
   const ids = lineup.map(player => player.mlb_id)
-  const { data: statRows, error } = await admin.from('dugout_statcast_precomputed').select('mlb_id,pitcher_hand,windows,computed_at').eq('game_date', gameDate).in('mlb_id', ids)
+  const start = new Date(`${gameDate}T12:00:00Z`)
+  start.setUTCDate(start.getUTCDate() - 14)
+  const statQuery = options.strictPregameFeatures && !options.useTargetPregameCache
+    ? admin.from('dugout_statcast_precomputed').select('game_date,mlb_id,pitcher_hand,windows,computed_at')
+      .gte('game_date', start.toISOString().slice(0, 10)).lt('game_date', gameDate).in('mlb_id', ids)
+      .order('game_date', { ascending: false }).order('mlb_id').order('pitcher_hand')
+    : admin.from('dugout_statcast_precomputed').select('game_date,mlb_id,pitcher_hand,windows,computed_at')
+      .eq('game_date', gameDate).in('mlb_id', ids)
+  const { data: statRows, error } = await statQuery
   if (error) throw error
   const rows = (statRows ?? []) as StatcastPrecomputeRow[]
-  const statMap = new Map(rows.map(row => [`${row.mlb_id}:${row.pitcher_hand}`, row]))
+  const statMap = new Map<string, StatcastPrecomputeRow>()
+  for (const row of rows) {
+    const key = `${row.mlb_id}:${row.pitcher_hand}`
+    if (!statMap.has(key)) statMap.set(key, row)
+  }
   const pitchers = [game.homePitcher, game.awayPitcher].filter((pitcher): pitcher is ProbablePitcher => Boolean(pitcher?.id))
   const pitcherRows = new Map<number, PitchLogRow[]>()
   await Promise.all(pitchers.map(async pitcher => pitcherRows.set(

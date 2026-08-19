@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { computeStatLine, lastNGameDates, type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
+import { isStrictlyPregameDate } from '@/lib/pregameFeatureDate'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -163,7 +164,9 @@ export async function precomputeMatchupEdgeForDate(date: string): Promise<{ date
 
   const rows: { game_date: string; mlb_id: number; role: 'batter' | 'pitcher'; data: any }[] = []
   for (const mlbId of batterIdList) {
-    const batRows = batterRowsById[mlbId] ?? []
+    // This cache is a pregame snapshot. A past-date self-heal must not let
+    // that date's completed plate appearances enter its own matchup edge.
+    const batRows = (batterRowsById[mlbId] ?? []).filter(row => isStrictlyPregameDate(row.game_date, date))
     rows.push({
       game_date: date, mlb_id: mlbId, role: 'batter',
       data: {
@@ -173,7 +176,7 @@ export async function precomputeMatchupEdgeForDate(date: string): Promise<{ date
     })
   }
   for (const mlbId of pitcherIdList) {
-    const pitRows = pitcherRowsById[mlbId] ?? []
+    const pitRows = (pitcherRowsById[mlbId] ?? []).filter(row => isStrictlyPregameDate(row.game_date, date))
     rows.push({
       game_date: date, mlb_id: mlbId, role: 'pitcher',
       data: { recentByPitchTypeByHand: computeRecentByPitchTypeByHand(pitRows, 'stand') },

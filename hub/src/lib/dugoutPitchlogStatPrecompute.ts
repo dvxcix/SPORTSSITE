@@ -3,6 +3,7 @@ import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchBulkBatterPitchRows } from '@/lib/matrixMatch'
 import { computeAllPitchlogStatWindows, type PitchlogStatWindow } from '@slipsurge/core/matrixEngine'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
+import { priorPregameDate } from '@/lib/pregameFeatureDate'
 
 // Precomputes Custom Matrix's pitchlog_stat category (whiff%/chase%/hard-
 // hit%/barrel%/HR/etc, real "last N games played" windows — see
@@ -35,10 +36,11 @@ export async function precomputeDugoutPitchlogStatForDate(date: string): Promise
   // swap then just reads the other hand's already-precomputed row instead
   // of needing a re-run.
   const rows: { game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[] = []
+  const dataThroughDate = priorPregameDate(date)
   for (const mlbId of ids) {
     const pitchRows = pitchRowsByBatter[mlbId] ?? []
     for (const hand of ['L', 'R'] as const) {
-      rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllPitchlogStatWindows(pitchRows, hand, date) })
+      rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllPitchlogStatWindows(pitchRows, hand, dataThroughDate) })
     }
   }
 

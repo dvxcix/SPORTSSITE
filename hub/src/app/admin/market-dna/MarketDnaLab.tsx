@@ -164,19 +164,19 @@ function GameAnalysisPanel({ analysis, liveGame }: { analysis: MarketDnaGameAnal
   const signalPool = liveGame?.players ?? analysis.game.players
   const liveLeader = livePlayer(leader.player, liveGame)
   return <div className="space-y-5">
-    {analysis.candidateLanes.length ? <section className="overflow-hidden rounded-3xl border border-lime-400/25 bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.14),transparent_44%),rgba(9,9,11,.92)]">
-      <div className="border-b border-zinc-800 px-4 py-4 sm:px-5"><p className="text-xs font-black text-white">Game-specific market lanes</p><p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">Two different structures are reduced independently across all 18 players. These cards prevent a broad probability favorite from burying a quieter settlement or redirected-price profile.</p></div>
-      <div className="grid gap-3 p-4 lg:grid-cols-2">{analysis.candidateLanes.map(candidate => {
+    <section className="overflow-hidden rounded-3xl border border-lime-400/25 bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.14),transparent_44%),rgba(9,9,11,.92)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-4 py-4 sm:px-5"><div><p className="text-xs font-black text-white">Game-first decision</p><p className="mt-1 max-w-3xl text-[11px] leading-5 text-zinc-500">The game HR volume is estimated first. Zero, one or several independent player cards can follow; no pair is forced.</p></div>{analysis.projection ? <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-right"><p className="text-[8px] font-black uppercase tracking-wider text-cyan-300">Projected HR events</p><p className="text-xl font-black text-white">{analysis.projection.label}</p><p className="text-[9px] text-zinc-500">{Math.round(analysis.projection.confidence * 100)}% bucket confidence</p></div> : null}</div>
+      {analysis.candidates.length ? <div className="grid gap-3 p-4 lg:grid-cols-2">{analysis.candidates.map(candidate => {
         const result = analysis.actualHomeRuns.find(outcome => outcome.mlbId === candidate.player.mlbId)
         const candidatePlayer = livePlayer(candidate.player, liveGame)
-        return <article key={candidate.lane} className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+        return <article key={candidate.player.mlbId} className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
           <div className="mb-3"><DugoutSignals player={candidatePlayer} pool={signalPool} /></div>
           <div className="flex items-center gap-3"><PlayerAvatar headshot={mlbHeadshot(candidate.player.mlbId)} teamLogo={getTeamLogoUrl(candidate.player.team)} teamAbbr={candidate.player.team} name={candidate.player.name} size={48} /><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[.16em] text-lime-300">{candidate.label}</p><h3 className="truncate text-base font-black text-white">{candidate.player.name}</h3><p className="text-[10px] text-zinc-500">{candidate.player.team} #{candidate.player.battingOrder} · learned rank #{candidate.learnedRank}</p></div><div className="text-right"><p className="text-xl font-black text-lime-300">{candidate.score.toFixed(1)}</p><p className="text-[8px] font-black uppercase text-zinc-600">lane score</p></div></div>
           <ul className="mt-3 space-y-1.5 text-[11px] leading-5 text-zinc-400">{candidate.reasons.map(reason => <li key={reason}>• {reason}</li>)}</ul>
           {result ? <p className="mt-3 rounded-lg border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] font-black text-lime-300">Postgame: {result.homeRuns} HR · {result.rbis} RBI · {result.totalBases} TB{result.hrMlWon ? ' · HR/ML' : ''}</p> : null}
         </article>
-      })}</div>
-    </section> : null}
+      })}</div> : <div className="p-5"><p className="rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-400">{analysis.readState === 'clear' && analysis.projection?.candidateLimit === 0 ? 'No-HR is the game model strongest pregame bucket. No player card is forced.' : 'No player cleared the separation threshold. The reducer passes instead of inventing a pair.'}</p></div>}
+    </section>
     <section className="overflow-hidden rounded-3xl border border-lime-400/25 bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.16),transparent_42%),rgba(9,9,11,.9)]">
       <div className="flex flex-wrap items-center gap-4 border-b border-zinc-800/80 p-5 sm:p-6">
         <PlayerAvatar headshot={mlbHeadshot(leader.player.mlbId)} teamLogo={getTeamLogoUrl(leader.player.team)} teamAbbr={leader.player.team} name={leader.player.name} size={64} />
@@ -196,10 +196,10 @@ function GameAnalysisPanel({ analysis, liveGame }: { analysis: MarketDnaGameAnal
     {validation ? <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-black text-white">Held-out validation</p><p className="text-[10px] text-zinc-600">Games from {validation.cutoff} forward were excluded from that validation model.</p></div><span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-2.5 py-1 text-[9px] font-black uppercase text-lime-300">{analysis.reducer?.version}</span></div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryMetric label="Dual-lane top one" value={pct(validation.dualLaneTopOne)} detail={`Learned top one: ${pct(validation.learnedTopOne)}`} />
-        <SummaryMetric label="Dual-lane pair" value={pct(validation.dualLaneTopTwo)} detail={`Learned top two: ${pct(validation.learnedTopTwo)}`} tone="text-lime-300" />
-        <SummaryMetric label="Learned top three" value={pct(validation.learnedTopThree)} detail="At least one realized HR contained" />
-        <SummaryMetric label="Average HR rank" value={validation.averageDualLaneHomerRank?.toFixed(2) ?? '—'} detail={`Learned: ${validation.averageLearnedHomerRank?.toFixed(2) ?? '—'} · market: ${validation.averageMarketHomerRank?.toFixed(2) ?? '—'}`} />
+        <SummaryMetric label="Game-first top one" value={pct(validation.gameFirstTopOne)} detail={`Learned-only: ${pct(validation.learnedTopOne)}`} />
+        <SummaryMetric label="Game-first top two" value={pct(validation.gameFirstTopTwo)} detail={`Top three: ${pct(validation.gameFirstTopThree)}`} tone="text-lime-300" />
+        <SummaryMetric label="Selected coverage" value={pct(validation.selectedGameCoverage)} detail={`Player precision: ${pct(validation.selectedPlayerPrecision)}`} />
+        <SummaryMetric label="Count model" value={pct(validation.countBucketAccuracy)} detail={`No-HR: ${pct(validation.noHrAccuracy)} · MAE ${validation.countMae.toFixed(2)}`} />
       </div>
     </section> : null}
 
@@ -209,7 +209,7 @@ function GameAnalysisPanel({ analysis, liveGame }: { analysis: MarketDnaGameAnal
     </section> : null}
 
     <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/70">
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3"><div><p className="text-xs font-black text-white">All 18, learned together</p><p className="text-[10px] text-zinc-600">Pregame game-relative rank first. Broad evidence remains visible. Outcomes attach afterward.</p></div><Trophy size={17} className="text-lime-300" /></div>
+      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3"><div><p className="text-xs font-black text-white">All 18, game-first ranking</p><p className="text-[10px] text-zinc-600">Market, settlement, mechanics, MM and public leverage are compared inside this game. Outcomes attach afterward.</p></div><Trophy size={17} className="text-lime-300" /></div>
       {analysis.ranking.map(entry => <RankRow key={entry.player.mlbId} entry={entry} game={liveGame ?? analysis.game} />)}
     </section>
   </div>
@@ -227,7 +227,7 @@ function SlateAuditPanel({ audit }: { audit: MarketDnaSlateAudit }) {
       <SummaryMetric label="Games with HR" value={`${summary.gamesWithHomeRun}`} detail={`${summary.completedGames} final boards`} />
       <SummaryMetric label="#1 contained HR" value={`${summary.leaderHitGames}/${summary.gamesWithHomeRun}`} detail="At least one actual homer ranked first" tone="text-lime-300" />
       <SummaryMetric label="Top two contained HR" value={`${summary.topTwoHitGames}/${summary.gamesWithHomeRun}`} detail="At least one actual homer in the top two" />
-      <SummaryMetric label="Structure lanes contained HR" value={`${summary.lanePairHitGames}/${summary.gamesWithHomeRun}`} detail="Diagnostic only; exposed beside the learned rank" tone="text-amber-300" />
+      <SummaryMetric label="Selected cards contained HR" value={`${summary.candidateCoverageGames}/${summary.gamesWithHomeRun}`} detail="Variable-cardinality pregame reads" tone="text-amber-300" />
       <SummaryMetric label="Perfect separation" value={`${summary.perfectSeparationGames}/${summary.gamesWithHomeRun}`} detail="Every homer above every non-homer" />
       <SummaryMetric label="Average best rank" value={summary.averageBestHomerRank == null ? '—' : summary.averageBestHomerRank.toFixed(2)} detail="Best actual homer in each game" />
     </div>
@@ -313,7 +313,7 @@ export function MarketDnaLab() {
             ...current,
             game,
             ranking: current.ranking.map(entry => ({ ...entry, player: resolve(entry.player) })),
-            candidateLanes: current.candidateLanes.map(candidate => ({ ...candidate, player: resolve(candidate.player) })),
+            candidates: current.candidates.map(candidate => ({ ...candidate, player: resolve(candidate.player) })),
           }
         })
         setPlayerAnalysis(current => {

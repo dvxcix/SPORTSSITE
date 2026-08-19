@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchBulkBatterPitchRows, fetchBulkSavantSplits } from '@/lib/matrixMatch'
 import { computeAllStatcastWindows, type StatcastWindow, type StatcastLine } from '@slipsurge/core/dugoutStatcast'
+import { priorPregameDate } from '@/lib/pregameFeatureDate'
 
 // Precomputes the Dugout grid's own Statcast section (BSpd through HR, plus
 // Timing/Miss, HardSw/SQ/Blast, IdlAA, Pull/FB rate — see dugoutStatcast.ts)
@@ -21,6 +22,10 @@ export const DUGOUT_STATCAST_TABLE = 'dugout_statcast_precomputed'
 
 const ALL_STATCAST_SAVANT_CATEGORIES = ['bat_tracking', 'batted_ball_splits', 'swing_path_attack_angle', 'swing_timing_miss_distance']
 
+// A row dated D is the board that will be shown before games on D. Its
+// recency windows must therefore stop at D-1. The daily self-heal also
+// rewrites recent historical dates after their games finish, so passing D
+// here would silently put the result being graded into its own L1 window.
 export async function precomputeDugoutStatcastForDate(date: string): Promise<{ date: string; batters: number; rows: number }> {
   // Confirmed-or-projected lineups for every game today — the exact same
   // resolution the Dugout grid itself displays, so this covers every
@@ -49,12 +54,13 @@ export async function precomputeDugoutStatcastForDate(date: string): Promise<{ d
   // (one fetch per batter covers both), so this only doubles the cheap
   // in-memory aggregation step, not the real DB read cost.
   const rows: { game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[] = []
+  const dataThroughDate = priorPregameDate(date)
   for (const mlbId of batterIds) {
     const bats = batsById.get(mlbId) || '?'
     const pitchRows = pitchRowsByBatter[mlbId] ?? []
     const savantRows = savantRowsByBatter[mlbId] ?? []
     for (const hand of ['L', 'R'] as const) {
-      rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllStatcastWindows(pitchRows, savantRows, bats, hand, date) })
+      rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllStatcastWindows(pitchRows, savantRows, bats, hand, dataThroughDate) })
     }
   }
 
