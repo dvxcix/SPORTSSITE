@@ -5,6 +5,20 @@ import { safeErrorMetadata } from '@/lib/safeApiError'
 
 type RouteHandler = (request: Request) => Promise<Response>
 
+async function responseMetadata(response: Response) {
+  if (response.ok) return { error: null, details: {} }
+  try {
+    const body = await response.clone().json() as Record<string, unknown>
+    const reason = typeof body.reason === 'string' ? body.reason : `HTTP ${response.status}`
+    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt']
+      .filter(key => body[key] !== undefined)
+      .map(key => [key, body[key]]))
+    return { error: reason.slice(0, 2000), details }
+  } catch {
+    return { error: `HTTP ${response.status}`, details: {} }
+  }
+}
+
 export function withPipelineHealth(jobName: string, handler: RouteHandler, options?: { allowSecondarySecret?: boolean }): RouteHandler {
   return async request => {
     if (!isCronRequestAuthorized(request, options?.allowSecondarySecret)) return handler(request)
@@ -41,13 +55,15 @@ export function withPipelineHealth(jobName: string, handler: RouteHandler, optio
     try {
       const response = await handler(request)
       if (!startError) {
+        const responseInfo = await responseMetadata(response)
+        const status = response.status === 425 ? 'deferred' : response.ok ? 'succeeded' : 'failed'
         const { error } = await admin.from('pipeline_runs').update({
-          status: response.ok ? 'succeeded' : 'failed',
+          status,
           finished_at: new Date().toISOString(),
           duration_ms: Date.now() - startedAt,
           http_status: response.status,
-          error: response.ok ? null : `HTTP ${response.status}`,
-          details,
+          error: responseInfo.error,
+          details: { ...details, ...responseInfo.details },
         }).eq('run_id', runId).eq('job_name', jobName)
         if (error) console.error(`[pipeline-health] could not finish ${jobName}`, { code: error.code })
       }

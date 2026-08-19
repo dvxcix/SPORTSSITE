@@ -2,6 +2,7 @@ import priors from '@/data/biomechanics/openbiomechanics-hitting-priors.json'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchPlayerPitchRows } from '@/lib/pitchLogFetch'
 import type { TodayGame, LineupPlayer, ProbablePitcher } from '@slipsurge/core/mlbSchedule'
+import { priorPregameDate } from '@/lib/pregameFeatureDate'
 
 export const HR_MECHANICS_MODEL_VERSION = priors.modelVersion
 export const MECHANICS_WINDOWS = [1, 3, 5, 10] as const
@@ -395,7 +396,6 @@ export async function computeGameMechanicsWindows(
       return scorePlayer(player, opponent, pitcher, stat, pitcher ? pitcherRows.get(pitcher.id) ?? [] : [], window, gameDate)
     }).sort((a, b) => b.scores.overall - a.scores.overall || a.battingOrder - b.battingOrder)
       .map((player, index) => ({ ...player, rank: index + 1 }))
-    const sourceDates = players.map(player => player.metrics.sourceComputedAt?.slice(0, 10)).filter((value): value is string => Boolean(value)).sort()
     const result: GameMechanicsResult = {
       modelVersion: HR_MECHANICS_MODEL_VERSION,
       gameDate,
@@ -403,7 +403,7 @@ export async function computeGameMechanicsWindows(
       gameKey: game.gameKey,
       window,
       lineupConfirmed: game.awayLineupConfirmed && game.homeLineupConfirmed,
-      sourceThroughDate: sourceDates.at(-1) ?? null,
+      sourceThroughDate: priorPregameDate(gameDate),
       calibration,
       players,
     }

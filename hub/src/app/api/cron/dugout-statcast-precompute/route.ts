@@ -35,6 +35,7 @@ async function run(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const explicitDate = searchParams.get('date')
+  const currentOnly = searchParams.get('currentOnly') === '1'
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
   // An explicit ?date= (manual/admin trigger) still means exactly that one
@@ -59,20 +60,22 @@ async function run(req: Request) {
   // original 3-date trailing window. The admin backfill route
   // (/api/admin/dugout-statcast-backfill) remains the escape hatch for any
   // one-off miss.
-  const dates = explicitDate ? [explicitDate] : Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
+  const dates = explicitDate ? [explicitDate] : currentOnly ? [todayEt] : Array.from({ length: PAST_DAYS + 1 }, (_, i) => {
     const d = new Date(`${todayEt}T00:00:00Z`)
     d.setUTCDate(d.getUTCDate() - i)
     return d.toISOString().slice(0, 10)
   })
 
   const results: Record<string, unknown> = {}
+  let failed = false
   for (const date of dates) {
     try {
       results[date] = await precomputeDugoutStatcastForDate(date)
     } catch (e) {
+      failed = true
       console.error('[dugout-statcast-precompute] date failed', { date, type: e instanceof Error ? e.name : typeof e })
       results[date] = { error: 'precompute failed' }
     }
   }
-  return NextResponse.json({ dates, results })
+  return NextResponse.json({ ok: !failed, dates, results }, { status: failed ? 503 : 200 })
 }

@@ -8,6 +8,7 @@ import {
   type GameMechanicsWindows,
   type MechanicsWindow,
 } from '@/lib/hrMechanics'
+import { assertMechanicsStatcastReady } from '@/lib/statcastMechanicsReadiness'
 
 export type CompactMechanicsScore = {
   index: number
@@ -69,7 +70,7 @@ export function compactMechanicsByPlayer(results: GameMechanicsWindows): Record<
 export async function getGameMechanicsWindows(
   game: TodayGame,
   gameDate: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; verifySources?: boolean } = {},
 ): Promise<{ results: GameMechanicsWindows; cache: 'hit' | 'miss' | 'refresh' }> {
   const admin = createAdminClient()
   const lineupSignature = mechanicsLineupSignature(game)
@@ -84,7 +85,12 @@ export async function getGameMechanicsWindows(
   const rows = (data ?? []) as SnapshotRow[]
   const matchingRows = rows.filter(row => row.lineup_signature === lineupSignature)
   const cached = rowsToWindows(matchingRows)
-  if (cached && !options.force) return { results: cached, cache: 'hit' }
+  const readiness = options.verifySources === false
+    ? null
+    : await assertMechanicsStatcastReady(game, gameDate)
+  const freshnessBoundary = readiness?.freshnessBoundary ? new Date(readiness.freshnessBoundary).getTime() : null
+  const cacheIsFresh = freshnessBoundary == null || matchingRows.every(row => new Date(row.computed_at).getTime() >= freshnessBoundary)
+  if (cached && cacheIsFresh && !options.force) return { results: cached, cache: 'hit' }
 
   const key = `${gameDate}:${game.gamePk}:${lineupSignature}:${HR_MECHANICS_MODEL_VERSION}`
   const active = inFlight.get(key)
@@ -116,4 +122,3 @@ export async function getGameMechanicsWindows(
     inFlight.delete(key)
   }
 }
-

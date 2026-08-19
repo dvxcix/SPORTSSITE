@@ -10,13 +10,13 @@ export const dynamic = 'force-dynamic'
 type Run = {
   id: number
   job_name: string
-  status: 'running' | 'succeeded' | 'failed'
+  status: 'running' | 'succeeded' | 'failed' | 'deferred'
   started_at: string
   finished_at: string | null
   duration_ms: number | null
   http_status: number | null
   error: string | null
-  details: { deployment_id?: string | null; git_sha?: string | null; trigger?: string | null } | null
+  details: { deployment_id?: string | null; git_sha?: string | null; trigger?: string | null; stage?: string | null; requiredThroughDate?: string | null; retryAt?: string | null } | null
 }
 
 type DataEvidence = {
@@ -75,6 +75,7 @@ function nextRunLabel(schedule: string) {
   const match = schedule.match(/Every (\d+) minutes?/i)
   if (match) return `within ${match[1]}m`
   if (/Every minute/i.test(schedule)) return 'within 1m'
+  if (/Hourly/i.test(schedule)) return 'within 1h'
   if (/Daily/i.test(schedule)) return 'next daily window'
   return 'event-driven'
 }
@@ -209,6 +210,7 @@ export default async function PipelineHealthPage() {
   })
   const healthy = rows.filter(row => row.state === 'succeeded' || row.state === 'verified').length
   const problems = rows.filter(row => row.state === 'failed' || row.state === 'stale' || row.state === 'timed_out').length
+  const deferred = rows.filter(row => row.state === 'deferred').length
 
   return (
     <div className="mx-auto max-w-7xl p-6 lg:p-8">
@@ -223,8 +225,9 @@ export default async function PipelineHealthPage() {
 
       {error && <div className="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"><XCircle size={16} /> Health data could not be loaded.</div>}
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Healthy</p><p className="mt-1 text-2xl font-black text-emerald-400">{healthy}</p></div>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Waiting upstream</p><p className="mt-1 text-2xl font-black text-amber-300">{deferred}</p></div>
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Needs attention</p><p className="mt-1 text-2xl font-black text-amber-400">{problems}</p></div>
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"><p className="text-xs text-zinc-500">Instrumented</p><p className="mt-1 text-2xl font-black text-white">{TRACKED_PIPELINES.length}</p></div>
       </div>
@@ -271,14 +274,14 @@ export default async function PipelineHealthPage() {
           <span>Pipeline</span><span>Status</span><span>Last signal</span><span>Next run</span><span>Action</span>
         </div>
         {rows.map(({ pipeline, run, evidence, state }) => {
-          const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
-          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' || state === 'timed_out' ? 'text-red-400' : 'text-amber-400'
-          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state === 'timed_out' ? 'Timed out' : state
+          const Icon = state === 'succeeded' || state === 'verified' ? CheckCircle2 : state === 'running' || state === 'deferred' ? Clock3 : state === 'waiting' ? Gauge : AlertTriangle
+          const tone = state === 'succeeded' ? 'text-emerald-400' : state === 'verified' || state === 'running' ? 'text-cyan-400' : state === 'deferred' ? 'text-amber-300' : state === 'waiting' ? 'text-zinc-500' : state === 'failed' || state === 'timed_out' ? 'text-red-400' : 'text-amber-400'
+          const statusLabel = state === 'verified' ? 'Data current' : state === 'waiting' ? 'No telemetry' : state === 'timed_out' ? 'Timed out' : state === 'deferred' ? 'Waiting for Statcast' : state
           const signalAt = state === 'verified' ? evidence?.observedAt : run?.started_at ?? evidence?.observedAt
           const ageMinutes = run?.started_at ? Math.max(1, (Date.now() - new Date(run.started_at).getTime()) / 60_000) : 0
           return (
             <div key={pipeline.name} className="grid grid-cols-[minmax(240px,1fr)_120px_130px_110px_70px] gap-4 border-b border-zinc-800/70 px-5 py-4 text-sm last:border-0">
-              <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className="mt-1 truncate text-xs text-red-300" title={run.error}>{run.error}</div>}</div>
+              <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className={`mt-1 truncate text-xs ${state === 'deferred' ? 'text-amber-200' : 'text-red-300'}`} title={run.error}>{run.error}</div>}{state === 'deferred' && run?.details?.requiredThroughDate && <div className="mt-1 text-[11px] text-zinc-500">Required through {run.details.requiredThroughDate}{run.details.stage ? ` · ${run.details.stage}` : ''}</div>}</div>
               <div className={`flex items-center gap-1.5 ${tone}`} title={state === 'verified' ? `Verified from ${evidence?.detail}` : undefined}><Icon size={14} />{statusLabel}</div>
               <div className="text-zinc-300">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
               <div className="text-xs text-zinc-400"><span className="block">{nextRunLabel(pipeline.schedule)}</span><span className="text-zinc-600">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms) : 'No duration'}</span></div>

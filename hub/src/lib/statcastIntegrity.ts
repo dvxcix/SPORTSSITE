@@ -17,6 +17,9 @@ export type StatcastIntegrityResult = {
       fair_balls?: number
       home_runs?: number
       raw_to_typed_gaps?: Record<string, number>
+      classification_mismatches?: number
+      terminal_events_without_description?: number
+      fair_balls_without_event?: number
       source_unavailable_fair_ball_metrics?: Record<string, number>
     }
     game_coverage?: { scheduled_games?: number; scheduled_games_without_pitch_log?: number; games_with_suspiciously_short_pitch_log?: number }

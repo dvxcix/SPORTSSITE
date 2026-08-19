@@ -54,11 +54,11 @@
     },
     {
       "path": "/api/cron/savant-sync-bat-tracking",
-      "schedule": "0 10 * * *"
+      "schedule": "0 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-batted-ball",
-      "schedule": "0 10 * * *"
+      "schedule": "0 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-swing-take",
@@ -66,7 +66,7 @@
     },
     {
       "path": "/api/cron/savant-sync-swing-timing",
-      "schedule": "0 10 * * *"
+      "schedule": "0 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-batting-stance",
@@ -74,7 +74,7 @@
     },
     {
       "path": "/api/cron/savant-sync-swing-path",
-      "schedule": "0 10 * * *"
+      "schedule": "0 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-hr-details",
@@ -90,7 +90,7 @@
     },
     {
       "path": "/api/cron/savant-sync-pitch-log",
-      "schedule": "10 10 * * *"
+      "schedule": "10 10-16 * * *"
     },
     {
       "path": "/api/cron/pitch-log-freshness-check",
@@ -98,7 +98,7 @@
     },
     {
       "path": "/api/cron/statcast-integrity-check",
-      "schedule": "45 11 * * *"
+      "schedule": "20 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-affinity",
@@ -106,7 +106,11 @@
     },
     {
       "path": "/api/cron/dugout-statcast-precompute",
-      "schedule": "20 10 * * *"
+      "schedule": "25 10 * * *"
+    },
+    {
+      "path": "/api/cron/dugout-statcast-precompute?currentOnly=1",
+      "schedule": "25 11-16 * * *"
     },
     {
       "path": "/api/cron/dugout-matchup-edge-precompute",
@@ -122,7 +126,7 @@
     },
     {
       "path": "/api/cron/research-mechanics-precompute",
-      "schedule": "38 10 * * *"
+      "schedule": "38 10-16 * * *"
     },
     {
       "path": "/api/cron/market-dna-maintenance",

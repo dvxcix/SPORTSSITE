@@ -53,14 +53,15 @@ export async function precomputeDugoutStatcastForDate(date: string): Promise<{ d
   // re-run. The raw pitch-log/Savant rows fetched above are hand-agnostic
   // (one fetch per batter covers both), so this only doubles the cheap
   // in-memory aggregation step, not the real DB read cost.
-  const rows: { game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine> }[] = []
+  const rows: { game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine>; computed_at: string }[] = []
   const dataThroughDate = priorPregameDate(date)
+  const computedAt = new Date().toISOString()
   for (const mlbId of batterIds) {
     const bats = batsById.get(mlbId) || '?'
     const pitchRows = pitchRowsByBatter[mlbId] ?? []
     const savantRows = savantRowsByBatter[mlbId] ?? []
     for (const hand of ['L', 'R'] as const) {
-      rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllStatcastWindows(pitchRows, savantRows, bats, hand, dataThroughDate) })
+      rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllStatcastWindows(pitchRows, savantRows, bats, hand, dataThroughDate), computed_at: computedAt })
     }
   }
 
