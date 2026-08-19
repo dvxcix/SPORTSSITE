@@ -196,8 +196,8 @@ function GameAnalysisPanel({ analysis, liveGame }: { analysis: MarketDnaGameAnal
     {validation ? <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-black text-white">Held-out validation</p><p className="text-[10px] text-zinc-600">Games from {validation.cutoff} forward were excluded from that validation model.</p></div><span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-2.5 py-1 text-[9px] font-black uppercase text-lime-300">{analysis.reducer?.version}</span></div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryMetric label="Game-first top one" value={pct(validation.gameFirstTopOne)} detail={`Learned-only: ${pct(validation.learnedTopOne)}`} />
-        <SummaryMetric label="Game-first top two" value={pct(validation.gameFirstTopTwo)} detail={`Top three: ${pct(validation.gameFirstTopThree)}`} tone="text-lime-300" />
+        <SummaryMetric label="Guarded top one" value={pct(validation.guardedTopOne)} detail={validation.guardActive ? `Market guard active · raw learned ${pct(validation.gameFirstTopOne)}` : `Learned-only: ${pct(validation.learnedTopOne)}`} />
+        <SummaryMetric label="Guarded top two" value={pct(validation.guardedTopTwo)} detail={`Top three: ${pct(validation.guardedTopThree)}`} tone="text-lime-300" />
         <SummaryMetric label="Selected coverage" value={pct(validation.selectedGameCoverage)} detail={`Player precision: ${pct(validation.selectedPlayerPrecision)}`} />
         <SummaryMetric label="Count model" value={pct(validation.countBucketAccuracy)} detail={`No-HR: ${pct(validation.noHrAccuracy)} · MAE ${validation.countMae.toFixed(2)}`} />
       </div>

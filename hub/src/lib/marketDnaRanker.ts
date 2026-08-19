@@ -31,12 +31,17 @@ export type MarketDnaRankerValidation = {
   noHrGames: number
   marketTopOne: number
   marketTopTwo: number
+  marketTopThree: number
   learnedTopOne: number
   learnedTopTwo: number
   learnedTopThree: number
   gameFirstTopOne: number
   gameFirstTopTwo: number
   gameFirstTopThree: number
+  guardedTopOne: number
+  guardedTopTwo: number
+  guardedTopThree: number
+  guardActive: boolean
   selectedGameCoverage: number
   selectedPlayerPrecision: number
   countBucketAccuracy: number
@@ -63,7 +68,8 @@ type GameCountModel = {
 }
 
 export type MarketDnaRankerArtifact = {
-  version: 'game-first-gbdt-v4'
+  version: 'game-first-gbdt-v5'
+  rankingMode: 'learned-lanes' | 'market-guard'
   trainedThrough: string
   trainingRows: number
   trainingGames: number
@@ -311,15 +317,23 @@ function scoreCountModel(model: GameCountModel, rows: MarketDnaRankerRow[]) {
   return softmax(model.weights.map(row => row.reduce((sum, weight, index) => sum + weight * vector[index], 0)))
 }
 
+function candidateLimitFor(probabilities: number[], expectedHomeRuns: number) {
+  // A zero-card read is intentionally fail-closed. The first v4 holdout did not
+  // correctly identify any no-HR game, so a plurality zero bucket is not enough.
+  if (probabilities[0] >= .60) return 0
+  if (expectedHomeRuns < 1.5) return 1
+  if (expectedHomeRuns < 2.5) return 2
+  if (expectedHomeRuns < 3.5) return 3
+  return 4
+}
+
 export function projectMarketDnaGame(artifact: MarketDnaRankerArtifact, featureVectors: Record<string, number>[]): MarketDnaGameProjection {
   const rows = featureVectors.map((feature_vector, index) => ({ game_date: '', game_pk: 0, mlb_id: index, did_hr: false, feature_vector }))
   const probabilities = scoreCountModel(artifact.countModel, rows)
   const bucket = probabilities.indexOf(Math.max(...probabilities)) as 0 | 1 | 2 | 3
   const expectedHomeRuns = probabilities[1] + probabilities[2] * 2 + probabilities[3] * 3.6
   const confidence = Math.max(...probabilities)
-  let candidateLimit: number = bucket
-  if (bucket === 0 && (probabilities[1] + probabilities[2] + probabilities[3]) >= .58) candidateLimit = 1
-  if (bucket === 3 && expectedHomeRuns >= 3.55) candidateLimit = 4
+  const candidateLimit = candidateLimitFor(probabilities, expectedHomeRuns)
   return {
     bucket,
     label: bucket === 3 ? '3+' : `${bucket}` as '0' | '1' | '2',
@@ -397,10 +411,11 @@ function gameFirstScore(core: ReturnType<typeof trainCore>, game: MarketDnaRanke
 function validate(core: ReturnType<typeof trainCore>, rows: MarketDnaRankerRow[], cutoff: string): MarketDnaRankerValidation {
   const games = groupCompleteGames(rows)
   const gamesWithHr = games.filter(game => game.some(row => row.did_hr))
-  let marketTopOne = 0, marketTopTwo = 0, learnedTopOne = 0, learnedTopTwo = 0, learnedTopThree = 0
+  let marketTopOne = 0, marketTopTwo = 0, marketTopThree = 0, learnedTopOne = 0, learnedTopTwo = 0, learnedTopThree = 0
   let gameFirstTopOne = 0, gameFirstTopTwo = 0, gameFirstTopThree = 0
   let marketRankSum = 0, learnedRankSum = 0, gameFirstRankSum = 0, homerCount = 0
-  let countCorrect = 0, noHrCorrect = 0, countError = 0, selectedCovered = 0, selectedHits = 0, selectedPlayers = 0
+  let countCorrect = 0, noHrCorrect = 0, countError = 0
+  const selectionAudits: Array<{ actualIds: Set<number>; market: MarketDnaRankerRow[]; gameFirst: ReturnType<typeof gameFirstScore>; selectedCount: number }> = []
   for (const game of games) {
     const actualIds = new Set(game.filter(row => row.did_hr).map(row => row.mlb_id))
     const market = [...game].sort((a, b) => featureValue(b, 'market.hr.probability') - featureValue(a, 'market.hr.probability'))
@@ -413,20 +428,14 @@ function validate(core: ReturnType<typeof trainCore>, rows: MarketDnaRankerRow[]
     countCorrect += Number(predictedBucket === actualBucket)
     if (actualBucket === 0) noHrCorrect += Number(predictedBucket === 0)
     countError += Math.abs(expected - homeRunCount(game))
-    let selectedCount: number = predictedBucket
-    if (predictedBucket === 0 && 1 - probabilities[0] >= .58) selectedCount = 1
-    if (predictedBucket === 3 && expected >= 3.55) selectedCount = 4
-    const selected = gameFirst.slice(0, selectedCount)
-    selectedPlayers += selected.length
-    const hits = selected.filter(entry => actualIds.has(entry.row.mlb_id)).length
-    selectedHits += hits
-    selectedCovered += Number(hits > 0 || (actualIds.size === 0 && selected.length === 0))
+    selectionAudits.push({ actualIds, market, gameFirst, selectedCount: candidateLimitFor(probabilities, expected) })
     if (!actualIds.size) continue
     const marketRanks = [...actualIds].map(id => market.findIndex(row => row.mlb_id === id) + 1)
     const learnedRanks = [...actualIds].map(id => learned.findIndex(row => row.mlb_id === id) + 1)
     const gameFirstRanks = [...actualIds].map(id => gameFirst.findIndex(entry => entry.row.mlb_id === id) + 1)
     if (Math.min(...marketRanks) <= 1) marketTopOne++
     if (Math.min(...marketRanks) <= 2) marketTopTwo++
+    if (Math.min(...marketRanks) <= 3) marketTopThree++
     if (Math.min(...learnedRanks) <= 1) learnedTopOne++
     if (Math.min(...learnedRanks) <= 2) learnedTopTwo++
     if (Math.min(...learnedRanks) <= 3) learnedTopThree++
@@ -440,16 +449,38 @@ function validate(core: ReturnType<typeof trainCore>, rows: MarketDnaRankerRow[]
   }
   const hrCount = gamesWithHr.length
   const noHrCount = games.length - hrCount
+  const marketTopOneRate = hrCount ? marketTopOne / hrCount : 0
+  const marketTopTwoRate = hrCount ? marketTopTwo / hrCount : 0
+  const marketTopThreeRate = hrCount ? marketTopThree / hrCount : 0
+  const gameFirstTopOneRate = hrCount ? gameFirstTopOne / hrCount : 0
+  const gameFirstTopTwoRate = hrCount ? gameFirstTopTwo / hrCount : 0
+  const gameFirstTopThreeRate = hrCount ? gameFirstTopThree / hrCount : 0
+  const guardActive = gameFirstTopTwoRate + .02 < marketTopTwoRate
+  let selectedCovered = 0, selectedHits = 0, selectedPlayers = 0
+  for (const audit of selectionAudits) {
+    const selectedIds = guardActive
+      ? audit.market.slice(0, audit.selectedCount).map(row => row.mlb_id)
+      : audit.gameFirst.slice(0, audit.selectedCount).map(entry => entry.row.mlb_id)
+    selectedPlayers += selectedIds.length
+    const hits = selectedIds.filter(id => audit.actualIds.has(id)).length
+    selectedHits += hits
+    selectedCovered += Number(hits > 0 || (audit.actualIds.size === 0 && selectedIds.length === 0))
+  }
   return {
     cutoff, games: games.length, gamesWithHr: hrCount, noHrGames: noHrCount,
-    marketTopOne: hrCount ? marketTopOne / hrCount : 0,
-    marketTopTwo: hrCount ? marketTopTwo / hrCount : 0,
+    marketTopOne: marketTopOneRate,
+    marketTopTwo: marketTopTwoRate,
+    marketTopThree: marketTopThreeRate,
     learnedTopOne: hrCount ? learnedTopOne / hrCount : 0,
     learnedTopTwo: hrCount ? learnedTopTwo / hrCount : 0,
     learnedTopThree: hrCount ? learnedTopThree / hrCount : 0,
-    gameFirstTopOne: hrCount ? gameFirstTopOne / hrCount : 0,
-    gameFirstTopTwo: hrCount ? gameFirstTopTwo / hrCount : 0,
-    gameFirstTopThree: hrCount ? gameFirstTopThree / hrCount : 0,
+    gameFirstTopOne: gameFirstTopOneRate,
+    gameFirstTopTwo: gameFirstTopTwoRate,
+    gameFirstTopThree: gameFirstTopThreeRate,
+    guardedTopOne: guardActive ? marketTopOneRate : gameFirstTopOneRate,
+    guardedTopTwo: guardActive ? marketTopTwoRate : gameFirstTopTwoRate,
+    guardedTopThree: guardActive ? marketTopThreeRate : gameFirstTopThreeRate,
+    guardActive,
     selectedGameCoverage: games.length ? selectedCovered / games.length : 0,
     selectedPlayerPrecision: selectedPlayers ? selectedHits / selectedPlayers : 0,
     countBucketAccuracy: games.length ? countCorrect / games.length : 0,
@@ -473,7 +504,8 @@ export function trainMarketDnaRanker(rows: MarketDnaRankerRow[], targetDate: str
   }
   const core = trainCore(priorRows)
   return {
-    version: 'game-first-gbdt-v4',
+    version: 'game-first-gbdt-v5',
+    rankingMode: validationResult?.guardActive ? 'market-guard' : 'learned-lanes',
     trainedThrough: dates.at(-1)!,
     trainingRows: core.trainingRows,
     trainingGames: core.trainingGames,

@@ -206,7 +206,7 @@ export type MarketDnaGameRank = {
   profileScore: number
   learnedProbability: number | null
   laneScores: MarketDnaLaneScores
-  selectedLane: 'primary' | 'secondary' | 'conditional' | null
+  selectedLane: 'primary' | 'secondary' | 'conditional' | 'market-guard' | null
   gapFromLeader: number
   player: MarketDnaPlayer
   components: MarketDnaGameComponents
@@ -1196,7 +1196,7 @@ async function loadOrTrainMarketDnaRanker(
   }, null)
   const modelUpdatedAt = typeof data?.updated_at === 'string' ? data.updated_at : null
   const archiveIsNewer = newestArchiveUpdate != null && (!modelUpdatedAt || newestArchiveUpdate > modelUpdatedAt)
-  if (storedArtifact?.version === 'game-first-gbdt-v4' && !archiveIsNewer) return storedArtifact
+  if (storedArtifact?.version === 'game-first-gbdt-v5' && !archiveIsNewer) return storedArtifact
 
   const artifact = trainMarketDnaRanker(rows, targetDate)
   if (!error) {
@@ -1232,9 +1232,12 @@ function applyLearnedGameRanking(
   ]))
   const scored = learnedRows.map(row => {
     const relative = learnedRelative.get(row.entry.player.mlbId) ?? .5
+    const marketGuardScore = row.vector['market.hr.probability'] ?? .5
     return {
       ...row.entry,
-      score: (relative * .44 + row.lane.composite * .56) * 100,
+      score: (artifact.rankingMode === 'market-guard'
+        ? marketGuardScore
+        : relative * .44 + row.lane.composite * .56) * 100,
       learnedProbability: row.learned.probability,
       laneScores: {
         market: row.lane.market * 100,
@@ -1243,7 +1246,7 @@ function applyLearnedGameRanking(
         leverage: row.lane.leverage * 100,
         composite: row.lane.composite * 100,
       },
-      selectedLane: null,
+      selectedLane: artifact.rankingMode === 'market-guard' ? 'market-guard' as const : null,
     }
   }).sort((a, b) => b.score - a.score || b.profileScore - a.profileScore)
   const leader = scored[0]?.score ?? 0
@@ -1278,6 +1281,7 @@ function buildCandidates(
       player: entry.player,
       reasons: [
         `Complete-board rank #${entry.rank}; market ${entry.laneScores.market.toFixed(0)}, settlement ${entry.laneScores.settlement.toFixed(0)}, mechanics ${entry.laneScores.mechanics.toFixed(0)}.`,
+        artifactRankingReason(entry, projection),
         entry.laneScores.leverage >= 60
           ? 'Implied HR share is stronger than public exposure after MM, movement and adjacent-lineup context.'
           : 'The read is supported by the market-and-contact stack rather than public underexposure alone.',
@@ -1286,6 +1290,12 @@ function buildCandidates(
     }
   })
   return { candidates, readState }
+}
+
+function artifactRankingReason(entry: MarketDnaGameRank, projection: MarketDnaGameProjection) {
+  return entry.selectedLane === 'market-guard'
+    ? 'Validation guard is active: the learned ordering was not allowed to override the stronger held-out HR-price baseline.'
+    : `The ${projection.label}-HR game shape is ranked through the learned market, settlement, mechanics and leverage stack.`
 }
 
 function attachGameOutcomes(

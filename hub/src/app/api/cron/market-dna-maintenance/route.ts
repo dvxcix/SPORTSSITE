@@ -8,6 +8,7 @@ export const revalidate = 0
 export const maxDuration = 300
 
 const MAX_BACKFILL_DATES = 4
+const STRICT_ARCHIVE_START = '2026-07-16'
 
 function shiftDate(date: string, days: number) {
   const value = new Date(`${date}T12:00:00Z`)
@@ -31,21 +32,45 @@ async function run(req: Request) {
   const admin = createAdminClient()
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const throughDate = shiftDate(todayEt, -1)
-  const { data: newest, error: newestError } = await admin
-    .from('market_dna_profile_archive')
-    .select('game_date')
-    .lte('game_date', throughDate)
-    .order('game_date', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (newestError) throw newestError
+  const coverage: Array<{ game_date: string; source_version: string | null }> = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin
+      .from('market_dna_profile_archive')
+      .select('game_date,source_version')
+      .gte('game_date', STRICT_ARCHIVE_START)
+      .lte('game_date', throughDate)
+      .order('game_date', { ascending: true })
+      .range(from, from + 999)
+    if (error) throw error
+    const page = (data ?? []) as Array<{ game_date: string; source_version: string | null }>
+    coverage.push(...page)
+    if (page.length < 1000) break
+  }
 
-  const dates: string[] = []
-  for (let date = shiftDate(newest?.game_date ?? throughDate, 1); date <= throughDate && dates.length < MAX_BACKFILL_DATES; date = shiftDate(date, 1)) {
-    dates.push(date)
+  const capturedDates = [...new Set(coverage.map(row => row.game_date))].sort()
+  const strictDates = new Set(coverage.filter(row => row.source_version === 'canonical-v3-strict-mechanics').map(row => row.game_date))
+  const dates = capturedDates.filter(date => !strictDates.has(date)).slice(0, MAX_BACKFILL_DATES)
+  const newestCaptured = capturedDates.at(-1)
+  if (dates.length < MAX_BACKFILL_DATES) {
+    for (let date = shiftDate(newestCaptured ?? throughDate, 1); date <= throughDate && dates.length < MAX_BACKFILL_DATES; date = shiftDate(date, 1)) {
+      dates.push(date)
+    }
   }
 
   const archived = await pooled(dates, 2, date => archiveMarketDnaDate(date))
+  // Four historical board rebuilds plus a model fit approached the function's
+  // hard runtime ceiling. Backfill first; the admin request retrains whenever it
+  // sees a newer archive, and the cron resumes model fitting once the gap closes.
+  if (dates.length >= 2) {
+    return NextResponse.json({
+      ok: true,
+      todayEt,
+      throughDate,
+      archived,
+      modelDeferredForBackfill: true,
+      strictDates: strictDates.size + dates.length,
+    })
+  }
   const slate = await buildMarketDnaSlate(todayEt)
   const analysis = await analyzeMarketDnaSlate(todayEt, slate.games)
   const reducer = analysis.games.find(game => game.reducer)?.reducer ?? null
