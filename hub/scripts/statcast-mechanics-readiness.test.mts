@@ -70,7 +70,7 @@ test('defers when materialized Statcast fields fail integrity', () => {
   assert.equal(result.stage, 'integrity_failed')
 })
 
-test('defers until every required batter-hand profile is rebuilt after the audit', () => {
+test('defers until every required batter-hand profile exists for the exact game date', () => {
   const result = evaluateMechanicsReadiness({
     gameDate,
     currentDate: gameDate,
@@ -79,12 +79,25 @@ test('defers until every required batter-hand profile is rebuilt after the audit
     categoryRows: readyCategories,
     derivedRows: [
       readyRows[0],
-      { ...readyRows[1], computed_at: '2026-08-19T10:15:00.000Z' },
     ],
   })
   assert.equal(result.ready, false)
   assert.equal(result.stage, 'dugout_statcast_pending')
   assert.deepEqual(result.missingProfiles, ['2:L'])
+})
+
+test('does not invalidate exact-date profiles when a later integrity audit runs', () => {
+  const result = evaluateMechanicsReadiness({
+    gameDate,
+    currentDate: gameDate,
+    audit: audit({ created_at: '2026-08-19T11:20:00.000Z' }),
+    requirements,
+    categoryRows: readyCategories.map(row => ({ ...row, last_synced_at: '2026-08-19T11:00:00.000Z' })),
+    derivedRows: readyRows,
+  })
+  assert.equal(result.ready, true)
+  assert.equal(result.stage, 'ready')
+  assert.equal(result.freshnessBoundary, '2026-08-19T10:25:00.000Z')
 })
 
 test('opens the gate only after canonical and derived inputs are current', () => {

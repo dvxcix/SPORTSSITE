@@ -6,6 +6,7 @@ import {
   type MechanicsWindow,
 } from '@/lib/hrMechanics'
 import { compactMechanicsByPlayer, getGameMechanicsWindows } from '@/lib/hrMechanicsCache'
+import { StatcastSourcesNotReadyError } from '@/lib/statcastMechanicsReadiness'
 
 export const revalidate = 0
 
@@ -47,6 +48,22 @@ export async function GET(req: Request) {
       },
     })
   } catch (cause) {
+    if (cause instanceof StatcastSourcesNotReadyError) {
+      const retryAfter = cause.readiness.retryAt
+        ? Math.max(5, Math.ceil((new Date(cause.readiness.retryAt).getTime() - Date.now()) / 1000))
+        : 30
+      return NextResponse.json({
+        error: cause.readiness.reason,
+        stage: cause.readiness.stage,
+        retryAt: cause.readiness.retryAt,
+      }, {
+        status: 425,
+        headers: {
+          'Cache-Control': 'private, no-store',
+          'Retry-After': String(retryAfter),
+        },
+      })
+    }
     console.error('[research/mechanics]', cause)
     return NextResponse.json({ error: 'The mechanics model could not be prepared for this game.' }, { status: 500 })
   }

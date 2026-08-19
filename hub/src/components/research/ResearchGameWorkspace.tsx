@@ -215,25 +215,47 @@ export function ResearchGameWorkspace({ date, game }: { date: string; game: Toda
   const [query, setQuery] = useState('')
   const [matchupContext, setMatchupContext] = useState<MatchupResearchContext | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [mechanicsWaitReason, setMechanicsWaitReason] = useState<string | null>(null)
+  const [mechanicsRetry, setMechanicsRetry] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
     fetch(`/api/research/mechanics?date=${date}&gamePk=${game.gamePk}&window=${window}`, { signal: controller.signal })
       .then(async response => {
         const body = await response.json().catch(() => null)
-        if (!response.ok) throw new Error(body?.error ?? 'Mechanics data is unavailable.')
+        if (!response.ok) {
+          throw Object.assign(new Error(body?.error ?? 'Mechanics data is unavailable.'), {
+            status: response.status,
+            retryAfter: Number(response.headers.get('Retry-After')) || 30,
+          })
+        }
         return body as GameMechanicsResult
       })
       .then(mechanicsBody => {
         setError(null)
+        setMechanicsWaitReason(null)
         setMechanics(mechanicsBody)
         setSelectedId(current => mechanicsBody.players.some(player => player.playerId === current) ? current : mechanicsBody.players[0]?.playerId ?? null)
       })
       .catch(cause => {
-        if (cause?.name !== 'AbortError') setError(cause instanceof Error ? cause.message : 'Mechanics data could not be loaded.')
+        if (cause?.name === 'AbortError') return
+        if (cause?.status === 425) {
+          setError(null)
+          setMechanicsWaitReason(cause instanceof Error ? cause.message : 'Verified Statcast inputs are still being prepared.')
+          retryTimer = setTimeout(
+            () => setMechanicsRetry(value => value + 1),
+            Math.min(60_000, Math.max(5_000, Number(cause.retryAfter || 30) * 1_000)),
+          )
+          return
+        }
+        setError(cause instanceof Error ? cause.message : 'Mechanics data could not be loaded.')
       })
-    return () => controller.abort()
-  }, [date, game.gamePk, window])
+    return () => {
+      controller.abort()
+      if (retryTimer) clearTimeout(retryTimer)
+    }
+  }, [date, game.gamePk, mechanicsRetry, window])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -322,7 +344,7 @@ export function ResearchGameWorkspace({ date, game }: { date: string; game: Toda
   }, [])
 
   if (error && (!mechanics || !dugout)) return <div className={styles.state} data-error><Flame /><strong>Unified game workspace unavailable</strong><span>{error}</span></div>
-  if (!mechanics || !dugout) return <div className={styles.state}><Dna className={styles.spin} /><strong>Assembling the complete game</strong><span>Mechanics, matchup science, Dugout structure, public action and every captured price.</span></div>
+  if (!mechanics || !dugout) return <div className={styles.state}><Dna className={styles.spin} /><strong>Assembling the complete game</strong><span>{mechanicsWaitReason ?? 'Mechanics, matchup science, Dugout structure, public action and every captured price.'}</span></div>
 
   return (
     <div className={styles.workspace}>

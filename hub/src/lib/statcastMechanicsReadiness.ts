@@ -146,7 +146,7 @@ export function evaluateMechanicsReadiness(input: {
   const missingProfiles = requirements
     .filter(requirement => {
       const row = rowMap.get(`${requirement.mlbId}:${requirement.pitcherHand}`)
-      return !row || new Date(row.computed_at).getTime() < auditTime
+      return !row
     })
     .map(requirement => `${requirement.mlbId}:${requirement.pitcherHand}`)
   if (missingProfiles.length) {
@@ -159,12 +159,17 @@ export function evaluateMechanicsReadiness(input: {
     }
   }
 
-  const freshnessBoundary = [audit.created_at, ...derivedRows.map(row => row.computed_at)]
+  // The integrity audit's created_at value is the time the audit ran, not the
+  // time canonical Statcast changed. Treating it as a source watermark made
+  // every hourly audit invalidate all same-day derived profiles until the next
+  // precompute pass. Exact-date profile presence is the readiness contract;
+  // their own computed_at values are the cache freshness watermark.
+  const freshnessBoundary = derivedRows.map(row => row.computed_at)
     .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? audit.created_at
   return {
     ready: true,
     stage: 'ready',
-    reason: `Verified through ${requiredThroughDate}; every required game profile was rebuilt after the integrity audit.`,
+    reason: `Verified through ${requiredThroughDate}; every required game profile is available.`,
     gameDate,
     requiredThroughDate,
     freshnessBoundary,
