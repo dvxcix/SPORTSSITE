@@ -12,7 +12,10 @@ export const GET = withPipelineHealth('whop-addon-reconcile', run)
 // not the primary grant path anymore. Runs every 15 minutes (see
 // vercel.json) — cheap now that this fetches every page via
 // fetchAllWhopMemberships() and no longer touches downgrades, so more
-// frequent runs don't risk anything, just catch stragglers faster.
+// frequent runs catch both missed grants and ended cancellations quickly.
+// Revocation remains fail-closed: an explicit inactive provider record is
+// authoritative, while a missing record is only actionable after a locally
+// recorded scheduled cancellation has passed its paid-through boundary.
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError

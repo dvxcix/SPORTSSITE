@@ -36,3 +36,20 @@ export function whopMembershipGrantsAccess(record: WhopAccessRecord, now = Date.
   if (['active', 'valid', 'trialing', 'canceling', 'past_due', 'completed'].includes(status)) return true
   return whopCancellationKeepsAccess(record, now)
 }
+
+export function shouldRevokeStoredWhopAccess(
+  providerRecord: WhopAccessRecord | undefined,
+  stored: { cancelAtPeriodEnd?: boolean | null; periodEnd?: string | null },
+  now = Date.now(),
+): boolean {
+  // A record returned by Whop is authoritative. Never infer access from our
+  // stale local period once the provider has explicitly marked it inactive.
+  if (providerRecord) return !whopMembershipGrantsAccess(providerRecord, now)
+
+  // Whop can age a canceled membership out of a plan listing. Absence alone
+  // is not enough to revoke access, but absence after the member explicitly
+  // scheduled cancellation and the paid-through boundary has passed is.
+  if (stored.cancelAtPeriodEnd !== true || !stored.periodEnd) return false
+  const periodEnd = Date.parse(stored.periodEnd)
+  return Number.isFinite(periodEnd) && periodEnd <= now
+}

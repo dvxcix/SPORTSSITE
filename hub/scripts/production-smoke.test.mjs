@@ -293,6 +293,7 @@ test('Whop billing retries are bounded without breaking idempotency or legacy ac
     assert.ok(reconcile.includes('linkedOwnerByMembershipId'))
     assert.ok(reconcile.includes("select('id, whop_membership_id')"))
     assert.ok(reconcile.includes('whopMembershipGrantsAccess'))
+    assert.ok(reconcile.includes('shouldRevokeStoredWhopAccess'))
     assert.ok(reconcile.includes('tier_cancel_at_period_end'))
   }
   assert.ok(whop.includes("cancellation_mode: immediate ? 'immediate' : 'at_period_end'"))

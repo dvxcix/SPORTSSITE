@@ -3,9 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
-import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
+import { fetchAllWhopMemberships, type WhopMembershipRecord } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
-import { whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
+import { shouldRevokeStoredWhopAccess, whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
 // Same safety-net reasoning as whopAddonReconcile.ts, for the MAIN
 // tier-payments business — confirmed live that its webhook (/api/webhooks/whop)
@@ -37,6 +37,20 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   const results: Record<string, unknown>[] = []
   let totalMemberships = 0
 
+  // Load every locally stored membership owned by this Whop business, not
+  // just users found in today's active provider set. The latter can grant or
+  // refresh access but can never discover a canceled membership that needs
+  // removing, which is how ended trials remained Ultimate indefinitely.
+  const { data: trackedOwners, error: trackedOwnersError } = await admin
+    .from('users')
+    .select('id, whop_membership_id')
+    .in('whop_plan_id', MAIN_PLAN_IDS)
+    .neq('tier', 'free')
+  if (trackedOwnersError) return { error: `Could not load tracked memberships: ${trackedOwnersError.message}` }
+  const linkedOwnerByMembershipId = new Map((trackedOwners ?? [])
+    .filter(user => user.whop_membership_id)
+    .map(user => [user.whop_membership_id as string, user.id as string]))
+
   // A user can end up with more than one simultaneously active membership
   // across different plans — confirmed live: a customer with a real,
   // currently-active paid Basic subscription also held an active Advanced
@@ -63,19 +77,7 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // linked by their provider membership id. Resolve those links before
   // selecting the best active plan so account email changes never sever
   // billing access.
-  const legacyMembershipIds = [...new Set(planFetches.flatMap(entry => {
-    if ('error' in entry.fetched) return []
-    return entry.fetched.memberships
-      .filter(membership => !membership.metadata?.internal_user_id && membership.id)
-      .map(membership => membership.id as string)
-  }))]
-  const { data: linkedUsers, error: linkedUsersError } = legacyMembershipIds.length
-    ? await admin.from('users').select('id, whop_membership_id').in('whop_membership_id', legacyMembershipIds)
-    : { data: [], error: null }
-  if (linkedUsersError) return { error: `Could not resolve linked memberships: ${linkedUsersError.message}` }
-  const linkedOwnerByMembershipId = new Map((linkedUsers ?? [])
-    .filter(user => user.whop_membership_id)
-    .map(user => [user.whop_membership_id as string, user.id as string]))
+  const providerMembershipById = new Map<string, WhopMembershipRecord>()
 
   for (const { planId, fetched } of planFetches) {
     const planInfo = WHOP_PLANS[planId]
@@ -84,6 +86,7 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     totalMemberships += memberships.length
 
     for (const m of memberships) {
+      if (m.id) providerMembershipById.set(m.id, m)
       const status: string | undefined = m.status ?? m.valid_status
       const isActive = whopMembershipGrantsAccess(m)
       const membershipId: string | undefined = m.id
@@ -111,9 +114,9 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     }
   }
 
-  const activeUserIds = [...bestByUser.keys()]
-  const { data: existingUsers, error: existingUsersError } = activeUserIds.length
-    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
+  const relevantUserIds = [...new Set([...bestByUser.keys(), ...(trackedOwners ?? []).map(user => user.id as string)])]
+  const { data: existingUsers, error: existingUsersError } = relevantUserIds.length
+    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', relevantUserIds)
     : { data: [], error: null }
   if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
   const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
@@ -144,7 +147,9 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     // cancellation) still reach the user via the webhook's own
     // membership-specific deactivation path, which IS scoped correctly.
     const currentTier = (existing?.tier as Tier | undefined) ?? 'free'
-    if (TIER_RANK[best.tier] < TIER_RANK[currentTier]) {
+    const currentPlan = existing.whop_plan_id ? WHOP_PLANS[existing.whop_plan_id] : undefined
+    const currentTierComesFromOtherBusiness = currentPlan?.company === 'addon'
+    if (TIER_RANK[best.tier] < TIER_RANK[currentTier] && currentTierComesFromOtherBusiness) {
       results.push({ planId: best.planId, membershipId: best.membershipId, internalUserId, skipped: `current tier ${currentTier} already higher (likely granted by the addon business)` })
       continue
     }
@@ -193,10 +198,34 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     results.push({ planId: best.planId, membershipId: best.membershipId, internalUserId, username: updated.username, granted: best.tier })
   }
 
-  // Downgrade side REMOVED — same reasoning as whopAddonReconcile.ts. Every
-  // page is now fetched (see fetchAllWhopMemberships), but the webhook fix
-  // already covers real cancellations, so there's no need to reintroduce
-  // grant-then-strip risk here.
+  for (const existing of existingUsers ?? []) {
+    if (!existing.whop_membership_id || !MAIN_PLAN_IDS.includes(existing.whop_plan_id ?? '')) continue
+    if (bestByUser.has(existing.id as string)) continue
+    const providerRecord = providerMembershipById.get(existing.whop_membership_id)
+    if (!shouldRevokeStoredWhopAccess(providerRecord, {
+      cancelAtPeriodEnd: existing.tier_cancel_at_period_end,
+      periodEnd: existing.tier_current_period_end,
+    })) continue
+
+    const currentTier = (existing.tier as Tier | undefined) ?? 'free'
+    const previousEffectiveTier = effectiveTier(currentTier, existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const nextEffectiveTier = effectiveTier('free', existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const { error } = await admin.from('users').update({
+      tier: 'free',
+      tier_status: 'membership.reconciled_inactive',
+      tier_purchased_at: null,
+      tier_cancel_at_period_end: false,
+    }).eq('id', existing.id).eq('whop_membership_id', existing.whop_membership_id)
+    if (error) {
+      results.push({ internalUserId: existing.id, error: error.message })
+      continue
+    }
+    if (previousEffectiveTier !== nextEffectiveTier) {
+      await syncTierBadge(admin, existing.id as string, nextEffectiveTier)
+      await syncDiscordRoleForUser(admin, existing.id as string)
+    }
+    results.push({ internalUserId: existing.id, membershipId: existing.whop_membership_id, revoked: currentTier })
+  }
 
   return { totalMemberships, results }
 }

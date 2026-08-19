@@ -5,7 +5,7 @@ import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { fetchAllWhopMemberships } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
-import { whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
+import { shouldRevokeStoredWhopAccess, whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
 // Shared by the admin route (manual/emergency re-run) and the hourly cron
 // (see vercel.json) — safety net for the addon Whop business's webhook,
@@ -45,19 +45,21 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
   const memberships = fetched.memberships
 
   const admin = createAdminClient()
+  const { data: trackedOwners, error: trackedOwnersError } = await admin
+    .from('users')
+    .select('id, whop_membership_id')
+    .eq('whop_plan_id', ADDON_PLAN_ID)
+    .neq('tier', 'free')
+  if (trackedOwnersError) return { error: `Could not load tracked memberships: ${trackedOwnersError.message}` }
   // Older memberships predate checkout metadata. Preserve their stable
   // account link through users.whop_membership_id so an email change cannot
   // make a paying member invisible to reconciliation.
-  const legacyMembershipIds = [...new Set(memberships
-    .filter(membership => !membership.metadata?.internal_user_id && membership.id)
-    .map(membership => membership.id as string))]
-  const { data: linkedUsers, error: linkedUsersError } = legacyMembershipIds.length
-    ? await admin.from('users').select('id, whop_membership_id').in('whop_membership_id', legacyMembershipIds)
-    : { data: [], error: null }
-  if (linkedUsersError) return { error: `Could not resolve linked memberships: ${linkedUsersError.message}` }
-  const linkedOwnerByMembershipId = new Map((linkedUsers ?? [])
+  const linkedOwnerByMembershipId = new Map((trackedOwners ?? [])
     .filter(user => user.whop_membership_id)
     .map(user => [user.whop_membership_id as string, user.id as string]))
+  const providerMembershipById = new Map(memberships
+    .filter(membership => membership.id)
+    .map(membership => [membership.id as string, membership]))
 
   const results: Record<string, unknown>[] = []
   const bestByUser = new Map<string, ActiveMembership>()
@@ -79,9 +81,9 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     const currentEnd = current?.periodEnd ? Date.parse(current.periodEnd) : 0
     if (!current || candidateEnd > currentEnd) bestByUser.set(internalUserId, candidate)
   }
-  const activeUserIds = [...bestByUser.keys()]
-  const { data: existingUsers, error: existingUsersError } = activeUserIds.length
-    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', activeUserIds)
+  const relevantUserIds = [...new Set([...bestByUser.keys(), ...(trackedOwners ?? []).map(user => user.id as string)])]
+  const { data: existingUsers, error: existingUsersError } = relevantUserIds.length
+    ? await admin.from('users').select('id, tier, tier_purchased_at, tier_cancel_at_period_end, whop_plan_id, tier_status, tier_current_period_end, whop_membership_id, discord_advanced_claimed, admin_granted_tier, email, username').in('id', relevantUserIds)
     : { data: [], error: null }
   if (existingUsersError) return { error: `Could not load existing users: ${existingUsersError.message}` }
   const existingById = new Map((existingUsers ?? []).map(user => [user.id as string, user]))
@@ -160,13 +162,34 @@ export async function reconcileWhopAddon(): Promise<ReconcileResult> {
     results.push({ membershipId, internalUserId, username: updated.username, status, granted: planInfo.tier })
   }
 
-  // Downgrade side REMOVED — confirmed live it was actively harmful when
-  // this route only ever saw page 1 of a paginated response. Now that every
-  // page is fetched (see fetchAllWhopMemberships) it would be safe to add
-  // back, but the webhook signature bug is also fixed now, so real
-  // cancellations already downgrade correctly via
-  // membership.deactivated/went_invalid events — no need to re-add
-  // grant-then-strip risk here for coverage that already exists elsewhere.
+  for (const existing of existingUsers ?? []) {
+    if (existing.whop_plan_id !== ADDON_PLAN_ID || !existing.whop_membership_id) continue
+    if (bestByUser.has(existing.id as string)) continue
+    const providerRecord = providerMembershipById.get(existing.whop_membership_id)
+    if (!shouldRevokeStoredWhopAccess(providerRecord, {
+      cancelAtPeriodEnd: existing.tier_cancel_at_period_end,
+      periodEnd: existing.tier_current_period_end,
+    })) continue
+
+    const currentTier = (existing.tier as Tier | undefined) ?? 'free'
+    const previousEffectiveTier = effectiveTier(currentTier, existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const nextEffectiveTier = effectiveTier('free', existing.discord_advanced_claimed, existing.admin_granted_tier)
+    const { error } = await admin.from('users').update({
+      tier: 'free',
+      tier_status: 'membership.reconciled_inactive',
+      tier_purchased_at: null,
+      tier_cancel_at_period_end: false,
+    }).eq('id', existing.id).eq('whop_membership_id', existing.whop_membership_id)
+    if (error) {
+      results.push({ internalUserId: existing.id, error: error.message })
+      continue
+    }
+    if (previousEffectiveTier !== nextEffectiveTier) {
+      await syncTierBadge(admin, existing.id as string, nextEffectiveTier)
+      await syncDiscordRoleForUser(admin, existing.id as string)
+    }
+    results.push({ internalUserId: existing.id, membershipId: existing.whop_membership_id, revoked: currentTier })
+  }
 
   return { totalMemberships: memberships.length, results }
 }
