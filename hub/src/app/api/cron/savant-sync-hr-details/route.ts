@@ -11,21 +11,10 @@ export const revalidate = 0
 // reintroducing a timeout-starvation failure mode of its own.
 export const maxDuration = 180
 
-// Runs once daily, ~6am ET (see vercel.json — a fixed UTC hour, so it'll
-// drift an hour off 6am ET across the DST changeover until adjusted) —
-// same reasoning as every other Savant-sourced cron: this data isn't live,
-// it only settles once a day, so polling more often than that never buys
-// real freshness. Claims batters per tick (BATCH_SIZE, see
-// savantHrDetailsSync.ts), fetched concurrently — confirmed live that
-// Savant's details endpoint has no meaningful rate limit, the entire
-// ~500-batter leaderboard fetched concurrently in ~9s with zero errors —
-// so one daily run comfortably covers the whole day's new home runs, AS
-// LONG AS BATCH_SIZE actually covers the full daily-eligible pool (see
-// that constant's own comment for the real incident where it didn't: 185
-// batters silently frozen for 10+ days because the claim query had no
-// ordering and the same under-sized batch won every day). Re-checks
-// 'complete' rows after 20h so batters keep accumulating new home runs
-// instead of going stale.
+// Runs after the hourly morning pitch-log attempt. Savant sometimes publishes
+// the prior day's detail payload after the first refresh, so the two-hour
+// per-batter recheck window retries late rows while canonical fallbacks keep
+// event coverage complete between attempts.
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError

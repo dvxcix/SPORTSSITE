@@ -14,9 +14,10 @@ must never create, remove, or reclassify a canonical event.
   failed source write cannot hide another.
 - MLB Gameday supplies live contact while a game is in progress. Savant
   replaces that temporary live representation after the postgame sync.
-- `player_home_run_events` and `near_hrs` are enrichment sources for park
-  context and near-home-run metadata. Their absence never removes a home run
-  from the canonical ledger.
+- `player_home_run_events` stores one detail representation for every canonical
+  home run. Savant supplies park context when published; otherwise a
+  `canonical_pitch_log` fallback preserves the complete MLB event and its
+  available Statcast measurements without fabricating a park projection.
 - A source-provided value must survive into its typed database column. A value
   that the source did not track remains `null` and renders as unavailable. It
   must never be fabricated or converted to zero.
@@ -32,7 +33,8 @@ row in `statcast_integrity_runs`, appears in Admin > Pipeline health, and checks
 4. Every source-provided raw field against its materialized typed column.
 5. Stored schedule coverage and suspiciously short game logs.
 6. Final-game coverage against MLB's official schedule.
-7. Optional home-run enrichment coverage, including inside-the-park events.
+7. Complete home-run detail coverage, including inside-the-park events and
+   provenance-marked canonical fallbacks for source omissions.
 8. Freshness of every current Statcast category sync.
 
 A real integrity failure sends the existing pipeline-health Discord alert and
@@ -53,8 +55,8 @@ This test fails when one importer drops a field that another importer stores.
 
 - Queries that can exceed PostgREST's 1,000-row response cap must paginate in
   a deterministic order.
-- Actual home-run histories come from `player_pitch_log.is_home_run`; optional
-  Savant details are matched afterward.
+- Actual home-run histories come from `player_pitch_log.is_home_run`; Savant
+  details are matched afterward and canonical fallbacks close any event gap.
 - Spray charts plot only source-provided locations. Coordinate-less events
   remain in the canonical event ledger and are reported by the audit as source
   unavailable rather than silently displayed at a fabricated location.

@@ -34,7 +34,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'savant-sync-swing-timing', label: 'Savant swing timing', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-batting-stance', label: 'Savant batting stance', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-swing-path', label: 'Savant swing path', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
-  { name: 'savant-sync-hr-details', label: 'Savant home run detail', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
+  { name: 'savant-sync-hr-details', label: 'Savant home run detail', schedule: 'Hourly morning retry', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-pitch-arsenal-stats', label: 'Pitch arsenal statistics', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-pitch-arsenal-details', label: 'Pitch arsenal detail', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'savant-sync-pitch-log', label: 'Pitch logs', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },

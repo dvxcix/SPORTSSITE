@@ -37,7 +37,7 @@ const SEASON_BATTING_COLUMNS = 'id,mlb_id,season,game_type,team_id,team_abbr,gam
 const SEASON_PITCHING_COLUMNS = 'id,mlb_id,season,game_type,team_id,team_abbr,games_played,games_started,wins,losses,saves,innings_pitched,strikeouts,walks,earned_runs,home_runs_allowed,era,whip,last_synced_at'
 const CAREER_BATTING_COLUMNS = 'mlb_id,games_played,at_bats,hits,home_runs,rbi,runs,stolen_bases,walks,strikeouts,avg,obp,slg,ops,last_synced_at'
 const CAREER_PITCHING_COLUMNS = 'mlb_id,games_played,games_started,wins,losses,saves,innings_pitched,strikeouts,walks,earned_runs,home_runs_allowed,era,whip,last_synced_at'
-const HOME_RUN_COLUMNS = 'game_pk,season,game_date,batter_id,batter_name,pitcher_id,pitcher_name,result,exit_velocity,launch_angle,hr_distance,hr_cat,hr_type,parks'
+const HOME_RUN_COLUMNS = 'game_pk,season,game_date,batter_id,batter_name,pitcher_id,pitcher_name,result,exit_velocity,launch_angle,hr_distance,hr_cat,hr_type,parks,detail_source'
 const CANONICAL_HOME_RUN_COLUMNS = 'game_pk,season,game_date,batter_id,pitcher_id,launch_speed,launch_angle,hit_distance,at_bat_index,pitch_number'
 
 type CanonicalHomeRunRow = {
@@ -68,6 +68,7 @@ type HomeRunDetailRow = {
   hr_cat: string | null
   hr_type: string | null
   parks: Record<string, boolean> | null
+  detail_source: 'savant' | 'canonical_pitch_log'
 }
 
 function measurementsMatch(left: number | null, right: number | null, tolerance: number) {
@@ -76,9 +77,9 @@ function measurementsMatch(left: number | null, right: number | null, tolerance:
 
 /**
  * `player_pitch_log` is the canonical event ledger. Savant's dedicated
- * home-run feed is optional enrichment: it has richer park/category data,
- * but it does not publish every real MLB home run. Match it onto canonical
- * rows without ever allowing an absent enrichment row to erase an event.
+ * home-run feed has richer park/category data, but it does not publish every
+ * real MLB home run. Provenance-marked canonical fallback rows close that
+ * coverage gap without pretending source-only park projections exist.
  */
 function enrichCanonicalHomeRuns(
   rows: CanonicalHomeRunRow[],
@@ -126,12 +127,12 @@ function enrichCanonicalHomeRuns(
       exit_velocity: row.launch_speed,
       launch_angle: row.launch_angle,
       hr_distance: row.hit_distance,
-      hr_cat: detail?.hr_cat ?? null,
+      hr_cat: detail?.detail_source === 'savant' ? detail.hr_cat : null,
       hr_type: detail?.hr_type ?? null,
-      parks: detail?.parks ?? null,
+      parks: detail?.detail_source === 'savant' ? detail.parks : null,
       at_bat_index: row.at_bat_index,
       pitch_number: row.pitch_number,
-      enrichment_available: Boolean(detail),
+      enrichment_available: detail?.detail_source === 'savant',
     }
   })
 }

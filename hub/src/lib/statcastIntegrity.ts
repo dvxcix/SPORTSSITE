@@ -23,7 +23,14 @@ export type StatcastIntegrityResult = {
       source_unavailable_fair_ball_metrics?: Record<string, number>
     }
     game_coverage?: { scheduled_games?: number; scheduled_games_without_pitch_log?: number; games_with_suspiciously_short_pitch_log?: number }
-    home_run_enrichment?: { canonical_home_runs?: number; missing_optional_detail_events?: number; inside_the_park_events?: number }
+    home_run_enrichment?: {
+      canonical_home_runs?: number
+      covered_home_runs?: number
+      savant_detail_home_runs?: number
+      canonical_fallback_home_runs?: number
+      missing_detail_events?: number
+      inside_the_park_events?: number
+    }
     category_freshness?: { tracked_categories?: number; stale_categories?: number }
     official_schedule?: { source_available: boolean; final_games: number; final_games_without_pitch_log: number; missing_game_pks: number[] }
   }

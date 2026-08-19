@@ -78,7 +78,7 @@
     },
     {
       "path": "/api/cron/savant-sync-hr-details",
-      "schedule": "0 10 * * *"
+      "schedule": "15 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-pitch-arsenal-stats",

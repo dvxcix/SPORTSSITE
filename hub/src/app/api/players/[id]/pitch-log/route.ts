@@ -25,6 +25,7 @@ type HomeRunDetailRow = {
   launch_angle: number | null
   hr_distance: number | null
   parks: Record<string, boolean> | null
+  detail_source: 'savant' | 'canonical_pitch_log'
 }
 
 function sameBattedBall(
@@ -99,7 +100,7 @@ const getCachedPitchLog = unstable_cache(
         { maxRows: 1000, revalidateSeconds: 86400 },
       ).catch(() => [] as NearHrRow[]) : Promise.resolve([] as NearHrRow[]),
       sprayRows.length ? admin.from('player_home_run_events')
-        .select('game_pk,exit_velocity,launch_angle,hr_distance,parks')
+        .select('game_pk,exit_velocity,launch_angle,hr_distance,parks,detail_source')
         .eq('batter_id', mlbId)
         .order('game_date', { ascending: false }) : Promise.resolve({ data: [] as HomeRunDetailRow[] }),
     ])
@@ -111,7 +112,7 @@ const getCachedPitchLog = unstable_cache(
       const homeRun = row.is_home_run
         ? (homeRunDetails.data ?? []).find(detail => sameBattedBall(row, detail)) ?? null
         : null
-      const parksHrCount = homeRun?.parks
+      const parksHrCount = homeRun?.detail_source === 'savant' && homeRun.parks
         ? Object.values(homeRun.parks).filter(Boolean).length
         : near?.parks_hr_count ?? null
       return {

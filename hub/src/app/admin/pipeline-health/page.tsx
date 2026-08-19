@@ -32,7 +32,7 @@ type IntegrityRun = {
   checks: {
     pitch_log?: { rows?: number; games?: number; fair_balls?: number; home_runs?: number; source_unavailable_fair_ball_metrics?: Record<string, number> }
     game_coverage?: { scheduled_games_without_pitch_log?: number }
-    home_run_enrichment?: { missing_optional_detail_events?: number }
+    home_run_enrichment?: { missing_detail_events?: number; canonical_fallback_home_runs?: number }
     category_freshness?: { stale_categories?: number }
     official_schedule?: { source_available?: boolean; final_games?: number; final_games_without_pitch_log?: number; missing_game_pks?: number[] }
   } | null
@@ -264,7 +264,7 @@ export default async function PipelineHealthPage() {
           </div>
           <div className="mt-3 space-y-1 text-xs text-zinc-500">
             <p>Official MLB final-game gaps: {integrity.checks?.official_schedule?.final_games_without_pitch_log ?? 0}. Stored schedule gaps: {integrity.checks?.game_coverage?.scheduled_games_without_pitch_log ?? 0}.</p>
-            <p>Source unavailable counts are genuine MLB/Statcast omissions, displayed as unavailable rather than zero. Optional Savant HR-detail gaps: {integrity.checks?.home_run_enrichment?.missing_optional_detail_events ?? 0}. These never remove canonical MLB home-run events.</p>
+            <p>Source unavailable counts are genuine MLB/Statcast omissions, displayed as unavailable rather than zero. HR event coverage gaps: {integrity.checks?.home_run_enrichment?.missing_detail_events ?? 0}. Canonical detail fallbacks: {integrity.checks?.home_run_enrichment?.canonical_fallback_home_runs ?? 0}. Every MLB home run has a detail record; a fallback preserves the canonical event when Savant has not published its separate park projection.</p>
           </div>
         </section>
       )}

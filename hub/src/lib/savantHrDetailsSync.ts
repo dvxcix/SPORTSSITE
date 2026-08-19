@@ -58,8 +58,8 @@ const STALE_CLAIM_MINUTES = 12
 // speed, it was doing one sequential Supabase round-trip per player; fixed
 // by fetching concurrently and writing in one bulk upsert per tick.
 // Confirmed live (2026-08-07): 300 was NOT enough headroom once the
-// backlog phase ended and this became a steady-state daily job — with
-// RECHECK_COMPLETE_HOURS=20 < the 24h gap between runs, essentially every
+// backlog phase ended and this became a steady-state daily job - with the
+// old RECHECK_COMPLETE_HOURS=20 < the 24h gap between runs, essentially every
 // 'complete' row is eligible again by the next run, so the real daily
 // candidate pool is close to the FULL qualifying-batter count (497 the day
 // this was found), not just new pending ones. The claim query below had no
@@ -75,7 +75,16 @@ const STALE_CLAIM_MINUTES = 12
 const BATCH_SIZE = 700
 const FETCH_CONCURRENCY = 20
 const WRITE_CHUNK_SIZE = 500
-const RECHECK_COMPLETE_HOURS = 20
+// Savant can publish the prior day's detail payload later than its first
+// morning refresh. The cron runs hourly during the ingestion window, so a
+// two-hour recheck retries late source rows without hammering continuously.
+const RECHECK_COMPLETE_HOURS = 2
+
+async function refreshCanonicalCoverage(admin: AdminClient, season: number) {
+  const { data, error } = await admin.rpc('refresh_canonical_home_run_detail_coverage', { p_season: season })
+  if (error) throw new Error('Canonical HR detail coverage refresh failed')
+  return data
+}
 
 // Runs a bounded number of jobs concurrently.
 async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -91,32 +100,31 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
   return results
 }
 
-// Seeds a 'pending' claim row for every batter who actually has a home run
-// this season, drawn straight from the already-synced Tier A `home_runs`
-// leaderboard rows (`player_statcast_hitting_season`) rather than
-// re-deriving the qualifying-player list from scratch — `ignoreDuplicates`
-// means a batter already seeded (mid-progress or complete) is left alone.
+// Seeds directly from the canonical event ledger. The aggregate leaderboard
+// can publish later or omit a player even though MLB has already classified a
+// home run; using it as the seed source made those detail rows unreachable.
 async function seedPendingBatters(admin: AdminClient, season: number) {
   // Paginated in pages of 1000 — an un-paginated select silently truncates
   // to PostgREST's default row cap (confirmed live elsewhere, in the
   // pitch-arsenal-details seed query, where it silently dropped ~2,170 of
-  // 3,172 real rows). Currently under 1000 qualifying batters, but this
-  // would fail the exact same silent way once that count grows past it.
+  // 3,172 real rows). The canonical log is already above 1000 HR events, so
+  // deterministic pagination is required even though batter IDs are deduped.
   // `.range()` without an explicit `.order()` has no guaranteed row
   // ordering between separate calls — real bug hit in the sibling
   // pitch-arsenal-details seed query (see savantPitchArsenalSync.ts),
   // where pagination without an order plateaued short of the real total.
-  // `(mlb_id, season, category)` is this table's real unique constraint, so
-  // ordering by mlb_id alone is enough for gap-free pages here.
+  // The pitch-log event key supplies stable ordering across pages.
   const PAGE_SIZE = 1000
-  const rows: { mlb_id: number; metrics: unknown }[] = []
+  const ids = new Set<number>()
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data: page, error } = await admin
-      .from('player_statcast_hitting_season')
-      .select('mlb_id, metrics')
+      .from('player_pitch_log')
+      .select('batter_id,game_pk,at_bat_index,pitch_number')
       .eq('season', season)
-      .eq('category', 'home_runs')
-      .order('mlb_id', { ascending: true })
+      .eq('is_home_run', true)
+      .order('game_pk', { ascending: true })
+      .order('at_bat_index', { ascending: true })
+      .order('pitch_number', { ascending: true })
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) {
@@ -124,16 +132,15 @@ async function seedPendingBatters(admin: AdminClient, season: number) {
       throw new Error('Savant HR details seed query failed')
     }
     if (!page?.length) break
-    rows.push(...page)
+    page.forEach(row => ids.add(Number(row.batter_id)))
     if (page.length < PAGE_SIZE) break
   }
 
-  const qualifying = rows.filter(r => Number((r.metrics as any)?.hr_total) > 0)
-  if (!qualifying.length) return
+  if (!ids.size) return
 
   const { error: seedError } = await admin.from('sync_state').upsert(
-    qualifying.map(r => ({
-      source: SOURCE, entity_type: ENTITY_TYPE, entity_id: String(r.mlb_id), season, status: 'pending',
+    Array.from(ids, id => ({
+      source: SOURCE, entity_type: ENTITY_TYPE, entity_id: String(id), season, status: 'pending',
     })),
     { onConflict: 'source,entity_type,entity_id,season', ignoreDuplicates: true }
   )
@@ -169,7 +176,10 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
   if (jobsError) throw new Error('Savant HR details claim query failed')
 
   const claimedIds = (jobs ?? []).map(j => j.entity_id)
-  if (!claimedIds.length) return { claimed: 0, results: {} }
+  if (!claimedIds.length) {
+    const coverage = await refreshCanonicalCoverage(admin, season)
+    return { claimed: 0, results: {}, coverage }
+  }
 
   const { error: claimError } = await admin.from('sync_state').upsert(
     claimedIds.map(id => ({ source: SOURCE, entity_type: ENTITY_TYPE, entity_id: id, season, status: 'claimed', claimed_at: new Date().toISOString() })),
@@ -217,7 +227,7 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
         season, game_date: e.game_date || null,
         batter_id: Number(e.batter_id), batter_name: e.batter_name || null,
         pitcher_id: Number(e.pitcher_id), pitcher_name: e.pitcher_name || null,
-        result: e.result || null,
+        result: e.result || null, source_result: e.result || null, detail_source: 'savant',
         exit_velocity: toNum(e.exit_velocity), launch_angle: toNum(e.launch_angle),
         hr_distance: toNum(e.hr_distance), hr_trot: toNum(e.hr_trot),
         hr_cat: e.hr_cat || null, hr_type: e.hr_type || null,
@@ -255,7 +265,8 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
       const { error } = await admin.from('sync_state').upsert(errorRows, { onConflict: 'source,entity_type,entity_id,season' })
       if (error) throw new Error('Savant HR details error-state write failed')
     }
-    return { claimed: claimedIds.length, results }
+    const coverage = await refreshCanonicalCoverage(admin, season)
+    return { claimed: claimedIds.length, results, coverage }
   }
 
   for (const f of fetched) {
@@ -277,5 +288,6 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
     if (error) throw new Error('Savant HR details error-state write failed')
   }
 
-  return { claimed: claimedIds.length, results }
+  const coverage = await refreshCanonicalCoverage(admin, season)
+  return { claimed: claimedIds.length, results, coverage }
 }
