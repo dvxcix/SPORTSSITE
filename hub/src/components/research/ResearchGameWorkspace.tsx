@@ -24,7 +24,7 @@ type Snapshot = { captured_at: string; prop_map: Record<string, SnapshotPlayer> 
 type SnapshotPlayer = { name?: string; [market: string]: string | Record<string, number | string> | undefined }
 type PriceReceipt = { open: number; current: number; delta: number }
 type HistoryPlayer = { name: string; markets: Record<string, Record<string, PriceReceipt>> }
-type SortKey = 'mechanics' | 'mm' | 'fhr' | 'hr' | 'picks'
+type SortKey = 'mechanics' | 'shape' | 'trajectory' | 'plane' | 'mm' | 'fhr' | 'hr' | 'picks'
 type JsonRecord = Record<string, unknown>
 type DugoutResearch = {
   communityPicks?: JsonRecord | null
@@ -74,6 +74,15 @@ function odds(value: number | null | undefined) {
 function pct(value: number | null) {
   if (value == null) return '—'
   return `${value > 0 ? '+' : ''}${(value * 100).toFixed(1)}%`
+}
+
+function hrShapeScore(player: MechanicsPlayer) {
+  return Number(((player.scores.planeMatch + player.scores.trajectory) / 2).toFixed(1))
+}
+
+function metric(value: number | null, suffix = '') {
+  if (value == null) return '—'
+  return `${value > 0 && suffix === '°' ? '+' : ''}${value.toFixed(1)}${suffix}`
 }
 
 function moveTone(value: number | null | undefined) {
@@ -320,11 +329,33 @@ export function ResearchGameWorkspace({ date, game }: { date: string; game: Toda
   }), [dugoutPlayers, fhrAverages, historyByName, hrAverages, mechanics?.players, picks, window])
 
   const lineupsConfirmed = game.awayLineupConfirmed && game.homeLineupConfirmed
+  const leaderPool = useMemo(
+    () => lineupsConfirmed ? players.filter(player => player.lineupStatus !== 'candidate') : players,
+    [lineupsConfirmed, players],
+  )
+  const planeLeaderId = useMemo(
+    () => leaderPool.reduce<UnifiedPlayer | null>((best, player) => !best || player.scores.planeMatch > best.scores.planeMatch ? player : best, null)?.playerId ?? null,
+    [leaderPool],
+  )
+  const trajectoryLeaderId = useMemo(
+    () => leaderPool.reduce<UnifiedPlayer | null>((best, player) => !best || player.scores.trajectory > best.scores.trajectory ? player : best, null)?.playerId ?? null,
+    [leaderPool],
+  )
+  const shapeLeaders = useMemo(() => {
+    const ranked = leaderPool.slice().sort((a, b) => hrShapeScore(b) - hrShapeScore(a) || b.scores.overall - a.scores.overall)
+    const featuredIds = new Set(ranked.slice(0, 4).map(player => player.playerId))
+    if (planeLeaderId != null) featuredIds.add(planeLeaderId)
+    if (trajectoryLeaderId != null) featuredIds.add(trajectoryLeaderId)
+    return ranked.filter(player => featuredIds.has(player.playerId))
+  }, [leaderPool, planeLeaderId, trajectoryLeaderId])
   const visiblePlayers = useMemo(() => players.filter(player => (
     (teamFilter === 'all' || player.team === teamFilter)
     && (!lineupsConfirmed || showCandidates || player.lineupStatus !== 'candidate')
     && (!query.trim() || normName(player.playerName).includes(normName(query)))
   )).sort((a, b) => {
+    if (sort === 'shape') return hrShapeScore(b) - hrShapeScore(a) || b.scores.overall - a.scores.overall
+    if (sort === 'trajectory') return b.scores.trajectory - a.scores.trajectory || b.scores.overall - a.scores.overall
+    if (sort === 'plane') return b.scores.planeMatch - a.scores.planeMatch || b.scores.overall - a.scores.overall
     if (sort === 'mm') return (a.mm ?? 999) - (b.mm ?? 999) || b.scores.overall - a.scores.overall
     if (sort === 'fhr') return (b.fhr ? probabilityPoints(b.fhr) : -9999) - (a.fhr ? probabilityPoints(a.fhr) : -9999)
     if (sort === 'hr') return (b.hr ? probabilityPoints(b.hr) : -9999) - (a.hr ? probabilityPoints(a.hr) : -9999)
@@ -365,6 +396,20 @@ export function ResearchGameWorkspace({ date, game }: { date: string; game: Toda
         </nav>
       </section>
 
+      <section className={`${styles.sectionShell} ${styles.shapeSection}`}>
+        <header className={styles.sectionTitle}>
+          <div><Flame /><span><small>00 · HR CONTACT SHAPE</small><h2>Best lift paths in this game</h2><p>Exact Plane and Trajectory components for the active L{window} window—not a second prediction model.</p></span></div>
+          <span className={styles.liveLink}><CircleDot /> TAP FOR FULL RECEIPT</span>
+        </header>
+        <MechanicsLeaderDeck
+          players={shapeLeaders}
+          planeLeaderId={planeLeaderId}
+          trajectoryLeaderId={trajectoryLeaderId}
+          selectedId={selected?.playerId ?? null}
+          onSelect={setSelectedId}
+        />
+      </section>
+
       <section className={styles.sectionShell}>
         <header className={styles.sectionTitle}>
           <div><Crosshair /><span><small>01 · MATCHUP LAB</small><h2>Pitcher arsenal against today&apos;s hitters</h2><p>Pin pitch types and change batter recency here. Those same filters drive the park projection below.</p></span></div>
@@ -380,11 +425,11 @@ export function ResearchGameWorkspace({ date, game }: { date: string; game: Toda
         <div className={styles.boardTools}>
           <label><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search any candidate" /></label>
           <div><Filter />{(['all', game.awayAbbr, game.homeAbbr] as const).map(value => <button key={value} type="button" data-active={teamFilter === value} onClick={() => setTeamFilter(value)}>{value === 'all' ? 'Both teams' : value}</button>)}{lineupsConfirmed && <button type="button" data-active={showCandidates} onClick={() => setShowCandidates(value => !value)}>{showCandidates ? 'All scored' : 'Starters only'}</button>}</div>
-          <label><SlidersHorizontal /><select value={sort} onChange={event => setSort(event.target.value as SortKey)}><option value="mechanics">Mechanics index</option><option value="mm">MM, lowest first</option><option value="fhr">FHR movement</option><option value="hr">HR movement</option><option value="picks">Public HR picks</option></select></label>
+          <label><SlidersHorizontal /><select value={sort} onChange={event => setSort(event.target.value as SortKey)}><option value="mechanics">Mechanics index</option><option value="shape">HR contact shape</option><option value="trajectory">Trajectory</option><option value="plane">Plane match</option><option value="mm">MM, lowest first</option><option value="fhr">FHR movement</option><option value="hr">HR movement</option><option value="picks">Public HR picks</option></select></label>
         </div>
         <div className={styles.boardLegend}><span data-tone="shorter"><i />Shorter / conviction</span><span data-tone="longer"><i />Longer</span><span><b>MM</b> book rank minus paper rank</span><small>Percentages are the exact Dugout current-price vs player-average calculations.</small></div>
         <div className={styles.playerTableShell}>
-          <div className={styles.playerHeader}><span>PLAYER</span><span>SCORE</span><span>FHR</span><span>HR</span><span>FHR%</span><span>HR%</span><span>MM</span><span>BOOK / PAPER</span><span>PUBLIC HR</span><span /></div>
+          <div className={styles.playerHeader}><span>PLAYER</span><span>SCORE</span><span>PLANE / TRAJ</span><span>FHR</span><span>HR</span><span>FHR%</span><span>HR%</span><span>MM</span><span>BOOK / PAPER</span><span>PUBLIC HR</span><span /></div>
           {visiblePlayers.map(player => <PlayerSignalRow key={player.playerId} player={player} active={selected?.playerId === player.playerId} fhrDeltaPool={fhrAverageDeltaPool} hrDeltaPool={hrAverageDeltaPool} fhrMovementPool={fhrMovementPool} hrMovementPool={hrMovementPool} onSelect={() => setSelectedId(player.playerId)} />)}
         </div>
       </section>
@@ -405,6 +450,57 @@ export function ResearchGameWorkspace({ date, game }: { date: string; game: Toda
   )
 }
 
+function MechanicsLeaderDeck({ players, planeLeaderId, trajectoryLeaderId, selectedId, onSelect }: {
+  players: UnifiedPlayer[]
+  planeLeaderId: number | null
+  trajectoryLeaderId: number | null
+  selectedId: number | null
+  onSelect: (playerId: number) => void
+}) {
+  return (
+    <div className={styles.shapeDeck}>
+      {players.map((player, index) => {
+        const planeLeader = player.playerId === planeLeaderId
+        const trajectoryLeader = player.playerId === trajectoryLeaderId
+        const reason = player.reasons.find(item => /plane|lift|air contact|damage/i.test(item))
+          ?? `Overall mechanics ${player.scores.overall} · trend ${player.scores.trend}`
+        return (
+          <button
+            key={player.playerId}
+            type="button"
+            className={styles.shapeCard}
+            data-active={player.playerId === selectedId}
+            onClick={() => onSelect(player.playerId)}
+            style={{ '--team-color': getTeamColor(player.team) } as CSSProperties}
+            aria-label={`Open ${player.playerName}, plane ${player.scores.planeMatch}, trajectory ${player.scores.trajectory}`}
+          >
+            <span className={styles.shapeCardTop}>
+              <b>{index < 4 ? `#${index + 1} HR SHAPE` : 'COMPONENT LEADER'}</b>
+              <span>{planeLeader ? <i>BEST PLANE</i> : null}{trajectoryLeader ? <i>BEST TRAJECTORY</i> : null}</span>
+            </span>
+            <span className={styles.shapeIdentity}>
+              <PlayerAvatar headshot={mlbHeadshot(player.playerId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.playerName} size={44} />
+              <span><strong>{player.playerName}</strong><small>{player.team} · #{player.battingOrder} · {player.lineupStatus}</small></span>
+              <span className={styles.shapeScore}><b>{hrShapeScore(player)}</b><small>LIFT SHAPE</small></span>
+            </span>
+            <span className={styles.shapeBars}>
+              <span><small>PLANE</small><i><em style={{ width: `${player.scores.planeMatch}%` }} /></i><b>{player.scores.planeMatch}</b></span>
+              <span><small>TRAJECTORY</small><i><em style={{ width: `${player.scores.trajectory}%` }} /></i><b>{player.scores.trajectory}</b></span>
+            </span>
+            <span className={styles.shapeMetrics}>
+              <span><small>Attack</small><b>{metric(player.metrics.attackAngle, '°')}</b></span>
+              <span><small>Barrel</small><b>{metric(player.metrics.barrelRate, '%')}</b></span>
+              <span><small>Pull air</small><b>{metric(player.metrics.pullAirRate, '%')}</b></span>
+              <span><small>EV</small><b>{metric(player.metrics.exitVelocity)}</b></span>
+            </span>
+            <span className={styles.shapeReason}>{reason}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function PlayerSignalRow({ player, active, fhrDeltaPool, hrDeltaPool, fhrMovementPool, hrMovementPool, onSelect }: {
   player: UnifiedPlayer
   active: boolean
@@ -418,10 +514,11 @@ function PlayerSignalRow({ player, active, fhrDeltaPool, hrDeltaPool, fhrMovemen
     <button className={styles.playerRow} data-active={active} type="button" onClick={onSelect}>
       <span className={styles.playerCell}><em>{player.battingOrder <= 9 ? player.battingOrder : '—'}</em><PlayerAvatar headshot={mlbHeadshot(player.playerId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.playerName} size={34} /><span><strong>{player.playerName}</strong><small>{player.team} · {player.position} · <b data-status={player.lineupStatus}>{player.lineupStatus}</b></small></span></span>
       <span className={styles.scoreCell}><MechanicsScoreRing score={player.scores.overall} label="INDEX" size="small" /><small>#{player.rank}</small></span>
-      <PriceCell receipt={player.fhr} vendor="fanduel" pool={fhrMovementPool} />
-      <PriceCell receipt={player.hr} vendor="fanduel" pool={hrMovementPool} />
-      <span className={styles.pctCell} style={getDugoutPercentStyle(player.fhrPct, player.fhrDeltaVsAverage, fhrDeltaPool)}>{pct(player.fhrPct)}</span>
-      <span className={styles.pctCell} style={getDugoutPercentStyle(player.hrPct, player.hrDeltaVsAverage, hrDeltaPool)}>{pct(player.hrPct)}</span>
+      <span className={styles.shapeCell}><span><small>PLANE</small><b>{player.scores.planeMatch}</b></span><i /><span><small>TRAJ</small><b>{player.scores.trajectory}</b></span></span>
+      <PriceCell receipt={player.fhr} vendor="fanduel" pool={fhrMovementPool} className={styles.fhrPrice} />
+      <PriceCell receipt={player.hr} vendor="fanduel" pool={hrMovementPool} className={styles.hrPrice} />
+      <span className={`${styles.pctCell} ${styles.fhrPct}`} style={getDugoutPercentStyle(player.fhrPct, player.fhrDeltaVsAverage, fhrDeltaPool)}>{pct(player.fhrPct)}</span>
+      <span className={`${styles.pctCell} ${styles.hrPct}`} style={getDugoutPercentStyle(player.hrPct, player.hrDeltaVsAverage, hrDeltaPool)}>{pct(player.hrPct)}</span>
       <span className={styles.mmCell} data-tone={player.mm != null && player.mm < 0 ? 'shorter' : player.mm != null && player.mm > 0 ? 'longer' : 'flat'}>{player.mm == null ? '—' : player.mm > 0 ? `+${player.mm}` : player.mm}</span>
       <span className={styles.rankCell}><b>{player.bookRank ?? '—'}</b><i>/</i><b>{player.paperRank ?? '—'}</b></span>
       <span className={styles.picksCell}>{player.hrPicks.toLocaleString()}<small>picks</small></span>
@@ -430,9 +527,9 @@ function PlayerSignalRow({ player, active, fhrDeltaPool, hrDeltaPool, fhrMovemen
   )
 }
 
-function PriceCell({ receipt, vendor, pool }: { receipt: PriceReceipt | null; vendor: string; pool: Array<PriceReceipt | null> }) {
+function PriceCell({ receipt, vendor, pool, className }: { receipt: PriceReceipt | null; vendor: string; pool: Array<PriceReceipt | null>; className?: string }) {
   const tone = moveTone(receipt?.delta)
-  return <span className={styles.priceCell} data-tone={tone} style={movementHeat(receipt, pool)}><i className={styles.priceBook}><BookLogo vendor={vendor} size={13} /></i><span><strong>{odds(receipt?.current)}</strong><small>{receipt ? `${odds(receipt.open)} · ${probabilityMove(receipt)}` : 'unavailable'}</small></span>{receipt && receipt.delta !== 0 && (receipt.delta < 0 ? <ArrowDownRight className={styles.priceArrow} /> : <ArrowUpRight className={styles.priceArrow} />)}</span>
+  return <span className={`${styles.priceCell} ${className ?? ''}`} data-tone={tone} style={movementHeat(receipt, pool)}><i className={styles.priceBook}><BookLogo vendor={vendor} size={13} /></i><span><strong>{odds(receipt?.current)}</strong><small>{receipt ? `${odds(receipt.open)} · ${probabilityMove(receipt)}` : 'unavailable'}</small></span>{receipt && receipt.delta !== 0 && (receipt.delta < 0 ? <ArrowDownRight className={styles.priceArrow} /> : <ArrowUpRight className={styles.priceArrow} />)}</span>
 }
 
 function resultColor(row: SprayPitchRow) {
