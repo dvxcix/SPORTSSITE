@@ -108,49 +108,74 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
         // interaction never triggers. Rendering outside the card's DOM
         // subtree entirely is the only fix that holds regardless of what
         // any ancestor's CSS does.
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
-          display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center',
-          padding: isMobile ? 0 : 16,
-          overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-        }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Secure checkout"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+            overflowX: 'hidden', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {/*
+            Keep the card centered while it fits, but let this rail grow with
+            the checkout once Whop reports a taller iframe. Centering the card
+            directly inside the fixed-height scrolling overlay positioned the
+            top of an oversized card above scrollTop=0 on desktop, making the
+            first payment fields permanently unreachable.
+
+            The rail itself never scrolls: the overlay above remains the one
+            continuous scrolling surface on both desktop and mobile.
+          */}
           <div style={{
-            background: '#06070A',
-            borderRadius: isMobile ? 0 : 16,
-            maxWidth: isMobile ? 'none' : 480,
+            minHeight: '100%',
             width: '100%',
-            minHeight: isMobile ? '100dvh' : undefined,
-            position: 'relative',
-            padding: 24,
-            paddingTop: isMobile ? 'max(24px, env(safe-area-inset-top))' : 24,
-            border: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: isMobile ? 'stretch' : 'center',
+            justifyContent: 'center',
+            padding: isMobile ? 0 : 16,
+            boxSizing: 'border-box',
           }}>
-            <button
-              onClick={() => setSessionId(null)}
-              aria-label="Close checkout"
-              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, zIndex: 1 }}
-            >
-              <X size={20} color="var(--text-3)" />
-            </button>
-            <WhopCheckoutEmbed
-              sessionId={sessionId}
-              // No ?status= of our own here — Whop appends the real
-              // "success" or "error" outcome to this URL itself for the
-              // redirect-based payment flows (3DS, etc). Hardcoding
-              // "success" ourselves would make a failed payment redirect
-              // to a URL that still claims success once Whop's own value
-              // gets appended alongside/after ours.
-              returnUrl={`${window.location.origin}/pricing`}
-              theme="dark"
-              themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
-              onComplete={() => {
-                setSessionId(null)
-                trackProductEvent('pricing_checkout_completed', { plan_id: planId })
-                router.push('/pricing?status=success')
-                router.refresh()
-              }}
-              fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
-            />
+            <div style={{
+              background: '#06070A',
+              borderRadius: isMobile ? 0 : 16,
+              maxWidth: isMobile ? 'none' : 480,
+              width: '100%',
+              minHeight: isMobile ? '100dvh' : undefined,
+              position: 'relative',
+              flex: '0 0 auto',
+              boxSizing: 'border-box',
+              padding: 24,
+              paddingTop: isMobile ? 'max(24px, env(safe-area-inset-top))' : 24,
+              border: '1px solid var(--border)',
+            }}>
+              <button
+                onClick={() => setSessionId(null)}
+                aria-label="Close checkout"
+                style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, zIndex: 1 }}
+              >
+                <X size={20} color="var(--text-3)" />
+              </button>
+              <WhopCheckoutEmbed
+                sessionId={sessionId}
+                // No ?status= of our own here — Whop appends the real
+                // "success" or "error" outcome to this URL itself for the
+                // redirect-based payment flows (3DS, etc). Hardcoding
+                // "success" ourselves would make a failed payment redirect
+                // to a URL that still claims success once Whop's own value
+                // gets appended alongside/after ours.
+                returnUrl={`${window.location.origin}/pricing`}
+                theme="dark"
+                themeOptions={{ accentColor: '#B4FF4D', backgroundColor: '#06070A' }}
+                onComplete={() => {
+                  setSessionId(null)
+                  trackProductEvent('pricing_checkout_completed', { plan_id: planId })
+                  router.push('/pricing?status=success')
+                  router.refresh()
+                }}
+                fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading checkout…</div>}
+              />
+            </div>
           </div>
         </div>,
         document.body
