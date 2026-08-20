@@ -234,6 +234,8 @@ test('billing reconciliation is bounded and avoids unchanged side effects', asyn
   assert.ok(main.includes('if (unchanged) continue'))
   assert.ok(main.includes('if (accessChanged)'))
   assert.ok(main.includes('stopped before writes'))
+  assert.ok(main.includes('fetchWhopMembershipById'))
+  assert.ok(main.includes('mapWithConcurrency(ownersWithMembership, 6'))
   assert.ok(addon.includes('const bestByUser = new Map'))
   assert.ok(addon.includes('if (unchanged) continue'))
   assert.ok(addon.includes('if (accessChanged)'))
@@ -291,7 +293,7 @@ test('Whop billing retries are bounded without breaking idempotency or legacy ac
   assert.ok(cancel.includes("consumeServerRateLimit(user.id, 'whop_cancel', 10, 5 * 60)"))
   for (const reconcile of [addonReconcile, mainReconcile]) {
     assert.ok(reconcile.includes('linkedOwnerByMembershipId'))
-    assert.ok(reconcile.includes("select('id, whop_membership_id')"))
+    assert.ok(reconcile.includes("select('id, whop_membership_id"))
     assert.ok(reconcile.includes('whopMembershipGrantsAccess'))
     assert.ok(reconcile.includes('shouldRevokeStoredWhopAccess'))
     assert.ok(reconcile.includes('tier_cancel_at_period_end'))
@@ -426,6 +428,8 @@ test('expired refresh tokens cannot pass protected requests through middleware',
   assert.ok(middleware.includes("pathname.startsWith('/api/')"))
   assert.ok(middleware.includes("code: 'SESSION_EXPIRED'"))
   assert.ok(middleware.includes("loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)"))
+  assert.ok(middleware.includes('AUTH_REFRESH_RETRY_COOKIE'))
+  assert.ok(middleware.includes('clearStaleSupabaseAuthCookies'))
   assert.ok(!middleware.includes('return supabaseResponse // Allow request to proceed'))
 })
 

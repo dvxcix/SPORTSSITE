@@ -140,19 +140,17 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
 // missed lineup-confirm window reproduced the exact same gap). Moving the
 // self-check + retry HERE instead means every caller — the automated
 // dispatcher, the 2-hour sweep, AND a manual gamePk hit — gets the same
-// one-retry safety net, no queue required. A fresh Browserbase session on
-// the retry (not the same page) since whatever DOM state caused the miss
-// shouldn't be trusted to have cleared on its own.
+// Report the missing markets to the caller/dispatcher instead of opening a
+// second complete Browserbase session inside the same serverless invocation.
+// A full event commonly takes 2-4 minutes now that every tab is archived; an
+// immediate second pass was the direct cause of the 300-second hard timeouts.
+// dispatch-scrapes already owns the bounded delayed retry for lineup-triggered
+// captures, while scheduled sweeps naturally retry on their next pass.
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
   const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
   if (dryRun || 'error' in first) return first
   const missing = missingCoreMarkets(first.imported?.body?.marketSummary ?? {})
-  if (!missing.length) return first
-
-  const retry = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
-  if ('error' in retry) return { ...first, retriedFor: missing, retryError: retry.error }
-  const stillMissing = missingCoreMarkets(retry.imported?.body?.marketSummary ?? {})
-  return { ...retry, retriedFor: missing, stillMissing: stillMissing.length ? stillMissing : undefined }
+  return missing.length ? { ...first, stillMissing: missing } : first
 }
 
 async function run(req: Request) {

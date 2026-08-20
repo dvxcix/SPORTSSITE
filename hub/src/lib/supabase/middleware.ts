@@ -1,6 +1,30 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
+
+function markRefreshRetry(response: NextResponse) {
+  response.cookies.set(AUTH_REFRESH_RETRY_COOKIE, '1', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 20,
+  })
+}
+
+function clearRefreshRetry(response: NextResponse) {
+  response.cookies.set(AUTH_REFRESH_RETRY_COOKIE, '', { path: '/', maxAge: 0 })
+}
+
+function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextResponse) {
+  for (const cookie of request.cookies.getAll()) {
+    if (cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')) {
+      response.cookies.set(cookie.name, '', { path: '/', maxAge: 0 })
+    }
+  }
+}
+
 export async function updateSession(request: NextRequest) {
   // Public liveness/readiness endpoint for external uptime monitoring. Its
   // response contains no user or infrastructure details.
@@ -162,6 +186,7 @@ export async function updateSession(request: NextRequest) {
   // page load. This is Supabase's current SSR proxy contract.
   const { data: authData, error: authError } = await supabase.auth.getClaims()
   const userId = typeof authData?.claims?.sub === 'string' ? authData.claims.sub : null
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
 
   // Real incident (confirmed via Vercel logs: ~44 users/week hitting this):
   // @supabase/ssr rotates the refresh token on every use, so when a page
@@ -182,14 +207,42 @@ export async function updateSession(request: NextRequest) {
   // signed out. Do not clear cookies here because a losing concurrent
   // response could overwrite the valid cookies issued by the winner.
   if (authError && (authError.code === 'refresh_token_already_used' || authError.code === 'refresh_token_not_found')) {
+    // Login/callback routes must remain reachable even when a dead auth
+    // cookie is present. Clear only Supabase's auth-cookie family here so a
+    // stale token cannot bounce the browser between login and middleware.
+    if (isAuthRoute) {
+      const response = NextResponse.next({ request })
+      clearStaleSupabaseAuthCookies(request, response)
+      clearRefreshRetry(response)
+      return response
+    }
+
+    const alreadyRetried = request.cookies.get(AUTH_REFRESH_RETRY_COOKIE)?.value === '1'
     if (request.nextUrl.pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Authentication required', code: 'SESSION_EXPIRED' }, { status: 401 })
+      const response = NextResponse.json({ error: 'Authentication required', code: 'SESSION_EXPIRED' }, { status: 401 })
+      if (alreadyRetried && authError.code === 'refresh_token_not_found') {
+        clearStaleSupabaseAuthCookies(request, response)
+        clearRefreshRetry(response)
+      } else {
+        markRefreshRetry(response)
+      }
+      return response
+    }
+    if (!alreadyRetried) {
+      const retryUrl = request.nextUrl.clone()
+      const response = NextResponse.redirect(retryUrl)
+      markRefreshRetry(response)
+      return response
     }
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/auth/login'
     loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
-    return NextResponse.redirect(loginUrl)
+    const response = NextResponse.redirect(loginUrl)
+    if (authError.code === 'refresh_token_not_found') clearStaleSupabaseAuthCookies(request, response)
+    return response
   }
+
+  if (userId && request.cookies.has(AUTH_REFRESH_RETRY_COOKIE)) clearRefreshRetry(supabaseResponse)
 
   if (userId && request.nextUrl.pathname.startsWith('/api/admin/')) {
     const [{ data: profile }, { data: assurance }] = await Promise.all([
@@ -204,7 +257,6 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   // Public discovery also includes published editorial content plus the
   // creator acquisition and catalog surface. Creator studios and payouts
   // remain gated below. The marketing homepage, legal/info pages, and pricing (no

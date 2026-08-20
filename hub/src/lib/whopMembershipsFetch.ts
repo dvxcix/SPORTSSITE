@@ -64,6 +64,33 @@ async function fetchWhopPage(url: string, apiKey: string): Promise<Response> {
   throw lastError instanceof Error ? lastError : new Error('Whop request failed')
 }
 
+export async function fetchWhopMembershipById(
+  apiKey: string,
+  membershipId: string,
+): Promise<{ membership: WhopMembershipRecord } | { missing: true } | { error: string }> {
+  const encodedId = encodeURIComponent(membershipId)
+  try {
+    const res = await fetchWhopPage(`https://api.whop.com/api/v2/memberships/${encodedId}`, apiKey)
+    // A provider-side deletion is an authoritative absence. The caller still
+    // applies the stored paid-through boundary before revoking access.
+    if (res.status === 404) return { missing: true }
+    if (!res.ok) {
+      console.error('[whop-memberships] direct lookup failed', { status: res.status })
+      return { error: `Whop membership lookup returned ${res.status}` }
+    }
+    const body = await res.json().catch(() => null)
+    const membership = body?.data && typeof body.data === 'object' ? body.data : body
+    if (!membership || typeof membership !== 'object') {
+      return { error: 'Whop membership lookup returned invalid JSON' }
+    }
+    return { membership: membership as WhopMembershipRecord }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown failure'
+    console.error('[whop-memberships] direct lookup failed', { reason })
+    return { error: 'Whop membership lookup failed after bounded retries' }
+  }
+}
+
 export async function fetchAllWhopMemberships(apiKey: string, planId: string): Promise<{ memberships: WhopMembershipRecord[]; pagesFetched: number } | { error: string }> {
   const candidates = [
     `https://api.whop.com/api/v2/memberships?plan_id=${planId}`,

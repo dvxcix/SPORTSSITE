@@ -3,17 +3,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { syncDiscordRoleForUser } from '@/lib/discord'
-import { fetchAllWhopMemberships, type WhopMembershipRecord } from '@/lib/whopMembershipsFetch'
+import { fetchWhopMembershipById, type WhopMembershipRecord } from '@/lib/whopMembershipsFetch'
 import { sendXConversion } from '@/lib/xConversion'
 import { shouldRevokeStoredWhopAccess, whopCancellationKeepsAccess, whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 
-// Same safety-net reasoning as whopAddonReconcile.ts, for the MAIN
-// tier-payments business — confirmed live that its webhook (/api/webhooks/whop)
-// has never actually been received (the runtime-log hits that looked like it
-// were a false match on /api/whop/checkout-session, not the webhook route
-// itself), the same root cause already found and worked around for the addon
-// business. A real customer (plan purchased, no tier change) is why this
-// exists now instead of waiting on the webhook to get fixed first.
+// The signed webhook is the primary grant path. This scheduled safety net
+// checks every membership that currently grants local access directly by ID.
+// Do not enumerate the whole provider catalog here: five full plan scans grew
+// to hundreds of requests, hit Whop's 429 limit at page 51, and prevented the
+// exact expired-trial cleanup this job exists to perform.
 const MAIN_PLAN_IDS = Object.entries(WHOP_PLANS)
   .filter(([, info]) => info.company !== 'addon')
   .map(([id]) => id)
@@ -43,12 +41,12 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // removing, which is how ended trials remained Ultimate indefinitely.
   const { data: trackedOwners, error: trackedOwnersError } = await admin
     .from('users')
-    .select('id, whop_membership_id')
+    .select('id, whop_membership_id, whop_plan_id')
     .in('whop_plan_id', MAIN_PLAN_IDS)
     .neq('tier', 'free')
   if (trackedOwnersError) return { error: `Could not load tracked memberships: ${trackedOwnersError.message}` }
-  const linkedOwnerByMembershipId = new Map((trackedOwners ?? [])
-    .filter(user => user.whop_membership_id)
+  const ownersWithMembership = (trackedOwners ?? []).filter(user => user.whop_membership_id && user.whop_plan_id)
+  const linkedOwnerByMembershipId = new Map(ownersWithMembership
     .map(user => [user.whop_membership_id as string, user.id as string]))
 
   // A user can end up with more than one simultaneously active membership
@@ -61,15 +59,15 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // regardless of its actual rank.
   const bestByUser = new Map<string, { planId: string; tier: Tier; membershipId?: string; periodEnd: string | null; cancelAtPeriodEnd: boolean }>()
 
-  const planFetches = await Promise.all(MAIN_PLAN_IDS.map(async planId => ({
-    planId,
-    fetched: await fetchAllWhopMemberships(apiKey, planId),
-  })))
+  const membershipFetches = await mapWithConcurrency(ownersWithMembership, 6, async owner => ({
+    owner,
+    fetched: await fetchWhopMembershipById(apiKey, owner.whop_membership_id as string),
+  }))
 
-  const failedFetches = planFetches.filter(entry => 'error' in entry.fetched)
+  const failedFetches = membershipFetches.filter(entry => 'error' in entry.fetched)
   if (failedFetches.length) {
     return {
-      error: `Whop reconciliation stopped before writes because ${failedFetches.length} plan lookup${failedFetches.length === 1 ? '' : 's'} failed`,
+      error: `Whop reconciliation stopped before writes because ${failedFetches.length} membership lookup${failedFetches.length === 1 ? '' : 's'} failed`,
     }
   }
 
@@ -79,19 +77,21 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // billing access.
   const providerMembershipById = new Map<string, WhopMembershipRecord>()
 
-  for (const { planId, fetched } of planFetches) {
+  for (const { owner, fetched } of membershipFetches) {
+    const planId = owner.whop_plan_id as string
     const planInfo = WHOP_PLANS[planId]
-    if ('error' in fetched) continue
-    const memberships = fetched.memberships
-    totalMemberships += memberships.length
+    if (!planInfo || 'error' in fetched || 'missing' in fetched) continue
+    const memberships = [fetched.membership]
+    totalMemberships += 1
 
     for (const m of memberships) {
-      if (m.id) providerMembershipById.set(m.id, m)
+      providerMembershipById.set(m.id ?? (owner.whop_membership_id as string), m)
       const status: string | undefined = m.status ?? m.valid_status
       const isActive = whopMembershipGrantsAccess(m)
       const membershipId: string | undefined = m.id
       const internalUserId: string | undefined = m.metadata?.internal_user_id
         ?? (membershipId ? linkedOwnerByMembershipId.get(membershipId) : undefined)
+        ?? (owner.id as string)
       const periodEnd = whopMembershipPeriodEnd(m)
       const cancelAtPeriodEnd = whopCancellationKeepsAccess(m)
 
@@ -228,4 +228,17 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   }
 
   return { totalMemberships, results }
+}
+
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let cursor = 0
+  async function runWorker() {
+    while (cursor < items.length) {
+      const index = cursor++
+      results[index] = await worker(items[index])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, runWorker))
+  return results
 }

@@ -9,7 +9,24 @@ import { safeApiError } from '@/lib/safeApiError'
 import { getMLBSchedule } from '@slipsurge/core/mlb-api'
 
 export const revalidate = 0
-export const maxDuration = 60
+export const maxDuration = 120
+
+async function runAuditWithTransientRetry(admin: ReturnType<typeof createAdminClient>, season: number, throughDate: string) {
+  const first = await admin.rpc('run_statcast_integrity_audit', {
+    p_season: season,
+    p_through_date: throughDate,
+  })
+  // PostgreSQL 57014 here has been transient contention while the morning
+  // Statcast writers are still landing, not a deterministic bad audit. One
+  // bounded retry keeps the integrity result current without hiding a second
+  // failure or creating an unbounded serverless loop.
+  if (first.error?.code !== '57014') return first
+  await new Promise(resolve => setTimeout(resolve, 1_500))
+  return admin.rpc('run_statcast_integrity_audit', {
+    p_season: season,
+    p_through_date: throughDate,
+  })
+}
 
 async function run(req: Request) {
   const authError = requireCronAuth(req)
@@ -19,10 +36,7 @@ async function run(req: Request) {
   const season = currentSeason()
   const throughDate = daysAgoET(1)
   const [auditResponse, officialSchedule] = await Promise.all([
-    admin.rpc('run_statcast_integrity_audit', {
-      p_season: season,
-      p_through_date: throughDate,
-    }),
+    runAuditWithTransientRetry(admin, season, throughDate),
     getMLBSchedule(throughDate),
   ])
   const { data, error } = auditResponse

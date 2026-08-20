@@ -72,9 +72,13 @@ const STALE_CLAIM_MINUTES = 12
 // progresses, and paired with an explicit oldest-first ORDER BY (see the
 // claim query) so even if the pool outgrows this again, it rotates fairly
 // instead of permanently starving whichever rows lose the tiebreak.
-const BATCH_SIZE = 700
+// Keep one invocation comfortably below the function and PostgREST write
+// budgets. The hourly retry window still rotates through the full population,
+// while a bad provider payload no longer turns a 700-player pass into one
+// all-or-nothing transaction.
+const BATCH_SIZE = 250
 const FETCH_CONCURRENCY = 20
-const WRITE_CHUNK_SIZE = 500
+const WRITE_CHUNK_SIZE = 100
 // Savant can publish the prior day's detail payload later than its first
 // morning refresh. The cron runs hourly during the ingestion window, so a
 // two-hour recheck retries late source rows without hammering continuously.
@@ -222,18 +226,40 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
       )
       if (pitcherError) throw pitcherError
 
-      const upsertRows = allEvents.map(e => ({
-        game_pk: Number(e.game_pk), play_id: e.play_id, play_url: e.play_url || null,
+      const invalidEventOwners = new Set<string>()
+      const upsertRows = allEvents.flatMap(e => {
+        const gamePk = Number(e.game_pk)
+        const batterId = Number(e.batter_id)
+        const pitcherId = Number(e.pitcher_id)
+        if (!Number.isInteger(gamePk) || !Number.isInteger(batterId) || !Number.isInteger(pitcherId)) {
+          if (Number.isInteger(batterId)) invalidEventOwners.add(String(batterId))
+          console.error('[savant-hr-details] invalid required event identity', {
+            hasGamePk: Number.isInteger(gamePk),
+            hasBatterId: Number.isInteger(batterId),
+            hasPitcherId: Number.isInteger(pitcherId),
+          })
+          return []
+        }
+        const playId = typeof e.play_id === 'string' && e.play_id.trim()
+          ? e.play_id
+          : `savant:${gamePk}:${batterId}:${pitcherId}:${e.game_date ?? 'unknown'}:${e.hr_distance ?? 'unknown'}`
+        return [{
+        game_pk: gamePk, play_id: playId, play_url: e.play_url || null,
         season, game_date: e.game_date || null,
-        batter_id: Number(e.batter_id), batter_name: e.batter_name || null,
-        pitcher_id: Number(e.pitcher_id), pitcher_name: e.pitcher_name || null,
+        batter_id: batterId, batter_name: e.batter_name || null,
+        pitcher_id: pitcherId, pitcher_name: e.pitcher_name || null,
         result: e.result || null, source_result: e.result || null, detail_source: 'savant',
         exit_velocity: toNum(e.exit_velocity), launch_angle: toNum(e.launch_angle),
         hr_distance: toNum(e.hr_distance), hr_trot: toNum(e.hr_trot),
         hr_cat: e.hr_cat || null, hr_type: e.hr_type || null,
         parks: Object.fromEntries(PARK_COLUMNS.map(p => [p, e[p] === '1'])),
         last_synced_at: new Date().toISOString(),
-      }))
+      }]
+      })
+
+      if (invalidEventOwners.size) {
+        throw new Error(`Savant returned invalid required IDs for ${invalidEventOwners.size} batter payload(s)`)
+      }
 
       for (let i = 0; i < upsertRows.length; i += WRITE_CHUNK_SIZE) {
         const { error } = await admin.from('player_home_run_events')
@@ -241,7 +267,11 @@ export async function syncHrDetailBatch(admin: AdminClient, season: number) {
         if (error) throw error
       }
     } catch (e: any) {
-      console.error('[savant-hr-details] bulk write failed', { type: e instanceof Error ? e.name : typeof e })
+      console.error('[savant-hr-details] bulk write failed', {
+        type: e instanceof Error ? e.name : typeof e,
+        code: typeof e?.code === 'string' ? e.code : undefined,
+        message: typeof e?.message === 'string' ? e.message.slice(0, 300) : undefined,
+      })
       writeFailed = 'write failed'
     }
   }
