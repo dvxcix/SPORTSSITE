@@ -19,6 +19,20 @@ type CategoryRow = {
   last_synced_at: string
 }
 
+export function newestMechanicsAudit(audits: StatcastIntegrityResult[]): StatcastIntegrityResult | null {
+  const newestAudit = audits[0] ?? null
+  if (!newestAudit || newestAudit.checks.official_schedule) return newestAudit
+  const scheduleAudit = audits.find(audit => audit.checks.official_schedule)
+  if (!scheduleAudit?.checks.official_schedule) return newestAudit
+  return {
+    ...newestAudit,
+    checks: {
+      ...newestAudit.checks,
+      official_schedule: scheduleAudit.checks.official_schedule,
+    },
+  }
+}
+
 export const MECHANICS_STATCAST_CATEGORIES = [
   'bat_tracking',
   'batted_ball_splits',
@@ -108,10 +122,19 @@ export function evaluateMechanicsReadiness(input: {
   if (!audit || audit.through_date !== requiredThroughDate) {
     return { ...base, ready: false, stage: 'integrity_missing', reason: `Waiting for the canonical Statcast audit through ${requiredThroughDate}.` }
   }
-  if (!audit.checks.official_schedule?.source_available) {
+  // A direct canonical audit does not own the independent MLB schedule check,
+  // so older/manual audit rows may legitimately omit this nested field. Only
+  // an explicit source failure means the schedule is unavailable. Treating an
+  // omitted field as `false` caused a newer healthy audit to mask an earlier
+  // complete schedule check for the same date.
+  if (audit.checks.official_schedule?.source_available === false) {
     return { ...base, ready: false, stage: 'official_schedule_pending', reason: `MLB's finalized schedule for ${requiredThroughDate} is not available yet.` }
   }
-  const missingFinalGames = Number(audit.checks.official_schedule.final_games_without_pitch_log || 0)
+  const missingFinalGames = Number(
+    audit.checks.official_schedule?.final_games_without_pitch_log
+      ?? audit.checks.game_coverage?.scheduled_games_without_pitch_log
+      ?? 0,
+  )
   if (missingFinalGames > 0) {
     return { ...base, ready: false, stage: 'pitch_log_incomplete', reason: `Waiting for Statcast pitch logs from ${missingFinalGames} finalized game${missingFinalGames === 1 ? '' : 's'} on ${requiredThroughDate}.` }
   }
@@ -195,13 +218,12 @@ export async function getMechanicsStatcastReadiness(game: TodayGame, gameDate: s
   const admin = createAdminClient()
   const requiredThroughDate = priorPregameDate(gameDate)
   const playerIds = [...new Set(requirements.map(requirement => requirement.mlbId))]
-  const [{ data: auditData, error: auditError }, { data: rowsData, error: rowsError }, categoryResults] = await Promise.all([
+  const [{ data: auditRows, error: auditError }, { data: rowsData, error: rowsError }, categoryResults] = await Promise.all([
     admin.from('statcast_integrity_runs')
       .select('id,season,through_date,status,summary,checks,created_at')
       .eq('through_date', requiredThroughDate)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(10),
     playerIds.length
       ? admin.from('dugout_statcast_precomputed')
         .select('mlb_id,pitcher_hand,computed_at')
@@ -219,9 +241,10 @@ export async function getMechanicsStatcastReadiness(game: TodayGame, gameDate: s
   if (rowsError) throw rowsError
   const categoryError = categoryResults.find(result => result.error)?.error
   if (categoryError) throw categoryError
+  const audit = newestMechanicsAudit((auditRows ?? []) as StatcastIntegrityResult[])
   return evaluateMechanicsReadiness({
     gameDate,
-    audit: auditData as StatcastIntegrityResult | null,
+    audit,
     requirements,
     derivedRows: (rowsData ?? []) as DerivedRow[],
     categoryRows: categoryResults.flatMap(result => result.data ? [result.data as CategoryRow] : []),

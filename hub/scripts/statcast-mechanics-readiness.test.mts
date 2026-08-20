@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { evaluateMechanicsReadiness } from '../src/lib/statcastMechanicsReadiness.ts'
+import { evaluateMechanicsReadiness, newestMechanicsAudit } from '../src/lib/statcastMechanicsReadiness.ts'
 import type { StatcastIntegrityResult } from '../src/lib/statcastIntegrity.ts'
 
 const gameDate = '2026-08-19'
@@ -57,6 +57,40 @@ test('defers when an officially final game has no pitch log', () => {
   const result = evaluateMechanicsReadiness({ gameDate, currentDate: gameDate, audit: current, requirements, derivedRows: readyRows, categoryRows: readyCategories })
   assert.equal(result.ready, false)
   assert.equal(result.stage, 'pitch_log_incomplete')
+})
+
+test('does not call an omitted schedule check an MLB source outage', () => {
+  const current = audit({
+    checks: {
+      pitch_log: { raw_to_typed_gaps: {}, classification_mismatches: 0, terminal_events_without_description: 0, fair_balls_without_event: 0 },
+      game_coverage: { scheduled_games_without_pitch_log: 0 },
+      category_freshness: { stale_categories: 0 },
+    },
+  })
+  const result = evaluateMechanicsReadiness({ gameDate, currentDate: gameDate, audit: current, requirements, derivedRows: readyRows, categoryRows: readyCategories })
+  assert.equal(result.ready, true)
+  assert.equal(result.stage, 'ready')
+})
+
+test('still defers on an explicit MLB schedule source failure', () => {
+  const current = audit({
+    checks: {
+      ...audit().checks,
+      official_schedule: { source_available: false, final_games: 0, final_games_without_pitch_log: 0, missing_game_pks: [] },
+    },
+  })
+  const result = evaluateMechanicsReadiness({ gameDate, currentDate: gameDate, audit: current, requirements, derivedRows: readyRows, categoryRows: readyCategories })
+  assert.equal(result.ready, false)
+  assert.equal(result.stage, 'official_schedule_pending')
+})
+
+test('keeps the newest canonical audit while carrying forward same-date schedule evidence', () => {
+  const newest = audit({ id: 'newest', created_at: '2026-08-19T12:00:00.000Z', checks: { ...audit().checks, official_schedule: undefined } })
+  const scheduled = audit({ id: 'scheduled', created_at: '2026-08-19T11:00:00.000Z' })
+  const merged = newestMechanicsAudit([newest, scheduled])
+  assert.equal(merged?.id, 'newest')
+  assert.equal(merged?.checks.official_schedule?.source_available, true)
+  assert.equal(merged?.checks.official_schedule?.final_games, 15)
 })
 
 test('defers when materialized Statcast fields fail integrity', () => {

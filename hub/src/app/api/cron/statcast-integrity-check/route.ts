@@ -100,6 +100,10 @@ async function run(req: Request) {
         },
       },
     }
+    const { error: persistError } = await admin.from('statcast_integrity_runs').update({
+      checks: result.checks,
+    }).eq('id', result.id)
+    if (persistError) return safeApiError('statcast-integrity-persist-official-schedule-unavailable', persistError)
   }
   await alertOnStatcastIntegrityFailure(admin, result)
   return NextResponse.json(result, { status: result.status === 'failed' ? 503 : 200 })
