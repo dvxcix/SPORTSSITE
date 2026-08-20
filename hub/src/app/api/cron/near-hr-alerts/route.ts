@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
@@ -7,9 +7,14 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { postAlert } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/platform'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { fetchHrFeed } from '@/lib/hrFeed'
+import { nearHomeRunAlertEvent, type NearHrSourceRow } from '@/lib/contactAlertEvents'
+import { enqueueContactAlert, processContactAlertJob } from '@/lib/contactAlertOutbox'
 
 export const revalidate = 0
-export const maxDuration = 60
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 export const GET = withPipelineHealth('near-hr-alerts', run)
 
 // mlb-party Supabase — same external scraper source Dugout's own "Today's
@@ -42,6 +47,7 @@ async function run(req: Request) {
   const admin = createAdminClient()
   const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const games = await getTodaysMatchups(date)
+  const { contactFeed } = await fetchHrFeed(games.map(game => ({ gamePk: game.gamePk, status: { abstractGameState: game.abstractStatus } })))
 
   const teamByMlbId: Record<number, { team: string; gamePk: number }> = {}
   for (const g of games) {
@@ -51,7 +57,7 @@ async function run(req: Request) {
   }
 
   const rows = await mpGet(
-    `/rest/v1/near_hrs?game_date=eq.${date}&select=batter_name,batter_id,pitcher_name,exit_velocity,launch_angle,hit_distance,inning,half_inning,captured_at&order=captured_at.asc`
+    `/rest/v1/near_hrs?game_date=eq.${date}&select=game_pk,game_date,batter_name,batter_id,pitcher_name,pitch_type,pitch_speed,result,inning,half_inning,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,park_hr_list,home_team,away_team,captured_at&order=captured_at.asc`
   )
   if (!rows.length) return NextResponse.json({ ok: true, rows: 0, newRows: 0 })
 
@@ -60,9 +66,18 @@ async function run(req: Request) {
   const maxCapturedAt = rows.reduce((max, r) => Math.max(max, new Date(r.captured_at).getTime()), 0)
 
   let posted = 0
-  if (lastSeen !== null) {
-    const newRows = rows.filter(r => new Date(r.captured_at).getTime() > lastSeen)
+  const queued: Array<{ id: string }> = []
+  // On a first deployment/run, recover only the last five minutes rather
+  // than silently discarding a just-hit ball or flooding the day's backlog.
+  const alertThreshold = lastSeen ?? Date.now() - 5 * 60_000
+  if (lastSeen !== null || rows.some(r => new Date(r.captured_at).getTime() > alertThreshold)) {
+    const newRows = rows.filter(r => new Date(r.captured_at).getTime() > alertThreshold)
     for (const n of newRows) {
+      const event = nearHomeRunAlertEvent(n as NearHrSourceRow, games, date, contactFeed)
+      if (!event) continue
+      const job = await enqueueContactAlert(event, 'near-hr-alerts-cron')
+      queued.push({ id: job.id })
+      continue
       const teamInfo = n.batter_id ? teamByMlbId[n.batter_id] : undefined
       const details = [
         n.hit_distance != null ? `${Math.round(n.hit_distance)} ft` : null,
@@ -74,7 +89,7 @@ async function run(req: Request) {
 
       await postAlert(admin, 'near_hr', {
         embeds: [{
-          ...(teamInfo ? { author: { name: getTeamName(teamInfo.team), icon_url: getTeamLogoPngUrl(teamInfo.team) } } : {}),
+          ...(teamInfo ? { author: { name: getTeamName(teamInfo!.team), icon_url: getTeamLogoPngUrl(teamInfo!.team) } } : {}),
           title: `${n.batter_name} — Near Home Run`,
           description: details || undefined,
           url: `${PLATFORM_URL}/dugout?date=${date}`,
@@ -88,5 +103,9 @@ async function run(req: Request) {
 
   await admin.from('near_hr_alert_cursor').upsert({ game_date: date, last_captured_at: new Date(maxCapturedAt).toISOString() }, { onConflict: 'game_date' })
 
-  return NextResponse.json({ ok: true, rows: rows.length, newRows: lastSeen === null ? 0 : posted, firstRun: lastSeen === null, posted })
+  if (queued.length) after(async () => {
+    for (const job of queued) await processContactAlertJob(job.id)
+  })
+
+  return NextResponse.json({ ok: true, rows: rows.length, newRows: queued.length, firstRun: lastSeen === null, queued: queued.length, posted })
 }

@@ -64,6 +64,23 @@ function compactText(value: string, maxLength: number) {
   return `${value.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`
 }
 
+function svgDataUri(svg: string) {
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+}
+
+function initials(value: string, fallback: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean)
+  return (parts.length > 1 ? `${parts[0][0]}${parts.at(-1)?.[0] ?? ''}` : parts[0]?.slice(0, 2) || fallback).toUpperCase()
+}
+
+function fallbackBadge(label: string, color: string, kind: 'player' | 'team') {
+  const safe = esc(initials(label, kind === 'player' ? 'P' : 'MLB'))
+  const figure = kind === 'player'
+    ? '<circle cx="64" cy="43" r="23" fill="#dce5ef" fill-opacity=".94"/><path d="M22 126c4-37 22-56 42-56s38 19 42 56" fill="#dce5ef" fill-opacity=".94"/>'
+    : ''
+  return svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" rx="28" fill="#071018"/><rect x="3" y="3" width="122" height="122" rx="25" fill="${esc(color)}" fill-opacity=".42" stroke="${esc(color)}" stroke-width="4"/>${figure}<text x="64" y="${kind === 'player' ? 119 : 76}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${kind === 'player' ? 20 : 42}" font-weight="900" fill="#fff">${safe}</text></svg>`)
+}
+
 function resultLabel(event: DailyContactEvent) {
   if (event.kind === 'home_run') return event.isGrandSlam ? 'GRAND SLAM' : `${Math.max(1, event.rbi)}-RUN HOME RUN`
   return event.result.replaceAll('_', ' ').toUpperCase()
@@ -207,6 +224,8 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
   const venueLabel = compactText(event.game.venueName.toUpperCase(), 34)
   const batterLabel = compactText(event.batterName, 29)
   const batterTitleSize = batterLabel.length > 25 ? 27 : batterLabel.length > 21 ? 30 : 34
+  const pitchReceipt = event.pitchType ? ` / ${event.pitchType}${event.pitchSpeed != null ? ` ${event.pitchSpeed.toFixed(1)} mph` : ''}` : ''
+  const matchupDetails = compactText(`${event.batterTeam} / ${event.half} ${event.inning ?? '-'} / off ${event.pitcherName}${pitchReceipt}`, 70)
   const matchupLabel = compactText(`${event.batterTeam}  ·  ${event.half} ${event.inning ?? '-'}  ·  off ${event.pitcherName}`, 58)
   const tailMarkup = Array.from({ length: 6 }, (_, index) => {
     const point = flightPoint(event, Math.max(0, progress - ((index + 1) * .018)))
@@ -232,7 +251,7 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
     <rect x="28" y="397" width="190" height="24" rx="12" fill="${accent}" fill-opacity=".08" stroke="${accent}" stroke-opacity=".22"/><text x="123" y="413" text-anchor="middle" class="badge" fill="${accent}">${sourceLabel}</text>
     <rect x="28" y="430" width="672" height="264" rx="26" fill="url(#panel)" fill-opacity=".97" stroke="#fff" stroke-opacity=".11"/><path d="M54 431 H674 Q698 431 698 455" fill="none" stroke="#fff" stroke-opacity=".08"/>
     <rect x="45" y="449" width="110" height="110" rx="22" fill="${getTeamColor(event.batterTeam)}" fill-opacity=".45" stroke="${accent}" stroke-opacity=".55"/>${assets.headshot ? `<image href="${assets.headshot}" x="45" y="449" width="110" height="110" preserveAspectRatio="xMidYMax meet" clip-path="url(#avatar)"/>` : ''}${assets.batterLogo ? `<circle cx="145" cy="549" r="18" fill="#05090d" stroke="#fff" stroke-opacity=".14"/><image href="${assets.batterLogo}" x="133" y="537" width="24" height="24"/>` : ''}
-    <text x="174" y="459" class="eyebrow">${esc(event.kind === 'home_run' ? 'HOME RUN FLIGHT' : 'NEAR HOME RUN FLIGHT')}</text><text x="174" y="497" class="title" style="font-size:${batterTitleSize}px">${esc(batterLabel)}</text><text x="174" y="525" class="subtitle">${esc(matchupLabel)}</text><text x="174" y="555" class="body">${esc(resultLabel(event))}</text>
+    <text x="174" y="459" class="eyebrow">${esc(event.kind === 'home_run' ? 'HOME RUN FLIGHT' : 'NEAR HOME RUN FLIGHT')}</text><text x="174" y="497" class="title" style="font-size:${batterTitleSize}px">${esc(batterLabel)}</text><text x="174" y="525" class="subtitle">${esc(matchupDetails)}</text><text x="174" y="555" class="body">${esc(resultLabel(event))}</text>
     ${badgeMarkup}
     ${[['EXIT VELO', metric(event.exitVelocity, ' mph')], ['DISTANCE', metric(event.distance, ' ft')], ['LAUNCH', metric(event.launchAngle, '°')], ['PARKS', event.kind === 'near_hr' && event.parksHrCount != null ? `${event.parksHrCount}/30` : event.game.parkTeamAbbr]].map((item,index) => `<rect x="${174 + index * 123}" y="599" width="113" height="64" rx="15" fill="#0b1118" stroke="#fff" stroke-opacity=".08"/><text x="${188 + index * 123}" y="620" class="metricLabel">${item[0]}</text><text x="${188 + index * 123}" y="648" class="metricValue">${esc(item[1])}</text>`).join('')}
     <rect x="720" y="430" width="532" height="264" rx="26" fill="url(#panel)" fill-opacity=".98" stroke="#fff" stroke-opacity=".11"/><path d="M746 431 H1226 Q1250 431 1250 455" fill="none" stroke="#fff" stroke-opacity=".08"/>
@@ -249,13 +268,24 @@ async function buildAssets(event: DailyContactEvent, cache: Map<string, string>,
     if (!cache.has(url)) cache.set(url, await remoteDataUri(url))
     return cache.get(url) ?? ''
   }
+  const batterColor = getTeamColor(event.batterTeam)
+  const parkColor = getTeamColor(event.game.parkTeamAbbr)
+  const homeColor = getTeamColor(event.game.homeTeam)
+  const awayColor = getTeamColor(event.game.awayTeam)
+  const [headshot, batterLogo, parkLogo, homeLogo, awayLogo] = await Promise.all([
+    load(mlbHeadshot(event.batterId)),
+    load(getTeamLogoPngUrl(event.batterTeam)),
+    load(getTeamLogoPngUrl(event.game.parkTeamAbbr)),
+    load(getTeamLogoPngUrl(event.game.homeTeam)),
+    load(getTeamLogoPngUrl(event.game.awayTeam)),
+  ])
   return {
     brandLogo, bookLogos,
-    headshot: await load(mlbHeadshot(event.batterId)),
-    batterLogo: await load(getTeamLogoPngUrl(event.batterTeam)),
-    parkLogo: await load(getTeamLogoPngUrl(event.game.parkTeamAbbr)),
-    homeLogo: await load(getTeamLogoPngUrl(event.game.homeTeam)),
-    awayLogo: await load(getTeamLogoPngUrl(event.game.awayTeam)),
+    headshot: headshot || fallbackBadge(event.batterName, batterColor, 'player'),
+    batterLogo: batterLogo || fallbackBadge(event.batterTeam, batterColor, 'team'),
+    parkLogo: parkLogo || fallbackBadge(event.game.parkTeamAbbr, parkColor, 'team'),
+    homeLogo: homeLogo || fallbackBadge(event.game.homeTeam, homeColor, 'team'),
+    awayLogo: awayLogo || fallbackBadge(event.game.awayTeam, awayColor, 'team'),
   }
 }
 
@@ -310,6 +340,7 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
   const cache = new Map<string, string>()
   const sharp = await loadSharpWithBundledFont()
   const brandLogo = await localDataUri('logo.png', 'image/png')
+  if (!brandLogo) throw new Error('SlipSurge brand logo is unavailable; refusing to render an unbranded export')
   const bookLogos: Record<string, string> = {}
   await Promise.all(Object.entries(BOOK_ASSETS).map(async ([book, asset]) => { bookLogos[book] = await localDataUri(asset.path, asset.mime) }))
   try {
@@ -346,4 +377,48 @@ export async function renderContactRecap(events: DailyContactEvent[], format: Co
 
 export async function renderContactRecapGif(events: DailyContactEvent[]) {
   return renderContactRecap(events, 'gif')
+}
+
+export type ContactAlertMedia = {
+  body: Buffer
+  filename: string
+  contentType: 'image/gif' | 'image/png'
+  width: number
+  height: number
+  animated: boolean
+}
+
+// Discord's inline image limit varies by guild. Keep enough headroom for
+// multipart overhead and fall back to a fully branded static receipt rather
+// than posting a broken/oversized animation.
+const DISCORD_ALERT_MAX_BYTES = 9_000_000
+
+export async function renderContactAlertMedia(event: DailyContactEvent): Promise<ContactAlertMedia> {
+  const stem = `slipsurge-${event.kind === 'home_run' ? 'home-run' : 'near-home-run'}-${event.gamePk}-${event.atBatIndex}`
+  try {
+    const body = await renderContactRecap([event], 'gif', 'landscape')
+    const sharp = await loadSharpWithBundledFont()
+    const metadata = await sharp(body, { animated: true }).metadata()
+    if (metadata.width !== 960 || metadata.pageHeight !== 540 || Number(metadata.pages ?? 1) < 2) {
+      throw new Error(`Animated alert dimensions were ${metadata.width}x${metadata.pageHeight} (${metadata.pages ?? 1} frames), expected 960x540`)
+    }
+    if (body.byteLength <= 0 || body.byteLength > DISCORD_ALERT_MAX_BYTES) {
+      throw new Error(`Animated alert size ${body.byteLength} is outside Discord delivery limits`)
+    }
+    return { body, filename: `${stem}.gif`, contentType: 'image/gif', width: 960, height: 540, animated: true }
+  } catch (error) {
+    console.error('[contact-alert] GIF render fell back to PNG', { reason: error instanceof Error ? error.message : String(error) })
+    const sharp = await loadSharpWithBundledFont()
+    const brandLogo = await localDataUri('logo.png', 'image/png')
+    if (!brandLogo) throw new Error('SlipSurge brand logo is unavailable; refusing to render an unbranded alert')
+    const bookLogos: Record<string, string> = {}
+    await Promise.all(Object.entries(BOOK_ASSETS).map(async ([book, asset]) => { bookLogos[book] = await localDataUri(asset.path, asset.mime) }))
+    const assets = await buildAssets(event, new Map(), brandLogo, bookLogos)
+    const body = await sharp(frameSvg(event, 1, assets, 0, 1)).png({ compressionLevel: 7 }).toBuffer()
+    const metadata = await sharp(body).metadata()
+    if (metadata.width !== W || metadata.height !== H || body.byteLength <= 0) {
+      throw new Error(`Static alert dimensions were ${metadata.width}x${metadata.height}, expected ${W}x${H}`)
+    }
+    return { body, filename: `${stem}.png`, contentType: 'image/png', width: W, height: H, animated: false }
+  }
 }

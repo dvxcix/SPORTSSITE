@@ -23,6 +23,7 @@ async function run(request: Request) {
   const { data: items, error } = await admin.from('operational_retry_queue')
     .select('id,provider,operation,payload,attempts,max_attempts')
     .eq('status', 'pending')
+    .neq('operation', 'contact_alert_media')
     .lte('next_attempt_at', now)
     .order('next_attempt_at', { ascending: true })
     .limit(20)

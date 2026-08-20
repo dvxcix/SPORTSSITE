@@ -14,7 +14,12 @@ const API = 'https://discord.com/api/v10'
 async function discordFetch(path: string, init: RequestInit = {}) {
   const token = process.env.DISCORD_BOT_TOKEN
   if (!token) throw new Error('DISCORD_BOT_TOKEN is not configured')
-  const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json', ...(init.headers || {}) }
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bot ${token}`)
+  // fetch must supply multipart/form-data's generated boundary. Forcing a
+  // JSON content type here made binary Discord attachments impossible even
+  // though every ordinary message correctly uses JSON.
+  if (!(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   let res: Response | null = null
   // Role add/remove during a bulk sync routinely trips Discord's per-route
   // rate limit (confirmed: every call in a 5-concurrent-user batch came back
@@ -108,6 +113,45 @@ export async function postAlert(admin: SupabaseClient, alertKey: 'lineup_confirm
   const channelId = config.alert_channels?.[alertKey]
   if (!channelId) return
   await postToChannel(channelId, payload)
+}
+
+export type DiscordAttachmentResult = {
+  ok: boolean
+  channelId?: string
+  messageId?: string
+  error?: string
+  status?: number
+}
+
+// Binary alert delivery is deliberately checked and is retried by the
+// durable contact_alert_jobs outbox. The generic operational retry queue is
+// JSON-only and therefore cannot safely preserve an image attachment.
+export async function postAlertAttachmentChecked(
+  admin: SupabaseClient,
+  alertKey: 'hr' | 'near_hr',
+  payload: { content?: string; embeds?: any[] },
+  attachment: { body: Uint8Array; filename: string; contentType: string },
+): Promise<DiscordAttachmentResult> {
+  const config = await getDiscordConfig(admin)
+  if (!config?.enabled) return { ok: false, error: 'Discord alerts are disabled' }
+  const channelId = config.alert_channels?.[alertKey]
+  if (!channelId) return { ok: false, error: `No Discord channel configured for ${alertKey}` }
+
+  try {
+    const form = new FormData()
+    form.append('payload_json', JSON.stringify(payload))
+    const bytes = Uint8Array.from(attachment.body)
+    form.append('files[0]', new Blob([bytes.buffer], { type: attachment.contentType }), attachment.filename)
+    const res = await discordFetch(`/channels/${channelId}/messages`, { method: 'POST', body: form })
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      return { ok: false, channelId, status: res.status, error: `Discord returned ${res.status}${detail ? `: ${detail.slice(0, 300)}` : ''}` }
+    }
+    const body = await res.json().catch(() => null) as { id?: string } | null
+    return { ok: true, channelId, messageId: body?.id }
+  } catch (error) {
+    return { ok: false, channelId, error: error instanceof Error ? error.message : 'Discord attachment request failed' }
+  }
 }
 
 export const fmtAmericanOdds = (n: number) => (n > 0 ? `+${n}` : `${n}`)
