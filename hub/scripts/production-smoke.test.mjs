@@ -226,6 +226,7 @@ test('billing reconciliation is bounded and avoids unchanged side effects', asyn
   const fetcher = await read('src/lib/whopMembershipsFetch.ts')
   const main = await read('src/lib/whopMainReconcile.ts')
   const addon = await read('src/lib/whopAddonReconcile.ts')
+  const reconcileGrants = await read('supabase/migrations/20260820194500_lock_reconcile_state_grants.sql')
   assert.ok(fetcher.includes('AbortSignal.timeout(REQUEST_TIMEOUT_MS)'))
   assert.ok(fetcher.includes('for (let page = 2; page <= totalPages; page++)'))
   assert.ok(fetcher.includes('failed after ${MAX_ATTEMPTS} attempts'))
@@ -238,6 +239,8 @@ test('billing reconciliation is bounded and avoids unchanged side effects', asyn
   assert.ok(main.includes('RECONCILE_BATCH_SIZE = 24'))
   assert.ok(main.includes('REQUEST_SPACING_MS = 1_200'))
   assert.ok(main.includes(".from('integration_reconcile_state')"))
+  assert.ok(reconcileGrants.includes('revoke all on table public.integration_reconcile_state from anon, authenticated'))
+  assert.ok(reconcileGrants.includes('grant all on table public.integration_reconcile_state to service_role'))
   assert.ok(addon.includes('const bestByUser = new Map'))
   assert.ok(addon.includes('if (unchanged) continue'))
   assert.ok(addon.includes('if (accessChanged)'))
@@ -312,10 +315,15 @@ test('Whop billing retries are bounded without breaking idempotency or legacy ac
 test('pipeline telemetry records starts before handlers can time out', async () => {
   const health = await read('src/lib/pipelineHealth.ts')
   const admin = await read('src/app/admin/pipeline-health/page.tsx')
+  const watchdog = await read('src/app/api/cron/replay-operational-retries/route.ts')
   assert.ok(health.indexOf("status: 'running'") < health.indexOf('await handler(request)'))
   assert.ok(health.includes(".update({"))
   assert.ok(admin.includes("? 'timed_out'"))
   assert.ok(admin.includes("? 'Timed out'"))
+  assert.ok(admin.includes("status === 'running' ? 'Running' : 'No duration'"))
+  assert.ok(watchdog.includes(".from('pipeline_runs')"))
+  assert.ok(watchdog.includes(".eq('status', 'running')"))
+  assert.ok(watchdog.includes(".lt('started_at', abandonedBefore)"))
 })
 
 test('database RPCs and reaction notifications are least privilege', async () => {

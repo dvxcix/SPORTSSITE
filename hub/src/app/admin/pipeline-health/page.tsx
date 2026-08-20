@@ -66,8 +66,8 @@ function currentTimestamp() {
   return Date.now()
 }
 
-function durationLabel(ms: number | null) {
-  if (ms == null) return 'Running'
+function durationLabel(ms: number | null, status: Run['status']) {
+  if (ms == null) return status === 'running' ? 'Running' : 'No duration'
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`
 }
 
@@ -284,7 +284,7 @@ export default async function PipelineHealthPage() {
               <div className="min-w-0"><div className="font-semibold text-white">{pipeline.label}</div><div className="mt-0.5 text-xs text-zinc-500">{pipeline.area} · {pipeline.schedule}</div>{run?.error && <div className={`mt-1 truncate text-xs ${state === 'deferred' ? 'text-amber-200' : 'text-red-300'}`} title={run.error}>{run.error}</div>}{state === 'deferred' && run?.details?.requiredThroughDate && <div className="mt-1 text-[11px] text-zinc-500">Required through {run.details.requiredThroughDate}{run.details.stage ? ` · ${run.details.stage}` : ''}</div>}</div>
               <div className={`flex items-center gap-1.5 ${tone}`} title={state === 'verified' ? `Verified from ${evidence?.detail}` : undefined}><Icon size={14} />{statusLabel}</div>
               <div className="text-zinc-300">{signalAt ? ageLabel(signalAt) : evidence?.currentOutput ? 'Output verified' : 'Not recorded'}</div>
-              <div className="text-xs text-zinc-400"><span className="block">{nextRunLabel(pipeline.schedule)}</span><span className="text-zinc-600">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms) : 'No duration'}</span></div>
+              <div className="text-xs text-zinc-400"><span className="block">{nextRunLabel(pipeline.schedule)}</span><span className="text-zinc-600">{run ? state === 'timed_out' ? `${Math.floor(ageMinutes)}m+` : durationLabel(run.duration_ms, run.status) : 'No duration'}</span></div>
               <PipelineRetryButton jobName={pipeline.name}/>
             </div>
           )
