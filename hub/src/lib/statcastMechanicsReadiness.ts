@@ -98,8 +98,9 @@ export function evaluateMechanicsReadiness(input: {
   categoryRows?: CategoryRow[]
 }): MechanicsReadiness {
   const { gameDate, audit, requirements, derivedRows } = input
+  const currentDate = input.currentDate ?? todayEt()
   const requiredThroughDate = priorPregameDate(gameDate)
-  if (gameDate < (input.currentDate ?? todayEt())) {
+  if (gameDate < currentDate) {
     return {
       ready: true,
       stage: 'historical',
@@ -149,12 +150,13 @@ export function evaluateMechanicsReadiness(input: {
     return { ...base, ready: false, stage: 'integrity_failed', reason: `Statcast is present but failed event integrity (${Math.max(nonCategoryFailures, structuralGaps)} canonical gaps).` }
   }
 
-  const auditTime = new Date(audit.created_at).getTime()
-  const categoryCutoff = auditTime - 2 * 60 * 60_000
   const categoryMap = new Map((input.categoryRows ?? []).map(row => [row.category, row.last_synced_at]))
   const missingCategories = MECHANICS_STATCAST_CATEGORIES.filter(category => {
     const syncedAt = categoryMap.get(category)
-    return !syncedAt || new Date(syncedAt).getTime() < categoryCutoff
+    const syncedDate = syncedAt
+      ? new Date(syncedAt).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+      : null
+    return !syncedDate || syncedDate < currentDate
   })
   if (missingCategories.length) {
     return {

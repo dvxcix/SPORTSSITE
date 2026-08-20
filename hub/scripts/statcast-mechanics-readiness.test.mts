@@ -124,7 +124,7 @@ test('does not invalidate exact-date profiles when a later integrity audit runs'
   const result = evaluateMechanicsReadiness({
     gameDate,
     currentDate: gameDate,
-    audit: audit({ created_at: '2026-08-19T11:20:00.000Z' }),
+    audit: audit({ created_at: '2026-08-19T22:20:00.000Z' }),
     requirements,
     categoryRows: readyCategories.map(row => ({ ...row, last_synced_at: '2026-08-19T11:00:00.000Z' })),
     derivedRows: readyRows,
@@ -149,6 +149,19 @@ test('defers when one mechanics-specific Statcast category did not refresh', () 
     requirements,
     derivedRows: readyRows,
     categoryRows: readyCategories.filter(row => row.category !== 'swing_timing_miss_distance'),
+  })
+  assert.equal(result.ready, false)
+  assert.equal(result.stage, 'statcast_categories_pending')
+})
+
+test('defers when mechanics categories are still from the prior ET date', () => {
+  const result = evaluateMechanicsReadiness({
+    gameDate,
+    currentDate: gameDate,
+    audit: audit(),
+    requirements,
+    derivedRows: readyRows,
+    categoryRows: readyCategories.map(row => ({ ...row, last_synced_at: '2026-08-18T18:00:00.000Z' })),
   })
   assert.equal(result.ready, false)
   assert.equal(result.stage, 'statcast_categories_pending')
