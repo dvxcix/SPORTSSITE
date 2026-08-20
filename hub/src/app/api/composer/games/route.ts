@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTodaysMatchups, isPregame } from '@slipsurge/core/mlbSchedule'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { normName, resolveNameEntry, resolvePlayerIdentity } from '@slipsurge/core/nameNorm'
 
 export const revalidate = 0
 
@@ -84,13 +84,34 @@ export async function GET(req: Request) {
   const merged = rawGames.map(g => {
     const propMap = propMapByGamePk.get(String(g.gamePk)) ?? {}
     const bdlByName: Record<string, any> = {}
-    for (const entry of Object.values(propMap)) {
+    const identityCandidates = [...g.homeLineup, ...g.awayLineup].map(player => ({
+      mlbId: player.mlb_id,
+      name: player.name,
+      team: player.team,
+    }))
+    const bdlByMlbId: Record<number, any> = {}
+    for (const [sourceId, entry] of Object.entries(propMap)) {
       if (entry?.name) bdlByName[normName(entry.name)] = entry
+      if (!entry?.name) continue
+      const identity = resolvePlayerIdentity(identityCandidates, entry.name, {
+        provider: 'bdl', sourceId: entry.source_player_id ?? sourceId, sourceTeam: entry.source_team,
+      })
+      if (identity) bdlByMlbId[identity.mlbId] = entry
+    }
+    const entryForSourceName = (sourceName: string) => {
+      const identity = resolvePlayerIdentity(identityCandidates, sourceName)
+      if (identity) {
+        const entry = bdlByMlbId[identity.mlbId] ?? resolveNameEntry(bdlByName, normName(identity.name)) ?? { name: identity.name }
+        bdlByMlbId[identity.mlbId] = entry
+        bdlByName[normName(sourceName)] = entry
+        return entry
+      }
+      return resolveNameEntry(bdlByName, normName(sourceName)) ?? (bdlByName[normName(sourceName)] = { name: sourceName })
     }
 
     const fdByName = fdByGameKey[g.gameKey] ?? {}
     for (const [nn, gap] of Object.entries(fdByName)) {
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: (gap as any).player_name ?? nn })
+      const entry = entryForSourceName(nn)
       const e = entry as any, gp = gap as any
       if (gp.fhr_fd      != null) e.fhr      = { ...e.fhr,      fanduel: gp.fhr_fd }
       if (gp.sa_fd  != null && e.sa?.fanduel  == null) e.sa  = { ...e.sa,  fanduel: gp.sa_fd }
@@ -115,14 +136,14 @@ export async function GET(req: Request) {
 
     const mgmByName = mgmByGameKey[g.gameKey] ?? {}
     for (const [nn, mgm] of Object.entries(mgmByName)) {
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: (mgm as any).player_name ?? nn })
+      const entry = entryForSourceName(nn)
       const e = entry as any, mg = mgm as any
       if (mg.sa_mgm  != null && e.sa?.betmgm  == null) e.sa  = { ...e.sa,  betmgm: mg.sa_mgm }
       if (mg.hr2_mgm != null && e.hr2?.betmgm == null) e.hr2 = { ...e.hr2, betmgm: mg.hr2_mgm }
     }
 
     const withProps = (players: typeof g.homeLineup) =>
-      players.map(p => ({ ...p, name_norm: normName(p.name), props: resolveNameEntry(bdlByName, normName(p.name)) ?? null }))
+      players.map(p => ({ ...p, name_norm: normName(p.name), props: bdlByMlbId[p.mlb_id] ?? resolveNameEntry(bdlByName, normName(p.name)) ?? null }))
 
     return { ...g, homeLineup: withProps(g.homeLineup), awayLineup: withProps(g.awayLineup) }
   })

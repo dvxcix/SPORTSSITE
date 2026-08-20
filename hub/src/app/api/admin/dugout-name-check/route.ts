@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import {
+  canonicalProviderArchiveKey,
+  normName,
+  resolveNameEntry,
+  resolveProviderEntryForPlayer,
+} from '@slipsurge/core/nameNorm'
 
 // Read-only diagnostic for the "why are some batters always blank on
 // FHR%/HR%" investigation — does NOT touch buildBatterRow's fhr_pct/sa_pct
@@ -153,7 +158,7 @@ async function mpPropsHistoryLookup(nameNorm: string): Promise<any[]> {
 function buildAvgMap(rows: any[]): Record<string, { fd?: number; cz?: number }> {
   const m: Record<string, { fd?: number; cz?: number }> = {}
   for (const r of rows) {
-    const nn = normName(r.name_norm || r.player_name || '')
+    const nn = canonicalProviderArchiveKey(r.name_norm || r.player_name || '')
     if (!nn) continue
     if (!m[nn]) m[nn] = {}
     if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
@@ -162,7 +167,14 @@ function buildAvgMap(rows: any[]): Record<string, { fd?: number; cz?: number }> 
   return m
 }
 
-const DEFAULT_NAMES = ['Trea Turner', 'Yandy Diaz', 'Willson Contreras', 'Wilyer Abreu', 'Vladimir Guerrero Jr.', 'Jasson Dominguez']
+const DEFAULT_NAMES = ['Max P. Muncy', 'Max Muncy', 'Andrés Chaparro', 'Trea Turner', 'Yandy Diaz', 'Willson Contreras', 'Wilyer Abreu', 'Vladimir Guerrero Jr.', 'Jasson Dominguez']
+
+const KNOWN_DIAGNOSTIC_MLB_IDS: Record<string, number> = {
+  'max p muncy': 691777,
+  'max muncy 2002': 691777,
+  'max muncy': 571970,
+  'andres chaparro': 665953,
+}
 
 export async function GET(req: Request) {
   const gate = await requireAdmin()
@@ -193,8 +205,13 @@ export async function GET(req: Request) {
 
   const results = await Promise.all(names.map(async name => {
     const nn = normName(name)
-    const fhrExact = fhrAvgMap[nn] ?? null
-    const saExact = saAvgMap[nn] ?? null
+    const mlbId = KNOWN_DIAGNOSTIC_MLB_IDS[canonicalProviderArchiveKey(name)]
+    const fhrExact = mlbId
+      ? resolveProviderEntryForPlayer(fhrAvgMap, { mlbId, name }) ?? null
+      : fhrAvgMap[nn] ?? null
+    const saExact = mlbId
+      ? resolveProviderEntryForPlayer(saAvgMap, { mlbId, name }) ?? null
+      : saAvgMap[nn] ?? null
     const fhrFuzzy = resolveNameEntry(fhrAvgMap, nn)
     const saFuzzy = resolveNameEntry(saAvgMap, nn)
     // Substring scan against every distinct name_norm actually present, to

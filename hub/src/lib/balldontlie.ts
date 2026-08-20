@@ -70,6 +70,8 @@ export interface BDLPropMap {
   // keyed by bdl player_id
   [playerId: number]: {
     name: string
+    source_player_id?: number
+    source_team?: string | null
     fhr?: { [vendor: string]: number }        // First HR (milestone)
     sa?: { [vendor: string]: number }         // Anytime HR / 1+ HR (line=0.5)
     hr2?: { [vendor: string]: number }        // 2+ HR (line=1.5)
@@ -228,7 +230,11 @@ export function buildPropMap(props: BDLPlayerProp[], playerNames: Record<number,
     if (!map[pid]) {
       const known = playerNames[pid]
       const fallback = `${known?.first_name ?? ''} ${known?.last_name ?? ''}`.trim()
-      map[pid] = { name: known?.full_name ?? (fallback || `Player #${pid}`) }
+      map[pid] = {
+        name: known?.full_name ?? (fallback || `Player #${pid}`),
+        source_player_id: pid,
+        source_team: known?.team?.abbreviation ?? null,
+      }
     }
     const entry = map[pid]
     const vendor = p.vendor

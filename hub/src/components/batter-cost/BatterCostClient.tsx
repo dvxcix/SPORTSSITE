@@ -336,9 +336,12 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
         const nn = p.name_norm || normName(p.name || '')
         const fhrFd = p.props?.fhr?.fanduel ?? null
         const saFd = p.props?.sa?.fanduel ?? null
-        const fhrAvg = fhrAvgMap[nn]?.fd
+        // The server attaches season averages after resolving the canonical
+        // MLB player ID.  Name-only maps are fallback-only because LAD and
+        // Athletics both have an active Max Muncy.
+        const fhrAvg = (p.fhrAvg ?? fhrAvgMap[nn])?.fd
         const fhr_pct = fhrFd != null && fhrAvg ? (fhrFd - fhrAvg) / fhrAvg : null
-        const saAvg = saAvgMap[nn] ?? {}
+        const saAvg = p.saAvg ?? saAvgMap[nn] ?? {}
         const sa_pct = saFd != null && saAvg.fd ? (saFd - saAvg.fd) / saAvg.fd
           : saFd != null && saAvg.cz ? (saFd - saAvg.cz) / saAvg.cz
           : null

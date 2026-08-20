@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import { unstable_cache } from 'next/cache'
 import { type BDLPropMap } from '@/lib/balldontlie'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import {
+  canonicalProviderArchiveKey, normName,
+  resolveNameEntry, resolvePlayerIdentity, resolveProviderEntryForPlayer,
+} from '@slipsurge/core/nameNorm'
 import { getEffectiveTier } from '@/lib/requireTier'
 import { getFeaturedGameKey } from '@/lib/featuredGame'
 import { hasTierAccess } from '@slipsurge/core/tiers'
@@ -1032,7 +1035,7 @@ export async function GET(req: Request) {
   // rather than needing the client's own derived map.
   const fhrAvgMap: Record<string, { fd?: number; cz?: number }> = {}
   for (const r of fhrAvg ?? []) {
-    const nn = normName(r.name_norm || r.player_name || '')
+    const nn = canonicalProviderArchiveKey(r.name_norm || r.player_name || '')
     if (!nn) continue
     if (!fhrAvgMap[nn]) fhrAvgMap[nn] = {}
     if (r.bookmaker === 'fanduel') fhrAvgMap[nn].fd = Number(r.avg_price)
@@ -1040,7 +1043,7 @@ export async function GET(req: Request) {
   }
   const saAvgMap: Record<string, { fd?: number; cz?: number }> = {}
   for (const r of saAvg ?? []) {
-    const nn = normName(r.name_norm || r.player_name || '')
+    const nn = canonicalProviderArchiveKey(r.name_norm || r.player_name || '')
     if (!nn) continue
     if (!saAvgMap[nn]) saAvgMap[nn] = {}
     if (r.bookmaker === 'fanduel') saAvgMap[nn].fd = Number(r.avg_price)
@@ -1131,15 +1134,42 @@ export async function GET(req: Request) {
     const bdlGameId = snap?.bdl_game_id ?? null
     const propMap: BDLPropMap = snap?.prop_map ?? {}
     const bdlByName: Record<string, any> = {}
-    for (const entry of Object.values(propMap)) {
+    const lineupIdentityCandidates = [...homeLineup, ...awayLineup].map(player => ({
+      mlbId: player.mlb_id,
+      name: player.name,
+      team: player.team,
+    }))
+    const bdlByMlbId: Record<number, any> = {}
+    for (const [sourceId, entry] of Object.entries(propMap)) {
       bdlByName[normName(entry.name)] = entry
+      const identity = resolvePlayerIdentity(lineupIdentityCandidates, entry.name, {
+        provider: 'bdl',
+        sourceId: entry.source_player_id ?? sourceId,
+        sourceTeam: entry.source_team,
+      })
+      if (identity) bdlByMlbId[identity.mlbId] = entry
+    }
+    const propsForPlayer = (player: typeof homeLineup[number]) =>
+      bdlByMlbId[player.mlb_id] ?? resolveNameEntry(bdlByName, player.name_norm) ?? null
+    const avgForPlayer = (map: Record<string, { fd?: number; cz?: number }>, player: typeof homeLineup[number]) =>
+      resolveProviderEntryForPlayer(map, { mlbId: player.mlb_id, name: player.name })
+    const entryForSourceName = (sourceName: string, displayName?: string | null) => {
+      const identity = resolvePlayerIdentity(lineupIdentityCandidates, sourceName)
+      if (identity) {
+        const existing = bdlByMlbId[identity.mlbId] ?? resolveNameEntry(bdlByName, normName(identity.name))
+        const entry = existing ?? { name: displayName || identity.name }
+        bdlByMlbId[identity.mlbId] = entry
+        bdlByName[normName(sourceName)] = entry
+        return entry
+      }
+      return resolveNameEntry(bdlByName, normName(sourceName)) ?? (bdlByName[normName(sourceName)] = { name: displayName || sourceName })
     }
     // Layer in manually-imported FanDuel gap markets. Create an entry if the
     // player has no BDL props at all (e.g. a bench bat BDL doesn't price)
     // rather than silently dropping their gap-market data.
     for (const [nn, gap] of Object.entries(fanduelGapByName)) {
       if (nn === GAME_LEVEL_NAME_NORM) continue // handled separately below, into game.noHr — not a player
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: gap.player_name ?? nn })
+      const entry = entryForSourceName(nn, gap.player_name)
       if (gap.fhr_fd      != null) entry.fhr      = { ...entry.fhr,      fanduel: gap.fhr_fd }
       // SA/HR2-fanduel: BDL is the primary live source for these — only
       // backfill from our manual paste when BDL has nothing at all, same
@@ -1171,7 +1201,7 @@ export async function GET(req: Request) {
     // betmgm coverage is missing, since a pasted snapshot is staler than a
     // live pregame line. Never overwrites a BDL value that's already there.
     for (const [nn, mgm] of Object.entries(mgmGapByName)) {
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: mgm.player_name ?? nn })
+      const entry = entryForSourceName(nn, mgm.player_name)
       if (mgm.sa_mgm  != null && entry.sa?.betmgm  == null) entry.sa  = { ...entry.sa,  betmgm: mgm.sa_mgm }
       if (mgm.hr2_mgm != null && entry.hr2?.betmgm == null) entry.hr2 = { ...entry.hr2, betmgm: mgm.hr2_mgm }
     }
@@ -1189,7 +1219,7 @@ export async function GET(req: Request) {
     if (ultimateForGame(gameKey)) {
       for (const [nn, marketBookPrices] of Object.entries(openingByName)) {
         if (nn === GAME_LEVEL_NAME_NORM) continue // handled separately below, into game.noHr — not a player
-        const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
+        const entry = entryForSourceName(nn)
         const open = { ...entry.open }
         for (const [marketBook, price] of Object.entries(marketBookPrices)) {
           const field = MARKET_BOOK_TO_OPEN_FIELD[marketBook]
@@ -1306,7 +1336,7 @@ export async function GET(req: Request) {
           effectiveBats: effectiveBatsFor(p.bats, homePHand),
           pitcherHand: homePHand,
           pitcherId: awayPitcher?.id ?? null,
-          saFd: resolveNameEntry(bdlByName, p.name_norm)?.sa?.fanduel ?? null,
+          saFd: propsForPlayer(p)?.sa?.fanduel ?? null,
           statcastWindows: precomputedStatcastByBatter[p.mlb_id]?.[homePHand] ?? null,
           batterMatchupData: matchupEdgeByBatter[p.mlb_id] ?? null,
         })),
@@ -1315,7 +1345,7 @@ export async function GET(req: Request) {
           effectiveBats: effectiveBatsFor(p.bats, awayPHand),
           pitcherHand: awayPHand,
           pitcherId: homePitcher?.id ?? null,
-          saFd: resolveNameEntry(bdlByName, p.name_norm)?.sa?.fanduel ?? null,
+          saFd: propsForPlayer(p)?.sa?.fanduel ?? null,
           statcastWindows: precomputedStatcastByBatter[p.mlb_id]?.[awayPHand] ?? null,
           batterMatchupData: matchupEdgeByBatter[p.mlb_id] ?? null,
         })),
@@ -1336,9 +1366,9 @@ export async function GET(req: Request) {
     const pipelineMatrixWinners = new Map<string, Set<string>>() // matrix.id -> winning name_norms (whole game, scope already applied)
     if (tiedFactors.length || pipelineMatrices.length) {
       const resolveBundle = (p: typeof homeLineup[number], pHand: 'L' | 'R'): FieldBundle => ({
-        props: resolveNameEntry(bdlByName, p.name_norm) || null,
-        fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm),
-        saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+        props: propsForPlayer(p),
+        fhrAvg: avgForPlayer(fhrAvgMap, p),
+        saAvg: avgForPlayer(saAvgMap, p),
         pitchlogWindows: isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null,
         statcastWindows: isUltimate ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null,
         pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
@@ -1492,14 +1522,14 @@ export async function GET(req: Request) {
       // client never has to distinguish "not Ultimate" from "Ultimate with
       // nothing saved."
       homeLineup: homeLineup.map(p => {
-        const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        const props = propsForPlayer(p)
         const pHand = homePHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = ultimateForGame(gameKey) ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
-              fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+              fhrAvg: avgForPlayer(fhrAvgMap, p), saAvg: avgForPlayer(saAvgMap, p),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
               isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,
@@ -1521,14 +1551,14 @@ export async function GET(req: Request) {
         }
       }),
       awayLineup: awayLineup.map(p => {
-        const props = resolveNameEntry(bdlByName, p.name_norm) || null
+        const props = propsForPlayer(p)
         const pHand = awayPHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = ultimateForGame(gameKey) ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
-              fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+              fhrAvg: avgForPlayer(fhrAvgMap, p), saAvg: avgForPlayer(saAvgMap, p),
               pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm), gameTotalPicksByMarket,
               isFactorTied: factorId => factorTiedWinners.get(factorId)?.has(p.name_norm) ?? false,
               isPipelineMatrixWinner: matrixId => pipelineMatrixWinners.get(matrixId)?.has(p.name_norm) ?? false,

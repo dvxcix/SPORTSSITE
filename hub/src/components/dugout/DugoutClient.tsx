@@ -10,7 +10,7 @@ import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAv
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { StatTile } from '@/components/pitcher-report/MatchupTables'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { canonicalProviderArchiveKey, normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown'
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
@@ -119,7 +119,7 @@ export function buildSplitMap(rows: any[]) {
 export function buildFhrAvgMap(data: any): Record<string, { fd?: number; cz?: number }> {
   const m: Record<string, { fd?: number; cz?: number }> = {}
   for (const r of (data?.fhrAvg ?? [])) {
-    const nn = normName(r.name_norm || r.player_name || '')
+    const nn = canonicalProviderArchiveKey(r.name_norm || r.player_name || '')
     if (!nn) continue
     if (!m[nn]) m[nn] = {}
     if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
@@ -131,7 +131,7 @@ export function buildFhrAvgMap(data: any): Record<string, { fd?: number; cz?: nu
 export function buildSaAvgMap(data: any): Record<string, { fd?: number; cz?: number }> {
   const m: Record<string, { fd?: number; cz?: number }> = {}
   for (const r of (data?.saAvg ?? [])) {
-    const nn = normName(r.name_norm || r.player_name || '')
+    const nn = canonicalProviderArchiveKey(r.name_norm || r.player_name || '')
     if (!nn) continue
     if (!m[nn]) m[nn] = {}
     if (r.bookmaker === 'fanduel') m[nn].fd = Number(r.avg_price)
@@ -255,8 +255,11 @@ export function buildBatterRow(
   const openingEntry = resolveNameEntry(openingMap, nn)
   const hrEntry       = resolveNameEntry(hrMap, nn)
   const nearEntry     = resolveNameEntry(nearMap, nn)
-  const fhrAvgEntry   = resolveNameEntry(fhrAvgMap, nn)
-  const saAvgEntry    = resolveNameEntry(saAvgMap, nn)
+  // The API resolves these archive rows with the canonical MLB player ID.
+  // Prefer that identity-safe value over rebuilding a name-only join in the
+  // browser (two active players are both named Max Muncy).
+  const fhrAvgEntry   = player.fhrAvg ?? resolveNameEntry(fhrAvgMap, nn)
+  const saAvgEntry    = player.saAvg ?? resolveNameEntry(saAvgMap, nn)
 
   // xHR is a genuine Statcast probability MODEL (not derivable from raw
   // pitch data ourselves) — still sourced from mlb-party's season split

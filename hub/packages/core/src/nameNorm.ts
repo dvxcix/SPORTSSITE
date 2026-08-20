@@ -9,6 +9,120 @@ export const normName = (s: string) =>
     .replace(/[^a-z ]/g, '')
     .replace(/\s+/g, ' ').trim()
 
+// Provider-side identity keys may carry a disambiguator that the display
+// name intentionally does not.  The important production example is
+// "Max Muncy (2002)" (Athletics) versus "Max Muncy" (Dodgers).  `normName`
+// is still the right key for ordinary display-name comparisons, but it
+// deliberately drops digits and therefore must never be used to index a
+// provider's identity-bearing key.
+export const normProviderPlayerKey = (s: string) =>
+  (s || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[`'’?-]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ').trim()
+
+// MLB Party historically used one trailing space as the only discriminator
+// for the Athletics player (`"max muncy "`).  Preserve that meaning while
+// old snapshots age out; blindly trimming first recreates the collision.
+export const canonicalProviderArchiveKey = (s: string) => {
+  if (/^max muncy\s+$/i.test(s || '')) return 'max muncy 2002'
+  return normProviderPlayerKey(s)
+}
+
+export type PlayerIdentityCandidate = {
+  mlbId: number
+  name: string
+  team?: string | null
+}
+
+// BDL has stable player IDs, so retain the few explicit cross-provider IDs
+// needed when MLB itself has two active players with the same full name.
+// Ordinary players continue through the generic name+team resolver below.
+const BDL_TO_MLB_ID: Record<string, number> = {
+  '142': 571970,    // Max Muncy, LAD
+  '241414': 691777, // Max Muncy, Athletics (born 2002)
+}
+
+const stripMiddleInitial = (nn: string) => {
+  const tokens = nn.split(' ').filter(Boolean)
+  if (tokens.length < 3) return nn
+  return tokens.filter((token, index) => index === 0 || index === tokens.length - 1 || token.length > 1).join(' ')
+}
+
+const sameTeam = (a?: string | null, b?: string | null) => {
+  if (!a || !b) return true
+  const aliases: Record<string, string> = { OAK: 'ATH', ATH: 'ATH', WSN: 'WSH', WSH: 'WSH', CHW: 'CWS', CWS: 'CWS', TBR: 'TB', TB: 'TB', KCR: 'KC', KC: 'KC', SDP: 'SD', SD: 'SD', SFG: 'SF', SF: 'SF', ARI: 'AZ', AZ: 'AZ' }
+  return (aliases[a.toUpperCase()] ?? a.toUpperCase()) === (aliases[b.toUpperCase()] ?? b.toUpperCase())
+}
+
+// Resolve one provider row against the players in THIS game.  Every fuzzy
+// fallback must produce exactly one candidate; ambiguous names fail closed
+// instead of silently assigning one player's markets to another player.
+export function resolvePlayerIdentity(
+  candidates: PlayerIdentityCandidate[],
+  sourceName: string,
+  options: { provider?: 'bdl' | string; sourceId?: string | number | null; sourceTeam?: string | null } = {},
+): PlayerIdentityCandidate | undefined {
+  if (options.provider === 'bdl' && options.sourceId != null) {
+    const mlbId = BDL_TO_MLB_ID[String(options.sourceId)]
+    if (mlbId) return candidates.find(candidate => candidate.mlbId === mlbId)
+  }
+
+  // Sportsbooks commonly add the middle initial only for the Athletics
+  // player. Keep that provider-owned discriminator before any fuzzy pass so
+  // even a future LAD/ATH game containing both players remains unambiguous.
+  const providerKey = normProviderPlayerKey(sourceName)
+  if (providerKey === 'max p muncy' || providerKey === 'max muncy 2002') {
+    return candidates.find(candidate => candidate.mlbId === 691777)
+  }
+
+  const teamCandidates = candidates.filter(candidate => sameTeam(candidate.team, options.sourceTeam))
+  const pool = teamCandidates.length ? teamCandidates : candidates
+  const source = normName(sourceName.replace(/\s+\(\d{4}\)\s*$/, ''))
+  const exact = pool.filter(candidate => normName(candidate.name) === source)
+  if (exact.length === 1) return exact[0]
+
+  const withoutMiddle = stripMiddleInitial(source)
+  const middleMatches = pool.filter(candidate => stripMiddleInitial(normName(candidate.name)) === withoutMiddle)
+  if (middleMatches.length === 1) return middleMatches[0]
+
+  const canonical = canonicalizeForMatch(source)
+  const fuzzy = pool.filter(candidate => canonicalizeForMatch(normName(candidate.name)) === canonical)
+  return fuzzy.length === 1 ? fuzzy[0] : undefined
+}
+
+// Keys used by MLB Party's season-average archive.  The birth-year key is
+// provider-owned identity, while "Max P. Muncy" is the sportsbook display
+// alias seen in FanDuel imports.  The legacy-accent key keeps historical
+// rows readable while the source archive is being repaired (the old trigger
+// deleted accented letters instead of transliterating them).
+export function providerKeysForPlayer(mlbId: number, displayName: string): string[] {
+  const keys = new Set<string>()
+  // Specific identity-bearing aliases must precede the shared display name
+  // or Athletics Max would still resolve Dodgers Max's unqualified row.
+  if (mlbId === 691777) {
+    keys.add('max muncy 2002')
+    keys.add('max p muncy')
+  } else {
+    keys.add(normProviderPlayerKey(displayName))
+  }
+  const normalizedDisplay = normProviderPlayerKey(displayName)
+  const legacyAccentDrop = normProviderPlayerKey(displayName.replace(/[^\x00-\x7F]/g, ''))
+  if (legacyAccentDrop && legacyAccentDrop !== normalizedDisplay) keys.add(legacyAccentDrop)
+  return [...keys]
+}
+
+export function resolveProviderEntryForPlayer<T>(
+  map: Record<string, T>,
+  player: { mlbId: number; name: string },
+): T | undefined {
+  for (const key of providerKeysForPlayer(player.mlbId, player.name)) {
+    if (key in map) return map[key]
+  }
+  return undefined
+}
+
 // MLB's Stats API is inconsistent about whether a generational suffix
 // shows up in a player's fullName (confirmed live: "Jazz Chisholm Jr."),
 // while a sportsbook's own scrape frequently drops it entirely ("Jazz
