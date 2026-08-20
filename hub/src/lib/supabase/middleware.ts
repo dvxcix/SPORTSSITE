@@ -18,6 +18,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Canonical contact events can wake the Discord media outbox immediately
+  // through this server-to-server endpoint. It has no browser cookie, and
+  // the route independently requires the same CRON_SECRET bearer token used
+  // by the recovery cron, so let it reach its own authentication check.
+  if (request.nextUrl.pathname === '/api/internal/contact-alert') {
+    return NextResponse.next({ request })
+  }
+
   // The Browserbase scrape-* cron routes POST here server-to-server via a
   // CRON_SECRET bearer header, no session cookie — same bug class as cron
   // above: the proxy redirected these to /auth/login (HTML) before each
