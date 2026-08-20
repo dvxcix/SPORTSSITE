@@ -46,6 +46,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'dugout-pitchlog-stat-precompute', label: 'Dugout pitch-log cache', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'dugout-season-avg-precompute', label: 'Dugout season-average cache', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'research-mechanics-precompute', label: 'HR mechanics window cache', schedule: 'Hourly morning gate and lineup-triggered', staleAfterMinutes: daily, area: 'MLB data' },
+  { name: 'market-dna-maintenance', label: 'Market DNA maintenance', schedule: 'Daily', staleAfterMinutes: daily, area: 'MLB data' },
   { name: 'nfl-sync-teams', label: 'NFL teams', schedule: 'Daily', staleAfterMinutes: daily, area: 'NFL data' },
   { name: 'nfl-sync-players', label: 'NFL players', schedule: 'Daily', staleAfterMinutes: daily, area: 'NFL data' },
   { name: 'nfl-sync-schedule', label: 'NFL schedule', schedule: 'Daily', staleAfterMinutes: daily, area: 'NFL data' },

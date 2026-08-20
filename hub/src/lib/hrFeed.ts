@@ -90,13 +90,20 @@ type MlbPlay = {
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-async function fetchPlayByPlay(gamePk: number) {
+type HrFeedFetchOptions = {
+  attempts?: number
+  timeoutMs?: number
+}
+
+async function fetchPlayByPlay(gamePk: number, options: HrFeedFetchOptions = {}) {
+  const attempts = Math.max(1, Math.min(3, Math.trunc(options.attempts ?? 3)))
+  const timeoutMs = Math.max(2_000, Math.min(20_000, Math.trunc(options.timeoutMs ?? 20_000)))
   let lastReason = 'Unknown MLB play-by-play failure'
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       const response = await fetch(`https://statsapi.mlb.com/api/v1/game/${gamePk}/playByPlay`, {
         cache: 'no-store',
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(timeoutMs),
       })
       if (!response.ok) {
         lastReason = `MLB play-by-play returned HTTP ${response.status}`
@@ -108,7 +115,7 @@ async function fetchPlayByPlay(gamePk: number) {
     } catch (error) {
       lastReason = error instanceof Error ? error.message : String(error)
     }
-    if (attempt < 2) await wait(250 * (attempt + 1))
+    if (attempt < attempts - 1) await wait(250 * (attempt + 1))
   }
   throw new Error(lastReason)
 }
@@ -161,7 +168,10 @@ export function parseMlbContactEvents(gamePk: number, plays: MlbPlay[]): MlbCont
 // Extracted from hub/src/app/api/dugout/data/route.ts (originally local to
 // that route) so the hr-alerts Discord cron can call the exact same logic
 // without duplicating it.
-export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstractGameState?: string } }[]): Promise<HrFeedResult> {
+export async function fetchHrFeed(
+  mlbGames: { gamePk: number; status?: { abstractGameState?: string } }[],
+  options: HrFeedFetchOptions = {},
+): Promise<HrFeedResult> {
   const livePks = mlbGames
     .filter(g => { const s = g.status?.abstractGameState; return s === 'Live' || s === 'Final' })
     .map(g => g.gamePk)
@@ -185,7 +195,7 @@ export async function fetchHrFeed(mlbGames: { gamePk: number; status?: { abstrac
       cursor += 1
       const pk = livePks[index]
       try {
-        const plays = await fetchPlayByPlay(pk)
+        const plays = await fetchPlayByPlay(pk, options)
         completedGamePks.push(pk)
         for (const p of plays) {
           const pid = p.matchup?.pitcher?.id
