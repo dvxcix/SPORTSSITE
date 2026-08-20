@@ -90,12 +90,11 @@ function alertPayload(event: DailyContactEvent, media: ContactAlertMedia) {
         `${event.batterTeam} - ${event.half === 'bottom' ? 'Bot' : 'Top'} ${event.inning ?? '-'} - off ${event.pitcherName}`,
         `${resultLabel(event)}${metricBits.length ? ` - ${metricBits.join(' - ')}` : ''}`,
         marketBits.length ? `${event.marketContext?.primaryLabel}: ${marketBits.join(' | ')}` : null,
-        media.animated ? 'Animated official flight - pregame prices frozen before first pitch' : 'Verified static flight receipt - animation fallback used',
       ].filter(Boolean).join('\n'),
       url: `${PLATFORM_URL}/spray-charts?date=${event.gameDate}&gamePk=${event.gamePk}`,
       color: event.kind === 'home_run' ? 0xA3FF3F : 0xFF9F43,
       image: { url: `attachment://${media.filename}` },
-      footer: { text: `SlipSurge - ${event.game.venueName} - ${media.width}x${media.height}` },
+      footer: { text: `SlipSurge - ${event.game.venueName}` },
       timestamp: event.eventTime ?? undefined,
     }],
   }
