@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
 import Image from 'next/image'
-import { CalendarDays, Check, Crosshair, Download, Flame, Layers3, Link2, LoaderCircle, RotateCcw, Share2, Sparkles, Target } from 'lucide-react'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Crosshair, Download, Flame, Layers3, Link2, LoaderCircle, RotateCcw, Share2, Sparkles, Target } from 'lucide-react'
 import { ContactFlightStage } from '@/components/contact/ContactFlightStage'
 import { ParkFieldSvg } from '@/components/sports/ParkFieldSvg'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
@@ -62,6 +62,9 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
   const [copied, setCopied] = useState(false)
   const [lastUpdatedAt, setLastUpdatedAt] = useState('')
   const parkStageRef = useRef<HTMLDivElement>(null)
+  const gameRailRef = useRef<HTMLElement>(null)
+  const [gameRailPosition, setGameRailPosition] = useState({ canGoBack: false, canGoForward: false })
+  const gameCount = data?.games.length ?? 0
 
   useEffect(() => {
     const controller = new AbortController()
@@ -116,6 +119,33 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
     window.history.replaceState(null, '', `${window.location.pathname}?${params}`)
   }, [allPlayers, date, gamePk, playerIds, result, view])
 
+  useEffect(() => {
+    const rail = gameRailRef.current
+    if (!rail) return
+    const updatePosition = () => {
+      const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth)
+      setGameRailPosition({
+        canGoBack: rail.scrollLeft > 2,
+        canGoForward: rail.scrollLeft < maxScroll - 2,
+      })
+    }
+    updatePosition()
+    rail.addEventListener('scroll', updatePosition, { passive: true })
+    window.addEventListener('resize', updatePosition)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePosition)
+    observer?.observe(rail)
+    return () => {
+      rail.removeEventListener('scroll', updatePosition)
+      window.removeEventListener('resize', updatePosition)
+      observer?.disconnect()
+    }
+  }, [gameCount])
+
+  useEffect(() => {
+    const activeGame = gameRailRef.current?.querySelector<HTMLButtonElement>('button[data-active="true"]')
+    activeGame?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [gamePk])
+
   const game = data?.games.find(candidate => candidate.gamePk === gamePk) ?? null
   const gameEvents = useMemo(() => data?.contacts.filter(event => event.gamePk === gamePk) ?? [], [data, gamePk])
   const players = useMemo(() => Array.from(new Map(gameEvents.map(event => [event.batterId, {
@@ -144,6 +174,21 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
     setLoading(true)
     setError('')
     setDate(nextDate)
+  }
+  const scrollGameRail = (direction: -1 | 1) => {
+    const rail = gameRailRef.current
+    if (!rail) return
+    rail.scrollBy({ left: direction * Math.max(320, rail.clientWidth * .78), behavior: 'smooth' })
+  }
+  const translateGameWheel = (event: WheelEvent<HTMLElement>) => {
+    const rail = gameRailRef.current
+    if (!rail || rail.scrollWidth <= rail.clientWidth || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return
+    const maxScroll = rail.scrollWidth - rail.clientWidth
+    const movingTowardStart = event.deltaY < 0 && rail.scrollLeft <= 0
+    const movingTowardEnd = event.deltaY > 0 && rail.scrollLeft >= maxScroll - 1
+    if (movingTowardStart || movingTowardEnd) return
+    event.preventDefault()
+    rail.scrollLeft += event.deltaY
   }
   const parkPrimary = game ? getTeamColor(game.parkTeamAbbr) : '#25314b'
   const parkSecondary = game ? getTeamSecondaryColor(game.parkTeamAbbr) : '#9ca8bb'
@@ -215,16 +260,20 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
     {loading ? <div className={styles.state}><LoaderCircle className={styles.spinner} size={30}/><strong>Loading park geometry and contact</strong></div> : null}
     {!loading && error ? <div className={styles.error}>{error}</div> : null}
     {!loading && !error && data ? <>
-      <section className={styles.gameRail} aria-label="Select a game">
-        {data.games.map(candidate => {
-          const away = getTeamLogoUrl(candidate.awayTeam)
-          const home = getTeamLogoUrl(candidate.homeTeam)
-          const count = data.contacts.filter(event => event.gamePk === candidate.gamePk).length
-          return <button key={candidate.gamePk} type="button" data-active={candidate.gamePk === gamePk} onClick={() => { setGamePk(candidate.gamePk); reset() }}>
-            <em>Game {candidate.gameIndex + 1}</em><span>{away ? <Image src={away} alt={candidate.awayName} width={30} height={30}/> : null}<b>vs</b>{home ? <Image src={home} alt={candidate.homeName} width={30} height={30}/> : null}</span><small>{count} batted balls</small>
-          </button>
-        })}
-      </section>
+      <div className={styles.gameRailShell}>
+        <button className={styles.gameRailNav} data-side="left" type="button" aria-label="Show earlier games" disabled={!gameRailPosition.canGoBack} onClick={() => scrollGameRail(-1)}><ChevronLeft size={18}/></button>
+        <section ref={gameRailRef} className={styles.gameRail} aria-label="Select a game" tabIndex={0} onWheel={translateGameWheel}>
+          {data.games.map(candidate => {
+            const away = getTeamLogoUrl(candidate.awayTeam)
+            const home = getTeamLogoUrl(candidate.homeTeam)
+            const count = data.contacts.filter(event => event.gamePk === candidate.gamePk).length
+            return <button key={candidate.gamePk} type="button" data-active={candidate.gamePk === gamePk} onClick={() => { setGamePk(candidate.gamePk); reset() }}>
+              <em>Game {candidate.gameIndex + 1}</em><span>{away ? <Image src={away} alt={candidate.awayName} width={30} height={30}/> : null}<b>vs</b>{home ? <Image src={home} alt={candidate.homeName} width={30} height={30}/> : null}</span><small>{count} batted balls</small>
+            </button>
+          })}
+        </section>
+        <button className={styles.gameRailNav} data-side="right" type="button" aria-label="Show later games" disabled={!gameRailPosition.canGoForward} onClick={() => scrollGameRail(1)}><ChevronRight size={18}/></button>
+      </div>
 
       <section className={styles.controls}>
         <div className={styles.controlHead}>
