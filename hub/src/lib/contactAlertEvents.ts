@@ -8,8 +8,10 @@ import type { CoordinateSource, DailyContactEvent, DailyContactGame } from '@/li
 const SPECIAL_VENUES = new Set([5340, 5355, 5445])
 
 export type NearHrSourceRow = {
+  id?: number | string | null
   game_pk?: number | string | null
   game_date?: string | null
+  play_id?: string | null
   batter_name: string
   batter_id?: number | string | null
   pitcher_name?: string | null
@@ -26,7 +28,7 @@ export type NearHrSourceRow = {
   park_hr_list?: string | null
   home_team?: string | null
   away_team?: string | null
-  captured_at: string
+  captured_at?: string | null
 }
 
 function finite(value: unknown): number | null {
@@ -182,7 +184,8 @@ export function nearHomeRunAlertEvent(
   const batterId = Number(finite(row.batter_id) ?? contact?.batter_mlb_id ?? 0)
   // If MLB has published the play, its game/AB/pitch tuple is canonical. A
   // scraper timestamp is retained only as an idempotent source fallback.
-  const fallbackIndex = Math.floor(new Date(row.captured_at).getTime() / 1000)
+  const capturedAt = row.captured_at ?? new Date().toISOString()
+  const fallbackIndex = Math.floor(new Date(capturedAt).getTime() / 1000)
   const atBatIndex = Number(contact?.ab_index ?? fallbackIndex)
   const pitchNumber = Number(contact?.pitch_number ?? 0)
   return {
@@ -191,7 +194,7 @@ export function nearHomeRunAlertEvent(
     gamePk: game.gamePk,
     gameIndex,
     gameDate: date,
-    eventTime: contact?.event_time ?? row.captured_at,
+    eventTime: contact?.event_time ?? capturedAt,
     atBatIndex,
     plateAppearanceNumber: null,
     pitchNumber,
