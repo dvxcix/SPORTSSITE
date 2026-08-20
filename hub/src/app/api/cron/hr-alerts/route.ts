@@ -9,7 +9,7 @@ import { postAlert } from '@/lib/discord'
 import { PLATFORM_URL } from '@/lib/platform'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { homeRunAlertEvent } from '@/lib/contactAlertEvents'
-import { enqueueContactAlert, processContactAlertJob } from '@/lib/contactAlertOutbox'
+import { enqueueContactAlert, processContactAlertJobs } from '@/lib/contactAlertOutbox'
 
 export const revalidate = 0
 export const runtime = 'nodejs'
@@ -83,9 +83,7 @@ async function run(req: Request) {
       .upsert(newHrs.map(h => ({ game_pk: h.game_pk, ab_index: h.ab_index })), { onConflict: 'game_pk,ab_index', ignoreDuplicates: true })
   }
 
-  if (queued.length) after(async () => {
-    for (const job of queued) await processContactAlertJob(job.id)
-  })
+  if (queued.length) after(() => processContactAlertJobs(queued.map(job => job.id)))
 
   return NextResponse.json({ ok: true, games: games.length, newHrs: newHrs.length, queued: queued.length, posted, feedFailures: failures })
 }

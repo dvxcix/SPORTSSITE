@@ -3,7 +3,7 @@ import { requireCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { homeRunAlertEvent, nearHomeRunAlertEvent, type NearHrSourceRow } from '@/lib/contactAlertEvents'
-import { enqueueContactAlert, processContactAlertJob } from '@/lib/contactAlertOutbox'
+import { enqueueContactAlert, processContactAlertJobs } from '@/lib/contactAlertOutbox'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -53,8 +53,6 @@ export async function POST(request: Request) {
     }
   }
 
-  if (jobs.length) after(async () => {
-    for (const job of jobs) await processContactAlertJob(job.id)
-  })
+  if (jobs.length) after(() => processContactAlertJobs(jobs.map(job => job.id)))
   return NextResponse.json({ ok: true, accepted: jobs.length, jobs, feedFailures: failures }, { status: 202 })
 }

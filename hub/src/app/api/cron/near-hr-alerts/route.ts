@@ -9,7 +9,7 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { nearHomeRunAlertEvent, type NearHrSourceRow } from '@/lib/contactAlertEvents'
-import { enqueueContactAlert, processContactAlertJob } from '@/lib/contactAlertOutbox'
+import { enqueueContactAlert, processContactAlertJobs } from '@/lib/contactAlertOutbox'
 
 export const revalidate = 0
 export const runtime = 'nodejs'
@@ -103,9 +103,7 @@ async function run(req: Request) {
 
   await admin.from('near_hr_alert_cursor').upsert({ game_date: date, last_captured_at: new Date(maxCapturedAt).toISOString() }, { onConflict: 'game_date' })
 
-  if (queued.length) after(async () => {
-    for (const job of queued) await processContactAlertJob(job.id)
-  })
+  if (queued.length) after(() => processContactAlertJobs(queued.map(job => job.id)))
 
   return NextResponse.json({ ok: true, rows: rows.length, newRows: queued.length, firstRun: lastSeen === null, queued: queued.length, posted })
 }

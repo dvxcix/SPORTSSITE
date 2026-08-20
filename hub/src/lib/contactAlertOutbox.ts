@@ -10,6 +10,7 @@ import type { DailyContactEvent } from '@/lib/contactRecapTypes'
 const BUCKET = 'contact-recap-exports'
 const OPERATION = 'contact_alert_media'
 const STALE_RUNNING_MINUTES = 8
+const CONTACT_ALERT_WORKERS = 2
 
 type ContactAlertPayload = {
   event: DailyContactEvent
@@ -100,6 +101,110 @@ function alertPayload(event: DailyContactEvent, media: ContactAlertMedia) {
   }
 }
 
+function canaryEvent(kind: 'hr' | 'near_hr'): DailyContactEvent {
+  const now = new Date()
+  const gameDate = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const nearHr = kind === 'near_hr'
+  return {
+    id: `contact-alert-canary-${kind}-${now.getTime()}`,
+    kind: nearHr ? 'near_hr' : 'home_run',
+    gamePk: 999000,
+    gameIndex: 0,
+    gameDate,
+    eventTime: now.toISOString(),
+    atBatIndex: nearHr ? 23 : 17,
+    plateAppearanceNumber: 2,
+    pitchNumber: 5,
+    batterId: 545361,
+    batterName: 'Mike Trout',
+    batterTeam: 'LAA',
+    pitcherId: 543243,
+    pitcherName: 'Delivery Test',
+    pitcherTeam: 'TEX',
+    inning: 3,
+    half: 'bottom',
+    result: nearHr ? 'double' : 'home_run',
+    description: nearHr ? 'Deep fly ball off the wall for a double' : 'Three-run home run',
+    rbi: nearHr ? 1 : 3,
+    isFirstHr: !nearHr,
+    isGrandSlam: false,
+    exitVelocity: nearHr ? 106.8 : 111.8,
+    launchAngle: nearHr ? 34 : 27,
+    distance: nearHr ? 397 : 442,
+    hitBearing: 8,
+    hcX: 145,
+    hcY: 43,
+    coordinateSource: 'mlb_live',
+    pitchType: 'FF',
+    pitchSpeed: 97.1,
+    bbType: 'fly_ball',
+    parksHrCount: nearHr ? 19 : 30,
+    parkHrList: nearHr ? 'AZ,ATL,BAL,BOS,CHC,CIN,CLE,COL,CWS,DET,HOU,KC,LAA,MIA,MIL,MIN,PHI,STL,TEX' : null,
+    game: {
+      gamePk: 999000,
+      gameIndex: 0,
+      gameDate,
+      startTime: now.toISOString(),
+      status: 'Delivery Test',
+      venueId: 1,
+      venueName: 'Angel Stadium',
+      parkTeamAbbr: 'LAA',
+      homeTeamId: 108,
+      homeTeam: 'LAA',
+      homeName: 'Los Angeles Angels',
+      homeScore: nearHr ? 1 : 3,
+      awayTeamId: 140,
+      awayTeam: 'TEX',
+      awayName: 'Texas Rangers',
+      awayScore: 0,
+    },
+    marketContext: nearHr ? {
+      primaryLabel: 'To Hit a Double',
+      frozenAt: now.toISOString(),
+      primary: [
+        { marketKey: 'doubles', marketLabel: 'To Hit a Double', book: 'fanduel', bookLabel: 'FanDuel', odds: 360 },
+        { marketKey: 'doubles', marketLabel: 'To Hit a Double', book: 'draftkings', bookLabel: 'DraftKings', odds: 350 },
+      ],
+      specials: [],
+    } : {
+      primaryLabel: 'Anytime Home Run',
+      frozenAt: now.toISOString(),
+      primary: [
+        { marketKey: 'sa', marketLabel: 'Anytime Home Run', book: 'fanduel', bookLabel: 'FanDuel', odds: 320 },
+        { marketKey: 'sa', marketLabel: 'Anytime Home Run', book: 'draftkings', bookLabel: 'DraftKings', odds: 330 },
+        { marketKey: 'sa', marketLabel: 'Anytime Home Run', book: 'betmgm', bookLabel: 'BetMGM', odds: 310 },
+      ],
+      specials: [
+        { marketKey: 'fhr', marketLabel: 'First Home Run', book: 'fanduel', bookLabel: 'FanDuel', odds: 650 },
+        { marketKey: 'laser110', marketLabel: 'Laser 110+', book: 'fanduel', bookLabel: 'FanDuel', odds: 2400 },
+        { marketKey: 'moonshot', marketLabel: 'Moonshot 420+', book: 'fanduel', bookLabel: 'FanDuel', odds: 1800 },
+      ],
+    },
+  }
+}
+
+export async function sendContactAlertCanary(kind: 'hr' | 'near_hr') {
+  const event = canaryEvent(kind)
+  const media = await renderContactAlertMedia(event)
+  const payload = alertPayload(event, media)
+  payload.embeds[0].title = `TEST - ${payload.embeds[0].title}`
+  const result = await postAlertAttachmentChecked(createAdminClient(), kind, {
+    content: '**SlipSurge delivery test - no live play occurred.**',
+    ...payload,
+  }, media)
+  if (!result.ok) throw new Error(result.error ?? 'Discord did not accept the test alert')
+  return {
+    ok: true,
+    kind,
+    channelId: result.channelId,
+    messageId: result.messageId,
+    animated: media.animated,
+    bytes: media.body.byteLength,
+    width: media.width,
+    height: media.height,
+  }
+}
+
 async function claimJob(jobId: string): Promise<ContactAlertJob | null> {
   const admin = createAdminClient()
   const { data, error } = await admin.from('operational_retry_queue').update({ status: 'processing', updated_at: new Date().toISOString() })
@@ -165,13 +270,28 @@ export async function processContactAlertJob(jobId: string) {
   }
 }
 
-export async function processNextContactAlertJob() {
+export async function processContactAlertJobs(jobIds: string[], concurrency = CONTACT_ALERT_WORKERS) {
+  const ids = [...new Set(jobIds.filter(Boolean))]
+  if (!ids.length) return []
+  const results: Awaited<ReturnType<typeof processContactAlertJob>>[] = []
+  let cursor = 0
+  async function worker() {
+    while (cursor < ids.length) {
+      const jobId = ids[cursor]
+      cursor += 1
+      results.push(await processContactAlertJob(jobId))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, concurrency), ids.length) }, () => worker()))
+  return results
+}
+
+export async function processPendingContactAlertJobs(limit = 6) {
   const admin = createAdminClient()
   const { data, error } = await admin.from('operational_retry_queue').select('id').eq('provider', 'discord').eq('operation', OPERATION)
-    .eq('status', 'pending').lte('next_attempt_at', new Date().toISOString()).order('next_attempt_at', { ascending: true }).limit(1).maybeSingle()
+    .eq('status', 'pending').lte('next_attempt_at', new Date().toISOString()).order('next_attempt_at', { ascending: true }).limit(limit)
   if (error) throw error
-  if (!data) return { processed: false, reason: 'empty' }
-  return processContactAlertJob(data.id as string)
+  return processContactAlertJobs((data ?? []).map(row => row.id as string))
 }
 
 export async function recoverStaleContactAlertJobs() {
