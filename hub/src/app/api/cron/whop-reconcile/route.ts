@@ -10,8 +10,9 @@ export const GET = withPipelineHealth('whop-reconcile', run)
 // (/api/webhooks/whop) — now confirmed working (signature bug fixed, real
 // events processing correctly live), so this backstops whatever it might
 // still miss rather than being the primary grant path. It directly verifies
-// every locally linked main-business membership instead of repeatedly
-// enumerating the provider's entire catalog. Runs every 15 minutes.
+// locally linked main-business memberships in paced, cursor-driven batches
+// instead of repeatedly enumerating the provider's entire catalog. Locally
+// overdue memberships are prioritized on every run. Runs every 15 minutes.
 async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError

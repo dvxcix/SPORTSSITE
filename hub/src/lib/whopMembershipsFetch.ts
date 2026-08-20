@@ -8,6 +8,7 @@
 // same URL + &page=N once a working candidate path is found on page 1.
 const MAX_ATTEMPTS = 3
 const REQUEST_TIMEOUT_MS = 12_000
+const DEFAULT_RATE_LIMIT_RETRY_MS = 15_000
 
 export type WhopMembershipRecord = {
   id?: string
@@ -52,8 +53,10 @@ async function fetchWhopPage(url: string, apiKey: string): Promise<Response> {
       if (attempt < MAX_ATTEMPTS - 1) {
         const retryAfter = Number(res.headers.get('retry-after'))
         const delay = Number.isFinite(retryAfter) && retryAfter > 0
-          ? Math.min(retryAfter * 1000, 15_000)
-          : Math.min(500 * 2 ** attempt, 4_000)
+          ? Math.min(retryAfter * 1000, 60_000)
+          : res.status === 429
+            ? DEFAULT_RATE_LIMIT_RETRY_MS * (attempt + 1)
+            : Math.min(500 * 2 ** attempt, 4_000)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
     } catch (error) {

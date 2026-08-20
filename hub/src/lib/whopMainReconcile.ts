@@ -11,10 +11,17 @@ import { shouldRevokeStoredWhopAccess, whopCancellationKeepsAccess, whopMembersh
 // checks every membership that currently grants local access directly by ID.
 // Do not enumerate the whole provider catalog here: five full plan scans grew
 // to hundreds of requests, hit Whop's 429 limit at page 51, and prevented the
-// exact expired-trial cleanup this job exists to perform.
+// exact expired-trial cleanup this job exists to perform. The safety net is
+// deliberately bounded and cursor-driven: locally overdue records go first,
+// while every other linked membership is revisited in deterministic batches.
 const MAIN_PLAN_IDS = Object.entries(WHOP_PLANS)
   .filter(([, info]) => info.company !== 'addon')
   .map(([id]) => id)
+
+const RECONCILE_JOB_NAME = 'whop-main-memberships'
+const RECONCILE_BATCH_SIZE = 24
+const OVERDUE_BATCH_RESERVE = 8
+const REQUEST_SPACING_MS = 1_200
 
 type ReconcileResult =
   | { error: string }
@@ -41,7 +48,7 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // removing, which is how ended trials remained Ultimate indefinitely.
   const { data: trackedOwners, error: trackedOwnersError } = await admin
     .from('users')
-    .select('id, whop_membership_id, whop_plan_id')
+    .select('id, whop_membership_id, whop_plan_id, tier_current_period_end')
     .in('whop_plan_id', MAIN_PLAN_IDS)
     .neq('tier', 'free')
   if (trackedOwnersError) return { error: `Could not load tracked memberships: ${trackedOwnersError.message}` }
@@ -59,16 +66,56 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
   // regardless of its actual rank.
   const bestByUser = new Map<string, { planId: string; tier: Tier; membershipId?: string; periodEnd: string | null; cancelAtPeriodEnd: boolean }>()
 
-  const membershipFetches = await mapWithConcurrency(ownersWithMembership, 6, async owner => ({
-    owner,
-    fetched: await fetchWhopMembershipById(apiKey, owner.whop_membership_id as string),
-  }))
+  const now = Date.now()
+  const overdueOwners = ownersWithMembership
+    .filter(owner => {
+      const periodEnd = owner.tier_current_period_end ? Date.parse(owner.tier_current_period_end as string) : Number.NaN
+      return Number.isFinite(periodEnd) && periodEnd <= now
+    })
+    .sort(compareMembershipOwners)
+    .slice(0, OVERDUE_BATCH_RESERVE)
+  const overdueMembershipIds = new Set(overdueOwners.map(owner => owner.whop_membership_id as string))
+  const rotationOwners = ownersWithMembership
+    .filter(owner => !overdueMembershipIds.has(owner.whop_membership_id as string))
+    .sort(compareMembershipOwners)
+
+  const { data: reconcileState, error: reconcileStateError } = await admin
+    .from('integration_reconcile_state')
+    .select('cursor')
+    .eq('job_name', RECONCILE_JOB_NAME)
+    .maybeSingle()
+  if (reconcileStateError) return { error: `Could not load Whop reconciliation cursor: ${reconcileStateError.message}` }
+  const rotationCapacity = RECONCILE_BATCH_SIZE - overdueOwners.length
+  const rotatingBatch = takeAfterCursor(rotationOwners, reconcileState?.cursor ?? null, rotationCapacity)
+  const ownersToCheck = [...overdueOwners, ...rotatingBatch]
+
+  const membershipFetches: Array<{
+    owner: (typeof ownersWithMembership)[number]
+    fetched: Awaited<ReturnType<typeof fetchWhopMembershipById>>
+  }> = []
+  for (const [index, owner] of ownersToCheck.entries()) {
+    membershipFetches.push({
+      owner,
+      fetched: await fetchWhopMembershipById(apiKey, owner.whop_membership_id as string),
+    })
+    if (index < ownersToCheck.length - 1) await wait(REQUEST_SPACING_MS)
+  }
 
   const failedFetches = membershipFetches.filter(entry => 'error' in entry.fetched)
   if (failedFetches.length) {
     return {
       error: `Whop reconciliation stopped before writes because ${failedFetches.length} membership lookup${failedFetches.length === 1 ? '' : 's'} failed`,
     }
+  }
+
+  const lastRotatedMembershipId = rotatingBatch.at(-1)?.whop_membership_id as string | undefined
+  if (lastRotatedMembershipId) {
+    const { error: cursorError } = await admin.from('integration_reconcile_state').upsert({
+      job_name: RECONCILE_JOB_NAME,
+      cursor: lastRotatedMembershipId,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'job_name' })
+    if (cursorError) return { error: `Could not advance Whop reconciliation cursor: ${cursorError.message}` }
   }
 
   // Memberships created before SlipSurge attached checkout metadata remain
@@ -227,18 +274,30 @@ export async function reconcileWhopMain(): Promise<ReconcileResult> {
     results.push({ internalUserId: existing.id, membershipId: existing.whop_membership_id, revoked: currentTier })
   }
 
-  return { totalMemberships, results }
+  return {
+    totalMemberships,
+    results: [{
+      checked: ownersToCheck.length,
+      overdueChecked: overdueOwners.length,
+      tracked: ownersWithMembership.length,
+      cursor: lastRotatedMembershipId ?? reconcileState?.cursor ?? null,
+    }, ...results],
+  }
 }
 
-async function mapWithConcurrency<T, R>(items: T[], concurrency: number, worker: (item: T) => Promise<R>): Promise<R[]> {
-  const results = new Array<R>(items.length)
-  let cursor = 0
-  async function runWorker() {
-    while (cursor < items.length) {
-      const index = cursor++
-      results[index] = await worker(items[index])
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, runWorker))
-  return results
+function compareMembershipOwners(left: { whop_membership_id: unknown }, right: { whop_membership_id: unknown }) {
+  return String(left.whop_membership_id).localeCompare(String(right.whop_membership_id))
+}
+
+function takeAfterCursor<T extends { whop_membership_id: unknown }>(owners: T[], cursor: string | null, count: number): T[] {
+  if (!owners.length || count <= 0) return []
+  const start = cursor
+    ? Math.max(0, owners.findIndex(owner => String(owner.whop_membership_id) > cursor))
+    : 0
+  const ordered = [...owners.slice(start), ...owners.slice(0, start)]
+  return ordered.slice(0, Math.min(count, owners.length))
+}
+
+function wait(delayMs: number) {
+  return new Promise(resolve => setTimeout(resolve, delayMs))
 }
