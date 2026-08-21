@@ -2453,6 +2453,17 @@ export function resolveDugoutColumns(prefs: DugoutColumnPrefs | null | undefined
       ordered.splice(ordered.findIndex(column => column.key === 'pk'), 0, mechanics)
     }
   }
+  // Keep the hit read attached to the two hit-price columns for members
+  // whose saved order predates it. After they move it themselves, their
+  // explicit placement wins like every other customizable column.
+  if (!(prefs?.columnOrder ?? []).includes('hit_score')) {
+    const hitScoreIndex = ordered.findIndex(column => column.key === 'hit_score')
+    const hits2Index = ordered.findIndex(column => column.key === 'hits2_fd')
+    if (hitScoreIndex >= 0 && hits2Index >= 0) {
+      const [hitScore] = ordered.splice(hitScoreIndex, 1)
+      ordered.splice(ordered.findIndex(column => column.key === 'hits2_fd') + 1, 0, hitScore)
+    }
+  }
   return ordered
 }
 
