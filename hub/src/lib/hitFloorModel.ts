@@ -17,7 +17,7 @@ export type HitPitchProfile = {
   reasons: string[]
 }
 
-export type HitFloorStatus = 'QUALIFIED' | 'WATCH' | 'PASS'
+export type HitFloorStatus = 'QUALIFIED' | 'WATCH' | 'PASS' | 'NO_READ'
 
 export type HitFloorInput = {
   name: string
@@ -28,6 +28,9 @@ export type HitFloorInput = {
   sng_fd: number | null
   hits_open: number | null
   hits2_open: number | null
+  hit_pick_count?: number | null
+  single_pick_count?: number | null
+  total_market_pick_count?: number | null
   recent_pitch_count: number | null
   platoon_ops: number | null
   hit_windows: Partial<Record<'l1' | 'l3' | 'l5' | 'l10', HitWindow>>
@@ -40,11 +43,6 @@ export type HitFloorInput = {
 }
 
 const clamp = (value: number, low = 0, high = 1) => Math.max(low, Math.min(high, value))
-
-const implied = (odds: number | null | undefined): number | null => {
-  if (odds == null || !Number.isFinite(odds)) return null
-  return odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100)
-}
 
 const percentile = (value: number | null | undefined, values: Array<number | null | undefined>, higherIsBetter = true): number | null => {
   if (value == null || !Number.isFinite(value)) return null
@@ -125,7 +123,7 @@ export function computeHitPitchProfile(
 
   const coverage = mixTotal > 0 ? clamp(supportedUsage / mixTotal) : 0
   const score = supportedWeight > 0 ? weightedScore / supportedWeight : null
-  if (coverage >= 0.70) reasons.push(`${Math.round(coverage * 100)}% of the starter's meaningful pitch mix has supported batter/pitcher samples.`)
+  if (coverage >= 0.70) reasons.push(`${Math.round(coverage * 100)}% of the starter's meaningful pitch mix is covered by usable samples. Coverage only; this is not a positive-match percentage.`)
   if (score != null && score >= 0.70) reasons.push('The supported pitch mix favors contact more than swing-and-miss.')
 
   return { score, coverage, supportedPitches, highUsageTraps, reasons }
@@ -136,16 +134,16 @@ function opportunityScore(order: number | null): number | null {
   return [1, 1.00, 0.97, 0.94, 0.90, 0.84, 0.76, 0.65, 0.54, 0.45][order]
 }
 
-function openingMove(current: number | null, opening: number | null): number | null {
-  const currentProbability = implied(current)
-  const openingProbability = implied(opening)
-  return currentProbability == null || openingProbability == null ? null : currentProbability - openingProbability
+function marketMove(current: number | null, opening: number | null): number | null {
+  if (current == null || opening == null || !Number.isFinite(current) || !Number.isFinite(opening)) return null
+  return current - opening
 }
 
 /**
- * Scores a complete two-lineup pool in place. `QUALIFIED` means every hard
- * evidence gate cleared; it is a board-agreement label, never a promise that
- * a hit is certain. Missing board/pitch evidence fails closed to PASS.
+ * Scores a complete two-lineup pool in place from baseball evidence only.
+ * Sportsbook prices and public picks are market-positioning/handle context;
+ * they are deliberately excluded from the grade and cannot promote or bury a
+ * player. `QUALIFIED` is an evidence-agreement label, never a certainty.
  */
 export function computeHitFloorReads<T extends HitFloorInput>(rows: T[], boardComplete: boolean): void {
   const windows = ['l1', 'l3', 'l5', 'l10'] as const
@@ -154,9 +152,6 @@ export function computeHitFloorReads<T extends HitFloorInput>(rows: T[], boardCo
   for (const window of windows) {
     for (const metric of metrics) pools[`${window}:${metric}`] = rows.map(row => row.hit_windows[window]?.[metric] ?? null)
   }
-  const hitProbabilities = rows.map(row => implied(row.hits_fd))
-  const hit2Probabilities = rows.map(row => implied(row.hits2_fd))
-  const singleProbabilities = rows.map(row => implied(row.sng_fd))
   const platoonValues = rows.map(row => row.platoon_ops)
 
   for (const row of rows) {
@@ -180,53 +175,63 @@ export function computeHitFloorReads<T extends HitFloorInput>(rows: T[], boardCo
     const windowAverage = perWindow.length ? perWindow.reduce((sum, value) => sum + value, 0) / perWindow.length : null
     const windowFloor = perWindow.length ? Math.min(...perWindow) : null
     const contactForm = weightedAverage([[windowAverage, 0.72], [windowFloor, 0.28]])
-    const marketStrength = weightedAverage([
-      [percentile(implied(row.hits_fd), hitProbabilities), 0.58],
-      [percentile(implied(row.hits2_fd), hit2Probabilities), 0.24],
-      [percentile(implied(row.sng_fd), singleProbabilities), 0.18],
-    ])
     const platoon = percentile(row.platoon_ops, platoonValues)
     const opportunity = opportunityScore(row.batting_order)
     const pitch = row.hit_pitch_profile.score
     const modelScore = weightedAverage([
-      [contactForm, 0.34],
-      [pitch, 0.29],
-      [marketStrength, 0.17],
+      [contactForm, 0.46],
+      [pitch, 0.34],
       [opportunity, 0.12],
       [platoon, 0.08],
     ])
 
-    const availableCoreParts = [contactForm, pitch, marketStrength, opportunity, platoon].filter(value => value != null).length
+    const availableCoreParts = [contactForm, pitch, opportunity, platoon].filter(value => value != null).length
     const sampleConfidence = clamp((row.recent_pitch_count ?? 0) / 40)
-    const evidenceCoverage = (availableCoreParts / 5) * 0.55 + row.hit_pitch_profile.coverage * 0.30 + sampleConfidence * 0.15
+    const evidenceCoverage = (availableCoreParts / 4) * 0.55 + row.hit_pitch_profile.coverage * 0.30 + sampleConfidence * 0.15
     const severePitchTrap = row.hit_pitch_profile.highUsageTraps.length >= 2
-    const hardFailures: string[] = []
-    if (!boardComplete) hardFailures.push('The complete confirmed 18-player board is unavailable.')
-    if (row.hits_fd == null) hardFailures.push('No current 1+ hit price is captured.')
-    if (row.batting_order == null) hardFailures.push('The batting-order opportunity is not confirmed.')
-    if (perWindow.length < 3) hardFailures.push(`Only ${perWindow.length} of four recent contact windows are available.`)
-    if (row.hit_pitch_profile.coverage < 0.35) hardFailures.push('Less than 35% of the starter pitch mix has supported batter/pitcher samples.')
-    if ((row.recent_pitch_count ?? 0) < 20) hardFailures.push('Recent pitch sample is below the 20-pitch publication floor.')
-    if (severePitchTrap) hardFailures.push(`Multiple high-usage whiff traps: ${row.hit_pitch_profile.highUsageTraps.join('; ')}.`)
+    const missingEvidence: string[] = []
+    if (!boardComplete) missingEvidence.push('The complete confirmed 18-player board is unavailable.')
+    if (row.batting_order == null) missingEvidence.push('The batting-order opportunity is not confirmed.')
+    if (perWindow.length < 3) missingEvidence.push(`Only ${perWindow.length} of four recent contact windows are available.`)
+    if (row.hit_pitch_profile.coverage < 0.35) missingEvidence.push('Less than 35% of the starter pitch mix has supported batter/pitcher samples.')
+    if ((row.recent_pitch_count ?? 0) < 20) missingEvidence.push('Recent pitch sample is below the 20-pitch publication floor.')
 
     const score = modelScore == null ? null : Math.round(modelScore * 1000) / 10
     const reasons: string[] = [...row.hit_pitch_profile.reasons]
-    const warnings: string[] = [...hardFailures]
+    const warnings: string[] = [...missingEvidence]
+    const componentScore = (value: number | null) => value == null ? '-' : (value * 100).toFixed(1)
+    reasons.unshift(`Underlying components — recent contact: ${componentScore(contactForm)}, starter-pitch contact: ${componentScore(pitch)}, opportunity: ${componentScore(opportunity)}, platoon: ${componentScore(platoon)}. Odds excluded.`)
     if (contactForm != null && contactForm >= 0.64) reasons.push('Squared-up, timing, miss-distance, sweet-spot, and contact-quality form is strong across the recent windows-not just L1.')
-    if (marketStrength != null && marketStrength >= 0.66) reasons.push('1+ hit, 2+ hits, and single pricing jointly rank near the top of this game.')
     if (opportunity != null && opportunity >= 0.84) reasons.push(`Batting ${row.batting_order} supplies a strong plate-appearance floor.`)
     if (platoon != null && platoon >= 0.65) reasons.push('Platoon production ranks in the upper portion of this game.')
-    const hitMove = openingMove(row.hits_fd, row.hits_open)
-    const hit2Move = openingMove(row.hits2_fd, row.hits2_open)
-    if (hitMove != null && hit2Move != null && hitMove > 0 && hit2Move > 0) reasons.push('Both 1+ and 2+ hit prices shortened from their captured openers.')
-    else if (hitMove != null && hit2Move != null && Math.sign(hitMove) !== Math.sign(hit2Move)) warnings.push('1+ and 2+ hit movement disagree; the market branch is not clean confirmation.')
+    if (severePitchTrap) warnings.push(`Underlying whiff veto: multiple high-usage traps (${row.hit_pitch_profile.highUsageTraps.join('; ')}).`)
     if (row.hit_pitch_profile.highUsageTraps.length === 1) warnings.push(`One high-usage whiff concern remains: ${row.hit_pitch_profile.highUsageTraps[0]}.`)
 
-    const status: HitFloorStatus = hardFailures.length === 0 && modelScore != null && modelScore >= 0.64 && evidenceCoverage >= 0.70
-      ? 'QUALIFIED'
-      : hardFailures.length === 0 && modelScore != null && modelScore >= 0.55 && evidenceCoverage >= 0.62
-        ? 'WATCH'
-        : 'PASS'
+    let status: HitFloorStatus
+    if (missingEvidence.length > 0 || modelScore == null || evidenceCoverage < 0.62) {
+      status = 'NO_READ'
+      if (missingEvidence.length === 0 && evidenceCoverage < 0.62) warnings.push(`Underlying evidence coverage ${(evidenceCoverage * 100).toFixed(1)}% is below the 62.0% publication floor.`)
+    } else if (severePitchTrap || modelScore < 0.55) {
+      status = 'PASS'
+      if (modelScore < 0.55) warnings.push(`Underlying contact/matchup score ${score?.toFixed(1) ?? '-'} is below the 55.0 watch floor.`)
+    } else if (modelScore >= 0.64 && evidenceCoverage >= 0.70) {
+      status = 'QUALIFIED'
+    } else {
+      status = 'WATCH'
+    }
+
+    // Markets are an adversarial positioning layer, not probability truth.
+    // Report observable price/handle facts without allowing them to change
+    // the score, rank, or status.
+    const hitMove = marketMove(row.hits_fd, row.hits_open)
+    const hit2Move = marketMove(row.hits2_fd, row.hits2_open)
+    const marketFacts: string[] = []
+    if (hitMove != null && hitMove !== 0) marketFacts.push(`1+ Hit moved ${hitMove > 0 ? 'out' : 'in'} ${Math.abs(hitMove)} odds points from the captured opener.`)
+    if (hit2Move != null && hit2Move !== 0) marketFacts.push(`2+ Hits moved ${hit2Move > 0 ? 'out' : 'in'} ${Math.abs(hit2Move)} odds points from the captured opener.`)
+    if (row.hit_pick_count != null) marketFacts.push(`Public 1+ Hit handle: ${row.hit_pick_count.toLocaleString()} picks = $${(row.hit_pick_count * 100).toLocaleString()} staked.`)
+    if (row.single_pick_count != null) marketFacts.push(`Public Single handle: ${row.single_pick_count.toLocaleString()} picks = $${(row.single_pick_count * 100).toLocaleString()} staked.`)
+    if (row.total_market_pick_count != null) marketFacts.push(`Public handle across captured player markets: ${row.total_market_pick_count.toLocaleString()} picks = $${(row.total_market_pick_count * 100).toLocaleString()} staked.`)
+    if (marketFacts.length) warnings.push('Market context only (excluded from underlying grade):', ...marketFacts)
 
     row.hit_score = score
     row.hit_status = status
@@ -237,4 +242,3 @@ export function computeHitFloorReads<T extends HitFloorInput>(rows: T[], boardCo
   const ranked = rows.filter(row => row.hit_score != null).sort((a, b) => (b.hit_score ?? -Infinity) - (a.hit_score ?? -Infinity))
   ranked.forEach((row, index) => { row.hit_rank = index + 1 })
 }
-

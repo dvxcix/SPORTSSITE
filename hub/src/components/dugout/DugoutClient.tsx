@@ -526,6 +526,15 @@ export function buildBatterRow(
   const opening = openingEntry
   const sa_rbi_raw_ratio = rawRatio(opening?.sa_open ?? null, opening?.rbi_open ?? null)
   const picks_count = (communityPickEntry?.home_runs?.picks as number | undefined) ?? null
+  const hit_pick_count = (communityPickEntry?.hits?.picks as number | undefined) ?? null
+  const single_pick_count = (communityPickEntry?.singles?.picks as number | undefined) ?? null
+  const captured_market_pick_counts = [
+    'home_runs', 'hits', 'runs', 'stolen_bases', 'singles',
+    'doubles', 'triples', 'rbi', 'hits_runs_rbi', 'bases',
+  ].map(key => communityPickEntry?.[key]?.picks).filter((value): value is number => typeof value === 'number')
+  const total_market_pick_count = captured_market_pick_counts.length
+    ? captured_market_pick_counts.reduce((sum, value) => sum + value, 0)
+    : null
   const is_money_sa_rbi = sa_rbi_raw_ratio != null && sa_rbi_raw_ratio >= 3.5
                         && picks_count != null && picks_count <= 50
 
@@ -611,10 +620,10 @@ export function buildBatterRow(
     d_spd, d_sq, d_brl, d_hrd, d_bla, d_len, d_atk, d_iaa, d_tlt, d_ev, d_la, d_hh, d_sweetspot, d_pa, d_fb,
     s_timing, r_timing, d_timing, s_miss, r_miss, d_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
-    hit_windows, hit_pitch_profile,
+    hit_windows, hit_pitch_profile, hit_pick_count, single_pick_count, total_market_pick_count,
     hit_score: null as number | null,
     hit_rank: null as number | null,
-    hit_status: 'PASS' as HitFloorStatus,
+    hit_status: 'NO_READ' as HitFloorStatus,
     hit_reasons: [] as string[],
     hit_warnings: [] as string[],
     // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
@@ -1606,8 +1615,16 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} openOdds={row.hits_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} openOdds={row.hits2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
       <td
-        aria-label={`Hit read: ${row.hit_status.toLowerCase()}${row.hit_rank != null ? `, rank ${row.hit_rank}` : ''}${row.hit_score != null ? `, score ${row.hit_score.toFixed(1)}` : ''}`}
-        title={[...(row.hit_reasons ?? []), ...(row.hit_warnings ?? [])].join('\n')}
+        aria-label={`Hit read: ${row.hit_status === 'NO_READ' ? 'no read' : row.hit_status.toLowerCase()}${row.hit_rank != null ? `, rank ${row.hit_rank}` : ''}${row.hit_score != null ? `, score ${row.hit_score.toFixed(1)}` : ''}`}
+        title={[
+          row.hit_status === 'QUALIFIED' ? 'QUALIFIED: underlying baseball evidence clears every publication gate.'
+            : row.hit_status === 'WATCH' ? 'WATCH: underlying evidence is playable but does not clear the qualified floor.'
+              : row.hit_status === 'NO_READ' ? 'NO READ: underlying evidence is incomplete; this is not a negative prediction.'
+                : 'PASS: complete underlying evidence grades below the watch floor or contains a whiff veto.',
+          'Sportsbook prices and public handle are context only and do not affect this grade.',
+          ...(row.hit_reasons ?? []),
+          ...(row.hit_warnings ?? []),
+        ].join('\n')}
         style={{ ...STD, width: 38, minWidth: 38 }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -1616,12 +1633,12 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
             height: 9,
             borderRadius: '50%',
             flex: '0 0 9px',
-            background: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : '#f87171',
+            background: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : row.hit_status === 'NO_READ' ? '#71717a' : '#f87171',
             boxShadow: row.hit_status === 'QUALIFIED' ? '0 0 6px rgba(74,222,128,0.75)' : row.hit_status === 'WATCH' ? '0 0 5px rgba(250,204,21,0.55)' : 'none',
             opacity: row.hit_score == null ? 0.35 : 1,
           }} />
           <span style={{
-            color: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : 'var(--text-3)',
+            color: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : row.hit_status === 'PASS' ? '#f87171' : 'var(--text-3)',
             fontWeight: 850,
           }}>
             {row.hit_rank ?? '-'}
@@ -2939,7 +2956,7 @@ export function getDugoutHeaderCells(
       {BL('fanduel', '2+ SB', '2+ stolen bases (FanDuel)', 50, 'sb2_fd')}
       {BL('fanduel', '1+ H', '1+ hit (FanDuel)', 46, 'hits_fd', 'pkHits')}
       {BL('fanduel', '2+ H', '2+ hits (FanDuel)', 46, 'hits2_fd')}
-      {H('HIT', '1+ hit read: green = qualified, amber = watch, red = pass. Number is the model rank across all 18 hitters. Hover the indicator for its score, evidence, and contradictions.', 38, 'hit_score')}
+      {H('HIT', 'Underlying 1+ hit read: green = qualified, amber = watch, red = underlying pass/fade, gray = insufficient evidence/no read. Odds and $100 public picks are market-positioning context only and never affect the grade. Number is the underlying rank across all 18 hitters.', 38, 'hit_score')}
       {BL('fanduel', '1+ R', '1+ run scored (FanDuel)', 46, 'runs_fd', 'pkRuns')}
       {BL('fanduel', '2+ R', '2+ runs scored (FanDuel)', 46, 'runs2_fd')}
       <th style={SDIV_H} />

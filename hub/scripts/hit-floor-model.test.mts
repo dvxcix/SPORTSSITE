@@ -36,22 +36,65 @@ function row(index: number): HitFloorInput {
   }
 }
 
-test('qualifies only complete, high-coverage, cross-signal hit reads', () => {
+test('qualifies only complete, high-coverage underlying hit reads', () => {
   const rows = Array.from({ length: 18 }, (_, index) => row(index))
   computeHitFloorReads(rows, true)
 
   assert.equal(rows[0].hit_status, 'QUALIFIED')
   assert.equal(rows[0].hit_rank, 1)
   assert.ok((rows[0].hit_score ?? 0) > 80)
-  assert.equal(rows.filter(item => item.hit_status === 'QUALIFIED').length, 1)
 })
 
 test('fails closed when the confirmed 18-player board is unavailable', () => {
   const rows = Array.from({ length: 18 }, (_, index) => row(index))
   computeHitFloorReads(rows, false)
 
-  assert.equal(rows[0].hit_status, 'PASS')
+  assert.equal(rows[0].hit_status, 'NO_READ')
   assert.ok(rows[0].hit_warnings?.some(reason => reason.includes('18-player board')))
+})
+
+test('sportsbook prices cannot change the underlying score or status', () => {
+  const shortPrices = Array.from({ length: 18 }, (_, index) => row(index))
+  const longPrices = Array.from({ length: 18 }, (_, index) => row(index))
+  longPrices[0].hits_fd = 5000
+  longPrices[0].hits2_fd = 10000
+  longPrices[0].sng_fd = 7500
+  longPrices[0].hits_open = -500
+  longPrices[0].hits2_open = -250
+
+  computeHitFloorReads(shortPrices, true)
+  computeHitFloorReads(longPrices, true)
+
+  assert.equal(longPrices[0].hit_score, shortPrices[0].hit_score)
+  assert.equal(longPrices[0].hit_status, shortPrices[0].hit_status)
+  assert.equal(longPrices[0].hit_rank, shortPrices[0].hit_rank)
+})
+
+test('missing hit prices cannot veto complete underlying evidence', () => {
+  const rows = Array.from({ length: 18 }, (_, index) => row(index))
+  rows[0].hits_fd = null
+  rows[0].hits2_fd = null
+  rows[0].sng_fd = null
+
+  computeHitFloorReads(rows, true)
+
+  assert.equal(rows[0].hit_status, 'QUALIFIED')
+})
+
+test('$100 public picks are reported as handle but cannot alter the grade', () => {
+  const noHandle = Array.from({ length: 18 }, (_, index) => row(index))
+  const publicHandle = Array.from({ length: 18 }, (_, index) => row(index))
+  publicHandle[0].hit_pick_count = 35
+  publicHandle[0].single_pick_count = 12
+  publicHandle[0].total_market_pick_count = 80
+
+  computeHitFloorReads(noHandle, true)
+  computeHitFloorReads(publicHandle, true)
+
+  assert.equal(publicHandle[0].hit_score, noHandle[0].hit_score)
+  assert.equal(publicHandle[0].hit_status, noHandle[0].hit_status)
+  assert.ok(publicHandle[0].hit_warnings?.some(reason => reason.includes('$3,500 staked')))
+  assert.ok(publicHandle[0].hit_warnings?.some(reason => reason.includes('$8,000 staked')))
 })
 
 test('a real high-usage pitch whiff cluster vetoes an otherwise strong card', () => {
@@ -60,7 +103,7 @@ test('a real high-usage pitch whiff cluster vetoes an otherwise strong card', ()
   computeHitFloorReads(rows, true)
 
   assert.equal(rows[0].hit_status, 'PASS')
-  assert.ok(rows[0].hit_warnings?.some(reason => reason.includes('Multiple high-usage whiff traps')))
+  assert.ok(rows[0].hit_warnings?.some(reason => reason.includes('multiple high-usage traps')))
 })
 
 test('pitch profile weights contact on the starter mix and reports coverage', () => {
@@ -83,4 +126,3 @@ test('pitch profile weights contact on the starter mix and reports coverage', ()
   assert.ok((profile.score ?? 0) > 0.70)
   assert.deepEqual(profile.highUsageTraps, [])
 })
-
