@@ -17,6 +17,7 @@ import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
+import { computeHitFloorReads, computeHitPitchProfile, type HitFloorStatus } from '@/lib/hitFloorModel'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
 import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
@@ -361,6 +362,18 @@ export function buildBatterRow(
 
   const matchup_edge = computeMatchupEdgeScore(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
   const platoon_ops = player.matchupEdge?.platoonOps?.[pitcherHand] ?? null
+  const hit_pitch_profile = computeHitPitchProfile(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
+  const hit_windows = Object.fromEntries((['l1', 'l3', 'l5', 'l10'] as const).map(window => {
+    const data = player.statcast?.[window] ?? null
+    return [window, {
+      squaredUpPct: data?.squaredUpPct ?? null,
+      sweetSpotPct: data?.sweetSpotPct ?? null,
+      missDistance: data?.missDistance ?? null,
+      onTimePct: data?.onTimePct ?? null,
+      hardHitPct: data?.hardHitPct ?? null,
+      avgEv: data?.avgEv ?? null,
+    }]
+  }))
 
   // How many real recent pitches we actually have on this guy — a proxy for
   // "does he play enough for his season rate stats to mean anything." A
@@ -598,6 +611,12 @@ export function buildBatterRow(
     d_spd, d_sq, d_brl, d_hrd, d_bla, d_len, d_atk, d_iaa, d_tlt, d_ev, d_la, d_hh, d_sweetspot, d_pa, d_fb,
     s_timing, r_timing, d_timing, s_miss, r_miss, d_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
+    hit_windows, hit_pitch_profile,
+    hit_score: null as number | null,
+    hit_rank: null as number | null,
+    hit_status: 'PASS' as HitFloorStatus,
+    hit_reasons: [] as string[],
+    hit_warnings: [] as string[],
     // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
     // own entry now — a player can have picks in more than one market for
     // the same game, and collapsing them into a single row (the old
@@ -1586,6 +1605,29 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases2" book="fanduel" odds={row.sb2_fd} openOdds={row.sb2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb2_fd, g('sb2_fd')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} openOdds={row.hits_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} openOdds={row.hits2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
+      <td
+        aria-label={`Hit read: ${row.hit_status.toLowerCase()}${row.hit_rank != null ? `, rank ${row.hit_rank}` : ''}${row.hit_score != null ? `, score ${row.hit_score.toFixed(1)}` : ''}`}
+        title={[...(row.hit_reasons ?? []), ...(row.hit_warnings ?? [])].join('\n')}
+        style={{ ...STD, width: 38, minWidth: 38 }}
+      >
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <span aria-hidden="true" style={{
+            width: 9,
+            height: 9,
+            borderRadius: '50%',
+            flex: '0 0 9px',
+            background: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : '#f87171',
+            boxShadow: row.hit_status === 'QUALIFIED' ? '0 0 6px rgba(74,222,128,0.75)' : row.hit_status === 'WATCH' ? '0 0 5px rgba(250,204,21,0.55)' : 'none',
+            opacity: row.hit_score == null ? 0.35 : 1,
+          }} />
+          <span style={{
+            color: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : 'var(--text-3)',
+            fontWeight: 850,
+          }}>
+            {row.hit_rank ?? '-'}
+          </span>
+        </span>
+      </td>
       <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} openOdds={row.runs_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="runs2" book="fanduel" odds={row.runs2_fd} openOdds={row.runs2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs2_fd, g('runs2_fd')) }} />
 
@@ -2285,6 +2327,7 @@ const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'col', key: 'sb2_fd', group: 'props' },
   { type: 'col', key: 'hits_fd', group: 'props' },
   { type: 'col', key: 'hits2_fd', group: 'props' },
+  { type: 'col', key: 'hit_score', group: 'props' },
   { type: 'col', key: 'runs_fd', group: 'props' },
   { type: 'col', key: 'runs2_fd', group: 'props' },
   { type: 'divider' },
@@ -2487,7 +2530,7 @@ const DUGOUT_COLUMN_LABELS: Record<string, string> = {
   sa_div_tb4: 'HR vs. 4+ total bases implied', sa_div_tb5: 'HR vs. 5+ total bases implied',
   sa_div_hr2: 'HR vs. 2+ home runs implied',
   sng_fd: 'To Hit a Single', dbl_fd: 'To Hit a Double', tri_fd: 'To Hit a Triple', sb_fd: '1+ Stolen Base', sb2_fd: '2+ Stolen Bases',
-  hits_fd: '1+ Hit', hits2_fd: '2+ Hits', runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
+  hits_fd: '1+ Hit', hits2_fd: '2+ Hits', hit_score: 'Hit model indicator and rank', runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
   paper: 'Composite Statcast score', bk_rk: 'Sportsbook rank', pp_rk: 'Statcast rank', mm: 'Market vs. Statcast gap',
   s_spd: 'Season bat speed', r_spd: 'Recent bat speed', d_spd: 'Recent−season bat speed',
   s_timing: 'Season timing %', r_timing: 'Recent timing', d_timing: 'Recent−season timing',
@@ -2885,6 +2928,7 @@ export function getDugoutHeaderCells(
       {BL('fanduel', '2+ SB', '2+ stolen bases (FanDuel)', 50, 'sb2_fd')}
       {BL('fanduel', '1+ H', '1+ hit (FanDuel)', 46, 'hits_fd', 'pkHits')}
       {BL('fanduel', '2+ H', '2+ hits (FanDuel)', 46, 'hits2_fd')}
+      {H('HIT', '1+ hit read: green = qualified, amber = watch, red = pass. Number is the model rank across all 18 hitters. Hover the indicator for its score, evidence, and contradictions.', 38, 'hit_score')}
       {BL('fanduel', '1+ R', '1+ run scored (FanDuel)', 46, 'runs_fd', 'pkRuns')}
       {BL('fanduel', '2+ R', '2+ runs scored (FanDuel)', 46, 'runs2_fd')}
       <th style={SDIV_H} />
@@ -3154,6 +3198,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     const pool = [...homeRows, ...awayRows]
     computePaperScores(pool)
     computeMmRanks(pool)
+    computeHitFloorReads(pool, pool.length === 18 && !!game.homeLineupConfirmed && !!game.awayLineupConfirmed)
     return { homeRows, awayRows, pool }
   }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, statcastWindow, mechanicsFallback])
 
@@ -3755,6 +3800,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
       const pool = [...homeRows, ...awayRows]
       computePaperScores(pool)
       computeMmRanks(pool)
+      computeHitFloorReads(pool, pool.length === 18 && !!game.homeLineupConfirmed && !!game.awayLineupConfirmed)
       const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
       for (const row of homeRows) {
         const hits = row.hr_hits ?? []
