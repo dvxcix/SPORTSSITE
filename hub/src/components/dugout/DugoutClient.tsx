@@ -1616,15 +1616,9 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} openOdds={row.hits2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
       <td
         aria-label={`Hit read: ${row.hit_status === 'NO_READ' ? 'no read' : row.hit_status.toLowerCase()}${row.hit_rank != null ? `, rank ${row.hit_rank}` : ''}${row.hit_score != null ? `, score ${row.hit_score.toFixed(1)}` : ''}`}
-        title={[
-          row.hit_status === 'QUALIFIED' ? 'QUALIFIED: underlying baseball evidence clears every publication gate.'
-            : row.hit_status === 'WATCH' ? 'WATCH: underlying evidence is playable but does not clear the qualified floor.'
-              : row.hit_status === 'NO_READ' ? 'NO READ: underlying evidence is incomplete; this is not a negative prediction.'
-                : 'PASS: complete underlying evidence grades below the watch floor or contains a whiff veto.',
-          'Sportsbook prices and public handle are context only and do not affect this grade.',
-          ...(row.hit_reasons ?? []),
-          ...(row.hit_warnings ?? []),
-        ].join('\n')}
+        title={row.hit_status === 'NO_READ'
+          ? 'HIT • NO READ • Data incomplete'
+          : `HIT • ${row.hit_status} • Rank #${row.hit_rank ?? '-'}${pool.length ? `/${pool.length}` : ''} • Score ${row.hit_score != null ? Math.round(row.hit_score) : '-'}`}
         style={{ ...STD, width: 38, minWidth: 38 }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -2956,7 +2950,7 @@ export function getDugoutHeaderCells(
       {BL('fanduel', '2+ SB', '2+ stolen bases (FanDuel)', 50, 'sb2_fd')}
       {BL('fanduel', '1+ H', '1+ hit (FanDuel)', 46, 'hits_fd', 'pkHits')}
       {BL('fanduel', '2+ H', '2+ hits (FanDuel)', 46, 'hits2_fd')}
-      {H('HIT', 'Underlying 1+ hit read: green = qualified, amber = watch, red = underlying pass/fade, gray = insufficient evidence/no read. Odds and $100 public picks are market-positioning context only and never affect the grade. Number is the underlying rank across all 18 hitters.', 38, 'hit_score')}
+      {H('HIT', '1+ hit read: green = qualified, amber = watch, red = pass, gray = no read. Number = game rank.', 38, 'hit_score')}
       {BL('fanduel', '1+ R', '1+ run scored (FanDuel)', 46, 'runs_fd', 'pkRuns')}
       {BL('fanduel', '2+ R', '2+ runs scored (FanDuel)', 46, 'runs2_fd')}
       <th style={SDIV_H} />
