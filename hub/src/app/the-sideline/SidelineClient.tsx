@@ -127,21 +127,51 @@ function EmptyState() {
 function FootballField({ aggressor }: { aggressor: string }) {
   return (
     <div className={styles.field}>
-      {[10, 20, 30, 40, 50, 40, 30, 20, 10].map((yard, index) => (
-        <div className={styles.yardLine} style={{ left: `${10 + index * 10}%` }} key={`${yard}-${index}`}><span>{yard}</span></div>
+      <div className={styles.fieldDirection}>OFFENSE <b>↑</b> END ZONE</div>
+      {[20, 30, 40, 50].map((yard, index) => (
+        <div className={styles.yardLine} style={{ top: `${16 + index * 14}%` }} key={yard}>
+          <span>{yard}</span><span>{yard}</span>
+        </div>
       ))}
       <div className={styles.lineOfScrimmage} />
-      <div className={`${styles.routeLine} ${styles.routeOne}`} />
-      <div className={`${styles.routeLine} ${styles.routeTwo}`} />
-      <div className={`${styles.routeLine} ${styles.routeThree}`} />
+      <div className={styles.losLabel}>LINE OF SCRIMMAGE</div>
+
+      <div className={`${styles.routeSegment} ${styles.routeX}`} />
+      <div className={`${styles.routeSegment} ${styles.routeHStem}`} />
+      <div className={`${styles.routeSegment} ${styles.routeHBreak}`} />
+      <div className={`${styles.routeSegment} ${styles.routeY}`} />
+      <div className={`${styles.routeSegment} ${styles.routeZStem}`} />
+      <div className={`${styles.routeSegment} ${styles.routeZBreak}`} />
+      <div className={`${styles.routeSegment} ${styles.routeRb}`} />
+
+      <div className={`${styles.offense} ${styles.playerX}`}>X</div>
+      <div className={`${styles.offense} ${styles.playerH}`}>H</div>
+      <div className={`${styles.offense} ${styles.playerLt}`}>LT</div>
+      <div className={`${styles.offense} ${styles.playerLg}`}>LG</div>
+      <div className={`${styles.offense} ${styles.playerC}`}>C</div>
+      <div className={`${styles.offense} ${styles.playerRg}`}>RG</div>
+      <div className={`${styles.offense} ${styles.playerRt}`}>RT</div>
+      <div className={`${styles.offense} ${styles.playerY}`}>Y</div>
+      <div className={`${styles.offense} ${styles.playerZ}`}>Z</div>
       <div className={styles.qb}>QB</div>
-      {['X', 'LT', 'LG', 'C', 'RG', 'RT', 'Y', 'Z'].map((player, index) => (
-        <div key={player} className={styles.offense} style={{ left: `${22 + index * 7.8}%`, top: index === 0 ? '76%' : index === 7 ? '70%' : '60%' }}>{player}</div>
-      ))}
-      {[18, 28, 38, 48, 58, 68, 78, 25, 42, 62, 79].map((left, index) => (
-        <div key={index} className={styles.defense} style={{ left: `${left}%`, top: index < 7 ? '43%' : '23%' }} />
-      ))}
-      <div className={styles.fieldCallout}><Crosshair size={14} /><div><b>{aggressor} leverage</b><span>Primary stress lane</span></div></div>
+      <div className={`${styles.offense} ${styles.playerRb}`}>RB</div>
+
+      <div className={`${styles.defense} ${styles.defDl1}`}>E</div>
+      <div className={`${styles.defense} ${styles.defDl2}`}>T</div>
+      <div className={`${styles.defense} ${styles.defDl3}`}>T</div>
+      <div className={`${styles.defense} ${styles.defDl4}`}>E</div>
+      <div className={`${styles.defense} ${styles.defLb1}`}>LB</div>
+      <div className={`${styles.defense} ${styles.defLb2}`}>LB</div>
+      <div className={`${styles.defense} ${styles.defCb1}`}>CB</div>
+      <div className={`${styles.defense} ${styles.defCb2}`}>CB</div>
+      <div className={`${styles.defense} ${styles.defS1}`}>S</div>
+      <div className={`${styles.defense} ${styles.defS2}`}>S</div>
+      <div className={styles.shellLabel}>TWO-HIGH SHELL</div>
+
+      <div className={styles.fieldCallout}>
+        <Crosshair size={18} />
+        <div><span>PRIMARY STRESS POINT</span><b>{aggressor}</b></div>
+      </div>
     </div>
   )
 }
@@ -318,7 +348,7 @@ export function SidelineClient({ games, selectedId, lens }: { games: SidelineGam
     <div className={`${styles.page} ${isPending ? styles.loading : ''}`}>
       <header className={styles.header}>
         <div className={styles.brandMark}><span>50</span></div>
-        <div><div className={styles.eyebrow}>NFL INTELLIGENCE</div><h1>The Sideline <span>LAB</span></h1><p>Game script, field geometry, matchup structure.</p></div>
+        <div><div className={styles.eyebrow}>NFL MATCHUP INTELLIGENCE</div><h1>The Sideline <span>PRIVATE LAB</span></h1><p>See the formation. Read the leverage. Find the player.</p></div>
         <div className={styles.privateBadge}><Radio size={12} /> Private preseason build</div>
       </header>
 
