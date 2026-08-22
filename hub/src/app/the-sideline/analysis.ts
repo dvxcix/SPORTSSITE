@@ -403,11 +403,20 @@ function buildTargets(pbp: Row[], teams: SidelineGame['home'][]): SidelineTarget
     const yards = numeric(row.yards_gained)
     return {
       id: `${String(row.game_id)}-${numeric(row.play_id)}`,
+      playId: numeric(row.play_id),
       playerId: String(row.receiver_player_id),
       playerName: String(row.receiver_player_name ?? 'Unknown player'),
       team: String(row.posteam ?? ''),
       defense: String(row.defteam ?? ''),
       gameId: String(row.game_id ?? ''),
+      homeTeam: String(row.home_team ?? ''),
+      awayTeam: String(row.away_team ?? ''),
+      quarter: numeric(row.qtr),
+      clock: clockLabel(row),
+      down: numeric(row.down),
+      distance: numeric(row.ydstogo),
+      yardline: numeric(row.yardline_100),
+      description: String(row.play_desc ?? ''),
       side,
       airYards: numeric(row.air_yards),
       yards,
@@ -613,7 +622,7 @@ async function querySeason(game: SidelineGame, season: number) {
   const [pbpResult, receivingResult, rushingResult, passingResult, dvpResult] = await Promise.all([
     admin
       .from('nfl_pbp')
-      .select('game_id,play_id,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+      .select('game_id,play_id,home_team,away_team,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yards_gained,score_differential,yardline_100,play_desc,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,complete_pass,success,touchdown,pass_touchdown,rush_touchdown,air_yards,yards_after_catch,pass_location,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
       .eq('season', season)
       .eq('season_type', 'REG')
       .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)

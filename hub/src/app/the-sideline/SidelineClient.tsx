@@ -132,11 +132,20 @@ export type SidelineProjection = {
 
 export type SidelineTarget = {
   id: string
+  playId: number
   playerId: string
   playerName: string
   team: string
   defense: string
   gameId: string
+  homeTeam: string
+  awayTeam: string
+  quarter: number
+  clock: string
+  down: number
+  distance: number
+  yardline: number
+  description: string
   side: 'left' | 'middle' | 'right'
   airYards: number
   yards: number
@@ -374,15 +383,105 @@ function PropCommand({ lens }: { lens: SidelineLens }) {
   </section>
 }
 
+const fieldClamp = (value: number) => Math.max(10, Math.min(110, value))
+
+function targetCoordinates(target: SidelineTarget) {
+  const los = fieldClamp(10 + 100 - target.yardline)
+  const x = fieldClamp(los + target.airYards)
+  const y = target.side === 'left' ? 14 : target.side === 'right' ? 39.3 : 26.65
+  return { x, y, los }
+}
+
+function fieldPosition(target: SidelineTarget) {
+  if (target.yardline === 50) return '50'
+  return target.yardline > 50 ? `${target.team} ${100 - target.yardline}` : `${target.defense} ${target.yardline}`
+}
+
+function RouteAtlasField({ lens }: { lens: SidelineLens }) {
+  const eligible = useMemo(() => lens.players.filter(player => lens.targets.some(target => target.playerId === player.id)), [lens.players, lens.targets])
+  const [playerId, setPlayerId] = useState(eligible[0]?.id ?? '')
+  const [defense, setDefense] = useState('ALL')
+  const [depth, setDepth] = useState<'all' | 'short' | 'deep'>('all')
+  const [playing, setPlaying] = useState(false)
+  const [cursor, setCursor] = useState(999)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const player = eligible.find(item => item.id === playerId) ?? eligible[0]
+  const targets = useMemo(() => lens.targets
+    .filter(target => target.playerId === player?.id && (defense === 'ALL' || target.defense === defense) && (depth === 'all' || (depth === 'deep' ? target.airYards >= 15 : target.airYards < 15)))
+    .sort((a, b) => a.gameId.localeCompare(b.gameId) || a.playId - b.playId)
+    .slice(-90), [defense, depth, lens.targets, player?.id])
+  const visible = playing ? targets.slice(0, Math.min(cursor, targets.length)) : targets
+  const defenses = useMemo(() => Array.from(new Set(lens.targets.filter(target => target.playerId === player?.id).map(target => target.defense))).sort(), [lens.targets, player?.id])
+  const activeIndex = Math.max(0, Math.min(selectedIndex, targets.length - 1))
+  const selectedTarget = targets[activeIndex]
+  const targetGame = selectedTarget ? lens.historicalGames.find(game => game.id === selectedTarget.gameId) : undefined
+  const fieldHome = targetGame?.home ?? lens.teams.find(item => item.team.abbr === selectedTarget?.homeTeam)?.team ?? lens.teams[1]?.team
+  const fieldAway = targetGame?.away ?? lens.teams.find(item => item.team.abbr === selectedTarget?.awayTeam)?.team ?? lens.teams[0]?.team
+  const selectedPoint = selectedTarget ? targetCoordinates(selectedTarget) : null
+  const lineToGain = selectedTarget && selectedPoint ? fieldClamp(selectedPoint.los + Math.min(selectedTarget.distance, selectedTarget.yardline)) : 10
+  const resultX = selectedTarget && selectedPoint ? (selectedTarget.touchdown ? 115 : fieldClamp(selectedPoint.los + selectedTarget.yards)) : 10
+
+  useEffect(() => {
+    if (!playing || cursor >= targets.length) return
+    const timer = window.setTimeout(() => {
+      setSelectedIndex(cursor)
+      setCursor(value => value + 1)
+      if (cursor + 1 >= targets.length) setPlaying(false)
+    }, 360)
+    return () => window.clearTimeout(timer)
+  }, [cursor, playing, targets.length])
+
+  const catches = targets.filter(target => target.complete).length
+  const explosive = targets.filter(target => target.explosive).length
+  const touchdowns = targets.filter(target => target.touchdown).length
+  const averageDepth = targets.length ? targets.reduce((sum, item) => sum + item.airYards, 0) / targets.length : 0
+  const play = () => { if (targets.length) { setSelectedIndex(0); setCursor(1); setPlaying(true) } }
+  const step = (direction: number) => { setPlaying(false); setSelectedIndex(Math.max(0, Math.min(targets.length - 1, activeIndex + direction))) }
+  const selectedOutcome = selectedTarget?.touchdown ? 'TOUCHDOWN' : selectedTarget?.complete ? `${selectedTarget.yards >= 0 ? '+' : ''}${selectedTarget.yards} YARDS` : 'INCOMPLETE'
+
+  return <section className={styles.fullPanel}>
+    <div className={styles.sectionHead}><div><span>PLAY-BY-PLAY FIELD POSITION</span><h2>Route Atlas</h2><p>Every target starts at its recorded line of scrimmage and ends at its recorded depth. Select any dot to inspect the real down, distance, first-down line and result.</p></div><Route size={24} /></div>
+    <div className={styles.atlasToolbar}>
+      <label><span>PLAYER</span><select value={player?.id ?? ''} onChange={event => { setPlayerId(event.target.value); setDefense('ALL'); setSelectedIndex(0); setPlaying(false) }}>{eligible.map(item => <option value={item.id} key={item.id}>{item.name} · {item.team}</option>)}</select></label>
+      <label><span>DEFENSE</span><select value={defense} onChange={event => { setDefense(event.target.value); setSelectedIndex(0); setPlaying(false) }}><option value="ALL">All opponents</option>{defenses.map(item => <option value={item} key={item}>{item}</option>)}</select></label>
+      <div className={styles.segmented}>{(['all', 'short', 'deep'] as const).map(item => <button key={item} type="button" className={depth === item ? styles.segmentActive : ''} onClick={() => { setDepth(item); setSelectedIndex(0); setPlaying(false) }}>{item.toUpperCase()}</button>)}</div>
+      <div className={styles.atlasSteps}><button type="button" onClick={() => step(-1)} disabled={!activeIndex}>PREV</button><button type="button" onClick={() => step(1)} disabled={activeIndex >= targets.length - 1}>NEXT</button></div>
+      <button type="button" className={styles.atlasPlay} onClick={() => playing ? setPlaying(false) : play()}>{playing ? <Pause size={17} /> : <Play size={17} />}{playing ? 'Pause' : 'Replay plays'}</button>
+    </div>
+    {!player ? <EmptyState title="Target atlas is syncing" copy="The selected matchup has no recorded receiver targets in the loaded season." /> : <div className={styles.atlasGrid}>
+      <div className={styles.atlasStadium}>
+        <div className={styles.atlasScoreboard}><div>{fieldAway && <TeamLogo team={fieldAway} compact />}<span>{fieldAway?.abbr ?? selectedTarget?.awayTeam}</span></div><strong>{targetGame ? `${targetGame.season} · WEEK ${targetGame.week}` : `${lens.season} SEASON`}</strong><div><span>{fieldHome?.abbr ?? selectedTarget?.homeTeam}</span>{fieldHome && <TeamLogo team={fieldHome} compact />}</div></div>
+        <div className={styles.atlasFieldRegulation}>
+          <div className={styles.atlasEndzoneLeft} style={{ backgroundColor: fieldHome?.color ?? '#203d2b' }}>{fieldHome?.logo ? <Image src={fieldHome.logo} alt="" width={54} height={54} unoptimized /> : <b>{fieldHome?.abbr}</b>}<span>{fieldHome?.abbr}</span></div>
+          <div className={styles.atlasEndzoneRight} style={{ backgroundColor: fieldHome?.color ?? '#203d2b' }}>{fieldHome?.logo ? <Image src={fieldHome.logo} alt="" width={54} height={54} unoptimized /> : <b>{fieldHome?.abbr}</b>}<span>{fieldHome?.abbr}</span></div>
+          {fieldHome?.logo && <Image className={styles.atlasMidfieldLogo} src={fieldHome.logo} alt="" width={96} height={96} unoptimized />}
+          {Array.from({ length: 21 }, (_, index) => 10 + index * 5).map(x => <div key={x} className={x % 10 === 0 ? styles.atlasMajorYardLine : styles.atlasMinorYardLine} style={{ left: `${x / 120 * 100}%` }}>{x > 10 && x < 110 && x % 10 === 0 && <><span>{x <= 60 ? x - 10 : 110 - x}</span><span>{x <= 60 ? x - 10 : 110 - x}</span></>}</div>)}
+          {selectedTarget && selectedPoint && <><div className={styles.atlasFirstDown} style={{ left: `${lineToGain / 120 * 100}%` }}><b>{lineToGain === 110 ? 'GOAL' : '1ST'}</b></div><div className={styles.atlasSelectedLos} style={{ left: `${selectedPoint.los / 120 * 100}%` }}><b>LOS</b></div></>}
+          <svg viewBox="0 0 120 53.3" preserveAspectRatio="none" aria-label={`${player.name} target atlas on a regulation football field`}>
+            {visible.map(target => { const point = targetCoordinates(target); const active = target.id === selectedTarget?.id; return <circle key={target.id} cx={point.x} cy={point.y} r={active ? 1.35 : target.touchdown ? 1.05 : .72} className={`${target.touchdown ? styles.atlasTdDot : target.complete ? styles.atlasCatchDot : styles.atlasMissDot} ${active ? styles.atlasActiveDot : ''}`} onClick={() => { setPlaying(false); setSelectedIndex(targets.findIndex(item => item.id === target.id)) }} /> })}
+            {selectedTarget && selectedPoint && <g className={styles.atlasSelectedRoute}><path d={`M ${selectedPoint.los} 26.65 Q ${(selectedPoint.los + selectedPoint.x) / 2} ${selectedPoint.y} ${selectedPoint.x} ${selectedPoint.y}`} className={styles.atlasAirTrace} />{selectedTarget.complete && Math.abs(resultX - selectedPoint.x) > .5 && <path d={`M ${selectedPoint.x} ${selectedPoint.y} L ${resultX} ${selectedPoint.y}`} className={styles.atlasYacTrace} />}<circle cx={resultX} cy={selectedPoint.y} r="1.15" className={selectedTarget.touchdown ? styles.atlasTdDot : selectedTarget.complete ? styles.atlasCatchDot : styles.atlasMissDot} /></g>}
+          </svg>
+          <div className={styles.atlasLaneLabels}><span>LEFT</span><span>MIDDLE</span><span>RIGHT</span></div>
+          <div className={styles.atlasLegend}><span><i className={styles.legendCatch} /> Catch</span><span><i className={styles.legendMiss} /> Miss</span><span><i className={styles.legendTd} /> TD</span><strong>OFFENSE →</strong></div>
+        </div>
+      </div>
+      <aside className={styles.atlasPanel}>
+        <div className={styles.atlasPlayer}><PlayerAvatar src={player.headshot} name={player.name} size="large" /><div><small>{player.team} · {player.position}</small><strong>{player.name}</strong><span>{targets.length} recorded targets</span></div></div>
+        {selectedTarget && <div className={styles.atlasPlayCard}><div><span>Q{selectedTarget.quarter} · {selectedTarget.clock}</span><b>{ordinal(selectedTarget.down)} &amp; {selectedTarget.distance}</b></div><strong>{selectedOutcome}</strong><small>BALL ON {fieldPosition(selectedTarget)}</small><p>{selectedTarget.description || `${selectedTarget.team} target vs ${selectedTarget.defense}`}</p><div><span><b>{selectedTarget.airYards >= 0 ? '+' : ''}{selectedTarget.airYards}</b>AIR YDS</span><span><b>{selectedTarget.yards >= 0 ? '+' : ''}{selectedTarget.yards}</b>GAIN</span><span><b>{selectedTarget.yac >= 0 ? '+' : ''}{selectedTarget.yac}</b>YAC</span><span><b>{activeIndex + 1}/{targets.length}</b>PLAY</span></div></div>}
+        <div className={styles.atlasStats}><div><b>{targets.length}</b><span>Targets</span></div><div><b>{targets.length ? Math.round(catches / targets.length * 100) : 0}%</b><span>Catch rate</span></div><div><b>{averageDepth.toFixed(1)}</b><span>aDOT</span></div><div><b>{explosive}</b><span>Explosive</span></div><div><b>{touchdowns}</b><span>TDs</span></div><div><b>{defenses.length}</b><span>Defenses</span></div></div>
+        <div className={styles.atlasTruth}><Database size={17} /><span>Field position, down, distance, target depth and result come from recorded play-by-play. Left/middle/right is the recorded pass lane.</span></div>
+      </aside>
+    </div>}
+  </section>
+}
+
 function routeCoordinates(target: SidelineTarget, index: number) {
   const lane = target.side === 'left' ? 24 : target.side === 'right' ? 76 : 50
   const jitter = ((index * 17 + target.playerName.length * 7) % 13) - 6
-  const x = Math.max(8, Math.min(92, lane + jitter))
-  const y = Math.max(7, Math.min(55, 52 - target.airYards * .82))
-  return { x, y }
+  return { x: Math.max(8, Math.min(92, lane + jitter)), y: Math.max(7, Math.min(55, 52 - target.airYards * .82)) }
 }
 
-function RouteAtlas({ lens }: { lens: SidelineLens }) {
+export function RouteAtlas({ lens }: { lens: SidelineLens }) {
   const eligible = useMemo(() => lens.players.filter(player => lens.targets.some(target => target.playerId === player.id)), [lens.players, lens.targets])
   const [playerId, setPlayerId] = useState(eligible[0]?.id ?? '')
   const [defense, setDefense] = useState('ALL')
@@ -442,7 +541,7 @@ export function SidelineClient({ games, selectedId, lens }: { games: SidelineGam
       <div className={styles.statusStrip}><span><Wind size={14} /> {selected.roof ?? 'Roof TBD'}</span><span><Shield size={14} /> {selected.surface ?? 'Surface TBD'}</span><span><Database size={14} /> {lens.historicalGames.length} archived games · plays load on demand</span><span className={styles.liveDot}>Private route · noindex</span></div>
       <nav className={styles.viewNav} aria-label="Sideline views">{views.map(item => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? styles.viewActive : ''} onClick={() => setView(item.id)}><Icon size={17} />{item.label}</button> })}</nav>
       <div className={styles.blueprintBanner}><div><small>THIS MATCHUP</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></div><b>{lens.players[0]?.index ?? '—'}<small>TOP INDEX</small></b><ChevronRight size={20} /></div>
-      {view === 'props' && <PropCommand key={selected.id} lens={lens} />}{view === 'routes' && <RouteAtlas key={selected.id} lens={lens} />}{view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}
+      {view === 'props' && <PropCommand key={selected.id} lens={lens} />}{view === 'routes' && <RouteAtlasField key={selected.id} lens={lens} />}{view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}
     </main>
   )
 }
