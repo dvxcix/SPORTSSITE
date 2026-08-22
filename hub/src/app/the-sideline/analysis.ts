@@ -289,51 +289,80 @@ function mapPlay(row: Row, headshots: Map<string, string>): SidelinePlay {
   }
 }
 
-async function queryHistory(game: SidelineGame) {
+const playSelect = 'game_id,play_id,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yardline_100,play_desc,yards_gained,air_yards,yards_after_catch,pass_location,run_location,run_gap,pass_attempt,rush_attempt,complete_pass,first_down,touchdown,pass_touchdown,rush_touchdown,interception,fumble_lost,success,epa,posteam_score,defteam_score,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name'
+
+async function playRowsForGame(gameId: string) {
   const admin = createAdminClient()
-  const teams = [game.away.abbr, game.home.abbr]
-  const historyResult = await admin
+  const { data, error } = await admin
+    .from('nfl_pbp')
+    .select(playSelect)
+    .eq('game_id', gameId)
+    .in('play_type', ['pass', 'run'])
+    .eq('play_deleted', false)
+    .order('play_id', { ascending: true })
+    .limit(500)
+  if (error) throw error
+  return (data ?? []) as Row[]
+}
+
+async function queryHeadshots(playerIds: string[]) {
+  const admin = createAdminClient()
+  const playerResult = playerIds.length
+    ? await admin.from('nfl_players').select('gsis_id,headshot').in('gsis_id', playerIds)
+    : { data: [] as Row[] }
+  const headshots = new Map<string, string>()
+  for (const row of (playerResult.data ?? []) as Row[]) {
+    const id = text(row.gsis_id)
+    const headshot = nullableText(row.headshot)
+    if (id && headshot) headshots.set(id, headshot)
+  }
+  return headshots
+}
+
+async function mapPlayRows(playRows: Row[]) {
+  const playerIds = Array.from(new Set(playRows.flatMap(row => [
+    nullableText(row.passer_player_id),
+    nullableText(row.receiver_player_id),
+    nullableText(row.rusher_player_id),
+  ]).filter((id): id is string => Boolean(id))))
+  const headshots = await queryHeadshots(playerIds)
+  return { plays: playRows.map(row => mapPlay(row, headshots)), headshots }
+}
+
+export async function getHistoricalGamePlays(gameId: string): Promise<SidelinePlay[]> {
+  if (!/^[A-Za-z0-9_-]{4,80}$/.test(gameId)) return []
+  const mapped = await mapPlayRows(await playRowsForGame(gameId))
+  return mapped.plays
+}
+
+async function queryHistory() {
+  const admin = createAdminClient()
+  const completedGames = admin
     .from('nfl_schedule')
-    .select('game_id,season,game_type,week,gameday,away_team,away_score,home_team,home_score')
-    .lt('gameday', game.gameday)
+    .select('game_id', { count: 'exact', head: true })
     .not('away_score', 'is', null)
     .not('home_score', 'is', null)
-    .or(teams.flatMap(team => [`away_team.eq.${team}`, `home_team.eq.${team}`]).join(','))
-    .order('gameday', { ascending: false })
-    .limit(10)
+  const teamsResultPromise = admin.from('nfl_teams').select('team_abbr,team_name,team_color,team_logo_espn')
+  const [{ count, error: countError }, teamsResult] = await Promise.all([completedGames, teamsResultPromise])
+  if (countError) throw countError
+  if (teamsResult.error) throw teamsResult.error
 
-  const scheduleRows = (historyResult.data ?? []) as Row[]
-  const gameIds = scheduleRows.map(row => text(row.game_id)).filter(Boolean)
-  const abbreviations = Array.from(new Set(scheduleRows.flatMap(row => [text(row.away_team), text(row.home_team)]).filter(Boolean)))
+  const pageSize = 1000
+  const pageCount = Math.ceil((count ?? 0) / pageSize)
+  const historyPages = await Promise.all(Array.from({ length: pageCount }, (_, page) => (
+    admin
+      .from('nfl_schedule')
+      .select('game_id,season,game_type,week,gameday,away_team,away_score,home_team,home_score')
+      .not('away_score', 'is', null)
+      .not('home_score', 'is', null)
+      .order('gameday', { ascending: false })
+      .order('game_id', { ascending: false })
+      .range(page * pageSize, ((page + 1) * pageSize) - 1)
+  )))
 
-  const playSelect = 'game_id,play_id,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yardline_100,play_desc,yards_gained,air_yards,yards_after_catch,pass_location,run_location,run_gap,pass_attempt,rush_attempt,complete_pass,first_down,touchdown,pass_touchdown,rush_touchdown,interception,fumble_lost,success,epa,posteam_score,defteam_score,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name'
-  const [teamsResult, playsPageOne, playsPageTwo] = await Promise.all([
-    abbreviations.length
-      ? admin.from('nfl_teams').select('team_abbr,team_name,team_color,team_logo_espn').in('team_abbr', abbreviations)
-      : Promise.resolve({ data: [] as Row[] }),
-    gameIds.length
-      ? admin
-          .from('nfl_pbp')
-          .select(playSelect)
-          .in('game_id', gameIds)
-          .in('play_type', ['pass', 'run'])
-          .eq('play_deleted', false)
-          .order('game_id', { ascending: false })
-          .order('play_id', { ascending: true })
-          .range(0, 999)
-      : Promise.resolve({ data: [] as Row[] }),
-    gameIds.length
-      ? admin
-          .from('nfl_pbp')
-          .select(playSelect)
-          .in('game_id', gameIds)
-          .in('play_type', ['pass', 'run'])
-          .eq('play_deleted', false)
-          .order('game_id', { ascending: false })
-          .order('play_id', { ascending: true })
-          .range(1000, 1999)
-      : Promise.resolve({ data: [] as Row[] }),
-  ])
+  const pageError = historyPages.find(page => page.error)?.error
+  if (pageError) throw pageError
+  const scheduleRows = historyPages.flatMap(page => (page.data ?? []) as Row[])
 
   const teamMap = new Map<string, SidelineGame['home']>()
   for (const row of (teamsResult.data ?? []) as Row[]) {
@@ -345,32 +374,13 @@ async function queryHistory(game: SidelineGame) {
       logo: nullableText(row.team_logo_espn),
     })
   }
-  teamMap.set(game.away.abbr, game.away)
-  teamMap.set(game.home.abbr, game.home)
-
-  const playRows = [
-    ...((playsPageOne.data ?? []) as Row[]),
-    ...((playsPageTwo.data ?? []) as Row[]),
-  ]
-  const playerIds = Array.from(new Set(playRows.flatMap(row => [
-    nullableText(row.passer_player_id),
-    nullableText(row.receiver_player_id),
-    nullableText(row.rusher_player_id),
-  ]).filter((id): id is string => Boolean(id))))
-  const playerResult = playerIds.length
-    ? await admin.from('nfl_players').select('gsis_id,headshot').in('gsis_id', playerIds)
-    : { data: [] as Row[] }
-  const headshots = new Map<string, string>()
-  for (const row of (playerResult.data ?? []) as Row[]) {
-    const id = text(row.gsis_id)
-    const headshot = nullableText(row.headshot)
-    if (id && headshot) headshots.set(id, headshot)
-  }
+  const initialRows = scheduleRows[0] ? await playRowsForGame(text(scheduleRows[0].game_id)) : []
+  const mapped = await mapPlayRows(initialRows)
 
   return {
     games: scheduleRows.map(row => mapHistoricalGame(row, teamMap)),
-    plays: playRows.map(row => mapPlay(row, headshots)),
-    headshots,
+    plays: mapped.plays,
+    headshots: mapped.headshots,
   }
 }
 
@@ -420,7 +430,7 @@ export async function getSidelineLens(game: SidelineGame): Promise<SidelineLens>
   const preferredSeason = game.gameType === 'REG' && game.week > 3 ? game.season : game.season - 1
   try {
     let season = preferredSeason
-    const historyPromise = queryHistory(game)
+    const historyPromise = queryHistory()
     let data = await querySeason(game, season)
     if (!data.pbp.length && !data.receiving.length && season > 2020) {
       season -= 1
@@ -430,7 +440,9 @@ export async function getSidelineLens(game: SidelineGame): Promise<SidelineLens>
     const history = await historyPromise
     const away = profileTeam(game.away, data.pbp)
     const home = profileTeam(game.home, data.pbp)
-    const players = buildPlayers(data.receiving, data.rushing, data.pbp, [game.away, game.home], history.headshots)
+    const matchupPlayerIds = Array.from(new Set([...data.receiving, ...data.rushing].map(row => nullableText(row.player_gsis_id)).filter((id): id is string => Boolean(id))))
+    const matchupHeadshots = await queryHeadshots(matchupPlayerIds)
+    const players = buildPlayers(data.receiving, data.rushing, data.pbp, [game.away, game.home], matchupHeadshots)
     const headline = buildHeadline(away, home)
 
     return {

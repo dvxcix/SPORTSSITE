@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
   Activity, ArrowUpRight, BarChart3, ChevronRight, CircleDot, Crosshair,
-  Database, Film, Gauge, Goal, Radio, Route, Shield, Sparkles, Target, Users, Wind,
+  Database, Film, Gauge, Goal, LoaderCircle, Radio, Route, Search, Shield, Sparkles, Target, Users, Wind,
 } from 'lucide-react'
 import styles from './sideline.module.css'
 
@@ -127,7 +127,7 @@ export type SidelineLens = {
 type View = 'film' | 'team-dna' | 'players' | 'red-zone' | 'markets'
 
 const views: { id: View; label: string; icon: typeof Film }[] = [
-  { id: 'film', label: 'Film Room', icon: Film },
+  { id: 'film', label: 'Historic Matchup', icon: Film },
   { id: 'team-dna', label: 'Team DNA', icon: BarChart3 },
   { id: 'players', label: 'Player Lab', icon: Users },
   { id: 'red-zone', label: 'Red Zone', icon: Goal },
@@ -194,35 +194,84 @@ function ActualPlayField({ play, teams }: { play: SidelinePlay; teams: Team[] })
   )
 }
 
-function GameSelector({ games, selected, onSelect }: { games: SidelineHistoricalGame[]; selected: string; onSelect: (id: string) => void }) {
-  return <div className={styles.historyGames}>{games.map(game => <button key={game.id} type="button" className={selected === game.id ? styles.historyGameActive : styles.historyGame} onClick={() => onSelect(game.id)}><div><TeamLogo team={game.away} compact /><span>{game.away.abbr}</span><b>{game.awayScore}</b></div><div><TeamLogo team={game.home} compact /><span>{game.home.abbr}</span><b>{game.homeScore}</b></div><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · W{game.week}</small></button>)}</div>
+function GameSelector({ games, selected, onSelect, loadingId }: { games: SidelineHistoricalGame[]; selected: string; onSelect: (id: string) => void; loadingId: string }) {
+  return <div className={styles.historyGames}>{games.map(game => <button key={game.id} type="button" className={selected === game.id ? styles.historyGameActive : styles.historyGame} onClick={() => onSelect(game.id)} disabled={Boolean(loadingId)}><div><TeamLogo team={game.away} compact /><span>{game.away.abbr}</span><b>{game.awayScore}</b></div><div><TeamLogo team={game.home} compact /><span>{game.home.abbr}</span><b>{game.homeScore}</b></div><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · {game.gameType} W{game.week}</small>{loadingId === game.id && <LoaderCircle className={styles.spin} size={16} />}</button>)}</div>
 }
 
 function FilmRoom({ lens }: { lens: SidelineLens }) {
-  const [gameId, setGameId] = useState(lens.historicalGames[0]?.id ?? '')
+  const initialGameId = lens.historicalPlays[0]?.gameId ?? lens.historicalGames[0]?.id ?? ''
+  const [gameId, setGameId] = useState(initialGameId)
   const [playId, setPlayId] = useState('')
   const [team, setTeam] = useState('ALL')
   const [type, setType] = useState<'all' | 'pass' | 'run'>('all')
   const [onlyImpact, setOnlyImpact] = useState(false)
+  const [seasonFilter, setSeasonFilter] = useState('ALL')
+  const [teamFilter, setTeamFilter] = useState('ALL')
+  const [archiveSearch, setArchiveSearch] = useState('')
+  const [loadingGameId, setLoadingGameId] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [playsByGame, setPlaysByGame] = useState<Record<string, SidelinePlay[]>>(() => initialGameId ? { [initialGameId]: lens.historicalPlays } : {})
 
   const game = lens.historicalGames.find(item => item.id === gameId) ?? lens.historicalGames[0]
-  const plays = useMemo(() => lens.historicalPlays.filter(play => play.gameId === game?.id && (team === 'ALL' || play.offense === team) && (type === 'all' || play.playType === type) && (!onlyImpact || play.explosive || play.touchdown || play.turnover)), [game?.id, lens.historicalPlays, onlyImpact, team, type])
+  const seasons = useMemo(() => Array.from(new Set(lens.historicalGames.map(item => item.season))).sort((a, b) => b - a), [lens.historicalGames])
+  const archiveTeams = useMemo(() => {
+    const byAbbr = new Map<string, Team>()
+    lens.historicalGames.forEach(item => { byAbbr.set(item.away.abbr, item.away); byAbbr.set(item.home.abbr, item.home) })
+    return Array.from(byAbbr.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [lens.historicalGames])
+  const filteredGames = useMemo(() => {
+    const query = archiveSearch.trim().toLowerCase()
+    return lens.historicalGames.filter(item => {
+      const seasonMatch = seasonFilter === 'ALL' || String(item.season) === seasonFilter
+      const teamMatch = teamFilter === 'ALL' || item.away.abbr === teamFilter || item.home.abbr === teamFilter
+      const searchMatch = !query || `${item.away.name} ${item.away.abbr} ${item.home.name} ${item.home.abbr}`.toLowerCase().includes(query)
+      return seasonMatch && teamMatch && searchMatch
+    })
+  }, [archiveSearch, lens.historicalGames, seasonFilter, teamFilter])
+  const currentGamePlays = useMemo(() => playsByGame[game?.id ?? ''] ?? [], [game?.id, playsByGame])
+  const plays = useMemo(() => currentGamePlays.filter(play => (team === 'ALL' || play.offense === team) && (type === 'all' || play.playType === type) && (!onlyImpact || play.explosive || play.touchdown || play.turnover)), [currentGamePlays, onlyImpact, team, type])
   const selectedPlay = plays.find(play => play.id === playId) ?? plays[0]
 
-  if (!game || !selectedPlay) return <EmptyState title="Historical film is syncing" copy="Completed games and recorded plays will appear here as soon as the NFL tables finish loading." />
+  const selectHistoricalGame = async (id: string) => {
+    setGameId(id)
+    setPlayId('')
+    setTeam('ALL')
+    setLoadError('')
+    if (playsByGame[id]) return
+    setLoadingGameId(id)
+    try {
+      const response = await fetch(`/api/the-sideline/history/${encodeURIComponent(id)}`)
+      if (!response.ok) throw new Error('Unable to load this game')
+      const payload = await response.json() as { plays?: SidelinePlay[] }
+      setPlaysByGame(current => ({ ...current, [id]: payload.plays ?? [] }))
+    } catch {
+      setLoadError('That game could not be loaded. Try another matchup.')
+    } finally {
+      setLoadingGameId('')
+    }
+  }
+
+  if (!game) return <EmptyState title="Historical archive is syncing" copy="Completed games will appear here as soon as the NFL tables finish loading." />
   const impactCount = plays.filter(play => play.explosive || play.touchdown || play.turnover).length
 
   return (
     <section className={styles.filmSuite}>
-      <div className={styles.sectionHead}><div><span>REAL HISTORICAL DATA</span><h2>Interactive Film Room</h2><p>Pick a completed game, then inspect every recorded pass and rush.</p></div><div className={styles.sourcePills}><b><Database size={13} /> Observed PBP</b><span><Route size={13} /> Outcome reconstruction</span></div></div>
-      <GameSelector games={lens.historicalGames} selected={game.id} onSelect={id => { setGameId(id); setPlayId('') }} />
+      <div className={styles.sectionHead}><div><span>FULL HISTORICAL ARCHIVE</span><h2>Historic Matchup</h2><p>Select any loaded season, team or game. Every pass and rush below came from that actual matchup.</p></div><div className={styles.sourcePills}><b><Database size={13} /> Recorded PBP</b><span><Route size={13} /> Direction + depth</span></div></div>
+      <div className={styles.archiveControls}>
+        <label><span>SEASON</span><select value={seasonFilter} onChange={event => setSeasonFilter(event.target.value)}><option value="ALL">All seasons</option>{seasons.map(season => <option key={season} value={season}>{season}</option>)}</select></label>
+        <label><span>TEAM</span><select value={teamFilter} onChange={event => setTeamFilter(event.target.value)}><option value="ALL">All teams</option>{archiveTeams.map(item => <option key={item.abbr} value={item.abbr}>{item.name}</option>)}</select></label>
+        <label className={styles.archiveSearch}><span>MATCHUP SEARCH</span><div><Search size={16} /><input value={archiveSearch} onChange={event => setArchiveSearch(event.target.value)} placeholder="Search team or abbreviation" /></div></label>
+        <div className={styles.archiveCount}><b>{filteredGames.length}</b><span>games found</span></div>
+      </div>
+      <GameSelector games={filteredGames.slice(0, 80)} selected={game.id} onSelect={selectHistoricalGame} loadingId={loadingGameId} />
+      {loadError && <div className={styles.archiveError}>{loadError}</div>}
       <div className={styles.filmToolbar}>
         <div className={styles.segmented}>{['ALL', game.away.abbr, game.home.abbr].map(item => <button type="button" className={team === item ? styles.segmentActive : ''} key={item} onClick={() => { setTeam(item); setPlayId('') }}>{item}</button>)}</div>
         <div className={styles.segmented}>{(['all', 'pass', 'run'] as const).map(item => <button type="button" className={type === item ? styles.segmentActive : ''} key={item} onClick={() => { setType(item); setPlayId('') }}>{item.toUpperCase()}</button>)}</div>
         <button type="button" className={onlyImpact ? styles.impactActive : styles.impactToggle} onClick={() => { setOnlyImpact(value => !value); setPlayId('') }}><Sparkles size={14} /> Impact plays</button>
         <span className={styles.resultCount}>{plays.length} plays · {impactCount} impact</span>
       </div>
-      <div className={styles.filmGrid}>
+      {!selectedPlay ? <div className={styles.archiveLoading}>{loadingGameId ? <><LoaderCircle className={styles.spin} size={24} /><strong>Loading recorded plays</strong><span>Rebuilding this historical matchup from play-by-play.</span></> : <><Database size={24} /><strong>No matching plays</strong><span>Clear a play filter or choose another game.</span></>}</div> : <div className={styles.filmGrid}>
         <div className={styles.playList}>{plays.map(play => <button key={play.id} type="button" className={selectedPlay.id === play.id ? styles.playRowActive : styles.playRow} onClick={() => setPlayId(play.id)}><span className={styles.playDown}>{ordinal(play.down)}<small>&amp; {play.distance}</small></span><span className={styles.playCopy}><small>Q{play.quarter} · {play.clock} · {play.offense}</small><strong>{play.playerName ?? (play.playType === 'pass' ? 'Pass' : 'Rush')}</strong><em>{play.yards >= 0 ? '+' : ''}{play.yards} YDS · {play.playType.toUpperCase()}</em></span><span className={play.touchdown ? styles.playTagTd : play.turnover ? styles.playTagBad : play.explosive ? styles.playTagBig : styles.playTag}>{play.touchdown ? 'TD' : play.turnover ? 'TO' : play.explosive ? 'BIG' : play.success ? 'WIN' : '—'}</span></button>)}</div>
         <div className={styles.replayStage}><ActualPlayField play={selectedPlay} teams={[game.away, game.home]} /><div className={styles.replayLegend}><span><i className={styles.traceThrow} /> Recorded throw / rush direction</span><span><i className={styles.traceYac} /> Recorded yards after catch</span><strong>No GPS path claimed</strong></div></div>
         <aside className={styles.playInspector}>
@@ -233,7 +282,7 @@ function FilmRoom({ lens }: { lens: SidelineLens }) {
           <div className={styles.playMetrics}><div><small>RESULT</small><b>{selectedPlay.yards >= 0 ? '+' : ''}{selectedPlay.yards}</b><span>yards</span></div><div><small>EPA</small><b className={selectedPlay.epa >= 0 ? styles.metricGood : styles.metricBad}>{selectedPlay.epa > 0 ? '+' : ''}{selectedPlay.epa.toFixed(2)}</b><span>play value</span></div><div><small>{selectedPlay.playType === 'pass' ? 'AIR / YAC' : 'LANE'}</small><b>{selectedPlay.playType === 'pass' ? `${selectedPlay.airYards} / ${selectedPlay.yardsAfterCatch}` : (selectedPlay.runLocation ?? '—').toUpperCase()}</b><span>{selectedPlay.playType === 'pass' ? 'yards' : selectedPlay.runGap ?? 'recorded'}</span></div><div><small>OUTCOME</small><b>{selectedPlay.touchdown ? 'TD' : selectedPlay.turnover ? 'TURNOVER' : selectedPlay.firstDown ? '1ST' : selectedPlay.success ? 'WIN' : 'LOSS'}</b><span>down result</span></div></div>
           <div className={styles.dataTruth}><Shield size={16} /><div><b>What is real here</b><span>Situation, description, direction, air yards, YAC, result and EPA are recorded. The line is a scaled replay of those outcomes—not player-tracking coordinates.</span></div></div>
         </aside>
-      </div>
+      </div>}
     </section>
   )
 }
@@ -276,9 +325,9 @@ export function SidelineClient({ games, selectedId, lens }: { games: SidelineGam
   return (
     <main className={`${styles.page} ${isPending ? styles.loading : ''}`}>
       <header className={styles.header}><div className={styles.brandMark}><span>50</span></div><div><div className={styles.eyebrow}>NFL RESEARCH SUITE</div><h1>The Sideline <span>PRIVATE</span></h1><p>Historical film, team identity, player geometry and market structure.</p></div><div className={styles.privateBadge}><Radio size={13} /> Internal build</div></header>
-      <div className={styles.gameRail} aria-label="Choose an NFL game">{games.slice(0, 16).map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : styles.gameButton} onClick={() => selectGame(game)}><span>{game.away.abbr}</span><b>@</b><span>{game.home.abbr}</span><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</small></button>)}</div>
+      <div className={styles.gameRail} aria-label="Choose an NFL game">{games.slice(0, 16).map(game => <button key={game.id} type="button" aria-label={`${game.away.name} at ${game.home.name}`} className={game.id === selected.id ? styles.gameActive : styles.gameButton} onClick={() => selectGame(game)}><div className={styles.railLogos}><TeamLogo team={game.away} compact /><b>VS</b><TeamLogo team={game.home} compact /></div><span>{game.away.abbr} @ {game.home.abbr}</span><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · W{game.week}</small></button>)}</div>
       <section className={styles.matchupBar}><div className={styles.teamBlock}><TeamLogo team={selected.away} /><div><small>AWAY</small><strong>{selected.away.name}</strong><span>{selected.away.abbr}</span></div></div><div className={styles.gameMeta}><span>{selected.gameType} · WEEK {selected.week}</span><strong>{selected.gametime ?? 'TBD'}</strong><small>{date} · {selected.stadium ?? 'Stadium TBD'}</small></div><div className={`${styles.teamBlock} ${styles.teamBlockHome}`}><div><small>HOME</small><strong>{selected.home.name}</strong><span>{selected.home.abbr}</span></div><TeamLogo team={selected.home} /></div></section>
-      <div className={styles.statusStrip}><span><Wind size={14} /> {selected.roof ?? 'Roof TBD'}</span><span><Shield size={14} /> {selected.surface ?? 'Surface TBD'}</span><span><Database size={14} /> {lens.historicalGames.length} historical games · {lens.historicalPlays.length} plays</span><span className={styles.liveDot}>Private route · noindex</span></div>
+      <div className={styles.statusStrip}><span><Wind size={14} /> {selected.roof ?? 'Roof TBD'}</span><span><Shield size={14} /> {selected.surface ?? 'Surface TBD'}</span><span><Database size={14} /> {lens.historicalGames.length} archived games · plays load on demand</span><span className={styles.liveDot}>Private route · noindex</span></div>
       <nav className={styles.viewNav} aria-label="Sideline views">{views.map(item => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? styles.viewActive : ''} onClick={() => setView(item.id)}><Icon size={17} />{item.label}</button> })}</nav>
       <div className={styles.blueprintBanner}><div><small>THIS MATCHUP</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></div><b>{lens.players[0]?.index ?? '—'}<small>TOP INDEX</small></b><ChevronRight size={20} /></div>
       {view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'players' && <PlayerLab lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}{view === 'markets' && <MarketsView lens={lens} />}
