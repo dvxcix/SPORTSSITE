@@ -1,11 +1,11 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
-  Activity, ArrowUpRight, BarChart3, ChevronRight, CircleDot, Crosshair,
-  Database, Film, Gauge, Goal, LoaderCircle, Radio, Route, Search, Shield, Sparkles, Target, Users, Wind,
+  Activity, BarChart3, ChevronRight, Crosshair,
+  Database, Film, Goal, LoaderCircle, Pause, Play, Radio, Route, Search, Shield, Sparkles, Target, Wind,
 } from 'lucide-react'
 import styles from './sideline.module.css'
 
@@ -109,6 +109,41 @@ export type SidelinePlayer = {
   separation: number
   redZoneLooks: number
   lane: string
+  opponent: string
+  games: number
+  projections: SidelineProjection[]
+}
+
+export type SidelineProjection = {
+  key: 'receptions' | 'receiving-yards' | 'rush-attempts' | 'rushing-yards' | 'pass-attempts' | 'completions' | 'passing-yards' | 'touchdown'
+  label: string
+  mean: number
+  low: number
+  high: number
+  unit: string
+  matchup: number
+  pace: number
+  confidence: number
+  baseline: number
+  recent3: number
+  recent5: number
+  hitRate: number
+}
+
+export type SidelineTarget = {
+  id: string
+  playerId: string
+  playerName: string
+  team: string
+  defense: string
+  gameId: string
+  side: 'left' | 'middle' | 'right'
+  airYards: number
+  yards: number
+  yac: number
+  complete: boolean
+  touchdown: boolean
+  explosive: boolean
 }
 
 export type SidelineLens = {
@@ -122,16 +157,17 @@ export type SidelineLens = {
   players: SidelinePlayer[]
   historicalGames: SidelineHistoricalGame[]
   historicalPlays: SidelinePlay[]
+  targets: SidelineTarget[]
 }
 
-type View = 'film' | 'team-dna' | 'players' | 'red-zone' | 'markets'
+type View = 'props' | 'routes' | 'film' | 'team-dna' | 'red-zone'
 
 const views: { id: View; label: string; icon: typeof Film }[] = [
+  { id: 'props', label: 'Prop Command', icon: Target },
+  { id: 'routes', label: 'Route Atlas', icon: Route },
   { id: 'film', label: 'Historic Matchup', icon: Film },
   { id: 'team-dna', label: 'Team DNA', icon: BarChart3 },
-  { id: 'players', label: 'Player Lab', icon: Users },
   { id: 'red-zone', label: 'Red Zone', icon: Goal },
-  { id: 'markets', label: 'Markets', icon: Target },
 ]
 
 function TeamLogo({ team, compact = false }: { team: Team; compact?: boolean }) {
@@ -291,16 +327,97 @@ function EmptyState({ title = 'Historical layer is syncing', copy = 'The live ma
   return <div className={styles.emptyState}><Radio size={22} /><strong>{title}</strong><span>{copy}</span></div>
 }
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
-  return <div className={styles.scoreBar}><span>{label}</span><i><b style={{ width: `${Math.max(4, value)}%` }} /></i><strong className={numberTone(value)}>{value}</strong></div>
-}
-
 function TeamDnaView({ lens }: { lens: SidelineLens }) {
   return <section className={styles.fullPanel}><div className={styles.sectionHead}><div><span>{lens.season} SEASON SAMPLE</span><h2>Team DNA</h2><p>Play-level tendencies from the current matchup teams.</p></div><Activity size={22} /></div><div className={styles.dnaGrid}>{lens.teams.map(profile => <article className={styles.dnaCard} key={profile.team.abbr}><div className={styles.dnaTeam}><TeamLogo team={profile.team} /><div><small>{profile.plays.toLocaleString()} PLAYS</small><strong>{profile.team.name}</strong><span>{profile.team.abbr}</span></div></div><div className={styles.dnaHero}><small>NEUTRAL-DOWN PASS RATE</small><b>{profile.neutralPassRate.toFixed(1)}%</b></div><div className={styles.dnaStats}><div><b>{profile.shotgunRate.toFixed(1)}%</b><span>Shotgun</span></div><div><b>{profile.successRate.toFixed(1)}%</b><span>Success</span></div><div><b>{profile.explosiveRate.toFixed(1)}%</b><span>Explosive</span></div><div><b>{profile.redZoneTdRate.toFixed(1)}%</b><span>RZ TD</span></div><div><b>{profile.thirdDownRate.toFixed(1)}%</b><span>3rd down</span></div><div><b>{profile.defenseExplosiveAllowed.toFixed(1)}%</b><span>Explosive allowed</span></div></div></article>)}</div></section>
 }
 
-function PlayerLab({ lens }: { lens: SidelineLens }) {
-  return <section className={styles.fullPanel}><div className={styles.sectionHead}><div><span>NGS + PLAY-BY-PLAY</span><h2>Player Lab</h2><p>Real usage, geometry and scoring-role profiles with player identity attached.</p></div><Users size={22} /></div><div className={styles.playerGrid}>{lens.players.map((player, index) => <article className={styles.playerCard} key={player.id}><div className={styles.playerCardTop}><span className={styles.playerRank}>#{index + 1}</span><PlayerAvatar src={player.headshot} name={player.name} /><div><small>{player.team} · {player.position}</small><strong>{player.name}</strong><span>{player.lane}</span></div><b className={numberTone(player.index)}>{player.index}</b></div><div className={styles.playerBars}><ScoreBar label="Volume" value={player.volume} /><ScoreBar label="Geometry" value={player.geometry} /><ScoreBar label="Red zone" value={player.redZone} /><ScoreBar label="Breakaway" value={player.breakaway} /></div><div className={styles.playerFacts}><span><b>{player.targets}</b> targets</span><span><b>{player.carries}</b> carries</span><span><b>{player.airYards.toFixed(1)}</b> aDOT</span><span><b>{player.separation.toFixed(1)}</b> separation</span></div></article>)}</div>{!lens.players.length && <EmptyState />}</section>
+function projectionValue(projection: SidelineProjection) {
+  if (projection.key === 'touchdown') return `${Math.round(projection.mean)}%`
+  return projection.mean < 10 ? projection.mean.toFixed(1) : Math.round(projection.mean).toString()
+}
+
+function projectionFit(player: SidelinePlayer, projection: SidelineProjection) {
+  const trendBase = Math.max(projection.baseline, 0.5)
+  const trend = Math.max(-20, Math.min(20, ((projection.recent3 - projection.baseline) / trendBase) * 100))
+  return player.index * .34 + projection.confidence * .26 + projection.hitRate * .16 + projection.matchup * .34 + projection.pace * .18 + trend * .12
+}
+
+function PropCommand({ lens }: { lens: SidelineLens }) {
+  const [team, setTeam] = useState('ALL')
+  const [market, setMarket] = useState<'all' | SidelineProjection['key']>('all')
+  const players = useMemo(() => lens.players.filter(player => team === 'ALL' || player.team === team).map(player => ({
+    player,
+    projections: player.projections.filter(projection => market === 'all' || projection.key === market),
+  })).filter(item => item.projections.length).sort((a, b) => Math.max(...b.projections.map(item => projectionFit(b.player, item))) - Math.max(...a.projections.map(item => projectionFit(a.player, item)))), [lens.players, market, team])
+  const marketOptions: { key: typeof market; label: string }[] = [
+    { key: 'all', label: 'Best fit' }, { key: 'receptions', label: 'Receptions' }, { key: 'receiving-yards', label: 'Rec yards' },
+    { key: 'rush-attempts', label: 'Carries' }, { key: 'rushing-yards', label: 'Rush yards' }, { key: 'pass-attempts', label: 'Pass attempts' },
+    { key: 'completions', label: 'Completions' }, { key: 'passing-yards', label: 'Pass yards' }, { key: 'touchdown', label: 'Touchdowns' },
+  ]
+  const teams = lens.teams.map(item => item.team.abbr)
+
+  return <section className={styles.fullPanel}>
+    <div className={styles.sectionHead}><div><span>MATCHUP-ADJUSTED OUTCOMES</span><h2>Prop Command</h2><p>Player baseline, opponent allowance, role, pace and scoring-area work converted into an expected stat line and a practical game range.</p></div><Target size={24} /></div>
+    <div className={styles.propToolbar}><div className={styles.segmented}>{['ALL', ...teams].map(item => <button key={item} type="button" className={team === item ? styles.segmentActive : ''} onClick={() => setTeam(item)}>{item}</button>)}</div><div className={styles.propMarkets}>{marketOptions.map(item => <button key={item.key} type="button" className={market === item.key ? styles.propMarketActive : ''} onClick={() => setMarket(item.key)}>{item.label}</button>)}</div></div>
+    <div className={styles.projectionGrid}>{players.map(({ player, projections }, rank) => <article className={styles.projectionCard} key={player.id}>
+      <div className={styles.projectionIdentity}><span>#{rank + 1}</span><PlayerAvatar src={player.headshot} name={player.name} size="large" /><div><small>{player.team} {player.position} · vs {player.opponent}</small><strong>{player.name}</strong><em>{player.lane} · {player.games} games</em></div><b className={numberTone(player.index)}>{player.index}</b></div>
+      <div className={styles.projectionRows}>{[...projections].sort((a, b) => projectionFit(player, b) - projectionFit(player, a)).slice(0, market === 'all' ? 3 : 1).map(projection => <div className={styles.projectionRow} key={projection.key}>
+        <div><small>{projection.label}</small><strong>{projectionValue(projection)}<span>{projection.unit}</span></strong></div>
+        <div className={styles.rangeRail}><i style={{ left: `${Math.max(3, 50 - projection.confidence / 3)}%`, width: `${Math.min(76, 24 + projection.confidence / 1.8)}%` }} /><b>EXPECTED RANGE {projection.low.toFixed(projection.low < 10 ? 1 : 0)}-{projection.high.toFixed(projection.high < 10 ? 1 : 0)}</b></div>
+        <div className={projection.matchup + projection.pace >= 0 ? styles.matchupGood : styles.matchupBad}><small>GAME FIT</small><b>{projection.matchup + projection.pace > 0 ? '+' : ''}{(projection.matchup + projection.pace).toFixed(1)}%</b></div>
+        <div className={styles.projectionEvidence}><span><small>BASE</small><b>{projection.baseline.toFixed(projection.baseline < 10 ? 1 : 0)}</b></span><span><small>L3</small><b>{projection.recent3.toFixed(projection.recent3 < 10 ? 1 : 0)}</b></span><span><small>L5</small><b>{projection.recent5.toFixed(projection.recent5 < 10 ? 1 : 0)}</b></span><span><small>OVER AVG</small><b>{Math.round(projection.hitRate)}%</b></span></div>
+      </div>)}</div>
+      <div className={styles.projectionFoot}><span><b>{player.targetShare.toFixed(1)}%</b> target share</span><span><b>{player.carryShare.toFixed(1)}%</b> carry share</span><span><b>{player.airYards.toFixed(1)}</b> aDOT</span><span><b>{player.redZoneLooks}</b> red-zone looks</span></div>
+    </article>)}</div>
+    {!players.length && <EmptyState title="No players fit this filter" copy="Switch the team or market filter to restore the matchup projections." />}
+    <div className={styles.modelNote}><Shield size={18} /><div><strong>Projection, not a sportsbook line.</strong><span>Expected output blends season form, L3/L5 direction, the player&apos;s recorded game distribution, opponent positional allowance and matchup pace.</span></div></div>
+  </section>
+}
+
+function routeCoordinates(target: SidelineTarget, index: number) {
+  const lane = target.side === 'left' ? 24 : target.side === 'right' ? 76 : 50
+  const jitter = ((index * 17 + target.playerName.length * 7) % 13) - 6
+  const x = Math.max(8, Math.min(92, lane + jitter))
+  const y = Math.max(7, Math.min(55, 52 - target.airYards * .82))
+  return { x, y }
+}
+
+function RouteAtlas({ lens }: { lens: SidelineLens }) {
+  const eligible = useMemo(() => lens.players.filter(player => lens.targets.some(target => target.playerId === player.id)), [lens.players, lens.targets])
+  const [playerId, setPlayerId] = useState(eligible[0]?.id ?? '')
+  const [defense, setDefense] = useState('ALL')
+  const [depth, setDepth] = useState<'all' | 'short' | 'deep'>('all')
+  const [playing, setPlaying] = useState(false)
+  const [cursor, setCursor] = useState(999)
+  const player = eligible.find(item => item.id === playerId) ?? eligible[0]
+  const targets = useMemo(() => lens.targets.filter(target => target.playerId === player?.id && (defense === 'ALL' || target.defense === defense) && (depth === 'all' || (depth === 'deep' ? target.airYards >= 15 : target.airYards < 15))).slice(-90), [defense, depth, lens.targets, player?.id])
+  const visible = targets.slice(0, Math.min(cursor, targets.length))
+  const defenses = useMemo(() => Array.from(new Set(lens.targets.filter(target => target.playerId === player?.id).map(target => target.defense))).sort(), [lens.targets, player?.id])
+
+  useEffect(() => {
+    if (!playing || cursor >= targets.length) return
+    const timer = window.setTimeout(() => {
+      const next = cursor + 1
+      setCursor(next)
+      if (next >= targets.length) setPlaying(false)
+    }, 130)
+    return () => window.clearTimeout(timer)
+  }, [cursor, playing, targets.length])
+
+  const catches = targets.filter(target => target.complete).length
+  const explosive = targets.filter(target => target.explosive).length
+  const touchdowns = targets.filter(target => target.touchdown).length
+  const averageDepth = targets.length ? targets.reduce((sum, item) => sum + item.airYards, 0) / targets.length : 0
+  const play = () => { if (targets.length) { setCursor(0); setPlaying(true) } }
+
+  return <section className={styles.fullPanel}>
+    <div className={styles.sectionHead}><div><span>NFL TARGET SPRAY CHART</span><h2>Route Atlas</h2><p>Every recorded target aligned to one field. Filled dot = catch, ring = miss, gold = touchdown. Filter the receiver, opponent and depth, then replay the full target history.</p></div><Route size={24} /></div>
+    <div className={styles.atlasToolbar}><label><span>PLAYER</span><select value={player?.id ?? ''} onChange={event => { setPlayerId(event.target.value); setDefense('ALL'); setCursor(999); setPlaying(false) }}>{eligible.map(item => <option value={item.id} key={item.id}>{item.name} · {item.team}</option>)}</select></label><label><span>DEFENSE</span><select value={defense} onChange={event => { setDefense(event.target.value); setCursor(999) }}><option value="ALL">All opponents</option>{defenses.map(item => <option value={item} key={item}>{item}</option>)}</select></label><div className={styles.segmented}>{(['all', 'short', 'deep'] as const).map(item => <button key={item} type="button" className={depth === item ? styles.segmentActive : ''} onClick={() => { setDepth(item); setCursor(999) }}>{item.toUpperCase()}</button>)}</div><button type="button" className={styles.atlasPlay} onClick={() => playing ? setPlaying(false) : play()}>{playing ? <Pause size={17} /> : <Play size={17} />}{playing ? 'Pause' : 'Replay targets'}</button></div>
+    {!player ? <EmptyState title="Target atlas is syncing" copy="The selected matchup has no recorded receiver targets in the loaded season." /> : <div className={styles.atlasGrid}>
+      <div className={styles.atlasField}><div className={styles.atlasEndzone}>END ZONE</div>{[10, 20, 30, 40].map(value => <span className={styles.atlasYard} style={{ bottom: `${value * 1.72 + 10}%` }} key={value}>{value}</span>)}<svg viewBox="0 0 100 60" preserveAspectRatio="none" aria-label={`${player.name} target atlas`}>{visible.map((target, index) => { const point = routeCoordinates(target, index); const curve = point.x < 50 ? point.x + 10 : point.x - 10; return <g key={target.id} className={styles.atlasRoute} style={{ animationDelay: `${Math.min(index, 20) * 18}ms` }}><path d={`M 50 55 Q ${curve} 35 ${point.x} ${point.y}`} className={target.complete ? styles.atlasCatchPath : styles.atlasMissPath} /><circle cx={point.x} cy={point.y} r={target.touchdown ? 1.75 : 1.25} className={target.touchdown ? styles.atlasTdDot : target.complete ? styles.atlasCatchDot : styles.atlasMissDot} /></g>})}</svg><div className={styles.atlasLos}>LINE OF SCRIMMAGE</div><div className={styles.atlasLegend}><span><i className={styles.legendCatch} /> Catch</span><span><i className={styles.legendMiss} /> Miss</span><span><i className={styles.legendTd} /> TD</span></div></div>
+      <aside className={styles.atlasPanel}><div className={styles.atlasPlayer}><PlayerAvatar src={player.headshot} name={player.name} size="large" /><div><small>{player.team} · {player.position}</small><strong>{player.name}</strong><span>{targets.length} recorded targets</span></div></div><div className={styles.atlasStats}><div><b>{targets.length}</b><span>Targets</span></div><div><b>{targets.length ? Math.round(catches / targets.length * 100) : 0}%</b><span>Catch rate</span></div><div><b>{averageDepth.toFixed(1)}</b><span>aDOT</span></div><div><b>{explosive}</b><span>Explosive</span></div><div><b>{touchdowns}</b><span>TDs</span></div><div><b>{defenses.length}</b><span>Defenses</span></div></div><div className={styles.atlasRead}><small>WHAT THIS CHANGES</small><strong>{(player.projections.find(item => item.key === 'receiving-yards')?.matchup ?? 0) >= 0 ? 'The opponent expands this receiving lane.' : 'The opponent compresses this receiving lane.'}</strong><p>Use the atlas to see whether volume is arriving short, deep or outside—and whether the defense normally allows the same stat family.</p></div><div className={styles.atlasTruth}><Database size={17} /><span>These are recorded target directions, depths and outcomes. Exact GPS route shapes require licensed tracking coordinates and are never fabricated here.</span></div></aside>
+    </div>}
+  </section>
 }
 
 function RedZoneView({ lens }: { lens: SidelineLens }) {
@@ -308,14 +425,9 @@ function RedZoneView({ lens }: { lens: SidelineLens }) {
   return <section className={styles.fullPanel}><div className={styles.sectionHead}><div><span>INSIDE THE 20</span><h2>Red-zone command</h2><p>Opportunity and scoring-role hierarchy from recorded plays.</p></div><Goal size={22} /></div><div className={styles.redZoneGrid}><div className={styles.redZoneVisual}><strong>END ZONE</strong>{[20, 15, 10, 5].map(value => <span key={value}>{value}</span>)}<div className={styles.redZoneTarget}><Crosshair size={34} /><b>{players[0]?.team ?? 'NFL'}</b><small>TOP SCORING LANE</small></div></div><div className={styles.redZoneList}>{players.slice(0, 8).map((player, index) => <article key={player.id}><span>{index + 1}</span><PlayerAvatar src={player.headshot} name={player.name} size="small" /><div><small>{player.team} · {player.position}</small><strong>{player.name}</strong><em>{player.redZoneLooks} recorded looks</em></div><b className={numberTone(player.redZone)}>{player.redZone}</b></article>)}</div></div></section>
 }
 
-function MarketsView({ lens }: { lens: SidelineLens }) {
-  const lanes = [{ title: 'Reception volume', key: 'volume' as const, icon: Activity, copy: 'Targets, share and role stability' }, { title: 'Yardage geometry', key: 'geometry' as const, icon: Route, copy: 'aDOT, separation and field access' }, { title: 'Scoring role', key: 'redZone' as const, icon: Goal, copy: 'Recorded opportunities inside the 20' }, { title: 'Explosive outcome', key: 'breakaway' as const, icon: Sparkles, copy: 'Breakaway and YAC environment' }]
-  return <section className={styles.fullPanel}><div className={styles.sectionHead}><div><span>FOOTBALL FIRST</span><h2>Market workbench</h2><p>Structural leaders ready for price and movement overlays.</p></div><Gauge size={22} /></div><div className={styles.marketGrid}>{lanes.map(lane => { const player = [...lens.players].sort((a, b) => b[lane.key] - a[lane.key])[0]; const Icon = lane.icon; return <article key={lane.key}><div className={styles.marketIcon}><Icon size={20} /></div><small>{lane.title}</small>{player ? <><div className={styles.marketPlayer}><PlayerAvatar src={player.headshot} name={player.name} size="small" /><div><strong>{player.name}</strong><span>{player.team} · {player.position}</span></div></div><p>{lane.copy}</p><div className={styles.marketScore}><b className={numberTone(player[lane.key])}>{player[lane.key]}</b><ArrowUpRight size={17} /></div></> : <p>Awaiting player data</p>}</article> })}</div><div className={styles.marketNotice}><CircleDot size={18} /><div><strong>Live NFL prices are the next feed—not fabricated placeholders.</strong><span>The workbench currently shows the football side only. It will label price, movement and book agreement separately when those NFL markets are connected.</span></div></div></section>
-}
-
 export function SidelineClient({ games, selectedId, lens }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens }) {
   const router = useRouter()
-  const [view, setView] = useState<View>('film')
+  const [view, setView] = useState<View>('props')
   const [isPending, startTransition] = useTransition()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
   if (!selected) return null
@@ -324,13 +436,13 @@ export function SidelineClient({ games, selectedId, lens }: { games: SidelineGam
 
   return (
     <main className={`${styles.page} ${isPending ? styles.loading : ''}`}>
-      <header className={styles.header}><div className={styles.brandMark}><span>50</span></div><div><div className={styles.eyebrow}>NFL RESEARCH SUITE</div><h1>The Sideline <span>PRIVATE</span></h1><p>Historical film, team identity, player geometry and market structure.</p></div><div className={styles.privateBadge}><Radio size={13} /> Internal build</div></header>
+      <header className={styles.header}><div className={styles.brandMark}><span>50</span></div><div><div className={styles.eyebrow}>NFL MATCHUP INTELLIGENCE</div><h1>The Sideline <span>PRIVATE</span></h1><p>Projected volume, route geometry, opponent allowances and historical play evidence.</p></div><div className={styles.privateBadge}><Radio size={13} /> Internal build</div></header>
       <div className={styles.gameRail} aria-label="Choose an NFL game">{games.slice(0, 16).map(game => <button key={game.id} type="button" aria-label={`${game.away.name} at ${game.home.name}`} className={game.id === selected.id ? styles.gameActive : styles.gameButton} onClick={() => selectGame(game)}><div className={styles.railLogos}><TeamLogo team={game.away} compact /><b>VS</b><TeamLogo team={game.home} compact /></div><span>{game.away.abbr} @ {game.home.abbr}</span><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · W{game.week}</small></button>)}</div>
       <section className={styles.matchupBar}><div className={styles.teamBlock}><TeamLogo team={selected.away} /><div><small>AWAY</small><strong>{selected.away.name}</strong><span>{selected.away.abbr}</span></div></div><div className={styles.gameMeta}><span>{selected.gameType} · WEEK {selected.week}</span><strong>{selected.gametime ?? 'TBD'}</strong><small>{date} · {selected.stadium ?? 'Stadium TBD'}</small></div><div className={`${styles.teamBlock} ${styles.teamBlockHome}`}><div><small>HOME</small><strong>{selected.home.name}</strong><span>{selected.home.abbr}</span></div><TeamLogo team={selected.home} /></div></section>
       <div className={styles.statusStrip}><span><Wind size={14} /> {selected.roof ?? 'Roof TBD'}</span><span><Shield size={14} /> {selected.surface ?? 'Surface TBD'}</span><span><Database size={14} /> {lens.historicalGames.length} archived games · plays load on demand</span><span className={styles.liveDot}>Private route · noindex</span></div>
       <nav className={styles.viewNav} aria-label="Sideline views">{views.map(item => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? styles.viewActive : ''} onClick={() => setView(item.id)}><Icon size={17} />{item.label}</button> })}</nav>
       <div className={styles.blueprintBanner}><div><small>THIS MATCHUP</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></div><b>{lens.players[0]?.index ?? '—'}<small>TOP INDEX</small></b><ChevronRight size={20} /></div>
-      {view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'players' && <PlayerLab lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}{view === 'markets' && <MarketsView lens={lens} />}
+      {view === 'props' && <PropCommand key={selected.id} lens={lens} />}{view === 'routes' && <RouteAtlas key={selected.id} lens={lens} />}{view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}
     </main>
   )
 }

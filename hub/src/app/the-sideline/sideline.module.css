@@ -591,6 +591,85 @@
 .marketNotice b, .marketNotice span { display: block; }
 .marketNotice span { margin-top: 4px; color: #aab6c1; font-size: 12px; line-height: 1.45; }
 
+.propToolbar, .atlasToolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding: 12px; border: 1px solid #2a3642; border-radius: 12px; background: #0a1017; }
+.propMarkets { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
+.propMarkets button, .propMarketActive { min-height: 38px; padding: 0 13px; border: 1px solid #303d49; border-radius: 8px; color: #aab6c1; background: #111923; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.propMarkets .propMarketActive { border-color: var(--lime); color: #10170b; background: var(--lime); }
+.projectionGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.projectionCard { overflow: hidden; border: 1px solid #2a3743; border-radius: 15px; background: linear-gradient(145deg, #121a24, #090e14); box-shadow: 0 18px 45px rgba(0,0,0,.16); }
+.projectionIdentity { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 17px; border-bottom: 1px solid #26323d; }
+.projectionIdentity > span { color: #748392; font: 900 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.projectionIdentity > div { min-width: 0; }
+.projectionIdentity small, .projectionIdentity em { display: block; color: #aeb9c3; font-size: 12px; font-style: normal; font-weight: 750; }
+.projectionIdentity strong { display: block; margin: 4px 0; overflow: hidden; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
+.projectionIdentity > b { font: 950 28px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.projectionRows { display: grid; }
+.projectionRow { display: grid; grid-template-columns: 140px minmax(135px, .9fr) 82px minmax(210px, 1.2fr); align-items: center; gap: 14px; min-height: 92px; padding: 13px 17px; border-bottom: 1px solid #202b35; }
+.projectionRow:last-child { border-bottom: 0; }
+.projectionRow small { display: block; color: #8e9ba8; font-size: 11px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+.projectionRow strong { display: block; margin-top: 5px; color: #f5f8fa; font: 950 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.projectionRow strong span { margin-left: 5px; color: #8f9ba7; font: 800 10px/1 Inter, sans-serif; text-transform: uppercase; }
+.rangeRail { min-width: 0; }
+.rangeRail i { position: relative; display: block; height: 7px; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--lime)); box-shadow: 0 0 16px rgba(186,255,70,.22); }
+.rangeRail b { display: block; margin-top: 9px; color: #a7b3be; font-size: 10px; letter-spacing: .04em; }
+.matchupGood, .matchupBad { padding: 10px 8px; border-radius: 9px; text-align: center; }
+.matchupGood { border: 1px solid rgba(186,255,70,.28); background: rgba(186,255,70,.07); }
+.matchupBad { border: 1px solid rgba(255,103,103,.25); background: rgba(255,103,103,.06); }
+.matchupGood b, .matchupBad b { display: block; margin-top: 5px; font: 900 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.matchupGood b { color: var(--lime); }
+.matchupBad b { color: #ff8d8d; }
+.projectionEvidence { display: grid; grid-template-columns: repeat(4, minmax(42px, 1fr)); gap: 5px; }
+.projectionEvidence span { padding: 8px 5px; border: 1px solid #263440; border-radius: 7px; background: #0a1017; text-align: center; }
+.projectionEvidence small { color: #93a1ad; font-size: 11px; letter-spacing: .03em; }
+.projectionEvidence b { display: block; margin-top: 4px; color: #e8edf1; font: 850 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.projectionFoot { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid #28343e; background: #090e14; }
+.projectionFoot span { min-width: 0; padding: 11px; border-right: 1px solid #222d37; color: #a1adb8; font-size: 11px; text-align: center; }
+.projectionFoot span:last-child { border-right: 0; }
+.projectionFoot b { display: block; margin-bottom: 4px; color: #e9eef2; font: 900 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.modelNote { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; padding: 15px; border: 1px solid rgba(102,185,255,.28); border-radius: 11px; color: var(--blue); background: rgba(102,185,255,.055); }
+.modelNote strong, .modelNote span { display: block; }
+.modelNote span { margin-top: 4px; color: #b1bdc7; font-size: 12px; line-height: 1.5; }
+
+.atlasToolbar { flex-wrap: wrap; }
+.atlasToolbar label { display: grid; gap: 5px; }
+.atlasToolbar label > span { color: #a9b5bf; font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+.atlasToolbar select { min-width: 190px; height: 40px; padding: 0 34px 0 11px; border: 1px solid #33414e; border-radius: 8px; color: #eef3f6; background: #111923; font-size: 12px; font-weight: 750; }
+.atlasPlay { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; margin-left: auto; padding: 0 15px; border: 1px solid var(--lime); border-radius: 8px; color: #10170a; background: var(--lime); font-size: 12px; font-weight: 900; }
+.atlasGrid { display: grid; grid-template-columns: minmax(500px, 1.45fr) minmax(300px, .55fr); min-height: 680px; overflow: hidden; border: 1px solid #2d3944; border-radius: 15px; background: #080d12; }
+.atlasField { position: relative; min-height: 680px; overflow: hidden; border-right: 1px solid #2b3741; background: repeating-linear-gradient(0deg, transparent 0 16.5%, rgba(255,255,255,.16) 16.6% 16.85%), repeating-linear-gradient(90deg, transparent 0 9.9%, rgba(255,255,255,.065) 10%), linear-gradient(180deg, #143e29, #0e3120); }
+.atlasEndzone { position: absolute; inset: 0 0 auto; display: grid; height: 11%; place-items: center; border-bottom: 2px solid rgba(255,255,255,.55); color: rgba(255,255,255,.88); background: #203d2b; font: 950 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .2em; }
+.atlasYard { position: absolute; z-index: 1; left: 15px; color: rgba(255,255,255,.48); font: 900 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.atlasField svg { position: absolute; inset: 8% 0 8%; z-index: 2; width: 100%; height: 84%; overflow: visible; }
+.atlasCatchPath, .atlasMissPath { fill: none; stroke-width: .35; vector-effect: non-scaling-stroke; }
+.atlasCatchPath { stroke: rgba(186,255,70,.34); }
+.atlasMissPath { stroke: rgba(139,173,198,.24); stroke-dasharray: 1.4 1.2; }
+.atlasCatchDot { fill: var(--lime); stroke: #e6ffc0; stroke-width: .35; }
+.atlasMissDot { fill: #12301f; stroke: #a8c5db; stroke-width: .55; }
+.atlasTdDot { fill: #ffc857; stroke: #fff1b9; stroke-width: .6; filter: drop-shadow(0 0 3px #ffc857); }
+.atlasRoute { animation: atlasIn .22s ease-out both; }
+@keyframes atlasIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+.atlasLos { position: absolute; z-index: 3; right: 12px; bottom: 7%; left: 12px; padding-top: 7px; border-top: 3px solid var(--blue); color: #d9eaff; font: 900 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+.atlasLegend { position: absolute; z-index: 4; left: 16px; bottom: 16px; display: flex; gap: 14px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.13); border-radius: 8px; background: rgba(4,10,7,.8); backdrop-filter: blur(8px); }
+.atlasLegend span { display: flex; align-items: center; gap: 6px; color: #d8e0e6; font-size: 11px; font-weight: 800; }
+.atlasLegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.legendCatch { border: 1px solid #e6ffc0; background: var(--lime); }
+.legendMiss { border: 2px solid #a8c5db; background: transparent; }
+.legendTd { border: 1px solid #fff1b9; background: #ffc857; }
+.atlasPanel { padding: 20px; background: linear-gradient(150deg, #111923, #080d13); }
+.atlasPlayer { display: flex; align-items: center; gap: 13px; padding-bottom: 18px; border-bottom: 1px solid #293540; }
+.atlasPlayer small, .atlasPlayer span { display: block; color: #8f9ca8; font-size: 11px; font-weight: 750; }
+.atlasPlayer strong { display: block; margin: 5px 0; font-size: 21px; }
+.atlasStats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 17px 0; }
+.atlasStats div { padding: 14px; border: 1px solid #293641; border-radius: 9px; background: #090f15; }
+.atlasStats b { display: block; font: 950 24px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.atlasStats span { display: block; margin-top: 6px; color: #91a0ad; font-size: 11px; font-weight: 750; }
+.atlasRead { padding: 16px; border: 1px solid rgba(186,255,70,.25); border-radius: 10px; background: rgba(186,255,70,.055); }
+.atlasRead small { color: var(--lime); font-size: 12px; font-weight: 900; letter-spacing: .1em; }
+.atlasRead strong { display: block; margin: 7px 0; font-size: 17px; line-height: 1.25; }
+.atlasRead p { margin: 0; color: #adb8c2; font-size: 12px; line-height: 1.55; }
+.atlasTruth { display: flex; align-items: flex-start; gap: 10px; margin-top: 13px; padding: 13px; border: 1px solid rgba(102,185,255,.24); border-radius: 9px; color: var(--blue); background: rgba(102,185,255,.05); }
+.atlasTruth span { color: #aebbc5; font-size: 11px; line-height: 1.5; }
+
 .page button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 @media (max-width: 1320px) {
@@ -601,6 +680,8 @@
   .situationLine, .playDescription, .playMetrics { grid-column: 2; }
   .dataTruth { grid-column: 3; grid-row: 1 / span 3; }
   .marketGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .projectionGrid { grid-template-columns: 1fr; }
+  .atlasGrid { grid-template-columns: minmax(470px, 1fr) 320px; overflow-x: auto; }
 }
 
 @media (max-width: 980px) {
@@ -614,6 +695,8 @@
   .playInspector { min-width: 670px; }
   .dnaGrid, .playerGrid { grid-template-columns: 1fr; }
   .redZoneGrid { grid-template-columns: 1fr; }
+  .atlasGrid { grid-template-columns: 1fr; overflow: hidden; }
+  .atlasField { min-height: 600px; border-right: 0; border-bottom: 1px solid #2b3741; }
 }
 
 @media (max-width: 720px) {
@@ -654,6 +737,16 @@
   .playerFacts { grid-template-columns: repeat(2, 1fr); }
   .redZoneVisual { min-height: 430px; }
   .marketGrid { grid-template-columns: 1fr; }
+  .propToolbar { align-items: flex-start; flex-direction: column; }
+  .propMarkets { width: 100%; }
+  .projectionRow { grid-template-columns: 1fr 82px; }
+  .rangeRail { grid-column: 1 / -1; grid-row: 2; }
+  .projectionEvidence { grid-column: 1 / -1; }
+  .projectionFoot { grid-template-columns: repeat(2, 1fr); }
+  .atlasToolbar { align-items: stretch; flex-direction: column; }
+  .atlasToolbar select { width: 100%; }
+  .atlasPlay { justify-content: center; margin-left: 0; }
+  .atlasField { min-height: 520px; }
 }
 
 @media (max-width: 430px) {
