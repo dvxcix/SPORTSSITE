@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'The Sideline - SlipSurge',
-  description: 'Private NFL matchup and game-script laboratory.',
+  description: 'Private NFL historical film, player geometry, team identity, red-zone and market research suite.',
   robots: { index: false, follow: false, nocache: true },
 }
 

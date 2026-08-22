@@ -16,6 +16,7 @@ const privateRoutes = [
   '/pitcher-report',
   '/slate-breakdown',
   '/weather-lab',
+  '/the-sideline',
   '/synergy',
   '/the-public',
   '/odds-terminal',
@@ -37,6 +38,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'a.espncdn.com' },
+      { protocol: 'https', hostname: 'static.www.nfl.com' },
       { protocol: 'https', hostname: 'img.mlbstatic.com' },
       { protocol: 'https', hostname: 'www.mlbstatic.com' },
       { protocol: 'https', hostname: '*.supabase.co' },

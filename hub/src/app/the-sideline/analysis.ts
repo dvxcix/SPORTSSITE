@@ -1,7 +1,14 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { SidelineGame, SidelineLens, SidelinePlayer, SidelineTeamProfile } from './SidelineClient'
+import type {
+  SidelineGame,
+  SidelineHistoricalGame,
+  SidelineLens,
+  SidelinePlay,
+  SidelinePlayer,
+  SidelineTeamProfile,
+} from './SidelineClient'
 
 type Row = Record<string, unknown>
 
@@ -79,6 +86,7 @@ type PlayerAccumulator = {
   redZoneLooks: number
   redZoneScores: number
   explosivePlays: number
+  headshot: string | null
 }
 
 function ensurePlayer(map: Map<string, PlayerAccumulator>, row: Row, kind: 'receiving' | 'rushing') {
@@ -103,12 +111,13 @@ function ensurePlayer(map: Map<string, PlayerAccumulator>, row: Row, kind: 'rece
     redZoneLooks: 0,
     redZoneScores: 0,
     explosivePlays: 0,
+    headshot: null,
   }
   map.set(id, created)
   return created
 }
 
-function buildPlayers(receiving: Row[], rushing: Row[], pbp: Row[], teams: SidelineGame['home'][]): SidelinePlayer[] {
+function buildPlayers(receiving: Row[], rushing: Row[], pbp: Row[], teams: SidelineGame['home'][], headshots: Map<string, string>): SidelinePlayer[] {
   const playerMap = new Map<string, PlayerAccumulator>()
   const teamTargets = new Map<string, number>()
   const teamCarries = new Map<string, number>()
@@ -137,6 +146,7 @@ function buildPlayers(receiving: Row[], rushing: Row[], pbp: Row[], teams: Sidel
   }
 
   const byName = new Map(Array.from(playerMap.values()).map(player => [player.name.toLowerCase(), player]))
+  for (const player of playerMap.values()) player.headshot = headshots.get(player.id) ?? null
   for (const row of pbp) {
     const isRedZone = numeric(row.yardline_100) > 0 && numeric(row.yardline_100) <= 20
     const name = String(row.receiver_player_name ?? row.rusher_player_name ?? '').toLowerCase()
@@ -187,10 +197,181 @@ function buildPlayers(receiving: Row[], rushing: Row[], pbp: Row[], teams: Sidel
         separation: Math.round(player.separation * 10) / 10,
         redZoneLooks: player.redZoneLooks,
         lane,
+        headshot: player.headshot,
       }
     })
     .sort((a, b) => b.index - a.index)
     .slice(0, 12)
+}
+
+const text = (value: unknown) => value == null ? '' : String(value)
+const nullableText = (value: unknown) => {
+  const normalized = text(value).trim()
+  return normalized ? normalized : null
+}
+
+function mapHistoricalGame(row: Row, teamMap: Map<string, SidelineGame['home']>): SidelineHistoricalGame {
+  const awayAbbr = text(row.away_team)
+  const homeAbbr = text(row.home_team)
+  return {
+    id: text(row.game_id),
+    season: numeric(row.season),
+    week: numeric(row.week),
+    gameType: text(row.game_type),
+    gameday: text(row.gameday),
+    away: teamMap.get(awayAbbr) ?? { abbr: awayAbbr, name: awayAbbr, color: '#243244', logo: null },
+    home: teamMap.get(homeAbbr) ?? { abbr: homeAbbr, name: homeAbbr, color: '#243244', logo: null },
+    awayScore: numeric(row.away_score),
+    homeScore: numeric(row.home_score),
+  }
+}
+
+function clockLabel(row: Row) {
+  const seconds = numeric(row.quarter_seconds_remaining)
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}:${String(Math.max(0, Math.floor(seconds % 60))).padStart(2, '0')}`
+}
+
+function playerIdentity(row: Row) {
+  if (truthy(row.pass_attempt)) return {
+    id: nullableText(row.receiver_player_id),
+    name: nullableText(row.receiver_player_name),
+    role: 'TARGET' as const,
+  }
+  return {
+    id: nullableText(row.rusher_player_id),
+    name: nullableText(row.rusher_player_name),
+    role: 'RUSHER' as const,
+  }
+}
+
+function mapPlay(row: Row, headshots: Map<string, string>): SidelinePlay {
+  const player = playerIdentity(row)
+  const yards = numeric(row.yards_gained)
+  const touchdown = truthy(row.touchdown) || truthy(row.pass_touchdown) || truthy(row.rush_touchdown)
+  const turnover = truthy(row.interception) || truthy(row.fumble_lost)
+  const explosive = truthy(row.pass_attempt) ? yards >= 20 : yards >= 10
+  return {
+    id: `${text(row.game_id)}-${numeric(row.play_id)}`,
+    gameId: text(row.game_id),
+    playId: numeric(row.play_id),
+    offense: text(row.posteam),
+    defense: text(row.defteam),
+    quarter: numeric(row.qtr),
+    clock: clockLabel(row),
+    down: numeric(row.down),
+    distance: numeric(row.ydstogo),
+    yardline: numeric(row.yardline_100),
+    playType: truthy(row.pass_attempt) ? 'pass' : 'run',
+    description: text(row.play_desc),
+    yards,
+    airYards: numeric(row.air_yards),
+    yardsAfterCatch: numeric(row.yards_after_catch),
+    passLocation: nullableText(row.pass_location),
+    runLocation: nullableText(row.run_location),
+    runGap: nullableText(row.run_gap),
+    complete: truthy(row.complete_pass),
+    firstDown: truthy(row.first_down),
+    touchdown,
+    turnover,
+    success: truthy(row.success),
+    explosive,
+    epa: Math.round(numeric(row.epa) * 100) / 100,
+    scoreOffense: numeric(row.posteam_score),
+    scoreDefense: numeric(row.defteam_score),
+    playerId: player.id,
+    playerName: player.name,
+    playerRole: player.role,
+    playerHeadshot: player.id ? headshots.get(player.id) ?? null : null,
+    passerId: nullableText(row.passer_player_id),
+    passerName: nullableText(row.passer_player_name),
+    passerHeadshot: nullableText(row.passer_player_id) ? headshots.get(text(row.passer_player_id)) ?? null : null,
+  }
+}
+
+async function queryHistory(game: SidelineGame) {
+  const admin = createAdminClient()
+  const teams = [game.away.abbr, game.home.abbr]
+  const historyResult = await admin
+    .from('nfl_schedule')
+    .select('game_id,season,game_type,week,gameday,away_team,away_score,home_team,home_score')
+    .lt('gameday', game.gameday)
+    .not('away_score', 'is', null)
+    .not('home_score', 'is', null)
+    .or(teams.flatMap(team => [`away_team.eq.${team}`, `home_team.eq.${team}`]).join(','))
+    .order('gameday', { ascending: false })
+    .limit(10)
+
+  const scheduleRows = (historyResult.data ?? []) as Row[]
+  const gameIds = scheduleRows.map(row => text(row.game_id)).filter(Boolean)
+  const abbreviations = Array.from(new Set(scheduleRows.flatMap(row => [text(row.away_team), text(row.home_team)]).filter(Boolean)))
+
+  const playSelect = 'game_id,play_id,posteam,defteam,qtr,quarter_seconds_remaining,down,ydstogo,yardline_100,play_desc,yards_gained,air_yards,yards_after_catch,pass_location,run_location,run_gap,pass_attempt,rush_attempt,complete_pass,first_down,touchdown,pass_touchdown,rush_touchdown,interception,fumble_lost,success,epa,posteam_score,defteam_score,passer_player_id,passer_player_name,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name'
+  const [teamsResult, playsPageOne, playsPageTwo] = await Promise.all([
+    abbreviations.length
+      ? admin.from('nfl_teams').select('team_abbr,team_name,team_color,team_logo_espn').in('team_abbr', abbreviations)
+      : Promise.resolve({ data: [] as Row[] }),
+    gameIds.length
+      ? admin
+          .from('nfl_pbp')
+          .select(playSelect)
+          .in('game_id', gameIds)
+          .in('play_type', ['pass', 'run'])
+          .eq('play_deleted', false)
+          .order('game_id', { ascending: false })
+          .order('play_id', { ascending: true })
+          .range(0, 999)
+      : Promise.resolve({ data: [] as Row[] }),
+    gameIds.length
+      ? admin
+          .from('nfl_pbp')
+          .select(playSelect)
+          .in('game_id', gameIds)
+          .in('play_type', ['pass', 'run'])
+          .eq('play_deleted', false)
+          .order('game_id', { ascending: false })
+          .order('play_id', { ascending: true })
+          .range(1000, 1999)
+      : Promise.resolve({ data: [] as Row[] }),
+  ])
+
+  const teamMap = new Map<string, SidelineGame['home']>()
+  for (const row of (teamsResult.data ?? []) as Row[]) {
+    const abbr = text(row.team_abbr)
+    teamMap.set(abbr, {
+      abbr,
+      name: text(row.team_name) || abbr,
+      color: text(row.team_color) || '#243244',
+      logo: nullableText(row.team_logo_espn),
+    })
+  }
+  teamMap.set(game.away.abbr, game.away)
+  teamMap.set(game.home.abbr, game.home)
+
+  const playRows = [
+    ...((playsPageOne.data ?? []) as Row[]),
+    ...((playsPageTwo.data ?? []) as Row[]),
+  ]
+  const playerIds = Array.from(new Set(playRows.flatMap(row => [
+    nullableText(row.passer_player_id),
+    nullableText(row.receiver_player_id),
+    nullableText(row.rusher_player_id),
+  ]).filter((id): id is string => Boolean(id))))
+  const playerResult = playerIds.length
+    ? await admin.from('nfl_players').select('gsis_id,headshot').in('gsis_id', playerIds)
+    : { data: [] as Row[] }
+  const headshots = new Map<string, string>()
+  for (const row of (playerResult.data ?? []) as Row[]) {
+    const id = text(row.gsis_id)
+    const headshot = nullableText(row.headshot)
+    if (id && headshot) headshots.set(id, headshot)
+  }
+
+  return {
+    games: scheduleRows.map(row => mapHistoricalGame(row, teamMap)),
+    plays: playRows.map(row => mapPlay(row, headshots)),
+    headshots,
+  }
 }
 
 function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
@@ -239,15 +420,17 @@ export async function getSidelineLens(game: SidelineGame): Promise<SidelineLens>
   const preferredSeason = game.gameType === 'REG' && game.week > 3 ? game.season : game.season - 1
   try {
     let season = preferredSeason
+    const historyPromise = queryHistory(game)
     let data = await querySeason(game, season)
     if (!data.pbp.length && !data.receiving.length && season > 2020) {
       season -= 1
       data = await querySeason(game, season)
     }
 
+    const history = await historyPromise
     const away = profileTeam(game.away, data.pbp)
     const home = profileTeam(game.home, data.pbp)
-    const players = buildPlayers(data.receiving, data.rushing, data.pbp, [game.away, game.home])
+    const players = buildPlayers(data.receiving, data.rushing, data.pbp, [game.away, game.home], history.headshots)
     const headline = buildHeadline(away, home)
 
     return {
@@ -259,6 +442,8 @@ export async function getSidelineLens(game: SidelineGame): Promise<SidelineLens>
       aggressor: headline.aggressor,
       teams: [away, home],
       players,
+      historicalGames: history.games,
+      historicalPlays: history.plays,
     }
   } catch {
     return {
@@ -270,6 +455,8 @@ export async function getSidelineLens(game: SidelineGame): Promise<SidelineLens>
       aggressor: game.away.abbr,
       teams: [emptyTeamProfile(game.away), emptyTeamProfile(game.home)],
       players: [],
+      historicalGames: [],
+      historicalPlays: [],
     }
   }
 }
