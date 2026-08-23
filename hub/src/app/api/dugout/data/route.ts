@@ -12,7 +12,7 @@ import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import {
   fetchUserMatrices, fetchBulkBatterPitchRows,
-  evaluateBatterMatrices, pitchlogNeeded, pitchlogCustomNeeded, asyncPool,
+  evaluateBatterMatrices, pitchlogCustomNeeded, asyncPool,
 } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
@@ -131,6 +131,70 @@ const getCachedGapOddsHistorical = unstable_cache(fetchGapOdds, ['dugout-gap-odd
 const getCachedGapOdds = (date: string) => {
   const tier = dateCacheTierET(date)
   return tier === 'historical' ? getCachedGapOddsHistorical(date) : tier === 'settling' ? getCachedGapOddsSettling(date) : getCachedGapOddsRecent(date)
+}
+
+type MechanicsIndexWindow = 'l1' | 'l3' | 'l5' | 'l10'
+type MechanicsIndexPoint = {
+  gamePk: string
+  window: MechanicsIndexWindow
+  playerId: number | null
+  nameNorm: string
+  score: number
+  rank: number | null
+}
+
+// Daily Recap must show the same frozen, window-specific INDEX that existed
+// on the pregame mechanics board. The live precision score attached later in
+// this route is intentionally a different model and is only available when a
+// currently-hydrated lineup is a complete 9-v-9; using it for completed games
+// left almost every confirmed homer blank and could never power L1/L3/L5/L10.
+// Keep this response compact: extract only identity + overall score/rank from
+// the latest saved snapshot for each game/window, never the full payload.
+async function fetchMechanicsIndexPoints(admin: ReturnType<typeof createAdminClient>, date: string): Promise<MechanicsIndexPoint[]> {
+  try {
+    const { data, error } = await admin
+      .from('research_mechanics_snapshots')
+      .select('game_pk, window_games, payload, computed_at')
+      .eq('game_date', date)
+      .in('window_games', [1, 3, 5, 10])
+      .order('computed_at', { ascending: false })
+      .limit(500)
+    if (error) throw error
+
+    const windowByGames: Record<number, MechanicsIndexWindow | undefined> = {
+      1: 'l1', 3: 'l3', 5: 'l5', 10: 'l10',
+    }
+    const seenSnapshots = new Set<string>()
+    const points: MechanicsIndexPoint[] = []
+    for (const snapshot of data ?? []) {
+      const gamePk = String(snapshot.game_pk ?? '')
+      const window = windowByGames[Number(snapshot.window_games)]
+      if (!gamePk || !window) continue
+      const snapshotKey = `${gamePk}:${window}`
+      if (seenSnapshots.has(snapshotKey)) continue
+      seenSnapshots.add(snapshotKey)
+
+      const payload = snapshot.payload as any
+      for (const player of Array.isArray(payload?.players) ? payload.players : []) {
+        const score = Number(player?.scores?.overall)
+        if (!Number.isFinite(score)) continue
+        const rawPlayerId = Number(player?.playerId)
+        const rawRank = Number(player?.rank)
+        points.push({
+          gamePk,
+          window,
+          playerId: Number.isFinite(rawPlayerId) && rawPlayerId > 0 ? rawPlayerId : null,
+          nameNorm: normName(player?.playerName ?? ''),
+          score,
+          rank: Number.isFinite(rawRank) ? rawRank : null,
+        })
+      }
+    }
+    return points
+  } catch (error) {
+    console.error('[dugout/data] mechanics index snapshot fetch failed', error)
+    return []
+  }
 }
 
 // Opening baselines now come from the unified market_opening_prices table
@@ -661,8 +725,7 @@ export async function GET(req: Request) {
   // averages, HR/near-HR feed, opening-price deltas, pitcher props/matchup
   // edge, the `locked` flag itself). Deliberately NOT used for anything
   // cross-game/account-level — Custom Matrix (`userMatrices`/`needsMm`/
-  // `needsPitchlog`/`needsPitchlogCustom`/`matrixPitchRowsByBatter`/
-  // `precomputedPitchlogByBatter`) is a signed-in member's own saved rule
+  // `needsPitchlogCustom`/`matrixPitchRowsByBatter`) is a signed-in member's own saved rule
   // set spanning every game, not something that makes sense to unlock "for
   // one game" — those stay gated on the real `isUltimate` only, unchanged.
   const ultimateForGame = (gameKey: string) => isUltimate || gameKey === featuredGameKey
@@ -732,7 +795,6 @@ export async function GET(req: Request) {
   // rows fetched below regardless (already needed for the grid's own
   // Statcast section), so there's nothing left to conditionally fetch here
   // for that category.
-  const needsPitchlog = pitchlogNeeded(userMatrices)
   // 'custom' recency (an arbitrary exact date range) is the only
   // pitchlog_stat case the daily precompute below can't cover — see
   // evaluatePitchlogFactorPrecomputed's own comment. Confirmed live
@@ -776,7 +838,7 @@ export async function GET(req: Request) {
   const [
     statSplits, timingSplits, pikkit, fhrAvg, saAvg, openingSaRbi, hrFeedResult, nearHrRaw, outcomesByGamePk,
     matrixPitchRowsByBatter, precomputedStatcastRows, precomputedPitchlogRows, precomputedMatchupEdgeRows,
-    batSideEntries, gapOddsResult, gapOddsOpeningResult, pitcherHandEntries, pitcherSplits, freezeResult,
+    batSideEntries, gapOddsResult, gapOddsOpeningResult, pitcherHandEntries, pitcherSplits, mechanicsIndexPoints, freezeResult,
   ] = await Promise.all([
     timed(reqId, 'statSplits', fetchStatSplits()),
     timed(reqId, 'timingSplits', fetchTimingSplits()),
@@ -849,9 +911,7 @@ export async function GET(req: Request) {
     // SELECT now, no live aggregation, no per-request MLB calls.
     // Below-Ultimate: fetched when there's a featured game today so its
     // players get real Statcast rows (see statcastWindows below, gated per-
-    // game via ultimateForGame); precomputedPitchlog just below stays
-    // isUltimate-only since it's a Custom Matrix-only input (never rendered
-    // as a standalone board field — see ultimateForGame's own comment above).
+    // game via ultimateForGame).
     timed(reqId, 'precomputedStatcast', (isUltimate || featuredGameKey) && admin ? (async () => {
       try {
         const { data } = await admin.from(DUGOUT_STATCAST_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
@@ -866,9 +926,10 @@ export async function GET(req: Request) {
     // dugoutPitchlogStatPrecompute.ts for the incident this fixes: this
     // used to be the one Matrix category still doing a live per-batter
     // raw-pitch fetch on every request). Same shape as precomputedStatcast
-    // above — plain indexed SELECT, gated the same way (only fetched when
-    // some Matrix actually references this category at all).
-    timed(reqId, 'precomputedPitchlog', isUltimate && admin && needsPitchlog ? (async () => {
+    // above - plain indexed SELECT. The inline hit read also consumes AVG,
+    // K%, PA, and BBE from these rows, so the featured game needs them even
+    // when no saved Matrix references pitchlog_stat.
+    timed(reqId, 'precomputedPitchlog', (isUltimate || featuredGameKey) && admin ? (async () => {
       try {
         const { data } = await admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date)
         return (data ?? []) as { mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }[]
@@ -936,6 +997,9 @@ export async function GET(req: Request) {
       } catch { return [] }
     })()),
     timed(reqId, 'pitcherSplits', fetchPitcherSplits(pitcherIdList)),
+    timed(reqId, 'mechanicsIndexSnapshots', (admin && isUltimate)
+      ? fetchMechanicsIndexPoints(admin, date)
+      : Promise.resolve([] as MechanicsIndexPoint[])),
     // Odds snapshot lookup — BDL is never called live from this route
     // anymore (see /api/cron/bdl-odds, which polls it on a fixed schedule
     // and writes here). A started-but-not-yet-frozen game gets permanently
@@ -1277,7 +1341,12 @@ export async function GET(req: Request) {
     const mmByWindowByMlbId: Record<number, MmByWindow> = {}
     const bkRkByWindowByMlbId: Record<number, MmByWindow> = {}
     const ppRkByWindowByMlbId: Record<number, MmByWindow> = {}
-    if (needsMm) {
+    // SlipSurge Index uses the full L1/L3/L5/L10 MM + Paper trajectory for
+    // every unlocked game. Previously this only ran when one of the member's
+    // saved Custom Matrices explicitly referenced an MM field, leaving the
+    // board-level index blank even though all 18 hitters' source data was
+    // already loaded.
+    if (needsMm || ultimateForGame(gameKey)) {
       const effectiveBatsFor = (bats: string | null | undefined, pHand: 'L' | 'R'): 'L' | 'R' =>
         bats === 'S' ? (pHand === 'L' ? 'R' : 'L') : ((bats as 'L' | 'R') || 'R')
       const mmInputs: MmPlayerInput[] = [
@@ -1304,6 +1373,31 @@ export async function GET(req: Request) {
       Object.assign(mmByWindowByMlbId, mm)
       Object.assign(bkRkByWindowByMlbId, bkRk)
       Object.assign(ppRkByWindowByMlbId, ppRk)
+    }
+
+    // Board-level SlipSurge HR index. This is the same frozen 18-player
+    // scorer already exposed to Custom Matrix as precision_hr_score; compute
+    // it for every complete, unlocked matchup instead of only when a saved
+    // pipeline happens to request that field.
+    const precisionHrScoreByName = new Map<string, number>()
+    if (ultimateForGame(gameKey) && homeLineup.length === 9 && awayLineup.length === 9) {
+      const precisionBundle = (p: typeof homeLineup[number], pHand: 'L' | 'R'): FieldBundle => ({
+        props: resolveNameEntry(bdlByName, p.name_norm) || null,
+        fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm),
+        saAvg: resolveNameEntry(saAvgMap, p.name_norm),
+        pitchlogWindows: precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null,
+        statcastWindows: precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null,
+        pikkitEntry: resolveNameEntry(pikkitByName, p.name_norm) ?? null,
+        mmByWindow: mmByWindowByMlbId[p.mlb_id] ?? null,
+        bkRkByWindow: bkRkByWindowByMlbId[p.mlb_id] ?? null,
+        ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
+        battingOrder: p.batting_order ?? null,
+      })
+      const bundles = new Map<string, FieldBundle>([
+        ...homeLineup.map(p => [p.name_norm, precisionBundle(p, homePHand)] as const),
+        ...awayLineup.map(p => [p.name_norm, precisionBundle(p, awayPHand)] as const),
+      ])
+      for (const [name, score] of computePrecisionHrScores(bundles)) precisionHrScoreByName.set(name, score)
     }
 
     const tiedFactors = userMatrices.flatMap(m => m.factors.filter(f => f.operator === 'tied'))
@@ -1476,7 +1570,7 @@ export async function GET(req: Request) {
         const pHand = homePHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = ultimateForGame(gameKey) ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
-        const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
+        const pitchlogStatWindows = ultimateForGame(gameKey) ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
@@ -1488,14 +1582,14 @@ export async function GET(req: Request) {
               ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return { ...p, props, matrixMatches, precisionHrScore: precisionHrScoreByName.get(p.name_norm) ?? null, statcast: statcastWindows, pitchlogStat: pitchlogStatWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
       awayLineup: awayLineup.map(p => {
         const props = resolveNameEntry(bdlByName, p.name_norm) || null
         const pHand = awayPHand
         const pitchRows = matrixPitchRowsByBatter[p.mlb_id] ?? []
         const statcastWindows = ultimateForGame(gameKey) ? (precomputedStatcastByBatter[p.mlb_id]?.[pHand] ?? null) : null
-        const pitchlogStatWindows = isUltimate ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
+        const pitchlogStatWindows = ultimateForGame(gameKey) ? (precomputedPitchlogByBatter[p.mlb_id]?.[pHand] ?? null) : null
         const matrixMatches = userMatrices.length
           ? evaluateBatterMatrices(userMatrices, pHand, pitchRows, statcastWindows, props, date, {
               fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm), saAvg: resolveNameEntry(saAvgMap, p.name_norm),
@@ -1507,7 +1601,7 @@ export async function GET(req: Request) {
               ppRkByWindow: ppRkByWindowByMlbId[p.mlb_id] ?? null,
             }, pitchlogStatWindows)
           : []
-        return { ...p, props, matrixMatches, statcast: statcastWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
+        return { ...p, props, matrixMatches, precisionHrScore: precisionHrScoreByName.get(p.name_norm) ?? null, statcast: statcastWindows, pitchlogStat: pitchlogStatWindows, matchupEdge: ultimateForGame(gameKey) ? (matchupEdgeByBatter[p.mlb_id] ?? null) : null }
       }),
     }
   }))
@@ -1560,7 +1654,7 @@ export async function GET(req: Request) {
     {
       date, games, statSplits, timingSplits, pitcherSplits, communityPicks: pikkit,
       fhrAvg: responseFhrAvg, saAvg: responseSaAvg, openingSaRbi: responseOpeningSaRbi,
-      hrFeed: responseHrFeed, nearHr: responseNearHr,
+      hrFeed: responseHrFeed, nearHr: responseNearHr, mechanicsIndexPoints,
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
   )

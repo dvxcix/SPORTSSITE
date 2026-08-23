@@ -17,6 +17,7 @@ import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
+import { computeHitFloorReads, computeHitPitchProfile, type HitFloorStatus } from '@/lib/hitFloorModel'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
 import { Lock } from 'lucide-react'
@@ -347,6 +348,23 @@ export function buildBatterRow(
   const pitRow = pickPitcherRow(pitcherMap, pitcherId, effectiveBats)
 
   const matchup_edge = computeMatchupEdgeScore(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
+  const hit_pitch_profile = computeHitPitchProfile(pitcherHand, effectiveBats, pitRow, player.matchupEdge, pitcherMatchupEdge)
+  const hit_windows = Object.fromEntries((['l1', 'l3', 'l5', 'l10'] as const).map(window => {
+    const data = player.statcast?.[window] ?? null
+    const pitchlog = player.pitchlogStat?.[window === 'l1' ? 'game' : window] ?? null
+    return [window, {
+      avg: pitchlog?.avg ?? null,
+      kPct: pitchlog?.kPct ?? null,
+      pa: pitchlog?.pa ?? null,
+      bbe: pitchlog?.bbe ?? null,
+      squaredUpPct: data?.squaredUpPct ?? null,
+      sweetSpotPct: data?.sweetSpotPct ?? null,
+      missDistance: data?.missDistance ?? null,
+      onTimePct: data?.onTimePct ?? null,
+      hardHitPct: data?.hardHitPct ?? null,
+      avgEv: data?.avgEv ?? null,
+    }]
+  }))
   const platoon_ops = player.matchupEdge?.platoonOps?.[pitcherHand] ?? null
 
   // How many real recent pitches we actually have on this guy — a proxy for
@@ -582,6 +600,17 @@ export function buildBatterRow(
     d_spd, d_sq, d_brl, d_hrd, d_bla, d_len, d_atk, d_iaa, d_tlt, d_ev, d_la, d_hh, d_sweetspot, d_pa, d_fb,
     s_timing, r_timing, d_timing, s_miss, r_miss, d_miss,
     matchup_edge, platoon_ops, recent_pitch_count,
+    hit_windows, hit_pitch_profile,
+    hit_score: null as number | null,
+    hit2_score: null as number | null,
+    hit_rank: null as number | null,
+    hit2_rank: null as number | null,
+    hit_value_rank: null as number | null,
+    hit2_value_rank: null as number | null,
+    hit_status: 'INSUFFICIENT' as HitFloorStatus,
+    hit2_status: 'INSUFFICIENT' as HitFloorStatus,
+    hit_reasons: [] as string[],
+    hit_warnings: [] as string[],
     // Each market (home_runs, hits, runs, stolen_bases, ...) is kept as its
     // own entry now — a player can have picks in more than one market for
     // the same game, and collapsing them into a single row (the old
@@ -607,6 +636,15 @@ export function buildBatterRow(
     // Always highest-priority-first; empty (not undefined) for non-Ultimate
     // callers and Ultimate members with nothing saved.
     matrix_matches: (player.matrixMatches ?? []) as { id: string; name: string; color: string; priority: number }[],
+    // Frozen whole-game HR model, supplied only after a complete 9-v-9
+    // lineup can be scored. Displayed as a 0-100 index, not a probability.
+    slipsurge_index: typeof player.precisionHrScore === 'number'
+      ? Math.round(player.precisionHrScore * 100)
+      : null as number | null,
+    // Daily Recap overlays these from the frozen pregame mechanics
+    // snapshots. Kept on the shared row shape so the INDEX cell can expose
+    // all four values without creating a recap-only renderer.
+    slipsurge_windows: null as Partial<Record<'l1' | 'l3' | 'l5' | 'l10', number>> | null,
     paper: null as number | null,
     bk_rk: null as number | null,
     pp_rk: null as number | null,
@@ -1426,6 +1464,25 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
         </div>
       </td>
 
+      <td style={{
+        ...STD, width: 44, minWidth: 44, fontWeight: 900,
+        color: row.slipsurge_index != null
+          ? (row.slipsurge_index >= 70 ? '#4ade80' : row.slipsurge_index >= 50 ? '#facc15' : 'var(--text-2)')
+          : 'var(--text-3)',
+        ...heat(row.slipsurge_index, g('slipsurge_index')),
+      }}>
+        {row.slipsurge_windows ? (
+          <Tooltip
+            content={(['l1', 'l3', 'l5', 'l10'] as const)
+              .map(window => `${window.toUpperCase()} ${row.slipsurge_windows?.[window] ?? '-'}`)
+              .join(' · ')}
+            containerClassName="w-full h-full flex items-center justify-center"
+          >
+            <span style={{ cursor: 'help' }}>{row.slipsurge_index ?? '-'}</span>
+          </Tooltip>
+        ) : row.slipsurge_index ?? '-'}
+      </td>
+
       {/* pk */}
       <td style={{ ...STD, width: 34, minWidth: 34, color: row.pk?.picks != null ? 'var(--accent)' : 'var(--text-3)', fontSize: 10, fontWeight: row.pk?.picks != null ? 700 : 400 }}>
         {row.pk?.picks != null ? (
@@ -1522,6 +1579,36 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <OddsCell row={row} gameInfo={gameInfo} propKey="stolen_bases2" book="fanduel" odds={row.sb2_fd} openOdds={row.sb2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.sb2_fd, g('sb2_fd')) }} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits" book="fanduel" odds={row.hits_fd} openOdds={row.hits_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits_fd, g('hits_fd')) }} pickCount={row.pkHits?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="hits2" book="fanduel" odds={row.hits2_fd} openOdds={row.hits2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.hits2_fd, g('hits2_fd')) }} />
+      <td
+        aria-label={`Hit read: 1+ ${row.hit_status.toLowerCase()}${row.hit_value_rank != null ? `, value rank ${row.hit_value_rank}` : ''}; 2+ ${row.hit2_status.toLowerCase()}${row.hit2_value_rank != null ? `, value rank ${row.hit2_value_rank}` : ''}`}
+        title={`1+ ${row.hit_status === 'QUALIFIED' ? `green H#${row.hit_value_rank}` : row.hit_status.toLowerCase()} · 2+ ${row.hit2_status === 'WATCH' ? `amber 2H#${row.hit2_value_rank}` : row.hit2_status.toLowerCase()}`}
+        style={{
+          ...STD, width: 54, minWidth: 54,
+        }}
+      >
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 9, height: 9, borderRadius: '50%', flex: '0 0 9px',
+              background: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : row.hit_status === 'PASS' ? '#f87171' : '#64748b',
+              boxShadow: row.hit_status === 'QUALIFIED'
+                ? '0 0 6px rgba(74,222,128,0.75)'
+                : row.hit_status === 'WATCH'
+                  ? '0 0 5px rgba(250,204,21,0.55)'
+                  : 'none',
+            }}
+          />
+          <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.05, fontSize: 9, fontWeight: 850 }}>
+            <span style={{ color: row.hit_status === 'QUALIFIED' ? '#4ade80' : row.hit_status === 'WATCH' ? '#facc15' : row.hit_status === 'PASS' ? '#f87171' : 'var(--text-3)' }}>
+              H{row.hit_value_rank ?? '-'}
+            </span>
+            <span style={{ color: row.hit2_status === 'QUALIFIED' ? '#4ade80' : row.hit2_status === 'WATCH' ? '#facc15' : row.hit2_status === 'PASS' ? '#f87171' : 'var(--text-3)' }}>
+              2H{row.hit2_value_rank ?? '-'}
+            </span>
+          </span>
+        </span>
+      </td>
       <OddsCell row={row} gameInfo={gameInfo} propKey="runs" book="fanduel" odds={row.runs_fd} openOdds={row.runs_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs_fd, g('runs_fd')) }} pickCount={row.pkRuns?.picks ?? null} />
       <OddsCell row={row} gameInfo={gameInfo} propKey="runs2" book="fanduel" odds={row.runs2_fd} openOdds={row.runs2_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.runs2_fd, g('runs2_fd')) }} />
 
@@ -2161,6 +2248,7 @@ const HL_SWATCHES = ['#B4FF4D', '#4D9EFF', '#FF4D6A', '#FFB84D', '#A855F7']
 type DugoutColSlot = { type: 'player' } | { type: 'divider' } | { type: 'col'; key: string; group: string }
 const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'player' },
+  { type: 'col', key: 'slipsurge_index', group: 'ranks' },
   { type: 'col', key: 'pk', group: 'picks' },
   { type: 'divider' },
   { type: 'col', key: 'fhr_fd', group: 'fhr' },
@@ -2201,6 +2289,7 @@ const DUGOUT_COLUMN_LAYOUT: DugoutColSlot[] = [
   { type: 'col', key: 'sb2_fd', group: 'props' },
   { type: 'col', key: 'hits_fd', group: 'props' },
   { type: 'col', key: 'hits2_fd', group: 'props' },
+  { type: 'col', key: 'hit_score', group: 'props' },
   { type: 'col', key: 'runs_fd', group: 'props' },
   { type: 'col', key: 'runs2_fd', group: 'props' },
   { type: 'divider' },
@@ -2388,8 +2477,9 @@ const DUGOUT_COLUMN_LABELS: Record<string, string> = {
   sa_div_tb4: 'Anytime HR÷4+ total bases implied', sa_div_tb5: 'Anytime HR÷5+ total bases implied',
   sa_div_hr2: 'Anytime HR÷2+ HR implied',
   sng_fd: 'Singles', dbl_fd: 'Doubles', tri_fd: 'Triples', sb_fd: 'Stolen Base', sb2_fd: '2+ Stolen Bases',
-  hits_fd: '1+ Hit', hits2_fd: '2+ Hits', runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
-  paper: 'Composite Statcast score', bk_rk: 'Sportsbook rank', pp_rk: 'Statcast rank', mm: 'Market vs. Statcast gap',
+  hits_fd: '1+ Hit', hits2_fd: '2+ Hits', hit_score: 'Hit model indicator and rank',
+  runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
+  slipsurge_index: 'SlipSurge HR index', paper: 'Composite Statcast score', bk_rk: 'Sportsbook rank', pp_rk: 'Statcast rank', mm: 'Market vs. Statcast gap',
   s_spd: 'Season bat speed', r_spd: 'Recent bat speed', d_spd: 'Recent−season bat speed',
   s_timing: 'Season timing %', r_timing: 'Recent timing', d_timing: 'Recent−season timing',
   s_miss: 'Season miss distance', r_miss: 'Recent miss distance', d_miss: 'Recent−season miss distance',
@@ -2659,6 +2749,7 @@ export function getDugoutHeaderCells(
   const headerCells = (
     <>
       <TH label="Player" title="Batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
+      {H('INDEX', 'SlipSurge HR index', 44, 'slipsurge_index')}
       {H(<>💲<span style={{ filter: 'invert(1)' }}>👤</span></>, 'Community HR pick count', 34, 'pk')}
       <th style={SDIV_H} />
       {BL('fanduel', 'FHR', 'FanDuel First HR', 50, 'fhr_fd')}
@@ -2699,6 +2790,7 @@ export function getDugoutHeaderCells(
       {BL('fanduel', 'SB2', '2+ Stolen Bases (FD)', 44, 'sb2_fd')}
       {BL('fanduel', 'HIT', '1+ Hit (FD)', 44, 'hits_fd', 'pkHits')}
       {BL('fanduel', '2HIT', '2+ Hits (FD)', 44, 'hits2_fd')}
+      {H('HIT', 'Green H# = qualified 1+ value rank. Amber 2H# = top-three 2+ watch.', 54, 'hit_score')}
       {BL('fanduel', '🏃', '1+ Run Scored (FD)', 44, 'runs_fd', 'pkRuns')}
       {BL('fanduel', '2️⃣🏃', '2+ Runs Scored (FD)', 44, 'runs2_fd')}
       <th style={SDIV_H} />
@@ -2924,6 +3016,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     const pool = [...homeRows, ...awayRows]
     computePaperScores(pool)
     computeMmRanks(pool)
+    computeHitFloorReads(pool, pool.length === 18 && !!game.homeLineupConfirmed && !!game.awayLineupConfirmed)
     return { homeRows, awayRows, pool }
   }, [game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, statcastWindow])
 
@@ -2934,7 +3027,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const displayAway = sortRowsMulti(awayRows, activeSortKeys).filter(row => !erasedIds.has(`a-${row.mlb_id ?? row.name}`))
 
   const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
-
   // This member's resolved column show/hide/order (null prefs = show
   // everything, default order — see resolveDugoutColumns above GameTable).
   // Computed once and reused by the header, both team-banner colSpans
@@ -3284,6 +3376,22 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
   const openingMap = useMemo(() => buildOpeningMap(data), [data?.openingSaRbi])
   const hrMap      = useMemo(() => buildHrMap(data), [data?.hrFeed])
   const nearMap    = useMemo(() => buildNearMap(data), [data?.nearHr])
+  const mechanicsIndexMap = useMemo(() => {
+    const byPlayer = new Map<string, number>()
+    for (const point of data?.mechanicsIndexPoints ?? []) {
+      const gamePk = String(point?.gamePk ?? '')
+      const window = String(point?.window ?? '')
+      const score = Number(point?.score)
+      if (!gamePk || !window || !Number.isFinite(score)) continue
+      const playerId = Number(point?.playerId)
+      if (Number.isFinite(playerId) && playerId > 0) {
+        byPlayer.set(`${gamePk}:${window}:id:${playerId}`, score)
+      }
+      const name = normName(point?.nameNorm ?? '')
+      if (name) byPlayer.set(`${gamePk}:${window}:name:${name}`, score)
+    }
+    return byPlayer
+  }, [data?.mechanicsIndexPoints])
 
   // Same per-game buildBatterRow + Paper/MM pool as GameTable's own useMemo
   // (both lineups pooled together, exactly like the live board), just run
@@ -3304,8 +3412,23 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
         buildBatterRow(p, hp?.hand || 'R', hp?.id ?? null, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, hp?.matchupEdge ?? null, statcastWindow, false, !!game.awayLineupConfirmed)
       )
       const pool = [...homeRows, ...awayRows]
+      const gamePk = String(game.gamePk ?? '')
+      for (const row of pool) {
+        const windows: Partial<Record<'l1' | 'l3' | 'l5' | 'l10', number>> = {}
+        for (const window of ['l1', 'l3', 'l5', 'l10'] as const) {
+          const byId = row.mlb_id != null ? mechanicsIndexMap.get(`${gamePk}:${window}:id:${row.mlb_id}`) : undefined
+          const byName = mechanicsIndexMap.get(`${gamePk}:${window}:name:${normName(row.name)}`)
+          const score = byId ?? byName
+          if (score != null) windows[window] = Math.round(score)
+        }
+        if (Object.keys(windows).length) {
+          row.slipsurge_windows = windows
+          row.slipsurge_index = windows[statcastWindow] ?? null
+        }
+      }
       computePaperScores(pool)
       computeMmRanks(pool)
+      computeHitFloorReads(pool, pool.length === 18 && !!game.homeLineupConfirmed && !!game.awayLineupConfirmed)
       const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
       for (const row of homeRows) {
         const hits = row.hr_hits ?? []
@@ -3323,7 +3446,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
       }
     }
     return out
-  }, [data, splitMap, pitcherMap, fhrAvgMap, saAvgMap, openingMap, hrMap, nearMap, statcastWindow, date])
+  }, [data, splitMap, pitcherMap, fhrAvgMap, saAvgMap, openingMap, hrMap, nearMap, mechanicsIndexMap, statcastWindow, date])
 
   const displayRows = useMemo(() => {
     if (!sort) return hrRows
