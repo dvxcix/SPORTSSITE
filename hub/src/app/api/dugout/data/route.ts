@@ -32,8 +32,8 @@ import {
 } from '@slipsurge/core/matrixEngine'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 import { fetchPikkitPublicPicks } from '@/lib/mlbPartyServer'
-import { HR_MECHANICS_MODEL_VERSION, MECHANICS_WINDOWS, type GameMechanicsResult, type GameMechanicsWindows } from '@/lib/hrMechanics'
-import { compactMechanicsByPlayer, type CompactMechanicsWindows } from '@/lib/hrMechanicsCache'
+import { HR_MECHANICS_MODEL_VERSION, MECHANICS_WINDOWS, type GameMechanicsResult } from '@/lib/hrMechanics'
+import type { CompactMechanicsWindows } from '@/lib/hrMechanicsCache'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -999,16 +999,32 @@ export async function GET(req: Request) {
   }
   const mechanicsForGame = (gamePk: number, lineupIds: number[]): Record<number, CompactMechanicsWindows> => {
     const byWindow = mechanicsRowsByGame.get(gamePk)
-    if (!byWindow || lineupIds.length !== 18) return {}
-    const expected = [...lineupIds].sort((a, b) => a - b).join(',')
-    const complete = MECHANICS_WINDOWS.every(window => {
+    if (!byWindow || !lineupIds.length) return {}
+
+    // Pregame mechanics snapshots intentionally include the full candidate
+    // pool until both lineups are confirmed. Most games therefore persist
+    // more than the 18 eventual starters. Requiring exact snapshot/lineup
+    // equality erased every mechanics score for those games in Daily Recap.
+    // Join the persisted windows by player instead: extra bench candidates
+    // are harmless, and a missing player/window no longer blanks the other
+    // valid scores from the same game.
+    const lineupIdSet = new Set(lineupIds)
+    const players: Record<number, CompactMechanicsWindows> = {}
+    for (const window of MECHANICS_WINDOWS) {
       const payload = byWindow.get(window)
-      return payload && [...payload.players.map(player => player.playerId)].sort((a, b) => a - b).join(',') === expected
-    })
-    if (!complete) return {}
-    return compactMechanicsByPlayer(Object.fromEntries(
-      MECHANICS_WINDOWS.map(window => [window, byWindow.get(window)!]),
-    ) as GameMechanicsWindows)
+      if (!payload) continue
+      for (const player of payload.players) {
+        if (!lineupIdSet.has(player.playerId)) continue
+        players[player.playerId] ??= {}
+        players[player.playerId][`l${window}`] = {
+          index: player.scores.overall,
+          rank: player.rank,
+          confidence: player.scores.confidence,
+          trend: player.scores.trend,
+        }
+      }
+    }
+    return players
   }
   const pitcherMap = needsMm ? buildPitcherMap(pitcherSplits) : {}
 
