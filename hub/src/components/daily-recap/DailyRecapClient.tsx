@@ -26,6 +26,7 @@ export function DailyRecapClient() {
   const [date, setDate] = useState(todayEt)
   const [data, setData] = useState<any | null>(null)
   const [error, setError] = useState('')
+  const isToday = date === todayEt()
 
   useEffect(() => {
     let cancelled = false
@@ -54,7 +55,26 @@ export function DailyRecapClient() {
     return () => window.removeEventListener('ss:matrices-updated', onMatricesUpdated)
   }, [date])
 
-  const isToday = date === todayEt()
+  // Today's confirmed-HR feed changes throughout the games. Keep the recap
+  // current in place instead of freezing the row count at the first page load.
+  useEffect(() => {
+    if (!isToday) return
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+        .then(d => setData(d))
+        .catch(() => {})
+    }
+    const timer = window.setInterval(refresh, 30_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [date, isToday])
 
   return (
     <div className="min-w-0">
