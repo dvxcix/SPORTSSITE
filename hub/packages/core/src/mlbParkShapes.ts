@@ -30,6 +30,10 @@ const OAK_SHAPE: ParkShapeData = {
 
 export const MLB_PARK_SHAPES: Partial<Record<string, ParkShapeData>> = {
   ARI: ARI_SHAPE,
+  // MLB's schedule feed alternates between ARI and AZ for Arizona. Keep
+  // both keys pointed at the traced Chase Field outline so a hydration
+  // change cannot silently fall back to the generic fan-shaped park.
+  AZ: ARI_SHAPE,
   ATH: OAK_SHAPE,
   OAK: OAK_SHAPE,
   ATL: {
