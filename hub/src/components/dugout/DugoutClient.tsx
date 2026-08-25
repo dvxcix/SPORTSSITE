@@ -1303,7 +1303,12 @@ function OddsCell({
         )}
       </span>
       {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
-      {openOdds != null && <small className="dg-market-open">O {oStr(openOdds)}</small>}
+      {openOdds != null && (
+        <small className="dg-market-open" aria-label={`Opening price ${oStr(openOdds)}`}>
+          <span>OPEN</span>
+          <b>{oStr(openOdds)}</b>
+        </small>
+      )}
       {pickCount != null && (
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
           <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
@@ -5047,10 +5052,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-dense-table th[data-col-group]{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--dg-group) 66%,transparent)}
         .dugout-dense-table td[data-col-group]:not(.dg-sticky-col){border-bottom-color:color-mix(in srgb,var(--dg-group) 14%,transparent)}
         .dugout-dense-table td[data-market-move]{position:relative}
-        .dugout-dense-table td[data-market-move=shorter]::after,.dugout-dense-table td[data-market-move=longer]::after{content:"";position:absolute;top:3px;right:3px;width:3px;height:3px;border-radius:50%;pointer-events:none}
-        .dugout-dense-table td[data-market-move=shorter]::after{background:#4ade80;box-shadow:0 0 5px rgba(74,222,128,.65)}
-        .dugout-dense-table td[data-market-move=longer]::after{background:#f87171;box-shadow:0 0 5px rgba(248,113,113,.55)}
-        .dg-market-cell{gap:1px}.dg-market-open{color:var(--text-4);font-size:8px;font-weight:800;line-height:1}.dugout-dense-table td[data-book=fanduel]{box-shadow:inset 0 2px 0 rgba(56,189,248,.38)}.dugout-dense-table td[data-book=betmgm]{box-shadow:inset 0 2px 0 rgba(251,191,36,.42)}.dugout-dense-table td[data-book-state=agreement]{background:rgba(34,197,94,.07)!important}.dugout-dense-table td[data-book-state=disagreement]{background:rgba(245,158,11,.08)!important}
+        .dg-market-cell{gap:2px}.dg-market-open{display:inline-flex;align-items:center;justify-content:center;gap:2px;max-width:100%;color:#b8c3d4;font-size:7.5px;font-weight:850;line-height:1;white-space:nowrap;letter-spacing:0}.dg-market-open span{color:#8290a5;font-size:6px;font-weight:950;letter-spacing:.045em}.dg-market-open b{color:#cbd5e1;font:inherit;font-weight:900}.dugout-dense-table td[data-book=fanduel]{box-shadow:inset 0 2px 0 rgba(56,189,248,.38)}.dugout-dense-table td[data-book=betmgm]{box-shadow:inset 0 2px 0 rgba(251,191,36,.42)}.dugout-dense-table td[data-book-state=agreement]{background:rgba(34,197,94,.07)!important}.dugout-dense-table td[data-book-state=disagreement]{background:rgba(245,158,11,.08)!important}
         /* Direct-child combinators only — the expanded drilldown row's own
            <td colSpan={99}> is a direct child of this table's tbody, but the
            nested pitch-mix/matchup tables inside it are many levels further

@@ -127,6 +127,14 @@ test('comparison and park surfaces use deliberate high-contrast heat treatments'
   assert.ok(parkSource.includes('color:#f8fafc'))
 })
 
+test('market cells use one movement indicator and a readable opening-price label', () => {
+  assert.ok(source.includes('<span>OPEN</span>'))
+  assert.ok(source.includes('aria-label={`Opening price ${oStr(openOdds)}`}'))
+  assert.match(source, /\.dg-market-open\{[^}]*color:#b8c3d4[^}]*font-size:7\.5px/)
+  assert.doesNotMatch(source, /td\[data-market-move=shorter\]::after/)
+  assert.doesNotMatch(source, /td\[data-market-move=longer\]::after/)
+})
+
 test('public scoring surfaces use SlipSurge Score branding instead of Index', () => {
   assert.ok(source.includes('SlipSurgeScoreLabel'))
   assert.ok(source.includes("mechanics_index: 'SlipSurge Score'"))
