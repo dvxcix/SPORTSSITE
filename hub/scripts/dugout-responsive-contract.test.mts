@@ -4,6 +4,7 @@ import test from 'node:test'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline } from '../src/lib/dugoutPresentation.ts'
 
 const source = readFileSync(new URL('../src/components/dugout/DugoutClient.tsx', import.meta.url), 'utf8')
+const parkSource = readFileSync(new URL('../src/components/dugout/GameWeatherCard.tsx', import.meta.url), 'utf8')
 const pageStyles = readFileSync(new URL('../src/app/dugout/dugout-page.module.css', import.meta.url), 'utf8')
 
 test('Dugout workspace fluidly fills ultrawide displays', () => {
@@ -76,4 +77,20 @@ test('presets never write member column preferences', () => {
   assert.ok(start > 0 && end > start)
   assert.equal(presetImplementation.includes('saveColumnPrefs'), false)
   assert.equal(presetImplementation.includes('setColumnPrefsState'), false)
+})
+
+test('mobile composition stays singular, dock-safe, and readable', () => {
+  assert.match(source, /\.dugout-command-navigation,\.dugout-command-matchup\{display:none\}/)
+  assert.match(source, /\.dugout-jump-menu\{display:none!important\}/)
+  assert.match(source, /inset:auto 6px var\(--mobile-dock-clearance\) 6px/)
+  assert.match(source, /\.dg-team-name\{[^}]*text-overflow:ellipsis/)
+})
+
+test('comparison and park surfaces use deliberate high-contrast heat treatments', () => {
+  assert.ok(source.includes('function comparisonHeat'))
+  assert.ok(source.includes('dugout-compare-heat-grid'))
+  assert.ok(source.includes('comparedRows.map'))
+  assert.ok(parkSource.includes('dugout-park-card'))
+  assert.ok(parkSource.includes('dugout-weather-metrics'))
+  assert.ok(parkSource.includes('color:#f8fafc'))
 })

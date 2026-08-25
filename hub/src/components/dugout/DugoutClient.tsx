@@ -678,6 +678,25 @@ function heat(v: number | null, all: (number | null)[], dir: 'hi' | 'lo' = 'hi')
   return {}
 }
 
+// Comparison cards need to read at a glance, even with only two selected
+// players. The table heat helper intentionally waits for three values; this
+// comparison-specific scale is useful as soon as two values can be ranked.
+function comparisonHeat(v: number | null, all: (number | null)[], dir: 'hi' | 'lo' = 'hi'): React.CSSProperties {
+  if (v == null) return {}
+  const vals = all.filter((x): x is number => x != null && Number.isFinite(x))
+  if (vals.length < 2) return {}
+  const mn = Math.min(...vals), mx = Math.max(...vals)
+  if (mx === mn) return { borderColor: 'rgba(148,163,184,.22)' }
+  let t = (v - mn) / (mx - mn)
+  if (dir === 'lo') t = 1 - t
+  const hue = Math.round(t * 118)
+  return {
+    background: `linear-gradient(145deg,hsla(${hue},72%,40%,.24),hsla(${hue},72%,18%,.1))`,
+    borderColor: `hsla(${hue},82%,62%,.42)`,
+    boxShadow: `inset 0 1px 0 hsla(${hue},88%,72%,.09)`,
+  }
+}
+
 // rgb defaults to FanDuel blue — pass a book's own brand triplet (see
 // BookLogo.tsx) to color-code a column by which book it actually is,
 // instead of every odds column reading as "FanDuel blue" regardless of book.
@@ -1011,7 +1030,7 @@ function PlayerDrillDown({
           <div className="dg-inspector-arrows"><button type="button" onClick={onPrevious} aria-label="Previous player"><ChevronLeft size={16} /></button><button type="button" onClick={onNext} aria-label="Next player"><ChevronRight size={16} /></button></div>
         </div>
         <nav className="dg-inspector-tabs" aria-label="Player inspector sections">
-          {(['matchup', 'contact', 'park'] as const).map(value => <button key={value} type="button" aria-pressed={(tab ?? 'matchup') === value} onClick={() => onTabChange?.(value)}>{value === 'park' ? 'Park Projection' : value[0].toUpperCase() + value.slice(1)}</button>)}
+          {(['matchup', 'contact', 'park'] as const).map(value => <button key={value} type="button" aria-pressed={(tab ?? 'matchup') === value} onClick={() => onTabChange?.(value)}><span>{value === 'park' ? 'Park Projection' : value[0].toUpperCase() + value.slice(1)}</span><i>{value === 'park' ? 'Park' : value[0].toUpperCase() + value.slice(1)}</i></button>)}
         </nav>
       <div className={`dg-player-drilldown-grid inspector-${tab ?? 'matchup'}`} style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
 
@@ -2366,7 +2385,7 @@ const STATCAST_WINDOW_LABEL: Record<'l1' | 'l3' | 'l5' | 'l10', string> = { l1: 
 // state (lifted to DugoutClient) behind both team sections' copies of it.
 function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' | 'l10'; onChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="dugout-window-toggle" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
       <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: 0.4, textTransform: 'uppercase', padding: '0 6px 0 4px' }}>Statcast</span>
       {(['l1', 'l3', 'l5', 'l10'] as const).map(w => (
         <button
@@ -2379,7 +2398,7 @@ function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' |
             color: value === w ? 'var(--accent)' : 'var(--text-2)',
           }}
         >
-          {STATCAST_WINDOW_LABEL[w]}
+          <span>{STATCAST_WINDOW_LABEL[w]}</span><i>{w.toUpperCase()}</i>
         </button>
       ))}
     </div>
@@ -3728,10 +3747,10 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         background: teamBannerGradient(side === 'home' ? game.homeAbbr : game.awayAbbr),
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <div className="dg-team-identity" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <button type="button" className="dg-team-collapse" onClick={() => toggleTeamCollapsed(abbr)} aria-expanded={!collapsedTeams.has(abbr)} aria-label={`${collapsedTeams.has(abbr) ? 'Expand' : 'Collapse'} ${abbr}`}><ChevronUp size={15} /></button>
         <TeamLogo abbr={abbr} size={28} />
-        <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
+        <span className="dg-team-name" style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
         {side === 'home' && !game.homeLineupConfirmed && (
           <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
             {game.homeLineup?.[0]?.projected ? 'PROJECTED' : 'UNCONFIRMED'}
@@ -3915,7 +3934,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <span><TeamLogo abbr={game.homeAbbr} size={32} /><strong>{game.homeAbbr}</strong></span>
           <em data-status={matchupStatus.toLowerCase()}>{matchupStatus}</em>
         </div>
-        <div className="dugout-command-primary"><StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} /><button type="button" onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><BarChart3 size={14} /> {viewPreset[0].toUpperCase() + viewPreset.slice(1)}</button><button type="button" onClick={onOpenColumns}><Settings2 size={14} /> Columns</button><button type="button" onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><Sparkles size={14} /> Tools <small>{gameWatchlistItems.length + matrixCount}</small></button><button type="button" onClick={() => setShowGlossary(true)} aria-label="Open glossary">?</button></div>
+        <div className="dugout-command-primary"><StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} /><button type="button" aria-label={`Select view preset, currently ${viewPreset}`} onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><BarChart3 size={14} /><span>{viewPreset[0].toUpperCase() + viewPreset.slice(1)}</span></button><button type="button" aria-label="Customize columns" onClick={onOpenColumns}><Settings2 size={14} /><span>Columns</span></button><button type="button" aria-label="Open board tools" onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><Sparkles size={14} /><span>Tools</span><small>{gameWatchlistItems.length + matrixCount}</small></button><button type="button" onClick={() => setShowGlossary(true)} aria-label="Open glossary">?</button></div>
         {showTools && <div className="dugout-tools-popover"><div className="dugout-tools-presets">{(['signal', 'market', 'power', 'props', 'all', 'custom'] as const).map(preset => <button key={preset} type="button" aria-pressed={viewPreset === preset} onClick={() => setViewPreset(preset)}>{preset[0].toUpperCase() + preset.slice(1)}</button>)}</div>{modeButtons}<button type="button" onClick={() => setCompareOpen(value => !value)}>{compareOpen ? 'Hide' : 'Show'} comparison</button></div>}
       </section>
       <section className="dugout-intelligence-strip" aria-label="Game intelligence">
@@ -3945,7 +3964,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <em>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures · ${selectedTimelineLabel}` : 'Open / latest only'}</em>
         </label>
       </section>
-      <nav className="dugout-timeline-phases" aria-label="Market timeline phases">{timelinePhaseIndices.map(phase => <button key={phase.label} type="button" aria-pressed={selectedTimelineIndex === phase.index} onClick={() => chooseTimelineIndex(phase.index)}>{phase.label}</button>)}</nav>
+      <nav className="dugout-timeline-phases" data-count={timelinePhaseIndices.length} aria-label="Market timeline phases">{timelinePhaseIndices.map(phase => <button key={phase.label} type="button" aria-pressed={selectedTimelineIndex === phase.index} onClick={() => chooseTimelineIndex(phase.index)}>{phase.label}</button>)}</nav>
       {activeSortKeys.length > 0 && (
         <div className="dugout-redundant-sort-summary" aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
@@ -4020,7 +4039,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       <nav className="dugout-board-nav" aria-label="Board minimap">
         {(['start', 'home', 'away', 'end'] as const).map(stop => (
           <button key={stop} type="button" onClick={() => scrollBoardToStop(stop)} disabled={(stop === 'start' && !horizontalState.canGoLeft) || (stop === 'end' && !horizontalState.canGoRight)}>
-            {stop === 'start' && <ChevronLeft size={12} aria-hidden="true" />}{stop[0].toUpperCase() + stop.slice(1)}{stop === 'end' && <ChevronRight size={12} aria-hidden="true" />}
+            {stop === 'start' && <ChevronLeft size={12} aria-hidden="true" />}{stop === 'home' ? <><TeamLogo abbr={game.homeAbbr} size={18} /><span>{game.homeAbbr}</span></> : stop === 'away' ? <><TeamLogo abbr={game.awayAbbr} size={18} /><span>{game.awayAbbr}</span></> : <span>{stop[0].toUpperCase() + stop.slice(1)}</span>}{stop === 'end' && <ChevronRight size={12} aria-hidden="true" />}
           </button>
         ))}
         <div className="dugout-board-progress" aria-label={`Board position ${Math.round(horizontalState.progress)} percent`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(horizontalState.progress)}><i style={{ width: `${Math.max(3, horizontalState.progress)}%` }} /></div>
@@ -4151,7 +4170,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <span><strong>Compare</strong><small>{comparedRows.length}/4 · {selectedTimelineLabel}{marketTimeline.length > 1 ? ` · ${marketHistorySourceCount || marketTimeline.length} captures` : ''}</small></span>
           <button type="button" onClick={() => setComparedKeys([])}>Clear</button>
         </div>
-        <div className="dugout-compare-grid">
+        <div className="dugout-compare-grid" data-count={comparedRows.length}>
           {comparedRows.map(row => {
             const timelineRow = withTimelinePrices(row)
             const pitchLabel = row.hit_pitch_profile.highUsageTraps[0]?.split(' ')[0]
@@ -4164,9 +4183,19 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                 <button type="button" aria-label={`Remove ${row.name} from comparison`} onClick={() => toggleCompared(row)}>×</button>
               </div>
               <div className="dugout-compare-windows" aria-label={`${row.name} mechanics scores by window`}>
-                {(['l1', 'l3', 'l5', 'l10'] as const).map(window => <span key={window}><small>{window.toUpperCase()}</small><strong>{row.mechanics_windows[window]?.index != null ? Math.round(row.mechanics_windows[window]!.index) : '—'}</strong></span>)}
+                {(['l1', 'l3', 'l5', 'l10'] as const).map(window => { const value = row.mechanics_windows[window]?.index ?? null; return <span key={window} style={comparisonHeat(value, comparedRows.map(item => item.mechanics_windows[window]?.index ?? null))}><small>{window.toUpperCase()}</small><strong>{value != null ? Math.round(value) : '-'}</strong></span> })}
               </div>
-              <div className="dugout-compare-stats">
+              <div className="dugout-compare-heat-grid">
+                <span style={comparisonHeat(row.mechanics_index, comparedRows.map(item => item.mechanics_index))}><small>INDEX · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '-'}</strong><i>#{row.mechanics_rank ?? '-'} / 18</i></span>
+                <span style={comparisonHeat(toImpl(timelineRow.fhr_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).fhr_fd)))}><small>FHR</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
+                <span style={comparisonHeat(toImpl(timelineRow.sa_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).sa_fd)))}><small>HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
+                <span style={comparisonHeat(row.hit_score, comparedRows.map(item => item.hit_score))}><small>HIT READ</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '-'}</strong><i>{row.hit_status}</i></span>
+                <span style={comparisonHeat(row.m_div_f != null ? -Math.abs(row.m_div_f - 1) : null, comparedRows.map(item => item.m_div_f != null ? -Math.abs(item.m_div_f - 1) : null))}><small>BOOK SPLIT</small><strong>{f2(timelineRow.m_div_f)}</strong><i>FD {oStr(timelineRow.sa_fd)} · MGM {oStr(timelineRow.sa_mgm)}</i></span>
+                <span style={comparisonHeat(row.matchup_edge, comparedRows.map(item => item.matchup_edge))}><small>PITCH FIT · {pitchLabel}</small><strong>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '-'}</strong><i>{row.recent_pitch_count ?? 0} recent pitches</i></span>
+                <span style={comparisonHeat(row.d_brl, comparedRows.map(item => item.d_brl))}><small>CONTACT SHIFT</small><strong>{dlt(row.d_brl)}</strong><i>HH {dlt(row.d_hh)} · EV {dlt(row.d_ev)}</i></span>
+                <span style={comparisonHeat(row.r_pa, comparedRows.map(item => item.r_pa))}><small>PROJECTED BATTED BALL</small><strong>{row.r_pa != null ? `${(row.r_pa * 100).toFixed(0)}% pull-air` : '-'}</strong><i>FB {row.r_fb != null ? `${(row.r_fb * 100).toFixed(0)}%` : '-'} · LA {f1(row.r_la)}°</i></span>
+              </div>
+              <div className="dugout-compare-stats is-legacy">
                 <span><small>INDEX · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong><i>#{row.mechanics_rank ?? '—'} / 18</i></span>
                 <span><small>FHR</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
                 <span><small>HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
@@ -4747,7 +4776,7 @@ export function DugoutClient({ date }: { date: string }) {
         {/* Per-account column customization — applies across every game's
             table below, not just the active one, so it lives up here at
             the page level rather than inside GameTable's per-game toolbar. */}
-        <button className="dugout-summary-action" onClick={() => setShowColumnPanel(true)} style={{
+        <button className="dugout-summary-action dugout-columns-launch" onClick={() => setShowColumnPanel(true)} style={{
           minHeight: 36, display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9, marginLeft: 'auto',
           border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)',
           fontSize: 12, fontWeight: 800, cursor: 'pointer',
@@ -4917,6 +4946,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-board-enter{--dg-control-h:38px;color:var(--text-1);font-variant-numeric:tabular-nums}
         .dugout-command-bar{position:sticky;top:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;margin-bottom:7px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(18px);box-shadow:0 12px 34px rgba(0,0,0,.24)}
         .dugout-command-navigation,.dugout-command-primary{display:flex;align-items:center;gap:5px;min-width:max-content}
+        .dugout-window-toggle i,.dg-inspector-tabs i{display:none;font-style:normal}
         .dugout-command-navigation button,.dugout-command-primary>button,.dugout-tools-popover button{min-height:var(--dg-control-h);display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);font-size:11px;font-weight:850;cursor:pointer}
         .dugout-command-navigation button:not(.dugout-all-games){width:var(--dg-control-h);padding:0}
         .dugout-command-navigation button:disabled{opacity:.4;cursor:default}
@@ -5044,6 +5074,12 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-compare-stats small{color:var(--text-4);font-size:7px;font-weight:900;letter-spacing:.06em}
         .dugout-compare-stats strong{color:var(--text-1);font-family:var(--font-mono,monospace);font-size:10px;font-weight:850;white-space:nowrap}
         .dugout-compare-stats i{color:var(--text-4);font-style:normal;font-size:8px}
+        .dugout-compare-stats.is-legacy{display:none}
+        .dugout-compare-heat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
+        .dugout-compare-heat-grid>span{display:grid;gap:2px;min-width:0;padding:7px;border:1px solid transparent;border-radius:8px;background:var(--surface-2);transition:transform 140ms ease,border-color 140ms ease}
+        .dugout-compare-heat-grid small{overflow:hidden;color:#cbd5e1;font-size:7px;font-weight:950;letter-spacing:.055em;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-compare-heat-grid strong{color:#f8fafc;font-family:var(--font-mono,monospace);font-size:11px;font-weight:900;white-space:nowrap}
+        .dugout-compare-heat-grid i{overflow:hidden;color:#94a3b8;font-size:8px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
         .dugout-glossary-backdrop{position:fixed;inset:0;z-index:1400;display:flex;justify-content:flex-end;padding:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(7px)}
         .dugout-glossary{width:min(430px,100%);height:100%;overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.62)}
         .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
@@ -5072,21 +5108,30 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-board-enter .dg-player-drilldown{width:392px}
         }
         @media(max-width:640px){
-          .dugout-board-enter{--dg-control-h:44px}
+          .dugout-board-enter{--dg-control-h:38px;max-width:100%;overflow:visible}
           .dugout-board-enter.has-inspector{padding-right:0}
-          .dugout-command-bar{top:0;display:grid;grid-template-columns:auto 1fr;min-height:96px;padding:7px;gap:6px 8px;border-radius:10px;overflow:visible}
-          .dugout-command-bar::-webkit-scrollbar{display:none}
-          .dugout-command-navigation{grid-column:1;grid-row:1}.dugout-all-games{padding:0 8px!important}.dugout-command-navigation button:not(.dugout-all-games){width:40px}
-          .dugout-command-matchup{grid-column:2;grid-row:1;justify-self:end;padding-right:2px}
-          .dugout-command-primary{grid-column:1/-1;grid-row:2;width:100%;overflow-x:auto;scrollbar-width:none}.dugout-command-primary::-webkit-scrollbar{display:none}.dugout-command-primary>*{flex:0 0 auto}.dugout-command-primary>button{min-height:44px}
-          .dugout-command-matchup>span strong{display:none}
-          .dugout-command-matchup>em{display:none}
-          .dugout-tools-popover{position:fixed;left:8px;right:8px;top:112px;max-width:none;overflow-x:auto}
-          .dugout-intelligence-strip{display:flex;gap:1px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none}
-          .dugout-intelligence-strip::-webkit-scrollbar{display:none}
-          .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:128px;min-height:52px;scroll-snap-align:start}
-          .dugout-market-snapshot{min-width:210px}
-          .dugout-timeline-phases button,.dugout-group-nav button{min-height:44px;padding:0 13px;font-size:11px}
+          .dugout-command-bar{position:relative;top:auto;display:block;min-height:0;padding:6px;margin-bottom:5px;border-radius:11px;overflow:visible}
+          .dugout-command-navigation,.dugout-command-matchup{display:none}
+          .dugout-command-primary{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,38px);gap:4px;width:100%;min-width:0;overflow:visible}
+          .dugout-command-primary>*{min-width:0}
+          .dugout-command-primary>button{width:38px;min-height:38px;padding:0}
+          .dugout-command-primary>button>span{display:none}
+          .dugout-command-primary>button small{position:absolute;top:-3px;right:-2px;display:grid;place-items:center;min-width:15px;height:15px;padding:0 3px;border:1px solid var(--surface);border-radius:999px;background:var(--accent);color:#08100a;font-size:7px}
+          .dugout-window-toggle{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px!important;width:100%;padding:2px!important}
+          .dugout-window-toggle>span{display:none}
+          .dugout-window-toggle button{min-width:0!important;min-height:32px;padding:0 3px!important}
+          .dugout-window-toggle button span{display:none}.dugout-window-toggle button i{display:inline;font-size:9px;font-style:normal;font-weight:950}
+          .dugout-tools-popover{position:absolute;left:0;right:0;top:calc(100% + 5px);display:grid;grid-template-columns:1fr;max-width:none;overflow:visible;padding:8px}
+          .dugout-tools-popover>.dugout-mode-buttons{overflow-x:auto}.dugout-tools-popover>button{width:100%}
+          .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin-bottom:5px;overflow:hidden}
+          .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:0;min-height:48px;padding:7px 8px}
+          .dugout-intelligence-strip>span:nth-child(3),.dugout-intelligence-strip>span:nth-child(4),.dugout-intelligence-strip>span:nth-child(6),.dugout-intelligence-strip>span:nth-child(7){display:none}
+          .dugout-weather-summary,.dugout-market-snapshot{grid-column:1/-1}
+          .dugout-intelligence-strip small{font-size:8px}.dugout-intelligence-strip strong{font-size:10px}.dugout-intelligence-strip em{font-size:8px}
+          .dugout-market-snapshot>span{gap:5px}.dugout-market-snapshot em{display:none}
+          .dugout-timeline-phases[data-count="0"],.dugout-timeline-phases[data-count="1"],.dugout-timeline-phases[data-count="2"]{display:none}
+          .dugout-timeline-phases button,.dugout-group-nav button{min-height:34px;padding:0 10px;font-size:9px}
+          .dugout-jump-menu{display:none!important}
           .dugout-desktop-minimap{display:none}
           .dugout-redundant-sort-summary{flex-wrap:nowrap!important;overflow-x:auto;min-height:38px;margin-bottom:5px!important;padding:5px 7px!important;scrollbar-width:none}
           .dugout-redundant-sort-summary::-webkit-scrollbar{display:none}
@@ -5099,43 +5144,54 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-mode-buttons button{min-height:34px!important;min-width:34px}
           .dugout-compare-toggle{width:24px;height:24px;border-radius:7px;font-size:14px}
           .dugout-compare-tray{margin-top:7px;padding:8px;border-radius:10px}
-          .dugout-compare-grid{display:flex;gap:7px;padding-bottom:2px;scroll-snap-type:x proximity}
-          .dugout-compare-card{min-width:min(248px,78vw);scroll-snap-align:start}
+          .dugout-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-bottom:2px;overflow:visible}
+          .dugout-compare-grid[data-count="1"]{grid-template-columns:minmax(0,1fr)}
+          .dugout-compare-grid[data-count="3"],.dugout-compare-grid[data-count="4"]{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(162px,44vw);overflow-x:auto;scroll-snap-type:x proximity}
+          .dugout-compare-card{min-width:0;padding:7px;scroll-snap-align:start}
           .dugout-compare-player strong{font-size:11px}
-          .dugout-compare-stats strong{font-size:11px}
+          .dugout-compare-player small{overflow:hidden;text-overflow:ellipsis}.dugout-compare-player button{width:22px;height:22px}
+          .dugout-compare-windows{gap:3px}.dugout-compare-windows>span{padding:4px 1px}.dugout-compare-windows strong{font-size:9px}
+          .dugout-compare-heat-grid{grid-template-columns:minmax(0,1fr);gap:5px}.dugout-compare-heat-grid>span{padding:6px}.dugout-compare-heat-grid strong{font-size:10px}
           .dugout-summary-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;margin-bottom:7px!important}
           .dugout-summary-action{width:100%!important;min-width:0!important;min-height:34px!important;margin-left:0!important;padding:5px 8px!important;justify-content:center!important;gap:5px!important;font-size:10px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis}
           .dugout-summary-action > span{min-width:0;flex-shrink:1;padding-left:5px!important;padding-right:5px!important}
           .dugout-summary-action svg{width:13px;height:13px;flex:0 0 13px}
+          .dugout-columns-launch{display:none!important}
           .dugout-game-selector{margin-bottom:7px!important}
           .dugout-game-rail{display:none!important}
           .dugout-games-label{display:none}
           .dugout-active-matchup{display:inline-flex}
-          .dugout-board-nav{position:sticky;top:101px;z-index:40;display:grid;grid-template-columns:repeat(4,1fr);min-height:53px;margin-bottom:5px!important;padding:5px 7px!important;gap:4px!important;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(16px)}
-          .dugout-board-nav button{min-height:44px;padding:3px 5px;font-size:10px}
+          .dugout-board-nav{position:relative;top:auto;z-index:4;display:grid;grid-template-columns:repeat(4,1fr);min-height:0;margin-bottom:5px!important;padding:4px!important;gap:3px!important;background:color-mix(in srgb,var(--surface) 96%,transparent)}
+          .dugout-board-nav button{min-height:34px;padding:2px 4px;font-size:9px}.dugout-board-nav button img{width:17px!important;height:17px!important}
           .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:auto!important;border-radius:8px!important;scroll-padding-top:36px}
           .dg-team-banner{position:static!important}
-          .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:max-content!important;min-height:38px}
+          .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:calc(100vw - 24px)!important;min-height:38px;overflow:hidden}
+          .dg-team-identity{width:100%;overflow:hidden}.dg-team-name{min-width:0;max-width:26vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dg-team-identity>a{min-width:0;max-width:46vw;overflow:hidden}
           .dugout-dense-table{font-size:12px!important}
           .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
-          .dg-sticky-col{width:190px!important;min-width:190px!important;max-width:190px!important}
-          .dg-player-cell-inner{gap:7px!important;padding:6px 5px!important;min-height:48px}
+          .dg-sticky-col{width:208px!important;min-width:208px!important;max-width:208px!important}
+          .dg-player-cell-inner{gap:6px!important;padding:6px 5px!important;min-height:52px}
           .dg-player-copy{font-size:11px!important;overflow:hidden}
           .dg-player-name{font-size:13px!important;line-height:1.25!important}
+          .dg-player-cell-inner>a img,.dg-player-cell-inner>img{width:32px!important;height:32px!important}
+          .dugout-compare-toggle{width:22px;height:22px}
           .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
           .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
-          .dugout-board-enter .dg-player-drilldown{position:fixed;inset:auto 0 0 0;width:100vw;max-width:100vw;max-height:min(84dvh,860px);padding:12px;border-width:1px 0 0;border-radius:18px 18px 0 0;background:color-mix(in srgb,var(--surface) 98%,transparent);box-sizing:border-box}
+          .dugout-board-enter .dg-player-drilldown{position:fixed;inset:auto 6px var(--mobile-dock-clearance) 6px;width:auto;max-width:none;max-height:calc(100dvh - var(--mobile-dock-clearance) - 42px);overflow-x:hidden;overflow-y:auto;padding:11px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));border-radius:18px;background:color-mix(in srgb,var(--surface) 99%,transparent);box-sizing:border-box}
           .dugout-board-enter .dg-player-drilldown::before{content:"";display:block;width:40px;height:4px;margin:0 auto 9px;border-radius:99px;background:var(--text-4);opacity:.65}
-          .dg-player-drilldown-head{display:flex!important;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+          .dg-player-drilldown-head{position:sticky!important;top:-11px!important;z-index:5;display:flex!important;align-items:center;justify-content:space-between;gap:10px;margin:-11px -11px 8px!important;padding:11px!important;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 99%,transparent)!important}
           .dg-player-drilldown-head > span{display:grid;gap:2px;min-width:0;color:var(--text-1);font-size:12px}
           .dg-player-drilldown-head small{color:var(--text-3);font-size:9px;font-weight:650}
           .dg-player-drilldown-head button{min-height:34px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--accent);font-size:10px;font-weight:850}
           .dg-player-drilldown-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important;width:100%!important}
-          .dg-drilldown-section{width:100%!important;min-width:0!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain}
+          .dg-drilldown-section{width:100%!important;min-width:0!important;max-width:100%!important;overflow:visible!important}
           .dg-drilldown-section > *{max-width:100%}
+          .dg-inspector-summary{grid-template-columns:auto minmax(0,1fr) auto;gap:7px;padding:7px}.dg-inspector-summary>span{gap:1px 5px}.dg-inspector-arrows button{width:32px;height:32px}
+          .dg-inspector-tabs{top:52px;gap:3px;margin-bottom:8px;padding:3px}.dg-inspector-tabs button{min-height:34px;font-size:9px}.dg-inspector-tabs button span{display:none}.dg-inspector-tabs button i{display:inline}
+          .dg-tracking-section>div[style*="display: flex"]{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px!important}
           .dg-team-banner-content button{min-height:34px!important;min-width:34px}
           .dg-team-banner-content a{min-height:34px;display:inline-flex!important;align-items:center}
-          .dg-team-summary{max-width:calc(100vw - 18px);overflow-x:auto}.dg-team-summary>span{min-width:104px}.dg-team-banner-content{align-items:flex-start!important;flex-direction:column!important;width:100%!important}
+          .dg-team-summary{width:100%;max-width:100%;overflow-x:auto}.dg-team-summary>span{min-width:92px}.dg-team-banner-content{align-items:flex-start!important;flex-direction:column!important}
           .dugout-modal-backdrop{align-items:flex-end!important;padding:0!important;overscroll-behavior:contain}
           .dugout-mobile-sheet{position:relative;width:100%!important;min-width:0!important;max-width:100%!important;max-height:calc(100dvh - 72px)!important;resize:none!important;border-radius:18px 18px 0 0!important;border-bottom:0!important;padding-bottom:max(12px,env(safe-area-inset-bottom));box-shadow:0 -18px 60px rgba(0,0,0,.58)!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
           .dugout-mobile-sheet::before{content:"";display:block;position:absolute;top:7px;left:50%;z-index:5;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.65}

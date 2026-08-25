@@ -96,11 +96,13 @@ export function GameWeatherCard({
     : hrWeather.color
 
   return (
-    <div style={{ minWidth: 200 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', marginBottom: 6 }}>
-        BALLPARK
-      </div>
-
+    <section className="dugout-park-card" style={{ ['--park-primary' as string]: teamPrimary, ['--park-secondary' as string]: teamSecondary }}>
+      <header className="dugout-park-card-head">
+        <span>PARK PROJECTION</span>
+        <strong>{game.park.name}</strong>
+        <small>{sprayRows.length ? selectionLabel : `${game.homeAbbr} field conditions`}</small>
+      </header>
+      <div className="dugout-park-visual">
       {sprayRows.length > 0 ? (
         <BattedBallSprayChart
           rows={sprayRows}
@@ -121,7 +123,7 @@ export function GameWeatherCard({
           its container - sizing this wrapper to that same constant (not an
           arbitrary smaller box) is what keeps the wind streaks inside the
           park outline instead of overflowing it. */}
-      <div style={{ position: 'relative', width: WIND_CANVAS_SIZE, height: WIND_CANVAS_SIZE, margin: '0 auto' }}>
+      <div className="dugout-park-canvas" style={{ position: 'relative', width: WIND_CANVAS_SIZE, height: WIND_CANVAS_SIZE, margin: '0 auto' }}>
         <div style={isSheltered ? { position: 'absolute', inset: 0, filter: 'grayscale(1) brightness(0.55)' } : { position: 'absolute', inset: 0 }}>
           <ParkShape primary={teamPrimary} secondary={teamSecondary} teamAbbr={game.homeAbbr} />
           {logoUrl && (
@@ -149,29 +151,29 @@ export function GameWeatherCard({
       </div>
       </>
       )}
-      <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>{game.park.name}</div>
+      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 4 }}>
-        <div>
+      <div className="dugout-weather-metrics" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 4 }}>
+        <div className="is-wind">
           <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>WIND</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.windMph != null ? `${h.windMph.toFixed(1)} mph` : '—'}</div>
           <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} to ${dirs.to}` : '—'}</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div className="is-temp" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>TEMP</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.tempF != null ? `${Math.round(h.tempF)}°F` : '—'}</div>
           <div style={{ fontSize: 9, color: 'var(--text-3)', maxWidth: '11ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {h?.weatherCode != null ? WMO_LABELS[h.weatherCode] ?? '—' : '—'}
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div className="is-humidity" style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>HUMIDITY</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.humidity != null ? `${Math.round(h.humidity)}%` : '—'}</div>
         </div>
       </div>
 
       <Tooltip content={hrWeather.label}>
-        <div style={{
+        <div className="dugout-weather-score" style={{
           marginTop: 6, padding: '5px 8px', borderRadius: 8, textAlign: 'center', cursor: 'help',
           background: hrWeatherBg, border: `1px solid ${hrWeather.color}`,
         }}>
@@ -181,6 +183,23 @@ export function GameWeatherCard({
           </span>
         </div>
       </Tooltip>
-    </div>
+      <style jsx>{`
+        .dugout-park-card{width:100%;min-width:0;overflow:hidden;border:1px solid rgba(148,163,184,.24);border-radius:16px;background:linear-gradient(155deg,#0b1420 0%,#071019 52%,#090f17 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 18px 46px rgba(0,0,0,.28);color:#f8fafc}
+        .dugout-park-card-head{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:13px 14px;border-bottom:1px solid rgba(148,163,184,.18);background:linear-gradient(90deg,color-mix(in srgb,var(--park-primary) 20%,#0b1420),#0b1420 72%)}
+        .dugout-park-card-head span{grid-column:1;color:#b4ff4d;font-size:9px;font-weight:950;letter-spacing:.12em}
+        .dugout-park-card-head strong{grid-column:1;overflow:hidden;color:#f8fafc;font-size:14px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-park-card-head small{grid-column:2;grid-row:1/3;align-self:center;max-width:170px;overflow:hidden;color:#cbd5e1;font-size:9px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-park-visual{position:relative;display:grid;place-items:center;min-height:232px;overflow:hidden;padding:10px;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--park-primary) 20%,transparent),transparent 58%),linear-gradient(180deg,rgba(15,23,42,.7),rgba(2,6,23,.86))}
+        .dugout-park-canvas{max-width:100%;transform-origin:center}
+        .dugout-weather-metrics{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px!important;margin:0!important;padding:10px 10px 0}
+        .dugout-weather-metrics>div{min-width:0;padding:9px 10px;border:1px solid rgba(148,163,184,.18);border-radius:10px;background:rgba(15,23,42,.72);text-align:left!important}
+        .dugout-weather-metrics>div>div:first-child{color:#94a3b8!important;font-size:8px!important;font-weight:950!important;letter-spacing:.1em!important}
+        .dugout-weather-metrics>div>div:nth-child(2){margin-top:3px;color:#f8fafc!important;font-size:14px!important;font-weight:900!important}
+        .dugout-weather-metrics>div>div:nth-child(3){margin-top:2px;color:#cbd5e1!important;font-size:9px!important}
+        .dugout-weather-score{display:flex;align-items:center;justify-content:center;gap:7px;margin:8px 10px 10px!important;min-height:42px;padding:7px 10px!important;border-radius:10px!important;background:rgba(15,23,42,.82)!important}
+        .dugout-weather-score span:first-child{color:#cbd5e1!important;font-size:9px!important;font-weight:950!important;letter-spacing:.08em!important}
+        @media(max-width:640px){.dugout-park-card{border-radius:13px}.dugout-park-card-head{grid-template-columns:minmax(0,1fr);padding:11px 12px}.dugout-park-card-head small{grid-column:1;grid-row:auto;max-width:none}.dugout-park-visual{min-height:205px;padding:6px}.dugout-park-canvas{transform:scale(.9)}.dugout-weather-metrics{gap:5px!important;padding:8px 8px 0}.dugout-weather-metrics>div{padding:8px 7px}.dugout-weather-metrics>div>div:nth-child(2){font-size:12px!important}.dugout-weather-score{margin:7px 8px 8px!important}}
+      `}</style>
+    </section>
   )
 }
