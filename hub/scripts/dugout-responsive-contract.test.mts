@@ -88,6 +88,28 @@ test('mobile composition stays singular, dock-safe, and readable', () => {
   assert.match(source, /\.dg-team-name\{[^}]*text-overflow:ellipsis/)
 })
 
+test('player analysis is a true accessible modal instead of a shrinking side rail', () => {
+  assert.ok(source.includes('dg-player-drilldown-backdrop'))
+  assert.ok(source.includes('role="dialog"'))
+  assert.ok(source.includes('aria-modal="true"'))
+  assert.ok(source.includes("document.body.style.overflow = 'hidden'"))
+  assert.match(source, /\.dugout-board-enter\.has-inspector\{padding-right:0\}/)
+  assert.match(source, /\.dugout-board-enter \.dg-player-drilldown\{[^}]*top:50%;left:50%/)
+  assert.match(source, /width:min\(1180px,calc\(100vw - 48px\)\)/)
+  assert.match(source, /transform:translate\(-50%,-50%\)/)
+})
+
+test('game intelligence and lineup navigation explain themselves visually', () => {
+  assert.ok(source.includes('Lineup quick jump'))
+  assert.ok(source.includes('Select a batter to move directly to their row.'))
+  assert.ok(source.includes('SlipSurge Score ${Math.round(score)}'))
+  assert.ok(source.includes('Jump to player row'))
+  assert.match(source, /\.dugout-intelligence-strip\{[^}]*grid-template-columns:repeat\(12,minmax\(0,1fr\)\)/)
+  assert.ok(source.includes('content:"Starting matchup"'))
+  assert.ok(source.includes('content:"HR + team win"'))
+  assert.ok(source.includes('content:"Your saved reads"'))
+})
+
 test('comparison and park surfaces use deliberate high-contrast heat treatments', () => {
   assert.ok(source.includes('function comparisonHeat'))
   assert.ok(source.includes('dugout-compare-heat-grid'))

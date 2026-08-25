@@ -43,8 +43,8 @@ export function GameWeatherSummary({ gamePk, date, venue }: { gamePk: string; da
   const temperature = hour?.tempF != null ? `${Math.round(hour.tempF)}°F` : null
 
   return (
-    <span className="dugout-weather-summary">
-      <small>PARK / WEATHER</small>
+    <span className="dugout-weather-summary" data-tone="weather">
+      <small>BALLPARK CONDITIONS</small>
       <strong>{game?.park.name || venue || 'Ballpark pending'}</strong>
       <em>{[temperature, conditions].filter(Boolean).join(' · ')}</em>
     </span>
