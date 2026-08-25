@@ -21,6 +21,7 @@
     "test:fanduel-markets": "node --experimental-strip-types scripts/fanduel-market-regression.mts",
     "test:fanduel-archive": "node --experimental-strip-types scripts/fanduel-archive-regression.mts",
     "test:player-identity": "node --experimental-strip-types scripts/player-identity-regression.mts",
+    "test:dugout-columns": "node --experimental-strip-types --test scripts/dugout-column-prefs.test.mts",
     "test:statcast-mappers": "node scripts/statcast-mapper-contract.test.mjs",
     "test:hr-mechanics": "node --test scripts/hr-mechanics-priors.test.mjs",
     "test:statcast-mechanics-readiness": "tsx --test scripts/statcast-mechanics-readiness.test.mts",
