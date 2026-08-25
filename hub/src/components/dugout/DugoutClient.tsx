@@ -1102,6 +1102,7 @@ function PlayerDrillDown({
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
+    document.body.classList.add('ss-modal-open')
     document.body.style.overflow = 'hidden'
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose?.()
@@ -1109,6 +1110,7 @@ function PlayerDrillDown({
     window.addEventListener('keydown', closeOnEscape)
     return () => {
       document.body.style.overflow = previousOverflow
+      document.body.classList.remove('ss-modal-open')
       window.removeEventListener('keydown', closeOnEscape)
     }
   }, [onClose])

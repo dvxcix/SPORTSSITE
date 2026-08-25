@@ -96,6 +96,8 @@ test('player analysis is a true accessible modal instead of a shrinking side rai
   assert.ok(source.includes('role="dialog"'))
   assert.ok(source.includes('aria-modal="true"'))
   assert.ok(source.includes("document.body.style.overflow = 'hidden'"))
+  assert.ok(source.includes("document.body.classList.add('ss-modal-open')"))
+  assert.ok(source.includes("document.body.classList.remove('ss-modal-open')"))
   assert.ok(source.includes('createPortal(dialog, portalHost)'))
   assert.ok(source.includes('trapDialogFocus'))
   assert.ok(source.includes("dialogRef.current?.scrollTo({ top: 0"))
