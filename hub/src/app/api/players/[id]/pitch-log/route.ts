@@ -2,9 +2,46 @@ import { NextResponse } from 'next/server'
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireTier } from '@/lib/requireTier'
-import { fetchPlayerPitchRows, enrichPitchRows } from '@/lib/pitchLogFetch'
+import { fetchPlayerPitchRows, fetchPlayerSprayRows, enrichPitchRows } from '@/lib/pitchLogFetch'
+import { fetchMlbPartyRows } from '@/lib/mlbPartyServer'
 
 export const revalidate = 0
+
+type NearHrRow = {
+  game_pk: number
+  game_date: string
+  result: string | null
+  exit_velocity: number | null
+  launch_angle: number | null
+  hit_distance: number | null
+  hit_bearing: number | null
+  parks_hr_count: number | null
+  park_hr_list: string | null
+}
+
+type HomeRunDetailRow = {
+  game_pk: number
+  exit_velocity: number | null
+  launch_angle: number | null
+  hr_distance: number | null
+  parks: Record<string, boolean> | null
+  detail_source: 'savant' | 'canonical_pitch_log'
+}
+
+function sameBattedBall(
+  pitch: Record<string, unknown>,
+  detail: { game_pk: number; exit_velocity: number | null; launch_angle: number | null; hit_distance?: number | null; hr_distance?: number | null },
+) {
+  if (Number(pitch.game_pk) !== Number(detail.game_pk)) return false
+  const comparisons = [
+    [pitch.launch_speed, detail.exit_velocity, 0.25],
+    [pitch.launch_angle, detail.launch_angle, 0.25],
+    [pitch.hit_distance, detail.hit_distance ?? detail.hr_distance, 2],
+  ].filter(([, right]) => right != null)
+  return comparisons.length >= 2 && comparisons.every(([left, right, tolerance]) => (
+    left != null && Math.abs(Number(left) - Number(right)) <= Number(tolerance)
+  ))
+}
 
 // Same response for every caller who passes the tier gate (no per-user/
 // per-tier field shaping here, unlike /api/dugout/data) — safe to cache
@@ -27,35 +64,70 @@ const getCachedPitchLog = unstable_cache(
   async (mlbId: number) => {
     const admin = createAdminClient()
 
-    const [pitcherRows, batterRows] = await Promise.all([
+    const [pitcherRows, batterRows, sprayRows] = await Promise.all([
       fetchPlayerPitchRows(admin, mlbId, 'pitcher'),
       fetchPlayerPitchRows(admin, mlbId, 'batter'),
+      fetchPlayerSprayRows(admin, mlbId),
     ])
 
-    if (!pitcherRows.length && !batterRows.length) {
-      return { pitcherRows: [], batterRows: [] }
+    if (!pitcherRows.length && !batterRows.length && !sprayRows.length) {
+      return { pitcherRows: [], batterRows: [], sprayRows: [] }
     }
 
     const opponentIds = new Set<number>()
     pitcherRows.forEach(r => opponentIds.add(r.batter_id))
     batterRows.forEach(r => opponentIds.add(r.pitcher_id))
+    sprayRows.forEach(r => opponentIds.add(r.pitcher_id))
     const gamePks = new Set<string>()
     pitcherRows.forEach(r => gamePks.add(r.game_pk))
     batterRows.forEach(r => gamePks.add(r.game_pk))
+    sprayRows.forEach(r => gamePks.add(r.game_pk))
 
-    const [oppRes, gamesRes] = await Promise.all([
+    const firstDate = sprayRows.reduce<string | null>((oldest, row) => {
+      const value = String(row.game_date ?? '')
+      return value && (!oldest || value < oldest) ? value : oldest
+    }, null)
+
+    const [oppRes, gamesRes, nearHrRows, homeRunDetails] = await Promise.all([
       opponentIds.size ? admin.from('players').select('mlb_id, full_name, current_team_abbr').in('mlb_id', Array.from(opponentIds)) : Promise.resolve({ data: [] as { mlb_id: number; full_name: string | null; current_team_abbr: string | null }[] }),
-      gamePks.size ? admin.from('games').select('game_pk, day_night, venue_name').in('game_pk', Array.from(gamePks)) : Promise.resolve({ data: [] as { game_pk: string; day_night: string | null; venue_name: string | null }[] }),
+      gamePks.size ? admin.from('games').select('game_pk, day_night, venue_id, venue_name, home_team_id, home_team, away_team_id, away_team').in('game_pk', Array.from(gamePks)) : Promise.resolve({ data: [] as { game_pk: string; day_night: string | null; venue_id: number | null; venue_name: string | null; home_team_id: number | null; home_team: string | null; away_team_id: number | null; away_team: string | null }[] }),
+      firstDate ? fetchMlbPartyRows<NearHrRow>(
+        `/rest/v1/near_hrs?batter_id=eq.${mlbId}&game_date=gte.${encodeURIComponent(firstDate)}&select=game_pk,game_date,result,exit_velocity,launch_angle,hit_distance,hit_bearing,parks_hr_count,park_hr_list`,
+        { maxRows: 1000, revalidateSeconds: 86400 },
+      ).catch(() => [] as NearHrRow[]) : Promise.resolve([] as NearHrRow[]),
+      sprayRows.length ? admin.from('player_home_run_events')
+        .select('game_pk,exit_velocity,launch_angle,hr_distance,parks,detail_source')
+        .eq('batter_id', mlbId)
+        .order('game_date', { ascending: false }) : Promise.resolve({ data: [] as HomeRunDetailRow[] }),
     ])
-    const opponents = Object.fromEntries((oppRes.data ?? []).map(p => [p.mlb_id, p]))
-    const gameInfo = Object.fromEntries((gamesRes.data ?? []).map(g => [g.game_pk, g]))
+    const opponents = Object.fromEntries((oppRes.data ?? []).map((p: { mlb_id: number; full_name: string | null; current_team_abbr: string | null }) => [p.mlb_id, p])) as Record<number, { full_name: string | null; current_team_abbr: string | null }>
+    type GameInfoRow = { game_pk: string; day_night: string | null; venue_id: number | null; venue_name: string | null; home_team_id: number | null; home_team: string | null; away_team_id: number | null; away_team: string | null }
+    const gameInfo = Object.fromEntries((gamesRes.data ?? []).map((g: GameInfoRow) => [g.game_pk, g])) as Record<string, GameInfoRow>
+
+    const enrichedSprayRows = enrichPitchRows(sprayRows, 'pitcher_id', opponents, gameInfo).map(row => {
+      const near = nearHrRows.find((detail: NearHrRow) => sameBattedBall(row, detail)) ?? null
+      const homeRun = row.is_home_run
+        ? (homeRunDetails.data ?? []).find((detail: HomeRunDetailRow) => sameBattedBall(row, detail)) ?? null
+        : null
+      const parksHrCount = homeRun?.detail_source === 'savant' && homeRun.parks
+        ? Object.values(homeRun.parks).filter(Boolean).length
+        : near?.parks_hr_count ?? null
+      return {
+        ...row,
+        parks_hr_count: parksHrCount,
+        park_hr_list: near?.park_hr_list ?? null,
+        hit_bearing: near?.hit_bearing ?? null,
+        is_near_hr: Boolean(near),
+      }
+    })
 
     return {
       pitcherRows: enrichPitchRows(pitcherRows, 'batter_id', opponents, gameInfo),
       batterRows: enrichPitchRows(batterRows, 'pitcher_id', opponents, gameInfo),
+      sprayRows: enrichedSprayRows,
     }
   },
-  ['player-pitch-log'],
+  ['player-pitch-log-v2'],
   { revalidate: 86400, tags: ['player-pitch-log'] }
 )
 

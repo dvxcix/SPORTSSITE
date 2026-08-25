@@ -9,6 +9,12 @@ export const PITCH_LOG_SELECT_COLS = [
   'raw',
 ].join(', ')
 
+export const SPRAY_LOG_SELECT_COLS = [
+  'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'p_throws',
+  'events', 'is_in_play', 'is_home_run', 'launch_speed', 'launch_angle',
+  'hit_distance', 'hc_x', 'hc_y', 'bb_type', 'inning', 'at_bat_index', 'pitch_number',
+].join(', ')
+
 // Real incident (2026-07-24, 57014 statement-timeout alert on this exact
 // route): this used to page via repeated .range(from, from+999) calls,
 // growing `from` each loop — the same OFFSET-pagination shape already
@@ -36,6 +42,33 @@ export async function fetchPlayerPitchRows(admin: AdminClient, mlbId: number, ro
     .range(0, MAX_ROWS - 1)
   if (error) throw error
   return data ?? []
+}
+
+// Batted-ball coordinates are sparse enough to page without carrying the
+// pitch log's raw JSONB. These rows power both the full Spray Chart and the
+// Dugout's controlled, today-park projection.
+export async function fetchPlayerSprayRows(admin: AdminClient, mlbId: number): Promise<Record<string, any>[]> {
+  const PAGE_SIZE = 1000
+  const rows: Record<string, any>[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from('player_pitch_log')
+      .select(SPRAY_LOG_SELECT_COLS)
+      .eq('batter_id', mlbId)
+      .eq('is_in_play', true)
+      .not('hc_x', 'is', null)
+      .not('hc_y', 'is', null)
+      .order('game_date', { ascending: false })
+      .order('game_pk', { ascending: false })
+      .order('at_bat_index', { ascending: false })
+      .order('pitch_number', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    if (!data?.length) break
+    rows.push(...data)
+    if (data.length < PAGE_SIZE) break
+  }
+  return rows
 }
 
 // Every home run a player has hit/allowed this season — a small subset by
@@ -95,7 +128,15 @@ export function enrichPitchRows(
   rows: Record<string, any>[],
   opponentKey: 'batter_id' | 'pitcher_id',
   opponents: Record<number, { full_name: string | null; current_team_abbr: string | null }>,
-  gameInfo: Record<string, { day_night: string | null; venue_name: string | null }>,
+  gameInfo: Record<string, {
+    day_night: string | null
+    venue_id?: number | null
+    venue_name: string | null
+    home_team_id?: number | null
+    home_team?: string | null
+    away_team_id?: number | null
+    away_team?: string | null
+  }>,
 ): Record<string, any>[] {
   return rows.map(r => {
     const opp = opponents[r[opponentKey]]
@@ -106,11 +147,16 @@ export function enrichPitchRows(
       opponent_name: opp?.full_name ?? `Player ${r[opponentKey]}`,
       opponent_team: opp?.current_team_abbr ?? null,
       day_night: gameInfo[r.game_pk]?.day_night ?? null,
+      venue_id: gameInfo[r.game_pk]?.venue_id ?? r.venue_id ?? null,
       venue_name: gameInfo[r.game_pk]?.venue_name ?? null,
+      home_team_id: gameInfo[r.game_pk]?.home_team_id ?? null,
+      home_team: gameInfo[r.game_pk]?.home_team ?? null,
+      away_team_id: gameInfo[r.game_pk]?.away_team_id ?? null,
+      away_team: gameInfo[r.game_pk]?.away_team ?? null,
       swing_length: raw.swing_length !== undefined && raw.swing_length !== '' ? Number(raw.swing_length) : null,
       attack_angle: raw.attack_angle !== undefined && raw.attack_angle !== '' ? Number(raw.attack_angle) : null,
-      hit_distance: raw.hit_distance_sc !== undefined && raw.hit_distance_sc !== '' ? Number(raw.hit_distance_sc) : null,
-      bb_type: raw.bb_type || null,
+      hit_distance: r.hit_distance ?? (raw.hit_distance_sc !== undefined && raw.hit_distance_sc !== '' ? Number(raw.hit_distance_sc) : null),
+      bb_type: r.bb_type ?? raw.bb_type ?? null,
       // Swing "tilt" and horizontal attack direction — same raw Statcast
       // bat-tracking payload as swing_length/attack_angle above, just never
       // pulled out before now. launch_speed_angle is Savant's OWN official

@@ -5,6 +5,7 @@ import { getTeamColor, getTeamSecondaryColor, getTeamLogoUrl } from '@slipsurge/
 import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore } from '@slipsurge/core/mlbParks'
 import { ParkShape, WindCanvas, WIND_CANVAS_SIZE, hexToRgba, type WeatherGame } from '@/components/weather/WeatherLabClient'
 import { Tooltip } from '@/components/ui/tooltip-card'
+import { BattedBallSprayChart, type SprayPitchRow } from '@/components/players/BattedBallSprayChart'
 
 // Same park-shape/wind-canvas rendering Weather Lab already ships, reused
 // here rather than rebuilt — one game's card out of that page's own
@@ -23,7 +24,19 @@ function fetchWeatherCached(date: string) {
   return p
 }
 
-export function GameWeatherCard({ gamePk, date }: { gamePk: string; date: string }) {
+export function GameWeatherCard({
+  gamePk,
+  date,
+  sprayRows = [],
+  playerName = 'Batter',
+  selectionLabel = 'All visible contact',
+}: {
+  gamePk: string
+  date: string
+  sprayRows?: SprayPitchRow[]
+  playerName?: string
+  selectionLabel?: string
+}) {
   const [games, setGames] = useState<WeatherGame[] | null>(null)
 
   useEffect(() => {
@@ -61,8 +74,24 @@ export function GameWeatherCard({ gamePk, date }: { gamePk: string; date: string
         BALLPARK
       </div>
 
+      {sprayRows.length > 0 ? (
+        <BattedBallSprayChart
+          rows={sprayRows}
+          playerName={playerName}
+          compact
+          projection={{ teamAbbr: game.homeAbbr, parkName: game.park.name, contextLabel: selectionLabel }}
+          fieldOverlay={!isSheltered ? (
+            <WindCanvas
+              deg={h?.windDirDeg ?? null}
+              mph={h?.windMph ?? null}
+              color={hrWindColor(h?.windDirDeg ?? null, h?.windMph ?? null, game.park.orientationDeg)}
+            />
+          ) : undefined}
+        />
+      ) : (
+      <>
       {/* WindCanvas always draws at a fixed WIND_CANVAS_SIZE px regardless of
-          its container — sizing this wrapper to that same constant (not an
+          its container - sizing this wrapper to that same constant (not an
           arbitrary smaller box) is what keeps the wind streaks inside the
           park outline instead of overflowing it. */}
       <div style={{ position: 'relative', width: WIND_CANVAS_SIZE, height: WIND_CANVAS_SIZE, margin: '0 auto' }}>
@@ -91,6 +120,8 @@ export function GameWeatherCard({ gamePk, date }: { gamePk: string; date: string
           </div>
         )}
       </div>
+      </>
+      )}
       <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>{game.park.name}</div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 4 }}>
