@@ -10,6 +10,7 @@ import { PostBetModal } from './PostBetModal'
 import { ShareWatchlistModal } from './ShareWatchlistModal'
 import { useDraggableFab } from '@/lib/useDraggableFab'
 import { Share2 } from 'lucide-react'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 
 const oStr = (v: number | null | undefined) => v != null ? (v > 0 ? `+${v}` : String(v)) : '—'
 
@@ -186,24 +187,22 @@ export function WatchlistButton() {
         )}
       </button>
 
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
-              borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
-              animation: 'slideIn 0.2s ease-out',
-            }}
-          >
+      <ModalSurface
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="watchlist-panel-title"
+        backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        panelStyle={{
+          width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
+          borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
+          animation: 'slideIn 0.2s ease-out', outline: 'none',
+        }}
+      >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: pendingItems.length > 0 ? 'none' : '1px solid var(--border)' }}>
-              <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>★ My Watchlist</span>
+              <span id="watchlist-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>★ My Watchlist</span>
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{wl.pendingCount} pending</span>
-              <button onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button type="button" data-modal-autofocus aria-label="Close watchlist" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
             {pendingItems.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
@@ -319,9 +318,7 @@ export function WatchlistButton() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
+      </ModalSurface>
 
       {modalLegs && (
         <PostBetModal

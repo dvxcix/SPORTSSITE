@@ -26,6 +26,7 @@ import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 
@@ -2128,29 +2129,26 @@ export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void 
   const nMoon = nDist != null && nDist >= 420
 
   return (
-    <div
-      className="dugout-modal-backdrop"
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    <ModalSurface
+      open
+      onClose={onClose}
+      labelledBy="dugout-hr-popup-title"
+      backdropClassName="dugout-modal-backdrop"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      panelClassName="dugout-mobile-sheet"
+      panelStyle={{ width: 360, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
     >
-      <div className="dugout-mobile-sheet"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 360, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-        }}
-      >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: hasHr ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)', backdropFilter: 'blur(8px)' }}>
           <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
             <PlayerAvatar mlbId={row.mlb_id} size={36} teamAbbr={row.team} name={row.name} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{row.name}</div>
+              <div id="dugout-hr-popup-title" style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{row.name}</div>
               <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
                 {row.team} · {row.position}{hasHr && hits.length > 1 ? ` · ${hits.length} HRs today` : ''}
               </div>
             </div>
           </Link>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+          <button type="button" data-modal-autofocus onClick={onClose} aria-label={`Close ${row.name} home run details`} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
         <div style={{ padding: 16 }}>
@@ -2198,8 +2196,7 @@ export function HrPopup({ row, onClose }: { row: BatterRow; onClose: () => void 
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </ModalSurface>
   )
 }
 
@@ -2215,11 +2212,6 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
   onClose: () => void
 }) {
   const [sortBy, setSortBy] = useState<'ev' | 'dist' | 'time'>('ev')
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
 
   const sorted = useMemo(() => {
     const withMeta = hits.map(h => ({ ...h, _team: teamByMlbId[h.mlb_id]?.team ?? null, _gameKey: teamByMlbId[h.mlb_id]?.gameKey ?? null }))
@@ -2236,15 +2228,22 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
   }, [hits, teamByMlbId, sortBy])
 
   return (
-    <div className="dugout-modal-backdrop" role="dialog" aria-modal="true" aria-label="Today's home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div className="dugout-mobile-sheet dugout-leaderboard-sheet" onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <ModalSurface
+      open
+      onClose={onClose}
+      labelledBy="dugout-hr-board-title"
+      backdropClassName="dugout-modal-backdrop"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      panelClassName="dugout-mobile-sheet dugout-leaderboard-sheet"
+      panelStyle={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+    >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(74,222,128,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>🔥</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Home Runs</div>
+            <div id="dugout-hr-board-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Home Runs</div>
             <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{hits.length} HR{hits.length === 1 ? '' : 's'} across the slate. Select a player to open that game.</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+          <button type="button" data-modal-autofocus onClick={onClose} aria-label="Close today's home runs" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
@@ -2326,8 +2325,7 @@ function HrLeaderboard({ hits, teamByMlbId, onJumpToGame, onClose }: {
             )
           })}
         </div>
-      </div>
-    </div>
+    </ModalSurface>
   )
 }
 
@@ -2347,11 +2345,6 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
   onClose: () => void
 }) {
   const [sortBy, setSortBy] = useState<'ev' | 'dist' | 'time'>('dist')
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
 
   const sorted = useMemo(() => {
     const withMeta = nearHrs.map(n => ({ ...n, _team: teamByMlbId[n.batter_id]?.team ?? null, _gameKey: teamByMlbId[n.batter_id]?.gameKey ?? null }))
@@ -2367,15 +2360,22 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
   }, [nearHrs, teamByMlbId, sortBy])
 
   return (
-    <div className="dugout-modal-backdrop" role="dialog" aria-modal="true" aria-label="Today's near home runs" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div className="dugout-mobile-sheet dugout-leaderboard-sheet" onClick={e => e.stopPropagation()} style={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <ModalSurface
+      open
+      onClose={onClose}
+      labelledBy="dugout-near-hr-board-title"
+      backdropClassName="dugout-modal-backdrop"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      panelClassName="dugout-mobile-sheet dugout-leaderboard-sheet"
+      panelStyle={{ width: 520, minWidth: 'min(340px, 100%)', maxWidth: 'min(92vw, 760px)', maxHeight: '88dvh', resize: 'horizontal', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+    >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', background: 'rgba(251,146,60,0.1)', backdropFilter: 'blur(8px)' }}>
           <span style={{ fontSize: 18 }}>😮</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Near Home Runs</div>
+            <div id="dugout-near-hr-board-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Today's Near Home Runs</div>
             <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{nearHrs.length} ball{nearHrs.length === 1 ? '' : 's'} that would've left another park. Select a player to open that game.</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+          <button type="button" data-modal-autofocus onClick={onClose} aria-label="Close today's near home runs" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
@@ -2451,8 +2451,7 @@ function NearHrLeaderboard({ nearHrs, teamByMlbId, onJumpToGame, onClose }: {
             )
           })}
         </div>
-      </div>
-    </div>
+    </ModalSurface>
   )
 }
 
@@ -2849,11 +2848,6 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   onSave: (next: DugoutColumnPrefs) => void
   onClose: () => void
 }) {
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set(prefs?.hiddenGroups ?? []))
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set(prefs?.hiddenColumns ?? []))
   const [columnQuery, setColumnQuery] = useState('')
@@ -2977,14 +2971,21 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
   })
 
   return (
-    <div className="dugout-modal-backdrop" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div className="dugout-mobile-sheet dugout-columns-sheet" onClick={e => e.stopPropagation()} style={{ width: 640, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+    <ModalSurface
+      open
+      onClose={onClose}
+      labelledBy="dugout-columns-title"
+      backdropClassName="dugout-modal-backdrop"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)', zIndex: 1000, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      panelClassName="dugout-mobile-sheet dugout-columns-sheet"
+      panelStyle={{ width: 640, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+    >
         <div style={{ position: 'sticky', top: 0, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--surface)', zIndex: 1 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
+            <div id="dugout-columns-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Customize Columns</div>
             <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Show, hide, and reorder the data that matters to you.</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+          <button type="button" data-modal-autofocus onClick={onClose} aria-label="Close column settings" style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
         </div>
 
         <div style={{ padding: '14px 16px 4px', borderBottom: '1px solid var(--border)' }}>
@@ -3116,8 +3117,7 @@ function ColumnCustomizePanel({ prefs, onSave, onClose }: {
             Save
           </button>
         </div>
-      </div>
-    </div>
+    </ModalSurface>
   )
 }
 
@@ -3326,6 +3326,24 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [compareOpen, setCompareOpen] = useState(persistedView.compareOpen)
   const [showTools, setShowTools] = useState(false)
   const [showGlossary, setShowGlossary] = useState(false)
+  const commandBarRef = useRef<HTMLElement>(null)
+  const toolsPopoverId = `dugout-tools-${game.gameKey}`
+
+  useEffect(() => {
+    if (!showTools) return
+    const dismissTools = (event: PointerEvent) => {
+      if (!commandBarRef.current?.contains(event.target as Node)) setShowTools(false)
+    }
+    const closeToolsOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowTools(false)
+    }
+    document.addEventListener('pointerdown', dismissTools)
+    window.addEventListener('keydown', closeToolsOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', dismissTools)
+      window.removeEventListener('keydown', closeToolsOnEscape)
+    }
+  }, [showTools])
 
   useEffect(() => {
     if (!showGlossary) return
@@ -4097,7 +4115,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className={`dugout-board-enter${expanded ? ' has-inspector' : ''}`} style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
-      <section className="dugout-command-bar" aria-label="Dugout board controls">
+      <section ref={commandBarRef} className="dugout-command-bar" aria-label="Dugout board controls">
         <div className="dugout-command-navigation">
           <button type="button" onClick={navigation.onPrevious} disabled={navigation.index === 0} aria-label="Previous game"><ChevronLeft size={17} /></button>
           <button type="button" className="dugout-all-games" onClick={navigation.onAllGames}>All Games <small>{navigation.index + 1}/{navigation.total}</small></button>
@@ -4109,8 +4127,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <span><TeamLogo abbr={game.homeAbbr} size={32} /><strong>{game.homeAbbr}</strong></span>
           <em data-status={matchupStatus.toLowerCase()}>{matchupStatus}</em>
         </div>
-        <div className="dugout-command-primary"><StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} /><button type="button" aria-label={`Select view preset, currently ${viewPreset}`} onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><BarChart3 size={14} /><span>{viewPreset[0].toUpperCase() + viewPreset.slice(1)}</span></button><button type="button" aria-label="Customize columns" onClick={onOpenColumns}><Settings2 size={14} /><span>Columns</span></button><button type="button" aria-label="Open board tools" onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><Sparkles size={14} /><span>Tools</span><small>{gameWatchlistItems.length + matrixCount}</small></button><button type="button" onClick={() => setShowGlossary(true)} aria-label="Open glossary">?</button></div>
-        {showTools && <div className="dugout-tools-popover"><div className="dugout-tools-presets">{(['signal', 'market', 'power', 'props', 'all', 'custom'] as const).map(preset => <button key={preset} type="button" aria-pressed={viewPreset === preset} onClick={() => setViewPreset(preset)}>{preset[0].toUpperCase() + preset.slice(1)}</button>)}</div>{modeButtons}<button type="button" onClick={() => setCompareOpen(value => !value)}>{compareOpen ? 'Hide' : 'Show'} comparison</button></div>}
+        <div className="dugout-command-primary"><StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} /><button type="button" aria-label={`Select view preset, currently ${viewPreset}`} onClick={() => setShowTools(value => !value)} aria-expanded={showTools} aria-controls={toolsPopoverId}><BarChart3 size={14} /><span>{viewPreset[0].toUpperCase() + viewPreset.slice(1)}</span></button><button type="button" aria-label="Customize columns" onClick={onOpenColumns}><Settings2 size={14} /><span>Columns</span></button><button type="button" aria-label="Open board tools" onClick={() => setShowTools(value => !value)} aria-expanded={showTools} aria-controls={toolsPopoverId}><Sparkles size={14} /><span>Tools</span><small>{gameWatchlistItems.length + matrixCount}</small></button><button type="button" onClick={() => setShowGlossary(true)} aria-label="Open glossary">?</button></div>
+        {showTools && <div id={toolsPopoverId} className="dugout-tools-popover" role="group" aria-label="Board tools"><div className="dugout-tools-presets">{(['signal', 'market', 'power', 'props', 'all', 'custom'] as const).map(preset => <button key={preset} type="button" aria-pressed={viewPreset === preset} onClick={() => { setViewPreset(preset); setShowTools(false) }}>{preset[0].toUpperCase() + preset.slice(1)}</button>)}</div>{modeButtons}<button type="button" onClick={() => { setCompareOpen(value => !value); setShowTools(false) }}>{compareOpen ? 'Hide' : 'Show'} comparison</button></div>}
       </section>
       <section className="dugout-intelligence-strip" aria-label="Game intelligence">
         <GameWeatherSummary gamePk={String(game.gamePk)} date={date} venue={game.venue} />
@@ -4667,13 +4685,6 @@ export function DugoutClient({ date }: { date: string }) {
       else window.sessionStorage.removeItem('ss:dugout-open-panel')
     } catch {}
   }, [showHrBoard, showNearHrBoard])
-  useEffect(() => {
-    if (!showGamePicker) return
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowGamePicker(false) }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [showGamePicker])
-
   // Per-member Dugout column show/hide/reorder — fetched once on mount
   // (null while loading behaves identically to "no prefs saved," i.e. show
   // everything in default order, so there's no layout flash while this
@@ -5070,12 +5081,18 @@ export function DugoutClient({ date }: { date: string }) {
             />
       )}
 
-      {showGamePicker && (
-        <div className="dugout-modal-backdrop" onClick={() => setShowGamePicker(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,.68)', padding: 10 }}>
-          <div className="dugout-mobile-sheet dugout-game-picker-sheet" onClick={event => event.stopPropagation()} style={{ width: '100%', maxHeight: '82dvh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', boxShadow: '0 -18px 60px rgba(0,0,0,.5)' }}>
+      <ModalSurface
+        open={showGamePicker}
+        onClose={() => setShowGamePicker(false)}
+        labelledBy="dugout-game-picker-title"
+        backdropClassName="dugout-modal-backdrop"
+        backdropStyle={{ zIndex: 1000, alignItems: 'flex-end', background: 'rgba(0,0,0,.68)', padding: 10 }}
+        panelClassName="dugout-mobile-sheet dugout-game-picker-sheet"
+        panelStyle={{ width: '100%', maxHeight: '82dvh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', boxShadow: '0 -18px 60px rgba(0,0,0,.5)' }}
+      >
             <div style={{ position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-              <div><div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
-              <button type="button" onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
+              <div><div id="dugout-game-picker-title" style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
+              <button type="button" data-modal-autofocus onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
             </div>
             <div className="dugout-game-picker-filters" aria-label="Filter games">
               {(['all', 'live', 'upcoming', 'final'] as const).map(filter => <button key={filter} type="button" aria-pressed={gamePickerFilter === filter} onClick={() => setGamePickerFilter(filter)}>{filter}</button>)}
@@ -5093,9 +5110,7 @@ export function DugoutClient({ date }: { date: string }) {
               })}
               {filteredPickerGames.length === 0 && <div className="dugout-picker-empty">No {gamePickerFilter} games on this slate.</div>}
             </div>
-          </div>
-        </div>
-      )}
+      </ModalSurface>
 
       <div className="dugout-header-help" style={{ marginTop: 10, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
         Select any column header for details.

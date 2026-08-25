@@ -11,6 +11,7 @@ import { PipelineBuilder, type MatrixPipelineStep } from './PipelineBuilder'
 import { PipelineSummary } from './PipelineSummary'
 import { useRouter } from 'next/navigation'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 
 // "Custom Matrix" — a member's own saved highlight rules for The Dugout's
 // batter table. Terminology is deliberately its own: a saved rule is a
@@ -1359,19 +1360,23 @@ export function MatrixButton() {
         )}
       </button>
 
-      {open && (
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)',
-            display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out',
-          }}>
+      <ModalSurface
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="custom-matrix-panel-title"
+        backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        panelStyle={{
+          width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out', outline: 'none',
+        }}
+      >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span id="custom-matrix-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Grid3x3 size={16} /> Custom Matrix
               </span>
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{matrices.length}/10</span>
-              <button onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button type="button" data-modal-autofocus aria-label="Close custom matrix" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
@@ -1426,9 +1431,7 @@ export function MatrixButton() {
                 {importError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>{importError}</div>}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </ModalSurface>
 
       {editing !== undefined && (
         <MatrixEditor

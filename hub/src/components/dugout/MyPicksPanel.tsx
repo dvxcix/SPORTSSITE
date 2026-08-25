@@ -7,6 +7,7 @@ import { fetchMyPicks } from '@/lib/myPicks'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import type { Post } from '@/lib/supabase/types'
 import { useDraggableFab } from '@/lib/useDraggableFab'
+import { ModalSurface } from '@/components/ui/ModalSurface'
 
 // Same "local day" framing as the watchlist — this panel is for tracking
 // slips you're live-watching today, not an archive of every pick you've
@@ -89,26 +90,24 @@ export function MyPicksButton() {
         )}
       </button>
 
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
-              borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
-              animation: 'slideIn 0.2s ease-out',
-            }}
-          >
+      <ModalSurface
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="my-picks-panel-title"
+        backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.62)', zIndex: 'var(--layer-modal)', display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(6px)' }}
+        panelStyle={{
+          width: 'min(420px, 100vw)', height: '100%', background: 'var(--bg)',
+          borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
+          animation: 'slideIn 0.2s ease-out', outline: 'none',
+        }}
+      >
             <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span id="my-picks-panel-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <ClipboardList size={16} /> My Picks
               </span>
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{items.length} today</span>
-              <button onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
+              <button type="button" data-modal-autofocus aria-label="Close my picks" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 18, cursor: 'pointer' }}>×</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {loading ? (
@@ -125,9 +124,7 @@ export function MyPicksButton() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+      </ModalSurface>
     </>
   )
 }

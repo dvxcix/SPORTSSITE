@@ -8,6 +8,10 @@ const parkSource = readFileSync(new URL('../src/components/dugout/GameWeatherCar
 const pageStyles = readFileSync(new URL('../src/app/dugout/dugout-page.module.css', import.meta.url), 'utf8')
 const scoreRingSource = readFileSync(new URL('../src/components/ui/MechanicsScoreRing.tsx', import.meta.url), 'utf8')
 const scoreLabelSource = readFileSync(new URL('../src/components/ui/SlipSurgeScoreLabel.tsx', import.meta.url), 'utf8')
+const modalSurfaceSource = readFileSync(new URL('../src/components/ui/ModalSurface.tsx', import.meta.url), 'utf8')
+const watchlistSource = readFileSync(new URL('../src/components/dugout/WatchlistPanel.tsx', import.meta.url), 'utf8')
+const picksSource = readFileSync(new URL('../src/components/dugout/MyPicksPanel.tsx', import.meta.url), 'utf8')
+const matrixSource = readFileSync(new URL('../src/components/dugout/CustomMatrixPanel.tsx', import.meta.url), 'utf8')
 
 test('Dugout workspace fluidly fills ultrawide displays', () => {
   const pageRule = pageStyles.match(/\.page\{([^}]*)\}/)?.[1] ?? ''
@@ -179,4 +183,30 @@ test('public scoring surfaces use SlipSurge Score branding instead of Index', ()
   assert.ok(scoreRingSource.includes('src="/logo.png"'))
   assert.ok(scoreLabelSource.includes('SlipSurgeScoreLabel'))
   assert.ok(scoreLabelSource.includes('src="/logo.png"'))
+})
+
+test('every secondary Dugout overlay follows the same accessible modal contract', () => {
+  assert.ok(modalSurfaceSource.includes("import { createPortal } from 'react-dom'"))
+  assert.ok(modalSurfaceSource.includes('role="dialog"'))
+  assert.ok(modalSurfaceSource.includes('aria-modal="true"'))
+  assert.ok(modalSurfaceSource.includes("document.body.style.overflow = 'hidden'"))
+  assert.ok(modalSurfaceSource.includes("document.body.classList.add('ss-modal-open')"))
+  assert.ok(modalSurfaceSource.includes("event.key !== 'Escape'"))
+  assert.ok(modalSurfaceSource.includes("event.key !== 'Tab'"))
+  assert.ok(modalSurfaceSource.includes("'[data-modal-autofocus]'"))
+  assert.ok(modalSurfaceSource.includes('activeElement?.focus'))
+  assert.ok(modalSurfaceSource.includes("position: 'fixed', inset: 0, display: 'flex'"))
+  assert.ok(modalSurfaceSource.includes("style={{ outline: 'none', ...panelStyle }}"))
+  assert.ok(watchlistSource.includes('<ModalSurface'))
+  assert.ok(picksSource.includes('<ModalSurface'))
+  assert.ok(matrixSource.includes('<ModalSurface'))
+  assert.ok((source.match(/<ModalSurface/g) ?? []).length >= 5)
+})
+
+test('the Dugout tools popover has explicit state, dismissal, and ownership', () => {
+  assert.ok(source.includes('aria-controls={toolsPopoverId}'))
+  assert.ok(source.includes('id={toolsPopoverId}'))
+  assert.ok(source.includes("document.addEventListener('pointerdown', dismissTools)"))
+  assert.ok(source.includes("if (event.key === 'Escape') setShowTools(false)"))
+  assert.ok(source.includes("setViewPreset(preset); setShowTools(false)"))
 })
