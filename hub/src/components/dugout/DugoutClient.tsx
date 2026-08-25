@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
@@ -1083,6 +1084,9 @@ function PlayerDrillDown({
 }) {
   const pitcherHand: 'R' | 'L' = oppPitcher?.hand === 'L' ? 'L' : 'R'
   const noBatSplits = !row.s_spd && !row.s_brl
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [spraySelection, setSpraySelection] = useState<DugoutSpraySelection>({
     rows: [],
     contextLabel: 'All visible contact',
@@ -1090,6 +1094,10 @@ function PlayerDrillDown({
   })
   const handleSpraySelection = useCallback((selection: DugoutSpraySelection) => {
     setSpraySelection(selection)
+  }, [])
+
+  useEffect(() => {
+    setPortalHost(document.body)
   }, [])
 
   useEffect(() => {
@@ -1105,13 +1113,45 @@ function PlayerDrillDown({
     }
   }, [onClose])
 
-  return (
-    <td className="dg-player-drilldown-cell" colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
+  useEffect(() => {
+    if (!portalHost) return
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus())
+    return () => {
+      window.cancelAnimationFrame(frame)
+      previouslyFocused?.focus({ preventScroll: true })
+    }
+  }, [portalHost])
+
+  useEffect(() => {
+    dialogRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [row.mlb_id])
+
+  const trapDialogFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+      .filter(element => element.getClientRects().length > 0)
+    if (!focusable.length) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
+  const dialog = (
+    <div className="dg-player-drilldown-portal">
       {onClose ? <button type="button" className="dg-player-drilldown-backdrop" onClick={onClose} aria-label={`Close ${row.name} player analysis`} /> : null}
-      <div className="dg-player-drilldown" role="dialog" aria-modal="true" aria-label={`${row.name} player analysis`}>
+      <div ref={dialogRef} className="dg-player-drilldown" role="dialog" aria-modal="true" aria-label={`${row.name} player analysis`} onKeyDown={trapDialogFocus}>
         <div className="dg-player-drilldown-head">
           <span><strong>{row.name}</strong><small>{row.team} · {row.position} · {row.bats}HB</small></span>
-          {onClose && <button type="button" onClick={onClose} aria-label={`Close ${row.name} player analysis`}>Close <X size={15} /></button>}
+          {onClose && <button ref={closeButtonRef} type="button" onClick={onClose} aria-label={`Close ${row.name} player analysis`}>Close <X size={15} /></button>}
         </div>
         <div className="dg-inspector-summary">
           <PlayerAvatar mlbId={row.mlb_id} size={42} teamAbbr={row.team} name={row.name} />
@@ -1230,6 +1270,12 @@ function PlayerDrillDown({
         })()}
       </div>
       </div>
+    </div>
+  )
+
+  return (
+    <td className="dg-player-drilldown-cell" colSpan={99} style={{ padding: 0, border: 0 }}>
+      {portalHost ? createPortal(dialog, portalHost) : null}
     </td>
   )
 }
@@ -5115,12 +5161,13 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-board-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#38bdf8);transition:width 100ms ease-out}
         .dugout-board-enter .dg-player-drilldown-cell{height:0;padding:0!important;border:0!important;overflow:visible!important}
         .dugout-board-enter.has-inspector{padding-right:0}
-        .dg-player-drilldown-backdrop{position:fixed;inset:0;z-index:940;border:0;background:rgba(0,3,8,.76);backdrop-filter:blur(9px);cursor:default}
-        .dugout-board-enter .dg-player-drilldown{position:fixed;top:50%;left:50%;right:auto;bottom:auto;z-index:950;width:min(1180px,calc(100vw - 48px));height:min(860px,calc(100dvh - 48px));max-width:none;overflow:auto;overscroll-behavior:contain;padding:18px;border:1px solid color-mix(in srgb,var(--accent) 42%,#334155);border-radius:20px;background:radial-gradient(circle at 90% 0,color-mix(in srgb,var(--accent) 8%,transparent),transparent 32%),linear-gradient(165deg,#101821,#070c12 74%);backdrop-filter:blur(22px);box-shadow:0 38px 120px rgba(0,0,0,.82),inset 0 1px 0 rgba(255,255,255,.06);transform:translate(-50%,-50%)}
-        .dugout-board-enter .dg-player-drilldown-head{position:sticky;top:-18px;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-18px -18px 14px;padding:15px 18px;border-bottom:1px solid #283445;background:rgba(10,15,22,.94);backdrop-filter:blur(20px)}
-        .dugout-board-enter .dg-player-drilldown-head>span{display:grid;gap:3px;color:#f8fafc;font-size:17px;font-weight:950}
-        .dugout-board-enter .dg-player-drilldown-head small{color:#9aa9bb;font-size:10px;font-weight:700}
-        .dugout-board-enter .dg-player-drilldown-head button{min-height:40px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border:1px solid color-mix(in srgb,var(--accent) 30%,#334155);border-radius:10px;background:#141d28;color:var(--accent);font-size:11px;font-weight:900;cursor:pointer}
+        .dg-player-drilldown-portal{position:fixed;inset:0;z-index:1700;display:flex;align-items:center;justify-content:center;padding:24px;isolation:isolate;overscroll-behavior:contain}
+        .dg-player-drilldown-backdrop{position:absolute;inset:0;z-index:0;border:0;background:rgba(0,3,8,.78);backdrop-filter:blur(9px);cursor:default}
+        .dg-player-drilldown-portal>.dg-player-drilldown{position:relative;z-index:1;width:min(1180px,calc(100vw - 48px));height:min(860px,calc(100dvh - 48px));max-width:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:18px;border:1px solid color-mix(in srgb,var(--accent) 42%,#334155);border-radius:20px;background:radial-gradient(circle at 90% 0,color-mix(in srgb,var(--accent) 8%,transparent),transparent 32%),linear-gradient(165deg,#101821,#070c12 74%);backdrop-filter:blur(22px);box-shadow:0 38px 120px rgba(0,0,0,.82),inset 0 1px 0 rgba(255,255,255,.06);box-sizing:border-box;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+        .dg-player-drilldown-portal .dg-player-drilldown-head{position:sticky;top:-18px;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-18px -18px 14px;padding:15px 18px;border-bottom:1px solid #283445;background:rgba(10,15,22,.94);backdrop-filter:blur(20px)}
+        .dg-player-drilldown-portal .dg-player-drilldown-head>span{display:grid;gap:3px;color:#f8fafc;font-size:17px;font-weight:950}
+        .dg-player-drilldown-portal .dg-player-drilldown-head small{color:#9aa9bb;font-size:10px;font-weight:700}
+        .dg-player-drilldown-portal .dg-player-drilldown-head button{min-height:40px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border:1px solid color-mix(in srgb,var(--accent) 30%,#334155);border-radius:10px;background:#141d28;color:var(--accent);font-size:11px;font-weight:900;cursor:pointer}
         .dg-inspector-summary{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-bottom:11px;padding:11px;border:1px solid #2a3647;border-radius:12px;background:linear-gradient(145deg,#121b26,#0c121a)}
         .dg-inspector-summary>span{display:grid;grid-template-columns:repeat(4,auto);align-items:center;gap:2px 8px}.dg-inspector-summary>span b{grid-row:1/3;color:var(--accent);font-size:14px}.dg-inspector-summary small{color:var(--text-4);font-size:9px;font-weight:900}.dg-inspector-summary strong{font-size:12px}
         .dg-inspector-arrows{display:flex;gap:4px}.dg-inspector-arrows button{width:36px;height:36px;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);cursor:pointer}
@@ -5220,14 +5267,14 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-command-bar{flex-wrap:wrap}.dugout-command-primary{margin-left:auto}
           .dugout-intelligence-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.dugout-intelligence-strip>span{grid-column:span 2}.dugout-intelligence-strip>span:nth-child(1),.dugout-intelligence-strip>span:nth-child(3),.dugout-market-snapshot{grid-column:span 3}
           .dugout-minimap-teams{grid-template-columns:1fr}
-          .dugout-board-enter .dg-player-drilldown{width:calc(100vw - 24px);height:calc(100dvh - 24px);border-radius:17px}
+          .dg-player-drilldown-portal>.dg-player-drilldown{width:calc(100vw - 24px);height:calc(100dvh - 24px);border-radius:17px}
           .dugout-compare-grid{grid-template-columns:repeat(4,minmax(280px,1fr))}
         }
         @media(min-width:901px) and (max-width:1250px){
           .dugout-intelligence-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.dugout-intelligence-strip>span{grid-column:span 2}.dugout-intelligence-strip>span:nth-child(1),.dugout-intelligence-strip>span:nth-child(3),.dugout-market-snapshot{grid-column:span 3}
           .dugout-minimap-teams{grid-template-columns:1fr}
           .dugout-board-enter.has-inspector{padding-right:0}
-          .dugout-board-enter .dg-player-drilldown{width:calc(100vw - 32px);height:calc(100dvh - 32px)}
+          .dg-player-drilldown-portal>.dg-player-drilldown{width:calc(100vw - 32px);height:calc(100dvh - 32px)}
         }
         @media(max-width:640px){
           .dugout-board-enter{--dg-control-h:38px;max-width:100%;overflow:visible}
@@ -5299,8 +5346,9 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-compare-toggle{width:22px;height:22px}
           .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
           .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
-          .dugout-board-enter .dg-player-drilldown{position:fixed;inset:auto 6px var(--mobile-dock-clearance) 6px;width:auto;height:auto;max-width:none;max-height:calc(100dvh - var(--mobile-dock-clearance) - 42px);overflow-x:hidden;overflow-y:auto;padding:11px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));border-radius:18px;background:linear-gradient(165deg,#101821,#070c12 74%);box-sizing:border-box;transform:none}
-          .dugout-board-enter .dg-player-drilldown::before{content:"";display:block;width:40px;height:4px;margin:0 auto 9px;border-radius:99px;background:var(--text-4);opacity:.65}
+          .dg-player-drilldown-portal{align-items:flex-end;justify-content:stretch;padding:max(8px,env(safe-area-inset-top)) 0 0}
+          .dg-player-drilldown-portal>.dg-player-drilldown{width:100%;height:calc(100dvh - max(8px,env(safe-area-inset-top)));max-width:none;max-height:none;overflow-x:hidden;overflow-y:auto;padding:12px 12px max(20px,env(safe-area-inset-bottom));border-width:1px 0 0;border-color:color-mix(in srgb,var(--accent) 34%,var(--border));border-radius:20px 20px 0 0;background:radial-gradient(circle at 90% 0,color-mix(in srgb,var(--accent) 10%,transparent),transparent 30%),linear-gradient(165deg,#101821,#070c12 74%);box-sizing:border-box;box-shadow:0 -24px 70px rgba(0,0,0,.72);transform:none;scrollbar-gutter:stable}
+          .dg-player-drilldown-portal>.dg-player-drilldown::before{content:"";display:block;width:42px;height:4px;margin:0 auto 10px;border-radius:99px;background:#526174;opacity:.85}
           .dg-player-drilldown-head{position:sticky!important;top:-11px!important;z-index:5;display:flex!important;align-items:center;justify-content:space-between;gap:10px;margin:-11px -11px 8px!important;padding:11px!important;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 99%,transparent)!important}
           .dg-player-drilldown-head > span{display:grid;gap:2px;min-width:0;color:var(--text-1);font-size:12px}
           .dg-player-drilldown-head small{color:var(--text-3);font-size:9px;font-weight:650}

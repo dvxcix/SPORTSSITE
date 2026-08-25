@@ -84,19 +84,25 @@ test('presets never write member column preferences', () => {
 test('mobile composition stays singular, dock-safe, and readable', () => {
   assert.match(source, /\.dugout-command-navigation,\.dugout-command-matchup\{display:none\}/)
   assert.match(source, /\.dugout-jump-menu\{display:none!important\}/)
-  assert.match(source, /inset:auto 6px var\(--mobile-dock-clearance\) 6px/)
+  assert.match(source, /\.dg-player-drilldown-portal\{align-items:flex-end;justify-content:stretch/)
+  assert.match(source, /height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\)/)
+  assert.match(source, /padding:12px 12px max\(20px,env\(safe-area-inset-bottom\)\)/)
   assert.match(source, /\.dg-team-name\{[^}]*text-overflow:ellipsis/)
 })
 
 test('player analysis is a true accessible modal instead of a shrinking side rail', () => {
+  assert.ok(source.includes("import { createPortal } from 'react-dom'"))
   assert.ok(source.includes('dg-player-drilldown-backdrop'))
   assert.ok(source.includes('role="dialog"'))
   assert.ok(source.includes('aria-modal="true"'))
   assert.ok(source.includes("document.body.style.overflow = 'hidden'"))
+  assert.ok(source.includes('createPortal(dialog, portalHost)'))
+  assert.ok(source.includes('trapDialogFocus'))
+  assert.ok(source.includes("dialogRef.current?.scrollTo({ top: 0"))
   assert.match(source, /\.dugout-board-enter\.has-inspector\{padding-right:0\}/)
-  assert.match(source, /\.dugout-board-enter \.dg-player-drilldown\{[^}]*top:50%;left:50%/)
+  assert.match(source, /\.dg-player-drilldown-portal\{position:fixed;inset:0;z-index:1700/)
+  assert.match(source, /\.dg-player-drilldown-portal>\.dg-player-drilldown\{position:relative/)
   assert.match(source, /width:min\(1180px,calc\(100vw - 48px\)\)/)
-  assert.match(source, /transform:translate\(-50%,-50%\)/)
 })
 
 test('game intelligence and lineup navigation explain themselves visually', () => {
