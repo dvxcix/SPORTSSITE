@@ -25,6 +25,7 @@ import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
+import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -788,11 +789,12 @@ type DugoutViewState = {
   stickyMode: boolean
   stickyCols: MultiSortEntry[]
   marketSnapshot: DugoutMarketSnapshot
+  timelineIndex: number | null
   expanded: string | null
 }
 
 export function parseDugoutViewState(raw: string | null): DugoutViewState {
-  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', expanded: null }
+  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', timelineIndex: null, expanded: null }
   if (!raw) return fallback
   try {
     const value = JSON.parse(raw)
@@ -807,6 +809,7 @@ export function parseDugoutViewState(raw: string | null): DugoutViewState {
       stickyMode: value?.stickyMode === true,
       stickyCols,
       marketSnapshot: value?.marketSnapshot === 'open' ? 'open' : 'now',
+      timelineIndex: Number.isInteger(value?.timelineIndex) && value.timelineIndex >= 0 ? value.timelineIndex : null,
       expanded: typeof value?.expanded === 'string' ? value.expanded : null,
     }
   } catch {
@@ -1094,7 +1097,7 @@ function PlayerDrillDown({
 
 // ─── watchlist-able odds cell ─────────────────────────────────────────────────
 function OddsCell({
-  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount, dataColKey,
+  row, gameInfo, propKey, book, odds, style, display, badge, openOdds, pickCount, dataColKey, dataColGroup,
 }: {
   row: BatterRow
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
@@ -1109,6 +1112,7 @@ function OddsCell({
   // highlight to a stable column, not a raw DOM cellIndex that shifts
   // whenever a member hides/reorders a column.
   dataColKey?: string
+  dataColGroup?: string
   // onClick lets a badge (e.g. an FHR/HR achievement flag) open something
   // of its own (the HR detail popup) instead of falling through to this
   // cell's own click-to-watchlist handler below.
@@ -1132,9 +1136,9 @@ function OddsCell({
     // it — a pick count is independent of whether FanDuel happens to have
     // posted odds yet, so it shouldn't silently disappear just because the
     // odds side of the cell has nothing to show.
-    if (pickCount == null) return <td style={style} data-col-key={dataColKey}>—</td>
+    if (pickCount == null) return <td style={style} data-col-key={dataColKey} data-col-group={dataColGroup}>-</td>
     return (
-      <td style={style} data-col-key={dataColKey}>
+      <td style={style} data-col-key={dataColKey} data-col-group={dataColGroup}>
         —
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
           <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
@@ -1189,11 +1193,7 @@ function OddsCell({
     kind: 'market',
     eyebrow: meta?.label ?? propKey,
     title: row.name,
-    description: saved
-      ? 'Saved to your watchlist. Select the price again to remove it.'
-      : wl.signedIn
-        ? 'Select this price to add the market to your watchlist.'
-        : 'Sign in to save this market to your watchlist.',
+    description: saved ? 'Saved. Select to remove.' : wl.signedIn ? 'Select to save.' : 'Sign in to save.',
     image: row.mlb_id ? { src: mlbHeadshot(row.mlb_id), alt: row.name } : null,
     team: teamLogo ? { logo: teamLogo, label: row.team } : null,
     book,
@@ -1246,6 +1246,8 @@ function OddsCell({
     <td
       onClick={handleClick}
       data-col-key={dataColKey}
+      data-col-group={dataColGroup}
+      data-market-move={hasDelta ? (odds < openOdds! ? 'shorter' : 'longer') : 'flat'}
       style={{
         ...style,
         cursor: wl.signedIn ? 'pointer' : style.cursor,
@@ -1655,7 +1657,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           ...STD, width: 50, minWidth: 50, ...oddsHeat(row.sng_fd, g('sng_fd')),
           ...(row.is_pwr ? { borderTop: '2px solid #f59e0b', borderBottom: '2px solid #f59e0b', borderLeft: '2px solid #f59e0b', boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.25)' } : {}),
         }}
-        badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power Vehicle — this player\'s HR, double, and total-bases pricing all line up with real book conviction on power tonight' } : undefined}
+        badge={row.is_pwr ? { label: '⚡PWR', color: '#f59e0b', title: 'Power markets align.' } : undefined}
         pickCount={row.pkSingles?.picks ?? null}
       />
       <OddsCell
@@ -1684,8 +1686,8 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <td
         aria-label={`Hit read: ${row.hit_status === 'NO_READ' ? 'no read' : row.hit_status.toLowerCase()}${row.hit_rank != null ? `, rank ${row.hit_rank}` : ''}${row.hit_score != null ? `, score ${row.hit_score.toFixed(1)}` : ''}`}
         title={row.hit_status === 'NO_READ'
-          ? 'HIT • NO READ • Data incomplete'
-          : `HIT • ${row.hit_status} • Rank #${row.hit_rank ?? '-'}${pool.length ? `/${pool.length}` : ''} • Score ${row.hit_score != null ? Math.round(row.hit_score) : '-'}`}
+          ? 'Hit read unavailable'
+          : `${row.hit_status} · #${row.hit_rank ?? '-'} · ${row.hit_score != null ? Math.round(row.hit_score) : '-'}`}
         style={{ ...STD, width: 38, minWidth: 38 }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -1842,7 +1844,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       {renderDugoutColumns(
         rowCells, visibleColumns,
         key => <td key={key} style={SDIV_D} />,
-        (el, key) => withColKey(el, key),
+        (el, key, group) => withColKey(el, key, group),
       )}
       {extraCells}
     </tr>
@@ -1852,9 +1854,9 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
 // Column-customization identity tagger for a row cell (see renderDugoutColumns
 // above GameTable) — OddsCell doesn't spread arbitrary DOM attrs, so it needs
 // its own dataColKey prop; every plain <td> accepts data-* natively.
-function withColKey(el: React.ReactElement, key: string): React.ReactElement {
-  if (el.type === OddsCell) return React.cloneElement(el as React.ReactElement<any>, { key, dataColKey: key })
-  return React.cloneElement(el as React.ReactElement<any>, { key, 'data-col-key': key })
+function withColKey(el: React.ReactElement, key: string, group: string): React.ReactElement {
+  if (el.type === OddsCell) return React.cloneElement(el as React.ReactElement<any>, { key, dataColKey: key, dataColGroup: group })
+  return React.cloneElement(el as React.ReactElement<any>, { key, 'data-col-key': key, 'data-col-group': group })
 }
 
 // ─── HR / near-HR popup ─────────────────────────────────────────────────────
@@ -2538,7 +2540,7 @@ function renderDugoutColumns(
   fragment: React.ReactNode,
   visible: { key: string; group: string }[],
   dividerFactory: (key: string) => React.ReactElement,
-  tagCell: (el: React.ReactElement, colKey: string) => React.ReactElement,
+  tagCell: (el: React.ReactElement, colKey: string, group: string) => React.ReactElement,
 ): React.ReactNode[] {
   // `fragment` is always a single <>...</> element (headerCells/rowCells),
   // not an array — React.Children.toArray on a lone Fragment ELEMENT just
@@ -2568,12 +2570,12 @@ function renderDugoutColumns(
     if (slot.type === 'col') byKey.set(slot.key, children[i] as React.ReactElement)
   })
   const playerEl = children[0] as React.ReactElement // position 0 is always 'player'
-  const out: React.ReactNode[] = [React.cloneElement(playerEl, { key: 'player' })]
+  const out: React.ReactNode[] = [React.cloneElement(playerEl as React.ReactElement<any>, { key: 'player', 'data-col-group': 'player' })]
   let lastGroup: string | null = null
   for (const { key, group } of visible) {
     if (lastGroup !== null && group !== lastGroup) out.push(dividerFactory(`div-${key}`))
     const el = byKey.get(key)
-    if (el) out.push(tagCell(el, key))
+    if (el) out.push(tagCell(el, key, group))
     lastGroup = group
   }
   return out
@@ -2966,7 +2968,7 @@ export function getDugoutHeaderCells(
       {BL('caesars', 'FHR', 'Caesars First HR', 50, 'fhr_cz')}
       {BL('fanatics', 'FHR', 'Fanatics First HR', 50, 'fhr_fan')}
       {H(<span style={{ filter: 'invert(1)' }}>➗</span>, 'FD−CZ implied diff ×100', 36, 'div')}
-      {H('FHR÷HR', 'FHR implied ÷ Anytime HR implied', 36, 'fhr_div_sa')}
+      {H('FHR÷HR', 'First HR / Anytime HR relationship', 36, 'fhr_div_sa')}
       {H('FHR%', 'FHR historical hit rate', 36, 'fhr_pct')}
       {H('HR%', 'Anytime HR historical rate', 36, 'sa_pct')}
       <th style={SDIV_H} />
@@ -2975,7 +2977,7 @@ export function getDugoutHeaderCells(
       {BL('betmgm', 'HR', 'BetMGM Anytime HR', 50, 'sa_mgm')}
       {BL('betrivers', 'HR', 'BetRivers Anytime HR', 50, 'sa_br')}
       {BL('fanatics', 'HR', 'Fanatics Anytime HR', 50, 'sa_fan')}
-      {H('M÷F', 'BetMGM÷FD implied ratio', 36, 'm_div_f')}
+      {H('M÷F', 'BetMGM / FanDuel comparison', 36, 'm_div_f')}
       {H('HR/ML', 'FanDuel Home Run/Moneyline Parlay price', 44, 'hrMl_fd')}
       {H('🏆', 'Anytime HR ÷ HR/Moneyline Parlay ratio', 36, 'sa_div_ml')}
       {H('⚡105+', 'Laser (105+ MPH Home Run) market price', 50, 'laser105_fd')}
@@ -2983,15 +2985,15 @@ export function getDugoutHeaderCells(
       {H('🌙', 'Moonshot market price', 50, 'moonshot_fd')}
       {H('🥇', '1st Plate Appearance HR price', 50, 'pa1_fd')}
       {H('⏰', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-      {H('1+ RBI', 'Anytime HR divided by 1+ RBI implied probability (FanDuel)', 44, 'sa_div_rbi', 'pkRbi')}
-      {H('2+ RBI', 'Anytime HR divided by 2+ RBI implied probability (FanDuel)', 44, 'sa_div_rbi2')}
-      {H('3+ RBI', 'Anytime HR divided by 3+ RBI implied probability (FanDuel)', 44, 'sa_div_rbi3')}
-      {H('H+R+RBI', 'Anytime HR divided by Hits + Runs + RBIs implied probability (FanDuel)', 52, 'sa_div_hrr', 'pkHrr')}
-      {H('2+ TB', 'Anytime HR divided by 2+ total bases implied probability (FanDuel)', 44, 'sa_div_tb', 'pkTb')}
-      {H('3+ TB', 'Anytime HR divided by 3+ total bases implied probability (FanDuel)', 44, 'sa_div_tb3')}
-      {H('4+ TB', 'Anytime HR divided by 4+ total bases implied probability (FanDuel)', 44, 'sa_div_tb4')}
-      {H('5+ TB', 'Anytime HR divided by 5+ total bases implied probability (FanDuel)', 44, 'sa_div_tb5')}
-      {H('2+ HR', 'Anytime HR divided by 2+ home runs implied probability (FanDuel)', 44, 'sa_div_hr2')}
+      {H('1+ RBI', 'HR / 1+ RBI relationship', 44, 'sa_div_rbi', 'pkRbi')}
+      {H('2+ RBI', 'HR / 2+ RBI relationship', 44, 'sa_div_rbi2')}
+      {H('3+ RBI', 'HR / 3+ RBI relationship', 44, 'sa_div_rbi3')}
+      {H('H+R+RBI', 'HR / Hits + Runs + RBIs relationship', 52, 'sa_div_hrr', 'pkHrr')}
+      {H('2+ TB', 'HR / 2+ total bases relationship', 44, 'sa_div_tb', 'pkTb')}
+      {H('3+ TB', 'HR / 3+ total bases relationship', 44, 'sa_div_tb3')}
+      {H('4+ TB', 'HR / 4+ total bases relationship', 44, 'sa_div_tb4')}
+      {H('5+ TB', 'HR / 5+ total bases relationship', 44, 'sa_div_tb5')}
+      {H('2+ HR', 'HR / 2+ HR relationship', 44, 'sa_div_hr2')}
       <th style={SDIV_H} />
       {BL('fanduel', '1B', 'To hit a single (FanDuel)', 50, 'sng_fd', 'pkSingles')}
       {BL('fanduel', '2B', 'To hit a double (FanDuel)', 50, 'dbl_fd', 'pkDoubles')}
@@ -3000,7 +3002,7 @@ export function getDugoutHeaderCells(
       {BL('fanduel', '2+ SB', '2+ stolen bases (FanDuel)', 50, 'sb2_fd')}
       {BL('fanduel', '1+ H', '1+ hit (FanDuel)', 46, 'hits_fd', 'pkHits')}
       {BL('fanduel', '2+ H', '2+ hits (FanDuel)', 46, 'hits2_fd')}
-      {H('HIT', '1+ hit read: green = qualified, amber = watch, red = pass, gray = no read. Number = game rank.', 38, 'hit_score')}
+      {H('HIT', 'Hit read and game rank', 38, 'hit_score')}
       {BL('fanduel', '1+ R', '1+ run scored (FanDuel)', 46, 'runs_fd', 'pkRuns')}
       {BL('fanduel', '2+ R', '2+ runs scored (FanDuel)', 46, 'runs2_fd')}
       <th style={SDIV_H} />
@@ -3067,7 +3069,7 @@ export function getDugoutHeaderCells(
   return renderDugoutColumns(
     headerCells, visibleColumns,
     key => <th key={key} style={SDIV_H} />,
-    (el, key) => React.cloneElement(el as React.ReactElement<any>, { key, 'data-col-key': key }),
+    (el, key, group) => React.cloneElement(el as React.ReactElement<any>, { key, 'data-col-key': key, 'data-col-group': group }),
   )
 }
 
@@ -3107,6 +3109,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [stickyMode, setStickyMode] = useState(persistedView.stickyMode)
   const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>(persistedView.stickyCols)
   const [marketSnapshot, setMarketSnapshot] = useState<DugoutMarketSnapshot>(persistedView.marketSnapshot)
+  const [timelineIndex, setTimelineIndex] = useState<number | null>(persistedView.timelineIndex)
+  const [viewPreset, setViewPreset] = useState<DugoutViewPreset>('all')
 
   // Highlighter — a totally separate, member-driven paint tool (own click
   // mode, own color, own persistence) from the Matrix highlight tint above:
@@ -3194,9 +3198,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   }, [compareStorageKey, comparedKeys])
   useEffect(() => {
     try {
-      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, expanded }))
+      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, timelineIndex, expanded }))
     } catch {}
-  }, [expanded, marketSnapshot, sort, stickyCols, stickyMode, viewStorageKey])
+  }, [expanded, marketSnapshot, sort, stickyCols, stickyMode, timelineIndex, viewStorageKey])
   const toggleCompared = (row: BatterRow) => {
     const key = compareKey(row)
     setComparedKeys(previous => previous.includes(key)
@@ -3317,6 +3321,90 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // Computed once and reused by the header, both team-banner colSpans
   // below, and every BatterRowEl row, so all four always agree.
   const visibleDugoutColumns = useMemo(() => resolveDugoutColumns(columnPrefs), [columnPrefs])
+  const renderedDugoutColumns = useMemo(
+    () => applyDugoutViewPreset(visibleDugoutColumns, viewPreset),
+    [viewPreset, visibleDugoutColumns],
+  )
+  const [marketHistory, setMarketHistory] = useState<DugoutHistorySnapshot[]>([])
+  const [marketHistorySourceCount, setMarketHistorySourceCount] = useState(0)
+  const [marketHistoryLoading, setMarketHistoryLoading] = useState(false)
+  useEffect(() => {
+    if (game.gamePk == null) {
+      setMarketHistory([])
+      setMarketHistorySourceCount(0)
+      return
+    }
+    const controller = new AbortController()
+    setMarketHistoryLoading(true)
+    const params = new URLSearchParams({ date, gamePk: String(game.gamePk), gameKey: String(game.gameKey) })
+    fetch(`/api/odds-terminal?${params}`, { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
+      .then(async response => response.ok ? response.json() : null)
+      .then(payload => {
+        if (controller.signal.aborted) return
+        setMarketHistory(Array.isArray(payload?.snapshots) ? payload.snapshots : [])
+        setMarketHistorySourceCount(Number(payload?.sourceCount) || 0)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setMarketHistory([])
+          setMarketHistorySourceCount(0)
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setMarketHistoryLoading(false) })
+    return () => controller.abort()
+  }, [date, game.gameKey, game.gamePk])
+  const marketTimeline = useMemo(() => buildDugoutMarketTimeline(marketHistory, normName), [marketHistory])
+  useEffect(() => {
+    if (!marketTimeline.length) return
+    setTimelineIndex(previous => Math.min(
+      previous ?? (persistedView.marketSnapshot === 'open' ? 0 : marketTimeline.length - 1),
+      marketTimeline.length - 1,
+    ))
+  }, [marketTimeline.length, persistedView.marketSnapshot])
+  const selectedTimelineIndex = marketTimeline.length
+    ? Math.min(timelineIndex ?? marketTimeline.length - 1, marketTimeline.length - 1)
+    : null
+  const selectedTimelinePoint = selectedTimelineIndex == null ? null : marketTimeline[selectedTimelineIndex]
+  const selectedTimelineLabel = selectedTimelinePoint
+    ? new Date(selectedTimelinePoint.capturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : marketSnapshot === 'open' ? 'Open' : 'Now'
+  const selectTimelinePrice = (row: BatterRow, market: 'fhr' | 'sa', open: number | null | undefined, current: number | null | undefined) => {
+    const captured = selectedTimelinePoint?.players.get(normName(row.name))?.[market]
+    return captured ?? selectDugoutMarketPrice(open, current, marketSnapshot)
+  }
+  const withTimelinePrices = (row: BatterRow): BatterRow => {
+    const fhrFd = selectTimelinePrice(row, 'fhr', row.fhr_open, row.fhr_fd)
+    const saFd = selectTimelinePrice(row, 'sa', row.saFd_open, row.sa_fd)
+    if (fhrFd === row.fhr_fd && saFd === row.sa_fd) return row
+    return {
+      ...row,
+      fhr_fd: fhrFd,
+      sa_fd: saFd,
+      div: fdczDiv(fhrFd, row.fhr_cz),
+      fhr_div_sa: implRatio(fhrFd, saFd),
+      m_div_f: implRatio(row.sa_mgm, saFd),
+      sa_div_rbi: implRatio(saFd, row.rbi_fd),
+      sa_div_rbi2: implRatio(saFd, row.rbi2_fd),
+      sa_div_rbi3: implRatio(saFd, row.rbi3_fd),
+      sa_div_hrr: implRatio(saFd, row.hrr_fd),
+      sa_div_tb: implRatio(saFd, row.tb_fd),
+      sa_div_tb3: implRatio(saFd, row.tb3_fd),
+      sa_div_tb4: implRatio(saFd, row.tb4_fd),
+      sa_div_tb5: implRatio(saFd, row.tb5_fd),
+      sa_div_hr2: implRatio(saFd, row.hr2_fd),
+      pa1_div_sa: implRatio(row.pa1_fd, saFd),
+      sa_div_ml: implRatio(saFd, row.hrMl_fd),
+    }
+  }
+  const chooseTimelineIndex = (index: number) => {
+    if (!marketTimeline.length) {
+      setMarketSnapshot(index === 0 ? 'open' : 'now')
+      return
+    }
+    const bounded = Math.min(Math.max(index, 0), marketTimeline.length - 1)
+    setTimelineIndex(bounded)
+    setMarketSnapshot(bounded === 0 ? 'open' : 'now')
+  }
   const topIndexRow = pool.reduce<BatterRow | null>((best, row) => {
     if (row.mechanics_index == null) return best
     return !best || best.mechanics_index == null || row.mechanics_index > best.mechanics_index ? row : best
@@ -3550,26 +3638,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     tableScrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
     ;(stop === 'home' ? homeSectionRef.current : awaySectionRef.current)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
-  const marketSectionJumps = useMemo(() => {
-    const seen = new Set<string>()
-    return visibleDugoutColumns.filter(column => {
-      if (seen.has(column.group)) return false
-      seen.add(column.group)
-      return true
-    })
-  }, [visibleDugoutColumns])
-  const boardViewJumps = useMemo(() => {
-    const firstIn = (...groups: string[]) => marketSectionJumps.find(column => groups.includes(column.group))
-    return [
-      { label: 'Markets', target: firstIn('fhr', 'hr') },
-      { label: 'Props', target: firstIn('props') },
-      { label: 'Ranks', target: firstIn('ranks') },
-      { label: 'Mechanics', target: firstIn('mechanics', 'batspeed') },
-      { label: 'Statcast', target: firstIn('barrel') },
-    ].filter((view): view is { label: string; target: { key: string; group: string } } => !!view.target)
-  }, [marketSectionJumps])
   const tableTourSteps = useMemo(() => {
-    const visible = new Set(visibleDugoutColumns.map(column => column.key))
+    const visible = new Set(renderedDugoutColumns.map(column => column.key))
     return [
       { key: 'player', label: 'Player context', title: 'Start with the lineup', body: 'The frozen column keeps the player, batting order, handedness, position, and team in view while you move across the board.', icon: 'pointer' },
       { key: 'fhr_fd', label: 'Sportsbook source', title: 'Know which market you are reading', body: 'Book logos identify the source. FHR means First Home Run. HR means an Anytime Home Run.', icon: 'book' },
@@ -3580,14 +3650,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       { key: 's_spd', label: 'Recent form', title: 'Compare season and recent form', body: 'S is season, R is the selected recent window, and Δ is the change from season to recent form. Change the recent window from the team toolbar.', icon: 'activity' },
       { key: 's_brl', label: 'Statcast', title: 'Finish with batted-ball context', body: 'The final section covers barrel rate, hard-hit rate, sweet spot, pull air, fly balls, exit velocity, launch angle, and related Statcast measures.', icon: 'chart' },
     ].filter(step => step.key === 'player' || visible.has(step.key))
-  }, [visibleDugoutColumns])
-  const scrollToMarketSection = (columnKey: string) => {
-    const el = tableScrollRef.current
-    if (!el) return
-    const target = el.querySelector<HTMLElement>(`th[data-col-key="${columnKey}"]`)
-    if (!target) return
-    el.scrollTo({ left: Math.max(0, target.offsetLeft - 190), behavior: 'smooth' })
-  }
+  }, [renderedDugoutColumns])
   useEffect(() => {
     const el = tableScrollRef.current
     if (!el || tourStep == null || !tableTourSteps[tourStep]) return
@@ -3637,7 +3700,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [visibleDugoutColumns])
+  }, [renderedDugoutColumns])
 
   useLayoutEffect(() => {
     const el = tableScrollRef.current
@@ -3657,7 +3720,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [game.gamePk, visibleDugoutColumns, updateHorizontalState])
+  }, [game.gamePk, renderedDugoutColumns, updateHorizontalState])
 
   // Rendered TWICE — once directly under the home banner, once directly
   // under the away banner (no shared top-level <thead> anymore) — each copy
@@ -3668,7 +3731,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // regardless of which team's rows are actually in view. Column JSX itself
   // lives in getDugoutHeaderCells so this board and DailyRecapTable always
   // render the identical set of columns.
-  const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleDugoutColumns)
+  const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, renderedDugoutColumns)
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className="dugout-board-enter" style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
@@ -3684,12 +3747,25 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       <section className="dugout-intelligence-strip" aria-label="Game intelligence">
         <span><small>LINEUPS</small><strong>{confirmedLineups}/2 confirmed</strong></span>
         <span><small>TOP INDEX</small><strong>{topIndexRow ? `${topIndexRow.name} ${Math.round(topIndexRow.mechanics_index ?? 0)}` : '-'}</strong></span>
-        <span><small>BOARD</small><strong>{visibleDugoutColumns.length} saved columns</strong></span>
+        <span><small>BOARD</small><strong>{viewPreset === 'all' ? `${visibleDugoutColumns.length} saved columns` : `${renderedDugoutColumns.length} in ${viewPreset}`}</strong></span>
         <span><small>WINDOW</small><strong>{statcastWindow.toUpperCase()} · {density}</strong></span>
         <span><small>NO HR</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong></span>
         <label className="dugout-market-snapshot">
-          <small>MARKET SNAPSHOT</small>
-          <span><b className={marketSnapshot === 'open' ? 'is-active' : ''}>Open</b><input aria-label="Market snapshot" type="range" min={0} max={1} step={1} value={marketSnapshot === 'open' ? 0 : 1} onChange={event => setMarketSnapshot(event.currentTarget.value === '0' ? 'open' : 'now')} /><b className={marketSnapshot === 'now' ? 'is-active' : ''}>Now</b></span>
+          <small>MARKET HISTORY</small>
+          <span>
+            <b className={selectedTimelineIndex === 0 || (!marketTimeline.length && marketSnapshot === 'open') ? 'is-active' : ''}>Open</b>
+            <input
+              aria-label="Market history"
+              type="range"
+              min={0}
+              max={marketTimeline.length ? Math.max(0, marketTimeline.length - 1) : 1}
+              step={1}
+              value={marketTimeline.length ? (selectedTimelineIndex ?? marketTimeline.length - 1) : (marketSnapshot === 'open' ? 0 : 1)}
+              onChange={event => chooseTimelineIndex(Number(event.currentTarget.value))}
+            />
+            <b className={selectedTimelineIndex === marketTimeline.length - 1 || (!marketTimeline.length && marketSnapshot === 'now') ? 'is-active' : ''}>{selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? 'Now' : selectedTimelineLabel}</b>
+          </span>
+          <em>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures · ${selectedTimelineLabel}` : 'Open / latest only'}</em>
         </label>
       </section>
       {activeSortKeys.length > 0 && (
@@ -3704,18 +3780,26 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         </div>
       )}
       <div className="dugout-jump-menu" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
-        <span className="dugout-lane-title">Jump views</span>
-        {boardViewJumps.map(view => (
-          <button
-            key={`${view.label}-${view.target.key}`}
-            type="button"
-            onClick={() => scrollToMarketSection(view.target.key)}
-            style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
-          >
-            {view.label}
-          </button>
-        ))}
-        <span className="dugout-lane-note">Jump only · your saved order never changes</span>
+        <span className="dugout-lane-title">Board view</span>
+        {(['all', 'markets', 'props', 'ranks', 'mechanics', 'statcast'] as const).map(preset => {
+          const columnCount = applyDugoutViewPreset(visibleDugoutColumns, preset).length
+          return (
+            <button
+              key={preset}
+              type="button"
+              aria-pressed={viewPreset === preset}
+              disabled={columnCount === 0}
+              onClick={() => {
+                setViewPreset(preset)
+                requestAnimationFrame(() => tableScrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' }))
+              }}
+              style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+            >
+              {preset === 'all' ? 'All' : preset[0].toUpperCase() + preset.slice(1)} <small>{columnCount}</small>
+            </button>
+          )
+        })}
+        <span className="dugout-lane-note">Temporary view · saved columns and order stay untouched</span>
         <button
           type="button"
           onClick={() => setTourStep(0)}
@@ -3798,10 +3882,10 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
             return (
               <React.Fragment key={key}>
                 <BatterRowEl
-                  row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
+                  row={withTimelinePrices(row)} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
                   gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
-                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={visibleDugoutColumns}
+                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={renderedDugoutColumns}
                   compared={comparedKeys.includes(compareKey(row))} onToggleCompare={() => toggleCompared(row)}
                 />
                 {expanded === key && (
@@ -3837,10 +3921,10 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
             return (
               <React.Fragment key={key}>
                 <BatterRowEl
-                  row={row} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
+                  row={withTimelinePrices(row)} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
                   gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
-                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={visibleDugoutColumns}
+                  eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={renderedDugoutColumns}
                   compared={comparedKeys.includes(compareKey(row))} onToggleCompare={() => toggleCompared(row)}
                 />
                 {expanded === key && (
@@ -3856,7 +3940,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     {comparedRows.length > 0 && (
       <aside className="dugout-compare-tray" aria-label="Player comparison">
         <div className="dugout-compare-head">
-          <span><strong>Compare</strong><small>{comparedRows.length}/4 · {marketSnapshot === 'open' ? 'Opening prices' : 'Current prices'}</small></span>
+          <span><strong>Compare</strong><small>{comparedRows.length}/4 · {selectedTimelineLabel}{marketTimeline.length > 1 ? ` · ${marketHistorySourceCount || marketTimeline.length} captures` : ''}</small></span>
           <button type="button" onClick={() => setComparedKeys([])}>Clear</button>
         </div>
         <div className="dugout-compare-grid">
@@ -3869,8 +3953,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               </div>
               <div className="dugout-compare-stats">
                 <span><small>INDEX</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong></span>
-                <span><small>FHR</small><strong>{oStr(selectDugoutMarketPrice(row.fhr_open, row.fhr_fd, marketSnapshot))}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
-                <span><small>HR</small><strong>{oStr(selectDugoutMarketPrice(row.saFd_open, row.sa_fd, marketSnapshot))}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
+                <span><small>FHR</small><strong>{oStr(selectTimelinePrice(row, 'fhr', row.fhr_open, row.fhr_fd))}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
+                <span><small>HR</small><strong>{oStr(selectTimelinePrice(row, 'sa', row.saFd_open, row.sa_fd))}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
                 <span><small>HIT</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</strong></span>
               </div>
             </article>
@@ -4590,6 +4674,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-market-snapshot b{color:var(--text-4);font-size:8px;text-transform:uppercase}
         .dugout-market-snapshot b.is-active{color:var(--accent)}
         .dugout-market-snapshot input{width:100%;accent-color:var(--accent);cursor:pointer}
+        .dugout-market-snapshot em{overflow:hidden;color:var(--text-3);font-size:7px;font-style:normal;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
         .dugout-board-nav{display:grid;grid-template-columns:repeat(4,auto);align-items:center;justify-content:start;gap:5px;margin-bottom:6px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
         .dugout-board-nav button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:3px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text-2);font-size:9px;font-weight:850;cursor:pointer}
         .dugout-board-nav button:disabled{color:var(--text-4);cursor:default;opacity:.55}
@@ -4605,9 +4690,20 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-game-picker-filters button{min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-3);font-size:9px;font-weight:900;text-transform:capitalize;cursor:pointer}
         .dugout-game-picker-filters button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
         .dugout-picker-empty{padding:28px 12px;text-align:center;color:var(--text-3);font-size:11px}
-        .dugout-dense-table th[data-col-key^=fhr_]{box-shadow:inset 0 2px 0 rgba(74,222,128,.55)}
-        .dugout-dense-table th[data-col-key^=sa_],.dugout-dense-table th[data-col-key^=hr_]{box-shadow:inset 0 2px 0 rgba(56,189,248,.55)}
-        .dugout-dense-table th[data-col-key^=s_],.dugout-dense-table th[data-col-key^=r_],.dugout-dense-table th[data-col-key^=d_]{box-shadow:inset 0 2px 0 rgba(168,85,247,.45)}
+        .dugout-dense-table [data-col-group=mechanics]{--dg-group:#fbbf24}
+        .dugout-dense-table [data-col-group=picks]{--dg-group:#a3e635}
+        .dugout-dense-table [data-col-group=fhr]{--dg-group:#4ade80}
+        .dugout-dense-table [data-col-group=hr]{--dg-group:#38bdf8}
+        .dugout-dense-table [data-col-group=props]{--dg-group:#c084fc}
+        .dugout-dense-table [data-col-group=ranks]{--dg-group:#fb923c}
+        .dugout-dense-table [data-col-group=batspeed]{--dg-group:#60a5fa}
+        .dugout-dense-table [data-col-group=barrel]{--dg-group:#f472b6}
+        .dugout-dense-table th[data-col-group]{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--dg-group) 66%,transparent)}
+        .dugout-dense-table td[data-col-group]:not(.dg-sticky-col){border-bottom-color:color-mix(in srgb,var(--dg-group) 14%,transparent)}
+        .dugout-dense-table td[data-market-move]{position:relative}
+        .dugout-dense-table td[data-market-move=shorter]::after,.dugout-dense-table td[data-market-move=longer]::after{content:"";position:absolute;top:3px;right:3px;width:3px;height:3px;border-radius:50%;pointer-events:none}
+        .dugout-dense-table td[data-market-move=shorter]::after{background:#4ade80;box-shadow:0 0 5px rgba(74,222,128,.65)}
+        .dugout-dense-table td[data-market-move=longer]::after{background:#f87171;box-shadow:0 0 5px rgba(248,113,113,.55)}
         /* Direct-child combinators only — the expanded drilldown row's own
            <td colSpan={99}> is a direct child of this table's tbody, but the
            nested pitch-mix/matchup tables inside it are many levels further
@@ -4625,6 +4721,8 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-jump-menu::-webkit-scrollbar{display:none}
         .dugout-jump-menu button{min-height:28px;flex:0 0 auto;white-space:nowrap;transition:border-color 140ms,color 140ms,background 140ms}
         .dugout-jump-menu button:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--border))!important;color:var(--text-1)!important}
+        .dugout-jump-menu button[aria-pressed=true]{border-color:var(--accent)!important;background:var(--accent-dim)!important;color:var(--accent)!important}
+        .dugout-jump-menu button small{margin-left:3px;color:currentColor;font-size:7px;opacity:.68}
         .dugout-lane-title{flex:0 0 auto;color:var(--text-1);font-size:10px;font-weight:950;letter-spacing:.065em;text-transform:uppercase}
         .dugout-lane-note{flex:0 0 auto;color:var(--text-4);font-size:9px;font-weight:650;white-space:nowrap}
         .dugout-mode-buttons{row-gap:6px!important}
