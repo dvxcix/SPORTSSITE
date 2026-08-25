@@ -513,7 +513,7 @@ function PlayerSignalRow({ player, active, fhrDeltaPool, hrDeltaPool, fhrMovemen
   return (
     <button className={styles.playerRow} data-active={active} type="button" onClick={onSelect}>
       <span className={styles.playerCell}><em>{player.battingOrder <= 9 ? player.battingOrder : '—'}</em><PlayerAvatar headshot={mlbHeadshot(player.playerId)} teamLogo={getTeamLogoUrl(player.team)} teamAbbr={player.team} name={player.playerName} size={34} /><span><strong>{player.playerName}</strong><small>{player.team} · {player.position} · <b data-status={player.lineupStatus}>{player.lineupStatus}</b></small></span></span>
-      <span className={styles.scoreCell}><MechanicsScoreRing score={player.scores.overall} label="INDEX" size="small" /><small>#{player.rank}</small></span>
+      <span className={styles.scoreCell}><MechanicsScoreRing score={player.scores.overall} label="SlipSurge Score" size="small" /><small>#{player.rank}</small></span>
       <span className={styles.shapeCell}><span><small>PLANE</small><b>{player.scores.planeMatch}</b></span><i /><span><small>TRAJ</small><b>{player.scores.trajectory}</b></span></span>
       <PriceCell receipt={player.fhr} vendor="fanduel" pool={fhrMovementPool} className={styles.fhrPrice} />
       <PriceCell receipt={player.hr} vendor="fanduel" pool={hrMovementPool} className={styles.hrPrice} />

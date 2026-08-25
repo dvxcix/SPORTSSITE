@@ -6,6 +6,8 @@ import { applyDugoutViewPreset, buildDugoutMarketTimeline } from '../src/lib/dug
 const source = readFileSync(new URL('../src/components/dugout/DugoutClient.tsx', import.meta.url), 'utf8')
 const parkSource = readFileSync(new URL('../src/components/dugout/GameWeatherCard.tsx', import.meta.url), 'utf8')
 const pageStyles = readFileSync(new URL('../src/app/dugout/dugout-page.module.css', import.meta.url), 'utf8')
+const scoreRingSource = readFileSync(new URL('../src/components/ui/MechanicsScoreRing.tsx', import.meta.url), 'utf8')
+const scoreLabelSource = readFileSync(new URL('../src/components/ui/SlipSurgeScoreLabel.tsx', import.meta.url), 'utf8')
 
 test('Dugout workspace fluidly fills ultrawide displays', () => {
   const pageRule = pageStyles.match(/\.page\{([^}]*)\}/)?.[1] ?? ''
@@ -51,9 +53,9 @@ test('The Dugout implements all 14 responsive product requirements', () => {
     ['4 responsive player inspector', ['aria-label="Player inspector sections"', "['matchup', 'contact', 'park']", "'Park Projection'", 'onPrevious', 'onNext']],
     ['5 player identity and quick scores', ['size={34}', 'dg-player-name', 'dg-player-signal-row', '<small>MKT</small>', '<small>CON</small>', '<small>FIT</small>']],
     ['6 readable density and mobile targets', ['dg-player-name{font-size:13px', 'font-variant-numeric:tabular-nums', 'min-height:44px', 'density-comfortable']],
-    ['7 concise glossary', ['Open glossary', 'Board glossary', 'Quick definitions only', "['INDEX', 'SlipSurge batter score for the selected window.']"]],
+    ['7 concise glossary', ['Open glossary', 'Board glossary', 'Quick definitions only', "['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.']"]],
     ['8 game intelligence strip', ['dugout-intelligence-strip', 'GameWeatherSummary', 'GAME STATE', 'TEAM ML SIGNAL', 'BOOK DISAGREEMENT', 'NO HR + MOVE', 'SAVED SIGNALS']],
-    ['9 collapsible team summaries', ['dg-team-collapse', 'toggleTeamCollapsed', 'TOP INDEX', 'HR LEAD', 'LINEUP']],
+    ['9 collapsible team summaries', ['dg-team-collapse', 'toggleTeamCollapsed', 'prefix="Top" compact', 'HR LEAD', 'LINEUP']],
     ['10 desktop and mobile minimaps', ['dugout-desktop-minimap', 'dugout-board-nav', "(['start', 'home', 'away', 'end'] as const)", 'dugout-board-progress']],
     ['11 persistent two-to-four player comparison', ['slice(0, 4)', 'previous.slice(-3)', 'dugout-compare-tray', "(['l1', 'l3', 'l5', 'l10'] as const)", 'PROJECTED BATTED BALL', 'PITCH FIT']],
     ['12 multi-market timeline', ['MARKET STORY', 'dugout-timeline-phases', "label: 'OPEN'", "label: '9AM'", "label: 'NOON'", "label: 'LINEUP'", "label: 'CURRENT'", 'withTimelinePrices', 'timelineRow.sa_mgm']],
@@ -90,7 +92,26 @@ test('comparison and park surfaces use deliberate high-contrast heat treatments'
   assert.ok(source.includes('function comparisonHeat'))
   assert.ok(source.includes('dugout-compare-heat-grid'))
   assert.ok(source.includes('comparedRows.map'))
+  assert.ok(source.includes('data-family="score"'))
+  assert.ok(source.includes('data-family="market"'))
+  assert.ok(source.includes('data-family="matchup"'))
+  assert.ok(source.includes('data-family="contact"'))
+  assert.ok(source.includes('data-family="projection"'))
+  assert.match(source, /\.dugout-compare-card\{[^}]*min-width:280px/)
+  assert.match(source, /\.dugout-compare-heat-grid strong\{[^}]*font-size:18px/)
+  assert.match(source, /grid-auto-columns:min\(86vw,360px\)/)
   assert.ok(parkSource.includes('dugout-park-card'))
   assert.ok(parkSource.includes('dugout-weather-metrics'))
   assert.ok(parkSource.includes('color:#f8fafc'))
+})
+
+test('public scoring surfaces use SlipSurge Score branding instead of Index', () => {
+  assert.ok(source.includes('SlipSurgeScoreLabel'))
+  assert.ok(source.includes("mechanics_index: 'SlipSurge Score'"))
+  assert.equal(source.includes('TOP INDEX'), false)
+  assert.equal(source.includes('>INDEX<'), false)
+  assert.ok(scoreRingSource.includes("label = 'SlipSurge Score'"))
+  assert.ok(scoreRingSource.includes('src="/logo.png"'))
+  assert.ok(scoreLabelSource.includes('SlipSurgeScoreLabel'))
+  assert.ok(scoreLabelSource.includes('src="/logo.png"'))
 })

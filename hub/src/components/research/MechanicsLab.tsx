@@ -53,7 +53,7 @@ function PlayerRow({ player, active, onClick }: { player: MechanicsPlayer; activ
       <span className={styles.rank}>{player.rank.toString().padStart(2, '0')}</span>
       <PlayerIdentity player={player} compact />
       <span className={styles.miniScores}><i style={{ width: `${player.scores.overall}%` }} /><small>{player.scores.trend >= 55 ? 'RISING' : player.scores.trend <= 42 ? 'COOLING' : 'STABLE'}</small></span>
-      <MechanicsScoreRing score={player.scores.overall} label="INDEX" size="small" />
+      <MechanicsScoreRing score={player.scores.overall} label="SlipSurge Score" size="small" />
       <ChevronRight size={15} />
     </button>
   )

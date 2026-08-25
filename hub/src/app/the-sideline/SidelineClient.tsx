@@ -8,6 +8,7 @@ import {
   Database, Film, Goal, LoaderCircle, Pause, Play, Radio, Route, Search, Shield, Sparkles, Target, Wind,
 } from 'lucide-react'
 import styles from './sideline.module.css'
+import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 
 export type Team = { abbr: string; name: string; color: string; logo: string | null }
 
@@ -540,7 +541,7 @@ export function SidelineClient({ games, selectedId, lens }: { games: SidelineGam
       <section className={styles.matchupBar}><div className={styles.teamBlock}><TeamLogo team={selected.away} /><div><small>AWAY</small><strong>{selected.away.name}</strong><span>{selected.away.abbr}</span></div></div><div className={styles.gameMeta}><span>{selected.gameType} · WEEK {selected.week}</span><strong>{selected.gametime ?? 'TBD'}</strong><small>{date} · {selected.stadium ?? 'Stadium TBD'}</small></div><div className={`${styles.teamBlock} ${styles.teamBlockHome}`}><div><small>HOME</small><strong>{selected.home.name}</strong><span>{selected.home.abbr}</span></div><TeamLogo team={selected.home} /></div></section>
       <div className={styles.statusStrip}><span><Wind size={14} /> {selected.roof ?? 'Roof TBD'}</span><span><Shield size={14} /> {selected.surface ?? 'Surface TBD'}</span><span><Database size={14} /> {lens.historicalGames.length} archived games · plays load on demand</span><span className={styles.liveDot}>Private route · noindex</span></div>
       <nav className={styles.viewNav} aria-label="Sideline views">{views.map(item => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? styles.viewActive : ''} onClick={() => setView(item.id)}><Icon size={17} />{item.label}</button> })}</nav>
-      <div className={styles.blueprintBanner}><div><small>THIS MATCHUP</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></div><b>{lens.players[0]?.index ?? '—'}<small>TOP INDEX</small></b><ChevronRight size={20} /></div>
+      <div className={styles.blueprintBanner}><div><small>THIS MATCHUP</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></div><b>{lens.players[0]?.index ?? '—'}<small><SlipSurgeScoreLabel prefix="Top" compact /></small></b><ChevronRight size={20} /></div>
       {view === 'props' && <PropCommand key={selected.id} lens={lens} />}{view === 'routes' && <RouteAtlasField key={selected.id} lens={lens} />}{view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}
     </main>
   )

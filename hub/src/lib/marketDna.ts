@@ -1076,7 +1076,7 @@ export function rankMarketDnaGameProfiles(
     if (evidence.samePlayerLift != null && evidence.samePlayerLift >= 1.15) signals.push('This player has cleared HR above their own baseline in similar prior profiles')
     if ((evidence.settlementShape.multiRbiHrRate ?? 0) >= .45 && p('rbi2') >= 60) signals.push('Historical analogs and today\'s RBI ladder support a multi-RBI HR shape')
     if (statcast >= 70) signals.push('Recent contact shape supports the price structure')
-    if (mechanics >= 70) signals.push('SlipSurge Batter Score windows support the contact-to-flight shape')
+    if (mechanics >= 70) signals.push('SlipSurge Score windows support the contact-to-flight shape')
     if (traffic >= 70) signals.push('Preceding lineup slots carry strong on-base and run pricing')
     if (publicLeverage >= 72 && allHrPicks > 0) signals.push('Market strength exceeds public HR share')
     if (player.metrics.avgLaL5 != null && (player.metrics.avgLaL5 < 8 || player.metrics.avgLaL5 > 38)) contradictions.push('Recent launch shape is outside the strongest HR band')

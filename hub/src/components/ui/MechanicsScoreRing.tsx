@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import Image from 'next/image'
 import styles from './MechanicsScoreRing.module.css'
 
 export function mechanicsScoreTone(score: number) {
@@ -10,7 +11,7 @@ export function mechanicsScoreTone(score: number) {
 
 export function MechanicsScoreRing({
   score,
-  label = 'INDEX',
+  label = 'SlipSurge Score',
   size = 'large',
   className,
 }: {
@@ -28,7 +29,10 @@ export function MechanicsScoreRing({
       style={{ '--score': `${value * 3.6}deg` } as CSSProperties}
       aria-label={`${label} ${Math.round(value)}`}
     >
-      <span><strong>{Math.round(value)}</strong><small>{label}</small></span>
+      <span>
+        <strong>{Math.round(value)}</strong>
+        <small><Image src="/logo.png" alt="" width={10} height={10} aria-hidden="true" /><em>SCORE</em></small>
+      </span>
     </div>
   )
 }

@@ -24,6 +24,7 @@ import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronU
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
+import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 
@@ -1026,7 +1027,7 @@ function PlayerDrillDown({
         </div>
         <div className="dg-inspector-summary">
           <PlayerAvatar mlbId={row.mlb_id} size={42} teamAbbr={row.team} name={row.name} />
-          <span><b>#{row.batting_order}</b><small>INDEX</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong><small>FHR</small><strong>{oStr(row.fhr_fd)}</strong><small>HR</small><strong>{oStr(row.sa_fd)}</strong></span>
+          <span><b>#{row.batting_order}</b><small><SlipSurgeScoreLabel compact /></small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '-'}</strong><small>FHR</small><strong>{oStr(row.fhr_fd)}</strong><small>HR</small><strong>{oStr(row.sa_fd)}</strong></span>
           <div className="dg-inspector-arrows"><button type="button" onClick={onPrevious} aria-label="Previous player"><ChevronLeft size={16} /></button><button type="button" onClick={onNext} aria-label="Next player"><ChevronRight size={16} /></button></div>
         </div>
         <nav className="dg-inspector-tabs" aria-label="Player inspector sections">
@@ -1635,7 +1636,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           <Tooltip
             content={{
               kind: 'stat',
-              eyebrow: 'SlipSurge Batter Score',
+              eyebrow: 'SlipSurge Score',
               title: `Score ${Math.round(row.mechanics_index)}`,
               description: `Ranks #${row.mechanics_rank ?? '—'} of 18 for the selected ${row.mechanics_window.toUpperCase()} window.`,
               icon: <Activity size={16} />,
@@ -1643,7 +1644,7 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
             containerClassName="w-full h-full flex items-center justify-center"
           >
             <span style={{ display: 'inline-flex', cursor: 'help' }}>
-              <MechanicsScoreRing score={row.mechanics_index} label="INDEX" size="small" />
+              <MechanicsScoreRing score={row.mechanics_index} label="SlipSurge Score" size="small" />
             </span>
           </Tooltip>
         ) : <span style={{ color: 'var(--text-4)' }}>—</span>}
@@ -2650,7 +2651,7 @@ function renderDugoutColumns(
 // the tooltip text each column's real header (H()/BL() inside GameTable)
 // already uses, so the panel reads consistently with the board itself.
 const DUGOUT_COLUMN_LABELS: Record<string, string> = {
-  mechanics_index: 'SlipSurge Batter Score',
+  mechanics_index: 'SlipSurge Score',
   pk: 'Community HR pick count',
   fhr_fd: 'FanDuel First HR', fhr_cz: 'Caesars First HR', fhr_fan: 'Fanatics First HR',
   div: 'FD−CZ implied diff', fhr_div_sa: 'FHR ÷ Anytime HR implied',
@@ -3018,10 +3019,10 @@ export function getDugoutHeaderCells(
       {H(
         <img
           src="/logo.png"
-          alt="SlipSurge Batter Score"
+          alt="SlipSurge Score"
           style={{ display: 'inline-block', width: 14, height: 14, objectFit: 'contain', verticalAlign: 'middle' }}
         />,
-        'SlipSurge Batter Score for the selected Last 1/3/5/10 window',
+        'SlipSurge Score for the selected Last 1/3/5/10 window',
         52,
         'mechanics_index',
       )}
@@ -3766,7 +3767,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       </div>
       <div className="dg-team-summary">
         <span><small>LINEUP</small><strong>{confirmed ? 'Confirmed' : 'Projected'} · {rows.length}</strong></span>
-        <span><small>TOP INDEX</small><strong>{summary.top ? `${summary.top.name} ${Math.round(summary.top.mechanics_index ?? 0)}` : '—'}</strong></span>
+        <span><small><SlipSurgeScoreLabel prefix="Top" compact /></small><strong>{summary.top ? `${summary.top.name} ${Math.round(summary.top.mechanics_index ?? 0)}` : '—'}</strong></span>
         <span><small>HR LEAD</small><strong>{summary.shortestHr ? `${summary.shortestHr.name} ${oStr(summary.shortestHr.sa_fd)}` : '—'}</strong></span>
         <span><small>TEAM ML</small><strong>{oStr(summary.teamMl)}</strong></span>
         <span><small>SAVED</small><strong>{summary.matrix}M · {summary.watched}W</strong></span>
@@ -4167,7 +4168,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     {compareOpen && comparedRows.length > 0 && (
       <aside className="dugout-compare-tray" aria-label="Player comparison">
         <div className="dugout-compare-head">
-          <span><strong>Compare</strong><small>{comparedRows.length}/4 · {selectedTimelineLabel}{marketTimeline.length > 1 ? ` · ${marketHistorySourceCount || marketTimeline.length} captures` : ''}</small></span>
+          <span><strong>Player comparison</strong><small>{comparedRows.length}/4 selected · {selectedTimelineLabel}{marketTimeline.length > 1 ? ` · ${marketHistorySourceCount || marketTimeline.length} captures` : ''}</small></span>
+          <div className="dugout-compare-legend" aria-label="Relative comparison heat"><i data-tone="strong">Stronger</i><i data-tone="weak">Weaker</i></div>
           <button type="button" onClick={() => setComparedKeys([])}>Clear</button>
         </div>
         <div className="dugout-compare-grid" data-count={comparedRows.length}>
@@ -4178,7 +4180,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
             return (
             <article key={compareKey(row)} className="dugout-compare-card">
               <div className="dugout-compare-player">
-                <PlayerAvatar mlbId={row.mlb_id} size={28} teamAbbr={row.team} name={row.name} />
+                <PlayerAvatar mlbId={row.mlb_id} size={40} teamAbbr={row.team} name={row.name} />
                 <span><strong>{row.name}</strong><small>{row.team} · #{row.batting_order} · {row.position}</small></span>
                 <button type="button" aria-label={`Remove ${row.name} from comparison`} onClick={() => toggleCompared(row)}>×</button>
               </div>
@@ -4186,17 +4188,17 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                 {(['l1', 'l3', 'l5', 'l10'] as const).map(window => { const value = row.mechanics_windows[window]?.index ?? null; return <span key={window} style={comparisonHeat(value, comparedRows.map(item => item.mechanics_windows[window]?.index ?? null))}><small>{window.toUpperCase()}</small><strong>{value != null ? Math.round(value) : '-'}</strong></span> })}
               </div>
               <div className="dugout-compare-heat-grid">
-                <span style={comparisonHeat(row.mechanics_index, comparedRows.map(item => item.mechanics_index))}><small>INDEX · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '-'}</strong><i>#{row.mechanics_rank ?? '-'} / 18</i></span>
-                <span style={comparisonHeat(toImpl(timelineRow.fhr_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).fhr_fd)))}><small>FHR</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
-                <span style={comparisonHeat(toImpl(timelineRow.sa_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).sa_fd)))}><small>HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
-                <span style={comparisonHeat(row.hit_score, comparedRows.map(item => item.hit_score))}><small>HIT READ</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '-'}</strong><i>{row.hit_status}</i></span>
-                <span style={comparisonHeat(row.m_div_f != null ? -Math.abs(row.m_div_f - 1) : null, comparedRows.map(item => item.m_div_f != null ? -Math.abs(item.m_div_f - 1) : null))}><small>BOOK SPLIT</small><strong>{f2(timelineRow.m_div_f)}</strong><i>FD {oStr(timelineRow.sa_fd)} · MGM {oStr(timelineRow.sa_mgm)}</i></span>
-                <span style={comparisonHeat(row.matchup_edge, comparedRows.map(item => item.matchup_edge))}><small>PITCH FIT · {pitchLabel}</small><strong>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '-'}</strong><i>{row.recent_pitch_count ?? 0} recent pitches</i></span>
-                <span style={comparisonHeat(row.d_brl, comparedRows.map(item => item.d_brl))}><small>CONTACT SHIFT</small><strong>{dlt(row.d_brl)}</strong><i>HH {dlt(row.d_hh)} · EV {dlt(row.d_ev)}</i></span>
-                <span style={comparisonHeat(row.r_pa, comparedRows.map(item => item.r_pa))}><small>PROJECTED BATTED BALL</small><strong>{row.r_pa != null ? `${(row.r_pa * 100).toFixed(0)}% pull-air` : '-'}</strong><i>FB {row.r_fb != null ? `${(row.r_fb * 100).toFixed(0)}%` : '-'} · LA {f1(row.r_la)}°</i></span>
+                <span data-family="score" style={comparisonHeat(row.mechanics_index, comparedRows.map(item => item.mechanics_index))}><small><SlipSurgeScoreLabel compact /> · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '-'}</strong><i>#{row.mechanics_rank ?? '-'} / 18</i></span>
+                <span data-family="market" style={comparisonHeat(toImpl(timelineRow.fhr_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).fhr_fd)))}><small>FHR MARKET</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
+                <span data-family="market" style={comparisonHeat(toImpl(timelineRow.sa_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).sa_fd)))}><small>ANYTIME HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
+                <span data-family="contact" style={comparisonHeat(row.hit_score, comparedRows.map(item => item.hit_score))}><small>HIT READ</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '-'}</strong><i>{row.hit_status}</i></span>
+                <span data-family="market" style={comparisonHeat(row.m_div_f != null ? -Math.abs(row.m_div_f - 1) : null, comparedRows.map(item => item.m_div_f != null ? -Math.abs(item.m_div_f - 1) : null))}><small>BOOK SPLIT</small><strong>{f2(timelineRow.m_div_f)}</strong><i>FD {oStr(timelineRow.sa_fd)} · MGM {oStr(timelineRow.sa_mgm)}</i></span>
+                <span data-family="matchup" style={comparisonHeat(row.matchup_edge, comparedRows.map(item => item.matchup_edge))}><small>PITCH FIT · {pitchLabel}</small><strong>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '-'}</strong><i>{row.recent_pitch_count ?? 0} recent pitches</i></span>
+                <span data-family="contact" style={comparisonHeat(row.d_brl, comparedRows.map(item => item.d_brl))}><small>CONTACT SHIFT</small><strong>{dlt(row.d_brl)}</strong><i>HH {dlt(row.d_hh)} · EV {dlt(row.d_ev)}</i></span>
+                <span data-family="projection" style={comparisonHeat(row.r_pa, comparedRows.map(item => item.r_pa))}><small>BATTED-BALL SHAPE</small><strong>{row.r_pa != null ? `${(row.r_pa * 100).toFixed(0)}% pull-air` : '-'}</strong><i>FB {row.r_fb != null ? `${(row.r_fb * 100).toFixed(0)}%` : '-'} · LA {f1(row.r_la)}°</i></span>
               </div>
               <div className="dugout-compare-stats is-legacy">
-                <span><small>INDEX · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong><i>#{row.mechanics_rank ?? '—'} / 18</i></span>
+                <span><small><SlipSurgeScoreLabel compact /> · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong><i>#{row.mechanics_rank ?? '—'} / 18</i></span>
                 <span><small>FHR</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
                 <span><small>HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
                 <span><small>HIT READ</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</strong><i>{row.hit_status}</i></span>
@@ -4216,7 +4218,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         <aside className="dugout-glossary" role="dialog" aria-modal="true" aria-label="Dugout glossary" onClick={event => event.stopPropagation()}>
           <header><span><strong>Board glossary</strong><small>Quick definitions only</small></span><button type="button" onClick={() => setShowGlossary(false)} aria-label="Close glossary"><X size={16} /></button></header>
           <div>{[
-            ['INDEX', 'SlipSurge batter score for the selected window.'],
+            ['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.'],
             ['FHR', 'First home run market.'],
             ['HR', 'Anytime home run market.'],
             ['OPEN', 'Earliest captured price.'],
@@ -4226,7 +4228,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
             ['PITCH FIT', 'Recent batter and pitcher pitch-shape matchup.'],
             ['MATRIX', 'A saved custom rule matched this player.'],
             ['HIT READ', 'Contact-floor read from underlying batter data.'],
-          ].map(([term, definition]) => <span key={term}><b>{term}</b><p>{definition}</p></span>)}</div>
+          ].map(([term, definition]) => <span key={term}><b>{term === 'SLIPSURGE SCORE' ? <SlipSurgeScoreLabel /> : term}</b><p>{definition}</p></span>)}</div>
         </aside>
       </div>
     )}
@@ -5056,30 +5058,34 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-dense-table button:focus-visible,.dugout-dense-table a:focus-visible,.dugout-jump-menu button:focus-visible,.dugout-board-nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         .dugout-compare-toggle{width:20px;height:20px;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-3);font-size:12px;font-weight:950;line-height:1;cursor:pointer;transition:border-color 120ms,color 120ms,background 120ms}
         .dugout-compare-toggle[aria-pressed=true]{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
-        .dugout-compare-tray{margin-top:8px;padding:10px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 98%,transparent),color-mix(in srgb,var(--surface-2) 94%,transparent));box-shadow:0 16px 42px rgba(0,0,0,.18)}
-        .dugout-compare-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-        .dugout-compare-head > span{display:flex;align-items:baseline;gap:8px;color:var(--text-1);font-size:12px}
-        .dugout-compare-head small{color:var(--text-3);font-size:9px;font-weight:650}
-        .dugout-compare-head button{min-height:28px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text-3);font-size:9px;font-weight:850;cursor:pointer}
-        .dugout-compare-grid{display:grid;grid-template-columns:repeat(4,minmax(190px,1fr));gap:7px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
-        .dugout-compare-card{min-width:190px;padding:9px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
-        .dugout-compare-player{display:flex;align-items:center;gap:7px;min-width:0;padding-bottom:8px;border-bottom:1px solid var(--border)}
+        .dugout-compare-tray{margin-top:12px;padding:16px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));border-radius:16px;background:radial-gradient(circle at 0 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 32%),linear-gradient(180deg,#0d1219,#080c12);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 20px 54px rgba(0,0,0,.28)}
+        .dugout-compare-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid color-mix(in srgb,var(--border) 82%,transparent)}
+        .dugout-compare-head > span{display:grid;gap:3px;min-width:0;margin-right:auto;color:var(--text-1)}
+        .dugout-compare-head > span strong{font-size:16px;font-weight:950;letter-spacing:-.015em}
+        .dugout-compare-head small{color:#aab6c8;font-size:11px;font-weight:700}
+        .dugout-compare-head button{min-height:36px;padding:0 13px;border:1px solid var(--border);border-radius:9px;background:#141b25;color:#d5dce8;font-size:11px;font-weight:900;cursor:pointer}
+        .dugout-compare-legend{display:flex;align-items:center;gap:6px}.dugout-compare-legend i{padding:5px 8px;border:1px solid transparent;border-radius:999px;font-size:9px;font-style:normal;font-weight:900;letter-spacing:.04em;text-transform:uppercase}.dugout-compare-legend i[data-tone=strong]{border-color:rgba(74,222,128,.36);background:rgba(22,101,52,.22);color:#86efac}.dugout-compare-legend i[data-tone=weak]{border-color:rgba(248,113,113,.32);background:rgba(127,29,29,.2);color:#fca5a5}
+        .dugout-compare-grid{display:grid;grid-template-columns:repeat(4,minmax(280px,1fr));gap:12px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+        .dugout-compare-grid[data-count="1"]{grid-template-columns:minmax(320px,1fr)}.dugout-compare-grid[data-count="2"]{grid-template-columns:repeat(2,minmax(320px,1fr))}.dugout-compare-grid[data-count="3"]{grid-template-columns:repeat(3,minmax(300px,1fr))}
+        .dugout-compare-card{min-width:280px;overflow:hidden;padding:14px;border:1px solid #273344;border-radius:14px;background:linear-gradient(165deg,#111821,#0a0f16 72%);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+        .dugout-compare-player{display:flex;align-items:center;gap:10px;min-width:0;padding-bottom:12px;border-bottom:1px solid #273344}
         .dugout-compare-player > span{display:grid;gap:2px;min-width:0;flex:1}
-        .dugout-compare-player strong{overflow:hidden;color:var(--text-1);font-size:10px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
-        .dugout-compare-player small{color:var(--text-3);font-size:8px;font-weight:700;white-space:nowrap}
-        .dugout-compare-player button{width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:6px;background:var(--surface-2);color:var(--text-3);font-size:13px;cursor:pointer}
-        .dugout-compare-windows{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:8px}.dugout-compare-windows>span{display:grid;justify-items:center;gap:1px;padding:5px 2px;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--surface-2) 84%,transparent)}.dugout-compare-windows small{color:var(--text-4);font-size:7px;font-weight:900}.dugout-compare-windows strong{color:var(--accent);font-family:var(--font-mono,monospace);font-size:10px}
+        .dugout-compare-player strong{overflow:hidden;color:#f8fafc;font-size:15px;font-weight:950;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-compare-player small{color:#aab6c8;font-size:10px;font-weight:750;letter-spacing:.025em;white-space:nowrap}
+        .dugout-compare-player button{width:32px;height:32px;display:grid;place-items:center;padding:0;border:1px solid #283443;border-radius:8px;background:#151c25;color:#b7c1d1;font-size:16px;cursor:pointer}
+        .dugout-compare-windows{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:12px}.dugout-compare-windows>span{display:grid;justify-items:center;gap:3px;min-height:58px;padding:8px 4px;border:1px solid #2a3545;border-radius:9px;background:#111821}.dugout-compare-windows small{color:#aab6c8;font-size:9px;font-weight:950;letter-spacing:.08em}.dugout-compare-windows strong{color:#d8ff9e;font-family:var(--font-mono,monospace);font-size:16px;font-weight:950}
         .dugout-compare-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
         .dugout-compare-stats > span{display:grid;gap:2px;padding:6px;border-radius:7px;background:var(--surface-2)}
         .dugout-compare-stats small{color:var(--text-4);font-size:7px;font-weight:900;letter-spacing:.06em}
         .dugout-compare-stats strong{color:var(--text-1);font-family:var(--font-mono,monospace);font-size:10px;font-weight:850;white-space:nowrap}
         .dugout-compare-stats i{color:var(--text-4);font-style:normal;font-size:8px}
         .dugout-compare-stats.is-legacy{display:none}
-        .dugout-compare-heat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
-        .dugout-compare-heat-grid>span{display:grid;gap:2px;min-width:0;padding:7px;border:1px solid transparent;border-radius:8px;background:var(--surface-2);transition:transform 140ms ease,border-color 140ms ease}
-        .dugout-compare-heat-grid small{overflow:hidden;color:#cbd5e1;font-size:7px;font-weight:950;letter-spacing:.055em;text-overflow:ellipsis;white-space:nowrap}
-        .dugout-compare-heat-grid strong{color:#f8fafc;font-family:var(--font-mono,monospace);font-size:11px;font-weight:900;white-space:nowrap}
-        .dugout-compare-heat-grid i{overflow:hidden;color:#94a3b8;font-size:8px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-compare-heat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+        .dugout-compare-heat-grid>span{position:relative;display:grid;align-content:center;gap:4px;min-width:0;min-height:86px;overflow:hidden;padding:12px 12px 11px;border:1px solid #293547;border-radius:10px;background:#111821;transition:transform 140ms ease,border-color 140ms ease}
+        .dugout-compare-heat-grid>span::before{position:absolute;top:0;left:0;right:0;height:3px;background:#64748b;content:""}.dugout-compare-heat-grid>span[data-family=score]::before{background:#a6ff3f}.dugout-compare-heat-grid>span[data-family=market]::before{background:#38bdf8}.dugout-compare-heat-grid>span[data-family=matchup]::before{background:#a78bfa}.dugout-compare-heat-grid>span[data-family=contact]::before{background:#fb923c}.dugout-compare-heat-grid>span[data-family=projection]::before{background:#f472b6}
+        .dugout-compare-heat-grid small{display:flex;align-items:center;min-height:14px;overflow:hidden;color:#d8e0ec;font-size:9px;font-weight:950;letter-spacing:.065em;text-overflow:ellipsis;white-space:nowrap}.dugout-compare-heat-grid>span[data-family=score] small{color:#d8ff9e}.dugout-compare-heat-grid>span[data-family=market] small{color:#a5e4ff}.dugout-compare-heat-grid>span[data-family=matchup] small{color:#d8c9ff}.dugout-compare-heat-grid>span[data-family=contact] small{color:#ffd0a8}.dugout-compare-heat-grid>span[data-family=projection] small{color:#ffc1df}
+        .dugout-compare-heat-grid strong{overflow:hidden;color:#fff;font-family:var(--font-mono,monospace);font-size:18px;font-weight:950;letter-spacing:-.025em;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-compare-heat-grid i{overflow:hidden;color:#aab6c8;font-size:10px;font-style:normal;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
         .dugout-glossary-backdrop{position:fixed;inset:0;z-index:1400;display:flex;justify-content:flex-end;padding:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(7px)}
         .dugout-glossary{width:min(430px,100%);height:100%;overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.62)}
         .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
@@ -5099,7 +5105,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-intelligence-strip{grid-template-columns:repeat(2,minmax(145px,1fr))}
           .dugout-market-snapshot{grid-column:span 2}
           .dugout-board-enter .dg-player-drilldown{width:min(448px,calc(100vw - 24px));right:12px;top:76px;bottom:12px;border:1px solid color-mix(in srgb,var(--accent) 26%,var(--border));border-radius:16px}
-          .dugout-compare-grid{grid-template-columns:repeat(4,minmax(220px,1fr))}
+          .dugout-compare-grid{grid-template-columns:repeat(4,minmax(280px,1fr))}
         }
         @media(min-width:901px) and (max-width:1250px){
           .dugout-intelligence-strip{grid-template-columns:repeat(3,minmax(145px,1fr))}
@@ -5143,15 +5149,14 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-mode-buttons{gap:5px!important;flex-wrap:nowrap!important}
           .dugout-mode-buttons button{min-height:34px!important;min-width:34px}
           .dugout-compare-toggle{width:24px;height:24px;border-radius:7px;font-size:14px}
-          .dugout-compare-tray{margin-top:7px;padding:8px;border-radius:10px}
-          .dugout-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-bottom:2px;overflow:visible}
-          .dugout-compare-grid[data-count="1"]{grid-template-columns:minmax(0,1fr)}
-          .dugout-compare-grid[data-count="3"],.dugout-compare-grid[data-count="4"]{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(162px,44vw);overflow-x:auto;scroll-snap-type:x proximity}
-          .dugout-compare-card{min-width:0;padding:7px;scroll-snap-align:start}
-          .dugout-compare-player strong{font-size:11px}
-          .dugout-compare-player small{overflow:hidden;text-overflow:ellipsis}.dugout-compare-player button{width:22px;height:22px}
-          .dugout-compare-windows{gap:3px}.dugout-compare-windows>span{padding:4px 1px}.dugout-compare-windows strong{font-size:9px}
-          .dugout-compare-heat-grid{grid-template-columns:minmax(0,1fr);gap:5px}.dugout-compare-heat-grid>span{padding:6px}.dugout-compare-heat-grid strong{font-size:10px}
+          .dugout-compare-tray{margin-top:8px;padding:11px;border-radius:13px}
+          .dugout-compare-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:10px;padding-bottom:10px}.dugout-compare-head>span strong{font-size:15px}.dugout-compare-head small{font-size:10px}.dugout-compare-legend{grid-column:1/-1;grid-row:2}.dugout-compare-head button{grid-column:2;grid-row:1;min-height:34px}
+          .dugout-compare-grid,.dugout-compare-grid[data-count="1"],.dugout-compare-grid[data-count="2"],.dugout-compare-grid[data-count="3"],.dugout-compare-grid[data-count="4"]{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:min(86vw,360px);gap:9px;padding-bottom:5px;overflow-x:auto;scroll-snap-type:x mandatory}
+          .dugout-compare-card{min-width:0;padding:12px;scroll-snap-align:center}
+          .dugout-compare-player strong{font-size:14px}
+          .dugout-compare-player small{overflow:hidden;font-size:9px;text-overflow:ellipsis}.dugout-compare-player button{width:30px;height:30px}
+          .dugout-compare-windows{gap:4px}.dugout-compare-windows>span{min-height:52px;padding:7px 2px}.dugout-compare-windows strong{font-size:14px}
+          .dugout-compare-heat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dugout-compare-heat-grid>span{min-height:80px;padding:11px 9px 9px}.dugout-compare-heat-grid strong{font-size:15px}.dugout-compare-heat-grid i{font-size:9px}
           .dugout-summary-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;margin-bottom:7px!important}
           .dugout-summary-action{width:100%!important;min-width:0!important;min-height:34px!important;margin-left:0!important;padding:5px 8px!important;justify-content:center!important;gap:5px!important;font-size:10px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis}
           .dugout-summary-action > span{min-width:0;flex-shrink:1;padding-left:5px!important;padding-right:5px!important}
