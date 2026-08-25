@@ -164,6 +164,20 @@ test('market cells use one movement indicator and a readable opening-price label
   assert.doesNotMatch(source, /td\[data-market-move=longer\]::after/)
 })
 
+test('RBI and total-base markets switch between HR ratios and raw FanDuel odds without changing columns', () => {
+  assert.ok(source.includes("export type DugoutRelatedMarketDisplay = 'ratio' | 'odds'"))
+  assert.ok(source.includes('className="dugout-related-market-control"'))
+  assert.ok(source.includes('HR Ratios'))
+  assert.ok(source.includes('Raw Odds'))
+  assert.ok(source.includes('<BookLogo vendor="fanduel" size={14} />'))
+  assert.ok(source.includes("relatedMarketDisplay === 'ratio' ? f2(ratio) : undefined"))
+  assert.ok(source.includes("RELATED('1+ RBI', 'sa_div_rbi', 'rbi_fd'"))
+  assert.ok(source.includes("RELATED('5+ TB', 'sa_div_tb5', 'tb5_fd'"))
+  assert.ok(source.includes("RELATED('2+ HR', 'sa_div_hr2', 'hr2_fd'"))
+  assert.ok(source.includes('relatedMarketDisplay={relatedMarketDisplay}'))
+  assert.ok(source.includes('compareOpen, relatedMarketDisplay'))
+})
+
 test('glossary terms cannot overlap their definitions at desktop or mobile widths', () => {
   assert.match(source, /grid-template-columns:minmax\(142px,\.78fr\) minmax\(0,1\.22fr\)/)
   assert.match(source, /\.dugout-glossary p\{min-width:0[^}]*overflow-wrap:anywhere/)

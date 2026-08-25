@@ -882,6 +882,7 @@ type MultiSortEntry = { col: string; dir: 'desc' | 'asc' }
 
 type DugoutMarketSnapshot = 'open' | 'now'
 type DugoutInspectorTab = 'matchup' | 'contact' | 'park'
+export type DugoutRelatedMarketDisplay = 'ratio' | 'odds'
 type DugoutViewState = {
   sort: SortState
   stickyMode: boolean
@@ -894,6 +895,7 @@ type DugoutViewState = {
   activeGroup: string
   inspectorTab: DugoutInspectorTab
   compareOpen: boolean
+  relatedMarketDisplay: DugoutRelatedMarketDisplay
 }
 function americanFromProbability(probability: number | null): number | null {
   if (probability == null || probability <= 0 || probability >= 1) return null
@@ -901,7 +903,7 @@ function americanFromProbability(probability: number | null): number | null {
 }
 
 export function parseDugoutViewState(raw: string | null): DugoutViewState {
-  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', timelineIndex: null, expanded: null, viewPreset: 'all', collapsedTeams: [], activeGroup: 'core', inspectorTab: 'matchup', compareOpen: true }
+  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', timelineIndex: null, expanded: null, viewPreset: 'all', collapsedTeams: [], activeGroup: 'core', inspectorTab: 'matchup', compareOpen: true, relatedMarketDisplay: 'ratio' }
   if (!raw) return fallback
   try {
     const value = JSON.parse(raw)
@@ -926,6 +928,7 @@ export function parseDugoutViewState(raw: string | null): DugoutViewState {
       activeGroup: typeof value?.activeGroup === 'string' ? value.activeGroup : 'core',
       inspectorTab: value?.inspectorTab === 'contact' || value?.inspectorTab === 'park' ? value.inspectorTab : 'matchup',
       compareOpen: value?.compareOpen !== false,
+      relatedMarketDisplay: value?.relatedMarketDisplay === 'odds' ? 'odds' : 'ratio',
     }
   } catch {
     return fallback
@@ -1466,7 +1469,7 @@ function OddsCell({
 }
 
 // ─── batter row ───────────────────────────────────────────────────────────────
-export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow, visibleColumns, extraCells, compared, onToggleCompare }: {
+export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr, id, highlightMode, cellHighlights, onCellToggle, eraserMode, onEraseRow, visibleColumns, extraCells, compared, onToggleCompare, relatedMarketDisplay = 'ratio' }: {
   row: BatterRow; pool: BatterRow[]; expanded: boolean; onToggle: () => void
   gameInfo: { sport: string; game_pk: string | null; game_date: string | null }
   onShowHr?: () => void
@@ -1503,6 +1506,10 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
   // member's saved column visibility/order or any table sort state.
   compared?: boolean
   onToggleCompare?: () => void
+  // Switches the same saved/reorderable related-market columns between their
+  // normalized Anytime-HR relationships and the underlying FanDuel prices.
+  // It deliberately does not add, remove, or reorder any column identity.
+  relatedMarketDisplay?: DugoutRelatedMarketDisplay
   // Optional trailing <td> cells appended after the normal Dugout columns —
   // used by DailyRecapTable to add its own HR Distance/EV sort columns
   // without forking this ~350-line row renderer. GameTable never passes
@@ -1563,6 +1570,10 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
     tr.style.cursor = eraserMode ? 'not-allowed' : ''
   })
   const g = (f: keyof BatterRow) => pool.map(r => r[f] as number | null)
+  const relatedDisplay = (ratio: number | null) => relatedMarketDisplay === 'ratio' ? f2(ratio) : undefined
+  const relatedHeat = (ratioKey: keyof BatterRow, oddsKey: keyof BatterRow) => relatedMarketDisplay === 'ratio'
+    ? heat(row[ratioKey] as number | null, g(ratioKey))
+    : oddsHeat(row[oddsKey] as number | null, g(oddsKey), '20,147,255')
   // FHR%'s shade is meaningful across the WHOLE game (all ~18 batters, both
   // teams — BDL's FanDuel FHR average is one shared per-game market), but
   // HR%'s shade should only be weighed against this player's own TEAMMATES,
@@ -1835,23 +1846,23 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
       <OddsCell row={row} gameInfo={gameInfo} propKey="pa1" book="fanduel" odds={row.pa1_fd} openOdds={row.pa1_open} style={{ ...STD, width: 44, minWidth: 44, ...oddsHeat(row.pa1_fd, g('pa1_fd')) }} />
       <td style={{ ...STD, width: 36, minWidth: 36, ...heat(row.pa1_div_sa, g('pa1_div_sa')) }}>{f2(row.pa1_div_sa)}</td>
       <OddsCell
-        row={row} gameInfo={gameInfo} propKey="rbi" book="fanduel" odds={row.rbi_fd} openOdds={row.rbiFd_open} display={f2(row.sa_div_rbi)}
-        style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi, g('sa_div_rbi')) }}
+        row={row} gameInfo={gameInfo} propKey="rbi" book="fanduel" odds={row.rbi_fd} openOdds={row.rbiFd_open} display={relatedDisplay(row.sa_div_rbi)}
+        style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi', 'rbi_fd') }}
         pickCount={row.pkRbi?.picks ?? null}
       />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="rbi2" book="fanduel" odds={row.rbi2_fd} openOdds={row.rbi2Fd_open} display={f2(row.sa_div_rbi2)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi2, g('sa_div_rbi2')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="rbi3" book="fanduel" odds={row.rbi3_fd} openOdds={row.rbi3Fd_open} display={f2(row.sa_div_rbi3)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_rbi3, g('sa_div_rbi3')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="rbi2" book="fanduel" odds={row.rbi2_fd} openOdds={row.rbi2Fd_open} display={relatedDisplay(row.sa_div_rbi2)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi2', 'rbi2_fd') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="rbi3" book="fanduel" odds={row.rbi3_fd} openOdds={row.rbi3Fd_open} display={relatedDisplay(row.sa_div_rbi3)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_rbi3', 'rbi3_fd') }} />
       {/* No openOdds here on purpose: BDL's own HRR line is variable-threshold
           per player (hrr_line in balldontlie.ts) — our opening capture is
           always the exact "1+" section, so BDL's current could silently be a
           2+/3+ line for a different player. Showing a delta would compare
           two different markets as if they were the same one. */}
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hrr" book="fanduel" odds={row.hrr_fd} display={f2(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hrr, g('sa_div_hrr')) }} pickCount={row.pkHrr?.picks ?? null} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="tb" book="fanduel" odds={row.tb_fd} openOdds={row.tbFd_open} display={f2(row.sa_div_tb)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb, g('sa_div_tb')) }} pickCount={row.pkTb?.picks ?? null} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="tb3" book="fanduel" odds={row.tb3_fd} openOdds={row.tb3Fd_open} display={f2(row.sa_div_tb3)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb3, g('sa_div_tb3')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="tb4" book="fanduel" odds={row.tb4_fd} openOdds={row.tb4Fd_open} display={f2(row.sa_div_tb4)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb4, g('sa_div_tb4')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="tb5" book="fanduel" odds={row.tb5_fd} openOdds={row.tb5Fd_open} display={f2(row.sa_div_tb5)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_tb5, g('sa_div_tb5')) }} />
-      <OddsCell row={row} gameInfo={gameInfo} propKey="hr2" book="fanduel" odds={row.hr2_fd} openOdds={row.hr2Fd_open} display={f2(row.sa_div_hr2)} style={{ ...STD, width: 38, minWidth: 38, ...heat(row.sa_div_hr2, g('sa_div_hr2')) }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hrr" book="fanduel" odds={row.hrr_fd} display={relatedDisplay(row.sa_div_hrr)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_hrr', 'hrr_fd') }} pickCount={row.pkHrr?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb" book="fanduel" odds={row.tb_fd} openOdds={row.tbFd_open} display={relatedDisplay(row.sa_div_tb)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb', 'tb_fd') }} pickCount={row.pkTb?.picks ?? null} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb3" book="fanduel" odds={row.tb3_fd} openOdds={row.tb3Fd_open} display={relatedDisplay(row.sa_div_tb3)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb3', 'tb3_fd') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb4" book="fanduel" odds={row.tb4_fd} openOdds={row.tb4Fd_open} display={relatedDisplay(row.sa_div_tb4)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb4', 'tb4_fd') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="tb5" book="fanduel" odds={row.tb5_fd} openOdds={row.tb5Fd_open} display={relatedDisplay(row.sa_div_tb5)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_tb5', 'tb5_fd') }} />
+      <OddsCell row={row} gameInfo={gameInfo} propKey="hr2" book="fanduel" odds={row.hr2_fd} openOdds={row.hr2Fd_open} display={relatedDisplay(row.sa_div_hr2)} style={{ ...STD, width: 38, minWidth: 38, ...relatedHeat('sa_div_hr2', 'hr2_fd') }} />
 
       <td style={SDIV_D} />
 
@@ -2808,6 +2819,11 @@ const DUGOUT_COLUMN_LABELS: Record<string, string> = {
   sa_div_tb: 'HR vs. 2+ total bases implied', sa_div_tb3: 'HR vs. 3+ total bases implied',
   sa_div_tb4: 'HR vs. 4+ total bases implied', sa_div_tb5: 'HR vs. 5+ total bases implied',
   sa_div_hr2: 'HR vs. 2+ home runs implied',
+  rbi_fd: 'FanDuel 1+ RBI odds', rbi2_fd: 'FanDuel 2+ RBI odds', rbi3_fd: 'FanDuel 3+ RBI odds',
+  hrr_fd: 'FanDuel Hits + Runs + RBIs odds',
+  tb_fd: 'FanDuel 2+ total bases odds', tb3_fd: 'FanDuel 3+ total bases odds',
+  tb4_fd: 'FanDuel 4+ total bases odds', tb5_fd: 'FanDuel 5+ total bases odds',
+  hr2_fd: 'FanDuel 2+ home runs odds',
   sng_fd: 'To Hit a Single', dbl_fd: 'To Hit a Double', tri_fd: 'To Hit a Triple', sb_fd: '1+ Stolen Base', sb2_fd: '2+ Stolen Bases',
   hits_fd: '1+ Hit', hits2_fd: '2+ Hits', hit_score: 'Hit model indicator and rank', runs_fd: '1+ Run Scored', runs2_fd: '2+ Runs Scored',
   paper: 'Composite Statcast score', bk_rk: 'Sportsbook rank', pp_rk: 'Statcast rank', mm: 'Market vs. Statcast gap',
@@ -3130,6 +3146,7 @@ export function getDugoutHeaderCells(
   sortInfo: (key?: string) => { active?: boolean; dir?: 'desc' | 'asc'; rank?: number },
   toggleSort: (col: string) => void,
   visibleColumns: { key: string; group: string }[],
+  relatedMarketDisplay: DugoutRelatedMarketDisplay = 'ratio',
 ): React.ReactNode[] {
   const H = (label: React.ReactNode, title?: string, w = 40, sortKey?: string, pickSortKey?: string) => {
     const info = sortInfo(sortKey)
@@ -3153,6 +3170,10 @@ export function getDugoutHeaderCells(
       />
     )
   }
+
+  const RELATED = (label: string, ratioKey: string, oddsKey: string, pickSortKey?: string, width = 44) => relatedMarketDisplay === 'ratio'
+    ? H(label, `Anytime HR / ${label} implied-probability relationship`, width, ratioKey, pickSortKey)
+    : BL('fanduel', label, `FanDuel ${label} raw odds`, width, oddsKey, pickSortKey)
 
   const headerCells = (
     <>
@@ -3191,15 +3212,15 @@ export function getDugoutHeaderCells(
       {H('🌙', 'Moonshot market price', 50, 'moonshot_fd')}
       {H('🥇', '1st Plate Appearance HR price', 50, 'pa1_fd')}
       {H('⏰', '1st Plate Appearance HR ÷ Anytime HR ratio', 36, 'pa1_div_sa')}
-      {H('1+ RBI', 'HR / 1+ RBI relationship', 44, 'sa_div_rbi', 'pkRbi')}
-      {H('2+ RBI', 'HR / 2+ RBI relationship', 44, 'sa_div_rbi2')}
-      {H('3+ RBI', 'HR / 3+ RBI relationship', 44, 'sa_div_rbi3')}
-      {H('H+R+RBI', 'HR / Hits + Runs + RBIs relationship', 52, 'sa_div_hrr', 'pkHrr')}
-      {H('2+ TB', 'HR / 2+ total bases relationship', 44, 'sa_div_tb', 'pkTb')}
-      {H('3+ TB', 'HR / 3+ total bases relationship', 44, 'sa_div_tb3')}
-      {H('4+ TB', 'HR / 4+ total bases relationship', 44, 'sa_div_tb4')}
-      {H('5+ TB', 'HR / 5+ total bases relationship', 44, 'sa_div_tb5')}
-      {H('2+ HR', 'HR / 2+ HR relationship', 44, 'sa_div_hr2')}
+      {RELATED('1+ RBI', 'sa_div_rbi', 'rbi_fd', 'pkRbi')}
+      {RELATED('2+ RBI', 'sa_div_rbi2', 'rbi2_fd')}
+      {RELATED('3+ RBI', 'sa_div_rbi3', 'rbi3_fd')}
+      {RELATED('H+R+RBI', 'sa_div_hrr', 'hrr_fd', 'pkHrr', 52)}
+      {RELATED('2+ TB', 'sa_div_tb', 'tb_fd', 'pkTb')}
+      {RELATED('3+ TB', 'sa_div_tb3', 'tb3_fd')}
+      {RELATED('4+ TB', 'sa_div_tb4', 'tb4_fd')}
+      {RELATED('5+ TB', 'sa_div_tb5', 'tb5_fd')}
+      {RELATED('2+ HR', 'sa_div_hr2', 'hr2_fd')}
       <th style={SDIV_H} />
       {BL('fanduel', '1B', 'To hit a single (FanDuel)', 50, 'sng_fd', 'pkSingles')}
       {BL('fanduel', '2B', 'To hit a double (FanDuel)', 50, 'dbl_fd', 'pkDoubles')}
@@ -3324,6 +3345,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [activeGroup, setActiveGroup] = useState(persistedView.activeGroup)
   const [inspectorTab, setInspectorTab] = useState<DugoutInspectorTab>(persistedView.inspectorTab)
   const [compareOpen, setCompareOpen] = useState(persistedView.compareOpen)
+  const [relatedMarketDisplay, setRelatedMarketDisplay] = useState<DugoutRelatedMarketDisplay>(persistedView.relatedMarketDisplay)
   const [showTools, setShowTools] = useState(false)
   const [showGlossary, setShowGlossary] = useState(false)
   const commandBarRef = useRef<HTMLElement>(null)
@@ -3448,9 +3470,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   }, [compareStorageKey, comparedKeys])
   useEffect(() => {
     try {
-      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, timelineIndex, expanded, viewPreset, collapsedTeams: [...collapsedTeams], activeGroup, inspectorTab, compareOpen }))
+      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, timelineIndex, expanded, viewPreset, collapsedTeams: [...collapsedTeams], activeGroup, inspectorTab, compareOpen, relatedMarketDisplay }))
     } catch {}
-  }, [activeGroup, collapsedTeams, compareOpen, expanded, inspectorTab, marketSnapshot, sort, stickyCols, stickyMode, timelineIndex, viewPreset, viewStorageKey])
+  }, [activeGroup, collapsedTeams, compareOpen, expanded, inspectorTab, marketSnapshot, relatedMarketDisplay, sort, stickyCols, stickyMode, timelineIndex, viewPreset, viewStorageKey])
   const toggleCompared = (row: BatterRow) => {
     const key = compareKey(row)
     setComparedKeys(previous => previous.includes(key)
@@ -4025,7 +4047,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       { key: 'fhr_fd', label: 'Sportsbook source', title: 'Know which market you are reading', body: 'Book logos identify the source. FHR means First Home Run. HR means an Anytime Home Run.', icon: 'book' },
       { key: 'sa_fd', label: 'Price and movement', title: 'Read the current market price', body: 'The main value is American odds. A movement arrow means the price changed from its opening value. Hover to compare opening and current prices.', icon: 'market' },
       { key: 'sng_fd', label: 'Public picks', title: 'Separate price from public action', body: 'A small P badge is the public pick count for that exact market. Use the PICKS control in the header to sort by public activity.', icon: 'users' },
-      { key: 'sa_div_rbi', label: 'Related markets', title: 'Compare connected markets', body: 'RBI, total-base, and Hits + Runs + RBIs columns compare their implied probability with the Anytime HR market. These are comparisons, not raw odds.', icon: 'activity' },
+      { key: 'sa_div_rbi', label: 'Related markets', title: 'Compare connected markets', body: 'Use the RBI + bases control to switch these columns between HR relationships and FanDuel raw odds.', icon: 'activity' },
       { key: 'paper', label: 'Board ranks', title: 'Use rankings as orientation', body: 'Rank and composite columns help organize a crowded board. Hover a header whenever you need its exact definition.', icon: 'chart' },
       { key: 's_spd', label: 'Recent form', title: 'Compare season and recent form', body: 'S is season, R is the selected recent window, and Δ is the change from season to recent form. Change the recent window from the team toolbar.', icon: 'activity' },
       { key: 's_brl', label: 'Statcast', title: 'Finish with batted-ball context', body: 'The final section covers barrel rate, hard-hit rate, sweet spot, pull air, fly balls, exit velocity, launch angle, and related Statcast measures.', icon: 'chart' },
@@ -4111,7 +4133,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // regardless of which team's rows are actually in view. Column JSX itself
   // lives in getDugoutHeaderCells so this board and DailyRecapTable always
   // render the identical set of columns.
-  const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, renderedDugoutColumns)
+  const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, renderedDugoutColumns, relatedMarketDisplay)
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className={`dugout-board-enter${expanded ? ' has-inspector' : ''}`} style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
@@ -4216,6 +4238,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           }}>{label}</button>
         })}
       </nav>
+      <section className="dugout-related-market-control" aria-label="RBI and total-base market display">
+        <span><small>RBI + BASES</small><strong>{relatedMarketDisplay === 'ratio' ? 'HR relationships' : 'FanDuel raw odds'}</strong></span>
+        <div role="group" aria-label="Choose RBI and total-base values">
+          <button type="button" aria-pressed={relatedMarketDisplay === 'ratio'} onClick={() => setRelatedMarketDisplay('ratio')}>HR Ratios</button>
+          <button type="button" aria-pressed={relatedMarketDisplay === 'odds'} onClick={() => setRelatedMarketDisplay('odds')}><BookLogo vendor="fanduel" size={14} /> Raw Odds</button>
+        </div>
+      </section>
       <nav className="dugout-desktop-minimap" aria-label="Lineup quick jump">
         <div className="dugout-minimap-copy"><strong>Lineup quick jump</strong><small>Select a batter to move directly to their row. The color fill is their SlipSurge Score.</small></div>
         <div className="dugout-minimap-teams">{([
@@ -4309,6 +4338,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
                   eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={renderedDugoutColumns}
                   compared={comparedKeys.includes(compareKey(row))} onToggleCompare={() => toggleCompared(row)}
+                  relatedMarketDisplay={relatedMarketDisplay}
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} tab={inspectorTab} onTabChange={setInspectorTab} onPrevious={() => navigateInspector(-1)} onNext={() => navigateInspector(1)} /></tr>
@@ -4348,6 +4378,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
                   eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={renderedDugoutColumns}
                   compared={comparedKeys.includes(compareKey(row))} onToggleCompare={() => toggleCompared(row)}
+                  relatedMarketDisplay={relatedMarketDisplay}
                 />
                 {expanded === key && (
                   <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} tab={inspectorTab} onTabChange={setInspectorTab} onPrevious={() => navigateInspector(-1)} onNext={() => navigateInspector(1)} /></tr>
@@ -5170,6 +5201,12 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-timeline-phases button,.dugout-group-nav button{min-height:32px;flex:0 0 auto;padding:0 11px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text-3);font-size:10px;font-weight:900;letter-spacing:.035em;cursor:pointer}
         .dugout-timeline-phases button[aria-pressed=true],.dugout-group-nav button[aria-pressed=true]{border-color:color-mix(in srgb,var(--accent) 48%,var(--border));background:var(--accent-dim);color:var(--accent)}
         .dugout-timeline-phases button:disabled,.dugout-group-nav button:disabled{opacity:.35;cursor:default}
+        .dugout-related-market-control{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:7px;padding:6px 7px 6px 11px;border:1px solid color-mix(in srgb,#38bdf8 24%,var(--border));border-radius:10px;background:radial-gradient(circle at 100% 0,rgba(56,189,248,.09),transparent 46%),linear-gradient(145deg,#0e151e,#090e14);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+        .dugout-related-market-control>span{display:grid;gap:1px;margin-right:auto;min-width:0}.dugout-related-market-control>span small{color:#7dd3fc;font-size:8px;font-weight:950;letter-spacing:.09em}.dugout-related-market-control>span strong{overflow:hidden;color:#f8fafc;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-related-market-control>div{display:flex;align-items:center;gap:4px;padding:3px;border:1px solid #263243;border-radius:8px;background:#070c12}
+        .dugout-related-market-control button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;border:1px solid transparent;border-radius:6px;background:transparent;color:#9aa9bb;font-size:9px;font-weight:900;letter-spacing:.025em;cursor:pointer}
+        .dugout-related-market-control button[aria-pressed=true]{border-color:rgba(56,189,248,.42);background:rgba(14,116,144,.22);color:#e0f2fe;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+        .dugout-related-market-control button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         .dugout-desktop-minimap{display:grid;gap:10px;margin-bottom:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));border-radius:13px;background:radial-gradient(circle at 0 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 30%),linear-gradient(180deg,#0e141c,#080d13)}
         .dugout-minimap-copy{display:flex;align-items:baseline;gap:10px;min-width:0}.dugout-minimap-copy strong{color:#f8fafc;font-size:13px;font-weight:950}.dugout-minimap-copy small{overflow:hidden;color:#9aa9bb;font-size:10px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
         .dugout-minimap-teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.dugout-minimap-teams>section{display:grid;grid-template-columns:minmax(102px,auto) minmax(0,1fr);align-items:center;gap:10px;min-width:0;padding:8px;border:1px solid #263243;border-radius:10px;background:rgba(9,14,21,.82)}
@@ -5332,6 +5369,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-market-snapshot{min-height:52px;padding-top:7px;padding-bottom:7px}.dugout-market-snapshot>span{gap:5px}.dugout-market-snapshot em{display:none}
           .dugout-timeline-phases[data-count="0"],.dugout-timeline-phases[data-count="1"],.dugout-timeline-phases[data-count="2"]{display:none}
           .dugout-timeline-phases button,.dugout-group-nav button{min-height:34px;padding:0 10px;font-size:9px}
+          .dugout-related-market-control{gap:5px;margin-bottom:5px;padding:4px 5px 4px 8px;border-radius:9px}.dugout-related-market-control>span small{display:none}.dugout-related-market-control>span strong{font-size:9px}.dugout-related-market-control>div{gap:2px;padding:2px}.dugout-related-market-control button{min-height:32px;padding:0 8px;font-size:8px}.dugout-related-market-control button svg{width:12px;height:12px}
           .dugout-jump-menu{display:none!important}
           .dugout-desktop-minimap{display:none}
           .dugout-redundant-sort-summary{flex-wrap:nowrap!important;overflow-x:auto;min-height:38px;margin-bottom:5px!important;padding:5px 7px!important;scrollbar-width:none}
