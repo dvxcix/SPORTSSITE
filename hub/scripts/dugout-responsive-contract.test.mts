@@ -4,6 +4,15 @@ import test from 'node:test'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline } from '../src/lib/dugoutPresentation.ts'
 
 const source = readFileSync(new URL('../src/components/dugout/DugoutClient.tsx', import.meta.url), 'utf8')
+const pageStyles = readFileSync(new URL('../src/app/dugout/dugout-page.module.css', import.meta.url), 'utf8')
+
+test('Dugout workspace fluidly fills ultrawide displays', () => {
+  const pageRule = pageStyles.match(/\.page\{([^}]*)\}/)?.[1] ?? ''
+  assert.match(pageRule, /width:100%/)
+  assert.match(pageRule, /max-width:none/)
+  assert.match(pageRule, /min-width:0/)
+  assert.doesNotMatch(pageRule, /1920px/)
+})
 
 test('temporary presets preserve a member custom order and never reveal hidden columns', () => {
   const customized = [

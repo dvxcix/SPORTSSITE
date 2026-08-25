@@ -40,6 +40,8 @@ const viewports = [
   { label: 'tablet-768x1024', width: 768, height: 1024, mobile: false },
   { label: 'desktop-1440x1000', width: 1440, height: 1000, mobile: false },
   { label: 'wide-1920x1080', width: 1920, height: 1080, mobile: false },
+  { label: 'wide-2560x1440', width: 2560, height: 1440, mobile: false },
+  { label: 'ultrawide-3440x1440', width: 3440, height: 1440, mobile: false },
 ] as const
 
 const browser = await chromium.launch({ executablePath, headless: true })
