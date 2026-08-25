@@ -8,6 +8,7 @@ import { MLB_PARKS } from '@slipsurge/core/mlbParks'
 import { pitchLabel } from '@slipsurge/core/mlb-api'
 import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 import { getTeamColor, getTeamLogoUrl, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
+import { formatBattedBallDistance, resolveBattedBallDistance } from '@slipsurge/core/battedBallDistance'
 import styles from './BattedBallSprayChart.module.css'
 
 export type SprayPitchRow = {
@@ -279,7 +280,7 @@ export function BattedBallSprayChart({ rows, playerName, projection, compact = f
                   style={{ '--point-delay': `${Math.min(index, 80) * 12}ms` } as CSSProperties}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${eventLabel(row.events)} on ${formatDate(row.game_date)}. ${fmt(row.launch_speed, ' mph')}, ${fmt(row.hit_distance, ' ft')}.`}
+                  aria-label={`${eventLabel(row.events)} on ${formatDate(row.game_date)}. ${fmt(row.launch_speed, ' mph')}, ${formatBattedBallDistance(row, { unavailable: 'distance not tracked' })}.`}
                   onMouseEnter={() => { setSelectedKey(rowKey); setReplay(value => value + 1) }}
                   onFocus={() => setSelectedKey(rowKey)}
                   onClick={() => { setSelectedKey(rowKey); setReplay(value => value + 1) }}
@@ -313,7 +314,7 @@ export function BattedBallSprayChart({ rows, playerName, projection, compact = f
               </div>
               <div className={styles.metrics}>
                 <span><small>Exit velocity</small><strong>{fmt(selected.launch_speed, ' mph')}</strong></span>
-                <span><small>Distance</small><strong>{fmt(selected.hit_distance, ' ft')}</strong></span>
+                <span title={resolveBattedBallDistance(selected).source === 'coordinate_estimate' ? 'Estimated from the Statcast landing coordinate' : undefined}><small>Distance</small><strong>{formatBattedBallDistance(selected, { unavailable: 'Not tracked' })}</strong></span>
                 <span><small>Launch angle</small><strong>{fmt(selected.launch_angle, '°')}</strong></span>
                 <span><small>Batted ball</small><strong>{selected.bb_type?.replaceAll('_', ' ') ?? 'Not tracked'}</strong></span>
               </div>

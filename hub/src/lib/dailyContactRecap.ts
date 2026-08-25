@@ -7,6 +7,7 @@ import { fetchMlbPartyRows } from '@/lib/mlbPartyServer'
 import { getMLBSchedule, type MLBGame } from '@slipsurge/core/mlb-api'
 import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 import { normName } from '@slipsurge/core/nameNorm'
+import { resolveBattedBallDistance } from '@slipsurge/core/battedBallDistance'
 import type { ContactKind, DailyContactEvent, DailyContactGame, DailyContactSlate } from '@/lib/contactRecapTypes'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -231,7 +232,7 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
       isFirstHr: hr?.is_first_hr_of_game ?? false, isGrandSlam: hr?.is_grand_slam ?? false,
       exitVelocity: row.launch_speed ?? hr?.exit_velocity ?? near?.exit_velocity ?? null,
       launchAngle: row.launch_angle ?? hr?.launch_angle ?? near?.launch_angle ?? null,
-      distance: row.hit_distance ?? hr?.hit_distance ?? near?.hit_distance ?? null,
+      distance: resolveBattedBallDistance(row).feet ?? hr?.hit_distance ?? near?.hit_distance ?? null,
       hitBearing: near?.hit_bearing ?? null, hcX: Number(row.hc_x), hcY: Number(row.hc_y), coordinateSource: 'statcast',
       pitchType: row.pitch_type ?? near?.pitch_type ?? null, pitchSpeed: row.velocity ?? near?.pitch_speed ?? null,
       bbType: row.bb_type ?? null, parksHrCount: near?.parks_hr_count ?? null, parkHrList: near?.park_hr_list ?? null,
@@ -270,7 +271,7 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
       pitcherTeam: batterTeam === game.homeTeam ? game.awayTeam : game.homeTeam,
       inning: live.inning ?? null, half: live.half ?? '', result: live.event_type, description: live.desc,
       rbi: live.rbi_on_play, isFirstHr: hr?.is_first_hr_of_game ?? false, isGrandSlam: hr?.is_grand_slam ?? false,
-      exitVelocity: live.exit_velocity, launchAngle: live.launch_angle, distance: live.hit_distance, hitBearing: near?.hit_bearing ?? null,
+      exitVelocity: live.exit_velocity, launchAngle: live.launch_angle, distance: resolveBattedBallDistance({ hit_distance: live.hit_distance, hc_x: live.hc_x, hc_y: live.hc_y }).feet, hitBearing: near?.hit_bearing ?? null,
       hcX: live.hc_x, hcY: live.hc_y, coordinateSource: 'mlb_live', pitchType: live.pitch_type,
       pitchSpeed: live.pitch_speed, bbType: live.bb_type, parksHrCount: near?.parks_hr_count ?? null, parkHrList: near?.park_hr_list ?? null, game,
     })
@@ -332,6 +333,7 @@ const loadCached = unstable_cache(async (date: string): Promise<DailyContactSlat
     dataNotes: [
       'Home runs use official MLB play-by-play and Statcast measurements.',
       'Official hc_x/hc_y coordinates are used whenever captured.',
+      'When projected distance is absent, a coordinate-derived distance is shown as an estimate.',
       'Live and recently completed games merge official MLB Gameday contact until the postgame Savant sync is available.',
       'Unsynced near-home-run points use the recorded Statcast bearing and distance and are labeled as projections.',
     ],

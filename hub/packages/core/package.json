@@ -21,6 +21,7 @@
     "./nameNorm": "./src/nameNorm.ts",
     "./teamAbbr": "./src/teamAbbr.ts",
     "./pitchLog": "./src/pitchLog.ts",
+    "./battedBallDistance": "./src/battedBallDistance.ts",
     "./allStarMarkets": "./src/allStarMarkets.ts",
     "./mlb-api": "./src/mlb-api.ts",
     "./espn-api": "./src/espn-api.ts"

@@ -6,6 +6,7 @@ import {
   Crosshair, Dna, Filter, Flame, Layers3, Search, SlidersHorizontal, Target,
 } from 'lucide-react'
 import { mlbHeadshot, pitchLabel } from '@slipsurge/core/mlb-api'
+import { formatBattedBallDistance } from '@slipsurge/core/battedBallDistance'
 import { getTeamColor, getTeamLogoUrl, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
 import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import type { TodayGame } from '@slipsurge/core/mlbSchedule'
@@ -598,7 +599,7 @@ function ResearchSprayChart({ player, game, context, fallbackWindow }: { player:
       <span><b>{filtered.length}</b><small>filtered BBE</small></span>
       <span><b>{filtered.filter(row => row.is_home_run).length}</b><small>home runs</small></span>
       <span><b>{filtered.filter(row => Number(row.launch_speed) >= 95).length}</b><small>hard hit</small></span>
-      {selected ? <div><i style={{ background: resultColor(selected) }} /><span><b>{selected.events?.replaceAll('_', ' ') ?? 'ball in play'}</b><small>{selected.launch_speed ?? '—'} mph · {selected.launch_angle ?? '—'}° · {selected.hit_distance ?? '—'} ft · {selected.pitch_type ? pitchLabel(selected.pitch_type) : 'pitch unavailable'}</small></span></div> : null}
+      {selected ? <div><i style={{ background: resultColor(selected) }} /><span><b>{selected.events?.replaceAll('_', ' ') ?? 'ball in play'}</b><small>{selected.launch_speed ?? '—'} mph · {selected.launch_angle ?? '—'}° · {formatBattedBallDistance(selected)} · {selected.pitch_type ? pitchLabel(selected.pitch_type) : 'pitch unavailable'}</small></span></div> : null}
     </div>
     <footer>Official Statcast coordinates are preserved. The current park outline is visual context; it does not relabel historical outcomes.</footer>
   </article>

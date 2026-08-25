@@ -5,7 +5,7 @@ type AdminClient = ReturnType<typeof createAdminClient>
 export const PITCH_LOG_SELECT_COLS = [
   'game_pk', 'game_date', 'pitcher_id', 'batter_id', 'pitch_type', 'zone', 'plate_x', 'plate_z',
   'balls', 'strikes', 'inning', 'events', 'description', 'is_in_play', 'is_swing', 'is_whiff', 'is_home_run',
-  'launch_speed', 'launch_angle', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed', 'velocity', 'spin_rate',
+  'launch_speed', 'launch_angle', 'hc_x', 'hc_y', 'hit_distance', 'xwoba', 'run_value', 'stand', 'p_throws', 'bat_speed', 'velocity', 'spin_rate',
   'attack_angle', 'swing_length', 'swing_path_tilt', 'attack_direction', 'launch_speed_angle', 'bb_type',
 ].join(', ')
 
@@ -59,9 +59,10 @@ export async function fetchPlayerPitchRows(admin: AdminClient, mlbId: number, ro
   return rows
 }
 
-// A batter produces far fewer balls in play than pitches seen. Keep spray
-// coordinates in this compact query so the full matchup payload does not
-// repeat mostly-null coordinate keys across thousands of pitch rows.
+// A batter produces far fewer balls in play than pitches seen. This compact
+// query remains useful for the full spray-chart history and its plate-
+// appearance ordering fields; the standard pitch query also carries landing
+// coordinates now so every detailed event table can resolve distance.
 export async function fetchPlayerSprayRows(admin: AdminClient, mlbId: number): Promise<Record<string, any>[]> {
   const rows: Record<string, any>[] = []
   for (let from = 0; ; from += PAGE_SIZE) {

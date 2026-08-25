@@ -5,6 +5,7 @@ import { pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { SortableTH, SortState, toggleSortState, cmpNullsLast, cmpAny } from '@/components/pitcher-report/MatchupTables'
 import { PlayerLink, ToggleBtn } from '@/components/players/PlayerPageClient'
 import type { PitchLogRow } from '@slipsurge/core/batterStatsEngine'
+import { formatBattedBallDistance, resolveBattedBallDistance } from '@slipsurge/core/battedBallDistance'
 
 const OUT_EVENTS = new Set(['field_out', 'force_out', 'fielders_choice_out', 'grounded_into_double_play', 'double_play', 'triple_play'])
 
@@ -90,6 +91,7 @@ export function PitchList({ rows, maxHeight = 280 }: { rows: PitchLogRow[]; maxH
     if (activeSort.col === 'pitch_type') return cmpAny(pitchLabel(a.pitch_type || ''), pitchLabel(b.pitch_type || ''), activeSort.dir)
     if (activeSort.col === 'result') return cmpAny(describeRow(a), describeRow(b), activeSort.dir)
     if (activeSort.col === 'opponent_name') return cmpAny(a.opponent_name, b.opponent_name, activeSort.dir)
+    if (activeSort.col === 'hit_distance') return cmpNullsLast(resolveBattedBallDistance(a).feet, resolveBattedBallDistance(b).feet, activeSort.dir)
     return cmpNullsLast((a as any)[activeSort.col], (b as any)[activeSort.col], activeSort.dir)
   })
 
@@ -154,7 +156,12 @@ export function PitchList({ rows, maxHeight = 280 }: { rows: PitchLogRow[]; maxH
                 <td style={{ padding: '4px 8px', textTransform: 'capitalize', color: resultColor(r), fontWeight: 600, whiteSpace: 'nowrap' }}>{describeRow(r)}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-1)' }}>{r.launch_speed != null ? r.launch_speed.toFixed(1) : '—'}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{r.launch_angle != null ? Math.round(r.launch_angle) : '—'}</td>
-                <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{r.hit_distance != null ? Math.round(r.hit_distance) : '—'}</td>
+                <td
+                  style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)', whiteSpace: 'nowrap' }}
+                  title={resolveBattedBallDistance(r).source === 'coordinate_estimate' ? 'Estimated from the Statcast landing coordinate' : undefined}
+                >
+                  {formatBattedBallDistance(r, { suffix: false, unavailable: '—' })}
+                </td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{n2(r.xwoba, 3)}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: 'var(--text-2)' }}>{r.bat_speed != null ? r.bat_speed.toFixed(1) : '—'}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: (r.run_value ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{r.run_value != null ? r.run_value.toFixed(2) : '—'}</td>

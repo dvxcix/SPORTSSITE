@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { resolveBattedBallDistance } from '@slipsurge/core/battedBallDistance'
 import { getTeamName } from '@slipsurge/core/mlbTeamColors'
 import type { TodayGame } from '@slipsurge/core/mlbSchedule'
 import type { HrFeedEvent, MlbContactFeedEvent } from '@/lib/hrFeed'
@@ -86,7 +87,12 @@ export function homeRunAlertEvent(
   const pitcherTeam = half === 'bottom' ? game.awayAbbr : game.homeAbbr
   const exactX = finite(contact?.hc_x ?? hr.hc_x)
   const exactY = finite(contact?.hc_y ?? hr.hc_y)
-  const projected = projectedCoordinate(null, hr.hit_distance)
+  const resolvedDistance = resolveBattedBallDistance({
+    hit_distance: hr.hit_distance ?? contact?.hit_distance,
+    hc_x: exactX,
+    hc_y: exactY,
+  })
+  const projected = projectedCoordinate(null, resolvedDistance.feet)
   const coordinateSource: CoordinateSource = exactX != null && exactY != null ? 'mlb_live' : 'bearing_projection'
   const batterId = Number(hr.mlb_id ?? contact?.batter_mlb_id ?? 0)
   const pitchNumber = Number(contact?.pitch_number ?? 0)
@@ -115,7 +121,7 @@ export function homeRunAlertEvent(
     isGrandSlam: hr.is_grand_slam,
     exitVelocity: hr.exit_velocity ?? contact?.exit_velocity ?? null,
     launchAngle: hr.launch_angle ?? contact?.launch_angle ?? null,
-    distance: hr.hit_distance ?? contact?.hit_distance ?? null,
+    distance: resolvedDistance.feet,
     hitBearing: null,
     hcX: exactX ?? projected.x,
     hcY: exactY ?? projected.y,
@@ -177,10 +183,14 @@ export function nearHomeRunAlertEvent(
   const batterTeam = half === 'bottom' ? game.homeAbbr : game.awayAbbr
   const pitcherTeam = half === 'bottom' ? game.awayAbbr : game.homeAbbr
   const bearing = finite(row.hit_bearing)
-  const distance = finite(row.hit_distance) ?? contact?.hit_distance ?? null
-  const projected = projectedCoordinate(bearing, distance)
   const exactX = finite(contact?.hc_x)
   const exactY = finite(contact?.hc_y)
+  const distance = resolveBattedBallDistance({
+    hit_distance: finite(row.hit_distance) ?? contact?.hit_distance,
+    hc_x: exactX,
+    hc_y: exactY,
+  }).feet
+  const projected = projectedCoordinate(bearing, distance)
   const batterId = Number(finite(row.batter_id) ?? contact?.batter_mlb_id ?? 0)
   // If MLB has published the play, its game/AB/pitch tuple is canonical. A
   // scraper timestamp is retained only as an idempotent source fallback.
