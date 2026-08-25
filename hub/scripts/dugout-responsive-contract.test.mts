@@ -55,7 +55,7 @@ test('The Dugout implements all 14 responsive product requirements', () => {
     ['6 readable density and mobile targets', ['dg-player-name{font-size:13px', 'font-variant-numeric:tabular-nums', 'min-height:44px', 'density-comfortable']],
     ['7 concise glossary', ['Open glossary', 'Board glossary', 'Quick definitions only', "['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.']"]],
     ['8 game intelligence strip', ['dugout-intelligence-strip', 'GameWeatherSummary', 'GAME STATE', 'TEAM ML SIGNAL', 'BOOK DISAGREEMENT', 'NO HR + MOVE', 'SAVED SIGNALS']],
-    ['9 collapsible team summaries', ['dg-team-collapse', 'toggleTeamCollapsed', 'prefix="Top" compact', 'HR LEAD', 'LINEUP']],
+    ['9 collapsible team summaries', ['dg-team-collapse', 'toggleTeamCollapsed', 'prefix="Top" compact', 'MOST ADVERTISED', 'MOST HIDDEN', 'LINEUP']],
     ['10 desktop and mobile minimaps', ['dugout-desktop-minimap', 'dugout-board-nav', "(['start', 'home', 'away', 'end'] as const)", 'dugout-board-progress']],
     ['11 persistent two-to-four player comparison', ['slice(0, 4)', 'previous.slice(-3)', 'dugout-compare-tray', "(['l1', 'l3', 'l5', 'l10'] as const)", 'PROJECTED BATTED BALL', 'PITCH FIT']],
     ['12 multi-market timeline', ['MARKET STORY', 'dugout-timeline-phases', "label: 'OPEN'", "label: '9AM'", "label: 'NOON'", "label: 'LINEUP'", "label: 'CURRENT'", 'withTimelinePrices', 'timelineRow.sa_mgm']],
@@ -125,6 +125,20 @@ test('comparison and park surfaces use deliberate high-contrast heat treatments'
   assert.ok(parkSource.includes('dugout-park-card'))
   assert.ok(parkSource.includes('dugout-weather-metrics'))
   assert.ok(parkSource.includes('color:#f8fafc'))
+})
+
+test('comparison and team signals expose the real sportsbook context', () => {
+  assert.ok(source.includes("const HR_BOOK_META = ["))
+  assert.ok(source.includes("{ vendor: 'fanduel', label: 'FanDuel' }"))
+  assert.ok(source.includes('FIRST HOME RUN'))
+  assert.ok(source.includes('ANYTIME HOME RUN'))
+  assert.ok(source.includes('dugout-compare-book-strip'))
+  assert.ok(source.includes('className={offer.primary ? \'is-primary\' : undefined}'))
+  assert.ok(source.includes("selectHrBookOffer(advertised, 'shortest')"))
+  assert.ok(source.includes("selectHrBookOffer(hidden, 'longest')"))
+  assert.ok(source.includes('<BookLogo vendor={summary.advertisedOffer.vendor}'))
+  assert.ok(source.includes('<BookLogo vendor={summary.hiddenOffer.vendor}'))
+  assert.equal(source.includes('<small>HR LEAD</small>'), false)
 })
 
 test('market cells use one movement indicator and a readable opening-price label', () => {

@@ -2,7 +2,7 @@ export type DugoutViewPreset = 'signal' | 'market' | 'power' | 'props' | 'all' |
 
 export type DugoutHistoryEntry = { name?: string; [market: string]: unknown }
 export type DugoutHistorySnapshot = { captured_at: string; prop_map: Record<string, DugoutHistoryEntry> }
-export type DugoutTimelineBooks = Partial<Record<'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers', number>>
+export type DugoutTimelineBooks = Partial<Record<'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers' | 'fanatics', number>>
 export type DugoutTimelinePlayer = Partial<Record<string, DugoutTimelineBooks>>
 export type DugoutTimelinePoint = { capturedAt: string; players: Map<string, DugoutTimelinePlayer> }
 
@@ -29,7 +29,7 @@ function numericHistoryPrice(value: unknown): number | null {
 }
 
 const TIMELINE_MARKETS = ['fhr', 'sa', 'rbi', 'rbi2', 'rbi3', 'tb', 'tb3', 'tb4', 'tb5', 'hrr', 'hr2', 'moonshot', 'laser105', 'laser110', 'pa1', 'hrMl'] as const
-const TIMELINE_BOOKS = ['fanduel', 'williamhill_us', 'betmgm', 'betrivers'] as const
+const TIMELINE_BOOKS = ['fanduel', 'williamhill_us', 'betmgm', 'betrivers', 'fanatics'] as const
 
 // Rebuild compact capture deltas into cumulative player state. The board can
 // now scrub every relevant book/market instead of pretending FHR and HR are

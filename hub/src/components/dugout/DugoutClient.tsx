@@ -664,6 +664,80 @@ export function buildBatterRow(
 
 export type BatterRow = ReturnType<typeof buildBatterRow>
 
+type HrMarketKind = 'fhr' | 'anytime'
+type HrBookOffer = { vendor: string; label: string; price: number; open: number | null; primary: boolean }
+
+const HR_BOOK_META = [
+  { vendor: 'fanduel', label: 'FanDuel' },
+  { vendor: 'caesars', label: 'Caesars' },
+  { vendor: 'betmgm', label: 'BetMGM' },
+  { vendor: 'betrivers', label: 'BetRivers' },
+  { vendor: 'fanatics', label: 'Fanatics' },
+] as const
+
+/** All posted HR offers for one player, always with FanDuel first. */
+function getHrBookOffers(row: BatterRow, market: HrMarketKind): HrBookOffer[] {
+  const values = market === 'fhr'
+    ? {
+        fanduel: [row.fhr_fd, row.fhr_open],
+        caesars: [row.fhr_cz, row.fhrCz_open],
+        betmgm: [null, null],
+        betrivers: [null, null],
+        fanatics: [row.fhr_fan, row.fhrFan_open],
+      }
+    : {
+        fanduel: [row.sa_fd, row.saFd_open],
+        caesars: [row.sa_cz, row.saCz_open],
+        betmgm: [row.sa_mgm, row.saMgm_open],
+        betrivers: [row.sa_br, row.saBr_open],
+        fanatics: [row.sa_fan, row.saFan_open],
+      }
+
+  return HR_BOOK_META.flatMap(({ vendor, label }) => {
+    const [price, open] = values[vendor]
+    return typeof price === 'number'
+      ? [{ vendor, label, price, open: typeof open === 'number' ? open : null, primary: vendor === 'fanduel' }]
+      : []
+  })
+}
+
+function selectHrBookOffer(row: BatterRow, direction: 'shortest' | 'longest'): HrBookOffer | null {
+  const offers = getHrBookOffers(row, 'anytime')
+  return offers.reduce<HrBookOffer | null>((best, offer) => {
+    if (!best) return offer
+    const probability = toImpl(offer.price) ?? 0
+    const bestProbability = toImpl(best.price) ?? 0
+    return direction === 'shortest'
+      ? probability > bestProbability ? offer : best
+      : probability < bestProbability ? offer : best
+  }, null)
+}
+
+function formatMm(value: number | null | undefined): string {
+  if (value == null) return '—'
+  return `${value > 0 ? '+' : ''}${Math.round(value)}mm`
+}
+
+function ComparisonMarketCard({ row, market, style }: { row: BatterRow; market: HrMarketKind; style: React.CSSProperties }) {
+  const offers = getHrBookOffers(row, market)
+  const title = market === 'fhr' ? 'FIRST HOME RUN' : 'ANYTIME HOME RUN'
+  return (
+    <section className="dugout-compare-market-card" data-family="market" style={style} aria-label={`${row.name} ${title.toLowerCase()} sportsbook prices`}>
+      <header><small>{title}</small><i>{offers.length} {offers.length === 1 ? 'book' : 'books'}</i></header>
+      <div className="dugout-compare-book-strip">
+        {offers.length ? offers.map(offer => (
+          <span key={`${market}-${offer.vendor}`} className={offer.primary ? 'is-primary' : undefined} title={`${offer.label}: ${oStr(offer.price)}${offer.open != null ? `, opened ${oStr(offer.open)}` : ''}`}>
+            <BookLogo vendor={offer.vendor} size={offer.primary ? 17 : 15} />
+            <em>{offer.primary ? 'FanDuel' : offer.label}</em>
+            <strong>{oStr(offer.price)}</strong>
+            {offer.open != null && offer.open !== offer.price && <small>OPEN {oStr(offer.open)}</small>}
+          </span>
+        )) : <b className="dugout-compare-no-market">Not offered</b>}
+      </div>
+    </section>
+  )
+}
+
 // ─── paper score ─────────────────────────────────────────────────────────────
 // ─── heat ─────────────────────────────────────────────────────────────────────
 function heat(v: number | null, all: (number | null)[], dir: 'hi' | 'lo' = 'hi'): React.CSSProperties {
@@ -3466,7 +3540,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     market: string,
     open: number | null | undefined,
     current: number | null | undefined,
-    book: 'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers' = 'fanduel',
+    book: 'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers' | 'fanatics' = 'fanduel',
   ) => {
     const captured = selectedTimelinePoint?.players.get(normName(row.name))?.[market]?.[book]
     return captured ?? selectDugoutMarketPrice(open, current, marketSnapshot)
@@ -3474,10 +3548,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const withTimelinePrices = (row: BatterRow): BatterRow => {
     const fhrFd = selectTimelinePrice(row, 'fhr', row.fhr_open, row.fhr_fd)
     const fhrCz = selectTimelinePrice(row, 'fhr', row.fhrCz_open, row.fhr_cz, 'williamhill_us')
+    const fhrFan = selectTimelinePrice(row, 'fhr', row.fhrFan_open, row.fhr_fan, 'fanatics')
     const saFd = selectTimelinePrice(row, 'sa', row.saFd_open, row.sa_fd)
     const saCz = selectTimelinePrice(row, 'sa', row.saCz_open, row.sa_cz, 'williamhill_us')
     const saMgm = selectTimelinePrice(row, 'sa', row.saMgm_open, row.sa_mgm, 'betmgm')
     const saBr = selectTimelinePrice(row, 'sa', row.saBr_open, row.sa_br, 'betrivers')
+    const saFan = selectTimelinePrice(row, 'sa', row.saFan_open, row.sa_fan, 'fanatics')
     const rbi = selectTimelinePrice(row, 'rbi', row.rbiFd_open, row.rbi_fd)
     const rbi2 = selectTimelinePrice(row, 'rbi2', row.rbi2Fd_open, row.rbi2_fd)
     const rbi3 = selectTimelinePrice(row, 'rbi3', row.rbi3Fd_open, row.rbi3_fd)
@@ -3496,10 +3572,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       ...row,
       fhr_fd: fhrFd,
       fhr_cz: fhrCz,
+      fhr_fan: fhrFan,
       sa_fd: saFd,
       sa_cz: saCz,
       sa_mgm: saMgm,
       sa_br: saBr,
+      sa_fan: saFan,
       rbi_fd: rbi,
       rbi2_fd: rbi2,
       rbi3_fd: rbi3,
@@ -3562,13 +3640,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   }, null)
   const teamSummary = (rows: BatterRow[]) => {
     const top = rows.reduce<BatterRow | null>((best, row) => !best || (row.mechanics_index ?? -1) > (best.mechanics_index ?? -1) ? row : best, null)
-    const shortestHr = rows.reduce<BatterRow | null>((best, row) => row.sa_fd == null ? best : !best || best.sa_fd == null || toImpl(row.sa_fd)! > toImpl(best.sa_fd)! ? row : best, null)
+    const advertised = rows.reduce<BatterRow | null>((best, row) => row.mm == null || row.mm >= 0 ? best : !best || best.mm == null || row.mm < best.mm ? row : best, null)
+    const hidden = rows.reduce<BatterRow | null>((best, row) => row.mm == null || row.mm <= 0 ? best : !best || best.mm == null || row.mm > best.mm ? row : best, null)
+    const advertisedOffer = advertised ? selectHrBookOffer(advertised, 'shortest') : null
+    const hiddenOffer = hidden ? selectHrBookOffer(hidden, 'longest') : null
     const mlSignals = rows.map(row => {
       const hr = toImpl(row.sa_fd), joint = toImpl(row.hrMl_fd)
       return hr && joint ? joint / hr : null
     }).filter((value): value is number => value != null && value > 0 && value < 1)
     const teamMl = mlSignals.length ? americanFromProbability(mlSignals.sort((a, b) => a - b)[Math.floor(mlSignals.length / 2)]) : null
-    return { top, shortestHr, teamMl, matrix: rows.filter(row => row.matrix_matches.length > 0).length, watched: rows.filter(row => row.mlb_id != null && watchedPlayerIds.has(row.mlb_id)).length }
+    return { top, advertised, advertisedOffer, hidden, hiddenOffer, teamMl, matrix: rows.filter(row => row.matrix_matches.length > 0).length, watched: rows.filter(row => row.mlb_id != null && watchedPlayerIds.has(row.mlb_id)).length }
   }
   const homeSummary = teamSummary(homeRows)
   const awaySummary = teamSummary(awayRows)
@@ -3787,7 +3868,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       <div className="dg-team-summary">
         <span><small>LINEUP</small><strong>{confirmed ? 'Confirmed' : 'Projected'} · {rows.length}</strong></span>
         <span><small><SlipSurgeScoreLabel prefix="Top" compact /></small><strong>{summary.top ? `${summary.top.name} ${Math.round(summary.top.mechanics_index ?? 0)}` : '—'}</strong></span>
-        <span><small>HR LEAD</small><strong>{summary.shortestHr ? `${summary.shortestHr.name} ${oStr(summary.shortestHr.sa_fd)}` : '—'}</strong></span>
+        <span className="dg-team-signal is-advertised">
+          <small>MOST ADVERTISED</small>
+          <strong><b>{formatMm(summary.advertised?.mm)}</b><em>{summary.advertised?.name ?? 'No signal'}</em></strong>
+          <i>{summary.advertisedOffer && <><BookLogo vendor={summary.advertisedOffer.vendor} size={12} /><b>{oStr(summary.advertisedOffer.price)}</b></>}</i>
+        </span>
+        <span className="dg-team-signal is-hidden">
+          <small>MOST HIDDEN</small>
+          <strong><b>{formatMm(summary.hidden?.mm)}</b><em>{summary.hidden?.name ?? 'No signal'}</em></strong>
+          <i>{summary.hiddenOffer && <><BookLogo vendor={summary.hiddenOffer.vendor} size={12} /><b>{oStr(summary.hiddenOffer.price)}</b></>}</i>
+        </span>
         <span><small>TEAM ML</small><strong>{oStr(summary.teamMl)}</strong></span>
         <span><small>SAVED</small><strong>{summary.matrix}M · {summary.watched}W</strong></span>
       </div>
@@ -4210,8 +4300,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               </div>
               <div className="dugout-compare-heat-grid">
                 <span data-family="score" style={comparisonHeat(row.mechanics_index, comparedRows.map(item => item.mechanics_index))}><small><SlipSurgeScoreLabel compact /> · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '-'}</strong><i>#{row.mechanics_rank ?? '-'} / 18</i></span>
-                <span data-family="market" style={comparisonHeat(toImpl(timelineRow.fhr_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).fhr_fd)))}><small>FHR MARKET</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
-                <span data-family="market" style={comparisonHeat(toImpl(timelineRow.sa_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).sa_fd)))}><small>ANYTIME HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
+                <ComparisonMarketCard row={timelineRow} market="fhr" style={comparisonHeat(toImpl(timelineRow.fhr_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).fhr_fd)))} />
+                <ComparisonMarketCard row={timelineRow} market="anytime" style={comparisonHeat(toImpl(timelineRow.sa_fd), comparedRows.map(item => toImpl(withTimelinePrices(item).sa_fd)))} />
                 <span data-family="contact" style={comparisonHeat(row.hit_score, comparedRows.map(item => item.hit_score))}><small>HIT READ</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '-'}</strong><i>{row.hit_status}</i></span>
                 <span data-family="market" style={comparisonHeat(row.m_div_f != null ? -Math.abs(row.m_div_f - 1) : null, comparedRows.map(item => item.m_div_f != null ? -Math.abs(item.m_div_f - 1) : null))}><small>BOOK SPLIT</small><strong>{f2(timelineRow.m_div_f)}</strong><i>FD {oStr(timelineRow.sa_fd)} · MGM {oStr(timelineRow.sa_mgm)}</i></span>
                 <span data-family="matchup" style={comparisonHeat(row.matchup_edge, comparedRows.map(item => item.matchup_edge))}><small>PITCH FIT · {pitchLabel}</small><strong>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '-'}</strong><i>{row.recent_pitch_count ?? 0} recent pitches</i></span>
@@ -5014,9 +5104,10 @@ export function DugoutClient({ date }: { date: string }) {
         .dg-team-banner-content{min-height:44px}
         .dg-team-collapse{width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:9px;background:rgba(0,0,0,.24);color:var(--text-2);cursor:pointer}
         .dg-team-collapse[aria-expanded=false] svg{transform:rotate(180deg)}
-        .dg-team-summary{display:flex;align-items:stretch;gap:4px}
-        .dg-team-summary>span{display:grid;align-content:center;gap:2px;min-width:92px;padding:5px 8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(0,0,0,.2)}
-        .dg-team-summary small{color:var(--text-4);font-size:9px;font-weight:900;letter-spacing:.04em}.dg-team-summary strong{overflow:hidden;color:var(--text-1);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+        .dg-team-summary{display:flex;align-items:stretch;gap:5px}
+        .dg-team-summary>span{display:grid;align-content:center;gap:3px;min-width:102px;padding:7px 9px;border:1px solid rgba(148,163,184,.2);border-radius:9px;background:linear-gradient(145deg,rgba(21,29,40,.95),rgba(8,13,20,.92));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+        .dg-team-summary small{color:#c9d4e5;font-size:9px;font-weight:950;letter-spacing:.055em}.dg-team-summary strong{overflow:hidden;color:#f8fafc;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+        .dg-team-signal{position:relative;min-width:188px!important;grid-template-columns:minmax(0,1fr) auto;column-gap:9px!important;overflow:hidden}.dg-team-signal::before{position:absolute;inset:0 auto 0 0;width:3px;content:""}.dg-team-signal>small{grid-column:1/-1}.dg-team-signal>strong{display:flex;align-items:center;gap:6px;min-width:0}.dg-team-signal>strong>b{font-family:var(--font-mono,monospace);font-size:12px}.dg-team-signal>strong>em{overflow:hidden;color:#f8fafc;font-style:normal;text-overflow:ellipsis;white-space:nowrap}.dg-team-signal>i{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#fff;font-size:11px;font-style:normal;font-weight:950}.dg-team-signal.is-advertised{border-color:rgba(248,113,113,.38);background:linear-gradient(135deg,rgba(127,29,29,.34),rgba(24,12,18,.92))}.dg-team-signal.is-advertised::before{background:#fb7185}.dg-team-signal.is-advertised small,.dg-team-signal.is-advertised strong>b{color:#fda4af}.dg-team-signal.is-hidden{border-color:rgba(74,222,128,.38);background:linear-gradient(135deg,rgba(20,83,45,.38),rgba(8,24,17,.92))}.dg-team-signal.is-hidden::before{background:#4ade80}.dg-team-signal.is-hidden small,.dg-team-signal.is-hidden strong>b{color:#86efac}
         .dugout-board-nav{display:none;grid-template-columns:repeat(4,auto);align-items:center;justify-content:start;gap:5px;margin-bottom:6px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
         .dugout-board-nav button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:3px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text-2);font-size:9px;font-weight:850;cursor:pointer}
         .dugout-board-nav button:disabled{color:var(--text-4);cursor:default;opacity:.55}
@@ -5105,11 +5196,12 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-compare-stats i{color:var(--text-4);font-style:normal;font-size:8px}
         .dugout-compare-stats.is-legacy{display:none}
         .dugout-compare-heat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
-        .dugout-compare-heat-grid>span{position:relative;display:grid;align-content:center;gap:4px;min-width:0;min-height:86px;overflow:hidden;padding:12px 12px 11px;border:1px solid #293547;border-radius:10px;background:#111821;transition:transform 140ms ease,border-color 140ms ease}
-        .dugout-compare-heat-grid>span::before{position:absolute;top:0;left:0;right:0;height:3px;background:#64748b;content:""}.dugout-compare-heat-grid>span[data-family=score]::before{background:#a6ff3f}.dugout-compare-heat-grid>span[data-family=market]::before{background:#38bdf8}.dugout-compare-heat-grid>span[data-family=matchup]::before{background:#a78bfa}.dugout-compare-heat-grid>span[data-family=contact]::before{background:#fb923c}.dugout-compare-heat-grid>span[data-family=projection]::before{background:#f472b6}
-        .dugout-compare-heat-grid small{display:flex;align-items:center;min-height:14px;overflow:hidden;color:#d8e0ec;font-size:9px;font-weight:950;letter-spacing:.065em;text-overflow:ellipsis;white-space:nowrap}.dugout-compare-heat-grid>span[data-family=score] small{color:#d8ff9e}.dugout-compare-heat-grid>span[data-family=market] small{color:#a5e4ff}.dugout-compare-heat-grid>span[data-family=matchup] small{color:#d8c9ff}.dugout-compare-heat-grid>span[data-family=contact] small{color:#ffd0a8}.dugout-compare-heat-grid>span[data-family=projection] small{color:#ffc1df}
+        .dugout-compare-heat-grid>span,.dugout-compare-heat-grid>section{position:relative;display:grid;align-content:center;gap:4px;min-width:0;min-height:86px;overflow:hidden;padding:12px 12px 11px;border:1px solid #293547;border-radius:10px;background:#111821;transition:transform 140ms ease,border-color 140ms ease}
+        .dugout-compare-heat-grid>span::before,.dugout-compare-heat-grid>section::before{position:absolute;top:0;left:0;right:0;height:3px;background:#64748b;content:""}.dugout-compare-heat-grid>[data-family=score]::before{background:#a6ff3f}.dugout-compare-heat-grid>[data-family=market]::before{background:#38bdf8}.dugout-compare-heat-grid>[data-family=matchup]::before{background:#a78bfa}.dugout-compare-heat-grid>[data-family=contact]::before{background:#fb923c}.dugout-compare-heat-grid>[data-family=projection]::before{background:#f472b6}
+        .dugout-compare-heat-grid small{display:flex;align-items:center;min-height:14px;overflow:hidden;color:#d8e0ec;font-size:9px;font-weight:950;letter-spacing:.065em;text-overflow:ellipsis;white-space:nowrap}.dugout-compare-heat-grid>[data-family=score] small{color:#d8ff9e}.dugout-compare-heat-grid>[data-family=market] small{color:#a5e4ff}.dugout-compare-heat-grid>[data-family=matchup] small{color:#d8c9ff}.dugout-compare-heat-grid>[data-family=contact] small{color:#ffd0a8}.dugout-compare-heat-grid>[data-family=projection] small{color:#ffc1df}
         .dugout-compare-heat-grid strong{overflow:hidden;color:#fff;font-family:var(--font-mono,monospace);font-size:18px;font-weight:950;letter-spacing:-.025em;text-overflow:ellipsis;white-space:nowrap}
         .dugout-compare-heat-grid i{overflow:hidden;color:#aab6c8;font-size:10px;font-style:normal;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-compare-market-card{grid-column:1/-1;align-content:start!important;gap:9px!important;min-height:116px!important}.dugout-compare-market-card>header{display:flex;align-items:center;justify-content:space-between;gap:8px}.dugout-compare-market-card>header>small{color:#d8f3ff!important;font-size:10px!important}.dugout-compare-market-card>header>i{color:#91a4b9;font-size:9px;font-style:normal;font-weight:800}.dugout-compare-book-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px}.dugout-compare-book-strip>span{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:2px 6px;min-width:0;min-height:52px;padding:7px 8px;border:1px solid rgba(148,163,184,.22);border-radius:8px;background:rgba(5,10,16,.62)}.dugout-compare-book-strip>span.is-primary{border-color:rgba(56,189,248,.62);background:linear-gradient(145deg,rgba(3,105,161,.28),rgba(5,15,24,.88));box-shadow:inset 0 0 0 1px rgba(56,189,248,.13)}.dugout-compare-book-strip>span>img,.dugout-compare-book-strip>span>span{grid-row:1/3}.dugout-compare-book-strip em{overflow:hidden;color:#cbd5e1;font-size:8px;font-style:normal;font-weight:850;text-overflow:ellipsis;white-space:nowrap}.dugout-compare-book-strip strong{color:#fff!important;font-family:var(--font-mono,monospace);font-size:14px!important;line-height:1}.dugout-compare-book-strip small{min-height:0!important;color:#9db0c4!important;font-size:7px!important;letter-spacing:.02em!important}.dugout-compare-no-market{align-self:center;color:#9aa9bb;font-size:12px}
         .dugout-glossary-backdrop{position:fixed;inset:0;z-index:1400;display:flex;justify-content:flex-end;padding:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(7px)}
         .dugout-glossary{width:min(430px,100%);height:100%;overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.62)}
         .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
@@ -5181,7 +5273,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-compare-player strong{font-size:14px}
           .dugout-compare-player small{overflow:hidden;font-size:9px;text-overflow:ellipsis}.dugout-compare-player button{width:30px;height:30px}
           .dugout-compare-windows{gap:4px}.dugout-compare-windows>span{min-height:52px;padding:7px 2px}.dugout-compare-windows strong{font-size:14px}
-          .dugout-compare-heat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dugout-compare-heat-grid>span{min-height:80px;padding:11px 9px 9px}.dugout-compare-heat-grid strong{font-size:15px}.dugout-compare-heat-grid i{font-size:9px}
+          .dugout-compare-heat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dugout-compare-heat-grid>span,.dugout-compare-heat-grid>section{min-height:80px;padding:11px 9px 9px}.dugout-compare-heat-grid strong{font-size:15px}.dugout-compare-heat-grid i{font-size:9px}.dugout-compare-market-card{min-height:112px!important}.dugout-compare-book-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.dugout-compare-book-strip>span{min-height:48px;padding:6px}
           .dugout-summary-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;margin-bottom:7px!important}
           .dugout-summary-action{width:100%!important;min-width:0!important;min-height:34px!important;margin-left:0!important;padding:5px 8px!important;justify-content:center!important;gap:5px!important;font-size:10px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis}
           .dugout-summary-action > span{min-width:0;flex-shrink:1;padding-left:5px!important;padding-right:5px!important}
