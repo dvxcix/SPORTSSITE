@@ -164,6 +164,10 @@ test('glossary terms cannot overlap their definitions at desktop or mobile width
   assert.match(source, /grid-template-columns:minmax\(142px,\.78fr\) minmax\(0,1\.22fr\)/)
   assert.match(source, /\.dugout-glossary p\{min-width:0[^}]*overflow-wrap:anywhere/)
   assert.match(source, /\.dugout-glossary>div>span\{grid-template-columns:minmax\(0,1fr\);gap:7px/)
+  assert.ok(source.includes("if (event.key === 'Escape') setShowGlossary(false)"))
+  assert.ok(source.includes("document.body.classList.add('ss-modal-open')"))
+  assert.ok(source.includes('aria-labelledby="dugout-glossary-title"'))
+  assert.ok(source.includes('aria-describedby="dugout-glossary-description"'))
 })
 
 test('public scoring surfaces use SlipSurge Score branding instead of Index', () => {

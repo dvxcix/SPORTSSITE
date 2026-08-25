@@ -3327,6 +3327,23 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [showTools, setShowTools] = useState(false)
   const [showGlossary, setShowGlossary] = useState(false)
 
+  useEffect(() => {
+    if (!showGlossary) return
+    const previousOverflow = document.body.style.overflow
+    const bodyWasModal = document.body.classList.contains('ss-modal-open')
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowGlossary(false)
+    }
+    document.body.style.overflow = 'hidden'
+    document.body.classList.add('ss-modal-open')
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape)
+      document.body.style.overflow = previousOverflow
+      if (!bodyWasModal) document.body.classList.remove('ss-modal-open')
+    }
+  }, [showGlossary])
+
   // Highlighter — a totally separate, member-driven paint tool (own click
   // mode, own color, own persistence) from the Matrix highlight tint above:
   // that one is computed server-side off a saved Matrix; this one is purely
@@ -4374,8 +4391,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     )}
     {showGlossary && (
       <div className="dugout-glossary-backdrop" role="presentation" onClick={() => setShowGlossary(false)}>
-        <aside className="dugout-glossary" role="dialog" aria-modal="true" aria-label="Dugout glossary" onClick={event => event.stopPropagation()}>
-          <header><span><strong>Board glossary</strong><small>Quick definitions only</small></span><button type="button" onClick={() => setShowGlossary(false)} aria-label="Close glossary"><X size={16} /></button></header>
+        <aside className="dugout-glossary" role="dialog" aria-modal="true" aria-labelledby="dugout-glossary-title" aria-describedby="dugout-glossary-description" onClick={event => event.stopPropagation()}>
+          <header><span><strong id="dugout-glossary-title">Board glossary</strong><small id="dugout-glossary-description">Quick definitions only</small></span><button type="button" autoFocus onClick={() => setShowGlossary(false)} aria-label="Close glossary"><X size={16} /></button></header>
           <div>{[
             ['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.'],
             ['FHR', 'First home run market.'],
