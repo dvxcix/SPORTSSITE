@@ -782,6 +782,42 @@ type SortState = { col: string; dir: 'desc' | 'asc' } | null
 // it's clear which column is breaking ties for which.
 type MultiSortEntry = { col: string; dir: 'desc' | 'asc' }
 
+type DugoutMarketSnapshot = 'open' | 'now'
+type DugoutViewState = {
+  sort: SortState
+  stickyMode: boolean
+  stickyCols: MultiSortEntry[]
+  marketSnapshot: DugoutMarketSnapshot
+  expanded: string | null
+}
+
+export function parseDugoutViewState(raw: string | null): DugoutViewState {
+  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', expanded: null }
+  if (!raw) return fallback
+  try {
+    const value = JSON.parse(raw)
+    const validSort = value?.sort && typeof value.sort.col === 'string' && (value.sort.dir === 'asc' || value.sort.dir === 'desc')
+      ? value.sort as SortState
+      : null
+    const stickyCols = Array.isArray(value?.stickyCols)
+      ? value.stickyCols.filter((entry: any) => typeof entry?.col === 'string' && (entry.dir === 'asc' || entry.dir === 'desc')).slice(0, 12)
+      : []
+    return {
+      sort: validSort,
+      stickyMode: value?.stickyMode === true,
+      stickyCols,
+      marketSnapshot: value?.marketSnapshot === 'open' ? 'open' : 'now',
+      expanded: typeof value?.expanded === 'string' ? value.expanded : null,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+export function selectDugoutMarketPrice(open: number | null | undefined, current: number | null | undefined, snapshot: DugoutMarketSnapshot) {
+  return snapshot === 'open' ? (open ?? current ?? null) : (current ?? open ?? null)
+}
+
 function TH({
   label, title, w = 40, sticky = false, sortKey, active = false, dir, rank, onSort,
   pickSortKey, pickActive = false, pickDir, pickRank, onPickSort, 'data-col-key': dataColKey,
@@ -938,7 +974,7 @@ function PlayerDrillDown({
 
   return (
     <td className="dg-player-drilldown-cell" colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
-      <div className="dg-player-drilldown">
+      <div className="dg-player-drilldown" role="dialog" aria-modal="false" aria-label={`${row.name} player inspector`}>
         <div className="dg-player-drilldown-head">
           <span><strong>{row.name}</strong><small>{row.team} · {row.position} · {row.bats}HB</small></span>
           {onClose && <button type="button" onClick={onClose} aria-label={`Collapse ${row.name}`}>Collapse <ChevronUp size={14} /></button>}
@@ -3054,7 +3090,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   density: 'compact' | 'comfortable'
   onDensityChange: (density: 'compact' | 'comfortable') => void
 }) {
-  const [sort, setSort] = useState<SortState>(null)
+  const viewStorageKey = `ss:dugout-view-v1:${date}:${game.gameKey}`
+  const persistedView = useMemo(() => {
+    if (typeof window === 'undefined') return parseDugoutViewState(null)
+    return parseDugoutViewState(window.localStorage.getItem(viewStorageKey))
+  }, [viewStorageKey])
+  const [sort, setSort] = useState<SortState>(persistedView.sort)
   const [tourStep, setTourStep] = useState<number | null>(null)
   // Sticky multi-column sort — when on, each header click ADDS that column
   // to the chain instead of replacing the sort outright (rank 1 = primary
@@ -3063,8 +3104,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // (e.g. most picks, highest SB, but LOWEST HR). Persists across toggling
   // sticky mode off/on so flipping it off to peek at a plain single sort
   // doesn't throw away the chain you built.
-  const [stickyMode, setStickyMode] = useState(false)
-  const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>([])
+  const [stickyMode, setStickyMode] = useState(persistedView.stickyMode)
+  const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>(persistedView.stickyCols)
+  const [marketSnapshot, setMarketSnapshot] = useState<DugoutMarketSnapshot>(persistedView.marketSnapshot)
 
   // Highlighter — a totally separate, member-driven paint tool (own click
   // mode, own color, own persistence) from the Matrix highlight tint above:
@@ -3135,7 +3177,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const highlightKey = highlightMlbId != null
     ? (game.homeLineup?.some((p: any) => p.mlb_id === highlightMlbId) ? `h-${highlightMlbId}` : `a-${highlightMlbId}`)
     : null
-  const [expanded, setExpanded] = useState<string | null>(highlightKey)
+  const [expanded, setExpanded] = useState<string | null>(highlightKey ?? persistedView.expanded)
   const [hrPopupRow, setHrPopupRow] = useState<BatterRow | null>(null)
   const toggleExpand = (key: string) => setExpanded(prev => prev === key ? null : key)
   const compareStorageKey = `dugout-compare-v1:${date}:${game.gameKey}`
@@ -3150,6 +3192,11 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   useEffect(() => {
     try { window.sessionStorage.setItem(compareStorageKey, JSON.stringify(comparedKeys)) } catch {}
   }, [compareStorageKey, comparedKeys])
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, expanded }))
+    } catch {}
+  }, [expanded, marketSnapshot, sort, stickyCols, stickyMode, viewStorageKey])
   const toggleCompared = (row: BatterRow) => {
     const key = compareKey(row)
     setComparedKeys(previous => previous.includes(key)
@@ -3270,6 +3317,12 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // Computed once and reused by the header, both team-banner colSpans
   // below, and every BatterRowEl row, so all four always agree.
   const visibleDugoutColumns = useMemo(() => resolveDugoutColumns(columnPrefs), [columnPrefs])
+  const topIndexRow = pool.reduce<BatterRow | null>((best, row) => {
+    if (row.mechanics_index == null) return best
+    return !best || best.mechanics_index == null || row.mechanics_index > best.mechanics_index ? row : best
+  }, null)
+  const confirmedLineups = Number(!!game.homeLineupConfirmed) + Number(!!game.awayLineupConfirmed)
+  const matchupStatus = game.status === 'Live' ? 'Live' : game.status === 'Final' ? 'Final' : 'Pregame'
 
   // Shared by both team banners (home + away both get their own copy of
   // Sticky/Highlighter/Eraser now, not just home) — icon-only labels (no more
@@ -3405,7 +3458,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     </div>
   )
 
-  // Team-info + modeButtons content for each team's banner row. Wrapped in
+  // Team identity stays inside each table section. Board controls live once
+  // in the responsive command bar above the table, so users do not have to
+  // re-parse duplicate controls when moving between teams.
   // its own position:sticky;left:0 — the <td> it lives in is colSpan'd across
   // the whole (very wide, ~90-column) row so the gradient bar visually spans
   // the table regardless of horizontal scroll, but that left this actual
@@ -3441,7 +3496,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         {side === 'home' && game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
         {side === 'away' && game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
       </div>
-      {modeButtons}
     </div>
   )
 
@@ -3465,6 +3519,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // against its bottom edge instead of a guessed pixel value that breaks the
   // moment the banner's own content wraps to an extra line.
   const bannerRowRef = useRef<HTMLTableCellElement>(null)
+  const homeSectionRef = useRef<HTMLTableRowElement>(null)
+  const awaySectionRef = useRef<HTMLTableRowElement>(null)
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [bannerHeight, setBannerHeight] = useState(0)
@@ -3486,6 +3542,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     if (!el) return
     el.scrollTo({ left: edge === 'start' ? 0 : el.scrollWidth, behavior: 'smooth' })
   }
+  const scrollBoardToStop = (stop: 'start' | 'home' | 'away' | 'end') => {
+    if (stop === 'start' || stop === 'end') {
+      scrollBoardTo(stop)
+      return
+    }
+    tableScrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
+    ;(stop === 'home' ? homeSectionRef.current : awaySectionRef.current)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const marketSectionJumps = useMemo(() => {
     const seen = new Set<string>()
     return visibleDugoutColumns.filter(column => {
@@ -3494,6 +3558,16 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       return true
     })
   }, [visibleDugoutColumns])
+  const boardViewJumps = useMemo(() => {
+    const firstIn = (...groups: string[]) => marketSectionJumps.find(column => groups.includes(column.group))
+    return [
+      { label: 'Markets', target: firstIn('fhr', 'hr') },
+      { label: 'Props', target: firstIn('props') },
+      { label: 'Ranks', target: firstIn('ranks') },
+      { label: 'Mechanics', target: firstIn('mechanics', 'batspeed') },
+      { label: 'Statcast', target: firstIn('barrel') },
+    ].filter((view): view is { label: string; target: { key: string; group: string } } => !!view.target)
+  }, [marketSectionJumps])
   const tableTourSteps = useMemo(() => {
     const visible = new Set(visibleDugoutColumns.map(column => column.key))
     return [
@@ -3598,6 +3672,26 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
     <div className="dugout-board-enter" style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
+      <section className="dugout-command-bar" aria-label="Dugout board controls">
+        <div className="dugout-command-matchup">
+          <span><TeamLogo abbr={game.awayAbbr} size={24} /><strong>{game.awayAbbr}</strong></span>
+          <i>at</i>
+          <span><TeamLogo abbr={game.homeAbbr} size={24} /><strong>{game.homeAbbr}</strong></span>
+          <em data-status={matchupStatus.toLowerCase()}>{matchupStatus}</em>
+        </div>
+        {modeButtons}
+      </section>
+      <section className="dugout-intelligence-strip" aria-label="Game intelligence">
+        <span><small>LINEUPS</small><strong>{confirmedLineups}/2 confirmed</strong></span>
+        <span><small>TOP INDEX</small><strong>{topIndexRow ? `${topIndexRow.name} ${Math.round(topIndexRow.mechanics_index ?? 0)}` : '-'}</strong></span>
+        <span><small>BOARD</small><strong>{visibleDugoutColumns.length} saved columns</strong></span>
+        <span><small>WINDOW</small><strong>{statcastWindow.toUpperCase()} · {density}</strong></span>
+        <span><small>NO HR</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong></span>
+        <label className="dugout-market-snapshot">
+          <small>MARKET SNAPSHOT</small>
+          <span><b className={marketSnapshot === 'open' ? 'is-active' : ''}>Open</b><input aria-label="Market snapshot" type="range" min={0} max={1} step={1} value={marketSnapshot === 'open' ? 0 : 1} onChange={event => setMarketSnapshot(event.currentTarget.value === '0' ? 'open' : 'now')} /><b className={marketSnapshot === 'now' ? 'is-active' : ''}>Now</b></span>
+        </label>
+      </section>
       {activeSortKeys.length > 0 && (
         <div className="dugout-redundant-sort-summary" aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
@@ -3610,18 +3704,18 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         </div>
       )}
       <div className="dugout-jump-menu" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
-        <span className="dugout-lane-title">Board lanes</span>
-        {marketSectionJumps.map(section => (
+        <span className="dugout-lane-title">Jump views</span>
+        {boardViewJumps.map(view => (
           <button
-            key={`${section.group}-${section.key}`}
+            key={`${view.label}-${view.target.key}`}
             type="button"
-            onClick={() => scrollToMarketSection(section.key)}
+            onClick={() => scrollToMarketSection(view.target.key)}
             style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
           >
-            {DUGOUT_GROUP_LABELS[section.group] ?? section.group}
+            {view.label}
           </button>
         ))}
-        <span className="dugout-lane-note">Navigation only · saved columns stay in your order</span>
+        <span className="dugout-lane-note">Jump only · your saved order never changes</span>
         <button
           type="button"
           onClick={() => setTourStep(0)}
@@ -3631,19 +3725,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <BookOpen size={12} aria-hidden="true" /> Take the table tour
         </button>
       </div>
-      {horizontalState.hasOverflow && (
-        <div className="dugout-board-nav" style={{ display: 'grid', gridTemplateColumns: 'auto minmax(72px, 1fr) auto', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
-          <button type="button" onClick={() => scrollBoardTo('start')} disabled={!horizontalState.canGoLeft} aria-label="Go to the first Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoLeft ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoLeft ? 'pointer' : 'default', padding: '3px 4px' }}>
-            <ChevronLeft size={13} aria-hidden="true" /> Start
+      <nav className="dugout-board-nav" aria-label="Board minimap">
+        {(['start', 'home', 'away', 'end'] as const).map(stop => (
+          <button key={stop} type="button" onClick={() => scrollBoardToStop(stop)} disabled={(stop === 'start' && !horizontalState.canGoLeft) || (stop === 'end' && !horizontalState.canGoRight)}>
+            {stop === 'start' && <ChevronLeft size={12} aria-hidden="true" />}{stop[0].toUpperCase() + stop.slice(1)}{stop === 'end' && <ChevronRight size={12} aria-hidden="true" />}
           </button>
-          <div aria-label={`Board position ${Math.round(horizontalState.progress)} percent`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(horizontalState.progress)} style={{ height: 4, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden' }}>
-            <div style={{ width: `${Math.max(3, horizontalState.progress)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--accent), #38bdf8)', transition: 'width 100ms ease-out' }} />
-          </div>
-          <button type="button" onClick={() => scrollBoardTo('end')} disabled={!horizontalState.canGoRight} aria-label="Go to the last Dugout columns" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'none', color: horizontalState.canGoRight ? 'var(--text-2)' : 'var(--text-4)', fontSize: 10, fontWeight: 800, cursor: horizontalState.canGoRight ? 'pointer' : 'default', padding: '3px 4px' }}>
-            End <ChevronRight size={13} aria-hidden="true" />
-          </button>
-        </div>
-      )}
+        ))}
+        <div className="dugout-board-progress" aria-label={`Board position ${Math.round(horizontalState.progress)} percent`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(horizontalState.progress)}><i style={{ width: `${Math.max(3, horizontalState.progress)}%` }} /></div>
+      </nav>
     <div
       ref={tableScrollRef}
       className="dugout-board-scroll"
@@ -3678,7 +3767,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               not "redundant"). Each pair pins together and hands off to the
               other team's pair as you scroll from one section into the
               other, exactly like the banner-only version already did. */}
-          <tr>
+          <tr ref={homeSectionRef}>
             {/* Mode buttons + Statcast toggle sit content-hugging right
                 after the pitcher chip (not spread to the far right via
                 justifyContent:'space-between') so mobile users reach them
@@ -3727,7 +3816,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               break instead of the away header looking like a trailing part
               of the home team's block above it. */}
           <tr><td colSpan={99} style={{ height: 6, background: 'transparent', border: 'none', padding: 0 }} /></tr>
-          <tr>
+          <tr ref={awaySectionRef}>
             <td
               className="dg-team-banner"
               colSpan={renderedHeaderCells.length}
@@ -3767,7 +3856,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     {comparedRows.length > 0 && (
       <aside className="dugout-compare-tray" aria-label="Player comparison">
         <div className="dugout-compare-head">
-          <span><strong>Compare</strong><small>{comparedRows.length}/4 · Open → now</small></span>
+          <span><strong>Compare</strong><small>{comparedRows.length}/4 · {marketSnapshot === 'open' ? 'Opening prices' : 'Current prices'}</small></span>
           <button type="button" onClick={() => setComparedKeys([])}>Clear</button>
         </div>
         <div className="dugout-compare-grid">
@@ -3780,8 +3869,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               </div>
               <div className="dugout-compare-stats">
                 <span><small>INDEX</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong></span>
-                <span><small>FHR</small><strong>{oStr(row.fhr_open)} <i>→</i> {oStr(row.fhr_fd)}</strong></span>
-                <span><small>HR</small><strong>{oStr(row.saFd_open)} <i>→</i> {oStr(row.sa_fd)}</strong></span>
+                <span><small>FHR</small><strong>{oStr(selectDugoutMarketPrice(row.fhr_open, row.fhr_fd, marketSnapshot))}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
+                <span><small>HR</small><strong>{oStr(selectDugoutMarketPrice(row.saFd_open, row.sa_fd, marketSnapshot))}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
                 <span><small>HIT</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</strong></span>
               </div>
             </article>
@@ -4013,6 +4102,7 @@ export function DugoutClient({ date }: { date: string }) {
   const [showHrBoard, setShowHrBoard] = useState(false)
   const [showNearHrBoard, setShowNearHrBoard] = useState(false)
   const [showGamePicker, setShowGamePicker] = useState(false)
+  const [gamePickerFilter, setGamePickerFilter] = useState<'all' | 'live' | 'upcoming' | 'final'>('all')
   const [density, setDensity] = useState<'compact' | 'comfortable'>(() => {
     if (typeof window === 'undefined') return 'compact'
     return window.localStorage.getItem('ss:dugout-density') === 'comfortable' ? 'comfortable' : 'compact'
@@ -4237,6 +4327,13 @@ export function DugoutClient({ date }: { date: string }) {
 
   const games: any[] = data.games
   const active = games.find(g => g.gameKey === activeGame) ?? games[0]
+  const filteredPickerGames = games.filter(game => {
+    if (gamePickerFilter === 'all') return true
+    const status = String(game.status ?? '').toLowerCase()
+    if (gamePickerFilter === 'live') return status === 'live'
+    if (gamePickerFilter === 'final') return status === 'final'
+    return status !== 'live' && status !== 'final'
+  })
   const activeGameIndex = Math.max(0, games.findIndex(g => g.gameKey === active.gameKey))
   // `locked` is added server-side by /api/dugout/data for below-Ultimate
   // members — always `false` on every game for a real Ultimate (or admin/
@@ -4435,8 +4532,11 @@ export function DugoutClient({ date }: { date: string }) {
               <div><div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>Choose a game</div><div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-3)' }}>{games.length} games on this slate</div></div>
               <button type="button" onClick={() => setShowGamePicker(false)} aria-label="Close game picker" style={{ border: 0, background: 'none', color: 'var(--text-2)', fontSize: 20, cursor: 'pointer' }}>×</button>
             </div>
+            <div className="dugout-game-picker-filters" aria-label="Filter games">
+              {(['all', 'live', 'upcoming', 'final'] as const).map(filter => <button key={filter} type="button" aria-pressed={gamePickerFilter === filter} onClick={() => setGamePickerFilter(filter)}>{filter}</button>)}
+            </div>
             <div className="dugout-game-picker-list" style={{ display: 'grid', gap: 7, padding: 10 }}>
-              {games.map(game => {
+              {filteredPickerGames.map(game => {
                 const selected = game.gameKey === active.gameKey
                 const time = game.gameDate ? new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
                 return (
@@ -4446,6 +4546,7 @@ export function DugoutClient({ date }: { date: string }) {
                   </button>
                 )
               })}
+              {filteredPickerGames.length === 0 && <div className="dugout-picker-empty">No {gamePickerFilter} games on this slate.</div>}
             </div>
           </div>
         </div>
@@ -4475,6 +4576,38 @@ export function DugoutClient({ date }: { date: string }) {
 
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
+        .dugout-command-bar{position:sticky;top:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;margin-bottom:7px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(18px);box-shadow:0 12px 34px rgba(0,0,0,.24)}
+        .dugout-command-matchup{display:flex;align-items:center;gap:7px;min-width:max-content}
+        .dugout-command-matchup>span{display:flex;align-items:center;gap:5px;color:var(--text-1);font-size:12px}
+        .dugout-command-matchup>i{color:var(--text-4);font-size:8px;font-style:normal;font-weight:900;text-transform:uppercase}
+        .dugout-command-matchup>em{margin-left:3px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;color:var(--text-3);font-size:8px;font-style:normal;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
+        .dugout-command-matchup>em[data-status=live]{border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.1);color:#fb7185}
+        .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(5,minmax(105px,1fr)) minmax(190px,1.35fr);gap:1px;margin-bottom:7px;overflow:hidden;border:1px solid var(--border);border-radius:11px;background:var(--border)}
+        .dugout-intelligence-strip>span,.dugout-market-snapshot{display:grid;align-content:center;gap:3px;min-height:49px;padding:7px 10px;background:var(--surface)}
+        .dugout-intelligence-strip small{color:var(--text-4);font-size:7px;font-weight:950;letter-spacing:.075em}
+        .dugout-intelligence-strip strong{overflow:hidden;color:var(--text-1);font-size:10px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-market-snapshot>span{display:grid;grid-template-columns:auto minmax(72px,1fr) auto;align-items:center;gap:7px}
+        .dugout-market-snapshot b{color:var(--text-4);font-size:8px;text-transform:uppercase}
+        .dugout-market-snapshot b.is-active{color:var(--accent)}
+        .dugout-market-snapshot input{width:100%;accent-color:var(--accent);cursor:pointer}
+        .dugout-board-nav{display:grid;grid-template-columns:repeat(4,auto);align-items:center;justify-content:start;gap:5px;margin-bottom:6px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
+        .dugout-board-nav button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:3px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text-2);font-size:9px;font-weight:850;cursor:pointer}
+        .dugout-board-nav button:disabled{color:var(--text-4);cursor:default;opacity:.55}
+        .dugout-board-progress{grid-column:1/-1;height:3px;overflow:hidden;border-radius:999px;background:var(--surface-2)}
+        .dugout-board-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#38bdf8);transition:width 100ms ease-out}
+        .dugout-board-enter .dg-player-drilldown-cell{height:0;padding:0!important;border:0!important;overflow:visible!important}
+        .dugout-board-enter .dg-player-drilldown{position:fixed;top:74px;right:12px;bottom:12px;z-index:950;width:min(760px,54vw);max-width:calc(100vw - 24px);overflow:auto;overscroll-behavior:contain;padding:14px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border));border-radius:16px;background:color-mix(in srgb,var(--surface) 97%,transparent);backdrop-filter:blur(20px);box-shadow:0 28px 90px rgba(0,0,0,.68)}
+        .dugout-board-enter .dg-player-drilldown-head{position:sticky;top:-14px;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-14px -14px 12px;padding:13px 14px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 97%,transparent);backdrop-filter:blur(18px)}
+        .dugout-board-enter .dg-player-drilldown-head>span{display:grid;gap:2px;color:var(--text-1);font-size:13px}
+        .dugout-board-enter .dg-player-drilldown-head small{color:var(--text-3);font-size:9px}
+        .dugout-board-enter .dg-player-drilldown-head button{min-height:36px;display:inline-flex;align-items:center;gap:5px;padding:0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--accent);font-size:10px;font-weight:850;cursor:pointer}
+        .dugout-game-picker-filters{position:sticky;top:66px;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--surface)}
+        .dugout-game-picker-filters button{min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-3);font-size:9px;font-weight:900;text-transform:capitalize;cursor:pointer}
+        .dugout-game-picker-filters button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+        .dugout-picker-empty{padding:28px 12px;text-align:center;color:var(--text-3);font-size:11px}
+        .dugout-dense-table th[data-col-key^=fhr_]{box-shadow:inset 0 2px 0 rgba(74,222,128,.55)}
+        .dugout-dense-table th[data-col-key^=sa_],.dugout-dense-table th[data-col-key^=hr_]{box-shadow:inset 0 2px 0 rgba(56,189,248,.55)}
+        .dugout-dense-table th[data-col-key^=s_],.dugout-dense-table th[data-col-key^=r_],.dugout-dense-table th[data-col-key^=d_]{box-shadow:inset 0 2px 0 rgba(168,85,247,.45)}
         /* Direct-child combinators only — the expanded drilldown row's own
            <td colSpan={99}> is a direct child of this table's tbody, but the
            nested pitch-mix/matchup tables inside it are many levels further
@@ -4527,6 +4660,15 @@ export function DugoutClient({ date }: { date: string }) {
         @keyframes dugout-tour-glow{from{box-shadow:inset 0 0 0 1px var(--accent),0 0 7px color-mix(in srgb,var(--accent) 24%,transparent)}to{box-shadow:inset 0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 58%,transparent)}}
         @keyframes dugout-tour-icon{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
         @media(max-width:640px){
+          .dugout-command-bar{top:0;min-height:48px;padding:6px 7px;gap:8px;border-radius:10px;overflow-x:auto;scrollbar-width:none}
+          .dugout-command-bar::-webkit-scrollbar{display:none}
+          .dugout-command-matchup{position:sticky;left:0;z-index:2;padding-right:7px;background:color-mix(in srgb,var(--surface) 97%,transparent)}
+          .dugout-command-matchup>span strong{display:none}
+          .dugout-command-matchup>em{display:none}
+          .dugout-intelligence-strip{display:flex;gap:1px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none}
+          .dugout-intelligence-strip::-webkit-scrollbar{display:none}
+          .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:128px;min-height:52px;scroll-snap-align:start}
+          .dugout-market-snapshot{min-width:210px}
           .dugout-redundant-sort-summary{flex-wrap:nowrap!important;overflow-x:auto;min-height:38px;margin-bottom:5px!important;padding:5px 7px!important;scrollbar-width:none}
           .dugout-redundant-sort-summary::-webkit-scrollbar{display:none}
           .dugout-redundant-sort-summary > *{flex:0 0 auto}
@@ -4550,7 +4692,8 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-game-rail{display:none!important}
           .dugout-games-label{display:none}
           .dugout-active-matchup{display:inline-flex}
-          .dugout-board-nav{min-height:38px;margin-bottom:5px!important;padding:4px 7px!important;gap:7px!important}
+          .dugout-board-nav{position:sticky;top:49px;z-index:40;grid-template-columns:repeat(4,1fr);min-height:45px;margin-bottom:5px!important;padding:5px 7px!important;gap:4px!important;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(16px)}
+          .dugout-board-nav button{min-height:36px;padding:3px 5px;font-size:9px}
           .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:auto!important;border-radius:8px!important;scroll-padding-top:36px}
           .dg-team-banner{position:static!important}
           .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:max-content!important;min-height:38px}
@@ -4562,7 +4705,8 @@ export function DugoutClient({ date }: { date: string }) {
           .dg-player-name{font-size:12px!important;line-height:1.25!important}
           .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
           .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
-          .dg-player-drilldown{position:sticky;left:0;width:calc(100vw - 28px);max-width:calc(100vw - 28px);padding:10px;background:color-mix(in srgb,var(--surface) 97%,transparent);border-top:1px solid var(--accent);box-sizing:border-box}
+          .dugout-board-enter .dg-player-drilldown{position:fixed;inset:auto 0 0 0;width:100vw;max-width:100vw;max-height:min(84dvh,860px);padding:12px;border-width:1px 0 0;border-radius:18px 18px 0 0;background:color-mix(in srgb,var(--surface) 98%,transparent);box-sizing:border-box}
+          .dugout-board-enter .dg-player-drilldown::before{content:"";display:block;width:40px;height:4px;margin:0 auto 9px;border-radius:99px;background:var(--text-4);opacity:.65}
           .dg-player-drilldown-head{display:flex!important;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border)}
           .dg-player-drilldown-head > span{display:grid;gap:2px;min-width:0;color:var(--text-1);font-size:12px}
           .dg-player-drilldown-head small{color:var(--text-3);font-size:9px;font-weight:650}
