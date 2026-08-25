@@ -54,7 +54,7 @@ test('The Dugout implements all 14 responsive product requirements', () => {
     ['5 player identity and quick scores', ['size={34}', 'dg-player-name', 'dg-player-signal-row', '<small>MKT</small>', '<small>CON</small>', '<small>FIT</small>']],
     ['6 readable density and mobile targets', ['dg-player-name{font-size:13px', 'font-variant-numeric:tabular-nums', 'min-height:44px', 'density-comfortable']],
     ['7 concise glossary', ['Open glossary', 'Board glossary', 'Quick definitions only', "['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.']"]],
-    ['8 game intelligence strip', ['dugout-intelligence-strip', 'GameWeatherSummary', 'GAME STATE', 'TEAM ML SIGNAL', 'BOOK DISAGREEMENT', 'NO HR + MOVE', 'SAVED SIGNALS']],
+    ['8 game intelligence strip', ['dugout-intelligence-strip', 'GameWeatherSummary', 'GAME STATUS', 'HR + TEAM WIN', 'BOOK DISAGREEMENT', 'NO HOME RUN', 'YOUR SAVED READS']],
     ['9 collapsible team summaries', ['dg-team-collapse', 'toggleTeamCollapsed', 'prefix="Top" compact', 'MOST ADVERTISED', 'MOST HIDDEN', 'LINEUP']],
     ['10 desktop and mobile minimaps', ['dugout-desktop-minimap', 'dugout-board-nav', "(['start', 'home', 'away', 'end'] as const)", 'dugout-board-progress']],
     ['11 persistent two-to-four player comparison', ['slice(0, 4)', 'previous.slice(-3)', 'dugout-compare-tray', "(['l1', 'l3', 'l5', 'l10'] as const)", 'PROJECTED BATTED BALL', 'PITCH FIT']],
@@ -111,9 +111,12 @@ test('game intelligence and lineup navigation explain themselves visually', () =
   assert.ok(source.includes('SlipSurge Score ${Math.round(score)}'))
   assert.ok(source.includes('Jump to player row'))
   assert.match(source, /\.dugout-intelligence-strip\{[^}]*grid-template-columns:repeat\(12,minmax\(0,1fr\)\)/)
-  assert.ok(source.includes('content:"Starting matchup"'))
-  assert.ok(source.includes('content:"HR + team win"'))
-  assert.ok(source.includes('content:"Your saved reads"'))
+  assert.ok(source.includes('<small>STARTING MATCHUP</small>'))
+  assert.ok(source.includes('<small>HR + TEAM WIN</small>'))
+  assert.ok(source.includes('<small>YOUR SAVED READS</small>'))
+  assert.ok(source.includes('className="dugout-intel-matchup"'))
+  assert.match(source, /grid-template-areas:"weather state" "matchup saved" "market market"/)
+  assert.match(source, /\.dugout-intel-team-ml,\.dugout-intel-book,\.dugout-intel-window,\.dugout-intel-nohr\{display:none!important\}/)
 })
 
 test('comparison and park surfaces use deliberate high-contrast heat treatments', () => {

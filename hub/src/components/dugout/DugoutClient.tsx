@@ -4095,13 +4095,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       </section>
       <section className="dugout-intelligence-strip" aria-label="Game intelligence">
         <GameWeatherSummary gamePk={String(game.gamePk)} date={date} venue={game.venue} />
-        <span><small>GAME STATE</small><strong>{gameStatePrimary}</strong><em>{matchupStatus} · {confirmedLineups}/2 lineups</em></span>
-        <span className="is-matchup"><small>MATCHUP</small><strong><TeamLogo abbr={game.awayAbbr} size={18} /> {game.awayPitcher?.name ?? 'TBD'} · <TeamLogo abbr={game.homeAbbr} size={18} /> {game.homePitcher?.name ?? 'TBD'}</strong><em>{confirmedLineups}/2 lineups</em></span>
-        <span><small>TEAM ML SIGNAL</small><strong>{game.awayAbbr} {oStr(awaySummary.teamMl)} · {game.homeAbbr} {oStr(homeSummary.teamMl)}</strong><em>from HR + team win</em></span>
-        <span><small>BOOK DISAGREEMENT</small><strong>{disagreementLeader ? `${disagreementLeader.row.name} ${disagreementLeader.gap.toFixed(1)} pts` : 'No split'}</strong><em>FD · CZ · MGM · BR</em></span>
-        <span><small>WINDOW</small><strong>{statcastWindow.toUpperCase()} · {density}</strong></span>
-        <span><small>NO HR + MOVE</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong><em>{oStr(game.noHr?.openingFanduel)} → {oStr(game.noHr?.fanduel)}</em></span>
-        <span><small>SAVED SIGNALS</small><strong>{matrixCount} Matrix · {gameWatchlistItems.length} Watchlist</strong><em>{statcastWindow.toUpperCase()} · {density}</em></span>
+        <span className="dugout-intel-state"><small>GAME STATUS</small><strong>{gameStatePrimary}</strong><em>{matchupStatus} · {confirmedLineups}/2 lineups</em></span>
+        <span className="dugout-intel-matchup"><small>STARTING MATCHUP</small><strong><TeamLogo abbr={game.awayAbbr} size={18} /> {game.awayPitcher?.name ?? 'TBD'} · <TeamLogo abbr={game.homeAbbr} size={18} /> {game.homePitcher?.name ?? 'TBD'}</strong><em>{confirmedLineups}/2 lineups</em></span>
+        <span className="dugout-intel-team-ml"><small>HR + TEAM WIN</small><strong>{game.awayAbbr} {oStr(awaySummary.teamMl)} · {game.homeAbbr} {oStr(homeSummary.teamMl)}</strong><em>from HR + team win</em></span>
+        <span className="dugout-intel-book"><small>BOOK DISAGREEMENT</small><strong>{disagreementLeader ? `${disagreementLeader.row.name} ${disagreementLeader.gap.toFixed(1)} pts` : 'No split'}</strong><em>FD · CZ · MGM · BR</em></span>
+        <span className="dugout-intel-window"><small>DATA VIEW</small><strong>{statcastWindow.toUpperCase()} · {density}</strong></span>
+        <span className="dugout-intel-nohr"><small>NO HOME RUN</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong><em>{oStr(game.noHr?.openingFanduel)} → {oStr(game.noHr?.fanduel)}</em></span>
+        <span className="dugout-intel-saved"><small>YOUR SAVED READS</small><strong>{matrixCount} Matrix · {gameWatchlistItems.length} Watchlist</strong><em>{statcastWindow.toUpperCase()} · {density}</em></span>
         <label className="dugout-market-snapshot" data-tone="timeline">
           <small>MARKET STORY</small>
           <span>
@@ -5123,9 +5123,6 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-intelligence-strip>span::before,.dugout-market-snapshot::before{position:absolute;inset:0 auto 0 0;width:3px;background:var(--card-accent);content:"";opacity:.85}
         .dugout-intelligence-strip>span:nth-child(1){--card-accent:#38bdf8;grid-column:span 3}.dugout-intelligence-strip>span:nth-child(2){--card-accent:#a6ff3f;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(3){--card-accent:#a78bfa;grid-column:span 3}.dugout-intelligence-strip>span:nth-child(4){--card-accent:#fbbf24;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(5){--card-accent:#fb7185;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(6){--card-accent:#60a5fa;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(7){--card-accent:#f87171;grid-column:span 2}.dugout-intelligence-strip>span:nth-child(8){--card-accent:#f472b6;grid-column:span 2}
         .dugout-intelligence-strip small{color:color-mix(in srgb,var(--card-accent) 80%,#fff);font-size:10px;font-weight:950;letter-spacing:.085em;text-transform:uppercase}
-        .dugout-intelligence-strip>span:nth-child(2)>small,.dugout-intelligence-strip>span:nth-child(3)>small,.dugout-intelligence-strip>span:nth-child(4)>small,.dugout-intelligence-strip>span:nth-child(5)>small,.dugout-intelligence-strip>span:nth-child(6)>small,.dugout-intelligence-strip>span:nth-child(7)>small,.dugout-intelligence-strip>span:nth-child(8)>small{font-size:0}
-        .dugout-intelligence-strip>span:nth-child(2)>small::after{content:"Game status"}.dugout-intelligence-strip>span:nth-child(3)>small::after{content:"Starting matchup"}.dugout-intelligence-strip>span:nth-child(4)>small::after{content:"HR + team win"}.dugout-intelligence-strip>span:nth-child(5)>small::after{content:"Book split"}.dugout-intelligence-strip>span:nth-child(6)>small::after{content:"Data view"}.dugout-intelligence-strip>span:nth-child(7)>small::after{content:"No home run"}.dugout-intelligence-strip>span:nth-child(8)>small::after{content:"Your saved reads"}
-        .dugout-intelligence-strip>span:nth-child(n+2):nth-child(-n+8)>small::after{font-size:10px}
         .dugout-intelligence-strip strong{display:flex;align-items:center;gap:5px;overflow:hidden;color:#f8fafc;font-size:14px;font-weight:900;letter-spacing:-.015em;text-overflow:ellipsis;white-space:nowrap}
         .dugout-intelligence-strip em{overflow:hidden;color:#aab6c8;font-size:10px;font-style:normal;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
         .dugout-market-snapshot{--card-accent:#2dd4bf;grid-column:span 6}
@@ -5279,11 +5276,11 @@ export function DugoutClient({ date }: { date: string }) {
         @media(max-width:640px){
           .dugout-board-enter{--dg-control-h:38px;max-width:100%;overflow:visible}
           .dugout-board-enter.has-inspector{padding-right:0}
-          .dugout-command-bar{position:relative;top:auto;display:block;min-height:0;padding:6px;margin-bottom:5px;border-radius:11px;overflow:visible}
+          .dugout-command-bar{position:relative;top:auto;display:block;min-height:0;padding:5px;margin-bottom:6px;border-radius:12px;overflow:visible}
           .dugout-command-navigation,.dugout-command-matchup{display:none}
-          .dugout-command-primary{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,38px);gap:4px;width:100%;min-width:0;overflow:visible}
+          .dugout-command-primary{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,36px);gap:4px;width:100%;min-width:0;overflow:visible}
           .dugout-command-primary>*{min-width:0}
-          .dugout-command-primary>button{width:38px;min-height:38px;padding:0}
+          .dugout-command-primary>button{width:36px;min-height:36px;padding:0}
           .dugout-command-primary>button>span{display:none}
           .dugout-command-primary>button small{position:absolute;top:-3px;right:-2px;display:grid;place-items:center;min-width:15px;height:15px;padding:0 3px;border:1px solid var(--surface);border-radius:999px;background:var(--accent);color:#08100a;font-size:7px}
           .dugout-window-toggle{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px!important;width:100%;padding:2px!important}
@@ -5292,13 +5289,13 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-window-toggle button span{display:none}.dugout-window-toggle button i{display:inline;font-size:9px;font-style:normal;font-weight:950}
           .dugout-tools-popover{position:absolute;left:0;right:0;top:calc(100% + 5px);display:grid;grid-template-columns:1fr;max-width:none;overflow:visible;padding:8px}
           .dugout-tools-popover>.dugout-mode-buttons{overflow-x:auto}.dugout-tools-popover>button{width:100%}
-          .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px;overflow:visible}
-          .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:0;min-height:62px;padding:10px 11px;border-radius:10px}
-          .dugout-intelligence-strip>span:nth-child(4),.dugout-intelligence-strip>span:nth-child(5),.dugout-intelligence-strip>span:nth-child(6),.dugout-intelligence-strip>span:nth-child(7){display:none}
-          .dugout-weather-summary,.dugout-intelligence-strip>span:nth-child(3),.dugout-market-snapshot{grid-column:1/-1}
-          .dugout-intelligence-strip>span:nth-child(2),.dugout-intelligence-strip>span:nth-child(8){grid-column:span 1}
-          .dugout-intelligence-strip small{font-size:9px}.dugout-intelligence-strip>span:nth-child(n+2):nth-child(-n+8)>small::after{font-size:9px}.dugout-intelligence-strip strong{font-size:12px}.dugout-intelligence-strip em{font-size:9px}
-          .dugout-market-snapshot>span{gap:5px}.dugout-market-snapshot em{display:none}
+          .dugout-intelligence-strip{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(112px,.85fr);grid-template-areas:"weather state" "matchup saved" "market market";gap:5px;margin-bottom:6px;overflow:visible}
+          .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:0;min-height:56px;padding:8px 10px;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+          .dugout-weather-summary{grid-area:weather}.dugout-intel-state{grid-area:state}.dugout-intel-matchup{grid-area:matchup}.dugout-intel-saved{grid-area:saved}.dugout-market-snapshot{grid-area:market}
+          .dugout-intel-team-ml,.dugout-intel-book,.dugout-intel-window,.dugout-intel-nohr{display:none!important}
+          .dugout-intelligence-strip small{font-size:8px;letter-spacing:.07em}.dugout-intelligence-strip strong{font-size:11px;line-height:1.15}.dugout-intelligence-strip em{font-size:8px;line-height:1.2}
+          .dugout-intel-matchup strong{font-size:10px}.dugout-intel-matchup strong img{width:16px!important;height:16px!important}.dugout-intel-saved strong{white-space:normal;line-height:1.2}
+          .dugout-market-snapshot{min-height:52px;padding-top:7px;padding-bottom:7px}.dugout-market-snapshot>span{gap:5px}.dugout-market-snapshot em{display:none}
           .dugout-timeline-phases[data-count="0"],.dugout-timeline-phases[data-count="1"],.dugout-timeline-phases[data-count="2"]{display:none}
           .dugout-timeline-phases button,.dugout-group-nav button{min-height:34px;padding:0 10px;font-size:9px}
           .dugout-jump-menu{display:none!important}
