@@ -13,7 +13,7 @@ import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { canonicalProviderArchiveKey, normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { MatchupPitchBreakdown, type DugoutSpraySelection } from '@/components/dugout/MatchupPitchBreakdown'
-import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
+import { GameWeatherCard, GameWeatherSummary } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
@@ -560,6 +560,7 @@ export function buildBatterRow(
     mechanics_confidence: (mechanicsRecent?.confidence ?? null) as number | null,
     mechanics_trend: (mechanicsRecent?.trend ?? null) as number | null,
     mechanics_window: statcastWindow,
+    mechanics_windows: (player.mechanics ?? {}) as DugoutMechanicsWindows,
     fhr_fd, fhr_cz, fhr_fan, div, fhr_div_sa,
     // Shade %: today's price vs own season-average price (negative = cheaper
     // than usual = book conviction). Ported exactly from mlb-party: FHR% only
@@ -784,6 +785,7 @@ type SortState = { col: string; dir: 'desc' | 'asc' } | null
 type MultiSortEntry = { col: string; dir: 'desc' | 'asc' }
 
 type DugoutMarketSnapshot = 'open' | 'now'
+type DugoutInspectorTab = 'matchup' | 'contact' | 'park'
 type DugoutViewState = {
   sort: SortState
   stickyMode: boolean
@@ -791,10 +793,19 @@ type DugoutViewState = {
   marketSnapshot: DugoutMarketSnapshot
   timelineIndex: number | null
   expanded: string | null
+  viewPreset: DugoutViewPreset
+  collapsedTeams: string[]
+  activeGroup: string
+  inspectorTab: DugoutInspectorTab
+  compareOpen: boolean
+}
+function americanFromProbability(probability: number | null): number | null {
+  if (probability == null || probability <= 0 || probability >= 1) return null
+  return Math.round(probability >= 0.5 ? (-100 * probability) / (1 - probability) : (100 * (1 - probability)) / probability)
 }
 
 export function parseDugoutViewState(raw: string | null): DugoutViewState {
-  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', timelineIndex: null, expanded: null }
+  const fallback: DugoutViewState = { sort: null, stickyMode: false, stickyCols: [], marketSnapshot: 'now', timelineIndex: null, expanded: null, viewPreset: 'all', collapsedTeams: [], activeGroup: 'core', inspectorTab: 'matchup', compareOpen: true }
   if (!raw) return fallback
   try {
     const value = JSON.parse(raw)
@@ -804,6 +815,9 @@ export function parseDugoutViewState(raw: string | null): DugoutViewState {
     const stickyCols = Array.isArray(value?.stickyCols)
       ? value.stickyCols.filter((entry: any) => typeof entry?.col === 'string' && (entry.dir === 'asc' || entry.dir === 'desc')).slice(0, 12)
       : []
+    const presetMap: Record<string, DugoutViewPreset> = { markets: 'market', ranks: 'signal', mechanics: 'power', statcast: 'power' }
+    const requestedPreset = presetMap[value?.viewPreset] ?? value?.viewPreset
+    const viewPreset: DugoutViewPreset = ['signal', 'market', 'power', 'props', 'all', 'custom'].includes(requestedPreset) ? requestedPreset : 'all'
     return {
       sort: validSort,
       stickyMode: value?.stickyMode === true,
@@ -811,6 +825,11 @@ export function parseDugoutViewState(raw: string | null): DugoutViewState {
       marketSnapshot: value?.marketSnapshot === 'open' ? 'open' : 'now',
       timelineIndex: Number.isInteger(value?.timelineIndex) && value.timelineIndex >= 0 ? value.timelineIndex : null,
       expanded: typeof value?.expanded === 'string' ? value.expanded : null,
+      viewPreset,
+      collapsedTeams: Array.isArray(value?.collapsedTeams) ? value.collapsedTeams.filter((team: unknown) => typeof team === 'string') : [],
+      activeGroup: typeof value?.activeGroup === 'string' ? value.activeGroup : 'core',
+      inspectorTab: value?.inspectorTab === 'contact' || value?.inspectorTab === 'park' ? value.inspectorTab : 'matchup',
+      compareOpen: value?.compareOpen !== false,
     }
   } catch {
     return fallback
@@ -952,7 +971,7 @@ function PitcherStrikeoutsChip({ oppPitcher, gameInfo }: {
 }
 
 function PlayerDrillDown({
-  row, oppPitcher, pitcherTeamAbbr, gameInfo, pool, onClose,
+  row, oppPitcher, pitcherTeamAbbr, gameInfo, pool, onClose, tab, onTabChange, onPrevious, onNext,
 }: {
   row: BatterRow
   oppPitcher?: any
@@ -963,6 +982,10 @@ function PlayerDrillDown({
   // Report's PlayerStatcastDetail.
   pool: BatterRow[]
   onClose?: () => void
+  tab?: DugoutInspectorTab
+  onTabChange?: (tab: DugoutInspectorTab) => void
+  onPrevious?: () => void
+  onNext?: () => void
 }) {
   const pitcherHand: 'R' | 'L' = oppPitcher?.hand === 'L' ? 'L' : 'R'
   const noBatSplits = !row.s_spd && !row.s_brl
@@ -982,7 +1005,15 @@ function PlayerDrillDown({
           <span><strong>{row.name}</strong><small>{row.team} · {row.position} · {row.bats}HB</small></span>
           {onClose && <button type="button" onClick={onClose} aria-label={`Collapse ${row.name}`}>Collapse <ChevronUp size={14} /></button>}
         </div>
-      <div className="dg-player-drilldown-grid" style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <div className="dg-inspector-summary">
+          <PlayerAvatar mlbId={row.mlb_id} size={42} teamAbbr={row.team} name={row.name} />
+          <span><b>#{row.batting_order}</b><small>INDEX</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong><small>FHR</small><strong>{oStr(row.fhr_fd)}</strong><small>HR</small><strong>{oStr(row.sa_fd)}</strong></span>
+          <div className="dg-inspector-arrows"><button type="button" onClick={onPrevious} aria-label="Previous player"><ChevronLeft size={16} /></button><button type="button" onClick={onNext} aria-label="Next player"><ChevronRight size={16} /></button></div>
+        </div>
+        <nav className="dg-inspector-tabs" aria-label="Player inspector sections">
+          {(['matchup', 'contact', 'park'] as const).map(value => <button key={value} type="button" aria-pressed={(tab ?? 'matchup') === value} onClick={() => onTabChange?.(value)}>{value === 'park' ? 'Park Projection' : value[0].toUpperCase() + value.slice(1)}</button>)}
+        </nav>
+      <div className={`dg-player-drilldown-grid inspector-${tab ?? 'matchup'}`} style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
 
         {/* Real pitch-by-pitch matchup — genuine Statcast rows off
             player_pitch_log via batterStatsEngine.ts, the same engine and
@@ -1064,7 +1095,7 @@ function PlayerDrillDown({
                 right beside the matchup arsenal column on smaller screens
                 instead of wrapping below both columns and needing a scroll. */}
             {gameInfo.game_pk && gameInfo.game_date && (
-              <div style={{ marginTop: 14 }}>
+              <div className="dg-park-projection" style={{ marginTop: 14 }}>
                 <GameWeatherCard
                   gamePk={gameInfo.game_pk}
                   date={gameInfo.game_date}
@@ -1187,6 +1218,12 @@ function OddsCell({
   }
 
   const hasDelta = openOdds != null && openOdds !== odds
+  const crossBookPrices = propKey === 'sa'
+    ? [row.sa_fd, row.sa_cz, row.sa_mgm, row.sa_br, row.sa_fan]
+    : propKey === 'fhr' ? [row.fhr_fd, row.fhr_cz, row.fhr_fan] : []
+  const crossBookProbabilities = crossBookPrices.map(value => toImpl(value)).filter((value): value is number => value != null)
+  const bookSpread = crossBookProbabilities.length > 1 ? Math.max(...crossBookProbabilities) - Math.min(...crossBookProbabilities) : null
+  const bookState = bookSpread == null ? 'single' : bookSpread <= 0.015 ? 'agreement' : bookSpread >= 0.04 ? 'disagreement' : 'mixed'
   const deltaTitle = hasDelta ? `Opened ${oStr(openOdds)} → now ${oStr(odds)}` : null
   const teamLogo = getTeamLogoUrl(row.team)
   const tooltipContent: TooltipCardData = {
@@ -1212,7 +1249,7 @@ function OddsCell({
   // div is the single flex child of that outer container either way, so it
   // controls its own internal stacking regardless of which branch renders it.
   const cellContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+    <div className="dg-market-cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
       {badge && (
         <Tooltip content={badge.title}>
           <div
@@ -1232,6 +1269,7 @@ function OddsCell({
         )}
       </span>
       {saved && <span style={{ position: 'absolute', top: 1, right: 1, fontSize: 6 }}>★</span>}
+      {openOdds != null && <small className="dg-market-open">O {oStr(openOdds)}</small>}
       {pickCount != null && (
         <Tooltip content={`${pickCount.toLocaleString()} community ${meta?.label ?? propKey} picks`}>
           <div aria-label={`${pickCount.toLocaleString()} community picks`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2, padding: '1px 3px', borderRadius: 3, background: 'var(--accent-dim)', fontSize: 7, fontWeight: 900, color: 'var(--accent)', cursor: 'help', lineHeight: 1 }}>
@@ -1247,6 +1285,8 @@ function OddsCell({
       onClick={handleClick}
       data-col-key={dataColKey}
       data-col-group={dataColGroup}
+      data-book={book}
+      data-book-state={bookState}
       data-market-move={hasDelta ? (odds < openOdds! ? 'shorter' : 'longer') : 'flat'}
       style={{
         ...style,
@@ -1476,10 +1516,10 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           </div>
           {row.mlb_id ? (
             <Link href={`/players/${row.mlb_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'flex' }}>
-              <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
+              <PlayerAvatar mlbId={row.mlb_id} size={34} teamAbbr={row.team} name={row.name} />
             </Link>
           ) : (
-            <PlayerAvatar mlbId={row.mlb_id} size={24} teamAbbr={row.team} name={row.name} />
+            <PlayerAvatar mlbId={row.mlb_id} size={34} teamAbbr={row.team} name={row.name} />
           )}
           <div className="dg-player-copy" style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
             {/* Name line's width is now fixed regardless of how many flags
@@ -1557,6 +1597,11 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                   }}>💰</span>
                 </Tooltip>
               )}
+            </div>
+            <div className="dg-player-signal-row" aria-label={`${row.name} quick scores`}>
+              <span><small>MKT</small><b>{row.mm != null ? Math.round(row.mm) : '—'}</b></span>
+              <span><small>CON</small><b>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</b></span>
+              <span><small>FIT</small><b>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '—'}</b></span>
             </div>
           </div>
           <span className="dg-expand-indicator" style={{ fontSize: 8, color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>{expanded ? '▲' : '▼'}</span>
@@ -3073,7 +3118,7 @@ export function getDugoutHeaderCells(
   )
 }
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange }: {
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange, navigation, onOpenColumns }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -3091,7 +3136,10 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   columnPrefs?: DugoutColumnPrefs | null
   density: 'compact' | 'comfortable'
   onDensityChange: (density: 'compact' | 'comfortable') => void
+  navigation: { index: number; total: number; onPrevious: () => void; onNext: () => void; onAllGames: () => void }
+  onOpenColumns: () => void
 }) {
+  const watchlist = useWatchlist()
   const viewStorageKey = `ss:dugout-view-v1:${date}:${game.gameKey}`
   const persistedView = useMemo(() => {
     if (typeof window === 'undefined') return parseDugoutViewState(null)
@@ -3110,7 +3158,13 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>(persistedView.stickyCols)
   const [marketSnapshot, setMarketSnapshot] = useState<DugoutMarketSnapshot>(persistedView.marketSnapshot)
   const [timelineIndex, setTimelineIndex] = useState<number | null>(persistedView.timelineIndex)
-  const [viewPreset, setViewPreset] = useState<DugoutViewPreset>('all')
+  const [viewPreset, setViewPreset] = useState<DugoutViewPreset>(persistedView.viewPreset)
+  const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set(persistedView.collapsedTeams))
+  const [activeGroup, setActiveGroup] = useState(persistedView.activeGroup)
+  const [inspectorTab, setInspectorTab] = useState<DugoutInspectorTab>(persistedView.inspectorTab)
+  const [compareOpen, setCompareOpen] = useState(persistedView.compareOpen)
+  const [showTools, setShowTools] = useState(false)
+  const [showGlossary, setShowGlossary] = useState(false)
 
   // Highlighter — a totally separate, member-driven paint tool (own click
   // mode, own color, own persistence) from the Matrix highlight tint above:
@@ -3189,18 +3243,18 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [comparedKeys, setComparedKeys] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
     try {
-      const stored = JSON.parse(window.sessionStorage.getItem(compareStorageKey) ?? '[]')
+      const stored = JSON.parse(window.localStorage.getItem(compareStorageKey) ?? '[]')
       return Array.isArray(stored) ? stored.slice(0, 4).filter(value => typeof value === 'string') : []
     } catch { return [] }
   })
   useEffect(() => {
-    try { window.sessionStorage.setItem(compareStorageKey, JSON.stringify(comparedKeys)) } catch {}
+    try { window.localStorage.setItem(compareStorageKey, JSON.stringify(comparedKeys)) } catch {}
   }, [compareStorageKey, comparedKeys])
   useEffect(() => {
     try {
-      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, timelineIndex, expanded }))
+      window.localStorage.setItem(viewStorageKey, JSON.stringify({ sort, stickyMode, stickyCols, marketSnapshot, timelineIndex, expanded, viewPreset, collapsedTeams: [...collapsedTeams], activeGroup, inspectorTab, compareOpen }))
     } catch {}
-  }, [expanded, marketSnapshot, sort, stickyCols, stickyMode, timelineIndex, viewStorageKey])
+  }, [activeGroup, collapsedTeams, compareOpen, expanded, inspectorTab, marketSnapshot, sort, stickyCols, stickyMode, timelineIndex, viewPreset, viewStorageKey])
   const toggleCompared = (row: BatterRow) => {
     const key = compareKey(row)
     setComparedKeys(previous => previous.includes(key)
@@ -3214,7 +3268,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     // (and pushed layout) before scrolling — scrolling immediately can
     // land short since the drilldown's height isn't in the page yet.
     const t = setTimeout(() => {
-      document.getElementById('dugout-highlight-row')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      document.getElementById(highlightKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 150)
     return () => clearTimeout(t)
     // Only on mount for this game/highlight combo — don't re-scroll every
@@ -3368,32 +3422,73 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const selectedTimelineLabel = selectedTimelinePoint
     ? new Date(selectedTimelinePoint.capturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : marketSnapshot === 'open' ? 'Open' : 'Now'
-  const selectTimelinePrice = (row: BatterRow, market: 'fhr' | 'sa', open: number | null | undefined, current: number | null | undefined) => {
-    const captured = selectedTimelinePoint?.players.get(normName(row.name))?.[market]
+  const selectTimelinePrice = (
+    row: BatterRow,
+    market: string,
+    open: number | null | undefined,
+    current: number | null | undefined,
+    book: 'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers' = 'fanduel',
+  ) => {
+    const captured = selectedTimelinePoint?.players.get(normName(row.name))?.[market]?.[book]
     return captured ?? selectDugoutMarketPrice(open, current, marketSnapshot)
   }
   const withTimelinePrices = (row: BatterRow): BatterRow => {
     const fhrFd = selectTimelinePrice(row, 'fhr', row.fhr_open, row.fhr_fd)
+    const fhrCz = selectTimelinePrice(row, 'fhr', row.fhrCz_open, row.fhr_cz, 'williamhill_us')
     const saFd = selectTimelinePrice(row, 'sa', row.saFd_open, row.sa_fd)
-    if (fhrFd === row.fhr_fd && saFd === row.sa_fd) return row
+    const saCz = selectTimelinePrice(row, 'sa', row.saCz_open, row.sa_cz, 'williamhill_us')
+    const saMgm = selectTimelinePrice(row, 'sa', row.saMgm_open, row.sa_mgm, 'betmgm')
+    const saBr = selectTimelinePrice(row, 'sa', row.saBr_open, row.sa_br, 'betrivers')
+    const rbi = selectTimelinePrice(row, 'rbi', row.rbiFd_open, row.rbi_fd)
+    const rbi2 = selectTimelinePrice(row, 'rbi2', row.rbi2Fd_open, row.rbi2_fd)
+    const rbi3 = selectTimelinePrice(row, 'rbi3', row.rbi3Fd_open, row.rbi3_fd)
+    const tb = selectTimelinePrice(row, 'tb', row.tbFd_open, row.tb_fd)
+    const tb3 = selectTimelinePrice(row, 'tb3', row.tb3Fd_open, row.tb3_fd)
+    const tb4 = selectTimelinePrice(row, 'tb4', row.tb4Fd_open, row.tb4_fd)
+    const tb5 = selectTimelinePrice(row, 'tb5', row.tb5Fd_open, row.tb5_fd)
+    const hrr = selectTimelinePrice(row, 'hrr', row.hrrFd_open, row.hrr_fd)
+    const hr2 = selectTimelinePrice(row, 'hr2', row.hr2Fd_open, row.hr2_fd)
+    const moonshot = selectTimelinePrice(row, 'moonshot', row.moonshot_open, row.moonshot_fd)
+    const laser105 = selectTimelinePrice(row, 'laser105', row.laser105_open, row.laser105_fd)
+    const laser110 = selectTimelinePrice(row, 'laser110', row.laser110_open, row.laser110_fd)
+    const pa1 = selectTimelinePrice(row, 'pa1', row.pa1_open, row.pa1_fd)
+    const hrMl = selectTimelinePrice(row, 'hrMl', row.hrMl_open, row.hrMl_fd)
     return {
       ...row,
       fhr_fd: fhrFd,
+      fhr_cz: fhrCz,
       sa_fd: saFd,
-      div: fdczDiv(fhrFd, row.fhr_cz),
+      sa_cz: saCz,
+      sa_mgm: saMgm,
+      sa_br: saBr,
+      rbi_fd: rbi,
+      rbi2_fd: rbi2,
+      rbi3_fd: rbi3,
+      tb_fd: tb,
+      tb3_fd: tb3,
+      tb4_fd: tb4,
+      tb5_fd: tb5,
+      hrr_fd: hrr,
+      hr2_fd: hr2,
+      moonshot_fd: moonshot,
+      laser105_fd: laser105,
+      laser110_fd: laser110,
+      pa1_fd: pa1,
+      hrMl_fd: hrMl,
+      div: fdczDiv(fhrFd, fhrCz),
       fhr_div_sa: implRatio(fhrFd, saFd),
-      m_div_f: implRatio(row.sa_mgm, saFd),
-      sa_div_rbi: implRatio(saFd, row.rbi_fd),
-      sa_div_rbi2: implRatio(saFd, row.rbi2_fd),
-      sa_div_rbi3: implRatio(saFd, row.rbi3_fd),
-      sa_div_hrr: implRatio(saFd, row.hrr_fd),
-      sa_div_tb: implRatio(saFd, row.tb_fd),
-      sa_div_tb3: implRatio(saFd, row.tb3_fd),
-      sa_div_tb4: implRatio(saFd, row.tb4_fd),
-      sa_div_tb5: implRatio(saFd, row.tb5_fd),
-      sa_div_hr2: implRatio(saFd, row.hr2_fd),
-      pa1_div_sa: implRatio(row.pa1_fd, saFd),
-      sa_div_ml: implRatio(saFd, row.hrMl_fd),
+      m_div_f: implRatio(saMgm, saFd),
+      sa_div_rbi: implRatio(saFd, rbi),
+      sa_div_rbi2: implRatio(saFd, rbi2),
+      sa_div_rbi3: implRatio(saFd, rbi3),
+      sa_div_hrr: implRatio(saFd, hrr),
+      sa_div_tb: implRatio(saFd, tb),
+      sa_div_tb3: implRatio(saFd, tb3),
+      sa_div_tb4: implRatio(saFd, tb4),
+      sa_div_tb5: implRatio(saFd, tb5),
+      sa_div_hr2: implRatio(saFd, hr2),
+      pa1_div_sa: implRatio(pa1, saFd),
+      sa_div_ml: implRatio(saFd, hrMl),
     }
   }
   const chooseTimelineIndex = (index: number) => {
@@ -3411,6 +3506,49 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   }, null)
   const confirmedLineups = Number(!!game.homeLineupConfirmed) + Number(!!game.awayLineupConfirmed)
   const matchupStatus = game.status === 'Live' ? 'Live' : game.status === 'Final' ? 'Final' : 'Pregame'
+  const scheduledTime = game.gameDate
+    ? new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : 'Time TBD'
+  const gameStatePrimary = matchupStatus === 'Pregame'
+    ? scheduledTime
+    : `${game.awayAbbr} ${game.awayScore ?? '-'} · ${game.homeAbbr} ${game.homeScore ?? '-'}`
+  const gameWatchlistItems = watchlist.items.filter(item => item.status === 'pending' && item.game_pk === String(game.gamePk))
+  const watchedPlayerIds = new Set(gameWatchlistItems.map(item => item.mlb_id).filter((id): id is number => id != null))
+  const matrixCount = pool.filter(row => row.matrix_matches.length > 0).length
+  const disagreementLeader = pool.reduce<{ row: BatterRow; gap: number } | null>((best, row) => {
+    const prices = [row.sa_fd, row.sa_cz, row.sa_mgm, row.sa_br].map(value => toImpl(value)).filter((value): value is number => value != null)
+    if (prices.length < 2) return best
+    const gap = (Math.max(...prices) - Math.min(...prices)) * 100
+    return !best || gap > best.gap ? { row, gap } : best
+  }, null)
+  const teamSummary = (rows: BatterRow[]) => {
+    const top = rows.reduce<BatterRow | null>((best, row) => !best || (row.mechanics_index ?? -1) > (best.mechanics_index ?? -1) ? row : best, null)
+    const shortestHr = rows.reduce<BatterRow | null>((best, row) => row.sa_fd == null ? best : !best || best.sa_fd == null || toImpl(row.sa_fd)! > toImpl(best.sa_fd)! ? row : best, null)
+    const mlSignals = rows.map(row => {
+      const hr = toImpl(row.sa_fd), joint = toImpl(row.hrMl_fd)
+      return hr && joint ? joint / hr : null
+    }).filter((value): value is number => value != null && value > 0 && value < 1)
+    const teamMl = mlSignals.length ? americanFromProbability(mlSignals.sort((a, b) => a - b)[Math.floor(mlSignals.length / 2)]) : null
+    return { top, shortestHr, teamMl, matrix: rows.filter(row => row.matrix_matches.length > 0).length, watched: rows.filter(row => row.mlb_id != null && watchedPlayerIds.has(row.mlb_id)).length }
+  }
+  const homeSummary = teamSummary(homeRows)
+  const awaySummary = teamSummary(awayRows)
+  const timelinePhaseIndices = useMemo(() => {
+    if (!marketTimeline.length) return [] as { label: string; index: number }[]
+    const phases: { label: string; target: number }[] = [{ label: 'OPEN', target: -Infinity }, { label: '9AM', target: 9 }, { label: 'NOON', target: 12 }, { label: 'LINEUP', target: 16 }, { label: 'CURRENT', target: Infinity }]
+    const used = new Set<number>()
+    return phases.map(phase => {
+      let index = phase.target === -Infinity ? 0 : phase.target === Infinity ? marketTimeline.length - 1 : 0
+      if (Number.isFinite(phase.target)) {
+        let distance = Infinity
+        marketTimeline.forEach((point, pointIndex) => {
+          const hour = new Date(point.capturedAt).getHours() + new Date(point.capturedAt).getMinutes() / 60
+          if (Math.abs(hour - phase.target) < distance) { distance = Math.abs(hour - phase.target); index = pointIndex }
+        })
+      }
+      return { label: phase.label, index }
+    }).filter(phase => !used.has(phase.index) && used.add(phase.index))
+  }, [marketTimeline])
 
   // Shared by both team banners (home + away both get their own copy of
   // Sticky/Highlighter/Eraser now, not just home) — icon-only labels (no more
@@ -3559,7 +3697,29 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   // scroll container (and the same mechanism) the Player column already
   // relies on, so it stays glued to the visible left edge no matter how far
   // right the table is scrolled.
-  const bannerContent = (side: 'home' | 'away') => (
+  const toggleTeamCollapsed = (abbr: string) => setCollapsedTeams(previous => {
+    const next = new Set(previous)
+    if (next.has(abbr)) next.delete(abbr)
+    else next.add(abbr)
+    return next
+  })
+  const orderedInspectorRows = [
+    ...displayHome.map(row => ({ row, key: `h-${row.mlb_id ?? row.name}`, pitcher: game.awayPitcher, pitcherTeamAbbr: game.awayAbbr })),
+    ...displayAway.map(row => ({ row, key: `a-${row.mlb_id ?? row.name}`, pitcher: game.homePitcher, pitcherTeamAbbr: game.homeAbbr })),
+  ]
+  const navigateInspector = (direction: -1 | 1) => {
+    if (!orderedInspectorRows.length) return
+    const current = Math.max(0, orderedInspectorRows.findIndex(entry => entry.key === expanded))
+    const next = orderedInspectorRows[(current + direction + orderedInspectorRows.length) % orderedInspectorRows.length]
+    setExpanded(next.key)
+    requestAnimationFrame(() => document.getElementById(next.key)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+  }
+  const bannerContent = (side: 'home' | 'away') => {
+    const abbr = side === 'home' ? game.homeAbbr : game.awayAbbr
+    const summary = side === 'home' ? homeSummary : awaySummary
+    const rows = side === 'home' ? homeRows : awayRows
+    const confirmed = side === 'home' ? game.homeLineupConfirmed : game.awayLineupConfirmed
+    return (
     <div
       className="dg-team-banner-content"
       style={{
@@ -3569,7 +3729,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <TeamLogo abbr={side === 'home' ? game.homeAbbr : game.awayAbbr} size={22} />
+        <button type="button" className="dg-team-collapse" onClick={() => toggleTeamCollapsed(abbr)} aria-expanded={!collapsedTeams.has(abbr)} aria-label={`${collapsedTeams.has(abbr) ? 'Expand' : 'Collapse'} ${abbr}`}><ChevronUp size={15} /></button>
+        <TeamLogo abbr={abbr} size={28} />
         <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>{side === 'home' ? game.homeTeam : game.awayTeam}</span>
         {side === 'home' && !game.homeLineupConfirmed && (
           <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>
@@ -3584,8 +3745,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         {side === 'home' && game.awayPitcher && <PitcherLinkChip pitcher={game.awayPitcher} teamAbbr={game.awayAbbr} date={date} />}
         {side === 'away' && game.homePitcher && <PitcherLinkChip pitcher={game.homePitcher} teamAbbr={game.homeAbbr} date={date} />}
       </div>
+      <div className="dg-team-summary">
+        <span><small>LINEUP</small><strong>{confirmed ? 'Confirmed' : 'Projected'} · {rows.length}</strong></span>
+        <span><small>TOP INDEX</small><strong>{summary.top ? `${summary.top.name} ${Math.round(summary.top.mechanics_index ?? 0)}` : '—'}</strong></span>
+        <span><small>HR LEAD</small><strong>{summary.shortestHr ? `${summary.shortestHr.name} ${oStr(summary.shortestHr.sa_fd)}` : '—'}</strong></span>
+        <span><small>TEAM ML</small><strong>{oStr(summary.teamMl)}</strong></span>
+        <span><small>SAVED</small><strong>{summary.matrix}M · {summary.watched}W</strong></span>
+      </div>
     </div>
-  )
+  )}
 
   // A JS-driven `position:fixed` clone (tracking scroll, swapping banners in
   // and out) used to live here, because position:sticky on the banner <td>s
@@ -3734,24 +3902,33 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const renderedHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, renderedDugoutColumns)
   const activeTourStep = tourStep == null ? null : tableTourSteps[tourStep]
   return (
-    <div className="dugout-board-enter" style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
+    <div className={`dugout-board-enter${expanded ? ' has-inspector' : ''}`} style={{ minWidth: 0, marginBottom: 8, position: 'relative' }}>
       <section className="dugout-command-bar" aria-label="Dugout board controls">
+        <div className="dugout-command-navigation">
+          <button type="button" onClick={navigation.onPrevious} disabled={navigation.index === 0} aria-label="Previous game"><ChevronLeft size={17} /></button>
+          <button type="button" className="dugout-all-games" onClick={navigation.onAllGames}>All Games <small>{navigation.index + 1}/{navigation.total}</small></button>
+          <button type="button" onClick={navigation.onNext} disabled={navigation.index === navigation.total - 1} aria-label="Next game"><ChevronRight size={17} /></button>
+        </div>
         <div className="dugout-command-matchup">
-          <span><TeamLogo abbr={game.awayAbbr} size={24} /><strong>{game.awayAbbr}</strong></span>
+          <span><TeamLogo abbr={game.awayAbbr} size={32} /><strong>{game.awayAbbr}</strong></span>
           <i>at</i>
-          <span><TeamLogo abbr={game.homeAbbr} size={24} /><strong>{game.homeAbbr}</strong></span>
+          <span><TeamLogo abbr={game.homeAbbr} size={32} /><strong>{game.homeAbbr}</strong></span>
           <em data-status={matchupStatus.toLowerCase()}>{matchupStatus}</em>
         </div>
-        {modeButtons}
+        <div className="dugout-command-primary"><StatcastWindowToggle value={statcastWindow} onChange={onStatcastWindowChange} /><button type="button" onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><BarChart3 size={14} /> {viewPreset[0].toUpperCase() + viewPreset.slice(1)}</button><button type="button" onClick={onOpenColumns}><Settings2 size={14} /> Columns</button><button type="button" onClick={() => setShowTools(value => !value)} aria-expanded={showTools}><Sparkles size={14} /> Tools <small>{gameWatchlistItems.length + matrixCount}</small></button><button type="button" onClick={() => setShowGlossary(true)} aria-label="Open glossary">?</button></div>
+        {showTools && <div className="dugout-tools-popover"><div className="dugout-tools-presets">{(['signal', 'market', 'power', 'props', 'all', 'custom'] as const).map(preset => <button key={preset} type="button" aria-pressed={viewPreset === preset} onClick={() => setViewPreset(preset)}>{preset[0].toUpperCase() + preset.slice(1)}</button>)}</div>{modeButtons}<button type="button" onClick={() => setCompareOpen(value => !value)}>{compareOpen ? 'Hide' : 'Show'} comparison</button></div>}
       </section>
       <section className="dugout-intelligence-strip" aria-label="Game intelligence">
-        <span><small>LINEUPS</small><strong>{confirmedLineups}/2 confirmed</strong></span>
-        <span><small>TOP INDEX</small><strong>{topIndexRow ? `${topIndexRow.name} ${Math.round(topIndexRow.mechanics_index ?? 0)}` : '-'}</strong></span>
-        <span><small>BOARD</small><strong>{viewPreset === 'all' ? `${visibleDugoutColumns.length} saved columns` : `${renderedDugoutColumns.length} in ${viewPreset}`}</strong></span>
+        <GameWeatherSummary gamePk={String(game.gamePk)} date={date} venue={game.venue} />
+        <span><small>GAME STATE</small><strong>{gameStatePrimary}</strong><em>{matchupStatus} · {confirmedLineups}/2 lineups</em></span>
+        <span className="is-matchup"><small>MATCHUP</small><strong><TeamLogo abbr={game.awayAbbr} size={18} /> {game.awayPitcher?.name ?? 'TBD'} · <TeamLogo abbr={game.homeAbbr} size={18} /> {game.homePitcher?.name ?? 'TBD'}</strong><em>{confirmedLineups}/2 lineups</em></span>
+        <span><small>TEAM ML SIGNAL</small><strong>{game.awayAbbr} {oStr(awaySummary.teamMl)} · {game.homeAbbr} {oStr(homeSummary.teamMl)}</strong><em>from HR + team win</em></span>
+        <span><small>BOOK DISAGREEMENT</small><strong>{disagreementLeader ? `${disagreementLeader.row.name} ${disagreementLeader.gap.toFixed(1)} pts` : 'No split'}</strong><em>FD · CZ · MGM · BR</em></span>
         <span><small>WINDOW</small><strong>{statcastWindow.toUpperCase()} · {density}</strong></span>
-        <span><small>NO HR</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong></span>
+        <span><small>NO HR + MOVE</small><strong>{oStr(selectDugoutMarketPrice(game.noHr?.openingFanduel, game.noHr?.fanduel, marketSnapshot))}</strong><em>{oStr(game.noHr?.openingFanduel)} → {oStr(game.noHr?.fanduel)}</em></span>
+        <span><small>SAVED SIGNALS</small><strong>{matrixCount} Matrix · {gameWatchlistItems.length} Watchlist</strong><em>{statcastWindow.toUpperCase()} · {density}</em></span>
         <label className="dugout-market-snapshot">
-          <small>MARKET HISTORY</small>
+          <small>MARKET STORY</small>
           <span>
             <b className={selectedTimelineIndex === 0 || (!marketTimeline.length && marketSnapshot === 'open') ? 'is-active' : ''}>Open</b>
             <input
@@ -3768,6 +3945,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <em>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures · ${selectedTimelineLabel}` : 'Open / latest only'}</em>
         </label>
       </section>
+      <nav className="dugout-timeline-phases" aria-label="Market timeline phases">{timelinePhaseIndices.map(phase => <button key={phase.label} type="button" aria-pressed={selectedTimelineIndex === phase.index} onClick={() => chooseTimelineIndex(phase.index)}>{phase.label}</button>)}</nav>
       {activeSortKeys.length > 0 && (
         <div className="dugout-redundant-sort-summary" aria-label="Active table sorts" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
           <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sorted by</span>
@@ -3780,8 +3958,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         </div>
       )}
       <div className="dugout-jump-menu" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)' }}>
-        <span className="dugout-lane-title">Board view</span>
-        {(['all', 'markets', 'props', 'ranks', 'mechanics', 'statcast'] as const).map(preset => {
+        <span className="dugout-lane-title">View</span>
+        {(['signal', 'market', 'power', 'props', 'all', 'custom'] as const).map(preset => {
           const columnCount = applyDugoutViewPreset(visibleDugoutColumns, preset).length
           return (
             <button
@@ -3795,7 +3973,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               }}
               style={{ border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', padding: '3px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
             >
-              {preset === 'all' ? 'All' : preset[0].toUpperCase() + preset.slice(1)} <small>{columnCount}</small>
+              {preset[0].toUpperCase() + preset.slice(1)} <small>{columnCount}</small>
             </button>
           )
         })}
@@ -3809,6 +3987,36 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <BookOpen size={12} aria-hidden="true" /> Take the table tour
         </button>
       </div>
+      <nav className="dugout-group-nav" aria-label="Column groups">
+        {([
+          ['core', 'CORE', 'mechanics_index'],
+          ['market', 'MARKET', 'sa_fd'],
+          ['fhr', 'FHR', 'fhr_fd'],
+          ['props', 'PROPS', 'sng_fd'],
+          ['contact', 'CONTACT', 's_spd'],
+          ['pitch-fit', 'PITCH FIT', 'paper'],
+        ] as const).map(([group, label, key]) => {
+          const available = renderedDugoutColumns.some(column => column.key === key)
+          return <button key={group} type="button" disabled={!available} aria-pressed={activeGroup === group} onClick={() => {
+            setActiveGroup(group)
+            const target = tableScrollRef.current?.querySelector(`[data-col-key="${key}"]`) as HTMLElement | null
+            if (target && tableScrollRef.current) tableScrollRef.current.scrollTo({ left: Math.max(0, target.offsetLeft - 190), behavior: 'smooth' })
+          }}>{label}</button>
+        })}
+      </nav>
+      <nav className="dugout-desktop-minimap" aria-label="Lineup minimap">
+        {([
+          [game.homeAbbr, homeRows, homeSummary],
+          [game.awayAbbr, awayRows, awaySummary],
+        ] as const).map(([abbr, rows, summary]) => <div key={abbr}>
+          <span><TeamLogo abbr={abbr} size={18} /><b>{abbr}</b><small>{summary.top?.name ?? 'Lineup'}</small></span>
+          <div>{(rows as BatterRow[]).map((row: BatterRow, index: number) => {
+            const rowKey = `${abbr === game.homeAbbr ? 'h' : 'a'}-${row.mlb_id ?? row.name}`
+            const score = Math.max(0, Math.min(100, row.mechanics_index ?? 0))
+            return <button key={rowKey} type="button" aria-label={`${row.batting_order}. ${row.name}, index ${Math.round(score)}`} className={`${expanded === rowKey ? 'is-active' : ''}${row.matrix_matches.length ? ' has-matrix' : ''}${row.mlb_id != null && watchedPlayerIds.has(row.mlb_id) ? ' is-watched' : ''}`} style={{ ['--score' as string]: `${score}%` }} onClick={() => document.getElementById(rowKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>{index + 1}</button>
+          })}</div>
+        </div>)}
+      </nav>
       <nav className="dugout-board-nav" aria-label="Board minimap">
         {(['start', 'home', 'away', 'end'] as const).map(stop => (
           <button key={stop} type="button" onClick={() => scrollBoardToStop(stop)} disabled={(stop === 'start' && !horizontalState.canGoLeft) || (stop === 'end' && !horizontalState.canGoRight)}>
@@ -3876,20 +4084,20 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
               {bannerContent('home')}
             </td>
           </tr>
-          <tr>{renderedHeaderCells}</tr>
-          {displayHome.map((row: BatterRow) => {
+          {!collapsedTeams.has(game.homeAbbr) && <tr>{renderedHeaderCells}</tr>}
+          {!collapsedTeams.has(game.homeAbbr) && displayHome.map((row: BatterRow) => {
             const key = `h-${row.mlb_id ?? row.name}`
             return (
               <React.Fragment key={key}>
                 <BatterRowEl
                   row={withTimelinePrices(row)} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
-                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
+                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key}
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
                   eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={renderedDugoutColumns}
                   compared={comparedKeys.includes(compareKey(row))} onToggleCompare={() => toggleCompared(row)}
                 />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.awayPitcher} pitcherTeamAbbr={game.awayAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} tab={inspectorTab} onTabChange={setInspectorTab} onPrevious={() => navigateInspector(-1)} onNext={() => navigateInspector(1)} /></tr>
                 )}
               </React.Fragment>
             )
@@ -3915,20 +4123,20 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           </tr>
           {/* Away's own column-label row, right below away's banner — see
               the big comment above the home pair for why this copy is back. */}
-          <tr>{renderedHeaderCells}</tr>
-          {displayAway.map((row: BatterRow) => {
+          {!collapsedTeams.has(game.awayAbbr) && <tr>{renderedHeaderCells}</tr>}
+          {!collapsedTeams.has(game.awayAbbr) && displayAway.map((row: BatterRow) => {
             const key = `a-${row.mlb_id ?? row.name}`
             return (
               <React.Fragment key={key}>
                 <BatterRowEl
                   row={withTimelinePrices(row)} pool={pool} expanded={expanded === key} onToggle={() => toggleExpand(key)}
-                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key === highlightKey ? 'dugout-highlight-row' : undefined}
+                  gameInfo={gameInfo} onShowHr={() => setHrPopupRow(row)} id={key}
                   highlightMode={highlightMode} cellHighlights={cellHighlights[key]} onCellToggle={colKey => toggleCellHighlight(key, colKey)}
                   eraserMode={eraserMode} onEraseRow={() => toggleErased(key)} visibleColumns={renderedDugoutColumns}
                   compared={comparedKeys.includes(compareKey(row))} onToggleCompare={() => toggleCompared(row)}
                 />
                 {expanded === key && (
-                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} /></tr>
+                  <tr><PlayerDrillDown row={row} oppPitcher={game.homePitcher} pitcherTeamAbbr={game.homeAbbr} gameInfo={gameInfo} pool={pool} onClose={() => setExpanded(null)} tab={inspectorTab} onTabChange={setInspectorTab} onPrevious={() => navigateInspector(-1)} onNext={() => navigateInspector(1)} /></tr>
                 )}
               </React.Fragment>
             )
@@ -3937,30 +4145,61 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       </table>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
     </div>
-    {comparedRows.length > 0 && (
+    {compareOpen && comparedRows.length > 0 && (
       <aside className="dugout-compare-tray" aria-label="Player comparison">
         <div className="dugout-compare-head">
           <span><strong>Compare</strong><small>{comparedRows.length}/4 · {selectedTimelineLabel}{marketTimeline.length > 1 ? ` · ${marketHistorySourceCount || marketTimeline.length} captures` : ''}</small></span>
           <button type="button" onClick={() => setComparedKeys([])}>Clear</button>
         </div>
         <div className="dugout-compare-grid">
-          {comparedRows.map(row => (
+          {comparedRows.map(row => {
+            const timelineRow = withTimelinePrices(row)
+            const pitchLabel = row.hit_pitch_profile.highUsageTraps[0]?.split(' ')[0]
+              ?? `${row.hit_pitch_profile.supportedPitches} types`
+            return (
             <article key={compareKey(row)} className="dugout-compare-card">
               <div className="dugout-compare-player">
                 <PlayerAvatar mlbId={row.mlb_id} size={28} teamAbbr={row.team} name={row.name} />
                 <span><strong>{row.name}</strong><small>{row.team} · #{row.batting_order} · {row.position}</small></span>
                 <button type="button" aria-label={`Remove ${row.name} from comparison`} onClick={() => toggleCompared(row)}>×</button>
               </div>
+              <div className="dugout-compare-windows" aria-label={`${row.name} mechanics scores by window`}>
+                {(['l1', 'l3', 'l5', 'l10'] as const).map(window => <span key={window}><small>{window.toUpperCase()}</small><strong>{row.mechanics_windows[window]?.index != null ? Math.round(row.mechanics_windows[window]!.index) : '—'}</strong></span>)}
+              </div>
               <div className="dugout-compare-stats">
-                <span><small>INDEX</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong></span>
-                <span><small>FHR</small><strong>{oStr(selectTimelinePrice(row, 'fhr', row.fhr_open, row.fhr_fd))}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
-                <span><small>HR</small><strong>{oStr(selectTimelinePrice(row, 'sa', row.saFd_open, row.sa_fd))}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
-                <span><small>HIT</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</strong></span>
+                <span><small>INDEX · {statcastWindow.toUpperCase()}</small><strong>{row.mechanics_index != null ? Math.round(row.mechanics_index) : '—'}</strong><i>#{row.mechanics_rank ?? '—'} / 18</i></span>
+                <span><small>FHR</small><strong>{oStr(timelineRow.fhr_fd)}</strong><i>{oStr(row.fhr_open)} → {oStr(row.fhr_fd)}</i></span>
+                <span><small>HR</small><strong>{oStr(timelineRow.sa_fd)}</strong><i>{oStr(row.saFd_open)} → {oStr(row.sa_fd)}</i></span>
+                <span><small>HIT READ</small><strong>{row.hit_score != null ? Math.round(row.hit_score) : '—'}</strong><i>{row.hit_status}</i></span>
+                <span><small>BOOK SPLIT</small><strong>{f2(timelineRow.m_div_f)}</strong><i>FD {oStr(timelineRow.sa_fd)} · MGM {oStr(timelineRow.sa_mgm)}</i></span>
+                <span><small>PITCH FIT · {pitchLabel}</small><strong>{row.matchup_edge != null ? Math.round(row.matchup_edge) : '—'}</strong><i>{row.recent_pitch_count ?? 0} recent pitches</i></span>
+                <span><small>CONTACT SHIFT</small><strong>{dlt(row.d_brl)}</strong><i>HH {dlt(row.d_hh)} · EV {dlt(row.d_ev)}</i></span>
+                <span><small>PROJECTED BATTED BALL</small><strong>{row.r_pa != null ? `${(row.r_pa * 100).toFixed(0)}% pull-air` : '—'}</strong><i>FB {row.r_fb != null ? `${(row.r_fb * 100).toFixed(0)}%` : '—'} · LA {f1(row.r_la)}°</i></span>
               </div>
             </article>
-          ))}
+            )
+          })}
         </div>
       </aside>
+    )}
+    {showGlossary && (
+      <div className="dugout-glossary-backdrop" role="presentation" onClick={() => setShowGlossary(false)}>
+        <aside className="dugout-glossary" role="dialog" aria-modal="true" aria-label="Dugout glossary" onClick={event => event.stopPropagation()}>
+          <header><span><strong>Board glossary</strong><small>Quick definitions only</small></span><button type="button" onClick={() => setShowGlossary(false)} aria-label="Close glossary"><X size={16} /></button></header>
+          <div>{[
+            ['INDEX', 'SlipSurge batter score for the selected window.'],
+            ['FHR', 'First home run market.'],
+            ['HR', 'Anytime home run market.'],
+            ['OPEN', 'Earliest captured price.'],
+            ['MOVE', 'Direction from open to current.'],
+            ['PICKS', 'Community entries for that exact market.'],
+            ['M/F', 'MGM price compared with FanDuel.'],
+            ['PITCH FIT', 'Recent batter and pitcher pitch-shape matchup.'],
+            ['MATRIX', 'A saved custom rule matched this player.'],
+            ['HIT READ', 'Contact-floor read from underlying batter data.'],
+          ].map(([term, definition]) => <span key={term}><b>{term}</b><p>{definition}</p></span>)}</div>
+        </aside>
+      </div>
     )}
     {horizontalState.canGoLeft && (
       <button className="dugout-return-player" type="button" onClick={() => scrollBoardTo('start')} aria-label="Return to the Player column" title="Return to Player column" style={{ position: 'absolute', left: 10, bottom: 12, zIndex: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 9px', borderRadius: 999, border: '1px solid var(--accent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)', backdropFilter: 'blur(10px)', color: 'var(--accent)', fontSize: 10, fontWeight: 850, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.35)' }}>
@@ -4279,6 +4518,7 @@ export function DugoutClient({ date }: { date: string }) {
   // fetch effect on every tab click, since replace() gives it a new object
   // identity each time.
   const initialGameParamRef = useRef(searchParams.get('game'))
+  const activeGameStorageKey = `ss:dugout-active-game:${date}`
 
   useEffect(() => {
     setLoading(true); setErr(null); setData(null); setActive(null)
@@ -4288,8 +4528,10 @@ export function DugoutClient({ date }: { date: string }) {
         setData(d)
         // Restoring the exact game the user was on beats a highlight deep
         // link beats just defaulting to the first game of the day.
-        const restoredGame = initialGameParamRef.current
-          ? d.games?.find((g: any) => g.gameKey === initialGameParamRef.current)
+        const savedGameKey = (() => { try { return window.localStorage.getItem(activeGameStorageKey) } catch { return null } })()
+        const requestedGameKey = initialGameParamRef.current ?? savedGameKey
+        const restoredGame = requestedGameKey
+          ? d.games?.find((g: any) => g.gameKey === requestedGameKey)
           : null
         const targetGame = restoredGame ?? (highlightId != null
           ? d.games?.find((g: any) =>
@@ -4300,7 +4542,7 @@ export function DugoutClient({ date }: { date: string }) {
         setLoading(false)
       })
       .catch(e => { setErr(String(e)); setLoading(false) })
-  }, [date, highlightId, reloadToken])
+  }, [activeGameStorageKey, date, highlightId, reloadToken])
 
   // Real gap (2026-07-24): saving/importing/deleting a Matrix elsewhere in
   // the app (the Matrix panel is mounted globally — see CustomMatrixPanel.tsx
@@ -4332,11 +4574,15 @@ export function DugoutClient({ date }: { date: string }) {
   // button history with dozens of entries.
   const setActiveGame = useCallback((gameKey: string | null) => {
     setActive(gameKey)
+    try {
+      if (gameKey) window.localStorage.setItem(activeGameStorageKey, gameKey)
+      else window.localStorage.removeItem(activeGameStorageKey)
+    } catch {}
     const params = new URLSearchParams(searchParams.toString())
     if (gameKey) params.set('game', gameKey)
     else params.delete('game')
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [pathname, router, searchParams])
+  }, [activeGameStorageKey, pathname, router, searchParams])
 
   useEffect(() => {
     if (!activeGame) return
@@ -4606,6 +4852,14 @@ export function DugoutClient({ date }: { date: string }) {
               columnPrefs={columnPrefs}
               density={density}
               onDensityChange={setDensity}
+              navigation={{
+                index: activeGameIndex,
+                total: games.length,
+                onPrevious: () => setActiveGame(games[Math.max(0, activeGameIndex - 1)]?.gameKey ?? active.gameKey),
+                onNext: () => setActiveGame(games[Math.min(games.length - 1, activeGameIndex + 1)]?.gameKey ?? active.gameKey),
+                onAllGames: () => setShowGamePicker(true),
+              }}
+              onOpenColumns={() => setShowColumnPanel(true)}
             />
       )}
 
@@ -4660,32 +4914,70 @@ export function DugoutClient({ date }: { date: string }) {
 
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
+        .dugout-board-enter{--dg-control-h:38px;color:var(--text-1);font-variant-numeric:tabular-nums}
         .dugout-command-bar{position:sticky;top:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;margin-bottom:7px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(18px);box-shadow:0 12px 34px rgba(0,0,0,.24)}
+        .dugout-command-navigation,.dugout-command-primary{display:flex;align-items:center;gap:5px;min-width:max-content}
+        .dugout-command-navigation button,.dugout-command-primary>button,.dugout-tools-popover button{min-height:var(--dg-control-h);display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);font-size:11px;font-weight:850;cursor:pointer}
+        .dugout-command-navigation button:not(.dugout-all-games){width:var(--dg-control-h);padding:0}
+        .dugout-command-navigation button:disabled{opacity:.4;cursor:default}
+        .dugout-all-games small,.dugout-command-primary small{color:var(--accent);font-size:9px}
+        .dugout-tools-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:100%}.dugout-tools-presets button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+        .dugout-command-primary>button:last-child{width:var(--dg-control-h);padding:0;border-color:color-mix(in srgb,var(--accent) 40%,var(--border));color:var(--accent);font-size:13px}
+        .dugout-tools-popover{position:absolute;top:calc(100% + 6px);right:8px;z-index:5;display:flex;align-items:center;gap:6px;max-width:min(760px,calc(100vw - 24px));padding:8px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 18px 54px rgba(0,0,0,.5)}
         .dugout-command-matchup{display:flex;align-items:center;gap:7px;min-width:max-content}
         .dugout-command-matchup>span{display:flex;align-items:center;gap:5px;color:var(--text-1);font-size:12px}
         .dugout-command-matchup>i{color:var(--text-4);font-size:8px;font-style:normal;font-weight:900;text-transform:uppercase}
         .dugout-command-matchup>em{margin-left:3px;padding:3px 7px;border:1px solid var(--border);border-radius:999px;color:var(--text-3);font-size:8px;font-style:normal;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .dugout-command-matchup>em[data-status=live]{border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.1);color:#fb7185}
-        .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(5,minmax(105px,1fr)) minmax(190px,1.35fr);gap:1px;margin-bottom:7px;overflow:hidden;border:1px solid var(--border);border-radius:11px;background:var(--border)}
+        .dugout-intelligence-strip{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:1px;margin-bottom:7px;overflow:hidden;border:1px solid var(--border);border-radius:11px;background:var(--border)}
         .dugout-intelligence-strip>span,.dugout-market-snapshot{display:grid;align-content:center;gap:3px;min-height:49px;padding:7px 10px;background:var(--surface)}
-        .dugout-intelligence-strip small{color:var(--text-4);font-size:7px;font-weight:950;letter-spacing:.075em}
-        .dugout-intelligence-strip strong{overflow:hidden;color:var(--text-1);font-size:10px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-intelligence-strip small{color:var(--text-4);font-size:10px;font-weight:950;letter-spacing:.075em}
+        .dugout-intelligence-strip strong{display:flex;align-items:center;gap:4px;overflow:hidden;color:var(--text-1);font-size:12px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-intelligence-strip em{overflow:hidden;color:var(--text-3);font-size:10px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-market-snapshot{grid-column:span 2}
         .dugout-market-snapshot>span{display:grid;grid-template-columns:auto minmax(72px,1fr) auto;align-items:center;gap:7px}
         .dugout-market-snapshot b{color:var(--text-4);font-size:8px;text-transform:uppercase}
         .dugout-market-snapshot b.is-active{color:var(--accent)}
         .dugout-market-snapshot input{width:100%;accent-color:var(--accent);cursor:pointer}
         .dugout-market-snapshot em{overflow:hidden;color:var(--text-3);font-size:7px;font-style:normal;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
-        .dugout-board-nav{display:grid;grid-template-columns:repeat(4,auto);align-items:center;justify-content:start;gap:5px;margin-bottom:6px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
+        .dugout-timeline-phases,.dugout-group-nav{display:flex;align-items:center;gap:5px;margin-bottom:6px;padding:5px;border:1px solid var(--border);border-radius:9px;background:var(--surface);overflow-x:auto;scrollbar-width:none}
+        .dugout-timeline-phases::-webkit-scrollbar,.dugout-group-nav::-webkit-scrollbar{display:none}
+        .dugout-timeline-phases button,.dugout-group-nav button{min-height:32px;flex:0 0 auto;padding:0 11px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text-3);font-size:10px;font-weight:900;letter-spacing:.035em;cursor:pointer}
+        .dugout-timeline-phases button[aria-pressed=true],.dugout-group-nav button[aria-pressed=true]{border-color:color-mix(in srgb,var(--accent) 48%,var(--border));background:var(--accent-dim);color:var(--accent)}
+        .dugout-timeline-phases button:disabled,.dugout-group-nav button:disabled{opacity:.35;cursor:default}
+        .dugout-desktop-minimap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px}
+        .dugout-desktop-minimap>div{display:grid;grid-template-columns:minmax(125px,auto) 1fr;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+        .dugout-desktop-minimap>div>span{display:grid;grid-template-columns:auto auto;align-items:center;gap:2px 6px;min-width:0}
+        .dugout-desktop-minimap>div>span img{grid-row:1/3}
+        .dugout-desktop-minimap b{font-size:11px}.dugout-desktop-minimap small{overflow:hidden;color:var(--text-3);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-desktop-minimap>div>div{display:grid;grid-template-columns:repeat(9,minmax(24px,1fr));gap:4px}
+        .dugout-desktop-minimap button{position:relative;min-height:30px;overflow:hidden;border:1px solid var(--border);border-radius:7px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 20%,var(--surface-2)) var(--score),var(--surface-2) var(--score));color:var(--text-2);font-size:10px;font-weight:950;cursor:pointer}
+        .dugout-desktop-minimap button.has-matrix{box-shadow:inset 0 -2px 0 #a855f7}.dugout-desktop-minimap button.is-watched{border-color:#fbbf24}.dugout-desktop-minimap button.is-active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+        .dg-team-banner-content{min-height:44px}
+        .dg-team-collapse{width:34px;height:34px;display:grid;place-items:center;padding:0;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:9px;background:rgba(0,0,0,.24);color:var(--text-2);cursor:pointer}
+        .dg-team-collapse[aria-expanded=false] svg{transform:rotate(180deg)}
+        .dg-team-summary{display:flex;align-items:stretch;gap:4px}
+        .dg-team-summary>span{display:grid;align-content:center;gap:2px;min-width:92px;padding:5px 8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(0,0,0,.2)}
+        .dg-team-summary small{color:var(--text-4);font-size:9px;font-weight:900;letter-spacing:.04em}.dg-team-summary strong{overflow:hidden;color:var(--text-1);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+        .dugout-board-nav{display:none;grid-template-columns:repeat(4,auto);align-items:center;justify-content:start;gap:5px;margin-bottom:6px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
         .dugout-board-nav button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:3px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text-2);font-size:9px;font-weight:850;cursor:pointer}
         .dugout-board-nav button:disabled{color:var(--text-4);cursor:default;opacity:.55}
         .dugout-board-progress{grid-column:1/-1;height:3px;overflow:hidden;border-radius:999px;background:var(--surface-2)}
         .dugout-board-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#38bdf8);transition:width 100ms ease-out}
         .dugout-board-enter .dg-player-drilldown-cell{height:0;padding:0!important;border:0!important;overflow:visible!important}
-        .dugout-board-enter .dg-player-drilldown{position:fixed;top:74px;right:12px;bottom:12px;z-index:950;width:min(760px,54vw);max-width:calc(100vw - 24px);overflow:auto;overscroll-behavior:contain;padding:14px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border));border-radius:16px;background:color-mix(in srgb,var(--surface) 97%,transparent);backdrop-filter:blur(20px);box-shadow:0 28px 90px rgba(0,0,0,.68)}
+        .dugout-board-enter.has-inspector{padding-right:472px;transition:padding-right 180ms ease}
+        .dugout-board-enter .dg-player-drilldown{position:fixed;top:74px;right:12px;bottom:12px;z-index:950;width:448px;max-width:calc(100vw - 24px);overflow:auto;overscroll-behavior:contain;padding:14px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--border));border-radius:16px;background:color-mix(in srgb,var(--surface) 97%,transparent);backdrop-filter:blur(20px);box-shadow:0 28px 90px rgba(0,0,0,.68)}
         .dugout-board-enter .dg-player-drilldown-head{position:sticky;top:-14px;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-14px -14px 12px;padding:13px 14px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 97%,transparent);backdrop-filter:blur(18px)}
         .dugout-board-enter .dg-player-drilldown-head>span{display:grid;gap:2px;color:var(--text-1);font-size:13px}
         .dugout-board-enter .dg-player-drilldown-head small{color:var(--text-3);font-size:9px}
         .dugout-board-enter .dg-player-drilldown-head button{min-height:36px;display:inline-flex;align-items:center;gap:5px;padding:0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--accent);font-size:10px;font-weight:850;cursor:pointer}
+        .dg-inspector-summary{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;margin-bottom:9px;padding:9px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2)}
+        .dg-inspector-summary>span{display:grid;grid-template-columns:repeat(4,auto);align-items:center;gap:2px 8px}.dg-inspector-summary>span b{grid-row:1/3;color:var(--accent);font-size:14px}.dg-inspector-summary small{color:var(--text-4);font-size:9px;font-weight:900}.dg-inspector-summary strong{font-size:12px}
+        .dg-inspector-arrows{display:flex;gap:4px}.dg-inspector-arrows button{width:36px;height:36px;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);cursor:pointer}
+        .dg-inspector-tabs{position:sticky;top:47px;z-index:3;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:11px;padding:4px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+        .dg-inspector-tabs button{min-height:36px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text-3);font-size:10px;font-weight:900;cursor:pointer}.dg-inspector-tabs button[aria-pressed=true]{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-dim);color:var(--accent)}
+        .dg-player-drilldown-grid{display:block!important}.dg-player-drilldown-grid .dg-drilldown-section{min-width:0!important;width:100%}
+        .dg-player-drilldown-grid.inspector-matchup .dg-tracking-section{display:none}.dg-player-drilldown-grid.inspector-contact .dg-matchup-section,.dg-player-drilldown-grid.inspector-contact .dg-park-projection{display:none}.dg-player-drilldown-grid.inspector-park .dg-matchup-section{display:none}.dg-player-drilldown-grid.inspector-park .dg-tracking-section>:not(.dg-park-projection){display:none}
         .dugout-game-picker-filters{position:sticky;top:66px;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--surface)}
         .dugout-game-picker-filters button{min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-3);font-size:9px;font-weight:900;text-transform:capitalize;cursor:pointer}
         .dugout-game-picker-filters button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
@@ -4704,6 +4996,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-dense-table td[data-market-move=shorter]::after,.dugout-dense-table td[data-market-move=longer]::after{content:"";position:absolute;top:3px;right:3px;width:3px;height:3px;border-radius:50%;pointer-events:none}
         .dugout-dense-table td[data-market-move=shorter]::after{background:#4ade80;box-shadow:0 0 5px rgba(74,222,128,.65)}
         .dugout-dense-table td[data-market-move=longer]::after{background:#f87171;box-shadow:0 0 5px rgba(248,113,113,.55)}
+        .dg-market-cell{gap:1px}.dg-market-open{color:var(--text-4);font-size:8px;font-weight:800;line-height:1}.dugout-dense-table td[data-book=fanduel]{box-shadow:inset 0 2px 0 rgba(56,189,248,.38)}.dugout-dense-table td[data-book=betmgm]{box-shadow:inset 0 2px 0 rgba(251,191,36,.42)}.dugout-dense-table td[data-book-state=agreement]{background:rgba(34,197,94,.07)!important}.dugout-dense-table td[data-book-state=disagreement]{background:rgba(245,158,11,.08)!important}
         /* Direct-child combinators only — the expanded drilldown row's own
            <td colSpan={99}> is a direct child of this table's tbody, but the
            nested pitch-mix/matchup tables inside it are many levels further
@@ -4728,6 +5021,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-mode-buttons{row-gap:6px!important}
         .dugout-mode-buttons button{min-height:30px;min-width:30px}
         .dugout-dense-table{font-variant-numeric:tabular-nums}
+        .dugout-dense-table .dg-player-name{font-size:13px!important;font-weight:850!important;line-height:1.25}.dugout-dense-table .dg-player-copy{font-size:11px}.dugout-dense-table .dg-player-cell-inner{min-height:44px;gap:8px!important;padding:5px 6px!important}
         .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){transition:filter 110ms ease,background 110ms ease}
         .dugout-dense-table button:focus-visible,.dugout-dense-table a:focus-visible,.dugout-jump-menu button:focus-visible,.dugout-board-nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         .dugout-compare-toggle{width:20px;height:20px;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-3);font-size:12px;font-weight:950;line-height:1;cursor:pointer;transition:border-color 120ms,color 120ms,background 120ms}
@@ -4744,11 +5038,17 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-compare-player strong{overflow:hidden;color:var(--text-1);font-size:10px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
         .dugout-compare-player small{color:var(--text-3);font-size:8px;font-weight:700;white-space:nowrap}
         .dugout-compare-player button{width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:6px;background:var(--surface-2);color:var(--text-3);font-size:13px;cursor:pointer}
+        .dugout-compare-windows{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:8px}.dugout-compare-windows>span{display:grid;justify-items:center;gap:1px;padding:5px 2px;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--surface-2) 84%,transparent)}.dugout-compare-windows small{color:var(--text-4);font-size:7px;font-weight:900}.dugout-compare-windows strong{color:var(--accent);font-family:var(--font-mono,monospace);font-size:10px}
         .dugout-compare-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
         .dugout-compare-stats > span{display:grid;gap:2px;padding:6px;border-radius:7px;background:var(--surface-2)}
         .dugout-compare-stats small{color:var(--text-4);font-size:7px;font-weight:900;letter-spacing:.06em}
         .dugout-compare-stats strong{color:var(--text-1);font-family:var(--font-mono,monospace);font-size:10px;font-weight:850;white-space:nowrap}
         .dugout-compare-stats i{color:var(--text-4);font-style:normal;font-size:8px}
+        .dugout-glossary-backdrop{position:fixed;inset:0;z-index:1400;display:flex;justify-content:flex-end;padding:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(7px)}
+        .dugout-glossary{width:min(430px,100%);height:100%;overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.62)}
+        .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
+        .dugout-glossary>div{display:grid;gap:1px;background:var(--border)}.dugout-glossary>div>span{display:grid;grid-template-columns:88px 1fr;gap:10px;padding:12px 14px;background:var(--surface)}.dugout-glossary b{color:var(--accent);font-size:11px}.dugout-glossary p{margin:0;color:var(--text-2);font-size:12px;line-height:1.4}
+        .dg-player-signal-row{display:flex;align-items:center;gap:5px;margin-top:3px}.dg-player-signal-row span{padding:1px 4px;border-radius:4px;background:var(--surface-2);color:var(--text-3);font-size:8px;font-weight:850}
         .dugout-active-matchup{display:none;align-items:center;gap:6px}
         .dugout-active-matchup > span{color:var(--text-4);font-size:8px;font-weight:900;text-transform:uppercase}
         .dugout-board-enter{animation:dugout-board-in 180ms ease-out both}
@@ -4757,16 +5057,37 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-tour-icon{animation:dugout-tour-icon 1.5s ease-in-out infinite}
         @keyframes dugout-tour-glow{from{box-shadow:inset 0 0 0 1px var(--accent),0 0 7px color-mix(in srgb,var(--accent) 24%,transparent)}to{box-shadow:inset 0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 58%,transparent)}}
         @keyframes dugout-tour-icon{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+        @media(min-width:641px) and (max-width:900px){
+          .dugout-board-enter.has-inspector{padding-right:0}
+          .dugout-command-bar{flex-wrap:wrap}.dugout-command-primary{margin-left:auto}
+          .dugout-intelligence-strip{grid-template-columns:repeat(2,minmax(145px,1fr))}
+          .dugout-market-snapshot{grid-column:span 2}
+          .dugout-board-enter .dg-player-drilldown{width:min(448px,calc(100vw - 24px));right:12px;top:76px;bottom:12px;border:1px solid color-mix(in srgb,var(--accent) 26%,var(--border));border-radius:16px}
+          .dugout-compare-grid{grid-template-columns:repeat(4,minmax(220px,1fr))}
+        }
+        @media(min-width:901px) and (max-width:1250px){
+          .dugout-intelligence-strip{grid-template-columns:repeat(3,minmax(145px,1fr))}
+          .dugout-market-snapshot{grid-column:span 2}
+          .dugout-board-enter.has-inspector{padding-right:412px}
+          .dugout-board-enter .dg-player-drilldown{width:392px}
+        }
         @media(max-width:640px){
-          .dugout-command-bar{top:0;min-height:48px;padding:6px 7px;gap:8px;border-radius:10px;overflow-x:auto;scrollbar-width:none}
+          .dugout-board-enter{--dg-control-h:44px}
+          .dugout-board-enter.has-inspector{padding-right:0}
+          .dugout-command-bar{top:0;display:grid;grid-template-columns:auto 1fr;min-height:96px;padding:7px;gap:6px 8px;border-radius:10px;overflow:visible}
           .dugout-command-bar::-webkit-scrollbar{display:none}
-          .dugout-command-matchup{position:sticky;left:0;z-index:2;padding-right:7px;background:color-mix(in srgb,var(--surface) 97%,transparent)}
+          .dugout-command-navigation{grid-column:1;grid-row:1}.dugout-all-games{padding:0 8px!important}.dugout-command-navigation button:not(.dugout-all-games){width:40px}
+          .dugout-command-matchup{grid-column:2;grid-row:1;justify-self:end;padding-right:2px}
+          .dugout-command-primary{grid-column:1/-1;grid-row:2;width:100%;overflow-x:auto;scrollbar-width:none}.dugout-command-primary::-webkit-scrollbar{display:none}.dugout-command-primary>*{flex:0 0 auto}.dugout-command-primary>button{min-height:44px}
           .dugout-command-matchup>span strong{display:none}
           .dugout-command-matchup>em{display:none}
+          .dugout-tools-popover{position:fixed;left:8px;right:8px;top:112px;max-width:none;overflow-x:auto}
           .dugout-intelligence-strip{display:flex;gap:1px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none}
           .dugout-intelligence-strip::-webkit-scrollbar{display:none}
           .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:128px;min-height:52px;scroll-snap-align:start}
           .dugout-market-snapshot{min-width:210px}
+          .dugout-timeline-phases button,.dugout-group-nav button{min-height:44px;padding:0 13px;font-size:11px}
+          .dugout-desktop-minimap{display:none}
           .dugout-redundant-sort-summary{flex-wrap:nowrap!important;overflow-x:auto;min-height:38px;margin-bottom:5px!important;padding:5px 7px!important;scrollbar-width:none}
           .dugout-redundant-sort-summary::-webkit-scrollbar{display:none}
           .dugout-redundant-sort-summary > *{flex:0 0 auto}
@@ -4790,17 +5111,17 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-game-rail{display:none!important}
           .dugout-games-label{display:none}
           .dugout-active-matchup{display:inline-flex}
-          .dugout-board-nav{position:sticky;top:49px;z-index:40;grid-template-columns:repeat(4,1fr);min-height:45px;margin-bottom:5px!important;padding:5px 7px!important;gap:4px!important;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(16px)}
-          .dugout-board-nav button{min-height:36px;padding:3px 5px;font-size:9px}
+          .dugout-board-nav{position:sticky;top:101px;z-index:40;display:grid;grid-template-columns:repeat(4,1fr);min-height:53px;margin-bottom:5px!important;padding:5px 7px!important;gap:4px!important;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(16px)}
+          .dugout-board-nav button{min-height:44px;padding:3px 5px;font-size:10px}
           .dugout-board-scroll{--dugout-header-top:0px!important;max-height:none!important;height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;-webkit-overflow-scrolling:auto!important;border-radius:8px!important;scroll-padding-top:36px}
           .dg-team-banner{position:static!important}
           .dg-team-banner-content{gap:7px!important;flex-wrap:nowrap!important;width:max-content!important;min-height:38px}
           .dugout-dense-table{font-size:12px!important}
           .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){padding-top:8px!important;padding-bottom:8px!important}
-          .dg-sticky-col{width:172px!important;min-width:172px!important;max-width:172px!important}
+          .dg-sticky-col{width:190px!important;min-width:190px!important;max-width:190px!important}
           .dg-player-cell-inner{gap:7px!important;padding:6px 5px!important;min-height:48px}
           .dg-player-copy{font-size:11px!important;overflow:hidden}
-          .dg-player-name{font-size:12px!important;line-height:1.25!important}
+          .dg-player-name{font-size:13px!important;line-height:1.25!important}
           .dg-expand-indicator{display:grid!important;place-items:center;width:22px;height:22px;margin:-3px -3px -3px 0!important;border-radius:7px;background:var(--surface-2);font-size:9px!important}
           .dg-player-drilldown-cell{padding:0!important;overflow:visible!important}
           .dugout-board-enter .dg-player-drilldown{position:fixed;inset:auto 0 0 0;width:100vw;max-width:100vw;max-height:min(84dvh,860px);padding:12px;border-width:1px 0 0;border-radius:18px 18px 0 0;background:color-mix(in srgb,var(--surface) 98%,transparent);box-sizing:border-box}
@@ -4814,6 +5135,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dg-drilldown-section > *{max-width:100%}
           .dg-team-banner-content button{min-height:34px!important;min-width:34px}
           .dg-team-banner-content a{min-height:34px;display:inline-flex!important;align-items:center}
+          .dg-team-summary{max-width:calc(100vw - 18px);overflow-x:auto}.dg-team-summary>span{min-width:104px}.dg-team-banner-content{align-items:flex-start!important;flex-direction:column!important;width:100%!important}
           .dugout-modal-backdrop{align-items:flex-end!important;padding:0!important;overscroll-behavior:contain}
           .dugout-mobile-sheet{position:relative;width:100%!important;min-width:0!important;max-width:100%!important;max-height:calc(100dvh - 72px)!important;resize:none!important;border-radius:18px 18px 0 0!important;border-bottom:0!important;padding-bottom:max(12px,env(safe-area-inset-bottom));box-shadow:0 -18px 60px rgba(0,0,0,.58)!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
           .dugout-mobile-sheet::before{content:"";display:block;position:absolute;top:7px;left:50%;z-index:5;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.65}
@@ -4831,6 +5153,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-game-picker-sheet button{min-height:58px}
           .dugout-return-player,.dugout-header-help{display:none!important}
           .dugout-table-tour{right:12px!important;bottom:96px!important}
+          .dugout-glossary-backdrop{align-items:flex-end;padding:0}.dugout-glossary{width:100%;height:min(78dvh,720px);border-width:1px 0 0;border-radius:18px 18px 0 0}.dugout-glossary>div>span{grid-template-columns:78px 1fr}.dugout-glossary p{font-size:13px}
         }
         /* The website should follow the browser's normal vertical document
            scroll at laptop and desktop widths. The bounded two-axis board is

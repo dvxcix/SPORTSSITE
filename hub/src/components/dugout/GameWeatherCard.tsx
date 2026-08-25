@@ -12,7 +12,7 @@ import { BattedBallSprayChart, type SprayPitchRow } from '@/components/players/B
 // per-date fetch, cached per date since every batter row expanded for the
 // same game asks for the same data.
 const weatherCache = new Map<string, Promise<WeatherGame[]>>()
-function fetchWeatherCached(date: string) {
+export function fetchWeatherCached(date: string) {
   let p = weatherCache.get(date)
   if (!p) {
     p = fetch(`/api/weather-lab?date=${date}`)
@@ -22,6 +22,33 @@ function fetchWeatherCached(date: string) {
     weatherCache.set(date, p)
   }
   return p
+}
+
+export function GameWeatherSummary({ gamePk, date, venue }: { gamePk: string; date: string; venue?: string | null }) {
+  const [games, setGames] = useState<WeatherGame[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchWeatherCached(date).then(value => { if (!cancelled) setGames(value) })
+    return () => { cancelled = true }
+  }, [date])
+
+  const game = games?.find(item => String(item.gamePk) === String(gamePk))
+  const hour = game?.hours?.[0]
+  const sheltered = game ? game.park.roof !== 'open' : false
+  const directions = hour?.windDirDeg != null ? compassFromTo(hour.windDirDeg) : null
+  const conditions = sheltered
+    ? game?.park.roof === 'dome' ? 'Fixed roof' : 'Roof protected'
+    : hour?.windMph != null ? `${Math.round(hour.windMph)} mph${directions ? ` to ${directions.to}` : ''}` : 'Weather pending'
+  const temperature = hour?.tempF != null ? `${Math.round(hour.tempF)}°F` : null
+
+  return (
+    <span className="dugout-weather-summary">
+      <small>PARK / WEATHER</small>
+      <strong>{game?.park.name || venue || 'Ballpark pending'}</strong>
+      <em>{[temperature, conditions].filter(Boolean).join(' · ')}</em>
+    </span>
+  )
 }
 
 export function GameWeatherCard({
