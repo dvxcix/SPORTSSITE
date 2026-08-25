@@ -12,7 +12,7 @@ import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { canonicalProviderArchiveKey, normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
-import { MatchupPitchBreakdown } from '@/components/dugout/MatchupPitchBreakdown'
+import { MatchupPitchBreakdown, type DugoutSpraySelection } from '@/components/dugout/MatchupPitchBreakdown'
 import { GameWeatherCard } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
@@ -926,6 +926,14 @@ function PlayerDrillDown({
 }) {
   const pitcherHand: 'R' | 'L' = oppPitcher?.hand === 'L' ? 'L' : 'R'
   const noBatSplits = !row.s_spd && !row.s_brl
+  const [spraySelection, setSpraySelection] = useState<DugoutSpraySelection>({
+    rows: [],
+    contextLabel: 'All visible contact',
+    pitchTypes: [],
+  })
+  const handleSpraySelection = useCallback((selection: DugoutSpraySelection) => {
+    setSpraySelection(selection)
+  }, [])
 
   return (
     <td className="dg-player-drilldown-cell" colSpan={99} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderBottom: '2px solid var(--border)' }}>
@@ -953,6 +961,7 @@ function PlayerDrillDown({
               pitcherName={oppPitcher.name}
               pitcherHand={pitcherHand}
               pitcherTeamAbbr={pitcherTeamAbbr}
+              onSpraySelectionChange={handleSpraySelection}
             />
             <div style={{ marginTop: 8 }}>
               <PitcherStrikeoutsChip oppPitcher={oppPitcher} gameInfo={gameInfo} />
@@ -1016,7 +1025,13 @@ function PlayerDrillDown({
                 instead of wrapping below both columns and needing a scroll. */}
             {gameInfo.game_pk && gameInfo.game_date && (
               <div style={{ marginTop: 14 }}>
-                <GameWeatherCard gamePk={gameInfo.game_pk} date={gameInfo.game_date} />
+                <GameWeatherCard
+                  gamePk={gameInfo.game_pk}
+                  date={gameInfo.game_date}
+                  sprayRows={spraySelection.rows}
+                  playerName={row.name}
+                  selectionLabel={spraySelection.contextLabel}
+                />
               </div>
             )}
             {oppPitcher && row.mlb_id != null && (

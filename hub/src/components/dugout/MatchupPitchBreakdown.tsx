@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Pin, PinOff } from 'lucide-react'
 import { pitchColor, pitchLabel, mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -13,6 +14,7 @@ import { ToggleBtn } from '@/components/players/PlayerPageClient'
 import { computeStatLine, lastNGameDates, pitchMix, BATTER_STAT_COLS, PITCHER_STAT_COLS, MIN_PITCHES_FOR_HEAT, type PitchLogRow, type BatterStats } from '@slipsurge/core/batterStatsEngine'
 import { PITCHER_RECENCY, BATTER_SCOPES } from '@/components/slate/PitcherVsLineup'
 import { lookupSavantMetricBlended, batterScopeToSavantWindow, type SavantSplitRow } from '@/lib/savantSplitLookup'
+import type { SprayPitchRow } from '@/components/players/BattedBallSprayChart'
 
 // Same fixed hand-color convention as the batter rows above this drilldown
 // (see DugoutClient.tsx's handColor) — right orange, left blue — so a
@@ -27,11 +29,11 @@ const HAND_COLOR: Record<'R' | 'L', string> = { R: '#fb923c', L: '#60a5fa' }
 // re-fetching identical data. Deliberately module-scope, not React state —
 // it just needs to outlive individual component instances for the page
 // session, not survive a reload.
-const pitchLogCache = new Map<number, Promise<{ pitcherRows: PitchLogRow[]; batterRows: PitchLogRow[] }>>()
+const pitchLogCache = new Map<number, Promise<{ pitcherRows: PitchLogRow[]; batterRows: PitchLogRow[]; sprayRows: SprayPitchRow[] }>>()
 export function fetchPitchLogCached(mlbId: number) {
   let p = pitchLogCache.get(mlbId)
   if (!p) {
-    p = fetch(`/api/players/${mlbId}/pitch-log`).then(r => r.json()).catch(() => ({ pitcherRows: [], batterRows: [] }))
+    p = fetch(`/api/players/${mlbId}/pitch-log`).then(r => r.json()).catch(() => ({ pitcherRows: [], batterRows: [], sprayRows: [] }))
     pitchLogCache.set(mlbId, p)
   }
   return p
@@ -105,6 +107,12 @@ const SAVANT_ONLY_COLS: { metric: string; category: 'bat_tracking' | 'swing_path
 // varies by his last-3-starts window.
 const EXTRA_BATTER_SCOPES = [{ key: 'vsSimilarArsenal', label: 'Vs. Similar Arsenal' }] as const
 
+export type DugoutSpraySelection = {
+  rows: SprayPitchRow[]
+  contextLabel: string
+  pitchTypes: string[]
+}
+
 const HAND_FILTERS_BATTER_SIDE = [
   { key: 'all', label: 'All' }, { key: 'R', label: 'vs RHB' }, { key: 'L', label: 'vs LHB' },
 ] as const
@@ -171,7 +179,7 @@ function BullpenBadge({ teamAbbr, bullpen }: { teamAbbr: string; bullpen: TeamBu
 // to the one matchup a Dugout row-expand actually needs instead of a whole
 // lineup table.
 export function MatchupPitchBreakdown({
-  batterId, batterName, batterBats, batterTeamAbbr, pitcherId, pitcherName, pitcherHand, pitcherTeamAbbr,
+  batterId, batterName, batterBats, batterTeamAbbr, pitcherId, pitcherName, pitcherHand, pitcherTeamAbbr, onSpraySelectionChange,
 }: {
   batterId: number
   batterName: string
@@ -181,9 +189,11 @@ export function MatchupPitchBreakdown({
   pitcherName: string
   pitcherHand: 'R' | 'L'
   pitcherTeamAbbr: string
+  onSpraySelectionChange?: (selection: DugoutSpraySelection) => void
 }) {
   const [pitcherRows, setPitcherRows] = useState<PitchLogRow[] | null>(null)
   const [batterRows, setBatterRows] = useState<PitchLogRow[] | null>(null)
+  const [sprayRows, setSprayRows] = useState<SprayPitchRow[]>([])
   const [batTrackingSplits, setBatTrackingSplits] = useState<SavantSplitRow[]>([])
   const [bullpen, setBullpen] = useState<TeamBullpen>(EMPTY_BULLPEN)
   const [pitcherAffinity, setPitcherAffinity] = useState<AffinityResult>(EMPTY_AFFINITY)
@@ -197,6 +207,7 @@ export function MatchupPitchBreakdown({
   const [batPitchSort, setBatPitchSort] = useState<SortState>({ col: 'pa', dir: 'desc' })
   const [expandedPitch, setExpandedPitch] = useState<string | null>(null)
   const [expandedPitcherPitch, setExpandedPitcherPitch] = useState<string | null>(null)
+  const [pinnedPitchTypes, setPinnedPitchTypes] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -208,7 +219,15 @@ export function MatchupPitchBreakdown({
   useEffect(() => {
     let cancelled = false
     setBatterRows(null)
-    fetchPitchLogCached(batterId).then(d => { if (!cancelled) setBatterRows(d.batterRows ?? []) })
+    setSprayRows([])
+    setPinnedPitchTypes([])
+    setExpandedPitch(null)
+    fetchPitchLogCached(batterId).then(d => {
+      if (!cancelled) {
+        setBatterRows(d.batterRows ?? [])
+        setSprayRows(d.sprayRows ?? [])
+      }
+    })
     return () => { cancelled = true }
   }, [batterId])
 
@@ -250,6 +269,53 @@ export function MatchupPitchBreakdown({
     fetchAffinityCached(`${batterId}-${dominantStand}`, 'hitter').then(d => { if (!cancelled) setBatterAffinity(d ?? EMPTY_AFFINITY) })
     return () => { cancelled = true }
   }, [batterId, batterRows, batterBats])
+
+  // One source of truth for the embedded spray projection. The game window
+  // is derived from the full pitch log (not only balls in play), then that
+  // exact date/hand/matchup/pitch selection is applied to Statcast contacts.
+  useEffect(() => {
+    if (!onSpraySelectionChange) return
+    const fullPitchRows = batterRows ?? []
+    const handPitchRows = batterHandFilter === 'all'
+      ? fullPitchRows
+      : fullPitchRows.filter(row => row.p_throws === batterHandFilter)
+    const handSprayRows = batterHandFilter === 'all'
+      ? sprayRows
+      : sprayRows.filter(row => row.p_throws === batterHandFilter)
+    const relieverIdsForScope = new Set(bullpen.relievers.map(row => row.mlbId))
+    const similarPitcherIdsForScope = new Set(pitcherAffinity.similar.map(row => row.mlbId))
+    let scopedRows = handSprayRows
+
+    if (batterScope === 'vsTeam') {
+      scopedRows = handSprayRows.filter(row => relieverIdsForScope.has(row.pitcher_id))
+    } else if (batterScope === 'vsSimilarArsenal') {
+      scopedRows = handSprayRows.filter(row => similarPitcherIdsForScope.has(row.pitcher_id))
+    } else if (batterScope === 'vsPitcher') {
+      scopedRows = handSprayRows.filter(row => row.pitcher_id === pitcherId)
+    } else if (batterScope !== 'season') {
+      const dates = lastNGameDates(handPitchRows, Number(batterScope))
+      scopedRows = handSprayRows.filter(row => dates.has(row.game_date))
+    }
+
+    const activePitchTypes = pinnedPitchTypes.length
+      ? pinnedPitchTypes
+      : (expandedPitch ? [expandedPitch] : [])
+    if (activePitchTypes.length) {
+      const selectedTypes = new Set(activePitchTypes)
+      scopedRows = scopedRows.filter(row => row.pitch_type && selectedTypes.has(row.pitch_type))
+    }
+
+    const scopeLabel = [...BATTER_SCOPES, ...EXTRA_BATTER_SCOPES].find(scope => scope.key === batterScope)?.label ?? 'Season'
+    const handLabel = batterHandFilter === 'all' ? 'All pitcher hands' : `vs ${batterHandFilter}HP`
+    const pitchTypesLabel = activePitchTypes.length
+      ? activePitchTypes.map(value => pitchLabel(value)).join(' + ')
+      : 'All visible pitch types'
+    onSpraySelectionChange({
+      rows: scopedRows,
+      contextLabel: `${scopeLabel} · ${handLabel} · ${pitchTypesLabel}`,
+      pitchTypes: activePitchTypes,
+    })
+  }, [batterHandFilter, batterRows, batterScope, bullpen.relievers, expandedPitch, onSpraySelectionChange, pinnedPitchTypes, pitcherAffinity.similar, pitcherId, sprayRows])
 
   if (pitcherRows === null || batterRows === null) {
     return <div style={{ fontSize: 11, color: 'var(--text-3)', padding: '8px 0' }}>Loading real pitch-log matchup data…</div>
@@ -501,6 +567,15 @@ export function MatchupPitchBreakdown({
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>OPPOSING HAND</span>
         {HAND_FILTERS_PITCHER_SIDE.map(o => <ToggleBtn key={o.key} active={batterHandFilter === o.key} onClick={() => setBatterHandFilter(o.key)}>{o.label}</ToggleBtn>)}
+        {pinnedPitchTypes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setPinnedPitchTypes([])}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}
+          >
+            <PinOff size={11} /> Clear {pinnedPitchTypes.length} spray pin{pinnedPitchTypes.length === 1 ? '' : 's'}
+          </button>
+        )}
       </div>
       {batterScope === 'vsTeam' && (
         <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 10 }}>
@@ -561,6 +636,20 @@ export function MatchupPitchBreakdown({
                     style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: isOpen ? 'var(--accent-dim)' : undefined }}
                   >
                     <td style={{ padding: '6px 8px', fontWeight: 700, color: isOpen ? 'var(--accent)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        title={`${pinnedPitchTypes.includes(r.pitchType) ? 'Remove' : 'Pin'} ${pitchLabel(r.pitchType)} on the spray chart`}
+                        aria-label={`${pinnedPitchTypes.includes(r.pitchType) ? 'Remove' : 'Pin'} ${pitchLabel(r.pitchType)} on the spray chart`}
+                        onClick={event => {
+                          event.stopPropagation()
+                          setPinnedPitchTypes(current => current.includes(r.pitchType)
+                            ? current.filter(value => value !== r.pitchType)
+                            : [...current, r.pitchType])
+                        }}
+                        style={{ display: 'inline-grid', placeItems: 'center', width: 22, height: 22, marginRight: 4, padding: 0, color: pinnedPitchTypes.includes(r.pitchType) ? 'var(--accent)' : 'var(--text-3)', border: `1px solid ${pinnedPitchTypes.includes(r.pitchType) ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 6, background: pinnedPitchTypes.includes(r.pitchType) ? 'var(--accent-dim)' : 'transparent', cursor: 'pointer', verticalAlign: 'middle' }}
+                      >
+                        <Pin size={11} fill={pinnedPitchTypes.includes(r.pitchType) ? 'currentColor' : 'none'} />
+                      </button>
                       <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: pitchColor(r.pitchType), marginRight: 6, verticalAlign: 'middle' }} />
                       {pitchLabel(r.pitchType)}
                       <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text-3)' }}>{isOpen ? '▲' : '▾'}</span>
