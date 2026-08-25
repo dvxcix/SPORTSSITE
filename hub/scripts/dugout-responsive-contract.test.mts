@@ -160,6 +160,12 @@ test('market cells use one movement indicator and a readable opening-price label
   assert.doesNotMatch(source, /td\[data-market-move=longer\]::after/)
 })
 
+test('glossary terms cannot overlap their definitions at desktop or mobile widths', () => {
+  assert.match(source, /grid-template-columns:minmax\(142px,\.78fr\) minmax\(0,1\.22fr\)/)
+  assert.match(source, /\.dugout-glossary p\{min-width:0[^}]*overflow-wrap:anywhere/)
+  assert.match(source, /\.dugout-glossary>div>span\{grid-template-columns:minmax\(0,1fr\);gap:7px/)
+})
+
 test('public scoring surfaces use SlipSurge Score branding instead of Index', () => {
   assert.ok(source.includes('SlipSurgeScoreLabel'))
   assert.ok(source.includes("mechanics_index: 'SlipSurge Score'"))

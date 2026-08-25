@@ -5251,7 +5251,7 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-glossary-backdrop{position:fixed;inset:0;z-index:1400;display:flex;justify-content:flex-end;padding:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(7px)}
         .dugout-glossary{width:min(430px,100%);height:100%;overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:16px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.62)}
         .dugout-glossary header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}.dugout-glossary header span{display:grid;gap:2px}.dugout-glossary header strong{font-size:15px}.dugout-glossary header small{color:var(--text-3);font-size:10px}.dugout-glossary header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
-        .dugout-glossary>div{display:grid;gap:1px;background:var(--border)}.dugout-glossary>div>span{display:grid;grid-template-columns:88px 1fr;gap:10px;padding:12px 14px;background:var(--surface)}.dugout-glossary b{color:var(--accent);font-size:11px}.dugout-glossary p{margin:0;color:var(--text-2);font-size:12px;line-height:1.4}
+        .dugout-glossary>div{display:grid;gap:1px;background:var(--border)}.dugout-glossary>div>span{display:grid;grid-template-columns:minmax(142px,.78fr) minmax(0,1.22fr);align-items:start;gap:14px;padding:12px 14px;background:var(--surface)}.dugout-glossary b{display:flex;min-width:0;color:var(--accent);font-size:11px}.dugout-glossary p{min-width:0;margin:0;color:var(--text-2);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
         .dg-player-signal-row{display:flex;align-items:center;gap:5px;margin-top:3px}.dg-player-signal-row span{padding:1px 4px;border-radius:4px;background:var(--surface-2);color:var(--text-3);font-size:8px;font-weight:850}
         .dugout-active-matchup{display:none;align-items:center;gap:6px}
         .dugout-active-matchup > span{color:var(--text-4);font-size:8px;font-weight:900;text-transform:uppercase}
@@ -5378,7 +5378,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-game-picker-sheet button{min-height:58px}
           .dugout-return-player,.dugout-header-help{display:none!important}
           .dugout-table-tour{right:12px!important;bottom:96px!important}
-          .dugout-glossary-backdrop{align-items:flex-end;padding:0}.dugout-glossary{width:100%;height:min(78dvh,720px);border-width:1px 0 0;border-radius:18px 18px 0 0}.dugout-glossary>div>span{grid-template-columns:78px 1fr}.dugout-glossary p{font-size:13px}
+          .dugout-glossary-backdrop{align-items:flex-end;padding:0}.dugout-glossary{width:100%;height:min(78dvh,720px);border-width:1px 0 0;border-radius:18px 18px 0 0}.dugout-glossary>div>span{grid-template-columns:minmax(0,1fr);gap:7px;padding:14px 16px}.dugout-glossary b{font-size:12px}.dugout-glossary p{font-size:13px}
         }
         /* The website should follow the browser's normal vertical document
            scroll at laptop and desktop widths. The bounded two-axis board is
