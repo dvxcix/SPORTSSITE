@@ -37,16 +37,44 @@ test('temporary presets preserve a member custom order and never reveal hidden c
 test('market timeline rebuilds real compact deltas without synthetic points', () => {
   const timeline = buildDugoutMarketTimeline([
     { captured_at: '2026-08-25T12:00:00Z', prop_map: { p1: { name: 'Player One', fhr: { fanduel: '+1500' }, sa: { fanduel: 500 } } } },
-    { captured_at: '2026-08-25T12:10:00Z', prop_map: { p1: { name: 'Player One', hits: { fanduel: -200 } } } },
-    { captured_at: '2026-08-25T12:20:00Z', prop_map: { p1: { name: 'Player One', sa: { fanduel: 450, betmgm: 475 }, tb5: { fanduel: 1700 } }, p2: { name: 'Player Two', fhr: { fanduel: 2200 } } } },
+    { captured_at: '2026-08-25T12:10:00Z', prop_map: { p1: { name: 'Player One', singles: { fanduel: -115 }, doubles: { fanduel: 380 }, triples: { fanduel: 4500 }, stolen_bases: { fanduel: 550 }, stolen_bases2: { fanduel: 2200 }, hits: { fanduel: -200 }, hits2: { fanduel: 280 }, runs: { fanduel: 120 }, runs2: { fanduel: 950 } } } },
+    { captured_at: '2026-08-25T12:20:00Z', prop_map: { p1: { name: 'Player One', sa: { fanduel: 450, betmgm: 475 }, hits: { fanduel: -220 }, tb5: { fanduel: 1700 } }, p2: { name: 'Player Two', fhr: { fanduel: 2200 } } } },
   ])
-  assert.equal(timeline.length, 2)
+  assert.equal(timeline.length, 3)
   assert.equal(timeline[0].players.get('player one')?.fhr?.fanduel, 1500)
-  assert.equal(timeline[1].players.get('player one')?.fhr?.fanduel, 1500)
-  assert.equal(timeline[1].players.get('player one')?.sa?.fanduel, 450)
-  assert.equal(timeline[1].players.get('player one')?.sa?.betmgm, 475)
-  assert.equal(timeline[1].players.get('player one')?.tb5?.fanduel, 1700)
-  assert.equal(timeline[1].players.get('player two')?.fhr?.fanduel, 2200)
+  assert.equal(timeline[1].players.get('player one')?.singles?.fanduel, -115)
+  assert.equal(timeline[1].players.get('player one')?.doubles?.fanduel, 380)
+  assert.equal(timeline[1].players.get('player one')?.triples?.fanduel, 4500)
+  assert.equal(timeline[1].players.get('player one')?.stolen_bases?.fanduel, 550)
+  assert.equal(timeline[1].players.get('player one')?.stolen_bases2?.fanduel, 2200)
+  assert.equal(timeline[1].players.get('player one')?.hits?.fanduel, -200)
+  assert.equal(timeline[1].players.get('player one')?.hits2?.fanduel, 280)
+  assert.equal(timeline[1].players.get('player one')?.runs?.fanduel, 120)
+  assert.equal(timeline[1].players.get('player one')?.runs2?.fanduel, 950)
+  assert.equal(timeline[2].players.get('player one')?.fhr?.fanduel, 1500)
+  assert.equal(timeline[2].players.get('player one')?.hits?.fanduel, -220)
+  assert.equal(timeline[2].players.get('player one')?.sa?.fanduel, 450)
+  assert.equal(timeline[2].players.get('player one')?.sa?.betmgm, 475)
+  assert.equal(timeline[2].players.get('player one')?.tb5?.fanduel, 1700)
+  assert.equal(timeline[2].players.get('player two')?.fhr?.fanduel, 2200)
+})
+
+test('single, extra-base, stolen-base, hit, and run cells follow the selected market capture', () => {
+  const mappings = [
+    ["'singles'", 'sngFd_open', 'sng_fd'],
+    ["'doubles'", 'dblFd_open', 'dbl_fd'],
+    ["'triples'", 'triFd_open', 'tri_fd'],
+    ["'stolen_bases'", 'sb_open', 'sb_fd'],
+    ["'stolen_bases2'", 'sb2_open', 'sb2_fd'],
+    ["'hits'", 'hits_open', 'hits_fd'],
+    ["'hits2'", 'hits2_open', 'hits2_fd'],
+    ["'runs'", 'runs_open', 'runs_fd'],
+    ["'runs2'", 'runs2_open', 'runs2_fd'],
+  ] as const
+
+  for (const [market, opener, field] of mappings) {
+    assert.ok(source.includes(`selectTimelinePrice(row, ${market}, row.${opener}, row.${field})`), `${field} does not follow Market Story`)
+  }
 })
 
 test('The Dugout implements all 14 responsive product requirements', () => {

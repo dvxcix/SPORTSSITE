@@ -28,7 +28,15 @@ function numericHistoryPrice(value: unknown): number | null {
   return Number.isFinite(numeric) ? numeric : null
 }
 
-const TIMELINE_MARKETS = ['fhr', 'sa', 'rbi', 'rbi2', 'rbi3', 'tb', 'tb3', 'tb4', 'tb5', 'hrr', 'hr2', 'moonshot', 'laser105', 'laser110', 'pa1', 'hrMl'] as const
+const TIMELINE_MARKETS = [
+  'fhr', 'sa',
+  'singles', 'doubles', 'triples',
+  'stolen_bases', 'stolen_bases2',
+  'hits', 'hits2', 'runs', 'runs2',
+  'rbi', 'rbi2', 'rbi3',
+  'tb', 'tb3', 'tb4', 'tb5', 'hrr', 'hr2',
+  'moonshot', 'laser105', 'laser110', 'pa1', 'hrMl',
+] as const
 const TIMELINE_BOOKS = ['fanduel', 'williamhill_us', 'betmgm', 'betrivers', 'fanatics'] as const
 
 // Rebuild compact capture deltas into cumulative player state. The board can

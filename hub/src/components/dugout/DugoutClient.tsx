@@ -3659,6 +3659,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     const saMgm = selectTimelinePrice(row, 'sa', row.saMgm_open, row.sa_mgm, 'betmgm')
     const saBr = selectTimelinePrice(row, 'sa', row.saBr_open, row.sa_br, 'betrivers')
     const saFan = selectTimelinePrice(row, 'sa', row.saFan_open, row.sa_fan, 'fanatics')
+    const singles = selectTimelinePrice(row, 'singles', row.sngFd_open, row.sng_fd)
+    const doubles = selectTimelinePrice(row, 'doubles', row.dblFd_open, row.dbl_fd)
+    const triples = selectTimelinePrice(row, 'triples', row.triFd_open, row.tri_fd)
+    const stolenBases = selectTimelinePrice(row, 'stolen_bases', row.sb_open, row.sb_fd)
+    const stolenBases2 = selectTimelinePrice(row, 'stolen_bases2', row.sb2_open, row.sb2_fd)
+    const hits = selectTimelinePrice(row, 'hits', row.hits_open, row.hits_fd)
+    const hits2 = selectTimelinePrice(row, 'hits2', row.hits2_open, row.hits2_fd)
+    const runs = selectTimelinePrice(row, 'runs', row.runs_open, row.runs_fd)
+    const runs2 = selectTimelinePrice(row, 'runs2', row.runs2_open, row.runs2_fd)
     const rbi = selectTimelinePrice(row, 'rbi', row.rbiFd_open, row.rbi_fd)
     const rbi2 = selectTimelinePrice(row, 'rbi2', row.rbi2Fd_open, row.rbi2_fd)
     const rbi3 = selectTimelinePrice(row, 'rbi3', row.rbi3Fd_open, row.rbi3_fd)
@@ -3683,6 +3692,15 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       sa_mgm: saMgm,
       sa_br: saBr,
       sa_fan: saFan,
+      sng_fd: singles,
+      dbl_fd: doubles,
+      tri_fd: triples,
+      sb_fd: stolenBases,
+      sb2_fd: stolenBases2,
+      hits_fd: hits,
+      hits2_fd: hits2,
+      runs_fd: runs,
+      runs2_fd: runs2,
       rbi_fd: rbi,
       rbi2_fd: rbi2,
       rbi3_fd: rbi3,
