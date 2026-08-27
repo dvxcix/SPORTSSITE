@@ -1,9 +1,11 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import type { User } from '@/lib/supabase/types'
+import { isSlipSurgeDesktop } from '@/lib/desktopNotifications'
+import { syncBrowserPushSubscription } from '@/lib/browserPush'
 
 interface AuthContextType {
   user: SupabaseUser | null
@@ -24,7 +26,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const pushSyncedForUser = useRef<string | null>(null)
+  const [supabase] = useState(() => createClient())
+
+  function repairPushRegistration(userId: string) {
+    if (pushSyncedForUser.current === userId || isSlipSurgeDesktop()) return
+    pushSyncedForUser.current = userId
+    void syncBrowserPushSubscription().catch(error => {
+      // A transient verification failure should not affect authentication.
+      console.warn('[push] automatic device repair failed', error)
+      pushSyncedForUser.current = null
+    })
+  }
 
   async function fetchProfile(userId: string) {
     const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
@@ -44,20 +57,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      if (session?.user) {
+        fetchProfile(session.user.id)
+        repairPushRegistration(session.user.id)
+      }
       setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else setProfile(null)
+      if (session?.user) {
+        fetchProfile(session.user.id)
+        repairPushRegistration(session.user.id)
+      } else {
+        setProfile(null)
+        pushSyncedForUser.current = null
+      }
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase.auth])
 
   async function signOut() {
     await supabase.auth.signOut()

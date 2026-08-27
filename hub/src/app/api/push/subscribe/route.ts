@@ -5,6 +5,28 @@ import { safeApiError } from '@/lib/safeApiError'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { isTrustedPushEndpoint, isValidPushKey } from '@/lib/pushEndpoint'
 
+export async function PUT(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+
+  const body = await request.json().catch(() => null)
+  const endpoint = body?.endpoint
+  if (!isTrustedPushEndpoint(endpoint)) {
+    return NextResponse.json({ error: 'Malformed subscription' }, { status: 400 })
+  }
+
+  const { data, error } = await createAdminClient()
+    .from('push_subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('endpoint', endpoint)
+    .maybeSingle()
+
+  if (error) return safeApiError('push-status', error, 'Could not verify notifications.')
+  return NextResponse.json({ registered: Boolean(data) })
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
