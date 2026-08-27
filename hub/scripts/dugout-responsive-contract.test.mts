@@ -155,6 +155,17 @@ test('team banners do not duplicate the board controls', () => {
   assert.equal(source.split('{modeButtons}').length - 1, 1)
 })
 
+test('each team banner can change the shared Statcast window without touching saved columns', () => {
+  assert.ok(source.includes('className="dg-team-window-control"'))
+  assert.ok(source.includes('ariaLabel={`${abbr} Statcast data window`}'))
+  assert.ok(source.includes('value={statcastWindow}'))
+  assert.ok(source.includes('onChange={onStatcastWindowChange}'))
+  assert.ok(source.includes('aria-pressed={value === w}'))
+  assert.match(source, /\.dugout-window-toggle\.is-team-header\{[^}]*min-height:36px/)
+  assert.match(source, /\.dg-team-window-control\{width:100%\}/)
+  assert.equal(source.includes("key: 'statcast-window'"), false)
+})
+
 test('presets never write member column preferences', () => {
   const start = source.indexOf('const renderedDugoutColumns')
   const end = source.indexOf('const [marketHistory', start)

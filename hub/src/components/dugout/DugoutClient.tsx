@@ -2572,14 +2572,22 @@ const STATCAST_WINDOW_LABEL: Record<'l1' | 'l3' | 'l5' | 'l10', string> = { l1: 
 // this toggle, right sticky-columns controls) so it visually sits above the
 // Statcast section's "R"/Δ columns it drives — one shared statcastWindow
 // state (lifted to DugoutClient) behind both team sections' copies of it.
-function StatcastWindowToggle({ value, onChange }: { value: 'l1' | 'l3' | 'l5' | 'l10'; onChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void }) {
+function StatcastWindowToggle({ value, onChange, compact = false, ariaLabel = 'Statcast data window' }: {
+  value: 'l1' | 'l3' | 'l5' | 'l10'
+  onChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void
+  compact?: boolean
+  ariaLabel?: string
+}) {
   return (
-    <div className="dugout-window-toggle" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: 0.4, textTransform: 'uppercase', padding: '0 6px 0 4px' }}>Statcast</span>
+    <div className={`dugout-window-toggle${compact ? ' is-team-header' : ''}`} role="group" aria-label={ariaLabel} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: 0.4, textTransform: 'uppercase', padding: '0 6px 0 4px' }}>{compact ? 'View' : 'Statcast'}</span>
       {(['l1', 'l3', 'l5', 'l10'] as const).map(w => (
         <button
           key={w}
+          type="button"
           onClick={() => onChange(w)}
+          aria-label={`Show ${STATCAST_WINDOW_LABEL[w]} data`}
+          aria-pressed={value === w}
           style={{
             padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, cursor: 'pointer',
             border: `1px solid ${value === w ? 'var(--accent)' : 'transparent'}`,
@@ -4042,6 +4050,14 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
         <span><small>TEAM ML</small><strong>{oStr(summary.teamMl)}</strong></span>
         <span><small>SAVED</small><strong>{summary.matrix}M · {summary.watched}W</strong></span>
       </div>
+      <div className="dg-team-window-control">
+        <StatcastWindowToggle
+          value={statcastWindow}
+          onChange={onStatcastWindowChange}
+          compact
+          ariaLabel={`${abbr} Statcast data window`}
+        />
+      </div>
     </div>
   )}
 
@@ -5279,6 +5295,10 @@ export function DugoutClient({ date }: { date: string }) {
         .dg-team-summary{display:flex;align-items:stretch;gap:5px}
         .dg-team-summary>span{display:grid;align-content:center;gap:3px;min-width:102px;padding:7px 9px;border:1px solid rgba(148,163,184,.2);border-radius:9px;background:linear-gradient(145deg,rgba(21,29,40,.95),rgba(8,13,20,.92));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
         .dg-team-summary small{color:#c9d4e5;font-size:9px;font-weight:950;letter-spacing:.055em}.dg-team-summary strong{overflow:hidden;color:#f8fafc;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+        .dg-team-window-control{display:flex;align-items:stretch;flex:0 0 auto}
+        .dugout-window-toggle.is-team-header{min-height:36px;border-color:rgba(180,255,77,.28)!important;background:linear-gradient(145deg,rgba(20,31,24,.98),rgba(8,14,18,.96))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 0 0 1px rgba(180,255,77,.03)}
+        .dugout-window-toggle.is-team-header>span{color:#d9e4f2!important;font-weight:950!important}
+        .dugout-window-toggle.is-team-header button{min-width:34px;min-height:30px}
         .dg-team-signal{position:relative;min-width:188px!important;grid-template-columns:minmax(0,1fr) auto;column-gap:9px!important;overflow:hidden}.dg-team-signal::before{position:absolute;inset:0 auto 0 0;width:3px;content:""}.dg-team-signal>small{grid-column:1/-1}.dg-team-signal>strong{display:flex;align-items:center;gap:6px;min-width:0}.dg-team-signal>strong>b{font-family:var(--font-mono,monospace);font-size:12px}.dg-team-signal>strong>em{overflow:hidden;color:#f8fafc;font-style:normal;text-overflow:ellipsis;white-space:nowrap}.dg-team-signal>i{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#fff;font-size:11px;font-style:normal;font-weight:950}.dg-team-signal.is-advertised{border-color:rgba(248,113,113,.38);background:linear-gradient(135deg,rgba(127,29,29,.34),rgba(24,12,18,.92))}.dg-team-signal.is-advertised::before{background:#fb7185}.dg-team-signal.is-advertised small,.dg-team-signal.is-advertised strong>b{color:#fda4af}.dg-team-signal.is-hidden{border-color:rgba(74,222,128,.38);background:linear-gradient(135deg,rgba(20,83,45,.38),rgba(8,24,17,.92))}.dg-team-signal.is-hidden::before{background:#4ade80}.dg-team-signal.is-hidden small,.dg-team-signal.is-hidden strong>b{color:#86efac}
         .dugout-board-nav{display:none;grid-template-columns:repeat(4,auto);align-items:center;justify-content:start;gap:5px;margin-bottom:6px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
         .dugout-board-nav button{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:3px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text-2);font-size:9px;font-weight:850;cursor:pointer}
@@ -5499,6 +5519,7 @@ export function DugoutClient({ date }: { date: string }) {
           .dg-team-banner-content button{min-height:34px!important;min-width:34px}
           .dg-team-banner-content a{min-height:34px;display:inline-flex!important;align-items:center}
           .dg-team-summary{width:100%;max-width:100%;overflow-x:auto}.dg-team-summary>span{min-width:92px}.dg-team-banner-content{align-items:flex-start!important;flex-direction:column!important}
+          .dg-team-window-control{width:100%}.dugout-window-toggle.is-team-header{width:100%;grid-template-columns:auto repeat(4,minmax(0,1fr))!important}.dugout-window-toggle.is-team-header>span{display:inline-flex!important;align-items:center;justify-content:center;padding:0 7px!important}.dugout-window-toggle.is-team-header button{min-height:36px!important}
           .dugout-modal-backdrop{align-items:flex-end!important;padding:0!important;overscroll-behavior:contain}
           .dugout-mobile-sheet{position:relative;width:100%!important;min-width:0!important;max-width:100%!important;max-height:calc(100dvh - 72px)!important;resize:none!important;border-radius:18px 18px 0 0!important;border-bottom:0!important;padding-bottom:max(12px,env(safe-area-inset-bottom));box-shadow:0 -18px 60px rgba(0,0,0,.58)!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
           .dugout-mobile-sheet::before{content:"";display:block;position:absolute;top:7px;left:50%;z-index:5;width:38px;height:4px;border-radius:99px;background:var(--text-4);transform:translateX(-50%);opacity:.65}
