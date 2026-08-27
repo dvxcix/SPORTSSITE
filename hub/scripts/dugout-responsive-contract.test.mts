@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline } from '../src/lib/dugoutPresentation.ts'
+import { computeDugoutMomentum, seriesTrend, type DugoutMomentumInputRow, type DugoutMomentumWindow } from '../src/lib/dugoutMomentum.ts'
 
 const source = readFileSync(new URL('../src/components/dugout/DugoutClient.tsx', import.meta.url), 'utf8')
 const parkSource = readFileSync(new URL('../src/components/dugout/GameWeatherCard.tsx', import.meta.url), 'utf8')
@@ -19,6 +20,56 @@ test('Dugout workspace fluidly fills ultrawide displays', () => {
   assert.match(pageRule, /max-width:none/)
   assert.match(pageRule, /min-width:0/)
   assert.doesNotMatch(pageRule, /1920px/)
+})
+
+function momentumRow(scores: [number, number, number, number], paperSpeeds: [number, number, number, number]): DugoutMomentumInputRow {
+  const windows = ['l10', 'l5', 'l3', 'l1'] as const
+  const mechanics_windows = {} as DugoutMomentumInputRow['mechanics_windows']
+  const paper_inputs_by_window = {} as DugoutMomentumInputRow['paper_inputs_by_window']
+  windows.forEach((window, index) => {
+    mechanics_windows[window] = { index: scores[index] }
+    paper_inputs_by_window[window] = {
+      matchup_edge: null, s_brl: null, s_spd: 70, r_spd: paperSpeeds[index], platoon_ops: null,
+      s_pa: null, s_sq: null, r_sq: null, s_hh: null, s_ev: null,
+      s_timing: null, r_timing: null, recent_pitch_count: 40,
+    }
+  })
+  return {
+    mechanics_windows,
+    paper_inputs_by_window,
+    paper_windows: {} as Partial<Record<DugoutMomentumWindow, number | null>>,
+    paper_percentile_windows: {} as Partial<Record<DugoutMomentumWindow, number | null>>,
+    momentum: { direction: 'unknown', score: null, slipsurgeTrend: null, paperTrend: null, level: 0, label: 'No trend' },
+  }
+}
+
+test('form battery combines full SlipSurge and Paper Score trajectories relative to the game', () => {
+  const charging = momentumRow([35, 48, 66, 82], [64, 70, 77, 84])
+  const steady = momentumRow([55, 55, 55, 55], [74, 74, 74, 74])
+  const cooling = momentumRow([84, 68, 49, 31], [84, 78, 69, 61])
+  const pool = [charging, steady, cooling]
+  computeDugoutMomentum(pool)
+
+  assert.equal(charging.momentum.direction, 'up')
+  assert.equal(charging.momentum.level, 1)
+  assert.equal(cooling.momentum.direction, 'down')
+  assert.equal(cooling.momentum.level, 1)
+  assert.equal(steady.momentum.direction, 'steady')
+  assert.ok(charging.momentum.slipsurgeTrend! > 0)
+  assert.ok(charging.momentum.paperTrend! > 0)
+  assert.ok(cooling.momentum.slipsurgeTrend! < 0)
+  assert.ok(cooling.momentum.paperTrend! < 0)
+  assert.ok(seriesTrend([10, null, 30, 40])! > 0)
+})
+
+test('player rows expose an animated accessible form battery without adding a saved column', () => {
+  assert.ok(source.includes('dg-momentum-battery'))
+  assert.ok(source.includes('Form battery:'))
+  assert.ok(source.includes("['FORM BATTERY', 'L10-to-L1 trajectory."))
+  assert.match(source, /\.dg-momentum-battery\.is-up \.dg-momentum-battery-fill\{bottom:1px/)
+  assert.match(source, /\.dg-momentum-battery\.is-down \.dg-momentum-battery-fill\{top:1px/)
+  assert.match(source, /@media\(prefers-reduced-motion:reduce\)/)
+  assert.equal(source.includes("key: 'momentum'"), false)
 })
 
 test('temporary presets preserve a member custom order and never reveal hidden columns', () => {

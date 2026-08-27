@@ -18,6 +18,7 @@ import { GameWeatherCard, GameWeatherSummary } from '@/components/dugout/GameWea
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
 import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
+import { computeDugoutMomentum, type DugoutMomentumResult, type DugoutMomentumWindow, type DugoutPaperWindowInput } from '@/lib/dugoutMomentum'
 import { computeHitFloorReads, computeHitPitchProfile, type HitFloorStatus } from '@/lib/hitFloorModel'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
@@ -392,6 +393,24 @@ export function buildBatterRow(
   // tonight's particular pitcher hand.
   const recent_pitch_count = Object.values(player.matchupEdge?.recentByPitchTypeByHand ?? {})
     .reduce((sum: number, byType: any) => sum + Object.values(byType ?? {}).reduce((s2: number, b: any) => s2 + (b?.pitches || 0), 0), 0)
+  const paper_inputs_by_window = Object.fromEntries((['l1', 'l3', 'l5', 'l10'] as const).map(window => {
+    const recent = player.statcast?.[window] ?? null
+    return [window, {
+      matchup_edge,
+      s_brl,
+      s_spd,
+      r_spd: recent?.avgBatSpeed ?? null,
+      platoon_ops,
+      s_pa,
+      s_sq,
+      r_sq: recent?.squaredUpPct ?? null,
+      s_hh,
+      s_ev,
+      s_timing,
+      r_timing: recent?.onTimePct ?? null,
+      recent_pitch_count,
+    } satisfies DugoutPaperWindowInput]
+  })) as Record<DugoutMomentumWindow, DugoutPaperWindowInput>
 
   const props      = player.props
   const fhr_fd     = props?.fhr?.fanduel      ?? null
@@ -564,6 +583,10 @@ export function buildBatterRow(
     mechanics_trend: (mechanicsRecent?.trend ?? null) as number | null,
     mechanics_window: statcastWindow,
     mechanics_windows: (player.mechanics ?? {}) as DugoutMechanicsWindows,
+    paper_inputs_by_window,
+    paper_windows: {} as Partial<Record<DugoutMomentumWindow, number | null>>,
+    paper_percentile_windows: {} as Partial<Record<DugoutMomentumWindow, number | null>>,
+    momentum: { direction: 'unknown', score: null, slipsurgeTrend: null, paperTrend: null, level: 0, label: 'No trend' } as DugoutMomentumResult,
     fhr_fd, fhr_cz, fhr_fan, div, fhr_div_sa,
     // Shade %: today's price vs own season-average price (negative = cheaper
     // than usual = book conviction). Ported exactly from mlb-party: FHR% only
@@ -1607,6 +1630,10 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
   const edgePool = g('matchup_edge').filter((x): x is number => x != null)
   const edgeAvg = edgePool.length ? edgePool.reduce((a, b) => a + b, 0) / edgePool.length : 0
   const hasLiveMatchup = row.matchup_edge != null && row.matchup_edge > edgeAvg + 8
+  const momentumSigned = (value: number | null) => value == null ? '-' : `${value > 0 ? '+' : ''}${value.toFixed(1)}`
+  const momentumTitle = row.momentum.direction === 'unknown'
+    ? 'Form battery: not enough L10/L5/L3/L1 data'
+    : `Form battery: ${row.momentum.label} ${momentumSigned(row.momentum.score)} · SlipSurge ${momentumSigned(row.momentum.slipsurgeTrend)} · Paper ${momentumSigned(row.momentum.paperTrend)}`
 
   // Achievement badges now sit under the actual FD odds cell they're each
   // about, not clustered on the name rail — a "did they homer, or is this
@@ -1668,7 +1695,17 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
           backgroundImage: hovered ? 'linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025))' : 'none',
         }}
       >
-        <div className="dg-player-cell-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px' }}>
+        <span
+          className={`dg-momentum-battery is-${row.momentum.direction}`}
+          role="img"
+          aria-label={momentumTitle}
+          title={momentumTitle}
+          style={{ ['--dg-momentum-level' as string]: `${Math.round(row.momentum.level * 100)}%` } as React.CSSProperties}
+        >
+          <span className="dg-momentum-battery-fill" />
+          <span className="dg-momentum-battery-cap" />
+        </span>
+        <div className="dg-player-cell-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: 5, padding: '4px 4px 4px 12px' }}>
           {/* Order#/hand-circle rail — achievement badges (FHR/HR/near-miss)
               moved off this rail entirely, onto the actual FD FHR/SA odds
               cells they're each about (see the OddsCell `badge` prop calls
@@ -3574,6 +3611,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     )
     const pool = [...homeRows, ...awayRows]
     computePaperScores(pool)
+    computeDugoutMomentum(pool)
     computeMmRanks(pool)
     computeHitFloorReads(pool, pool.length === 18 && !!game.homeLineupConfirmed && !!game.awayLineupConfirmed)
     return { homeRows, awayRows, pool }
@@ -4462,6 +4500,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           <header><span><strong id="dugout-glossary-title">Board glossary</strong><small id="dugout-glossary-description">Quick definitions only</small></span><button type="button" autoFocus onClick={() => setShowGlossary(false)} aria-label="Close glossary"><X size={16} /></button></header>
           <div>{[
             ['SLIPSURGE SCORE', 'The selected window’s SlipSurge batter score.'],
+            ['FORM BATTERY', 'L10-to-L1 trajectory. Green is charging, red is cooling, yellow is steady or mixed.'],
             ['FHR', 'First home run market.'],
             ['HR', 'Anytime home run market.'],
             ['OPEN', 'Earliest captured price.'],
@@ -4568,6 +4607,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
       )
       const pool = [...homeRows, ...awayRows]
       computePaperScores(pool)
+      computeDugoutMomentum(pool)
       computeMmRanks(pool)
       computeHitFloorReads(pool, pool.length === 18 && !!game.homeLineupConfirmed && !!game.awayLineupConfirmed)
       const gameInfo = { sport: 'MLB', game_pk: game.gamePk != null ? String(game.gamePk) : null, game_date: date }
@@ -5301,7 +5341,17 @@ export function DugoutClient({ date }: { date: string }) {
         .dugout-mode-buttons{row-gap:6px!important}
         .dugout-mode-buttons button{min-height:30px;min-width:30px}
         .dugout-dense-table{font-variant-numeric:tabular-nums}
-        .dugout-dense-table .dg-player-name{font-size:13px!important;font-weight:850!important;line-height:1.25}.dugout-dense-table .dg-player-copy{font-size:11px}.dugout-dense-table .dg-player-cell-inner{min-height:44px;gap:8px!important;padding:5px 6px!important}
+        .dugout-dense-table .dg-player-name{font-size:13px!important;font-weight:850!important;line-height:1.25}.dugout-dense-table .dg-player-copy{font-size:11px}.dugout-dense-table .dg-player-cell-inner{min-height:44px;gap:8px!important;padding:5px 6px 5px 13px!important}
+        .dg-momentum-battery{--dg-momentum-level:0%;position:absolute;z-index:4;top:4px;bottom:4px;left:2px;width:7px;overflow:hidden;border:1px solid rgba(148,163,184,.22);border-radius:999px;background:linear-gradient(180deg,rgba(30,41,59,.82),rgba(8,13,20,.92));box-shadow:inset 0 0 0 1px rgba(0,0,0,.28);cursor:help}
+        .dg-momentum-battery-fill{position:absolute;left:1px;right:1px;height:var(--dg-momentum-level);min-height:2px;border-radius:999px;animation:dg-momentum-fill 620ms cubic-bezier(.2,.75,.25,1) both}
+        .dg-momentum-battery.is-up .dg-momentum-battery-fill{bottom:1px;transform-origin:bottom;background:linear-gradient(180deg,#a6ff3f 0%,#d8ff4f 24%,#facc15 62%,#f43f5e 100%);box-shadow:0 0 9px rgba(166,255,63,.42)}
+        .dg-momentum-battery.is-down .dg-momentum-battery-fill{top:1px;transform-origin:top;background:linear-gradient(180deg,#fb7185 0%,#ef4444 46%,#7f1d1d 100%);box-shadow:0 0 8px rgba(239,68,68,.38)}
+        .dg-momentum-battery.is-steady .dg-momentum-battery-fill,.dg-momentum-battery.is-mixed .dg-momentum-battery-fill{top:50%;min-height:8px;transform:translateY(-50%);transform-origin:center;background:#facc15;box-shadow:0 0 7px rgba(250,204,21,.4);animation:dg-momentum-steady 520ms ease-out both}
+        .dg-momentum-battery.is-mixed .dg-momentum-battery-fill{background:linear-gradient(180deg,#a6ff3f 0 33%,#facc15 33% 67%,#fb7185 67%)}
+        .dg-momentum-battery.is-unknown{opacity:.32}.dg-momentum-battery.is-unknown .dg-momentum-battery-fill{display:none}
+        .dg-momentum-battery-cap{position:absolute;left:1px;right:1px;height:2px;border-radius:999px;opacity:.88}.dg-momentum-battery.is-up .dg-momentum-battery-cap{bottom:calc(var(--dg-momentum-level) - 1px);background:#d8ff9e;box-shadow:0 0 5px #a6ff3f}.dg-momentum-battery.is-down .dg-momentum-battery-cap{top:calc(var(--dg-momentum-level) - 1px);background:#fecdd3;box-shadow:0 0 5px #ef4444}.dg-momentum-battery.is-steady .dg-momentum-battery-cap,.dg-momentum-battery.is-mixed .dg-momentum-battery-cap,.dg-momentum-battery.is-unknown .dg-momentum-battery-cap{display:none}
+        @keyframes dg-momentum-fill{from{transform:scaleY(0);opacity:.3}to{transform:scaleY(1);opacity:1}}@keyframes dg-momentum-steady{from{opacity:0;transform:translateY(-50%) scaleY(0)}to{opacity:1;transform:translateY(-50%) scaleY(1)}}
+        @media(prefers-reduced-motion:reduce){.dg-momentum-battery-fill{animation:none!important}}
         .dugout-dense-table > tbody > tr > td:not(.dg-team-banner){transition:filter 110ms ease,background 110ms ease}
         .dugout-dense-table button:focus-visible,.dugout-dense-table a:focus-visible,.dugout-jump-menu button:focus-visible,.dugout-board-nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
         .dugout-compare-toggle{width:20px;height:20px;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-3);font-size:12px;font-weight:950;line-height:1;cursor:pointer;transition:border-color 120ms,color 120ms,background 120ms}
