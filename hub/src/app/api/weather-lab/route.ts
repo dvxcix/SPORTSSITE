@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getWeatherLabData } from '@/lib/weatherLab'
 import { requireTier } from '@/lib/requireTier'
 
-export const revalidate = 900
+export const revalidate = 300
 
 export async function GET(req: Request) {
   const gate = await requireTier('basic')

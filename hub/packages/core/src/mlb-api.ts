@@ -48,7 +48,19 @@ export interface MLBGame {
     teams?: { home: { runs: number; hits: number; errors: number }; away: { runs: number; hits: number; errors: number } }
     offense?: { first?: { id: number }; second?: { id: number }; third?: { id: number }; batter?: { id: number; fullName: string } }
   }
-  venue?: { id: number; name: string }
+  venue?: {
+    id: number
+    name: string
+    location?: {
+      city?: string
+      state?: string
+      defaultCoordinates?: { latitude?: number; longitude?: number }
+      azimuthAngle?: number
+    }
+    timeZone?: { id?: string; tz?: string; offset?: number; offsetAtGameTime?: number }
+    fieldInfo?: { roofType?: string }
+  }
+  weather?: { condition?: string; temp?: string | number; wind?: string }
   broadcasts?: { name: string; type: string }[]
 }
 
@@ -238,7 +250,7 @@ export interface MLBGameFeed {
 export async function getMLBSchedule(date?: string): Promise<MLBGame[]> {
   try {
     const d = date ?? new Date().toISOString().split('T')[0]
-    const url = `${BASE}/schedule?sportId=1&date=${d}&hydrate=linescore,team,broadcasts(all),venue`
+    const url = `${BASE}/schedule?sportId=1&date=${d}&hydrate=linescore,team,broadcasts(all),venue(location,fieldInfo),weather`
     const res = await fetch(url, { next: { revalidate: 30 }, headers: { 'User-Agent': 'SlipSurge/1.0' } })
     if (!res.ok) return []
     const data = await res.json()

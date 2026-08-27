@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor, isDarkTeamLogo, LOGO_WHITE_FILTER } from '@slipsurge/core/mlbTeamColors'
-import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore, type ParkRoof } from '@slipsurge/core/mlbParks'
+import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore, windFieldLabel, windRelativeToField, type ParkRoof } from '@slipsurge/core/mlbParks'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { ParkFieldSvg } from '@/components/sports/ParkFieldSvg'
@@ -24,12 +24,14 @@ export function hexToRgba(hex: string, alpha: number): string {
 
 export interface HourEntry {
   label: string
-  hour: number
+  hour?: number
   tempF: number | null
   windMph: number | null
+  windGustMph: number | null
   windDirDeg: number | null
   humidity: number | null
   weatherCode: number | null
+  isCurrent?: boolean
 }
 
 export interface WeatherGame {
@@ -41,6 +43,10 @@ export interface WeatherGame {
   awayTeam: string
   park: { name: string; city: string; roof: ParkRoof; orientationDeg: number }
   hours: HourEntry[]
+  roofStatus: 'open' | 'closed' | 'fixed' | 'unknown'
+  weatherMode: 'live' | 'forecast'
+  weatherUpdatedAt: string
+  source: string
 }
 
 export function ParkShape({ primary, secondary, teamAbbr }: { primary: string; secondary: string; teamAbbr: string }) {
@@ -63,7 +69,7 @@ export function ParkShape({ primary, secondary, teamAbbr }: { primary: string; s
 // a 15mph gust visibly streaks.
 export const WIND_CANVAS_SIZE = 220
 
-export function WindCanvas({ deg, mph, color }: { deg: number | null; mph: number | null; color: string }) {
+export function WindCanvas({ deg, mph, color, orientationDeg }: { deg: number | null; mph: number | null; color: string; orientationDeg: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -83,7 +89,7 @@ export function WindCanvas({ deg, mph, color }: { deg: number | null; mph: numbe
     // Meteorological deg is where wind blows FROM — flip 180° for the
     // direction it actually travels, then convert to a screen vector
     // (0° = up, clockwise), matching the compass "N" marker below.
-    const rad = (deg + 180) * Math.PI / 180
+    const rad = windRelativeToField(deg, orientationDeg) * Math.PI / 180
     const dx = Math.sin(rad)
     const dy = -Math.cos(rad)
     // Dialed down twice now — /15 still read as too fast relative to real
@@ -129,13 +135,15 @@ export function WindCanvas({ deg, mph, color }: { deg: number | null; mph: numbe
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [deg, mph, color])
+  }, [deg, mph, color, orientationDeg])
 
   if (deg == null) return null
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-      <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 900, color: '#f87171' }}>N</div>
+      <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,.68)' }}>CF</div>
+      <div style={{ position: 'absolute', top: '45%', left: 5, fontSize: 7, fontWeight: 800, color: 'rgba(255,255,255,.45)' }}>LF</div>
+      <div style={{ position: 'absolute', top: '45%', right: 5, fontSize: 7, fontWeight: 800, color: 'rgba(255,255,255,.45)' }}>RF</div>
     </div>
   )
 }
@@ -310,8 +318,9 @@ function GameCard({ game }: { game: WeatherGame }) {
   // viewer's own browser/OS timezone, not a hardcoded Eastern label.
   const gameTime = new Date(game.gameDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '')
   const dirs = h?.windDirDeg != null ? compassFromTo(h.windDirDeg) : null
+  const fieldWind = windFieldLabel(h?.windDirDeg ?? null, game.park.orientationDeg)
   const logoUrl = getTeamLogoUrl(game.homeAbbr)
-  const isSheltered = game.park.roof !== 'open'
+  const isSheltered = game.roofStatus === 'closed' || game.roofStatus === 'fixed'
   const [showParkHr, setShowParkHr] = useState(false)
   const hrWeather = hrWeatherScore({
     tempF: h?.tempF ?? null,
@@ -359,7 +368,7 @@ function GameCard({ game }: { game: WeatherGame }) {
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${game.hours.length}, 1fr)`, borderBottom: '1px solid var(--border)' }}>
         {game.hours.map((hr, i) => {
           const active = i === idx
-          const d = hr.windDirDeg != null ? hr.windDirDeg + 180 : 0
+          const d = hr.windDirDeg != null ? windRelativeToField(hr.windDirDeg, game.park.orientationDeg) : 0
           const heat = hrWindColor(hr.windDirDeg, hr.windMph, game.park.orientationDeg)
           return (
             <button
@@ -389,10 +398,11 @@ function GameCard({ game }: { game: WeatherGame }) {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>WIND</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{h?.windMph != null ? `${h.windMph.toFixed(1)} mph` : '—'}</span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} to ${dirs.to}` : '—'}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} → ${dirs.to}` : '-'}</span>
+          <span style={{ fontSize: 9, color: hrWeather.color, fontWeight: 800 }}>{fieldWind ?? '-'}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>FORECAST</span>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em' }}>{h?.isCurrent ? 'LIVE' : 'FORECAST'}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{h?.tempF != null ? `${Math.round(h.tempF)}°F` : '—'}</span>
           <span style={{ fontSize: 10, color: 'var(--text-3)', maxWidth: '12ch', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {h?.weatherCode != null ? WMO_LABELS[h.weatherCode] ?? '—' : '—'}
@@ -466,16 +476,22 @@ function GameCard({ game }: { game: WeatherGame }) {
               }} />
             )}
           </div>
-          {!isSheltered && <WindCanvas deg={h?.windDirDeg ?? null} mph={h?.windMph ?? null} color={hrWindColor(h?.windDirDeg ?? null, h?.windMph ?? null, game.park.orientationDeg)} />}
+          {!isSheltered && <WindCanvas deg={h?.windDirDeg ?? null} mph={h?.windMph ?? null} color={hrWindColor(h?.windDirDeg ?? null, h?.windMph ?? null, game.park.orientationDeg)} orientationDeg={game.park.orientationDeg} />}
           {isSheltered && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(20,20,20,0.9)', border: '1px solid #eab308', borderRadius: 8, padding: '6px 10px', boxShadow: '0 0 12px rgba(0,0,0,0.6)' }}>
                 <span style={{ color: '#eab308', fontSize: 12 }}>ⓘ</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>{game.park.roof === 'dome' ? 'Fixed Roof' : 'Retractable Roof'}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>{game.roofStatus === 'fixed' ? 'Fixed Roof' : 'Roof Closed'}</span>
               </div>
             </div>
           )}
         </div>
+        {game.roofStatus === 'unknown' && (
+          <span style={{ fontSize: 9, color: '#fbbf24', fontWeight: 800 }}>ROOF STATUS PENDING · OUTDOOR FORECAST SHOWN</span>
+        )}
+        <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
+          {game.weatherMode === 'live' ? 'Live conditions' : 'Game-time forecast'} · updated {new Date(game.weatherUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+        </span>
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{game.park.name}, {game.park.city}</span>
       </div>
     </div>
@@ -563,13 +579,25 @@ export function WeatherLabClient() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    fetch(`/api/weather-lab?date=${date}`)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(d => { if (!cancelled) setGames(d.games ?? []) })
-      .catch(() => { if (!cancelled) setGames([]) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+    const load = (showLoading = false) => {
+      if (showLoading) setLoading(true)
+      fetch(`/api/weather-lab?date=${date}`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(d => { if (!cancelled) setGames(d.games ?? []) })
+        .catch(() => { if (!cancelled && showLoading) setGames([]) })
+        .finally(() => { if (!cancelled) setLoading(false) })
+    }
+    const refreshVisible = () => { if (document.visibilityState === 'visible') load(false) }
+    load(true)
+    const interval = window.setInterval(() => load(false), 5 * 60_000)
+    window.addEventListener('focus', refreshVisible)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshVisible)
+      document.removeEventListener('visibilitychange', refreshVisible)
+    }
   }, [date])
 
   return (

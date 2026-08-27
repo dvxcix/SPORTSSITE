@@ -24,6 +24,7 @@
     "test:dugout-columns": "node --experimental-strip-types --test scripts/dugout-column-prefs.test.mts",
     "test:dugout-ui": "node --experimental-strip-types --test scripts/dugout-responsive-contract.test.mts",
     "test:dugout-visual": "node --experimental-strip-types scripts/dugout-visual-regression.mts",
+    "test:weather-orientation": "node --experimental-strip-types --test scripts/weather-field-orientation.test.mts",
     "test:statcast-mappers": "node scripts/statcast-mapper-contract.test.mjs",
     "test:hr-mechanics": "node --test scripts/hr-mechanics-priors.test.mjs",
     "test:statcast-mechanics-readiness": "tsx --test scripts/statcast-mechanics-readiness.test.mts",

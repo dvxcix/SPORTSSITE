@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getTeamColor, getTeamSecondaryColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
-import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore } from '@slipsurge/core/mlbParks'
+import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore, windFieldLabel } from '@slipsurge/core/mlbParks'
 import { ParkShape, WindCanvas, WIND_CANVAS_SIZE, hexToRgba, type WeatherGame } from '@/components/weather/WeatherLabClient'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { BattedBallSprayChart, type SprayPitchRow } from '@/components/players/BattedBallSprayChart'
@@ -11,15 +11,17 @@ import { BattedBallSprayChart, type SprayPitchRow } from '@/components/players/B
 // here rather than rebuilt — one game's card out of that page's own
 // per-date fetch, cached per date since every batter row expanded for the
 // same game asks for the same data.
-const weatherCache = new Map<string, Promise<WeatherGame[]>>()
+const WEATHER_REFRESH_MS = 5 * 60_000
+const weatherCache = new Map<string, { expiresAt: number; promise: Promise<WeatherGame[]> }>()
 export function fetchWeatherCached(date: string) {
-  let p = weatherCache.get(date)
+  const cached = weatherCache.get(date)
+  let p = cached && cached.expiresAt > Date.now() ? cached.promise : undefined
   if (!p) {
-    p = fetch(`/api/weather-lab?date=${date}`)
+    p = fetch(`/api/weather-lab?date=${date}`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(d => d.games ?? [])
       .catch(() => [])
-    weatherCache.set(date, p)
+    weatherCache.set(date, { expiresAt: Date.now() + WEATHER_REFRESH_MS, promise: p })
   }
   return p
 }
@@ -29,16 +31,26 @@ export function GameWeatherSummary({ gamePk, date, venue }: { gamePk: string; da
 
   useEffect(() => {
     let cancelled = false
-    fetchWeatherCached(date).then(value => { if (!cancelled) setGames(value) })
-    return () => { cancelled = true }
+    const load = () => fetchWeatherCached(date).then(value => { if (!cancelled) setGames(value) })
+    const refreshVisible = () => { if (document.visibilityState === 'visible') void load() }
+    void load()
+    const interval = window.setInterval(() => void load(), WEATHER_REFRESH_MS)
+    window.addEventListener('focus', refreshVisible)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshVisible)
+      document.removeEventListener('visibilitychange', refreshVisible)
+    }
   }, [date])
 
   const game = games?.find(item => String(item.gamePk) === String(gamePk))
   const hour = game?.hours?.[0]
-  const sheltered = game ? game.park.roof !== 'open' : false
+  const sheltered = game ? game.roofStatus === 'closed' || game.roofStatus === 'fixed' : false
   const directions = hour?.windDirDeg != null ? compassFromTo(hour.windDirDeg) : null
   const conditions = sheltered
-    ? game?.park.roof === 'dome' ? 'Fixed roof' : 'Roof protected'
+    ? game?.roofStatus === 'fixed' ? 'Fixed roof' : 'Roof closed'
     : hour?.windMph != null ? `${Math.round(hour.windMph)} mph${directions ? ` to ${directions.to}` : ''}` : 'Weather pending'
   const temperature = hour?.tempF != null ? `${Math.round(hour.tempF)}°F` : null
 
@@ -69,8 +81,18 @@ export function GameWeatherCard({
   useEffect(() => {
     let cancelled = false
     setGames(null)
-    fetchWeatherCached(date).then(g => { if (!cancelled) setGames(g) })
-    return () => { cancelled = true }
+    const load = () => fetchWeatherCached(date).then(value => { if (!cancelled) setGames(value) })
+    const refreshVisible = () => { if (document.visibilityState === 'visible') void load() }
+    void load()
+    const interval = window.setInterval(() => void load(), WEATHER_REFRESH_MS)
+    window.addEventListener('focus', refreshVisible)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshVisible)
+      document.removeEventListener('visibilitychange', refreshVisible)
+    }
   }, [date])
 
   if (games === null) return null
@@ -81,8 +103,9 @@ export function GameWeatherCard({
   const teamPrimary = getTeamColor(game.homeAbbr)
   const teamSecondary = getTeamSecondaryColor(game.homeAbbr)
   const logoUrl = getTeamLogoUrl(game.homeAbbr)
-  const isSheltered = game.park.roof !== 'open'
+  const isSheltered = game.roofStatus === 'closed' || game.roofStatus === 'fixed'
   const dirs = h?.windDirDeg != null ? compassFromTo(h.windDirDeg) : null
+  const fieldWind = windFieldLabel(h?.windDirDeg ?? null, game.park.orientationDeg)
   const hrWeather = hrWeatherScore({
     tempF: h?.tempF ?? null,
     humidity: h?.humidity ?? null,
@@ -114,6 +137,7 @@ export function GameWeatherCard({
               deg={h?.windDirDeg ?? null}
               mph={h?.windMph ?? null}
               color={hrWindColor(h?.windDirDeg ?? null, h?.windMph ?? null, game.park.orientationDeg)}
+              orientationDeg={game.park.orientationDeg}
             />
           ) : undefined}
         />
@@ -139,12 +163,13 @@ export function GameWeatherCard({
             deg={h?.windDirDeg ?? null}
             mph={h?.windMph ?? null}
             color={hrWindColor(h?.windDirDeg ?? null, h?.windMph ?? null, game.park.orientationDeg)}
+            orientationDeg={game.park.orientationDeg}
           />
         )}
         {isSheltered && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: '#eab308' }}>
-              {game.park.roof === 'dome' ? 'Fixed Roof' : 'Retractable Roof'}
+              {game.roofStatus === 'fixed' ? 'Fixed Roof' : 'Roof Closed'}
             </span>
           </div>
         )}
@@ -157,7 +182,8 @@ export function GameWeatherCard({
         <div className="is-wind">
           <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>WIND</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.windMph != null ? `${h.windMph.toFixed(1)} mph` : '—'}</div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} to ${dirs.to}` : '—'}</div>
+          <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{dirs ? `${dirs.from} to ${dirs.to}` : '-'}</div>
+          <div style={{ fontSize: 8, color: hrWeather.color, fontWeight: 800 }}>{fieldWind ?? '-'}</div>
         </div>
         <div className="is-temp" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>TEMP</div>
@@ -170,6 +196,15 @@ export function GameWeatherCard({
           <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em' }}>HUMIDITY</div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{h?.humidity != null ? `${Math.round(h.humidity)}%` : '—'}</div>
         </div>
+      </div>
+
+      {game.roofStatus === 'unknown' && (
+        <div style={{ padding: '0 10px 2px', color: '#fbbf24', fontSize: 8, fontWeight: 850, textAlign: 'center' }}>
+          ROOF STATUS PENDING · OUTDOOR FORECAST SHOWN
+        </div>
+      )}
+      <div style={{ padding: '2px 10px 0', color: 'var(--text-3)', fontSize: 8, textAlign: 'center' }}>
+        {game.weatherMode === 'live' ? 'Live conditions' : 'Game-time forecast'} · updated {new Date(game.weatherUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
       </div>
 
       <Tooltip content={hrWeather.label}>

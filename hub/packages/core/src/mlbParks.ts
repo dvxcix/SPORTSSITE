@@ -13,8 +13,8 @@ export interface ParkInfo {
   // Compass bearing (degrees, 0=N clockwise) from home plate toward center
   // field. Needed to tell "blowing out" from "blowing in" — a due-east wind
   // means very different things at a park facing NE vs one facing SW.
-  // Approximate published orientations, not surveyed values; good enough
-  // for an at-a-glance heat read, not a precise carry model.
+  // MLB Stats API venue.location.azimuthAngle. The live venue payload is
+  // preferred by Weather Lab; these values are its outage-safe fallback.
   orientationDeg: number
 }
 
@@ -30,44 +30,72 @@ export interface ParkInfo {
 // mlbTeamColors.ts already takes — is simpler here than introducing a
 // canonicalization function for a lookup this small.
 export const MLB_PARKS: Record<string, ParkInfo> = {
-  ARI: { name: 'Chase Field', city: 'Phoenix', lat: 33.4453, lon: -112.0667, roof: 'retractable', orientationDeg: 5 },
-  AZ: { name: 'Chase Field', city: 'Phoenix', lat: 33.4453, lon: -112.0667, roof: 'retractable', orientationDeg: 5 },
-  ATL: { name: 'Truist Park', city: 'Atlanta', lat: 33.8908, lon: -84.4678, roof: 'open', orientationDeg: 65 },
-  BAL: { name: 'Oriole Park at Camden Yards', city: 'Baltimore', lat: 39.2839, lon: -76.6217, roof: 'open', orientationDeg: 30 },
+  ARI: { name: 'Chase Field', city: 'Phoenix', lat: 33.4453, lon: -112.0667, roof: 'retractable', orientationDeg: 0 },
+  AZ: { name: 'Chase Field', city: 'Phoenix', lat: 33.4453, lon: -112.0667, roof: 'retractable', orientationDeg: 0 },
+  ATL: { name: 'Truist Park', city: 'Atlanta', lat: 33.8908, lon: -84.4678, roof: 'open', orientationDeg: 145 },
+  BAL: { name: 'Oriole Park at Camden Yards', city: 'Baltimore', lat: 39.2839, lon: -76.6217, roof: 'open', orientationDeg: 31 },
   BOS: { name: 'Fenway Park', city: 'Boston', lat: 42.3467, lon: -71.0972, roof: 'open', orientationDeg: 45 },
-  CHC: { name: 'Wrigley Field', city: 'Chicago', lat: 41.9484, lon: -87.6553, roof: 'open', orientationDeg: 30 },
-  CWS: { name: 'Rate Field', city: 'Chicago', lat: 41.8299, lon: -87.6338, roof: 'open', orientationDeg: 52 },
-  CHW: { name: 'Rate Field', city: 'Chicago', lat: 41.8299, lon: -87.6338, roof: 'open', orientationDeg: 52 },
-  CIN: { name: 'Great American Ball Park', city: 'Cincinnati', lat: 39.0979, lon: -84.5066, roof: 'open', orientationDeg: 90 },
-  CLE: { name: 'Progressive Field', city: 'Cleveland', lat: 41.4962, lon: -81.6852, roof: 'open', orientationDeg: 5 },
-  COL: { name: 'Coors Field', city: 'Denver', lat: 39.7559, lon: -104.9942, roof: 'open', orientationDeg: 25 },
+  CHC: { name: 'Wrigley Field', city: 'Chicago', lat: 41.9484, lon: -87.6553, roof: 'open', orientationDeg: 37 },
+  CWS: { name: 'Rate Field', city: 'Chicago', lat: 41.8299, lon: -87.6338, roof: 'open', orientationDeg: 127 },
+  CHW: { name: 'Rate Field', city: 'Chicago', lat: 41.8299, lon: -87.6338, roof: 'open', orientationDeg: 127 },
+  CIN: { name: 'Great American Ball Park', city: 'Cincinnati', lat: 39.0979, lon: -84.5066, roof: 'open', orientationDeg: 122 },
+  CLE: { name: 'Progressive Field', city: 'Cleveland', lat: 41.4962, lon: -81.6852, roof: 'open', orientationDeg: 0 },
+  COL: { name: 'Coors Field', city: 'Denver', lat: 39.7559, lon: -104.9942, roof: 'open', orientationDeg: 4 },
   DET: { name: 'Comerica Park', city: 'Detroit', lat: 42.339, lon: -83.0485, roof: 'open', orientationDeg: 150 },
-  HOU: { name: 'Daikin Park', city: 'Houston', lat: 29.7573, lon: -95.3555, roof: 'retractable', orientationDeg: 20 },
-  KC: { name: 'Kauffman Stadium', city: 'Kansas City', lat: 39.0517, lon: -94.4803, roof: 'open', orientationDeg: 75 },
-  KCR: { name: 'Kauffman Stadium', city: 'Kansas City', lat: 39.0517, lon: -94.4803, roof: 'open', orientationDeg: 75 },
-  LAA: { name: 'Angel Stadium', city: 'Anaheim', lat: 33.8003, lon: -117.8827, roof: 'open', orientationDeg: 20 },
-  LAD: { name: 'Dodger Stadium', city: 'Los Angeles', lat: 34.0739, lon: -118.24, roof: 'open', orientationDeg: 25 },
-  MIA: { name: 'loanDepot park', city: 'Miami', lat: 25.7781, lon: -80.2196, roof: 'retractable', orientationDeg: 30 },
-  MIL: { name: 'American Family Field', city: 'Milwaukee', lat: 43.028, lon: -87.9712, roof: 'retractable', orientationDeg: 20 },
-  MIN: { name: 'Target Field', city: 'Minneapolis', lat: 44.9817, lon: -93.2776, roof: 'open', orientationDeg: 96 },
-  NYM: { name: 'Citi Field', city: 'New York', lat: 40.7571, lon: -73.8458, roof: 'open', orientationDeg: 30 },
+  HOU: { name: 'Daikin Park', city: 'Houston', lat: 29.7573, lon: -95.3555, roof: 'retractable', orientationDeg: 343 },
+  KC: { name: 'Kauffman Stadium', city: 'Kansas City', lat: 39.0517, lon: -94.4803, roof: 'open', orientationDeg: 46 },
+  KCR: { name: 'Kauffman Stadium', city: 'Kansas City', lat: 39.0517, lon: -94.4803, roof: 'open', orientationDeg: 46 },
+  LAA: { name: 'Angel Stadium', city: 'Anaheim', lat: 33.8003, lon: -117.8827, roof: 'open', orientationDeg: 43.61 },
+  LAD: { name: 'Dodger Stadium', city: 'Los Angeles', lat: 34.0739, lon: -118.24, roof: 'open', orientationDeg: 26 },
+  MIA: { name: 'loanDepot park', city: 'Miami', lat: 25.7781, lon: -80.2196, roof: 'retractable', orientationDeg: 128 },
+  MIL: { name: 'American Family Field', city: 'Milwaukee', lat: 43.028, lon: -87.9712, roof: 'retractable', orientationDeg: 129 },
+  MIN: { name: 'Target Field', city: 'Minneapolis', lat: 44.9817, lon: -93.2776, roof: 'open', orientationDeg: 129 },
+  NYM: { name: 'Citi Field', city: 'New York', lat: 40.7571, lon: -73.8458, roof: 'open', orientationDeg: 13 },
   NYY: { name: 'Yankee Stadium', city: 'New York', lat: 40.8296, lon: -73.9262, roof: 'open', orientationDeg: 75 },
-  ATH: { name: 'Sutter Health Park', city: 'West Sacramento', lat: 38.5805, lon: -121.5133, roof: 'open', orientationDeg: 45 },
-  OAK: { name: 'Sutter Health Park', city: 'West Sacramento', lat: 38.5805, lon: -121.5133, roof: 'open', orientationDeg: 45 },
-  PHI: { name: 'Citizens Bank Park', city: 'Philadelphia', lat: 39.9061, lon: -75.1665, roof: 'open', orientationDeg: 15 },
-  PIT: { name: 'PNC Park', city: 'Pittsburgh', lat: 40.4469, lon: -80.0057, roof: 'open', orientationDeg: 30 },
-  SD: { name: 'Petco Park', city: 'San Diego', lat: 32.7073, lon: -117.1566, roof: 'open', orientationDeg: 350 },
-  SDP: { name: 'Petco Park', city: 'San Diego', lat: 32.7073, lon: -117.1566, roof: 'open', orientationDeg: 350 },
-  SF: { name: 'Oracle Park', city: 'San Francisco', lat: 37.7786, lon: -122.3893, roof: 'open', orientationDeg: 335 },
-  SFG: { name: 'Oracle Park', city: 'San Francisco', lat: 37.7786, lon: -122.3893, roof: 'open', orientationDeg: 335 },
-  SEA: { name: 'T-Mobile Park', city: 'Seattle', lat: 47.5914, lon: -122.3325, roof: 'retractable', orientationDeg: 45 },
-  STL: { name: 'Busch Stadium', city: 'St. Louis', lat: 38.6226, lon: -90.1928, roof: 'open', orientationDeg: 35 },
-  TB: { name: 'Tropicana Field', city: 'St. Petersburg', lat: 27.7683, lon: -82.6534, roof: 'dome', orientationDeg: 45 },
-  TBR: { name: 'Tropicana Field', city: 'St. Petersburg', lat: 27.7683, lon: -82.6534, roof: 'dome', orientationDeg: 45 },
-  TEX: { name: 'Globe Life Field', city: 'Arlington', lat: 32.7473, lon: -97.0842, roof: 'retractable', orientationDeg: 25 },
-  TOR: { name: 'Rogers Centre', city: 'Toronto', lat: 43.6414, lon: -79.3894, roof: 'retractable', orientationDeg: 0 },
-  WSH: { name: 'Nationals Park', city: 'Washington', lat: 38.873, lon: -77.0074, roof: 'open', orientationDeg: 30 },
-  WSN: { name: 'Nationals Park', city: 'Washington', lat: 38.873, lon: -77.0074, roof: 'open', orientationDeg: 30 },
+  ATH: { name: 'Sutter Health Park', city: 'West Sacramento', lat: 38.5805, lon: -121.5133, roof: 'open', orientationDeg: 46 },
+  OAK: { name: 'Sutter Health Park', city: 'West Sacramento', lat: 38.5805, lon: -121.5133, roof: 'open', orientationDeg: 46 },
+  PHI: { name: 'Citizens Bank Park', city: 'Philadelphia', lat: 39.9061, lon: -75.1665, roof: 'open', orientationDeg: 9 },
+  PIT: { name: 'PNC Park', city: 'Pittsburgh', lat: 40.4469, lon: -80.0057, roof: 'open', orientationDeg: 116 },
+  SD: { name: 'Petco Park', city: 'San Diego', lat: 32.7073, lon: -117.1566, roof: 'open', orientationDeg: 0 },
+  SDP: { name: 'Petco Park', city: 'San Diego', lat: 32.7073, lon: -117.1566, roof: 'open', orientationDeg: 0 },
+  SF: { name: 'Oracle Park', city: 'San Francisco', lat: 37.7786, lon: -122.3893, roof: 'open', orientationDeg: 85 },
+  SFG: { name: 'Oracle Park', city: 'San Francisco', lat: 37.7786, lon: -122.3893, roof: 'open', orientationDeg: 85 },
+  SEA: { name: 'T-Mobile Park', city: 'Seattle', lat: 47.5914, lon: -122.3325, roof: 'retractable', orientationDeg: 49 },
+  STL: { name: 'Busch Stadium', city: 'St. Louis', lat: 38.6226, lon: -90.1928, roof: 'open', orientationDeg: 62 },
+  TB: { name: 'Tropicana Field', city: 'St. Petersburg', lat: 27.7683, lon: -82.6534, roof: 'dome', orientationDeg: 359 },
+  TBR: { name: 'Tropicana Field', city: 'St. Petersburg', lat: 27.7683, lon: -82.6534, roof: 'dome', orientationDeg: 359 },
+  TEX: { name: 'Globe Life Field', city: 'Arlington', lat: 32.7473, lon: -97.0842, roof: 'retractable', orientationDeg: 30 },
+  TOR: { name: 'Rogers Centre', city: 'Toronto', lat: 43.6414, lon: -79.3894, roof: 'retractable', orientationDeg: 345 },
+  WSH: { name: 'Nationals Park', city: 'Washington', lat: 38.873, lon: -77.0074, roof: 'open', orientationDeg: 28 },
+  WSN: { name: 'Nationals Park', city: 'Washington', lat: 38.873, lon: -77.0074, roof: 'open', orientationDeg: 28 },
+}
+
+export function normalizeBearing(degrees: number): number {
+  return ((degrees % 360) + 360) % 360
+}
+
+// Meteorological direction is the direction wind comes FROM. This returns
+// the true-north bearing the air is travelling TOWARD.
+export function windTowardBearing(windDirDeg: number): number {
+  return normalizeBearing(windDirDeg + 180)
+}
+
+// Screen/field-relative direction with 0 = straight out to CF, +90 = toward
+// RF, -90 = toward LF, and +/-180 = straight in from CF.
+export function windRelativeToField(windDirDeg: number, orientationDeg: number): number {
+  const delta = normalizeBearing(windTowardBearing(windDirDeg) - orientationDeg)
+  return delta > 180 ? delta - 360 : delta
+}
+
+export function windFieldLabel(windDirDeg: number | null, orientationDeg: number): string | null {
+  if (windDirDeg == null) return null
+  const relative = windRelativeToField(windDirDeg, orientationDeg)
+  const abs = Math.abs(relative)
+  if (abs <= 22.5) return 'OUT TO CF'
+  if (abs <= 67.5) return relative > 0 ? 'OUT TO RF' : 'OUT TO LF'
+  if (abs <= 112.5) return relative > 0 ? 'LF TO RF' : 'RF TO LF'
+  if (abs <= 157.5) return relative > 0 ? 'IN FROM LF' : 'IN FROM RF'
+  return 'IN FROM CF'
 }
 
 // How aligned the wind is with THIS park's actual center-field orientation,
@@ -78,8 +106,7 @@ export const MLB_PARKS: Record<string, ParkInfo> = {
 // silently drift apart on the same underlying alignment math.
 function windAlignmentScore(windDirDeg: number | null, windMph: number | null, orientationDeg: number): number {
   if (windDirDeg == null) return 0
-  const blowsTo = windDirDeg + 180
-  const rad = ((blowsTo - orientationDeg) * Math.PI) / 180
+  const rad = (windRelativeToField(windDirDeg, orientationDeg) * Math.PI) / 180
   const alignment = Math.cos(rad) // +1 = dead out, -1 = dead in, 0 = crosswind
   const magnitude = Math.min(1, (windMph ?? 0) / 18)
   return alignment * magnitude // -1..1
@@ -118,7 +145,7 @@ export interface HrWeatherInput {
   windDirDeg: number | null
   windMph: number | null
   orientationDeg: number
-  sheltered: boolean // dome, or a retractable roof (we don't have live open/closed status)
+  sheltered: boolean // fixed roof, or a retractable roof confirmed closed by MLB
 }
 
 export interface HrWeatherResult {
