@@ -13,6 +13,8 @@ const modalSurfaceSource = readFileSync(new URL('../src/components/ui/ModalSurfa
 const watchlistSource = readFileSync(new URL('../src/components/dugout/WatchlistPanel.tsx', import.meta.url), 'utf8')
 const picksSource = readFileSync(new URL('../src/components/dugout/MyPicksPanel.tsx', import.meta.url), 'utf8')
 const matrixSource = readFileSync(new URL('../src/components/dugout/CustomMatrixPanel.tsx', import.meta.url), 'utf8')
+const utilityDockSource = readFileSync(new URL('../src/components/layout/UtilityDock.tsx', import.meta.url), 'utf8')
+const globalStyles = readFileSync(new URL('../src/app/globals.css', import.meta.url), 'utf8')
 
 test('Dugout workspace fluidly fills ultrawide displays', () => {
   const pageRule = pageStyles.match(/\.page\{([^}]*)\}/)?.[1] ?? ''
@@ -211,8 +213,21 @@ test('game intelligence and lineup navigation explain themselves visually', () =
   assert.ok(source.includes('<small>HR + TEAM WIN</small>'))
   assert.ok(source.includes('<small>YOUR SAVED READS</small>'))
   assert.ok(source.includes('className="dugout-intel-matchup"'))
-  assert.match(source, /grid-template-areas:"weather state" "matchup saved" "market market"/)
+  assert.match(source, /grid-template-areas:"weather state" "matchup saved"/)
+  assert.match(source, /\.dugout-market-snapshot\{position:fixed;left:50%;bottom:calc\(max\(10px,env\(safe-area-inset-bottom,0px\)\) \+ 70px\)/)
+  assert.match(source, /body:has\(\.dugout-market-snapshot\) \.ss-utility-dock\{bottom:calc\(var\(--mobile-dock-clearance\) \+ 48px\)\}/)
   assert.match(source, /\.dugout-intel-team-ml,\.dugout-intel-book,\.dugout-intel-window,\.dugout-intel-nohr\{display:none!important\}/)
+})
+
+test('touch foldables retain the complete mobile Dugout and shell behavior when unfolded', () => {
+  const foldQuery = '(max-width:1024px) and (any-pointer:coarse)'
+  assert.ok(source.includes(`@media(max-width:640px),${foldQuery}`))
+  assert.ok(parkSource.includes(`@media(max-width:640px),${foldQuery}`))
+  assert.ok(utilityDockSource.includes('(max-width: 1024px) and (any-pointer: coarse)'))
+  assert.ok(globalStyles.includes('@media (max-width: 1024px) and (any-pointer: coarse)'))
+  assert.ok(globalStyles.includes('.ss-mobile-dock.md\\:hidden'))
+  assert.ok(globalStyles.includes('.ss-site-sidebar.-translate-x-full'))
+  assert.ok(globalStyles.includes('.ss-site-topbar .md\\:hidden'))
 })
 
 test('comparison and park surfaces use deliberate high-contrast heat treatments', () => {

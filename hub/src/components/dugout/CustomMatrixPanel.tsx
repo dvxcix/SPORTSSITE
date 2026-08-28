@@ -1048,7 +1048,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           overflow-y: auto;
           padding: 18px;
         }
-        @media (max-width: 767px) {
+        @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {
           .matrix-editor-backdrop {
             align-items: flex-end;
             padding: max(8px, env(safe-area-inset-top, 0px)) 0 0;
@@ -1345,7 +1345,7 @@ export function MatrixButton() {
 
   return (
     <>
-      <style>{`.matrix-fab { position: fixed; right: 20px; bottom: calc(136px + env(safe-area-inset-bottom, 0px)); z-index: 50; } @media (max-width: 767px) { .matrix-fab { bottom: calc(204px + env(safe-area-inset-bottom, 0px)); } }`}</style>
+      <style>{`.matrix-fab { position: fixed; right: 20px; bottom: calc(136px + env(safe-area-inset-bottom, 0px)); z-index: 50; } @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) { .matrix-fab { bottom: calc(204px + env(safe-area-inset-bottom, 0px)); } }`}</style>
       <button
         ref={fab.ref} className="matrix-fab" title="Drag to move" onClick={() => setOpen(true)} {...fab.handlers}
         style={{

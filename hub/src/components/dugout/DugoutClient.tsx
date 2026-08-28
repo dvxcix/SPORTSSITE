@@ -4721,7 +4721,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
       </table>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
       <style>{`
-        @media(max-width:640px){
+        @media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){
           .daily-recap-board-scroll{max-height:none!important;height:auto!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;border-radius:8px!important;-webkit-overflow-scrolling:touch}
           .daily-recap-board-scroll .dugout-dense-table{font-size:12px!important}
           .daily-recap-board-scroll .dugout-dense-table > tbody > tr > td{padding-top:8px!important;padding-bottom:8px!important}
@@ -5432,8 +5432,9 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-board-enter.has-inspector{padding-right:0}
           .dg-player-drilldown-portal>.dg-player-drilldown{width:calc(100vw - 32px);height:calc(100dvh - 32px)}
         }
-        @media(max-width:640px){
-          .dugout-board-enter{--dg-control-h:38px;max-width:100%;overflow:visible}
+        @media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){
+          .dugout-board-enter{--dg-control-h:38px;max-width:100%;overflow:visible;padding-bottom:58px;animation:none;transform:none}
+          .dugout-board-enter .md\:hidden{display:flex!important}
           .dugout-board-enter.has-inspector{padding-right:0}
           .dugout-command-bar{position:relative;top:auto;display:block;min-height:0;padding:5px;margin-bottom:6px;border-radius:12px;overflow:visible}
           .dugout-command-navigation,.dugout-command-matchup{display:none}
@@ -5448,13 +5449,15 @@ export function DugoutClient({ date }: { date: string }) {
           .dugout-window-toggle button span{display:none}.dugout-window-toggle button i{display:inline;font-size:9px;font-style:normal;font-weight:950}
           .dugout-tools-popover{position:absolute;left:0;right:0;top:calc(100% + 5px);display:grid;grid-template-columns:1fr;max-width:none;overflow:visible;padding:8px}
           .dugout-tools-popover>.dugout-mode-buttons{overflow-x:auto}.dugout-tools-popover>button{width:100%}
-          .dugout-intelligence-strip{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(112px,.85fr);grid-template-areas:"weather state" "matchup saved" "market market";gap:5px;margin-bottom:6px;overflow:visible}
+          .dugout-intelligence-strip{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(112px,.85fr);grid-template-areas:"weather state" "matchup saved";gap:5px;margin-bottom:6px;overflow:visible}
           .dugout-intelligence-strip>span,.dugout-market-snapshot{min-width:0;min-height:56px;padding:8px 10px;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
-          .dugout-weather-summary{grid-area:weather}.dugout-intel-state{grid-area:state}.dugout-intel-matchup{grid-area:matchup}.dugout-intel-saved{grid-area:saved}.dugout-market-snapshot{grid-area:market}
+          .dugout-weather-summary{grid-area:weather}.dugout-intel-state{grid-area:state}.dugout-intel-matchup{grid-area:matchup}.dugout-intel-saved{grid-area:saved}
           .dugout-intel-team-ml,.dugout-intel-book,.dugout-intel-window,.dugout-intel-nohr{display:none!important}
           .dugout-intelligence-strip small{font-size:8px;letter-spacing:.07em}.dugout-intelligence-strip strong{font-size:11px;line-height:1.15}.dugout-intelligence-strip em{font-size:8px;line-height:1.2}
           .dugout-intel-matchup strong{font-size:10px}.dugout-intel-matchup strong img{width:16px!important;height:16px!important}.dugout-intel-saved strong{white-space:normal;line-height:1.2}
-          .dugout-market-snapshot{min-height:52px;padding-top:7px;padding-bottom:7px}.dugout-market-snapshot>span{gap:5px}.dugout-market-snapshot em{display:none}
+          .dugout-market-snapshot{position:fixed;left:50%;bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 70px);z-index:calc(var(--layer-floating) - 1);display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:10px;width:min(calc(100vw - 20px),470px);min-height:48px;margin:0;padding:7px 12px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));border-radius:13px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 98%,#0c2018),color-mix(in srgb,var(--surface-2) 96%,transparent));box-shadow:0 -8px 28px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.055);backdrop-filter:blur(20px);transform:translateX(-50%);pointer-events:auto}.dugout-market-snapshot>small{font-size:8px;white-space:nowrap}.dugout-market-snapshot>span{gap:6px}.dugout-market-snapshot>span b{font-size:8px}.dugout-market-snapshot em{display:none}
+          body:has(.dugout-market-snapshot) .ss-utility-dock{bottom:calc(var(--mobile-dock-clearance) + 48px)}
+          body.ss-modal-open .dugout-market-snapshot{opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,24px)}
           .dugout-timeline-phases[data-count="0"],.dugout-timeline-phases[data-count="1"],.dugout-timeline-phases[data-count="2"]{display:none}
           .dugout-timeline-phases button,.dugout-group-nav button{min-height:34px;padding:0 10px;font-size:9px}
           .dugout-related-market-control{gap:5px;margin-bottom:5px;padding:4px 5px 4px 8px;border-radius:9px}.dugout-related-market-control>span small{display:none}.dugout-related-market-control>span strong{font-size:9px}.dugout-related-market-control>div{gap:2px;padding:2px}.dugout-related-market-control button{min-height:32px;padding:0 8px;font-size:8px}.dugout-related-market-control button svg{width:12px;height:12px}

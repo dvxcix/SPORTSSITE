@@ -40,7 +40,7 @@ export function UtilityDock({ children }: { children: React.ReactNode }) {
         }
         .ss-utility-dock-toggle:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,0,0,.48), 0 0 30px rgba(180,255,77,.25); }
         .ss-utility-dock.is-expanded .ss-utility-dock-toggle { border-radius: 999px; }
-        @media (max-width: 767px) {
+        @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) {
           .ss-utility-dock {
             right: 14px;
             bottom: calc(var(--mobile-dock-clearance) - 8px);

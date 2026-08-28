@@ -765,6 +765,30 @@ img { max-width: 100%; }
   .ss-mobile-scroll-clearance { padding-bottom: var(--mobile-dock-clearance) !important; scroll-padding-bottom: var(--mobile-dock-clearance); }
 }
 
+/* An unfolded phone can expose a tablet-width CSS viewport. Treat touch-only
+   foldables as mobile through 1024px so their drawer, bottom dock, safe-area
+   clearance, and touch toolbars do not silently switch to desktop behavior. */
+@media (max-width: 1024px) and (any-pointer: coarse) {
+  html { scroll-padding-bottom: var(--mobile-dock-clearance); }
+  .ss-site-main,
+  .ss-page { padding-bottom: var(--mobile-dock-clearance); }
+  .ss-mobile-scroll-clearance { padding-bottom: var(--mobile-dock-clearance) !important; scroll-padding-bottom: var(--mobile-dock-clearance); }
+  .ss-responsive-toolbar > :is(button, a, select) { min-height: 42px; }
+  .ss-mobile-dock.md\:hidden,
+  .ss-mobile-sidebar-backdrop.md\:hidden,
+  .ss-sidebar-close.md\:hidden { display: block !important; }
+  .ss-site-topbar .md\:hidden { display: flex !important; }
+  .ss-site-sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    top: 0 !important;
+    z-index: 50 !important;
+  }
+  .ss-site-sidebar.-translate-x-full { transform: translateX(-100%) !important; }
+  .ss-site-sidebar.translate-x-0 { transform: translateX(0) !important; }
+  .ss-site-sidebar .hidden.md\:flex { display: none !important; }
+}
+
 /* Foldables and compact tablets have desktop-class viewport widths without
    enough header room for account copy. Keep the control icon-sized until the
    full desktop header can render without compressing the avatar. */

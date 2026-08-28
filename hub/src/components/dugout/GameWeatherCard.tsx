@@ -233,7 +233,7 @@ export function GameWeatherCard({
         .dugout-weather-metrics>div>div:nth-child(3){margin-top:2px;color:#cbd5e1!important;font-size:9px!important}
         .dugout-weather-score{display:flex;align-items:center;justify-content:center;gap:7px;margin:8px 10px 10px!important;min-height:42px;padding:7px 10px!important;border-radius:10px!important;background:rgba(15,23,42,.82)!important}
         .dugout-weather-score span:first-child{color:#cbd5e1!important;font-size:9px!important;font-weight:950!important;letter-spacing:.08em!important}
-        @media(max-width:640px){.dugout-park-card{border-radius:13px}.dugout-park-card-head{grid-template-columns:minmax(0,1fr);padding:11px 12px}.dugout-park-card-head small{grid-column:1;grid-row:auto;max-width:none}.dugout-park-visual{min-height:205px;padding:6px}.dugout-park-canvas{transform:scale(.9)}.dugout-weather-metrics{gap:5px!important;padding:8px 8px 0}.dugout-weather-metrics>div{padding:8px 7px}.dugout-weather-metrics>div>div:nth-child(2){font-size:12px!important}.dugout-weather-score{margin:7px 8px 8px!important}}
+        @media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){.dugout-park-card{border-radius:13px}.dugout-park-card-head{grid-template-columns:minmax(0,1fr);padding:11px 12px}.dugout-park-card-head small{grid-column:1;grid-row:auto;max-width:none}.dugout-park-visual{min-height:205px;padding:6px}.dugout-park-canvas{transform:scale(.9)}.dugout-weather-metrics{gap:5px!important;padding:8px 8px 0}.dugout-weather-metrics>div{padding:8px 7px}.dugout-weather-metrics>div>div:nth-child(2){font-size:12px!important}.dugout-weather-score{margin:7px 8px 8px!important}}
       `}</style>
     </section>
   )

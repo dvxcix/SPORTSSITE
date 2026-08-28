@@ -160,7 +160,7 @@ export function WatchlistButton() {
     <>
       <style>{`
         .wl-fab { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
-        @media (max-width: 767px) { .wl-fab { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); } }
+        @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) { .wl-fab { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); } }
       `}</style>
       <button
         ref={fab.ref}
