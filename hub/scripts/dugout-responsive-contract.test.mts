@@ -108,9 +108,12 @@ test('Daily Recap has a responsive market scrubber and never doubles Statcast wi
   assert.ok(recapSource.includes('/api/odds-terminal?'))
   assert.ok(recapSource.includes('withDugoutTimelinePrices'))
   assert.ok(recapSource.includes('const displayRows = useMemo(() =>'))
-  assert.match(recapSource, /\.daily-recap-board-scroll \.dugout-window-toggle i\{display:none\}/)
-  assert.match(recapSource, /\.daily-recap-board-scroll \.dugout-window-toggle button span\{display:none\}/)
-  assert.match(recapSource, /\.daily-recap-board-scroll \.dugout-window-toggle button i\{display:inline/)
+  const controlsIndex = recapSource.indexOf('className="daily-recap-controls"')
+  const boardIndex = recapSource.indexOf('className="daily-recap-board-scroll"')
+  assert.ok(controlsIndex >= 0 && controlsIndex < boardIndex, 'page controls must remain above and outside the scrolling board')
+  assert.match(recapSource, /\.daily-recap-controls \.dugout-window-toggle i\{display:none\}/)
+  assert.match(recapSource, /\.daily-recap-controls \.dugout-window-toggle button span\{display:none\}/)
+  assert.match(recapSource, /\.daily-recap-controls \.dugout-window-toggle button i\{display:inline/)
 })
 
 test('temporary presets preserve a member custom order and never reveal hidden columns', () => {

@@ -93,7 +93,7 @@ export function DailyRecapClient() {
 
       {error && <div style={{ color: '#f87171', fontSize: 13 }}>{error}</div>}
       {!error && data === null && <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>}
-      {!error && data !== null && <div className="min-w-0 overflow-x-auto overscroll-x-contain"><DailyRecapTable data={data} date={date} /></div>}
+      {!error && data !== null && <div className="min-w-0"><DailyRecapTable data={data} date={date} /></div>}
     </div>
   )
 }

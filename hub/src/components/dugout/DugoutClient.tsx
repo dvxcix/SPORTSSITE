@@ -4767,57 +4767,50 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
   }
 
   return (
-    <div
-      className="daily-recap-board-scroll"
-      style={{
-        overflow: 'auto', maxHeight: 'calc(100dvh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
-        borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
-        ['--dugout-header-top' as string]: '0px',
-      }}
-    >
-      <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
-        <tbody>
-          <tr>
-            <td
-              colSpan={renderedHeaderCells.length}
-              style={{
-                background: 'var(--surface-2)', padding: '7px 8px',
-                borderTop: '2px solid var(--accent)', borderBottom: '1px solid var(--border)',
-                position: 'sticky', top: 0, zIndex: 5,
-              }}
-            >
-              <div className="daily-recap-toolbar">
-                <span className="daily-recap-count">
-                  {hrRows.length} confirmed home run{hrRows.length === 1 ? '' : 's'}
-                </span>
-                <StatcastWindowToggle value={statcastWindow} onChange={setStatcastWindow} />
-                <div className="daily-recap-market-story" aria-label="Daily Recap market story">
-                  <div className="daily-recap-market-story-head">
-                    <strong>Market Story</strong>
-                    <span>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures` : 'Open / latest only'}</span>
-                  </div>
-                  <div className="daily-recap-market-story-track">
-                    <b className={selectedTimelineIndex === 0 ? 'is-active' : ''}>Open</b>
-                    <input
-                      type="range"
-                      aria-label="Scrub Daily Recap market captures"
-                      min={0}
-                      max={marketTimeline.length ? Math.max(0, marketTimeline.length - 1) : 1}
-                      step={1}
-                      value={marketTimeline.length ? (selectedTimelineIndex ?? marketTimeline.length - 1) : 1}
-                      disabled={marketHistoryLoading || marketTimeline.length < 2}
-                      onChange={event => setTimelineIndex(Number(event.currentTarget.value))}
-                    />
-                    <b className={selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? 'is-active' : ''}>
-                      {selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? timelineEndLabel : selectedTimelineLabel}
-                    </b>
-                  </div>
-                  <em>{selectedTimelineLabel}</em>
-                </div>
-              </div>
-            </td>
-          </tr>
-          <tr>{renderedHeaderCells}</tr>
+    <div className="daily-recap-surface">
+      <section className="daily-recap-controls" aria-label="Daily Recap controls">
+        <div className="daily-recap-market-story" aria-label="Daily Recap market story">
+          <div className="daily-recap-market-story-head">
+            <strong>Market Story</strong>
+            <span>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures` : 'Open / latest only'}</span>
+          </div>
+          <div className="daily-recap-market-story-track">
+            <b className={selectedTimelineIndex === 0 ? 'is-active' : ''}>Open</b>
+            <input
+              type="range"
+              aria-label="Scrub Daily Recap market captures"
+              min={0}
+              max={marketTimeline.length ? Math.max(0, marketTimeline.length - 1) : 1}
+              step={1}
+              value={marketTimeline.length ? (selectedTimelineIndex ?? marketTimeline.length - 1) : 1}
+              disabled={marketHistoryLoading || marketTimeline.length < 2}
+              onChange={event => setTimelineIndex(Number(event.currentTarget.value))}
+            />
+            <b className={selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? 'is-active' : ''}>
+              {selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? timelineEndLabel : selectedTimelineLabel}
+            </b>
+          </div>
+          <em>{selectedTimelineLabel}</em>
+        </div>
+        <div className="daily-recap-toolbar">
+          <span className="daily-recap-count">
+            {hrRows.length} confirmed home run{hrRows.length === 1 ? '' : 's'}
+          </span>
+          <StatcastWindowToggle value={statcastWindow} onChange={setStatcastWindow} />
+        </div>
+      </section>
+
+      <div
+        className="daily-recap-board-scroll"
+        style={{
+          overflow: 'auto', maxHeight: 'calc(100dvh - var(--banner-h, 0px) - var(--topbar-h) - 24px)',
+          borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8,
+          ['--dugout-header-top' as string]: '0px',
+        }}
+      >
+        <table className="dugout-dense-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 10, width: 'max-content', minWidth: '100%' }}>
+          <tbody>
+            <tr>{renderedHeaderCells}</tr>
           {displayRows.map(({ row, oppPitcher, pitcherTeamAbbr, gameInfo, pool }) => {
             const key = `hr-${row.mlb_id ?? row.name}-${gameInfo.game_pk}`
             return (
@@ -4836,14 +4829,17 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
               </React.Fragment>
             )
           })}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
       <style>{`
-        .daily-recap-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:min(100%,760px)}
+        .daily-recap-surface{min-width:0;width:100%}
+        .daily-recap-controls{display:grid;gap:8px;width:100%;margin:0 0 10px;padding:9px;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:12px;background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 5%,var(--surface)),var(--surface));box-shadow:0 12px 34px rgba(0,0,0,.16)}
+        .daily-recap-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-width:0}
         .daily-recap-count{font-size:12px;font-weight:900;color:var(--text-1);white-space:nowrap}
-        .daily-recap-board-scroll .dugout-window-toggle i{display:none}
-        .daily-recap-market-story{margin-left:auto;display:grid;grid-template-columns:auto minmax(240px,420px) auto;align-items:center;gap:5px 10px;min-width:min(100%,440px);padding:6px 9px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:9px;background:linear-gradient(105deg,color-mix(in srgb,var(--accent) 8%,var(--surface)),var(--surface))}
+        .daily-recap-controls .dugout-window-toggle i{display:none}
+        .daily-recap-market-story{display:grid;align-items:center;gap:5px 10px;width:100%;min-width:0;padding:7px 10px;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:9px;background:linear-gradient(105deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface))}
         .daily-recap-market-story-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
         .daily-recap-market-story-head strong{color:var(--accent);font-size:9px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
         .daily-recap-market-story-head span{overflow:hidden;color:var(--text-2);font-size:9px;font-weight:750;white-space:nowrap;text-overflow:ellipsis}
@@ -4856,14 +4852,15 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
         .daily-recap-market-story > em{grid-column:1/-1;justify-self:end;color:var(--text-2);font-size:9px;font-style:normal;font-weight:750}
         @media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){
           .daily-recap-board-scroll{max-height:none!important;height:auto!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;border-radius:8px!important;-webkit-overflow-scrolling:touch}
-          .daily-recap-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;min-width:calc(100vw - 44px);width:calc(100vw - 44px)}
+          .daily-recap-controls{gap:8px;padding:8px;border-radius:10px}
+          .daily-recap-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;width:100%}
           .daily-recap-count{font-size:11px}
-          .daily-recap-board-scroll .dugout-window-toggle{justify-self:end}
-          .daily-recap-board-scroll .dugout-window-toggle > span{display:none}
-          .daily-recap-board-scroll .dugout-window-toggle button{min-width:36px;min-height:34px;padding:4px 7px!important}
-          .daily-recap-board-scroll .dugout-window-toggle button span{display:none}
-          .daily-recap-board-scroll .dugout-window-toggle button i{display:inline;font-style:normal}
-          .daily-recap-market-story{grid-column:1/-1;margin-left:0;min-width:0;width:100%;box-sizing:border-box;padding:7px 9px}
+          .daily-recap-controls .dugout-window-toggle{justify-self:end}
+          .daily-recap-controls .dugout-window-toggle > span{display:none}
+          .daily-recap-controls .dugout-window-toggle button{min-width:36px;min-height:34px;padding:4px 7px!important}
+          .daily-recap-controls .dugout-window-toggle button span{display:none}
+          .daily-recap-controls .dugout-window-toggle button i{display:inline;font-style:normal}
+          .daily-recap-market-story{min-width:0;width:100%;padding:7px 9px}
           .daily-recap-market-story-track{grid-template-columns:36px minmax(120px,1fr) 42px;gap:6px}
           .daily-recap-market-story-track input{height:30px}
           .daily-recap-board-scroll .dugout-dense-table{font-size:12px!important}
