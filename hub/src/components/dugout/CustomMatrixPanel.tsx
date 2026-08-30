@@ -122,6 +122,7 @@ const ODDS_FIELDS: { key: string; label: string; deltaOnly?: boolean }[] = [
   { key: 'rbi1', label: '1+ RBI' },
   { key: 'rbi2', label: '2+ RBI' },
   { key: 'rbi3', label: '3+ RBI' },
+  { key: 'hrr', label: 'Hits + Runs + RBIs' },
   { key: 'tb2', label: '2+ Total Bases' },
   { key: 'tb3', label: '3+ Total Bases' },
   { key: 'tb4', label: '4+ Total Bases' },
@@ -164,7 +165,7 @@ const SAVANT_FIELDS: { key: string; label: string }[] = [
 // this player's own today-vs-his-season-average price deltas. Field keys
 // match the exact same ones evaluateDugoutSpecsFactor computes server-side
 // off the real props object — see matrixEngine.ts.
-const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boolean?: boolean }[] = [
+const DUGOUT_SPECS_FIELDS: FactorField[] = [
   { key: 'is_pwr', label: 'Is PWR ⚡?', boolean: true },
   { key: 'div', label: 'DIV (FD − Caesars FHR)', signed: true },
   { key: 'fhr_div_sa', label: 'FHR ÷ HR' },
@@ -180,6 +181,19 @@ const DUGOUT_SPECS_FIELDS: { key: string; label: string; signed?: boolean; boole
   { key: 'sa_div_tb4', label: 'HR ÷ TB4' },
   { key: 'sa_div_tb5', label: 'HR ÷ TB5' },
   { key: 'sa_div_hr2', label: 'HR ÷ 2HR' },
+  { key: 'fhr_div_sa_move', label: 'FHR / HR movement (open to now)', signed: true, movement: true },
+  { key: 'm_div_f_move', label: 'M / F movement (open to now)', signed: true, movement: true },
+  { key: 'pa1_div_sa_move', label: 'PA / HR movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_ml_move', label: 'HR / Parlay movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_rbi_move', label: 'HR / RBI movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_rbi2_move', label: 'HR / RBI2 movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_rbi3_move', label: 'HR / RBI3 movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_hrr_move', label: 'HR / HRR movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_tb_move', label: 'HR / TB2 movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_tb3_move', label: 'HR / TB3 movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_tb4_move', label: 'HR / TB4 movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_tb5_move', label: 'HR / TB5 movement (open to now)', signed: true, movement: true },
+  { key: 'sa_div_hr2_move', label: 'HR / 2HR movement (open to now)', signed: true, movement: true },
   { key: 'fhr_pct', label: 'FHR % (vs. season avg)', signed: true },
   { key: 'sa_pct', label: 'HR % (vs. season avg)', signed: true },
   // The board's own ❓ column — sportsbook rank minus Statcast-composite
@@ -291,7 +305,7 @@ export const OPERATOR_LABEL: Record<string, string> = {
   mm_trend: 'Trend across L1/L3/L5/L10',
 }
 
-export type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean }
+export type FactorField = { key: string; label: string; signed?: boolean; boolean?: boolean; movement?: boolean }
 const FIELDS_BY_CATEGORY: Record<MatrixFactor['category'], FactorField[]> = {
   odds: ODDS_FIELDS, dugout_specs: DUGOUT_SPECS_FIELDS, pitchlog_stat: STAT_FIELDS, savant_stat: SAVANT_FIELDS, picks: PICKS_FIELDS,
 }
@@ -300,6 +314,63 @@ export function fieldsForCategory(cat: MatrixFactor['category']): FactorField[] 
 }
 export function fieldLabel(cat: MatrixFactor['category'], key: string) {
   return fieldsForCategory(cat).find(f => f.key === key)?.label ?? key
+}
+
+type RatioMovementOperator = 'gte' | 'lte' | 'eq'
+type RatioMovementMode = 'down_at_least' | 'down_exactly' | 'up_at_least' | 'up_exactly' | 'flat'
+
+function ratioMovementMode(operator: string | null | undefined, value: number | null | undefined): RatioMovementMode {
+  if (operator === 'eq' && (value ?? 0) === 0) return 'flat'
+  if (operator === 'eq') return (value ?? 0) < 0 ? 'down_exactly' : 'up_exactly'
+  return operator === 'gte' ? 'up_at_least' : 'down_at_least'
+}
+
+// Shared by Classic and Pipeline builders. The signed value is the change
+// between the two-decimal ratios members actually see on TheDugout.
+export function RatioMovementFields({ operator, value, onPatch }: {
+  operator: string | null | undefined
+  value: number | null | undefined
+  onPatch: (patch: { operator: RatioMovementOperator; value: number | null }) => void
+}) {
+  const mode = ratioMovementMode(operator, value)
+  const amount = Math.abs(value ?? 0.01)
+  const applyMode = (next: RatioMovementMode) => {
+    if (next === 'flat') return onPatch({ operator: 'eq', value: 0 })
+    const magnitude = amount > 0 ? amount : 0.01
+    if (next === 'down_exactly') return onPatch({ operator: 'eq', value: -magnitude })
+    if (next === 'up_exactly') return onPatch({ operator: 'eq', value: magnitude })
+    if (next === 'up_at_least') return onPatch({ operator: 'gte', value: magnitude })
+    onPatch({ operator: 'lte', value: -magnitude })
+  }
+  const setAmount = (next: number | null) => {
+    if (next == null) return onPatch({ operator: mode.includes('exactly') ? 'eq' : mode.startsWith('up') ? 'gte' : 'lte', value: null })
+    const magnitude = Math.abs(next)
+    onPatch({
+      operator: mode.includes('exactly') ? 'eq' : mode.startsWith('up') ? 'gte' : 'lte',
+      value: mode.startsWith('down') ? -magnitude : magnitude,
+    })
+  }
+  return (
+    <>
+      <select className="ss-input" value={mode} onChange={e => applyMode(e.target.value as RatioMovementMode)} style={{ fontSize: 11, padding: '5px 6px', width: 156 }}>
+        <option value="down_at_least">Moved down by at least</option>
+        <option value="down_exactly">Moved down exactly</option>
+        <option value="up_at_least">Moved up by at least</option>
+        <option value="up_exactly">Moved up exactly</option>
+        <option value="flat">No displayed change</option>
+      </select>
+      {mode !== 'flat' && (
+        <input
+          className="ss-input" type="number" min={0} step={0.01} placeholder="0.01"
+          value={value == null ? '' : amount}
+          onChange={e => setAmount(e.target.value === '' ? null : Number(e.target.value))}
+          title="Uses the two-decimal ratio shown on TheDugout. Example: 0.71 to 0.70 is down 0.01."
+          style={{ fontSize: 11, padding: '5px 6px', width: 78 }}
+        />
+      )}
+      <span style={{ fontSize: 9, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>displayed ratio</span>
+    </>
+  )
 }
 function newFactor(): MatrixFactor {
   return {
@@ -529,6 +600,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
   // as every other Dugout Specs field, just with its own picker in place of
   // the usual operator+value inputs.
   const isBoolean = fields.find(f => f.key === factor.field_key)?.boolean === true
+  const isRatioMovement = fields.find(f => f.key === factor.field_key)?.movement === true
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8 }}>
@@ -560,10 +632,13 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
         onChange={e => {
           const field_key = e.target.value
           const nowBoolean = fields.find(f => f.key === field_key)?.boolean === true
+          const nowMovement = fields.find(f => f.key === field_key)?.movement === true
           onChange({
             ...factor, field_key,
             ...(isBooksFieldKey(field_key) ? { operator: 'gte' } : {}),
             ...(nowBoolean ? { operator: 'eq', value: 1 } : isBoolean ? { operator: 'gte', value: null } : {}),
+            ...(nowMovement && !isRatioMovement ? { operator: 'lte' as const, value: -0.01 } : {}),
+            ...(!nowMovement && isRatioMovement ? { operator: 'gte' as const, value: null } : {}),
             // 'mm_trend' is only ever offered for field_key 'mm' — switching
             // away from it resets to a plain threshold rather than leaving
             // the Factor in an operator/field combo the UI never offers.
@@ -594,6 +669,11 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           <option value="1">Yes</option>
           <option value="0">No</option>
         </select>
+      ) : isRatioMovement ? (
+        <RatioMovementFields
+          operator={factor.operator} value={factor.value}
+          onPatch={patch => onChange({ ...factor, ...patch })}
+        />
       ) : (
         <>
           <select

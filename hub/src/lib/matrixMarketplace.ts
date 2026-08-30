@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const MATRIX_FACTOR_SELECT = 'position, category, field_key, operator, value, recency, recency_start, recency_end, books, books_min_count, tie_scope, tie_direction, tiebreakers, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode'
-export const MATRIX_STEP_SELECT = 'position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode'
+export const MATRIX_STEP_SELECT = 'position, kind, join_mode, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode'
 
 export type MarketplaceMatrixSnapshot = {
   version: 1

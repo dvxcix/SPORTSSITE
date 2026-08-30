@@ -70,7 +70,7 @@ function cleanTiebreakers(raw: unknown): TiebreakersResult {
 // is created as Classic or Pipeline and stays that way — see
 // api/matrices/route.ts POST), only pipeline_scope + the step list.
 type CleanPipelineStep = {
-  kind: string; category: string; field_key: string; recency: string | null; book: string | null
+  kind: string; join_mode: 'and' | 'or' | null; category: string; field_key: string; recency: string | null; book: string | null
   books: string[] | null; books_min_count: number | null; operator: string | null; value: number | null
   direction: 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' | null; tolerance: number | null; zero_eligible: boolean | null
   condition_scope: 'team' | 'game' | null; condition_steps: CleanPipelineStep[] | null; then_steps: CleanPipelineStep[] | null
@@ -97,7 +97,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
   const clean: CleanPipelineStep[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
+    const { kind, join_mode, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -136,7 +136,7 @@ function cleanPipelineSteps(raw: unknown, allowUnless = true, anchorAvailable = 
     }
 
     clean.push({
-      kind: kind as string, category: category as string, field_key,
+      kind: kind as string, join_mode: join_mode === 'or' ? 'or' : join_mode === 'and' ? 'and' : null, category: category as string, field_key,
       recency: typeof recency === 'string' ? recency : null,
       book: typeof book === 'string' && VALID_BOOKS.includes(book) ? book : null,
       books: Array.isArray(books) && books.length ? books.filter(b => typeof b === 'string' && VALID_BOOKS.includes(b)) : null,

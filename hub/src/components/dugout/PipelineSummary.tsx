@@ -13,13 +13,10 @@ const OP_WORD: Record<string, string> = {
 }
 const MM_WINDOW_WORD: Record<string, string> = { l1: 'L1', l3: 'L3', l5: 'L5', l10: 'L10' }
 const MM_DIRECTION_WORD: Record<string, string> = {
-  increased: 'increased', decreased: 'decreased', moved: 'moved', crossed_positive: 'crossed to +', crossed_negative: 'crossed to −',
+  increased: 'increased', decreased: 'decreased', moved: 'moved', crossed_positive: 'crossed to +', crossed_negative: 'crossed to -',
   flat: 'stayed flat',
 }
 
-// mm_trend spans 2+ of the board's own windows at once instead of a single
-// resolved value against a fixed number — needs its own sentence shape
-// rather than falling through describeStep's generic `${field} ${op} ${value}`.
 function describeMmTrend(step: MatrixPipelineStep): string {
   const base = step.mm_base_window ? MM_WINDOW_WORD[step.mm_base_window] ?? step.mm_base_window : '?'
   const compare = (step.mm_compare_windows ?? []).map(w => MM_WINDOW_WORD[w] ?? w)
@@ -30,10 +27,6 @@ function describeMmTrend(step: MatrixPipelineStep): string {
   return `MM ${dir}${amount} from ${base} to ${compare.join('/') || '?'}${mode}`
 }
 
-// 'mm_move' resolves to a plain number (see computeMmMoveValue,
-// matrixEngine.ts) so it flows through describeStep's ordinary filter/
-// group/rank sentence shapes fine — this just appends which windows it's
-// measuring between, since "MM Movement" alone doesn't say that.
 function fieldLabelFor(step: MatrixPipelineStep): string {
   const base = fieldLabel(step.category, step.field_key)
   if (step.field_key !== 'mm_move') return base
@@ -42,16 +35,21 @@ function fieldLabelFor(step: MatrixPipelineStep): string {
   return `${base} (${from} vs ${to || '?'})`
 }
 
-// One clause per step, position-independent (no special-casing "first" vs.
-// "later" grammar) — the → separators between clauses are what convey the
-// pipeline itself, same shape as the walkthrough sentence this feature was
-// modeled on ("tied on PA/HR → narrow to matching HR/Parlay → lowest FHR/HR%
-// → highest Anytime HR"). Purely mechanical, built from the member's own
-// field/operator/direction choices — not written copy.
+function describeMovement(step: MatrixPipelineStep, field: string): string | null {
+  if (!step.field_key.endsWith('_move')) return null
+  const value = step.value ?? 0
+  if (step.operator === 'eq' && value === 0) return `${field} had no displayed change`
+  if (value < 0) return `${field} moved down by ${step.operator === 'eq' ? 'exactly' : 'at least'} ${Math.abs(value).toFixed(2)}`
+  if (value > 0) return `${field} moved up by ${step.operator === 'eq' ? 'exactly' : 'at least'} ${Math.abs(value).toFixed(2)}`
+  return null
+}
+
 function describeStep(step: MatrixPipelineStep): string {
   const field = fieldLabelFor(step)
   if (step.kind === 'filter') {
     if (step.operator === 'mm_trend') return describeMmTrend(step)
+    const movement = describeMovement(step, field)
+    if (movement) return movement
     const op = step.operator ? OP_WORD[step.operator] ?? step.operator : ''
     const needsValue = step.operator === 'gte' || step.operator === 'lte' || step.operator === 'eq'
     return `${field} ${op}${needsValue && step.value != null ? ` ${step.value}` : ''}`.trim()
@@ -65,7 +63,6 @@ function describeStep(step: MatrixPipelineStep): string {
     const dirWord = step.direction === 'lowest' ? 'lowest' : step.direction === 'closest_zero' ? 'closest to 0' : step.direction === 'farthest_zero' ? 'farthest from 0' : 'highest'
     return `${dirWord} ${field}${tol}`
   }
-  // unless — describes its own nested condition/then chains recursively.
   const scope = step.condition_scope === 'game' ? 'either team' : 'the same team'
   const condition = describeChain(step.condition_steps ?? []) || '…'
   const mode = step.unless_mode ?? 'replace'
@@ -75,8 +72,18 @@ function describeStep(step: MatrixPipelineStep): string {
   return `unless ${condition} on ${scope} → then ${then}`
 }
 
+function connectorFor(steps: MatrixPipelineStep[], index: number): 'AND' | 'OR' | '→' {
+  const step = steps[index]
+  const previous = steps[index - 1]
+  if (step?.kind === 'filter' && previous?.kind === 'filter') return step.join_mode === 'or' ? 'OR' : 'AND'
+  return '→'
+}
+
 function describeChain(steps: MatrixPipelineStep[]): string {
-  return steps.map(describeStep).join(' → ')
+  return steps.reduce((text, step, index) => {
+    if (index === 0) return describeStep(step)
+    return `${text} ${connectorFor(steps, index)} ${describeStep(step)}`
+  }, '')
 }
 
 export function PipelineSummary({ steps }: { steps: MatrixPipelineStep[] }) {
@@ -90,12 +97,19 @@ export function PipelineSummary({ steps }: { steps: MatrixPipelineStep[] }) {
   return (
     <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-1)', padding: '10px 12px', background: 'var(--accent-dim)', border: '1px solid var(--border-2)', borderRadius: 8 }}>
       <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>YOUR FORMULA</span>
-      {steps.map((s, i) => (
-        <React.Fragment key={i}>
-          {i > 0 && <span style={{ color: 'var(--text-3)', margin: '0 6px' }}>→</span>}
-          {describeStep(s)}
-        </React.Fragment>
-      ))}
+      {steps.map((step, index) => {
+        const connector = index > 0 ? connectorFor(steps, index) : null
+        return (
+          <React.Fragment key={index}>
+            {connector && (
+              <span style={{ color: connector === '→' ? 'var(--text-3)' : 'var(--accent)', margin: '0 6px', fontWeight: 900 }}>
+                {connector}
+              </span>
+            )}
+            {describeStep(step)}
+          </React.Fragment>
+        )
+      })}
     </div>
   )
 }

@@ -58,6 +58,7 @@ type TiebreakerInput = {
 // matrix_type === 'pipeline'.
 type PipelineStepInput = {
   kind: 'filter' | 'group' | 'rank' | 'unless'
+  join_mode: 'and' | 'or' | null
   category: 'odds' | 'dugout_specs' | 'pitchlog_stat' | 'savant_stat' | 'picks'
   field_key: string
   recency: string | null
@@ -154,7 +155,7 @@ function validatePipelineSteps(raw: unknown, allowUnless = true, anchorAvailable
   const clean: PipelineStepInput[] = []
   for (const s of raw.slice(0, MAX_PIPELINE_STEPS)) {
     if (!s || typeof s !== 'object') continue
-    const { kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
+    const { kind, join_mode, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode } = s as Record<string, unknown>
     if (!PIPELINE_STEP_KINDS.includes(kind as string)) continue
     if (kind === 'unless' && !allowUnless) continue
     if (!TIEBREAKER_CATEGORIES.includes(category as string)) continue
@@ -195,6 +196,7 @@ function validatePipelineSteps(raw: unknown, allowUnless = true, anchorAvailable
 
     clean.push({
       kind: kind as PipelineStepInput['kind'],
+      join_mode: join_mode === 'or' ? 'or' : join_mode === 'and' ? 'and' : null,
       category: category as PipelineStepInput['category'],
       field_key,
       recency: typeof recency === 'string' ? recency : null,
@@ -325,7 +327,7 @@ export async function GET() {
 
   const { data: pipelineSteps, error: stepsError } = await admin
     .from('matrix_pipeline_steps')
-    .select('id, matrix_id, position, kind, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
+    .select('id, matrix_id, position, kind, join_mode, category, field_key, recency, book, books, books_min_count, operator, value, direction, tolerance, zero_eligible, condition_scope, condition_steps, then_steps, unless_mode, uses_anchor, mm_base_window, mm_compare_windows, mm_direction, mm_match_mode, mm_amount_mode')
     .in('matrix_id', matrices.map(m => m.id))
     .order('position', { ascending: true })
   if (stepsError) return safeApiError('matrix-steps-list', stepsError, 'Could not load your Matrices.')

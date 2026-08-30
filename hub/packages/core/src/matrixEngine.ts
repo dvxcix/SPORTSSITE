@@ -274,6 +274,10 @@ export type MatrixTiebreaker = {
 export type PipelineStepKind = 'filter' | 'group' | 'rank' | 'unless'
 export type MatrixPipelineStep = {
   kind: PipelineStepKind
+  // Connector to the preceding adjacent Filter. Missing/null preserves the
+  // historical Pipeline behavior (AND), so existing saved Matrices continue
+  // to evaluate exactly as they did before connectors were introduced.
+  join_mode?: 'and' | 'or' | null
   category: MatrixFactor['category']
   field_key: string
   recency: MatrixRecency | null
@@ -712,6 +716,7 @@ const ODDS_BOOK_FIELD: Record<string, { market: string; open: string }> = {
   rbi1: { market: 'rbi', open: 'rbiFd' },
   rbi2: { market: 'rbi2', open: 'rbi2Fd' },
   rbi3: { market: 'rbi3', open: 'rbi3Fd' },
+  hrr: { market: 'hrr', open: 'hrrFd' },
   tb2: { market: 'tb', open: 'tbFd' },
   tb3: { market: 'tb3', open: 'tb3Fd' },
   tb4: { market: 'tb4', open: 'tb4Fd' },
@@ -897,6 +902,41 @@ const DUGOUT_SPECS_FIELD: Record<string, (props: OddsProps | null | undefined) =
   sa_div_hr2: props => implRatio(props?.sa?.fanduel ?? null, props?.hr2?.fanduel ?? null),
 }
 
+// Opening versions of every HR-relative market ratio shown on the board.
+// Movement criteria intentionally compare the DISPLAYED values: both sides
+// are rounded to two decimals first, then subtracted. A member who sees
+// 0.71 at open and 0.70 now therefore gets exactly -0.01, regardless of
+// hidden floating-point precision underneath those two visible numbers.
+const DUGOUT_SPECS_OPEN_FIELD: Record<string, (props: OddsProps | null | undefined) => number | null> = {
+  fhr_div_sa: props => implRatio(props?.open?.fhr ?? null, props?.open?.saFd ?? null),
+  m_div_f: props => implRatio(props?.open?.saMgm ?? null, props?.open?.saFd ?? null),
+  pa1_div_sa: props => implRatio(props?.open?.pa1 ?? null, props?.open?.saFd ?? null),
+  sa_div_ml: props => implRatio(props?.open?.saFd ?? null, props?.open?.hrMl ?? null),
+  sa_div_rbi: props => implRatio(props?.open?.saFd ?? null, props?.open?.rbiFd ?? null),
+  sa_div_rbi2: props => implRatio(props?.open?.saFd ?? null, props?.open?.rbi2Fd ?? null),
+  sa_div_rbi3: props => implRatio(props?.open?.saFd ?? null, props?.open?.rbi3Fd ?? null),
+  sa_div_hrr: props => implRatio(props?.open?.saFd ?? null, props?.open?.hrrFd ?? null),
+  sa_div_tb: props => implRatio(props?.open?.saFd ?? null, props?.open?.tbFd ?? null),
+  sa_div_tb3: props => implRatio(props?.open?.saFd ?? null, props?.open?.tb3Fd ?? null),
+  sa_div_tb4: props => implRatio(props?.open?.saFd ?? null, props?.open?.tb4Fd ?? null),
+  sa_div_tb5: props => implRatio(props?.open?.saFd ?? null, props?.open?.tb5Fd ?? null),
+  sa_div_hr2: props => implRatio(props?.open?.saFd ?? null, props?.open?.hr2Fd ?? null),
+}
+
+function roundDisplayedRatio(value: number | null): number | null {
+  return value == null ? null : Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+export function computeDisplayedRatioMovement(
+  fieldKey: string,
+  props: OddsProps | null | undefined,
+): number | null {
+  const current = roundDisplayedRatio(DUGOUT_SPECS_FIELD[fieldKey]?.(props) ?? null)
+  const opening = roundDisplayedRatio(DUGOUT_SPECS_OPEN_FIELD[fieldKey]?.(props) ?? null)
+  if (current == null || opening == null) return null
+  return roundDisplayedRatio(current - opening)
+}
+
 // The raw current value for a dugout_specs field — every ratio in
 // DUGOUT_SPECS_FIELD, plus fhr_pct/sa_pct's season-average-relative delta
 // (which needs the extra averages args those two don't get from `props`
@@ -934,6 +974,9 @@ export function computeDugoutSpecsValue(
   // Pipeline Rank step (or a Classic 'tied' tiebreaker), was needed instead
   // of another boolean condition. See computeMmMoveValue below.
   if (fieldKey === 'mm_move') return computeMmMoveValue(mmBaseWindow ?? null, mmCompareWindows ?? null, mmByWindow)
+  if (fieldKey.endsWith('_move')) {
+    return computeDisplayedRatioMovement(fieldKey.slice(0, -'_move'.length), props)
+  }
   if (fieldKey === 'fhr_pct' || fieldKey === 'sa_pct') {
     const fd = props?.[fieldKey === 'fhr_pct' ? 'fhr' : 'sa']?.fanduel ?? null
     const avg = fieldKey === 'fhr_pct' ? fhrAvg?.fd : (saAvg?.fd ?? saAvg?.cz)
@@ -1334,19 +1377,13 @@ export function runPipelineStep(
     }
 
     const universeMap = scopeBundles[step.condition_scope ?? 'team']
-    let conditionPool = new Set(universeMap.keys())
-    for (const condStep of step.condition_steps ?? []) {
-      conditionPool = runPipelineStep(conditionPool, condStep, universeMap, gameTotalPicksByMarket, scopeBundles, true, resolvedAnchor)
-    }
+    const conditionPool = runPipelineSteps(new Set(universeMap.keys()), step.condition_steps ?? [], universeMap, gameTotalPicksByMarket, scopeBundles, true, resolvedAnchor)
     if (!conditionPool.size) return pool // condition didn't trigger anywhere -> no-op, regardless of mode
 
     const mode = step.unless_mode ?? 'replace'
     if (mode === 'suppress') return new Set() // condition triggered -> cancel every normal pick, then_steps unused
 
-    let thenPool = conditionPool
-    for (const thenStep of step.then_steps ?? []) {
-      thenPool = runPipelineStep(thenPool, thenStep, universeMap, gameTotalPicksByMarket, scopeBundles, false, resolvedAnchor)
-    }
+    const thenPool = runPipelineSteps(conditionPool, step.then_steps ?? [], universeMap, gameTotalPicksByMarket, scopeBundles, false, resolvedAnchor)
     // then_steps somehow emptying out a real, triggered condition shouldn't
     // silently highlight nobody — fall back to a safe default per mode.
     if (mode === 'add') return thenPool.size ? new Set([...pool, ...thenPool]) : pool
@@ -1403,7 +1440,43 @@ export function runPipeline(
   gameTotalPicksByMarket: Record<string, number>,
   scopeBundles?: PipelineScopeBundles,
 ): Set<string> {
+  return runPipelineSteps(universe, steps, bundles, gameTotalPicksByMarket, scopeBundles)
+}
+
+// Consecutive Filter steps form one logical block. AND keeps narrowing the
+// block result. OR evaluates its own condition against the pool that entered
+// the block, then unions those matches with the block's current result. Any
+// Group/Rank/Unless step closes the block. This gives the builder ordinary
+// left-to-right AND/OR behavior while preserving the old all-AND default.
+function runPipelineSteps(
+  universe: Set<string>,
+  steps: MatrixPipelineStep[],
+  bundles: Map<string, FieldBundle>,
+  gameTotalPicksByMarket: Record<string, number>,
+  scopeBundles?: PipelineScopeBundles,
+  strict?: boolean,
+  anchorValue?: number | null,
+): Set<string> {
   let pool = universe
-  for (const step of steps) pool = runPipelineStep(pool, step, bundles, gameTotalPicksByMarket, scopeBundles)
+  let filterBlockUniverse: Set<string> | null = null
+  let previousWasFilter = false
+
+  for (const step of steps) {
+    if (step.kind !== 'filter') {
+      filterBlockUniverse = null
+      previousWasFilter = false
+      pool = runPipelineStep(pool, step, bundles, gameTotalPicksByMarket, scopeBundles, strict, anchorValue)
+      continue
+    }
+
+    if (!previousWasFilter || !filterBlockUniverse) filterBlockUniverse = new Set(pool)
+    if (previousWasFilter && step.join_mode === 'or') {
+      const alternative = runPipelineStep(filterBlockUniverse, step, bundles, gameTotalPicksByMarket, scopeBundles, strict, anchorValue)
+      pool = new Set([...pool, ...alternative])
+    } else {
+      pool = runPipelineStep(pool, step, bundles, gameTotalPicksByMarket, scopeBundles, strict, anchorValue)
+    }
+    previousWasFilter = true
+  }
   return pool
 }

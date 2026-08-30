@@ -6,7 +6,7 @@ import { GripVertical, X, Plus } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import {
   type MatrixFactor, type MmWindowKey, type MmTrendDirection, ALL_CATEGORIES, CATEGORY_LABEL, recencyLabel, recencyOptionsFor, MULTI_BOOK_FIELDS,
-  fieldsForCategory, isBooksFieldKey, MmTrendFields, MmMoveWindowPicker,
+  fieldsForCategory, isBooksFieldKey, MmTrendFields, MmMoveWindowPicker, RatioMovementFields,
 } from './CustomMatrixPanel'
 
 // A Pipeline is an ordered chain of steps that narrows a pool of players
@@ -42,6 +42,7 @@ import {
 //            themselves be Unless.
 export type MatrixPipelineStep = {
   kind: 'filter' | 'group' | 'rank' | 'unless'
+  join_mode?: 'and' | 'or' | null
   category: MatrixFactor['category']
   field_key: string
   recency: MatrixFactor['recency']
@@ -104,7 +105,7 @@ export function newPipelineStep(kind: MatrixPipelineStep['kind'], anchorFrom?: M
   const fieldsList = fieldsForCategory(category).filter(f => !f.boolean)
   const field_key = seedFromAnchor && fieldsList.some(f => f.key === anchorFrom!.field_key) ? anchorFrom!.field_key : fieldsList[0].key
   return {
-    kind, category, field_key,
+    kind, join_mode: null, category, field_key,
     recency: seedFromAnchor ? anchorFrom!.recency : null,
     book: seedFromAnchor ? anchorFrom!.book : null,
     books: null, books_min_count: null,
@@ -134,6 +135,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
   // Yes/No is meaningless, same exclusion TiebreakerRow already applies.
   const fields = step.kind === 'filter' ? fieldsForCategory(step.category) : fieldsForCategory(step.category).filter(f => !f.boolean)
   const isBoolean = step.kind === 'filter' && fields.find(f => f.key === step.field_key)?.boolean === true
+  const isRatioMovement = step.kind === 'filter' && fields.find(f => f.key === step.field_key)?.movement === true
   const isBooksField = step.kind === 'filter' && isBooksFieldKey(step.field_key)
   // 'mm_trend' spans all 4 windows itself (see MmTrendFields below) — the
   // plain recency picker is meaningless once that operator is selected.
@@ -198,10 +200,13 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           onChange={e => {
             const field_key = e.target.value
             const nowBoolean = step.kind === 'filter' && fields.find(f => f.key === field_key)?.boolean === true
+            const nowMovement = step.kind === 'filter' && fields.find(f => f.key === field_key)?.movement === true
             onChange({
               ...step, field_key, book: null, books: null, books_min_count: null,
               ...(step.kind === 'filter' && isBooksFieldKey(field_key) ? { operator: 'gte' } : {}),
               ...(nowBoolean ? { operator: 'eq', value: 1 } : isBoolean ? { operator: 'gte', value: null } : {}),
+              ...(nowMovement && !isRatioMovement ? { operator: 'lte' as const, value: -0.01 } : {}),
+              ...(!nowMovement && isRatioMovement ? { operator: 'gte' as const, value: null } : {}),
               // 'mm_trend' is only ever offered for field_key 'mm' — switching
               // away from it resets to a plain threshold.
               ...(step.operator === 'mm_trend' && field_key !== 'mm' ? { operator: 'gte' as const, value: null } : {}),
@@ -231,6 +236,11 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             <option value="1">Yes</option>
             <option value="0">No</option>
           </select>
+        ) : isRatioMovement ? (
+          <RatioMovementFields
+            operator={step.operator} value={step.value}
+            onPatch={patch => onChange({ ...step, ...patch })}
+          />
         ) : (
           <>
             <select
@@ -743,6 +753,7 @@ function StepList({ steps, onChange, allowUnless, hasAnchor, showHeader = true, 
           {steps.map((step, i) => (
             <StepListItem
               key={i} step={step} index={i} hasAnchor={hasAnchor}
+              showJoin={i > 0 && step.kind === 'filter' && steps[i - 1]?.kind === 'filter'}
               onChange={next => onChange(steps.map((s, si) => (si === i ? next : s)))}
               onRemove={() => onChange(steps.filter((_, si) => si !== i))}
             />
@@ -760,13 +771,47 @@ function StepList({ steps, onChange, allowUnless, hasAnchor, showHeader = true, 
 // `dragControls` bound ONLY to the GripVertical handle's pointerdown (see
 // PipelineStepCard/UnlessStepCard) fixes both: normal clicks on the card's
 // controls stay normal clicks, and a drag only ever starts from the handle.
-function StepListItem({ step, index, hasAnchor, onChange, onRemove }: {
+function StepListItem({ step, index, hasAnchor, showJoin, onChange, onRemove }: {
   step: MatrixPipelineStep; index: number; hasAnchor?: boolean
+  showJoin?: boolean
   onChange: (s: MatrixPipelineStep) => void; onRemove: () => void
 }) {
   const dragControls = useDragControls()
   return (
     <Reorder.Item value={step} as="div" dragListener={false} dragControls={dragControls} style={{ listStyle: 'none' }}>
+      {showJoin && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '1px 0 7px 14px' }}>
+          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.08em', color: 'var(--text-3)' }}>JOIN</span>
+          <div role="group" aria-label="Join this filter with the previous filter" style={{ display: 'inline-flex', padding: 2, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)' }}>
+            {(['and', 'or'] as const).map(mode => {
+              const active = (step.join_mode ?? 'and') === mode
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChange({ ...step, join_mode: mode })}
+                  style={{
+                    border: 0,
+                    borderRadius: 6,
+                    padding: '5px 10px',
+                    background: active ? (mode === 'or' ? 'rgba(67, 201, 255, 0.15)' : 'rgba(168, 255, 58, 0.14)') : 'transparent',
+                    color: active ? (mode === 'or' ? '#68d7ff' : 'var(--accent)') : 'var(--text-3)',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {mode.toUpperCase()}
+                </button>
+              )
+            })}
+          </div>
+          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+            {step.join_mode === 'or' ? 'either condition can qualify' : 'both conditions must qualify'}
+          </span>
+        </div>
+      )}
       {step.kind === 'unless' ? (
         <UnlessStepCard step={step} index={index} dragControls={dragControls} onChange={onChange} onRemove={onRemove} />
       ) : (
