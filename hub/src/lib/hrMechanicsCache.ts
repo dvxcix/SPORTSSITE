@@ -9,6 +9,7 @@ import {
   type MechanicsWindow,
 } from '@/lib/hrMechanics'
 import { assertMechanicsStatcastReady } from '@/lib/statcastMechanicsReadiness'
+import { isHistoricalDugoutDate } from '@/lib/dugoutBoardDate'
 
 export type CompactMechanicsScore = {
   index: number
@@ -83,6 +84,10 @@ export async function getGameMechanicsWindows(
   if (error) throw error
 
   const rows = (data ?? []) as SnapshotRow[]
+  const historical = isHistoricalDugoutDate(gameDate)
+  const historicalSnapshot = historical ? rowsToWindows(rows) : null
+  if (historicalSnapshot) return { results: historicalSnapshot, cache: 'hit' }
+
   const matchingRows = rows.filter(row => row.lineup_signature === lineupSignature)
   const cached = rowsToWindows(matchingRows)
   const readiness = options.verifySources === false
@@ -110,8 +115,22 @@ export async function getGameMechanicsWindows(
     }))
     const { error: writeError } = await admin.from('research_mechanics_snapshots').upsert(payload, {
       onConflict: 'game_date,game_pk,window_games,model_version',
+      ignoreDuplicates: historical,
     })
     if (writeError) throw writeError
+
+    if (historical) {
+      const { data: persisted, error: persistedError } = await admin
+        .from('research_mechanics_snapshots')
+        .select('window_games,lineup_signature,payload,computed_at')
+        .eq('game_date', gameDate)
+        .eq('game_pk', game.gamePk)
+        .eq('model_version', HR_MECHANICS_MODEL_VERSION)
+      if (persistedError) throw persistedError
+      const persistedSnapshot = rowsToWindows((persisted ?? []) as SnapshotRow[])
+      if (persistedSnapshot) return { results: persistedSnapshot, cache: (rows.length ? 'refresh' : 'miss') as 'refresh' | 'miss' }
+    }
+
     return { results, cache: (rows.length ? 'refresh' : 'miss') as 'refresh' | 'miss' }
   })()
 

@@ -13,13 +13,13 @@ export const GET = withPipelineHealth('dugout-matchup-edge-precompute', run)
 // could appear today — see dugoutMatchupEdgePrecompute.ts for why this
 // moved in-house instead of depending on mlb-party's own recency ingest.
 //
-// Also reprocesses the trailing PAST_DAYS days, every run — same reasoning
+// Also checks the trailing PAST_DAYS days every run - same reasoning
 // as dugout-statcast-precompute's own PAST_DAYS: savant-sync-pitch-log's
 // own recheck logic exists because a date's per-pitch CSV sometimes lands a
 // day or two late; that cron self-heals a late date on its NEXT run, so
-// this precompute needs to reprocess that same trailing window to actually
-// pick up the correction instead of leaving the first (incomplete) result
-// cached forever.
+// this precompute checks that same trailing window for absent rows. Existing
+// historical rows remain immutable so a past board's Batter Charge cannot
+// drift; only today's rows are refreshed in place.
 const PAST_DAYS = 2
 
 async function run(req: Request) {

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isHistoricalDugoutDate } from '@/lib/dugoutBoardDate'
 import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { computeStatLine, lastNGameDates, type PitchLogRow } from '@slipsurge/core/batterStatsEngine'
 import { isStrictlyPregameDate } from '@/lib/pregameFeatureDate'
@@ -157,13 +158,31 @@ export async function precomputeMatchupEdgeForDate(date: string): Promise<{ date
   if (!batterIdList.length && !pitcherIdList.length) return { date, batters: 0, pitchers: 0 }
 
   const admin = createAdminClient()
+  const historical = isHistoricalDugoutDate(date)
+  const existingKeys = new Set<string>()
+  if (historical) {
+    const allIds = Array.from(new Set([...batterIdList, ...pitcherIdList]))
+    const { data: existing, error: existingError } = await admin
+      .from(MATCHUP_EDGE_TABLE)
+      .select('mlb_id,role')
+      .eq('game_date', date)
+      .in('mlb_id', allIds)
+    if (existingError) throw existingError
+    for (const row of existing ?? []) existingKeys.add(`${Number(row.mlb_id)}:${String(row.role)}`)
+  }
+  const batterIdsToCompute = historical ? batterIdList.filter(mlbId => !existingKeys.has(`${mlbId}:batter`)) : batterIdList
+  const pitcherIdsToCompute = historical ? pitcherIdList.filter(mlbId => !existingKeys.has(`${mlbId}:pitcher`)) : pitcherIdList
+  if (!batterIdsToCompute.length && !pitcherIdsToCompute.length) {
+    return { date, batters: batterIdList.length, pitchers: pitcherIdList.length }
+  }
+
   const [batterRowsById, pitcherRowsById] = await Promise.all([
-    fetchBulkRows(admin, batterIdList, 'batter_id'),
-    fetchBulkRows(admin, pitcherIdList, 'pitcher_id'),
+    fetchBulkRows(admin, batterIdsToCompute, 'batter_id'),
+    fetchBulkRows(admin, pitcherIdsToCompute, 'pitcher_id'),
   ])
 
   const rows: { game_date: string; mlb_id: number; role: 'batter' | 'pitcher'; data: any }[] = []
-  for (const mlbId of batterIdList) {
+  for (const mlbId of batterIdsToCompute) {
     // This cache is a pregame snapshot. A past-date self-heal must not let
     // that date's completed plate appearances enter its own matchup edge.
     const batRows = (batterRowsById[mlbId] ?? []).filter(row => isStrictlyPregameDate(row.game_date, date))
@@ -175,7 +194,7 @@ export async function precomputeMatchupEdgeForDate(date: string): Promise<{ date
       },
     })
   }
-  for (const mlbId of pitcherIdList) {
+  for (const mlbId of pitcherIdsToCompute) {
     const pitRows = (pitcherRowsById[mlbId] ?? []).filter(row => isStrictlyPregameDate(row.game_date, date))
     rows.push({
       game_date: date, mlb_id: mlbId, role: 'pitcher',
@@ -187,7 +206,10 @@ export async function precomputeMatchupEdgeForDate(date: string): Promise<{ date
   for (let i = 0; i < rows.length; i += CHUNK) {
     const { error } = await admin
       .from(MATCHUP_EDGE_TABLE)
-      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'game_date,mlb_id,role' })
+      .upsert(rows.slice(i, i + CHUNK), {
+        onConflict: 'game_date,mlb_id,role',
+        ignoreDuplicates: historical,
+      })
     if (error) throw error
   }
   return { date, batters: batterIdList.length, pitchers: pitcherIdList.length }

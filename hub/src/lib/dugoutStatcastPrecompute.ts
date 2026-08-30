@@ -3,6 +3,7 @@ import { getTodaysMatchups } from '@slipsurge/core/mlbSchedule'
 import { fetchBulkBatterPitchRows, fetchBulkSavantSplits } from '@/lib/matrixMatch'
 import { computeAllStatcastWindows, type StatcastWindow, type StatcastLine } from '@slipsurge/core/dugoutStatcast'
 import { priorPregameDate } from '@/lib/pregameFeatureDate'
+import { isHistoricalDugoutDate } from '@/lib/dugoutBoardDate'
 
 // Precomputes the Dugout grid's own Statcast section (BSpd through HR, plus
 // Timing/Miss, HardSw/SQ/Blast, IdlAA, Pull/FB rate — see dugoutStatcast.ts)
@@ -23,9 +24,10 @@ export const DUGOUT_STATCAST_TABLE = 'dugout_statcast_precomputed'
 const ALL_STATCAST_SAVANT_CATEGORIES = ['bat_tracking', 'batted_ball_splits', 'swing_path_attack_angle', 'swing_timing_miss_distance']
 
 // A row dated D is the board that will be shown before games on D. Its
-// recency windows must therefore stop at D-1. The daily self-heal also
-// rewrites recent historical dates after their games finish, so passing D
-// here would silently put the result being graded into its own L1 window.
+// recency windows must therefore stop at D-1. Today may refresh as source
+// data arrives. Historical boards are immutable snapshots: the self-heal
+// may fill a missing batter/hand row, but it never rewrites one that already
+// existed for that date.
 export async function precomputeDugoutStatcastForDate(date: string): Promise<{ date: string; batters: number; rows: number }> {
   // Confirmed-or-projected lineups for every game today — the exact same
   // resolution the Dugout grid itself displays, so this covers every
@@ -42,9 +44,26 @@ export async function precomputeDugoutStatcastForDate(date: string): Promise<{ d
   if (!batterIds.length) return { date, batters: 0, rows: 0 }
 
   const admin = createAdminClient()
+  const historical = isHistoricalDugoutDate(date)
+  const existingKeys = new Set<string>()
+  if (historical) {
+    const { data: existing, error: existingError } = await admin
+      .from(DUGOUT_STATCAST_TABLE)
+      .select('mlb_id,pitcher_hand')
+      .eq('game_date', date)
+      .in('mlb_id', batterIds)
+    if (existingError) throw existingError
+    for (const row of existing ?? []) existingKeys.add(`${Number(row.mlb_id)}:${String(row.pitcher_hand)}`)
+  }
+
+  const batterIdsToCompute = historical
+    ? batterIds.filter(mlbId => !existingKeys.has(`${mlbId}:L`) || !existingKeys.has(`${mlbId}:R`))
+    : batterIds
+  if (!batterIdsToCompute.length) return { date, batters: batterIds.length, rows: batterIds.length * 2 }
+
   const [pitchRowsByBatter, savantRowsByBatter] = await Promise.all([
-    fetchBulkBatterPitchRows(admin, batterIds),
-    fetchBulkSavantSplits(admin, batterIds, ALL_STATCAST_SAVANT_CATEGORIES),
+    fetchBulkBatterPitchRows(admin, batterIdsToCompute),
+    fetchBulkSavantSplits(admin, batterIdsToCompute, ALL_STATCAST_SAVANT_CATEGORIES),
   ])
 
   // Both possible opposing-pitcher hands, not just today's actual probable
@@ -56,11 +75,12 @@ export async function precomputeDugoutStatcastForDate(date: string): Promise<{ d
   const rows: { game_date: string; mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<StatcastWindow, StatcastLine>; computed_at: string }[] = []
   const dataThroughDate = priorPregameDate(date)
   const computedAt = new Date().toISOString()
-  for (const mlbId of batterIds) {
+  for (const mlbId of batterIdsToCompute) {
     const bats = batsById.get(mlbId) || '?'
     const pitchRows = pitchRowsByBatter[mlbId] ?? []
     const savantRows = savantRowsByBatter[mlbId] ?? []
     for (const hand of ['L', 'R'] as const) {
+      if (existingKeys.has(`${mlbId}:${hand}`)) continue
       rows.push({ game_date: date, mlb_id: mlbId, pitcher_hand: hand, windows: computeAllStatcastWindows(pitchRows, savantRows, bats, hand, dataThroughDate), computed_at: computedAt })
     }
   }
@@ -69,8 +89,11 @@ export async function precomputeDugoutStatcastForDate(date: string): Promise<{ d
   for (let i = 0; i < rows.length; i += CHUNK) {
     const { error } = await admin
       .from(DUGOUT_STATCAST_TABLE)
-      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'game_date,mlb_id,pitcher_hand' })
+      .upsert(rows.slice(i, i + CHUNK), {
+        onConflict: 'game_date,mlb_id,pitcher_hand',
+        ignoreDuplicates: historical,
+      })
     if (error) throw error
   }
-  return { date, batters: batterIds.length, rows: rows.length }
+  return { date, batters: batterIds.length, rows: historical ? batterIds.length * 2 : rows.length }
 }

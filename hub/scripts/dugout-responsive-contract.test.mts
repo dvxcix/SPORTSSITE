@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline } from '../src/lib/dugoutPresentation.ts'
 import { computeDugoutMomentum, seriesTrend, type DugoutMomentumInputRow, type DugoutMomentumWindow } from '../src/lib/dugoutMomentum.ts'
+import { isHistoricalDugoutDate } from '../src/lib/dugoutBoardDate.ts'
 
 const source = readFileSync(new URL('../src/components/dugout/DugoutClient.tsx', import.meta.url), 'utf8')
 const parkSource = readFileSync(new URL('../src/components/dugout/GameWeatherCard.tsx', import.meta.url), 'utf8')
@@ -15,6 +16,9 @@ const picksSource = readFileSync(new URL('../src/components/dugout/MyPicksPanel.
 const matrixSource = readFileSync(new URL('../src/components/dugout/CustomMatrixPanel.tsx', import.meta.url), 'utf8')
 const utilityDockSource = readFileSync(new URL('../src/components/layout/UtilityDock.tsx', import.meta.url), 'utf8')
 const globalStyles = readFileSync(new URL('../src/app/globals.css', import.meta.url), 'utf8')
+const statcastPrecomputeSource = readFileSync(new URL('../src/lib/dugoutStatcastPrecompute.ts', import.meta.url), 'utf8')
+const matchupEdgePrecomputeSource = readFileSync(new URL('../src/lib/dugoutMatchupEdgePrecompute.ts', import.meta.url), 'utf8')
+const mechanicsCacheSource = readFileSync(new URL('../src/lib/hrMechanicsCache.ts', import.meta.url), 'utf8')
 
 test('Dugout workspace fluidly fills ultrawide displays', () => {
   const pageRule = pageStyles.match(/\.page\{([^}]*)\}/)?.[1] ?? ''
@@ -68,10 +72,31 @@ test('player rows expose an animated accessible form battery without adding a sa
   assert.ok(source.includes('dg-momentum-battery'))
   assert.ok(source.includes('Form battery:'))
   assert.ok(source.includes("['FORM BATTERY', 'L10-to-L1 trajectory."))
-  assert.match(source, /\.dg-momentum-battery\.is-up \.dg-momentum-battery-fill\{bottom:1px/)
-  assert.match(source, /\.dg-momentum-battery\.is-down \.dg-momentum-battery-fill\{top:1px/)
-  assert.match(source, /@media\(prefers-reduced-motion:reduce\)/)
+  assert.match(globalStyles, /\.dg-momentum-battery\.is-up \.dg-momentum-battery-fill\{bottom:1px/)
+  assert.match(globalStyles, /\.dg-momentum-battery\.is-down \.dg-momentum-battery-fill\{top:1px/)
+  assert.match(globalStyles, /@media\(prefers-reduced-motion:reduce\)/)
   assert.equal(source.includes("key: 'momentum'"), false)
+})
+
+test('historical Batter Charge inputs are immutable while missing rows may backfill', () => {
+  assert.equal(isHistoricalDugoutDate('2026-08-24', '2026-08-25'), true)
+  assert.equal(isHistoricalDugoutDate('2026-08-25', '2026-08-25'), false)
+  assert.equal(isHistoricalDugoutDate('2026-08-26', '2026-08-25'), false)
+  assert.match(statcastPrecomputeSource, /ignoreDuplicates: historical/)
+  assert.match(statcastPrecomputeSource, /existingKeys\.has/)
+  assert.match(matchupEdgePrecomputeSource, /ignoreDuplicates: historical/)
+  assert.match(matchupEdgePrecomputeSource, /existingKeys\.has/)
+  assert.match(mechanicsCacheSource, /historicalSnapshot\) return \{ results: historicalSnapshot, cache: 'hit' \}/)
+  assert.match(mechanicsCacheSource, /ignoreDuplicates: historical/)
+})
+
+test('Daily Recap reuses the Batter Charge calculation and shared visual treatment', () => {
+  const recapStart = source.indexOf('export function DailyRecapTable')
+  const recapEnd = source.indexOf('export default function DugoutClient', recapStart)
+  const recapSource = source.slice(recapStart, recapEnd > recapStart ? recapEnd : undefined)
+  assert.ok(recapSource.includes('computeDugoutMomentum(pool)'))
+  assert.ok(recapSource.includes('<BatterRowEl'))
+  assert.ok(globalStyles.includes('.dg-momentum-battery'))
 })
 
 test('temporary presets preserve a member custom order and never reveal hidden columns', () => {

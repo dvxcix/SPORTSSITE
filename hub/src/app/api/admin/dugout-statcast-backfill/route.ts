@@ -22,9 +22,9 @@ async function requireAdmin() {
 // this is safe to hit directly from a logged-in admin browser tab — no
 // secret ever needs to be typed in or shared. Runs the exact same
 // precomputeDugoutStatcastForDate() the daily cron calls, just for
-// whichever date is passed — same both-hands, all-5-windows result,
-// upserted the same way, instantly usable by every viewer of that date
-// afterward.
+// whichever date is passed - same both-hands, all-5-windows result. Past
+// dates are insert-only snapshots: this fills absent rows without changing
+// Batter Charge inputs that were already visible on that historical board.
 //
 // Accepts either ?date=YYYY-MM-DD (a single date, original behavior) or
 // ?dates=YYYY-MM-DD,YYYY-MM-DD,... (a specific list, not necessarily

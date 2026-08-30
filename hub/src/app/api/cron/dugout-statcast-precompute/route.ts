@@ -15,18 +15,17 @@ export const GET = withPipelineHealth('dugout-statcast-precompute', run)
 // request, under concurrent user load was blowing past Postgres's
 // statement_timeout even with the date-level lineup resolution cached).
 //
-// Also reprocesses the trailing PAST_DAYS days, every run — Savant's own
+// Also checks the trailing PAST_DAYS days every run - Savant's own
 // per-pitch CSV export doesn't always land same-day (confirmed live:
 // savant-sync-pitch-log's own recheck logic exists precisely because a
 // date's data sometimes only shows up a day or two late, upstream of us
 // entirely). That cron self-heals by retrying an incomplete PAST date on
 // its NEXT run; if this precompute only ever computed "today," a date that
 // was incomplete when its own precompute first ran would stay silently
-// wrong forever, even after the underlying pitch log caught up. Re-running
-// a small trailing window catches that automatically, same self-healing
-// tolerance the sync cron already has — no manual backfill needed for the
-// normal case, just a same-shape genuinely-new date range (e.g. a real
-// season debut) still needs the admin backfill route once.
+// wrong forever. Historical Dugout rows are snapshots, so this trailing
+// check only inserts missing batter/hand rows; it never overwrites values
+// that members already saw on that date. A genuinely new date range (for
+// example a season debut) still needs the admin backfill route once.
 const PAST_DAYS = 2
 
 async function run(req: Request) {
