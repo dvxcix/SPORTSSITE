@@ -29,7 +29,7 @@ import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
 import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
-import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutViewPreset } from '@/lib/dugoutPresentation'
+import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -960,6 +960,100 @@ export function parseDugoutViewState(raw: string | null): DugoutViewState {
 
 export function selectDugoutMarketPrice(open: number | null | undefined, current: number | null | undefined, snapshot: DugoutMarketSnapshot) {
   return snapshot === 'open' ? (open ?? current ?? null) : (current ?? open ?? null)
+}
+
+function withDugoutTimelinePrices(
+  row: BatterRow,
+  timelinePoint: DugoutTimelinePoint | null,
+  snapshot: DugoutMarketSnapshot,
+  playerKey = normName(row.name),
+): BatterRow {
+  const price = (
+    market: string,
+    open: number | null | undefined,
+    current: number | null | undefined,
+    book: 'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers' | 'fanatics' = 'fanduel',
+  ) => timelinePoint?.players.get(playerKey)?.[market]?.[book]
+    ?? selectDugoutMarketPrice(open, current, snapshot)
+  const fhrFd = price('fhr', row.fhr_open, row.fhr_fd)
+  const fhrCz = price('fhr', row.fhrCz_open, row.fhr_cz, 'williamhill_us')
+  const fhrFan = price('fhr', row.fhrFan_open, row.fhr_fan, 'fanatics')
+  const saFd = price('sa', row.saFd_open, row.sa_fd)
+  const saCz = price('sa', row.saCz_open, row.sa_cz, 'williamhill_us')
+  const saMgm = price('sa', row.saMgm_open, row.sa_mgm, 'betmgm')
+  const saBr = price('sa', row.saBr_open, row.sa_br, 'betrivers')
+  const saFan = price('sa', row.saFan_open, row.sa_fan, 'fanatics')
+  const singles = price('singles', row.sngFd_open, row.sng_fd)
+  const doubles = price('doubles', row.dblFd_open, row.dbl_fd)
+  const triples = price('triples', row.triFd_open, row.tri_fd)
+  const stolenBases = price('stolen_bases', row.sb_open, row.sb_fd)
+  const stolenBases2 = price('stolen_bases2', row.sb2_open, row.sb2_fd)
+  const hits = price('hits', row.hits_open, row.hits_fd)
+  const hits2 = price('hits2', row.hits2_open, row.hits2_fd)
+  const runs = price('runs', row.runs_open, row.runs_fd)
+  const runs2 = price('runs2', row.runs2_open, row.runs2_fd)
+  const rbi = price('rbi', row.rbiFd_open, row.rbi_fd)
+  const rbi2 = price('rbi2', row.rbi2Fd_open, row.rbi2_fd)
+  const rbi3 = price('rbi3', row.rbi3Fd_open, row.rbi3_fd)
+  const tb = price('tb', row.tbFd_open, row.tb_fd)
+  const tb3 = price('tb3', row.tb3Fd_open, row.tb3_fd)
+  const tb4 = price('tb4', row.tb4Fd_open, row.tb4_fd)
+  const tb5 = price('tb5', row.tb5Fd_open, row.tb5_fd)
+  const hrr = price('hrr', row.hrrFd_open, row.hrr_fd)
+  const hr2 = price('hr2', row.hr2Fd_open, row.hr2_fd)
+  const moonshot = price('moonshot', row.moonshot_open, row.moonshot_fd)
+  const laser105 = price('laser105', row.laser105_open, row.laser105_fd)
+  const laser110 = price('laser110', row.laser110_open, row.laser110_fd)
+  const pa1 = price('pa1', row.pa1_open, row.pa1_fd)
+  const hrMl = price('hrMl', row.hrMl_open, row.hrMl_fd)
+  return {
+    ...row,
+    fhr_fd: fhrFd,
+    fhr_cz: fhrCz,
+    fhr_fan: fhrFan,
+    sa_fd: saFd,
+    sa_cz: saCz,
+    sa_mgm: saMgm,
+    sa_br: saBr,
+    sa_fan: saFan,
+    sng_fd: singles,
+    dbl_fd: doubles,
+    tri_fd: triples,
+    sb_fd: stolenBases,
+    sb2_fd: stolenBases2,
+    hits_fd: hits,
+    hits2_fd: hits2,
+    runs_fd: runs,
+    runs2_fd: runs2,
+    rbi_fd: rbi,
+    rbi2_fd: rbi2,
+    rbi3_fd: rbi3,
+    tb_fd: tb,
+    tb3_fd: tb3,
+    tb4_fd: tb4,
+    tb5_fd: tb5,
+    hrr_fd: hrr,
+    hr2_fd: hr2,
+    moonshot_fd: moonshot,
+    laser105_fd: laser105,
+    laser110_fd: laser110,
+    pa1_fd: pa1,
+    hrMl_fd: hrMl,
+    div: fdczDiv(fhrFd, fhrCz),
+    fhr_div_sa: implRatio(fhrFd, saFd),
+    m_div_f: implRatio(saMgm, saFd),
+    sa_div_rbi: implRatio(saFd, rbi),
+    sa_div_rbi2: implRatio(saFd, rbi2),
+    sa_div_rbi3: implRatio(saFd, rbi3),
+    sa_div_hrr: implRatio(saFd, hrr),
+    sa_div_tb: implRatio(saFd, tb),
+    sa_div_tb3: implRatio(saFd, tb3),
+    sa_div_tb4: implRatio(saFd, tb4),
+    sa_div_tb5: implRatio(saFd, tb5),
+    sa_div_hr2: implRatio(saFd, hr2),
+    pa1_div_sa: implRatio(pa1, saFd),
+    sa_div_ml: implRatio(saFd, hrMl),
+  }
 }
 
 function TH({
@@ -3686,97 +3780,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const selectedTimelineLabel = selectedTimelinePoint
     ? new Date(selectedTimelinePoint.capturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : marketSnapshot === 'open' ? 'Open' : 'Now'
-  const selectTimelinePrice = (
-    row: BatterRow,
-    market: string,
-    open: number | null | undefined,
-    current: number | null | undefined,
-    book: 'fanduel' | 'williamhill_us' | 'betmgm' | 'betrivers' | 'fanatics' = 'fanduel',
-  ) => {
-    const captured = selectedTimelinePoint?.players.get(normName(row.name))?.[market]?.[book]
-    return captured ?? selectDugoutMarketPrice(open, current, marketSnapshot)
-  }
-  const withTimelinePrices = (row: BatterRow): BatterRow => {
-    const fhrFd = selectTimelinePrice(row, 'fhr', row.fhr_open, row.fhr_fd)
-    const fhrCz = selectTimelinePrice(row, 'fhr', row.fhrCz_open, row.fhr_cz, 'williamhill_us')
-    const fhrFan = selectTimelinePrice(row, 'fhr', row.fhrFan_open, row.fhr_fan, 'fanatics')
-    const saFd = selectTimelinePrice(row, 'sa', row.saFd_open, row.sa_fd)
-    const saCz = selectTimelinePrice(row, 'sa', row.saCz_open, row.sa_cz, 'williamhill_us')
-    const saMgm = selectTimelinePrice(row, 'sa', row.saMgm_open, row.sa_mgm, 'betmgm')
-    const saBr = selectTimelinePrice(row, 'sa', row.saBr_open, row.sa_br, 'betrivers')
-    const saFan = selectTimelinePrice(row, 'sa', row.saFan_open, row.sa_fan, 'fanatics')
-    const singles = selectTimelinePrice(row, 'singles', row.sngFd_open, row.sng_fd)
-    const doubles = selectTimelinePrice(row, 'doubles', row.dblFd_open, row.dbl_fd)
-    const triples = selectTimelinePrice(row, 'triples', row.triFd_open, row.tri_fd)
-    const stolenBases = selectTimelinePrice(row, 'stolen_bases', row.sb_open, row.sb_fd)
-    const stolenBases2 = selectTimelinePrice(row, 'stolen_bases2', row.sb2_open, row.sb2_fd)
-    const hits = selectTimelinePrice(row, 'hits', row.hits_open, row.hits_fd)
-    const hits2 = selectTimelinePrice(row, 'hits2', row.hits2_open, row.hits2_fd)
-    const runs = selectTimelinePrice(row, 'runs', row.runs_open, row.runs_fd)
-    const runs2 = selectTimelinePrice(row, 'runs2', row.runs2_open, row.runs2_fd)
-    const rbi = selectTimelinePrice(row, 'rbi', row.rbiFd_open, row.rbi_fd)
-    const rbi2 = selectTimelinePrice(row, 'rbi2', row.rbi2Fd_open, row.rbi2_fd)
-    const rbi3 = selectTimelinePrice(row, 'rbi3', row.rbi3Fd_open, row.rbi3_fd)
-    const tb = selectTimelinePrice(row, 'tb', row.tbFd_open, row.tb_fd)
-    const tb3 = selectTimelinePrice(row, 'tb3', row.tb3Fd_open, row.tb3_fd)
-    const tb4 = selectTimelinePrice(row, 'tb4', row.tb4Fd_open, row.tb4_fd)
-    const tb5 = selectTimelinePrice(row, 'tb5', row.tb5Fd_open, row.tb5_fd)
-    const hrr = selectTimelinePrice(row, 'hrr', row.hrrFd_open, row.hrr_fd)
-    const hr2 = selectTimelinePrice(row, 'hr2', row.hr2Fd_open, row.hr2_fd)
-    const moonshot = selectTimelinePrice(row, 'moonshot', row.moonshot_open, row.moonshot_fd)
-    const laser105 = selectTimelinePrice(row, 'laser105', row.laser105_open, row.laser105_fd)
-    const laser110 = selectTimelinePrice(row, 'laser110', row.laser110_open, row.laser110_fd)
-    const pa1 = selectTimelinePrice(row, 'pa1', row.pa1_open, row.pa1_fd)
-    const hrMl = selectTimelinePrice(row, 'hrMl', row.hrMl_open, row.hrMl_fd)
-    return {
-      ...row,
-      fhr_fd: fhrFd,
-      fhr_cz: fhrCz,
-      fhr_fan: fhrFan,
-      sa_fd: saFd,
-      sa_cz: saCz,
-      sa_mgm: saMgm,
-      sa_br: saBr,
-      sa_fan: saFan,
-      sng_fd: singles,
-      dbl_fd: doubles,
-      tri_fd: triples,
-      sb_fd: stolenBases,
-      sb2_fd: stolenBases2,
-      hits_fd: hits,
-      hits2_fd: hits2,
-      runs_fd: runs,
-      runs2_fd: runs2,
-      rbi_fd: rbi,
-      rbi2_fd: rbi2,
-      rbi3_fd: rbi3,
-      tb_fd: tb,
-      tb3_fd: tb3,
-      tb4_fd: tb4,
-      tb5_fd: tb5,
-      hrr_fd: hrr,
-      hr2_fd: hr2,
-      moonshot_fd: moonshot,
-      laser105_fd: laser105,
-      laser110_fd: laser110,
-      pa1_fd: pa1,
-      hrMl_fd: hrMl,
-      div: fdczDiv(fhrFd, fhrCz),
-      fhr_div_sa: implRatio(fhrFd, saFd),
-      m_div_f: implRatio(saMgm, saFd),
-      sa_div_rbi: implRatio(saFd, rbi),
-      sa_div_rbi2: implRatio(saFd, rbi2),
-      sa_div_rbi3: implRatio(saFd, rbi3),
-      sa_div_hrr: implRatio(saFd, hrr),
-      sa_div_tb: implRatio(saFd, tb),
-      sa_div_tb3: implRatio(saFd, tb3),
-      sa_div_tb4: implRatio(saFd, tb4),
-      sa_div_tb5: implRatio(saFd, tb5),
-      sa_div_hr2: implRatio(saFd, hr2),
-      pa1_div_sa: implRatio(pa1, saFd),
-      sa_div_ml: implRatio(saFd, hrMl),
-    }
-  }
+  const withTimelinePrices = (row: BatterRow): BatterRow =>
+    withDugoutTimelinePrices(row, selectedTimelinePoint, marketSnapshot)
   const chooseTimelineIndex = (index: number) => {
     if (!marketTimeline.length) {
       setMarketSnapshot(index === 0 ? 'open' : 'now')
@@ -4645,11 +4650,102 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
     return out
   }, [data, splitMap, pitcherMap, fhrAvgMap, saAvgMap, openingMap, hrMap, nearMap, statcastWindow, date])
 
+  // Daily Recap covers the whole slate rather than one active game. Load
+  // only the games represented by confirmed-HR rows, scope every player by
+  // gamePk, then merge the captures chronologically into one scrubber. The
+  // scoping prevents a same-name player/doubleheader collision from leaking
+  // one game's price into another game's row.
+  const recapHistoryGames = useMemo(() => {
+    const represented = new Set(hrRows.map(item => item.gameInfo.game_pk).filter(Boolean))
+    return (data?.games ?? []).filter((game: any) => represented.has(game.gamePk != null ? String(game.gamePk) : null))
+  }, [data?.games, hrRows])
+  const recapHistoryKey = recapHistoryGames.map((game: any) => `${game.gamePk}:${game.gameKey}`).sort().join('|')
+  const [marketHistory, setMarketHistory] = useState<DugoutHistorySnapshot[]>([])
+  const [marketHistorySourceCount, setMarketHistorySourceCount] = useState(0)
+  const [marketHistoryLoading, setMarketHistoryLoading] = useState(false)
+  const [timelineIndex, setTimelineIndex] = useState<number | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    setMarketHistory([])
+    setMarketHistorySourceCount(0)
+    setTimelineIndex(null)
+    if (!recapHistoryGames.length) return () => controller.abort()
+    setMarketHistoryLoading(true)
+    Promise.all(recapHistoryGames.map(async (game: any) => {
+      const gamePk = String(game.gamePk)
+      const params = new URLSearchParams({ date, gamePk, gameKey: String(game.gameKey) })
+      const response = await fetch(`/api/odds-terminal?${params}`, { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
+      if (!response.ok) return { snapshots: [] as DugoutHistorySnapshot[], sourceCount: 0 }
+      const payload = await response.json()
+      const snapshots = (Array.isArray(payload?.snapshots) ? payload.snapshots : []).map((snapshot: DugoutHistorySnapshot) => {
+        const prop_map: DugoutHistorySnapshot['prop_map'] = {}
+        for (const [providerKey, entry] of Object.entries(snapshot.prop_map ?? {})) {
+          const scopedName = `${gamePk}:${normName(entry?.name || providerKey)}`
+          prop_map[`${gamePk}:${providerKey}`] = { ...entry, name: scopedName }
+        }
+        return { captured_at: snapshot.captured_at, prop_map }
+      })
+      return { snapshots, sourceCount: Number(payload?.sourceCount) || 0 }
+    }))
+      .then(results => {
+        if (controller.signal.aborted) return
+        setMarketHistory(results.flatMap(result => result.snapshots).sort((a, b) => a.captured_at.localeCompare(b.captured_at)))
+        setMarketHistorySourceCount(results.reduce((total, result) => total + result.sourceCount, 0))
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setMarketHistory([])
+          setMarketHistorySourceCount(0)
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setMarketHistoryLoading(false) })
+    return () => controller.abort()
+    // recapHistoryKey is the stable identity of the represented games. Do
+    // not refetch captures merely because a Statcast window rebuilt hrRows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, recapHistoryKey])
+  const marketTimeline = useMemo(() => buildDugoutMarketTimeline(marketHistory, value => value), [marketHistory])
+  useEffect(() => {
+    if (marketTimeline.length) setTimelineIndex(previous => Math.min(previous ?? marketTimeline.length - 1, marketTimeline.length - 1))
+  }, [marketTimeline.length])
+  const selectedTimelineIndex = marketTimeline.length
+    ? Math.min(timelineIndex ?? marketTimeline.length - 1, marketTimeline.length - 1)
+    : null
+  const selectedTimelinePoint = selectedTimelineIndex == null ? null : marketTimeline[selectedTimelineIndex]
+  const selectedTimelineLabel = selectedTimelinePoint
+    ? new Date(selectedTimelinePoint.capturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : 'Latest'
+  const isToday = date === new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const timelineEndLabel = isToday ? 'Now' : 'Close'
+  const fallbackSnapshot: DugoutMarketSnapshot = !marketTimeline.length || selectedTimelineIndex === marketTimeline.length - 1
+    ? 'now'
+    : 'open'
+  const timelineRows = useMemo<DailyRecapRow[]>(() => {
+    if (!selectedTimelinePoint && fallbackSnapshot === 'now') return hrRows
+    const rowMap = new Map<BatterRow, BatterRow>()
+    const poolMap = new Map<BatterRow[], BatterRow[]>()
+    const mapRow = (row: BatterRow, gamePk: string | null) => {
+      const existing = rowMap.get(row)
+      if (existing) return existing
+      const adjusted = withDugoutTimelinePrices(row, selectedTimelinePoint, fallbackSnapshot, `${gamePk}:${normName(row.name)}`)
+      rowMap.set(row, adjusted)
+      return adjusted
+    }
+    return hrRows.map(item => {
+      let pool = poolMap.get(item.pool)
+      if (!pool) {
+        pool = item.pool.map(row => mapRow(row, item.gameInfo.game_pk))
+        poolMap.set(item.pool, pool)
+      }
+      return { ...item, row: mapRow(item.row, item.gameInfo.game_pk), pool }
+    })
+  }, [fallbackSnapshot, hrRows, selectedTimelinePoint])
+
   const displayRows = useMemo(() => {
-    if (!sort) return hrRows
-    const order = new Map(sortRowsMulti(hrRows.map(w => w.row), [sort]).map((r, i) => [r, i]))
-    return [...hrRows].sort((a, b) => (order.get(a.row) ?? 0) - (order.get(b.row) ?? 0))
-  }, [hrRows, sort])
+    if (!sort) return timelineRows
+    const order = new Map(sortRowsMulti(timelineRows.map(w => w.row), [sort]).map((r, i) => [r, i]))
+    return [...timelineRows].sort((a, b) => (order.get(a.row) ?? 0) - (order.get(b.row) ?? 0))
+  }, [timelineRows, sort])
 
   const visibleColumns = useMemo(() => resolveDugoutColumns(null), [])
   const dugoutHeaderCells = getDugoutHeaderCells(sortInfo, toggleSort, visibleColumns)
@@ -4690,11 +4786,34 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
                 position: 'sticky', top: 0, zIndex: 5,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-1)' }}>
+              <div className="daily-recap-toolbar">
+                <span className="daily-recap-count">
                   {hrRows.length} confirmed home run{hrRows.length === 1 ? '' : 's'}
                 </span>
                 <StatcastWindowToggle value={statcastWindow} onChange={setStatcastWindow} />
+                <div className="daily-recap-market-story" aria-label="Daily Recap market story">
+                  <div className="daily-recap-market-story-head">
+                    <strong>Market Story</strong>
+                    <span>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures` : 'Open / latest only'}</span>
+                  </div>
+                  <div className="daily-recap-market-story-track">
+                    <b className={selectedTimelineIndex === 0 ? 'is-active' : ''}>Open</b>
+                    <input
+                      type="range"
+                      aria-label="Scrub Daily Recap market captures"
+                      min={0}
+                      max={marketTimeline.length ? Math.max(0, marketTimeline.length - 1) : 1}
+                      step={1}
+                      value={marketTimeline.length ? (selectedTimelineIndex ?? marketTimeline.length - 1) : 1}
+                      disabled={marketHistoryLoading || marketTimeline.length < 2}
+                      onChange={event => setTimelineIndex(Number(event.currentTarget.value))}
+                    />
+                    <b className={selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? 'is-active' : ''}>
+                      {selectedTimelineIndex === marketTimeline.length - 1 || !marketTimeline.length ? timelineEndLabel : selectedTimelineLabel}
+                    </b>
+                  </div>
+                  <em>{selectedTimelineLabel}</em>
+                </div>
               </div>
             </td>
           </tr>
@@ -4721,8 +4840,32 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
       </table>
       {hrPopupRow && <HrPopup row={hrPopupRow} onClose={() => setHrPopupRow(null)} />}
       <style>{`
+        .daily-recap-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:min(100%,760px)}
+        .daily-recap-count{font-size:12px;font-weight:900;color:var(--text-1);white-space:nowrap}
+        .daily-recap-board-scroll .dugout-window-toggle i{display:none}
+        .daily-recap-market-story{margin-left:auto;display:grid;grid-template-columns:auto minmax(240px,420px) auto;align-items:center;gap:5px 10px;min-width:min(100%,440px);padding:6px 9px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-radius:9px;background:linear-gradient(105deg,color-mix(in srgb,var(--accent) 8%,var(--surface)),var(--surface))}
+        .daily-recap-market-story-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+        .daily-recap-market-story-head strong{color:var(--accent);font-size:9px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+        .daily-recap-market-story-head span{overflow:hidden;color:var(--text-2);font-size:9px;font-weight:750;white-space:nowrap;text-overflow:ellipsis}
+        .daily-recap-market-story-track{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(160px,1fr) auto;align-items:center;gap:8px}
+        .daily-recap-market-story-track b{min-width:33px;color:var(--text-3);font-size:9px;font-weight:850;text-transform:uppercase}
+        .daily-recap-market-story-track b:last-child{text-align:right}
+        .daily-recap-market-story-track b.is-active{color:var(--accent)}
+        .daily-recap-market-story-track input{width:100%;height:22px;margin:0;cursor:pointer;accent-color:var(--accent)}
+        .daily-recap-market-story-track input:disabled{cursor:default;opacity:.48}
+        .daily-recap-market-story > em{grid-column:1/-1;justify-self:end;color:var(--text-2);font-size:9px;font-style:normal;font-weight:750}
         @media(max-width:640px),(max-width:1024px) and (any-pointer:coarse){
           .daily-recap-board-scroll{max-height:none!important;height:auto!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important;border-radius:8px!important;-webkit-overflow-scrolling:touch}
+          .daily-recap-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;min-width:calc(100vw - 44px);width:calc(100vw - 44px)}
+          .daily-recap-count{font-size:11px}
+          .daily-recap-board-scroll .dugout-window-toggle{justify-self:end}
+          .daily-recap-board-scroll .dugout-window-toggle > span{display:none}
+          .daily-recap-board-scroll .dugout-window-toggle button{min-width:36px;min-height:34px;padding:4px 7px!important}
+          .daily-recap-board-scroll .dugout-window-toggle button span{display:none}
+          .daily-recap-board-scroll .dugout-window-toggle button i{display:inline;font-style:normal}
+          .daily-recap-market-story{grid-column:1/-1;margin-left:0;min-width:0;width:100%;box-sizing:border-box;padding:7px 9px}
+          .daily-recap-market-story-track{grid-template-columns:36px minmax(120px,1fr) 42px;gap:6px}
+          .daily-recap-market-story-track input{height:30px}
           .daily-recap-board-scroll .dugout-dense-table{font-size:12px!important}
           .daily-recap-board-scroll .dugout-dense-table > tbody > tr > td{padding-top:8px!important;padding-bottom:8px!important}
           .daily-recap-board-scroll .dg-sticky-col{width:172px!important;min-width:172px!important;max-width:172px!important}

@@ -99,6 +99,20 @@ test('Daily Recap reuses the Batter Charge calculation and shared visual treatme
   assert.ok(globalStyles.includes('.dg-momentum-battery'))
 })
 
+test('Daily Recap has a responsive market scrubber and never doubles Statcast window labels', () => {
+  const recapStart = source.indexOf('export function DailyRecapTable')
+  const recapEnd = source.indexOf('export default function DugoutClient', recapStart)
+  const recapSource = source.slice(recapStart, recapEnd > recapStart ? recapEnd : undefined)
+  assert.ok(recapSource.includes('Daily Recap market story'))
+  assert.ok(recapSource.includes('Scrub Daily Recap market captures'))
+  assert.ok(recapSource.includes('/api/odds-terminal?'))
+  assert.ok(recapSource.includes('withDugoutTimelinePrices'))
+  assert.ok(recapSource.includes('const displayRows = useMemo(() =>'))
+  assert.match(recapSource, /\.daily-recap-board-scroll \.dugout-window-toggle i\{display:none\}/)
+  assert.match(recapSource, /\.daily-recap-board-scroll \.dugout-window-toggle button span\{display:none\}/)
+  assert.match(recapSource, /\.daily-recap-board-scroll \.dugout-window-toggle button i\{display:inline/)
+})
+
 test('temporary presets preserve a member custom order and never reveal hidden columns', () => {
   const customized = [
     { key: 'hits', group: 'props' },
@@ -151,7 +165,7 @@ test('single, extra-base, stolen-base, hit, and run cells follow the selected ma
   ] as const
 
   for (const [market, opener, field] of mappings) {
-    assert.ok(source.includes(`selectTimelinePrice(row, ${market}, row.${opener}, row.${field})`), `${field} does not follow Market Story`)
+    assert.ok(source.includes(`price(${market}, row.${opener}, row.${field})`), `${field} does not follow Market Story`)
   }
 })
 
