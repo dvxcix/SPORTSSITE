@@ -311,6 +311,13 @@ test('market cells use one movement indicator and a readable opening-price label
   assert.doesNotMatch(source, /td\[data-market-move=longer\]::after/)
 })
 
+test('player rows render every matching Matrix as a compact colored dot', () => {
+  assert.ok(source.includes('row.matrix_matches.map(matrix => ('))
+  assert.ok(source.includes('aria-label={matrix.name}'))
+  assert.ok(source.includes('background: matrix.color'))
+  assert.equal(source.includes('{row.matrix_matches[0].name}'), false)
+})
+
 test('RBI and total-base markets switch between HR ratios and raw FanDuel odds without changing columns', () => {
   assert.ok(source.includes("export type DugoutRelatedMarketDisplay = 'ratio' | 'odds'"))
   assert.ok(source.includes('className="dugout-related-market-control"'))

@@ -1912,16 +1912,21 @@ export function BatterRowEl({ row, pool, expanded, onToggle, gameInfo, onShowHr,
                 {row.matrix_matches.length > 0 && (
                   <Tooltip content={`Matrix: ${row.matrix_matches.map(m => m.name).join(' · ')}`}>
                     <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 3, maxWidth: 64,
-                      padding: '2px 5px', borderRadius: 999, cursor: 'help',
-                      border: `1px solid ${row.matrix_matches[0].color}66`,
-                      background: `${row.matrix_matches[0].color}1f`,
-                      color: row.matrix_matches[0].color, fontSize: 7, fontWeight: 900,
+                      display: 'inline-flex', alignItems: 'center', gap: 2, maxWidth: 54,
+                      flexWrap: 'wrap', cursor: 'help', lineHeight: 0,
                     }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {row.matrix_matches[0].name}
-                      </span>
-                      {row.matrix_matches.length > 1 && <b>+{row.matrix_matches.length - 1}</b>}
+                      {row.matrix_matches.map(matrix => (
+                        <span
+                          key={matrix.id}
+                          aria-label={matrix.name}
+                          style={{
+                            width: 7, height: 7, borderRadius: '50%', flex: '0 0 7px',
+                            background: matrix.color,
+                            border: '1px solid rgba(255,255,255,.28)',
+                            boxShadow: `0 0 5px ${matrix.color}88`,
+                          }}
+                        />
+                      ))}
                     </span>
                   </Tooltip>
                 )}
