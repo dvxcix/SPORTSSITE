@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   computeDisplayedRatioMovement,
+  evaluateDugoutSpecsFactor,
   evaluateOddsFactor,
   runPipeline,
   type FieldBundle,
@@ -54,6 +55,29 @@ test('ratio movement does not invent a value without an opening ratio', () => {
   const props = propsWithMovement('tb4')
   delete props.open?.tb4Fd
   assert.equal(computeDisplayedRatioMovement('sa_div_tb4', props), null)
+})
+
+test('FHR/HR down filter rejects a ratio that moved up', () => {
+  const factor = {
+    id: 'fhr-hr-down', category: 'dugout_specs', field_key: 'fhr_div_sa_move',
+    operator: 'lte', value: -0.01, recency: null, recency_start: null, recency_end: null,
+    books: null, books_min_count: null, tie_scope: null, tie_direction: null, tiebreakers: null,
+    mm_base_window: null, mm_compare_windows: null, mm_direction: null,
+    mm_match_mode: null, mm_amount_mode: null,
+  } as MatrixFactor
+  const movedDown = {
+    fhr: { fanduel: 1100 }, sa: { fanduel: 550 },
+    open: { fhr: 1000, saFd: 550 },
+  } as unknown as OddsProps
+  const movedUp = {
+    fhr: { fanduel: 900 }, sa: { fanduel: 550 },
+    open: { fhr: 1000, saFd: 550 },
+  } as unknown as OddsProps
+
+  assert.ok(computeDisplayedRatioMovement('fhr_div_sa', movedDown)! < 0)
+  assert.ok(computeDisplayedRatioMovement('fhr_div_sa', movedUp)! > 0)
+  assert.equal(evaluateDugoutSpecsFactor(factor, movedDown, null, null), true)
+  assert.equal(evaluateDugoutSpecsFactor(factor, movedUp, null, null), false)
 })
 
 test('adjacent OR filters evaluate each alternative against the entering pool', () => {
