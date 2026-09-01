@@ -98,7 +98,7 @@
     },
     {
       "path": "/api/cron/statcast-integrity-check",
-      "schedule": "20 10-16 * * *"
+      "schedule": "50 10-16 * * *"
     },
     {
       "path": "/api/cron/savant-sync-affinity",
@@ -131,6 +131,10 @@
     {
       "path": "/api/cron/market-dna-maintenance",
       "schedule": "40 3 * * *"
+    },
+    {
+      "path": "/api/cron/market-dna-maintenance?fitOnly=1",
+      "schedule": "20 4 * * *"
     },
     {
       "path": "/api/cron/nfl-sync-teams",

@@ -7,7 +7,7 @@ import { withPipelineHealth } from '@/lib/pipelineHealth'
 export const revalidate = 0
 export const maxDuration = 300
 
-const MAX_BACKFILL_DATES = 4
+const MAX_BACKFILL_DATES = 2
 const STRICT_ARCHIVE_START = '2026-07-16'
 
 function shiftDate(date: string, days: number) {
@@ -29,8 +29,23 @@ async function run(req: Request) {
   const authError = requireCronAuth(req)
   if (authError) return authError
 
-  const admin = createAdminClient()
   const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const fitOnly = new URL(req.url).searchParams.get('fitOnly') === '1'
+  if (fitOnly) {
+    const slate = await buildMarketDnaSlate(todayEt)
+    const analysis = await analyzeMarketDnaSlate(todayEt, slate.games)
+    const reducer = analysis.games.find(game => game.reducer)?.reducer ?? null
+    return NextResponse.json({
+      ok: true,
+      todayEt,
+      stage: 'model-fit',
+      modelVersion: reducer?.version ?? null,
+      validation: reducer?.validation ?? null,
+      gamesAnalyzed: analysis.games.length,
+    })
+  }
+
+  const admin = createAdminClient()
   const throughDate = shiftDate(todayEt, -1)
   const coverage: Array<{ game_date: string; source_version: string | null }> = []
   for (let from = 0; ; from += 1000) {
@@ -58,31 +73,17 @@ async function run(req: Request) {
   }
 
   const archived = await pooled(dates, 2, date => archiveMarketDnaDate(date))
-  // Four historical board rebuilds plus a model fit approached the function's
-  // hard runtime ceiling. Backfill first; the admin request retrains whenever it
-  // sees a newer archive, and the cron resumes model fitting once the gap closes.
-  if (dates.length >= 2) {
-    return NextResponse.json({
-      ok: true,
-      todayEt,
-      throughDate,
-      archived,
-      modelDeferredForBackfill: true,
-      strictDates: strictDates.size + dates.length,
-    })
-  }
-  const slate = await buildMarketDnaSlate(todayEt)
-  const analysis = await analyzeMarketDnaSlate(todayEt, slate.games)
-  const reducer = analysis.games.find(game => game.reducer)?.reducer ?? null
-
+  // Archive reconstruction and model fitting are independently expensive.
+  // Keep them in separate cron invocations so neither can consume the other's
+  // serverless runtime budget and cap each archive pass to two dates.
   return NextResponse.json({
     ok: true,
     todayEt,
     throughDate,
+    stage: 'archive',
     archived,
-    modelVersion: reducer?.version ?? null,
-    validation: reducer?.validation ?? null,
-    gamesAnalyzed: analysis.games.length,
+    modelDeferredToFitStage: true,
+    strictDates: strictDates.size + dates.length,
   })
 }
 

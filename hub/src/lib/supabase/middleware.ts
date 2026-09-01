@@ -219,8 +219,15 @@ export async function updateSession(request: NextRequest) {
 
     const alreadyRetried = request.cookies.get(AUTH_REFRESH_RETRY_COOKIE)?.value === '1'
     if (request.nextUrl.pathname.startsWith('/api/')) {
-      const response = NextResponse.json({ error: 'Authentication required', code: 'SESSION_EXPIRED' }, { status: 401 })
-      if (alreadyRetried && authError.code === 'refresh_token_not_found') {
+      const response = NextResponse.json({
+        error: 'Authentication required',
+        code: alreadyRetried ? 'SESSION_EXPIRED' : 'SESSION_REFRESH_RETRY',
+      }, { status: 401 })
+      if (alreadyRetried) {
+        // A sibling refresh winner repairs the cookie before the next request.
+        // Seeing either rotation error again after the bounded retry therefore
+        // means this browser still owns an unusable token family. Clear it so
+        // the client cannot remain permanently wedged on protected API calls.
         clearStaleSupabaseAuthCookies(request, response)
         clearRefreshRetry(response)
       } else {
@@ -238,7 +245,8 @@ export async function updateSession(request: NextRequest) {
     loginUrl.pathname = '/auth/login'
     loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
     const response = NextResponse.redirect(loginUrl)
-    if (authError.code === 'refresh_token_not_found') clearStaleSupabaseAuthCookies(request, response)
+    clearStaleSupabaseAuthCookies(request, response)
+    clearRefreshRetry(response)
     return response
   }
 

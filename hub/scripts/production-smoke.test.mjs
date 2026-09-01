@@ -436,11 +436,34 @@ test('external notification and media fallbacks remain resilient', async () => {
 test('expired refresh tokens cannot pass protected requests through middleware', async () => {
   const middleware = await read('src/lib/supabase/middleware.ts')
   assert.ok(middleware.includes("pathname.startsWith('/api/')"))
-  assert.ok(middleware.includes("code: 'SESSION_EXPIRED'"))
+  assert.ok(middleware.includes("alreadyRetried ? 'SESSION_EXPIRED' : 'SESSION_REFRESH_RETRY'"))
+  assert.ok(middleware.includes("'SESSION_REFRESH_RETRY'"))
+  assert.ok(middleware.includes('if (alreadyRetried)'))
   assert.ok(middleware.includes("loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)"))
   assert.ok(middleware.includes('AUTH_REFRESH_RETRY_COOKIE'))
   assert.ok(middleware.includes('clearStaleSupabaseAuthCookies'))
   assert.ok(!middleware.includes('return supabaseResponse // Allow request to proceed'))
+})
+
+test('account reads distinguish auth, missing profiles, and database failures', async () => {
+  const route = await read('src/app/api/account/me/route.ts')
+  assert.ok(route.includes('supabase.auth.getClaims()'))
+  assert.ok(route.includes('.maybeSingle()'))
+  assert.ok(route.includes("code: 'PROFILE_NOT_FOUND'"))
+  assert.ok(route.includes("safeApiError('account-me'"))
+})
+
+test('heavy analytics jobs use bounded, contention-safe cron stages', async () => {
+  const vercel = JSON.parse(await read('vercel.json'))
+  const marketDna = await read('src/app/api/cron/market-dna-maintenance/route.ts')
+  const statcast = await read('src/app/api/cron/statcast-integrity-check/route.ts')
+  assert.ok(marketDna.includes('const MAX_BACKFILL_DATES = 2'))
+  assert.ok(marketDna.includes("searchParams.get('fitOnly') === '1'"))
+  assert.ok(marketDna.includes("stage: 'archive'"))
+  assert.ok(marketDna.includes("stage: 'model-fit'"))
+  assert.ok(vercel.crons.some(cron => cron.path === '/api/cron/market-dna-maintenance?fitOnly=1'))
+  assert.equal(vercel.crons.find(cron => cron.path === '/api/cron/statcast-integrity-check')?.schedule, '50 10-16 * * *')
+  assert.ok(statcast.includes('const retryDelaysMs = [1_500, 5_000]'))
 })
 
 test('service-role sports APIs authenticate mobile bearer requests themselves', async () => {

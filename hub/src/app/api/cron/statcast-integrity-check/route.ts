@@ -12,20 +12,23 @@ export const revalidate = 0
 export const maxDuration = 120
 
 async function runAuditWithTransientRetry(admin: ReturnType<typeof createAdminClient>, season: number, throughDate: string) {
-  const first = await admin.rpc('run_statcast_integrity_audit', {
+  const retryDelaysMs = [1_500, 5_000]
+  let response = await admin.rpc('run_statcast_integrity_audit', {
     p_season: season,
     p_through_date: throughDate,
   })
-  // PostgreSQL 57014 here has been transient contention while the morning
-  // Statcast writers are still landing, not a deterministic bad audit. One
-  // bounded retry keeps the integrity result current without hiding a second
-  // failure or creating an unbounded serverless loop.
-  if (first.error?.code !== '57014') return first
-  await new Promise(resolve => setTimeout(resolve, 1_500))
-  return admin.rpc('run_statcast_integrity_audit', {
-    p_season: season,
-    p_through_date: throughDate,
-  })
+  // PostgreSQL 57014 has been transient writer contention, not a bad audit.
+  // The cron is also scheduled away from writers; these two bounded backoffs
+  // cover an unusually slow writer without hiding a persistent query failure.
+  for (const delayMs of retryDelaysMs) {
+    if (response.error?.code !== '57014') return response
+    await new Promise(resolve => setTimeout(resolve, delayMs))
+    response = await admin.rpc('run_statcast_integrity_audit', {
+      p_season: season,
+      p_through_date: throughDate,
+    })
+  }
+  return response
 }
 
 async function run(req: Request) {
