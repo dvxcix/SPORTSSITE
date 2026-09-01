@@ -116,6 +116,16 @@ test('Daily Recap has a responsive market scrubber and never doubles Statcast wi
   assert.match(recapSource, /\.daily-recap-controls \.dugout-window-toggle button i\{display:inline/)
 })
 
+test('Market Story changes visible prices without changing hard-set Matrix matches', () => {
+  const start = source.indexOf('function withDugoutTimelinePrices')
+  const end = source.indexOf('function TH(', start)
+  const timelineSource = source.slice(start, end)
+  assert.ok(timelineSource.includes('fhr_fd: fhrFd'))
+  assert.equal(timelineSource.includes('matrix_matches:'), false)
+  assert.equal(source.includes('timelineMovementMatrices'), false)
+  assert.equal(source.includes('applyTimelineMovementMatrixMatches'), false)
+})
+
 test('temporary presets preserve a member custom order and never reveal hidden columns', () => {
   const customized = [
     { key: 'hits', group: 'props' },

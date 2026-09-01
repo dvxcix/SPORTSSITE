@@ -30,7 +30,6 @@ import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
-import { evaluateDugoutSpecsFactor, evaluateMatrix, type Matrix, type OddsProps } from '@slipsurge/core/matrixEngine'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -968,7 +967,6 @@ function withDugoutTimelinePrices(
   timelinePoint: DugoutTimelinePoint | null,
   snapshot: DugoutMarketSnapshot,
   playerKey = normName(row.name),
-  timelineMovementMatrices: Matrix[] = [],
 ): BatterRow {
   const price = (
     market: string,
@@ -1008,7 +1006,7 @@ function withDugoutTimelinePrices(
   const laser110 = price('laser110', row.laser110_open, row.laser110_fd)
   const pa1 = price('pa1', row.pa1_open, row.pa1_fd)
   const hrMl = price('hrMl', row.hrMl_open, row.hrMl_fd)
-  const adjusted: BatterRow = {
+  return {
     ...row,
     fhr_fd: fhrFd,
     fhr_cz: fhrCz,
@@ -1055,57 +1053,6 @@ function withDugoutTimelinePrices(
     sa_div_hr2: implRatio(saFd, hr2),
     pa1_div_sa: implRatio(pa1, saFd),
     sa_div_ml: implRatio(saFd, hrMl),
-  }
-  return applyTimelineMovementMatrixMatches(adjusted, timelineMovementMatrices)
-}
-
-/**
- * Rebuild the small odds shape used by matrixEngine from the prices visible
- * at the selected Market Story capture. Opening prices remain the immutable
- * game baseline; only current prices move with the slider.
- */
-function timelineOddsProps(row: BatterRow): OddsProps {
-  const base = (row.rawProps && typeof row.rawProps === 'object') ? row.rawProps as OddsProps : {} as OddsProps
-  const market = (key: string, fanduel: number | null, extras: Record<string, number | null> = {}) => ({
-    ...(base[key] ?? {}),
-    fanduel,
-    ...extras,
-  })
-  return {
-    ...base,
-    fhr: market('fhr', row.fhr_fd, { caesars: row.fhr_cz, fanatics: row.fhr_fan }),
-    sa: market('sa', row.sa_fd, {
-      caesars: row.sa_cz,
-      betmgm: row.sa_mgm,
-      betrivers: row.sa_br,
-      fanatics: row.sa_fan,
-    }),
-    pa1: market('pa1', row.pa1_fd),
-    hrMl: market('hrMl', row.hrMl_fd),
-    rbi: market('rbi', row.rbi_fd),
-    rbi2: market('rbi2', row.rbi2_fd),
-    rbi3: market('rbi3', row.rbi3_fd),
-    hrr: market('hrr', row.hrr_fd),
-    tb: market('tb', row.tb_fd),
-    tb3: market('tb3', row.tb3_fd),
-    tb4: market('tb4', row.tb4_fd),
-    tb5: market('tb5', row.tb5_fd),
-    hr2: market('hr2', row.hr2_fd),
-  } as OddsProps
-}
-
-function applyTimelineMovementMatrixMatches(row: BatterRow, matrices: Matrix[]): BatterRow {
-  if (!matrices.length) return row
-  const ids = new Set(matrices.map(matrix => matrix.id))
-  const stableMatches = row.matrix_matches.filter(match => !ids.has(match.id))
-  const props = timelineOddsProps(row)
-  const timelineMatches = matrices
-    .filter(matrix => evaluateMatrix(matrix, factor => evaluateDugoutSpecsFactor(factor, props, null, null)))
-    .map(matrix => ({ id: matrix.id, name: matrix.name, color: matrix.color, priority: matrix.priority }))
-  return {
-    ...row,
-    matrix_matches: [...stableMatches, ...timelineMatches]
-      .sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name)),
   }
 }
 
@@ -3504,7 +3451,7 @@ export function getDugoutHeaderCells(
   )
 }
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange, navigation, onOpenColumns, timelineMovementMatrices }: {
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange, navigation, onOpenColumns }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -3524,7 +3471,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   onDensityChange: (density: 'compact' | 'comfortable') => void
   navigation: { index: number; total: number; onPrevious: () => void; onNext: () => void; onAllGames: () => void }
   onOpenColumns: () => void
-  timelineMovementMatrices: Matrix[]
 }) {
   const watchlist = useWatchlist()
   const viewStorageKey = `ss:dugout-view-v1:${date}:${game.gameKey}`
@@ -3847,7 +3793,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     ? new Date(selectedTimelinePoint.capturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : marketSnapshot === 'open' ? 'Open' : 'Now'
   const withTimelinePrices = (row: BatterRow): BatterRow =>
-    withDugoutTimelinePrices(row, selectedTimelinePoint, marketSnapshot, normName(row.name), timelineMovementMatrices)
+    withDugoutTimelinePrices(row, selectedTimelinePoint, marketSnapshot, normName(row.name))
   const chooseTimelineIndex = (index: number) => {
     if (!marketTimeline.length) {
       setMarketSnapshot(index === 0 ? 'open' : 'now')
@@ -4798,7 +4744,6 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
         selectedTimelinePoint,
         fallbackSnapshot,
         `${gamePk}:${normName(row.name)}`,
-        (data.timelineMovementMatrices ?? []) as Matrix[],
       )
       rowMap.set(row, adjusted)
       return adjusted
@@ -4811,7 +4756,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
       }
       return { ...item, row: mapRow(item.row, item.gameInfo.game_pk), pool }
     })
-  }, [data.timelineMovementMatrices, fallbackSnapshot, hrRows, selectedTimelinePoint])
+  }, [fallbackSnapshot, hrRows, selectedTimelinePoint])
 
   const displayRows = useMemo(() => {
     if (!sort) return timelineRows
@@ -5395,7 +5340,6 @@ export function DugoutClient({ date }: { date: string }) {
                 onAllGames: () => setShowGamePicker(true),
               }}
               onOpenColumns={() => setShowColumnPanel(true)}
-              timelineMovementMatrices={(data.timelineMovementMatrices ?? []) as Matrix[]}
             />
       )}
 

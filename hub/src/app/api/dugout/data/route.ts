@@ -689,22 +689,6 @@ export async function GET(req: Request) {
   // both the app and DB level), so always fetching it for an eligible caller
   // is cheap.
   const userMatrices = isUltimate && admin && gate.userId ? await timed(reqId, 'userMatrices', fetchUserMatrices(admin, gate.userId)) : []
-  // Movement-only classic Matrices must also be available in the browser.
-  // Market Story can display any historical capture, while the server-side
-  // matrixMatches above necessarily describe the latest capture. The client
-  // re-evaluates this safe, price-only subset against the exact capture being
-  // displayed so a historical ratio cannot carry a stale "now" highlight.
-  const timelineMovementMatrices = userMatrices.filter(matrix =>
-    matrix.matrix_type === 'classic'
-    && matrix.factors.length > 0
-    && matrix.factors.every(factor =>
-      factor.category === 'dugout_specs'
-      && factor.field_key.endsWith('_move')
-      && factor.field_key !== 'mm_move'
-      && factor.operator !== 'tied'
-      && factor.operator !== 'mm_trend'
-    )
-  )
   // dugout_specs' 'mm'/'bk_rk'/'pp_rk' fields (the board's own ❓ column and
   // its two raw rank ingredients — see MmByWindow, matrixEngine.ts) are the
   // only dugout_specs fields that need real extra per-game work (a
@@ -1662,7 +1646,7 @@ export async function GET(req: Request) {
     {
       date, games, statSplits, timingSplits, pitcherSplits, communityPicks: pikkit,
       fhrAvg: responseFhrAvg, saAvg: responseSaAvg, openingSaRbi: responseOpeningSaRbi,
-      hrFeed: responseHrFeed, nearHr: responseNearHr, timelineMovementMatrices,
+      hrFeed: responseHrFeed, nearHr: responseNearHr,
     },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
   )
