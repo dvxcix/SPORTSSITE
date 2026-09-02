@@ -6,6 +6,10 @@ import { asyncPool } from '@/lib/matrixMatch'
 import { DUGOUT_STATCAST_TABLE } from '@/lib/dugoutStatcastPrecompute'
 import { DUGOUT_PITCHLOG_STAT_TABLE } from '@/lib/dugoutPitchlogStatPrecompute'
 import { DUGOUT_SEASON_AVG_TABLE } from '@/lib/dugoutSeasonAvgPrecompute'
+import { MATCHUP_EDGE_TABLE } from '@/lib/dugoutMatchupEdgePrecompute'
+import { buildPitcherMap, computeMmByWindowForGame, pickPitcherRow, type MmPlayerInput } from '@/lib/dugoutPaperScore'
+import { computePrecisionHrScores } from '@/lib/precisionHrModel'
+import { computeHitPitchProfile, type HitFloorInput } from '@/lib/hitFloorModel'
 import type { StatcastWindow, StatcastLine } from '@slipsurge/core/dugoutStatcast'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'
 import {
@@ -76,6 +80,91 @@ async function mpGetAll(path: string): Promise<any[]> {
   return out
 }
 
+type CapturedFhrQuote = {
+  name: string
+  odds: number
+  capturedAt: string
+}
+
+type FanduelCaptureMeta = {
+  capture_key: string
+  game_key: string
+  scraped_at: string
+}
+
+type FanduelCapturePayload = FanduelCaptureMeta & {
+  raw_sections: Record<string, unknown> | null
+}
+
+function capturedAmericanOdds(value: unknown): number | null {
+  const raw = String(value ?? '').trim()
+  if (/^even$/i.test(raw)) return 100
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function capturedPlayerName(value: unknown): string {
+  return String(value ?? '').split('|')[0].split('/')[0].trim()
+}
+
+// The aggregate pregame snapshot intentionally stores the cross-book board,
+// while FanDuel FHR is captured in the browser stream. Reconstruct the last
+// valid quote before first pitch so historical analysis is complete without
+// ever reaching into a post-lock mutable row.
+async function fetchPregameCapturedFhr(
+  admin: ReturnType<typeof createAdminClient>,
+  date: string,
+  games: TodayGame[],
+): Promise<Map<string, Map<string, CapturedFhrQuote>>> {
+  const startsAt = new Map(games.map(game => [canonGameKey(game.gameKey), new Date(game.gameDate).getTime()]))
+  const meta: FanduelCaptureMeta[] = []
+  for (let offset = 0; offset < 20_000; offset += 1000) {
+    const { data, error } = await admin.from('fanduel_market_captures')
+      .select('capture_key,game_key,scraped_at')
+      .eq('game_date', date)
+      .in('tab_label', ['Quick Bets', 'Popular', 'Same Game Parlay™'])
+      .order('scraped_at', { ascending: true })
+      .range(offset, offset + 999)
+    if (error) throw error
+    meta.push(...((data ?? []) as FanduelCaptureMeta[]))
+    if ((data?.length ?? 0) < 1000) break
+  }
+
+  const eligible = meta.filter(row => {
+    const start = startsAt.get(canonGameKey(row.game_key))
+    return start != null && Number.isFinite(start) && new Date(row.scraped_at).getTime() < start
+  })
+  const payloads: FanduelCapturePayload[] = []
+  for (let index = 0; index < eligible.length; index += 40) {
+    const keys = eligible.slice(index, index + 40).map(row => row.capture_key)
+    const { data, error } = await admin.from('fanduel_market_captures')
+      .select('capture_key,game_key,scraped_at,raw_sections')
+      .in('capture_key', keys)
+    if (error) throw error
+    payloads.push(...((data ?? []) as FanduelCapturePayload[]))
+  }
+  payloads.sort((a, b) => new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime())
+
+  const result = new Map<string, Map<string, CapturedFhrQuote>>()
+  for (const capture of payloads) {
+    const gameKey = canonGameKey(capture.game_key)
+    const gameQuotes = result.get(gameKey) ?? new Map<string, CapturedFhrQuote>()
+    for (const [section, rawOutcomes] of Object.entries(capture.raw_sections ?? {})) {
+      if (section.toLowerCase().replace(/\s+/g, ' ').trim() !== 'to hit first home run') continue
+      const outcomes = Array.isArray(rawOutcomes) ? rawOutcomes as Array<Record<string, unknown>> : []
+      for (const outcome of outcomes) {
+        const name = capturedPlayerName(outcome.selection)
+        const nn = normName(name)
+        const odds = capturedAmericanOdds(outcome.odds)
+        if (!nn || odds == null || /^no home run$/i.test(name)) continue
+        gameQuotes.set(nn, { name, odds, capturedAt: capture.scraped_at })
+      }
+    }
+    result.set(gameKey, gameQuotes)
+  }
+  return result
+}
+
 // Exact copy of dugout/data/route.ts's own reshaping table — market_opening_
 // prices rows come back as `${market}:${book}` -> price; this maps that onto
 // the same `.open.<field>` names evaluateOddsFactor's oddsFactorTrueForPrice
@@ -95,12 +184,15 @@ const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
   'fhr:fanatics': 'fhrFan', 'sa:betrivers': 'saBr', 'sa:fanatics': 'saFan',
 }
 
-type GameBundles = {
+export type GameBundles = {
   game: TodayGame
   gameKey: string
   homeBundle: Map<string, FieldBundle>
   awayBundle: Map<string, FieldBundle>
   gameTotalPicksByMarket: Record<string, number>
+  noHr: { current: number | null; open: number | null }
+  hitInputByName: Map<string, HitFloorInput>
+  inputIssues: string[]
 }
 
 // Everything a Factor/pipeline step across every category could reference,
@@ -108,16 +200,24 @@ type GameBundles = {
 // same shape dugout/data/route.ts's own per-request bundle-building uses,
 // just independently reconstructed for an arbitrary historical date instead
 // of "today."
-export async function fetchHistoricalGameBundles(date: string): Promise<GameBundles[]> {
+export type GameBundleSourceMode = 'historical' | 'live'
+
+export async function fetchHistoricalGameBundles(
+  date: string,
+  options: { sourceMode?: GameBundleSourceMode } = {},
+): Promise<GameBundles[]> {
+  const sourceMode = options.sourceMode ?? 'historical'
   const admin = createAdminClient()
 
-  const [games, snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, pikkitRows] = await Promise.all([
+  const [games, snapRows, fdRows, mgmRows, openingRowsAll, seasonAvgRows, statcastRows, pitchlogRows, matchupRows, pikkitRows] = await Promise.all([
     getTodaysMatchups(date),
-    admin.from('pregame_odds_snapshots').select('game_pk, prop_map').eq('game_date', date).then(r => r.data ?? []),
+    admin.from('pregame_odds_snapshots').select('game_pk, prop_map, is_frozen, captured_at, frozen_at').eq('game_date', date).then(r => r.data ?? []),
     admin.from('fanduel_gap_odds')
-      .select('game_key, name_norm, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
+      .select('game_key, player_name, name_norm, updated_at, fhr_fd, sa_fd, hr2_fd, sng_fd, dbl_fd, tri_fd, rbi_fd, rbi2_fd, rbi3_fd, tb_fd, tb3_fd, tb4_fd, tb5_fd, hrr_fd, hits_fd, hits2_fd, laser105_fd, laser110_fd, moonshot_fd, pa1_fd, hr_ml_fd, no_hr_fd, combo1_min, combo1_count, combo1_partners, combo2_min, combo2_count, combo2_partners')
       .eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
-    admin.from('mgm_gap_odds').select('game_key, name_norm, sa_mgm, hr2_mgm').eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
+    admin.from('mgm_gap_odds')
+      .select('game_key, name_norm, sa_mgm, hr2_mgm')
+      .eq('game_date', date).range(0, 19999).then(r => r.data ?? []),
     selectAll<{ game_key: string; name_norm: string; market: string; book: string; opening_price: number }>(
       (from, to) => admin.from('market_opening_prices').select('game_key, name_norm, market, book, opening_price').eq('game_date', date).range(from, to)
     ),
@@ -130,16 +230,30 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
     selectAll<{ mlb_id: number; pitcher_hand: 'L' | 'R'; windows: Record<PitchlogStatWindow, BatterStats> }>(
       (from, to) => admin.from(DUGOUT_PITCHLOG_STAT_TABLE).select('mlb_id, pitcher_hand, windows').eq('game_date', date).range(from, to)
     ),
+    selectAll<{ mlb_id: number; role: 'batter' | 'pitcher'; data: any }>(
+      (from, to) => admin.from(MATCHUP_EDGE_TABLE).select('mlb_id, role, data').eq('game_date', date).range(from, to)
+    ),
     mpGetAll(`/rest/v1/pikkit_public_picks?game_date=eq.${date}&select=player_name,picks,prop_type,game_key`),
   ])
 
   if (!games.length) return []
 
-  // Read-only: never touch pregame_odds_snapshots.is_frozen. A completed
-  // game's row is permanently frozen already and never revisited by any
-  // other writer, so this is the exact "current" price the live board used.
+  const capturedFhrByGameKey = sourceMode === 'historical'
+    ? await fetchPregameCapturedFhr(admin, date, games)
+    : new Map<string, Map<string, CapturedFhrQuote>>()
+
+  const pitcherIds = [...new Set(games.flatMap(game => [game.homePitcher?.id, game.awayPitcher?.id]).filter((id): id is number => typeof id === 'number'))]
+  const pitcherSplits = pitcherIds.length
+    ? await mpGetAll(`/rest/v1/pitcher_statcast_splits?mlb_id=in.(${pitcherIds.join(',')})&select=*`)
+    : []
+  const pitcherMap = buildPitcherMap(pitcherSplits)
+
+  // Read-only: never touch pregame_odds_snapshots.is_frozen. The snapshot is
+  // the historical source of truth. A mutable latest-gap row may fill a
+  // market only when its own update timestamp is no later than the lock;
+  // later rows are post-lock leakage and must not rewrite the board.
   const snapByGamePk = new Map<string, any>()
-  for (const s of snapRows) snapByGamePk.set(String(s.game_pk), s.prop_map ?? {})
+  for (const s of snapRows) snapByGamePk.set(String(s.game_pk), s)
 
   const fanduelGapByGameKey: Record<string, Record<string, any>> = {}
   for (const r of fdRows) (fanduelGapByGameKey[canonGameKey(r.game_key)] ??= {})[r.name_norm] = r
@@ -166,20 +280,49 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
   for (const row of statcastRows) (statcastByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
   const pitchlogByBatter: Record<number, Partial<Record<'L' | 'R', Record<PitchlogStatWindow, BatterStats>>>> = {}
   for (const row of pitchlogRows) (pitchlogByBatter[row.mlb_id] ??= {})[row.pitcher_hand] = row.windows
+  const matchupEdgeByBatter: Record<number, any> = {}
+  const matchupEdgeByPitcher: Record<number, any> = {}
+  for (const row of matchupRows) {
+    if (row.role === 'batter') matchupEdgeByBatter[row.mlb_id] = row.data
+    else matchupEdgeByPitcher[row.mlb_id] = row.data
+  }
 
   return games.map(game => {
     const gameKey = canonGameKey(game.gameKey)
-    const fanduelGapByName = fanduelGapByGameKey[gameKey] ?? {}
-    const mgmGapByName = mgmGapByGameKey[gameKey] ?? {}
+    const snapshot = snapByGamePk.get(String(game.gamePk)) ?? null
+    const lockAt = snapshot?.frozen_at ?? snapshot?.captured_at ?? null
+    const inputIssues: string[] = []
+    if (sourceMode === 'historical') {
+      if (!snapshot) inputIssues.push('Frozen pregame odds snapshot is missing.')
+      else if (snapshot.is_frozen !== true) inputIssues.push('Pregame odds snapshot was not frozen.')
+      if (!lockAt) inputIssues.push('Pregame odds snapshot has no capture/lock timestamp.')
+    } else if (!snapshot) {
+      inputIssues.push('Current BDL odds snapshot is missing.')
+    }
+    const fanduelGapByName = sourceMode === 'live'
+      ? (fanduelGapByGameKey[gameKey] ?? {})
+      : Object.fromEntries(Object.entries(fanduelGapByGameKey[gameKey] ?? {}).filter(([, row]) => {
+        if (!lockAt || !(row as any)?.updated_at) return false
+        return new Date((row as any).updated_at).getTime() <= new Date(lockAt).getTime()
+      }))
+    const mgmGapByName = sourceMode === 'live' ? (mgmGapByGameKey[gameKey] ?? {}) : {}
     const openingByName = openingByGameKey[gameKey] ?? {}
-    const propMap = snapByGamePk.get(String(game.gamePk)) ?? {}
+    const propMap = snapshot?.prop_map ?? {}
 
     const bdlByName: Record<string, any> = {}
     for (const entry of Object.values(propMap) as any[]) bdlByName[normName(entry.name)] = entry
 
-    // Same merge precedence as dugout/data/route.ts:1058-1122 — fhr always
-    // overwrites (unconditional), everything else only fills a gap BDL
-    // itself didn't already have.
+    // Frozen aggregate snapshots do not own FanDuel's FHR market. Hydrate it
+    // from the timestamped capture stream before applying any allowed gap-row
+    // fills. This quote is always strictly pregame by construction.
+    for (const [nn, quote] of capturedFhrByGameKey.get(gameKey) ?? []) {
+      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: quote.name })
+      entry.fhr = { ...entry.fhr, fanduel: quote.odds }
+    }
+
+    // Historical merge is intentionally stricter than the live route: only
+    // pre-lock gap rows survived the timestamp filter above. FHR can then use
+    // its last captured pre-lock value; a later mutable row never wins.
     for (const [nn, gap] of Object.entries(fanduelGapByName) as [string, any][]) {
       const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: gap.player_name ?? nn })
       if (gap.fhr_fd != null) entry.fhr = { ...entry.fhr, fanduel: gap.fhr_fd }
@@ -196,14 +339,18 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
       if (gap.tb4_fd != null && entry.tb4?.fanduel == null) entry.tb4 = { ...entry.tb4, fanduel: gap.tb4_fd }
       if (gap.tb5_fd != null && entry.tb5?.fanduel == null) entry.tb5 = { ...entry.tb5, fanduel: gap.tb5_fd }
       if (gap.hrr_fd != null && entry.hrr?.fanduel == null) entry.hrr = { ...entry.hrr, fanduel: gap.hrr_fd }
+      if (gap.hits_fd != null && entry.hits?.fanduel == null) entry.hits = { ...entry.hits, fanduel: gap.hits_fd }
+      if (gap.hits2_fd != null && entry.hits2?.fanduel == null) entry.hits2 = { ...entry.hits2, fanduel: gap.hits2_fd }
       if (gap.laser105_fd != null) entry.laser105 = { ...entry.laser105, fanduel: gap.laser105_fd }
       if (gap.laser110_fd != null) entry.laser110 = { ...entry.laser110, fanduel: gap.laser110_fd }
       if (gap.moonshot_fd != null) entry.moonshot = { ...entry.moonshot, fanduel: gap.moonshot_fd }
       if (gap.pa1_fd != null) entry.pa1 = { ...entry.pa1, fanduel: gap.pa1_fd }
       if (gap.hr_ml_fd != null) entry.hrMl = { ...entry.hrMl, fanduel: gap.hr_ml_fd }
     }
+    // Live reads may fill sparse BDL coverage from the current manual MGM
+    // import. Historical audits never blend this mutable latest table.
     for (const [nn, mgm] of Object.entries(mgmGapByName) as [string, any][]) {
-      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: mgm.player_name ?? nn })
+      const entry = resolveNameEntry(bdlByName, nn) ?? (bdlByName[nn] = { name: nn })
       if (mgm.sa_mgm != null && entry.sa?.betmgm == null) entry.sa = { ...entry.sa, betmgm: mgm.sa_mgm }
       if (mgm.hr2_mgm != null && entry.hr2?.betmgm == null) entry.hr2 = { ...entry.hr2, betmgm: mgm.hr2_mgm }
     }
@@ -244,6 +391,29 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
     // hand falls back to 'R' — same default the live route uses.
     const homePHand = (game.awayPitcher?.hand as 'L' | 'R') || 'R'
     const awayPHand = (game.homePitcher?.hand as 'L' | 'R') || 'R'
+    const effectiveBatsFor = (bats: string | null | undefined, pHand: 'L' | 'R'): 'L' | 'R' =>
+      bats === 'S' ? (pHand === 'L' ? 'R' : 'L') : ((bats as 'L' | 'R') || 'R')
+    const mmInputs: MmPlayerInput[] = [
+      ...game.homeLineup.map(player => ({
+        mlbId: player.mlb_id,
+        effectiveBats: effectiveBatsFor((player as any).bats, homePHand),
+        pitcherHand: homePHand,
+        pitcherId: game.awayPitcher?.id ?? null,
+        saFd: resolveNameEntry(bdlByName, normName(player.name))?.sa?.fanduel ?? null,
+        statcastWindows: statcastByBatter[player.mlb_id]?.[homePHand] ?? null,
+        batterMatchupData: matchupEdgeByBatter[player.mlb_id] ?? null,
+      })),
+      ...game.awayLineup.map(player => ({
+        mlbId: player.mlb_id,
+        effectiveBats: effectiveBatsFor((player as any).bats, awayPHand),
+        pitcherHand: awayPHand,
+        pitcherId: game.homePitcher?.id ?? null,
+        saFd: resolveNameEntry(bdlByName, normName(player.name))?.sa?.fanduel ?? null,
+        statcastWindows: statcastByBatter[player.mlb_id]?.[awayPHand] ?? null,
+        batterMatchupData: matchupEdgeByBatter[player.mlb_id] ?? null,
+      })),
+    ]
+    const mmRanks = computeMmByWindowForGame(mmInputs, pitcherMap, matchupEdgeByPitcher)
     const resolveBundle = (mlbId: number, name: string, pHand: 'L' | 'R'): FieldBundle => {
       const nn = normName(name)
       return {
@@ -253,12 +423,95 @@ export async function fetchHistoricalGameBundles(date: string): Promise<GameBund
         pitchlogWindows: pitchlogByBatter[mlbId]?.[pHand] ?? null,
         statcastWindows: statcastByBatter[mlbId]?.[pHand] ?? null,
         pikkitEntry: resolveNameEntry(pikkitByName, nn) ?? null,
+        mmByWindow: mmRanks.mm[mlbId] ?? null,
+        bkRkByWindow: mmRanks.bkRk[mlbId] ?? null,
+        ppRkByWindow: mmRanks.ppRk[mlbId] ?? null,
+        battingOrder: null,
       }
     }
-    const homeBundle = new Map(game.homeLineup.map(p => [normName(p.name), resolveBundle(p.mlb_id, p.name, homePHand)]))
-    const awayBundle = new Map(game.awayLineup.map(p => [normName(p.name), resolveBundle(p.mlb_id, p.name, awayPHand)]))
+    const homeBundle = new Map(game.homeLineup.map(p => {
+      const bundle = resolveBundle(p.mlb_id, p.name, homePHand)
+      bundle.battingOrder = p.batting_order
+      return [normName(p.name), bundle] as const
+    }))
+    const awayBundle = new Map(game.awayLineup.map(p => {
+      const bundle = resolveBundle(p.mlb_id, p.name, awayPHand)
+      bundle.battingOrder = p.batting_order
+      return [normName(p.name), bundle] as const
+    }))
 
-    return { game, gameKey, homeBundle, awayBundle, gameTotalPicksByMarket }
+    // The live Dugout computes this internal game-relative field after all
+    // 18 FieldBundles exist. Historical evaluation must do the same or a
+    // precision_hr_score filter sees null for every batter and returns an
+    // artificial zero-candidate backtest.
+    const allBundle = new Map([...homeBundle, ...awayBundle])
+    for (const [name, score] of computePrecisionHrScores(allBundle)) {
+      const bundle = allBundle.get(name)
+      if (bundle) bundle.precisionHrScore = score
+    }
+
+    const buildHitInput = (
+      player: TodayGame['homeLineup'][number],
+      team: string,
+      pHand: 'L' | 'R',
+      pitcherId: number | null | undefined,
+    ): HitFloorInput => {
+      const nn = normName(player.name)
+      const props = resolveNameEntry(bdlByName, nn) as OddsProps | null
+      const effectiveBats = effectiveBatsFor((player as any).bats, pHand)
+      const batterMatchup = matchupEdgeByBatter[player.mlb_id] ?? null
+      const pitcherMatchup = pitcherId ? matchupEdgeByPitcher[pitcherId] ?? null : null
+      const pitcherRow = pickPitcherRow(pitcherMap, pitcherId, effectiveBats)
+      const statcast = statcastByBatter[player.mlb_id]?.[pHand] ?? null
+      const recentPitchCount = Object.values(batterMatchup?.recentByPitchTypeByHand ?? {})
+        .reduce((sum: number, byType: any) => sum + Object.values(byType ?? {}).reduce((inner: number, bucket: any) => inner + (bucket?.pitches || 0), 0), 0)
+      const hitWindows = Object.fromEntries((['l1', 'l3', 'l5', 'l10'] as const).map(window => {
+        const data = statcast?.[window] ?? null
+        const pitchlog = pitchlogByBatter[player.mlb_id]?.[pHand]?.[window === 'l1' ? 'game' : window] ?? null
+        return [window, {
+          avg: pitchlog?.avg ?? null,
+          kPct: pitchlog?.kPct ?? null,
+          pa: pitchlog?.pa ?? null,
+          bbe: pitchlog?.bbe ?? null,
+          squaredUpPct: data?.squaredUpPct ?? null,
+          sweetSpotPct: data?.sweetSpotPct ?? null,
+          missDistance: data?.missDistance ?? null,
+          onTimePct: data?.onTimePct ?? null,
+          hardHitPct: data?.hardHitPct ?? null,
+          avgEv: data?.avgEv ?? null,
+        }]
+      }))
+      return {
+        mlb_id: player.mlb_id,
+        name: player.name,
+        team,
+        batting_order: player.batting_order,
+        hits_fd: props?.hits?.fanduel ?? null,
+        hits2_fd: props?.hits2?.fanduel ?? null,
+        sng_fd: props?.singles?.fanduel ?? null,
+        hits_open: props?.open?.hits ?? null,
+        hits2_open: props?.open?.hits2 ?? null,
+        recent_pitch_count: recentPitchCount,
+        platoon_ops: batterMatchup?.platoonOps?.[pHand] ?? null,
+        hit_windows: hitWindows,
+        hit_pitch_profile: computeHitPitchProfile(pHand, effectiveBats, pitcherRow, batterMatchup, pitcherMatchup),
+      }
+    }
+    const hitInputByName = new Map<string, HitFloorInput>([
+      ...game.homeLineup.map(player => [normName(player.name), buildHitInput(player, game.homeAbbr, homePHand, game.awayPitcher?.id)] as const),
+      ...game.awayLineup.map(player => [normName(player.name), buildHitInput(player, game.awayAbbr, awayPHand, game.homePitcher?.id)] as const),
+    ])
+
+    const noHrGap = fanduelGapByName['__game__'] ?? fanduelGapByName['no home run'] ?? null
+    const noHrOpen = openingByName['__game__']?.['noHr:fanduel']
+      ?? openingByName['no home run']?.['noHr:fanduel']
+      ?? null
+
+    return {
+      game, gameKey, homeBundle, awayBundle, gameTotalPicksByMarket,
+      noHr: { current: noHrGap?.no_hr_fd ?? null, open: noHrOpen }, hitInputByName,
+      inputIssues,
+    }
   })
 }
 

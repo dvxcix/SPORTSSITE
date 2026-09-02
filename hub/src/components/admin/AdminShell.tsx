@@ -13,6 +13,7 @@ const LABELS: Record<string, string> = {
   'pikkit-import': 'Pikkit import', 'social-platforms': 'Connected accounts',
   'site-banner': 'Site banner', changelog: 'Changelog',
   'market-dna': 'Market DNA',
+  'hr-intelligence': 'HR game intelligence',
 }
 
 function titleForPath(path: string) {
