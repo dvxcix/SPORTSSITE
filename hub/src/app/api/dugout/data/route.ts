@@ -1375,12 +1375,13 @@ export async function GET(req: Request) {
       Object.assign(ppRkByWindowByMlbId, ppRk)
     }
 
-    // Board-level SlipSurge HR index. This is the same frozen 18-player
-    // scorer already exposed to Custom Matrix as precision_hr_score; compute
-    // it for every complete, unlocked matchup instead of only when a saved
-    // pipeline happens to request that field.
+    // Board-level SlipSurge Score. Confirmed lineups contain nine hitters,
+    // while the pre-lineup board intentionally displays each team's larger
+    // projected position-player pool. The scorer supports either universe;
+    // requiring exactly 9-v-9 made every projected board serialize null
+    // scores until both official lineups posted.
     const precisionHrScoreByName = new Map<string, number>()
-    if (ultimateForGame(gameKey) && homeLineup.length === 9 && awayLineup.length === 9) {
+    if (ultimateForGame(gameKey) && homeLineup.length > 0 && awayLineup.length > 0) {
       const precisionBundle = (p: typeof homeLineup[number], pHand: 'L' | 'R'): FieldBundle => ({
         props: resolveNameEntry(bdlByName, p.name_norm) || null,
         fhrAvg: resolveNameEntry(fhrAvgMap, p.name_norm),
