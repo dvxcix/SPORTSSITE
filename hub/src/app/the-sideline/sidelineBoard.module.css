@@ -119,6 +119,31 @@
   text-transform: uppercase;
 }
 
+.brandActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filmLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid rgba(53, 215, 255, 0.3);
+  border-radius: 9px;
+  color: #94e8ff;
+  background: rgba(53, 215, 255, 0.07);
+  font-size: 11px;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.filmLink:hover { border-color: rgba(167, 255, 63, 0.55); color: var(--lime); }
+
 .dateStrip {
   display: grid;
   grid-template-columns: 46px repeat(7, minmax(92px, 1fr)) 46px;
@@ -839,7 +864,9 @@
   .brandIcon { width: 36px; height: 36px; flex-basis: 36px; }
   .brandHeader h1 { font-size: 20px; }
   .brandHeader p { max-width: 225px; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .privateBadge { width: 32px; height: 32px; justify-content: center; margin-left: auto; padding: 0; font-size: 0; }
+  .brandActions { margin-left: auto; gap: 5px; }
+  .filmLink { width: 36px; min-height: 36px; justify-content: center; padding: 0; font-size: 0; }
+  .privateBadge { display: none; }
   .dateStrip { grid-template-columns: 40px repeat(7, 83px) 40px; overflow-x: auto; border-radius: 12px; }
   .dateStrip button { min-height: 58px; }
   .gameRailSection { padding: 8px; }

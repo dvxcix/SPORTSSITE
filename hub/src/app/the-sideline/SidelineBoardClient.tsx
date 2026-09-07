@@ -12,6 +12,7 @@ import {
   Columns3,
   Eraser,
   Eye,
+  Film,
   Highlighter,
   Layers3,
   LockKeyhole,
@@ -807,7 +808,10 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       <header className={styles.brandHeader}>
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>Proprietary NFL game matrix · built from TheDugout system</p></div>
-        <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
+        <div className={styles.brandActions}>
+          <a className={styles.filmLink} href={`/the-sideline?mode=film&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}`}><Film size={14} /> Routes + history</a>
+          <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
+        </div>
       </header>
 
       <nav className={styles.dateStrip} aria-label="NFL slate date">

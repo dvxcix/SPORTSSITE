@@ -44,6 +44,30 @@
   padding: 14px 0 20px;
 }
 
+.headerActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.boardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(102, 185, 255, .34);
+  border-radius: 10px;
+  color: #9fd1ff;
+  background: rgba(102, 185, 255, .08);
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.boardLink:hover { border-color: rgba(186, 255, 70, .55); color: var(--lime); }
+
 .brandMark {
   display: grid;
   width: 58px;
@@ -847,6 +871,8 @@
   .header { min-height: 78px; gap: 12px; }
   .brandMark { width: 48px; height: 48px; border-radius: 12px; font-size: 18px; }
   .header p { display: none; }
+  .headerActions { margin-left: auto; }
+  .boardLink { min-height: 42px; padding-inline: 11px; }
   .privateBadge { display: none; }
   .gameRail { border-radius: 11px 11px 0 0; }
   .matchupBar { gap: 12px; min-height: 0; padding: 18px 13px; }

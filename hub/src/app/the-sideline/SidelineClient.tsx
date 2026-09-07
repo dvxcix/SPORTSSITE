@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
-  Activity, BarChart3, ChevronRight, Crosshair,
+  Activity, BarChart3, ChartNoAxesCombined, ChevronRight, Crosshair,
   Database, Film, Goal, LoaderCircle, Pause, Play, Radio, Route, Search, Shield, Sparkles, Target, Wind,
 } from 'lucide-react'
 import styles from './sideline.module.css'
@@ -525,18 +525,18 @@ function RedZoneView({ lens }: { lens: SidelineLens }) {
   return <section className={styles.fullPanel}><div className={styles.sectionHead}><div><span>INSIDE THE 20</span><h2>Red-zone command</h2><p>Opportunity and scoring-role hierarchy from recorded plays.</p></div><Goal size={22} /></div><div className={styles.redZoneGrid}><div className={styles.redZoneVisual}><strong>END ZONE</strong>{[20, 15, 10, 5].map(value => <span key={value}>{value}</span>)}<div className={styles.redZoneTarget}><Crosshair size={34} /><b>{players[0]?.team ?? 'NFL'}</b><small>TOP SCORING LANE</small></div></div><div className={styles.redZoneList}>{players.slice(0, 8).map((player, index) => <article key={player.id}><span>{index + 1}</span><PlayerAvatar src={player.headshot} name={player.name} size="small" /><div><small>{player.team} · {player.position}</small><strong>{player.name}</strong><em>{player.redZoneLooks} recorded looks</em></div><b className={numberTone(player.redZone)}>{player.redZone}</b></article>)}</div></div></section>
 }
 
-export function SidelineClient({ games, selectedId, lens }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens }) {
+export function SidelineClient({ games, selectedId, lens, boardHref = '/the-sideline' }: { games: SidelineGame[]; selectedId: string; lens: SidelineLens; boardHref?: string }) {
   const router = useRouter()
   const [view, setView] = useState<View>('props')
   const [isPending, startTransition] = useTransition()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
   if (!selected) return null
   const date = new Date(`${selected.gameday}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  const selectGame = (game: SidelineGame) => startTransition(() => router.replace(`/the-sideline?game=${encodeURIComponent(game.id)}`, { scroll: false }))
+  const selectGame = (game: SidelineGame) => startTransition(() => router.replace(`/the-sideline?mode=film&date=${game.gameday}&game=${encodeURIComponent(game.id)}`, { scroll: false }))
 
   return (
     <main className={`${styles.page} ${isPending ? styles.loading : ''}`}>
-      <header className={styles.header}><div className={styles.brandMark}><span>50</span></div><div><div className={styles.eyebrow}>NFL MATCHUP INTELLIGENCE</div><h1>The Sideline <span>PRIVATE</span></h1><p>Projected volume, route geometry, opponent allowances and historical play evidence.</p></div><div className={styles.privateBadge}><Radio size={13} /> Internal build</div></header>
+      <header className={styles.header}><div className={styles.brandMark}><span>50</span></div><div><div className={styles.eyebrow}>NFL MATCHUP INTELLIGENCE</div><h1>The Sideline <span>PRIVATE</span></h1><p>Projected volume, route geometry, opponent allowances and historical play evidence.</p></div><div className={styles.headerActions}><a className={styles.boardLink} href={boardHref}><ChartNoAxesCombined size={14} /> Market board</a><div className={styles.privateBadge}><Radio size={13} /> Film + routes</div></div></header>
       <div className={styles.gameRail} aria-label="Choose an NFL game">{games.slice(0, 16).map(game => <button key={game.id} type="button" aria-label={`${game.away.name} at ${game.home.name}`} className={game.id === selected.id ? styles.gameActive : styles.gameButton} onClick={() => selectGame(game)}><div className={styles.railLogos}><TeamLogo team={game.away} compact /><b>VS</b><TeamLogo team={game.home} compact /></div><span>{game.away.abbr} @ {game.home.abbr}</span><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · W{game.week}</small></button>)}</div>
       <section className={styles.matchupBar}><div className={styles.teamBlock}><TeamLogo team={selected.away} /><div><small>AWAY</small><strong>{selected.away.name}</strong><span>{selected.away.abbr}</span></div></div><div className={styles.gameMeta}><span>{selected.gameType} · WEEK {selected.week}</span><strong>{selected.gametime ?? 'TBD'}</strong><small>{date} · {selected.stadium ?? 'Stadium TBD'}</small></div><div className={`${styles.teamBlock} ${styles.teamBlockHome}`}><div><small>HOME</small><strong>{selected.home.name}</strong><span>{selected.home.abbr}</span></div><TeamLogo team={selected.home} /></div></section>
       <div className={styles.statusStrip}><span><Wind size={14} /> {selected.roof ?? 'Roof TBD'}</span><span><Shield size={14} /> {selected.surface ?? 'Surface TBD'}</span><span><Database size={14} /> {lens.historicalGames.length} archived games · plays load on demand</span><span className={styles.liveDot}>Private route · noindex</span></div>
