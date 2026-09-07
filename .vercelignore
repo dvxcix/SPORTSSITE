@@ -2,12 +2,17 @@
 /hub/desktop
 
 # Local build and dependency artifacts.
+.next
+node_modules
 hub/.next
 hub/node_modules
 hub/coverage
 hub/out
 hub/build
 hub/*.tsbuildinfo
+
+# Native release bundles are not web deployment inputs.
+*.zip
 
 # Local-only configuration and tooling state.
 hub/.env*

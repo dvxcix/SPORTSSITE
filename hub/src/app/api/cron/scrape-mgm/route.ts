@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
-import { scrapeMgmGame } from '@/lib/scrapers/mgmScraper'
-import { findAndClickGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
+import { scrapeMgmCdsGame } from '@/lib/scrapers/mgmCds'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -15,12 +14,10 @@ export const revalidate = 0
 export const maxDuration = 300
 export const GET = withPipelineHealth('scrape-mgm', run, { allowSecondarySecret: true })
 
-// Automates: nc.betmgm.com/.../mlb-75 -> "EVENTS" tab -> click into a
-// specific game -> append ?market=PlayerProps to the resulting event URL ->
-// scrapeMgmGame() expands "Batter home runs", clicks through both 1+/2+
-// threshold tabs, clicking every "Show more" along the way -> POST each
-// threshold's result to mgm-import (unlike FD, this route trusts the
-// gameKey we pass explicitly — no title-based re-detection on MGM's side).
+// Uses BetMGM's public MLB fixtures feed, discovered from the live listing
+// page, to collect every visible 1+ and 2+ batter home-run price for a
+// specific game. The fixture is matched by both team names and start time,
+// then each threshold is posted to mgm-import under the trusted gameKey.
 //
 // Called two ways: ?gamePk=123 scrapes just that game; no gamePk fans out
 // one concurrent request per today's game back to this same route instead
@@ -35,37 +32,17 @@ async function postImport(json: any, gameDate: string, homeTeam: string, awayTea
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
-  // nc.betmgm.com is state-gated real-money content — without a North
-  // Carolina-located proxy IP, BetMGM's backend won't serve the actual page
-  // body (the site loads, but the events/odds content never appears).
+async function scrapeOneGame(g: TodayGame, date: string, dryRun: boolean) {
+  // BetMGM is state-gated, so the Browserbase session establishes the
+  // permitted NC context and supplies the current public feed access id.
   const bb = await openSession({ geoState: 'NC', metadata: { book: 'mgm', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
-    await bb.page.goto('https://www.nc.betmgm.com/en/sports/baseball-23/betting/usa-9/mlb-75', { waitUntil: 'domcontentloaded' })
-    // "EVENTS" not "Futures" — best-effort, harmless if already active.
-    await clickTabByText(bb.page, 'EVENTS')
-    await bb.page.waitForTimeout(1500)
+    const { fixtureId, fixtureName, scrapes } = await scrapeMgmCdsGame(bb.page, g)
 
-    // Same reasoning as FanDuel's retry — the listing SPA can still be
-    // rendering game cards after domcontentloaded, so one retry after a
-    // longer wait catches a too-early search without slowing the common case.
-    let clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
-    if (!clicked) {
-      await bb.page.waitForTimeout(3000)
-      clicked = await findAndClickGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
-    }
-    if (!clicked) return { gameKey: g.gameKey, error: 'game link not found on MGM listing page' }
-    await bb.page.waitForTimeout(2000)
-
-    const pageUrl = bb.page.url()
-    const propsUrl = pageUrl + (pageUrl.includes('?') ? '&' : '?') + 'market=PlayerProps'
-    const scrapes = await scrapeMgmGame(bb.page, propsUrl)
-    if (!scrapes.length) return { gameKey: g.gameKey, error: 'no thresholds scraped — is "Batter home runs" present for this game?' }
-
-    if (dryRun) return { gameKey: g.gameKey, thresholdsScraped: scrapes.length, dryRun: true, scrapes }
+    if (dryRun) return { gameKey: g.gameKey, fixtureId, fixtureName, thresholdsScraped: scrapes.length, dryRun: true, scrapes }
 
     const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
-    return { gameKey: g.gameKey, thresholdsScraped: scrapes.length, imported }
+    return { gameKey: g.gameKey, fixtureId, fixtureName, thresholdsScraped: scrapes.length, imported }
   } catch (error) {
     console.error('[scrape-mgm] game failed', { gameKey: g.gameKey, ...safeErrorMetadata(error) })
     return { gameKey: g.gameKey, error: 'scrape failed' }
@@ -123,8 +100,8 @@ async function run(req: Request) {
     if (!force && !missingCoverage.some(x => x.gamePk === gamePk)) {
       return NextResponse.json({ date, gamePk, skipped: 'BDL BetMGM coverage is healthy' })
     }
-    const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun)
-    return NextResponse.json({ date, gamePk, result }, { status: result.error ? 502 : 200 })
+    const result = await scrapeOneGame(g, date, dryRun)
+    return NextResponse.json({ date, gamePk, result }, { status: 'error' in result ? 502 : 200 })
   }
 
   if (!missingCoverage.length) {
