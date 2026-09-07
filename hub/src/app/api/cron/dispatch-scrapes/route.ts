@@ -21,11 +21,11 @@ export const GET = withPipelineHealth('dispatch-scrapes', run)
 // line-movement sweep — this route only handles the early, precise
 // opening-line trigger.
 //
-// FanDuel only — BetMGM automation is on hold (its page never renders real
-// content past the header/nav, unresolved as of now; left manual). Pikkit's
-// pick counts need continuous refreshing throughout the pregame window
-// instead (see poll-pikkit-picks, every 30 min), not a one-shot "opening"
-// capture.
+// FanDuel is always captured here. BetMGM is also asked to fill the game,
+// but its route first checks BDL's current snapshot and opens Browserbase
+// only when BetMGM coverage is actually missing. This preserves BDL as the
+// primary feed while preventing a vendor-wide omission from blanking every
+// MGM column. Pikkit's pick counts refresh separately (poll-pikkit-picks).
 //
 // Claims due rows atomically (UPDATE ... RETURNING) before firing anything,
 // so two overlapping dispatcher runs can't double-fire the same game. Rows
@@ -74,18 +74,39 @@ async function run(req: Request) {
 
   const results = await Promise.allSettled(
     toScrape.map(async row => {
-      const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel?gamePk=${row.game_pk}`, {
-        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-        signal: AbortSignal.timeout(55_000),
-      })
+      const headers = { Authorization: `Bearer ${process.env.CRON_SECRET}` }
+      const [fanDuelRequest, mgmRequest] = await Promise.allSettled([
+        fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel?gamePk=${row.game_pk}`, {
+          headers,
+          signal: AbortSignal.timeout(55_000),
+        }),
+        fetch(`${PLATFORM_URL}/api/cron/scrape-mgm?gamePk=${row.game_pk}`, {
+          headers,
+          signal: AbortSignal.timeout(65_000),
+        }),
+      ])
+      if (fanDuelRequest.status === 'rejected') throw fanDuelRequest.reason
+
+      const res = fanDuelRequest.value
+      const mgmRes = mgmRequest.status === 'fulfilled' ? mgmRequest.value : null
       const body = await res.json().catch(() => null)
+      const mgmBody = mgmRes ? await mgmRes.json().catch(() => null) : null
       // The same-request retry only checks markets that must exist on every
       // healthy event. The delayed opening retry has one additional concern:
       // FHR may not have been posted yet. Always derive this queue's decision
       // from the FINAL capture so a surviving core-market miss cannot mask a
       // simultaneously absent FHR market.
       const stillMissing = missingOpeningMarkets(body?.result?.imported?.body?.marketSummary ?? {})
-      return { gamePk: row.game_pk, status: res.status, stillMissing, retryCount: row.retry_count }
+      return {
+        gamePk: row.game_pk,
+        status: res.status,
+        stillMissing,
+        retryCount: row.retry_count,
+        mgmStatus: mgmRes?.status ?? 0,
+        mgmResult: mgmRequest.status === 'rejected'
+          ? 'request failed'
+          : mgmBody?.skipped ?? mgmBody?.result ?? null,
+      }
     })
   )
 

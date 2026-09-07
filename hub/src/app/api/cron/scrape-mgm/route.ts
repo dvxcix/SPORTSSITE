@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
+import { getTodaysMatchups, isPregame, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { openSession } from '@/lib/browserbase'
 import { scrapeMgmGame } from '@/lib/scrapers/mgmScraper'
 import { findAndClickGame, legIndexFor, clickTabByText } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/platform'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { needsBetMgmFallback } from '@/lib/scrapers/mgmCoverage'
+import { safeErrorMetadata } from '@/lib/safeApiError'
+import { withPipelineHealth } from '@/lib/pipelineHealth'
 
 export const revalidate = 0
 export const maxDuration = 300
+export const GET = withPipelineHealth('scrape-mgm', run, { allowSecondarySecret: true })
 
 // Automates: nc.betmgm.com/.../mlb-75 -> "EVENTS" tab -> click into a
 // specific game -> append ?market=PlayerProps to the resulting event URL ->
@@ -61,14 +66,15 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
 
     const imported = await postImport(scrapes, date, g.homeTeam, g.awayTeam, g.gameKey)
     return { gameKey: g.gameKey, thresholdsScraped: scrapes.length, imported }
-  } catch {
+  } catch (error) {
+    console.error('[scrape-mgm] game failed', { gameKey: g.gameKey, ...safeErrorMetadata(error) })
     return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
     await bb.close()
   }
 }
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
@@ -79,14 +85,61 @@ export async function GET(req: Request) {
   const reqUrl = new URL(req.url)
   const gamePkParam = reqUrl.searchParams.get('gamePk')
   const dryRun = reqUrl.searchParams.get('dryRun') === '1'
+  const force = reqUrl.searchParams.get('force') === '1'
+
+  const eligible = games.filter(g =>
+    isPregame(g.status) && g.homeLineupConfirmed && g.awayLineupConfirmed
+  )
+  const admin = createAdminClient()
+  const eligiblePks = eligible.map(g => String(g.gamePk))
+  const snapshotByPk = new Map<string, unknown>()
+  if (eligiblePks.length) {
+    const { data, error } = await admin
+      .from('pregame_odds_snapshots')
+      .select('game_pk,prop_map')
+      .eq('game_date', date)
+      .in('game_pk', eligiblePks)
+    if (error) {
+      console.error('[scrape-mgm] coverage query failed', { code: error.code })
+      return NextResponse.json({ reason: 'Could not verify BetMGM coverage' }, { status: 502 })
+    }
+    for (const row of data ?? []) snapshotByPk.set(String(row.game_pk), row.prop_map)
+  }
+
+  const missingCoverage = eligible.filter(g =>
+    force || needsBetMgmFallback(snapshotByPk.get(String(g.gamePk)), g.homeLineup.length + g.awayLineup.length)
+  )
+
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
     if (!g) return NextResponse.json({ error: `gamePk ${gamePk} not found in today's matchups` }, { status: 404 })
+    if (!isPregame(g.status)) {
+      return NextResponse.json({ date, gamePk, skipped: 'game already started' })
+    }
+    if (!g.homeLineupConfirmed || !g.awayLineupConfirmed) {
+      return NextResponse.json({ date, gamePk, skipped: 'waiting for both confirmed lineups' })
+    }
+    if (!force && !missingCoverage.some(x => x.gamePk === gamePk)) {
+      return NextResponse.json({ date, gamePk, skipped: 'BDL BetMGM coverage is healthy' })
+    }
     const result = await scrapeOneGame(g, date, legIndexFor(g), dryRun)
-    return NextResponse.json({ date, gamePk, result })
+    return NextResponse.json({ date, gamePk, result }, { status: result.error ? 502 : 200 })
   }
 
-  const results = await fanOutToSelf('/api/cron/scrape-mgm', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
-  return NextResponse.json({ date, games: games.length, results })
+  if (!missingCoverage.length) {
+    return NextResponse.json({ date, eligibleGames: eligible.length, missingCoverage: 0, skipped: 'BDL BetMGM coverage is healthy' })
+  }
+
+  const results = await fanOutToSelf('/api/cron/scrape-mgm', missingCoverage.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
+  const completed = results.filter(result => result.status === 200 && !result.body?.result?.error).length
+  const response = {
+    date,
+    eligibleGames: eligible.length,
+    missingCoverage: missingCoverage.length,
+    attemptedGamePks: missingCoverage.map(g => g.gamePk),
+    completed,
+    results,
+  }
+  return NextResponse.json(response, { status: completed > 0 ? 200 : 502 })
 }
