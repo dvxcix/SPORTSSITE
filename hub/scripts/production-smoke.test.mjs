@@ -461,9 +461,13 @@ test('heavy analytics jobs use bounded, contention-safe cron stages', async () =
   assert.ok(marketDna.includes("searchParams.get('fitOnly') === '1'"))
   assert.ok(marketDna.includes("stage: 'archive'"))
   assert.ok(marketDna.includes("stage: 'model-fit'"))
+  assert.ok(marketDna.includes('refreshMarketDnaRanker(todayEt)'))
+  assert.ok(!marketDna.includes('analyzeMarketDnaSlate(todayEt'))
   assert.ok(vercel.crons.some(cron => cron.path === '/api/cron/market-dna-maintenance?fitOnly=1'))
   assert.equal(vercel.crons.find(cron => cron.path === '/api/cron/statcast-integrity-check')?.schedule, '50 10-16 * * *')
   assert.ok(statcast.includes('const retryDelaysMs = [1_500, 5_000]'))
+  assert.ok(statcast.includes("stage: 'savant-category-publication'"))
+  assert.ok(statcast.includes('{ status: 425 }'))
 })
 
 test('service-role sports APIs authenticate mobile bearer requests themselves', async () => {
