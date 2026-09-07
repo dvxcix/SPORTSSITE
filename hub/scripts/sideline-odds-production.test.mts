@@ -48,6 +48,14 @@ test('ATD and FTD baselines remain slate-frozen and calculate raw-price movement
   assert.equal(baseline?.sampleGames, 8)
   assert.equal(baseline?.deltaOdds, -30)
   assert.equal(baseline?.deltaPct, -0.2)
+
+  const negativePrice = attachNflTdBaselines(board(-130), [{
+    slate_date: '2026-09-07', player_id: 7, player_name: 'Test Runner', team_abbr: 'BUF',
+    vendor: 'fanduel', prop_type: 'anytime_td', average_odds: -110, sample_games: 8,
+    first_sample_date: '2025-10-19', through_date: '2026-01-18',
+  }]).players[0].tdBaselines?.[0]
+  assert.equal(negativePrice?.deltaOdds, -20)
+  assert.equal(negativePrice?.deltaPct, (-130 - -110) / -110)
 })
 
 test('baseline enrichment does not create a false market-story frame', () => {

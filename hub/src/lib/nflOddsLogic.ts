@@ -43,9 +43,11 @@ export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaseli
           sampleGames: row.sample_games,
           firstSampleDate: row.first_sample_date,
           throughDate: row.through_date,
+          // Match The Dugout's canonical FHR% / HR% calculation exactly,
+          // including the signed denominator for negative American prices.
           deltaPct: current == null || !Number.isFinite(averageOdds) || averageOdds === 0
             ? null
-            : (current - averageOdds) / Math.abs(averageOdds),
+            : (current - averageOdds) / averageOdds,
           deltaOdds: current == null || !Number.isFinite(averageOdds) ? null : current - averageOdds,
         }
       })
