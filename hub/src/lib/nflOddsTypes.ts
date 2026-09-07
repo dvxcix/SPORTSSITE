@@ -12,6 +12,7 @@ export type NflMarketOffer = {
   current: NflOddsValue
   opening: NflOddsValue | null
   updatedAt: string | null
+  isOpeningOnly?: boolean
 }
 
 export type NflPlayerMarket = {
@@ -23,12 +24,24 @@ export type NflPlayerMarket = {
   offers: NflMarketOffer[]
 }
 
+export type NflTdBaseline = {
+  propType: 'anytime_td' | 'first_td'
+  vendor: string
+  averageOdds: number
+  sampleGames: number
+  firstSampleDate: string | null
+  throughDate: string | null
+  deltaPct: number | null
+  deltaOdds: number | null
+}
+
 export type NflOddsPlayer = {
   id: number
   name: string
   team: string
   position: string
   markets: NflPlayerMarket[]
+  tdBaselines?: NflTdBaseline[]
 }
 
 export type NflGameLineBook = {
@@ -44,13 +57,14 @@ export type NflGameLineBook = {
   totalUnderOdds: number | null
   opening: Omit<NflGameLineBook, 'vendor' | 'opening' | 'updatedAt'> | null
   updatedAt: string | null
+  isOpeningOnly?: boolean
 }
 
 export type SidelineOddsBoard = {
   bdlGameId: number | null
   status: 'ready' | 'not-posted' | 'unavailable'
   capturedAt: string | null
-  source: 'live' | 'snapshot' | 'none'
+  source: 'live' | 'opening' | 'snapshot' | 'none'
   gameLines: NflGameLineBook[]
   players: NflOddsPlayer[]
 }

@@ -124,11 +124,6 @@ function oddsLabel(value: number | null | undefined) {
   return value > 0 ? `+${value}` : String(value)
 }
 
-function impliedProbability(american: number | null | undefined) {
-  if (american == null || american === 0) return null
-  return american > 0 ? 100 / (american + 100) : Math.abs(american) / (Math.abs(american) + 100)
-}
-
 function findMarketPlayer(board: SidelineOddsBoard, player: Pick<SidelinePlayer, 'name' | 'team'>) {
   const name = normalizedName(player.name)
   return board.players.find(candidate => normalizedName(candidate.name) === name && (!candidate.team || normalizedTeam(candidate.team) === normalizedTeam(player.team))) ?? null
@@ -203,10 +198,24 @@ function offerOpening(offer: NflMarketOffer | null) {
 }
 
 function marketMove(player: NflOddsPlayer | null, propType = 'anytime_td', vendor = 'fanduel') {
+  const baseline = player?.tdBaselines?.find(item => item.propType === propType && normalizedName(item.vendor) === normalizedName(vendor))
+  if (baseline?.deltaPct != null) return Math.round(baseline.deltaPct * 1000) / 10
   const offer = findOffer(findMarket(player, propType), vendor)
-  const current = impliedProbability(offerCurrent(offer))
-  const opening = impliedProbability(offerOpening(offer))
-  return current != null && opening != null ? Math.round((current - opening) * 1000) / 10 : null
+  const current = offerCurrent(offer)
+  const opening = offerOpening(offer)
+  return current != null && opening != null && opening !== 0 ? Math.round(((current - opening) / Math.abs(opening)) * 1000) / 10 : null
+}
+
+function baselineMove(player: NflOddsPlayer | null, propType: 'first_td' | 'anytime_td', vendor = 'fanduel') {
+  return player?.tdBaselines?.find(item => item.propType === propType && normalizedName(item.vendor) === normalizedName(vendor)) ?? null
+}
+
+function BaselineCell({ player, propType }: { player: NflOddsPlayer | null; propType: 'first_td' | 'anytime_td' }) {
+  const baseline = baselineMove(player, propType)
+  if (baseline?.deltaPct == null) return <span className={styles.empty}>-</span>
+  const value = Math.round(baseline.deltaPct * 1000) / 10
+  const tone = value <= -5 ? styles.baselineAdvertised : value >= 5 ? styles.baselineHidden : styles.baselineFlat
+  return <span className={`${styles.baselineValue} ${tone}`} title={`FanDuel current price versus ${baseline.sampleGames}-game player average (${oddsLabel(Math.round(baseline.averageOdds))})`}><b>{value > 0 ? '+' : ''}{value.toFixed(1)}%</b><small>{baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}</small></span>
 }
 
 function scoreTone(value: number) {
@@ -373,6 +382,16 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
         value: row => row.lane,
         render: row => <span className={styles.lane}>{row.lane}</span>,
       },
+      {
+        id: 'ftdPct', label: 'FTD%', title: 'FanDuel first-touchdown price versus this player’s own prior-game average', group: 'touchdowns', width: 108,
+        value: row => baselineMove(row.market, 'first_td')?.deltaPct ?? null,
+        render: row => <BaselineCell player={row.market} propType="first_td" />,
+      },
+      {
+        id: 'atdPct', label: 'ATD%', title: 'FanDuel anytime-touchdown price versus this player’s own prior-game average', group: 'touchdowns', width: 108,
+        value: row => baselineMove(row.market, 'anytime_td')?.deltaPct ?? null,
+        render: row => <BaselineCell player={row.market} propType="anytime_td" />,
+      },
       metric('volume', 'VOL', 'Volume score', 'core', 70, row => row.volume),
       metric('geometry', 'GEO', 'Field geometry score', 'core', 70, row => row.geometry),
       metric('redZone', 'RZ', 'Red-zone role score', 'core', 70, row => row.redZone),
@@ -443,8 +462,8 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
 }) {
   const topScore = [...rows].filter(row => row.hasTracking).sort((a, b) => b.index - a.index)[0]
   const movers = rows.map(row => ({ row, move: marketMove(row.market) })).filter(item => item.move != null) as { row: PlayerRow; move: number }[]
-  const advertised = [...movers].sort((a, b) => b.move - a.move)[0]
-  const hidden = [...movers].sort((a, b) => a.move - b.move)[0]
+  const advertised = [...movers].sort((a, b) => a.move - b.move)[0]
+  const hidden = [...movers].sort((a, b) => b.move - a.move)[0]
   const fanduel = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
   const moneyline = side === 'home' ? fanduel?.moneylineHome : fanduel?.moneylineAway
   return (
@@ -670,7 +689,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const columns = useColumnDefinitions({ markets: availableMarkets, books: availableBooks, savedKeys, onToggleSaved: toggleSavedMarket })
   const defaultOrder = useMemo(() => columns.map(column => column.id), [columns])
   const defaultVisible = useMemo(() => new Set(columns.filter(column =>
-    ['player', 'index', 'lane', 'volume', 'redZone', 'targets', 'targetShare', 'carries', 'carryShare', 'airYards', 'separation', 'redZoneLooks'].includes(column.id)
+    ['player', 'index', 'lane', 'ftdPct', 'atdPct', 'volume', 'redZone', 'targets', 'targetShare', 'carries', 'carryShare', 'airYards', 'separation', 'redZoneLooks'].includes(column.id)
     || (['fanduel', 'betmgm', 'draftkings'].includes(column.vendor ?? '') && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
     || (column.vendor === 'fanduel' && ['receptions', 'receiving_yards', 'rushing_yards', 'passing_yards'].includes(column.propType ?? ''))
   ).map(column => column.id)), [columns])

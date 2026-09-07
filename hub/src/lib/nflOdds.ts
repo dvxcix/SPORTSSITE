@@ -9,13 +9,14 @@ import type {
   NflPlayerMarket,
   SidelineOddsBoard,
 } from '@/lib/nflOddsTypes'
+export { mergeNflOddsBoards, nflOddsPayloadHash } from '@/lib/nflOddsLogic'
 
 const NFL_BDL_BASE = 'https://api.balldontlie.io/nfl/v1'
 const BOOK_ORDER = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'fanatics', 'betrivers', 'kalshi', 'polymarket']
 const TEAM_ALIASES: Record<string, string> = { LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' }
 
 type ApiTeam = { id: number; abbreviation: string; full_name?: string }
-type ApiGame = {
+export type ApiGame = {
   id: number
   season: number
   week: number
@@ -56,7 +57,7 @@ type ApiPlayer = {
   position_abbreviation?: string
   team?: { abbreviation?: string }
 }
-type SidelineGameRef = {
+export type SidelineGameRef = {
   id: string
   season: number
   week: number
@@ -114,7 +115,7 @@ function humanizePropType(propType: string) {
 
 function propMeta(propType: string): [NflPlayerMarket['label'], NflPlayerMarket['category']] {
   const explicit = PROP_META[propType]
-  if (explicit) return explicit
+  if (explicit) return [explicit[0].replaceAll('\uFFFD', '·'), explicit[1]]
   const key = propType.toLowerCase()
   const category: NflPlayerMarket['category'] = key.includes('pass') || key.includes('completion') || key.includes('interception')
     ? 'passing'
@@ -203,7 +204,9 @@ async function getPlayers(ids: number[]): Promise<Record<number, ApiPlayer>> {
 
 function buildGameLines(current: ApiGameOdds[], opening: ApiGameOdds[]): NflGameLineBook[] {
   const openingByVendor = new Map(opening.map(row => [row.vendor, row]))
-  return current
+  const currentByVendor = new Map(current.map(row => [row.vendor, row]))
+  return Array.from(new Set([...currentByVendor.keys(), ...openingByVendor.keys()]))
+    .map(vendor => currentByVendor.get(vendor) ?? openingByVendor.get(vendor)!)
     .map(row => {
       const opened = openingByVendor.get(row.vendor)
       const values = (source?: ApiGameOdds): Omit<NflGameLineBook, 'vendor' | 'opening' | 'updatedAt'> => ({
@@ -222,6 +225,7 @@ function buildGameLines(current: ApiGameOdds[], opening: ApiGameOdds[]): NflGame
         ...values(row),
         opening: opened ? values(opened) : null,
         updatedAt: row.updated_at ?? null,
+        isOpeningOnly: !currentByVendor.has(row.vendor),
       }
     })
     .sort((a, b) => bookRank(a.vendor) - bookRank(b.vendor))
@@ -237,7 +241,10 @@ function buildPlayers(current: ApiProp[], opening: ApiProp[], players: Record<nu
   })
   const grouped = new Map<number, Map<string, NflPlayerMarket>>()
 
-  for (const row of current) {
+  const currentKeys = new Set(current.map(row => `${row.player_id}:${row.vendor}:${row.prop_type}:${numeric(row.line_value) ?? ''}`))
+  const rows = [...current, ...opening.filter(row => !currentKeys.has(`${row.player_id}:${row.vendor}:${row.prop_type}:${numeric(row.line_value) ?? ''}`))]
+
+  for (const row of rows) {
     const meta = propMeta(row.prop_type)
     const line = numeric(row.line_value)
     const marketKey = `${row.prop_type}:${line ?? ''}`
@@ -262,6 +269,7 @@ function buildPlayers(current: ApiProp[], opening: ApiProp[], players: Record<nu
       current: apiValue(row),
       opening: valuePresent(openingValue) ? openingValue : null,
       updatedAt: row.updated_at ?? null,
+      isOpeningOnly: !currentKeys.has(`${row.player_id}:${row.vendor}:${row.prop_type}:${line ?? ''}`),
     }
     const existingIndex = market.offers.findIndex(candidate => candidate.vendor === offer.vendor)
     if (existingIndex >= 0) market.offers[existingIndex] = offer
@@ -306,12 +314,22 @@ export async function getLiveNflOddsBoard(game: SidelineGameRef, knownGames?: Ap
   return board
 }
 
-export function nflOddsPayloadHash(board: SidelineOddsBoard) {
-  const stable = JSON.stringify({ gameLines: board.gameLines, players: board.players })
-  let hash = 2166136261
-  for (let index = 0; index < stable.length; index += 1) {
-    hash ^= stable.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
+export async function getOpeningNflOddsBoard(game: SidelineGameRef, knownGames?: ApiGame[]): Promise<SidelineOddsBoard> {
+  const games = knownGames ?? await getNflBdlGames(game.season, game.week)
+  const matched = matchNflBdlGame(games, game)
+  if (!matched) return { bdlGameId: null, status: 'unavailable', capturedAt: null, source: 'none', gameLines: [], players: [] }
+
+  const [openingLines, openingProps] = await Promise.all([
+    bdlGet<ApiGameOdds>(`/odds/opening?game_ids[]=${matched.id}&per_page=100`, 'reference'),
+    bdlGet<ApiProp>(`/odds/player_props/opening?game_id=${matched.id}`, 'reference'),
+  ])
+  const playerLookup = await getPlayers(openingProps.map(row => row.player_id))
+  return {
+    bdlGameId: matched.id,
+    status: openingLines.length || openingProps.length ? 'ready' : 'not-posted',
+    capturedAt: new Date().toISOString(),
+    source: 'opening',
+    gameLines: buildGameLines([], openingLines),
+    players: buildPlayers([], openingProps, playerLookup),
   }
-  return (hash >>> 0).toString(16).padStart(8, '0')
 }

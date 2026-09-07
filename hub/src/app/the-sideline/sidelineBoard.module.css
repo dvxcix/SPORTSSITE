@@ -685,6 +685,12 @@
 .marketValue b i { margin-right: 4px; color: #96a4b6; font-size: 9px; font-style: normal; }
 .marketValue small { color: #8491a4; font-size: 8px; font-weight: 800; letter-spacing: 0.025em; }
 .marketValue em { position: absolute; top: -1px; right: -3px; font-size: 8px; font-style: normal; }
+.baselineValue { display: inline-flex; min-width: 82px; flex-direction: column; gap: 5px; padding: 8px 7px; border: 1px solid transparent; border-radius: 8px; }
+.baselineValue b { font-size: 12px; line-height: 1; }
+.baselineValue small { color: #a5b0bf; font-size: 7px; font-weight: 850; letter-spacing: .025em; white-space: nowrap; }
+.baselineAdvertised { color: #54e6a2; border-color: rgba(77, 226, 161, .2); background: rgba(77, 226, 161, .1); }
+.baselineHidden { color: #ff8193; border-color: rgba(255, 102, 126, .2); background: rgba(255, 102, 126, .1); }
+.baselineFlat { color: #ffd16d; border-color: rgba(255, 189, 69, .18); background: rgba(255, 189, 69, .08); }
 .marketSave,
 .marketSaved {
   position: absolute;
