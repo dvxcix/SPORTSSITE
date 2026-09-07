@@ -13,6 +13,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/nfl-bdl-odds",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/lineup-confirmed",
       "schedule": "*/5 * * * *"
     },

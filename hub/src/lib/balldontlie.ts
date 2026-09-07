@@ -1,7 +1,9 @@
 const BDL_BASE = 'https://api.balldontlie.io/mlb/v1'
-const BDL_KEY = '5a8ce061-7d5c-4337-b6b2-bb6c397bddcb'
+const BDL_KEY = process.env.BALLDONTLIE_API_KEY?.trim()
+  || process.env.BDL_API_KEY?.trim()
+  || '5a8ce061-7d5c-4337-b6b2-bb6c397bddcb'
 
-const bdlHeaders = { Authorization: BDL_KEY, 'Content-Type': 'application/json' }
+export const bdlHeaders = { Authorization: BDL_KEY, 'Content-Type': 'application/json' }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
