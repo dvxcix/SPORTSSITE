@@ -7,7 +7,7 @@ import { EMPTY_SIDELINE_ODDS, type SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { getSidelineLens } from './analysis'
 import { getSidelineBoardLens } from './boardAnalysis'
 import { enrichSidelineOddsBoards } from './playerIdentity'
-import type { SidelineGame, SidelineOddsFrame } from './types'
+import type { SidelineGame, SidelineOddsFrame, SidelineRosterPlayer } from './types'
 
 // A populated NFL board is commonly 700-900 KB. Next/Vercel cache entries have
 // a 2 MB ceiling, so cache one capture per entry and load them in bounded
@@ -132,7 +132,7 @@ async function loadHistoryPages(
 async function loadTdBaselinesRaw(date: string): Promise<NflTdBaselineRow[]> {
   const { data, error } = await createAdminClient()
     .from('nfl_td_baseline_daily')
-    .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,sample_games,first_sample_date,through_date')
+    .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
     .eq('slate_date', date)
   if (error) {
     if (error.code === '42P01') return []
@@ -165,8 +165,8 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
 }
 
 export const getCachedSidelineBoardLens = unstable_cache(
-  async (game: SidelineGame, roster: { id: string; team: string }[]) => getSidelineBoardLens(game, roster),
-  ['sideline-board-lens-v3'],
+  async (game: SidelineGame, roster: SidelineRosterPlayer[]) => getSidelineBoardLens(game, roster),
+  ['sideline-board-lens-v4'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 

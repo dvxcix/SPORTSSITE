@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { useWatchlist } from '@/context/WatchlistContext'
+import { americanImpliedProbability, hiddenProbabilityPoints, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineGame, SidelineLens, SidelineOddsFrame, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
@@ -52,6 +53,7 @@ type MarketSpec = {
   width: number
   line: number | null
   category: NflPlayerMarket['category']
+  vendors: string[]
 }
 type BookSpec = { id: string; short: string }
 
@@ -156,7 +158,12 @@ function marketCatalog(boards: SidelineOddsBoard[]): MarketSpec[] {
   for (const board of boards) {
     for (const player of board.players) {
       for (const market of player.markets) {
-        if (seen.has(market.key)) continue
+        const presentVendors = market.offers.map(offer => offer.vendor)
+        const existing = seen.get(market.key)
+        if (existing) {
+          existing.vendors = Array.from(new Set([...existing.vendors, ...presentVendors]))
+          continue
+        }
         const known = featured.get(market.propType)
         seen.set(market.key, {
           key: market.key,
@@ -167,6 +174,7 @@ function marketCatalog(boards: SidelineOddsBoard[]): MarketSpec[] {
           width: known?.width ?? 108,
           line: market.line,
           category: market.category,
+          vendors: presentVendors,
         })
       }
     }
@@ -218,11 +226,27 @@ function offerSummary(offer: NflMarketOffer, phase: 'current' | 'opening') {
 
 function marketMove(player: NflOddsPlayer | null, propType = 'anytime_td', vendor = 'fanduel') {
   const baseline = player?.tdBaselines?.find(item => item.propType === propType && normalizedName(item.vendor) === normalizedName(vendor))
-  if (baseline?.deltaPct != null) return Math.round(baseline.deltaPct * 1000) / 10
+  if (baseline?.sampleGames && baseline.sampleGames >= 2 && baseline.deltaProbabilityPoints != null) return baseline.deltaProbabilityPoints
   const offer = findOffer(findMarket(player, propType), vendor)
   const current = offerCurrent(offer)
   const opening = offerOpening(offer)
-  return current != null && opening != null && opening !== 0 ? Math.round(((current - opening) / Math.abs(opening)) * 1000) / 10 : null
+  return hiddenProbabilityPoints(americanImpliedProbability(opening), americanImpliedProbability(current))
+}
+
+function primaryMarketOffer(player: NflOddsPlayer | null, propType: string, vendor = 'fanduel') {
+  if (!player) return null
+  for (const market of player.markets.filter(candidate => candidate.propType === propType)) {
+    const offer = findOffer(market, vendor)
+    const odds = offerCurrent(offer)
+    if (offer && odds != null) return { market, offer, odds }
+  }
+  return null
+}
+
+function RatioCell({ numerator, denominator, detail }: { numerator: number | null; denominator: number | null; detail: string }) {
+  const ratio = impliedProbabilityRatio(numerator, denominator)
+  if (ratio == null) return <span className={styles.empty}>-</span>
+  return <span className={styles.ratioValue} title={detail}><b>{ratio.toFixed(2)}</b><small>IMPLIED P</small></span>
 }
 
 function bestOffer(market: NflPlayerMarket | null) {
@@ -274,10 +298,10 @@ function baselineMove(player: NflOddsPlayer | null, propType: 'first_td' | 'anyt
 
 function BaselineCell({ player, propType }: { player: NflOddsPlayer | null; propType: 'first_td' | 'anytime_td' }) {
   const baseline = baselineMove(player, propType)
-  if (baseline?.deltaPct == null) return <span className={styles.empty}>-</span>
-  const value = Math.round(baseline.deltaPct * 1000) / 10
+  if (baseline?.deltaProbabilityPoints == null || baseline.sampleGames < 2) return <span className={styles.empty}>-</span>
+  const value = baseline.deltaProbabilityPoints
   const tone = value <= -5 ? styles.baselineAdvertised : value >= 5 ? styles.baselineHidden : styles.baselineFlat
-  return <span className={`${styles.baselineValue} ${tone}`} title={`FanDuel current price versus ${baseline.sampleGames}-game player average (${oddsLabel(Math.round(baseline.averageOdds))})`}><b>{value > 0 ? '+' : ''}{value.toFixed(1)}%</b><small>{baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}</small></span>
+  return <span className={`${styles.baselineValue} ${tone}`} title={`FanDuel implied probability versus ${baseline.sampleGames}-game player average (${oddsLabel(Math.round(baseline.averageOdds))})`}><b>{value > 0 ? '+' : ''}{value.toFixed(1)} pp</b><small>{baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}</small></span>
 }
 
 function scoreTone(value: number) {
@@ -346,7 +370,7 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
         type="button"
         className={saved ? styles.marketSaved : styles.marketSave}
         aria-label={`${saved ? 'Remove' : 'Add'} ${player.name} ${market.label} ${vendor} ${saved ? 'from' : 'to'} watchlist`}
-        title={saved ? 'Remove saved read' : 'Save this market'}
+        title={saved ? 'Remove saved market' : 'Save this market'}
         onClick={event => { event.stopPropagation(); onToggleSaved(player, marketKey, vendor) }}
       ><Star size={10} fill={saved ? 'currentColor' : 'none'} /></button>
     </span>
@@ -428,9 +452,11 @@ function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | nul
   }
 }
 
-function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
+function useColumnDefinitions({ markets, books, board, game, savedKeys, onToggleSaved }: {
   markets: MarketSpec[]
   books: BookSpec[]
+  board: SidelineOddsBoard
+  game: SidelineGame
   savedKeys: Set<string>
   onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void
 }) {
@@ -483,29 +509,57 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
       },
       { ...metric('index', 'Score', 'SlipSurge Score for the selected NFL window', 'core', 118, row => row.index), brand: true },
       {
-        id: 'lane', label: 'Read', title: 'Strongest structural lane', group: 'core', width: 116,
+        id: 'lane', label: 'Role', title: 'Primary usage role in the selected window', group: 'core', width: 116,
         value: row => row.lane,
         render: row => <span className={styles.lane}>{row.lane}</span>,
       },
       {
-        id: 'bestFtd', label: 'Best FTD', title: 'Best currently available first-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'low', propType: 'first_td',
-        value: row => bestOffer(findMarket(row.market, 'first_td'))?.current ?? null,
+        id: 'bestFtd', label: 'Best FTD', title: 'Best currently available first-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'high', propType: 'first_td',
+        value: row => americanImpliedProbability(bestOffer(findMarket(row.market, 'first_td'))?.current ?? null),
         render: row => <BestMarketCell player={row} propType="first_td" />,
       },
       {
-        id: 'bestAtd', label: 'Best ATD', title: 'Best currently available anytime-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'low', propType: 'anytime_td',
-        value: row => bestOffer(findMarket(row.market, 'anytime_td'))?.current ?? null,
+        id: 'bestAtd', label: 'Best ATD', title: 'Best currently available anytime-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'high', propType: 'anytime_td',
+        value: row => americanImpliedProbability(bestOffer(findMarket(row.market, 'anytime_td'))?.current ?? null),
         render: row => <BestMarketCell player={row} propType="anytime_td" />,
       },
       {
-        id: 'ftdPct', label: 'FTD%', title: 'FanDuel first-touchdown price versus this player’s own prior-game average', group: 'touchdowns', width: 108,
-        value: row => baselineMove(row.market, 'first_td')?.deltaPct ?? null,
+        id: 'ftdPct', label: 'FTD vs AVG', title: 'FanDuel first-touchdown implied-probability displacement versus this player history', group: 'touchdowns', width: 116,
+        value: row => baselineMove(row.market, 'first_td')?.deltaProbabilityPoints ?? null,
         render: row => <BaselineCell player={row.market} propType="first_td" />,
       },
       {
-        id: 'atdPct', label: 'ATD%', title: 'FanDuel anytime-touchdown price versus this player’s own prior-game average', group: 'touchdowns', width: 108,
-        value: row => baselineMove(row.market, 'anytime_td')?.deltaPct ?? null,
+        id: 'atdPct', label: 'ATD vs AVG', title: 'FanDuel anytime-touchdown implied-probability displacement versus this player history', group: 'touchdowns', width: 116,
+        value: row => baselineMove(row.market, 'anytime_td')?.deltaProbabilityPoints ?? null,
         render: row => <BaselineCell player={row.market} propType="anytime_td" />,
+      },
+      {
+        id: 'ftdAtdRatio', label: 'FTD:ATD', title: 'FanDuel first-TD implied probability divided by anytime-TD implied probability', group: 'core', width: 92, heat: 'high',
+        value: row => impliedProbabilityRatio(primaryMarketOffer(row.market, 'first_td')?.odds ?? null, primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null),
+        render: row => <RatioCell numerator={primaryMarketOffer(row.market, 'first_td')?.odds ?? null} denominator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} detail="FanDuel FTD implied probability / ATD implied probability" />,
+      },
+      ...([
+        ['atdRecRatio', 'ATD:REC', 'receptions', 'Anytime TD / receptions'],
+        ['atdRecYdsRatio', 'ATD:REC YDS', 'receiving_yards', 'Anytime TD / receiving yards'],
+        ['atdRushYdsRatio', 'ATD:RUSH YDS', 'rushing_yards', 'Anytime TD / rushing yards'],
+        ['atdScrimYdsRatio', 'ATD:R+R YDS', 'rushing_receiving_yards', 'Anytime TD / scrimmage yards'],
+      ] as const).map(([id, label, propType, title]): ColumnDefinition => ({
+        id, label, title: `${title} FanDuel implied-probability ratio`, group: 'core', width: 108, heat: 'high',
+        value: row => impliedProbabilityRatio(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null, primaryMarketOffer(row.market, propType)?.odds ?? null),
+        render: row => <RatioCell numerator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} denominator={primaryMarketOffer(row.market, propType)?.odds ?? null} detail={`${title} using FanDuel prices`} />,
+      })),
+      {
+        id: 'atdTeamMlRatio', label: 'ATD:TEAM ML', title: 'FanDuel anytime-TD implied probability divided by team moneyline implied probability', group: 'core', width: 108, heat: 'high',
+        value: row => {
+          const line = board.gameLines.find(item => normalizedName(item.vendor) === 'fanduel') ?? board.gameLines[0]
+          const teamMl = normalizedTeam(row.team) === normalizedTeam(game.home.abbr) ? line?.moneylineHome ?? null : line?.moneylineAway ?? null
+          return impliedProbabilityRatio(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null, teamMl)
+        },
+        render: row => {
+          const line = board.gameLines.find(item => normalizedName(item.vendor) === 'fanduel') ?? board.gameLines[0]
+          const teamMl = normalizedTeam(row.team) === normalizedTeam(game.home.abbr) ? line?.moneylineHome ?? null : line?.moneylineAway ?? null
+          return <RatioCell numerator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} denominator={teamMl} detail="FanDuel ATD implied probability / team moneyline implied probability" />
+        },
       },
       metric('volume', 'VOL', 'Volume score', 'core', 70, row => row.volume),
       metric('geometry', 'GEO', 'Field geometry score', 'core', 70, row => row.geometry),
@@ -524,7 +578,7 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
       metric('receivingYards', 'REC YDS', 'Receiving yards in selected window', 'usage', 84, row => row.receivingYards),
       metric('rushingYards', 'RUSH YDS', 'Rushing yards in selected window', 'usage', 88, row => row.rushingYards),
       metric('passingYards', 'PASS YDS', 'Passing yards in selected window', 'usage', 88, row => row.passingYards),
-      metric('touchdowns', 'TD', 'Total passing, rushing and receiving touchdowns', 'usage', 64, row => row.touchdowns),
+      metric('touchdowns', 'TD', 'Rushing and receiving touchdowns scored', 'usage', 64, row => row.touchdowns),
       metric('airYards', 'aDOT', 'Average intended air yards', 'tracking', 72, row => row.airYards, '', 1),
       metric('airYardsShare', 'AIR%', 'Share of intended team air yards', 'tracking', 74, row => row.airYardsShare, '%', 1),
       metric('separation', 'SEP', 'Average route separation', 'tracking', 70, row => row.separation, '', 1),
@@ -555,8 +609,8 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
         width: Math.max(94, market.width),
         aggregate: true,
         propType: market.propType,
-        heat: 'low',
-        value: row => bestOffer(findMarketByKey(row.market, market.key))?.current ?? null,
+        heat: 'high',
+        value: row => americanImpliedProbability(bestOffer(findMarketByKey(row.market, market.key))?.current ?? null),
         render: row => {
           const target = findMarketByKey(row.market, market.key)
           const best = bestOffer(target)
@@ -566,6 +620,7 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
         },
       })
       for (const book of books) {
+        if (!market.vendors.some(vendor => normalizedName(vendor) === normalizedName(book.id))) continue
         const id = `${book.id}:${market.key}`
         columns.push({
           id,
@@ -575,14 +630,14 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
           width: market.width,
           vendor: book.id,
           propType: market.propType,
-          heat: 'low',
-          value: row => offerCurrent(findOffer(findMarketByKey(row.market, market.key), book.id)),
+          heat: 'high',
+          value: row => americanImpliedProbability(offerCurrent(findOffer(findMarketByKey(row.market, market.key), book.id))),
           render: row => <MarketCell player={row} marketKey={market.key} vendor={book.id} saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${market.key}:${book.id}`)} onToggleSaved={onToggleSaved} />,
         })
       }
     }
     return columns
-  }, [books, markets, onToggleSaved, savedKeys])
+  }, [board, books, game.home.abbr, markets, onToggleSaved, savedKeys])
 }
 
 function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: {
@@ -599,24 +654,29 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
 }) {
   const topScore = [...rows].filter(row => row.hasTracking).sort((a, b) => b.index - a.index)[0]
   const movers = rows.map(row => ({ row, move: marketMove(row.market) })).filter(item => item.move != null) as { row: PlayerRow; move: number }[]
-  const advertised = [...movers].sort((a, b) => a.move - b.move)[0]
-  const hidden = [...movers].sort((a, b) => b.move - a.move)[0]
+  const advertised = movers.filter(item => item.move < 0).sort((a, b) => a.move - b.move)[0]
+  const hidden = movers.filter(item => item.move > 0).sort((a, b) => b.move - a.move)[0]
   const fanduel = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
   const moneyline = side === 'home' ? fanduel?.moneylineHome : fanduel?.moneylineAway
+  const signal = (item: { row: PlayerRow; move: number } | undefined) => {
+    if (!item) return <b className={styles.noSignal}>No qualifying move</b>
+    const offer = primaryMarketOffer(item.row.market, 'anytime_td')
+    return <b className={styles.signalValue}><span>{item.move > 0 ? '+' : ''}{item.move.toFixed(1)} pp</span><strong>{item.row.name}</strong>{offer ? <em><BookLogo vendor={offer.offer.vendor} size={13} />{oddsLabel(offer.odds)}</em> : null}</b>
+  }
   return (
     <header className={styles.teamHeader} style={{ '--team-color': team.color, '--team-color-2': team.color2 || team.color } as CSSProperties}>
       <div className={styles.teamIdentity}>
         <button type="button" className={`${styles.collapseTeam} ${collapsed ? styles.teamCollapsed : ''}`} onClick={onToggle} aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${team.name}`}><ChevronDown size={16} /></button>
         <TeamLogo team={team} size={34} />
-        <div><strong>{team.name}</strong><span>vs {opponent.abbr} · {rows.filter(row => row.market).length} markets · {rows.filter(row => row.hasTracking).length} tracked</span></div>
+        <div><strong>{team.name}</strong><span>vs {opponent.abbr} · {rows.filter(row => row.market).length} priced · {rows.filter(row => row.hasTracking).length} with production</span></div>
       </div>
       <div className={styles.teamSignals}>
         <div className={styles.teamWindows}><small>WINDOW</small><span>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={selectedWindow === option.id ? styles.teamWindowActive : ''} onClick={() => onSelectWindow(option.id)}>{option.label.replace('Last ', 'L')}</button>)}</span></div>
         <div><small>TOP SLIPSURGE SCORE</small><b>{topScore ? `${topScore.name} ${topScore.index}` : 'Syncing'}</b></div>
-        <div className={styles.advertised}><small>MOST ADVERTISED</small><b>{advertised ? `${advertised.move > 0 ? '+' : ''}${advertised.move} ${advertised.row.name}` : '—'}</b></div>
-        <div className={styles.hidden}><small>MOST HIDDEN</small><b>{hidden ? `${hidden.move > 0 ? '+' : ''}${hidden.move} ${hidden.row.name}` : '—'}</b></div>
+        <div className={styles.advertised}><small>MOST ADVERTISED · ATD</small>{signal(advertised)}</div>
+        <div className={styles.hidden}><small>MOST HIDDEN · ATD</small>{signal(hidden)}</div>
         <div><small>TEAM ML</small><b>{oddsLabel(moneyline)}</b></div>
-        <div><small>SAVED READS</small><b>{savedCount}</b></div>
+        <div><small>SAVED MARKETS</small><b>{savedCount}</b></div>
       </div>
     </header>
   )
@@ -626,7 +686,7 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
   if (!board.gameLines.length) return null
   return (
     <section className={styles.gameLines} aria-label="All sportsbook game lines">
-      <header><div><small>ALL SPORTSBOOKS</small><strong>Live game lines</strong></div><span>{board.gameLines.length} books</span></header>
+      <header><div><small>GAME MARKET</small><strong>Moneyline · spread · total</strong></div><span><b>{board.gameLines.length}</b> live books</span></header>
       <div>
         {board.gameLines.map(line => (
           <article className={styles.gameLineCard} key={line.vendor}>
@@ -687,7 +747,7 @@ function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onC
           <div className={styles.modalWindows}>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>{option.label}</button>)}</div>
           {tab === 'matchup' ? (
             <>
-              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY READ · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><div className={styles.identityBadges}>{activePlayer.rookieSeason === lens.season ? <span>ROOKIE</span> : null}{activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}{activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}</div><p>{activePlayer.hasTracking ? 'Usage, field geometry, scoring role, explosive ability and sample strength in the selected window.' : activePlayer.rookieSeason === lens.season ? 'Player markets are live. NFL tracking history will populate after the rookie records qualifying regular-season usage.' : 'Player markets are live, but no qualifying tracking sample exists in this selected window.'}</p></div></div>
+              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY EDGE · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><div className={styles.identityBadges}>{activePlayer.rookieSeason === lens.season ? <span>ROOKIE</span> : null}{activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}{activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}</div><p>{activePlayer.hasTracking ? 'Current production, role, field geometry and matchup context in the selected window.' : activePlayer.rookieSeason === lens.season ? 'Player markets are live. Production will populate after the rookie records a qualifying game.' : 'Player markets are live, but no qualifying production sample exists in this selected window.'}</p></div></div>
               <div className={styles.metricCards}>
                 {[['Volume', activePlayer.volume], ['Geometry', activePlayer.geometry], ['Red zone', activePlayer.redZone], ['Breakaway', activePlayer.breakaway], ['Evidence', activePlayer.evidence], ['RZ looks', activePlayer.redZoneLooks]].map(([label, value]) => <div key={label}><small>{label}</small><b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b></div>)}
               </div>
@@ -810,6 +870,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [highlightsReady, setHighlightsReady] = useState(false)
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
+  const board = history[frameIndex]?.board ?? odds
   const sourceBoards = useMemo(() => [odds, ...history.map(frame => frame.board)], [history, odds])
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
@@ -846,15 +907,14 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       odds_by_book: oddsByBook,
     }).catch(error => console.error('[the-sideline] failed to save market', error))
   }, [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id])
-  const columns = useColumnDefinitions({ markets: availableMarkets, books: availableBooks, savedKeys, onToggleSaved: toggleSavedMarket })
+  const columns = useColumnDefinitions({ markets: availableMarkets, books: availableBooks, board, game: selected, savedKeys, onToggleSaved: toggleSavedMarket })
   const defaultOrder = useMemo(() => columns.map(column => column.id), [columns])
   const defaultVisible = useMemo(() => new Set(columns.filter(column =>
-    ['player', 'index', 'lane', 'bestFtd', 'bestAtd', 'ftdPct', 'atdPct', 'roleOpps', 'roleShare', 'roleYards', 'redZoneLooks'].includes(column.id)
+    ['player', 'index', 'lane', 'bestFtd', 'bestAtd', 'ftdAtdRatio', 'atdRecRatio', 'atdRecYdsRatio', 'atdRushYdsRatio', 'atdScrimYdsRatio', 'atdTeamMlRatio', 'ftdPct', 'atdPct', 'roleOpps', 'roleShare', 'roleYards', 'redZoneLooks'].includes(column.id)
     || (column.vendor === 'fanduel' && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
   ).map(column => column.id)), [columns])
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultOrder)
   const [visibleIds, setVisibleIds] = useState<Set<string>>(defaultVisible)
-  const board = history[frameIndex]?.board ?? odds
   const windowData = lens.windows[windowId]
 
   useEffect(() => {
@@ -1086,7 +1146,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
         <div className={styles.brandActions}>
-          <span className={styles.coverageBadge} title={lens.coverage.detail}>1999 STATS · 2016 NGS · 2022 PBP</span>
+          <span className={styles.coverageBadge} title={lens.coverage.detail}>{lens.coverage.currentProductionGames ? `${lens.coverage.currentProductionSeason} ${lens.coverage.currentProductionPhase} · ${lens.coverage.currentProductionGames}G LIVE` : `${lens.coverage.sampleSeason} HISTORY`} · NGS + PBP</span>
           <a className={styles.filmLink} href={`/the-sideline?mode=film&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}`}><Film size={14} /> Routes + history</a>
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>

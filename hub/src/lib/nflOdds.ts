@@ -55,7 +55,26 @@ type ApiPlayer = {
   first_name: string
   last_name: string
   position_abbreviation?: string
-  team?: { abbreviation?: string }
+  jersey_number?: number | string | null
+  team?: { id?: number; abbreviation?: string }
+}
+
+export type NflBdlPlayerStat = {
+  player: ApiPlayer
+  team?: ApiTeam
+  game?: { id: number; date?: string; week?: number; season?: number; postseason?: boolean }
+  receptions?: number | null
+  receiving_targets?: number | null
+  receiving_yards?: number | null
+  receiving_touchdowns?: number | null
+  rushing_attempts?: number | null
+  rush_attempts?: number | null
+  rushing_yards?: number | null
+  rushing_touchdowns?: number | null
+  passing_attempts?: number | null
+  passing_completions?: number | null
+  passing_yards?: number | null
+  passing_touchdowns?: number | null
 }
 export type SidelineGameRef = {
   id: string
@@ -169,8 +188,38 @@ async function bdlGet<T>(path: string, freshness: 'live' | 'reference' = 'live')
   return payload.data ?? []
 }
 
+async function bdlGetPaged<T>(path: string, maxPages = 20): Promise<T[]> {
+  const rows: T[] = []
+  let cursor: string | null = null
+  for (let page = 0; page < maxPages; page += 1) {
+    const joiner = path.includes('?') ? '&' : '?'
+    const response: Response = await fetch(`${NFL_BDL_BASE}${path}${cursor ? `${joiner}cursor=${encodeURIComponent(cursor)}` : ''}`, {
+      headers: bdlHeaders,
+      next: { revalidate: 3600 },
+    })
+    if (!response.ok) throw new Error(`BDL NFL ${path} returned ${response.status}`)
+    const payload: { data?: T[]; meta?: { next_cursor?: string | number | null } } = await response.json()
+    rows.push(...(payload.data ?? []))
+    const nextCursor: string | number | null | undefined = payload.meta?.next_cursor
+    if (nextCursor == null || nextCursor === '') break
+    cursor = String(nextCursor)
+  }
+  return rows
+}
+
 export async function getNflBdlGames(season: number, week: number): Promise<ApiGame[]> {
   return bdlGet<ApiGame>(`/games?seasons[]=${season}&weeks[]=${week}&per_page=100`, 'reference')
+}
+
+export async function getNflBdlCurrentSeasonStats(season: number, teamIds: number[]): Promise<NflBdlPlayerStat[]> {
+  const uniqueTeams = Array.from(new Set(teamIds.filter(id => Number.isFinite(id) && id > 0)))
+  if (!uniqueTeams.length) return []
+  const params = new URLSearchParams({ per_page: '100' })
+  params.append('seasons[]', String(season))
+  params.append('season_types[]', '1')
+  params.append('season_types[]', '2')
+  uniqueTeams.forEach(id => params.append('team_ids[]', String(id)))
+  return bdlGetPaged<NflBdlPlayerStat>(`/stats?${params}`)
 }
 
 export function matchNflBdlGame(games: ApiGame[], game: SidelineGameRef): ApiGame | null {
@@ -283,9 +332,11 @@ function buildPlayers(current: ApiProp[], opening: ApiProp[], players: Record<nu
     const player = players[id]
     return {
       id,
+      teamId: player?.team?.id ?? null,
       name: player ? `${player.first_name} ${player.last_name}`.trim() : `Player #${id}`,
       team: player?.team?.abbreviation ?? '',
       position: player?.position_abbreviation ?? '',
+      jersey: numeric(player?.jersey_number),
       markets: Array.from(markets.values()).sort((a, b) => a.label.localeCompare(b.label) || (a.line ?? 0) - (b.line ?? 0)),
     }
   }).sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name))

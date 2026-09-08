@@ -425,7 +425,9 @@
   gap: 5px;
   padding: 13px 15px;
   border-right: 1px solid var(--line);
-  background: linear-gradient(145deg, rgba(53, 215, 255, 0.07), transparent);
+  background:
+    radial-gradient(circle at 10% 15%, rgba(53, 215, 255, 0.15), transparent 48%),
+    linear-gradient(145deg, #101b27, #0a1118);
 }
 
 .gameLines > header small {
@@ -435,8 +437,23 @@
   letter-spacing: 0.1em;
 }
 
-.gameLines > header strong { font-size: 13px; }
-.gameLines > header span { color: #8190a3; font-size: 9px; }
+.gameLines > header strong { font-size: 13px; line-height: 1.25; }
+.gameLines > header span {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid rgba(53, 215, 255, 0.2);
+  border-radius: 99px;
+  color: #a7b5c6;
+  background: rgba(53, 215, 255, 0.06);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.gameLines > header span b { color: var(--cyan); font-size: 10px; }
 
 .gameLines > div {
   display: grid;
@@ -612,10 +629,24 @@
 }
 
 .teamSignals b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.teamSignals .signalValue {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  overflow: visible;
+  white-space: normal;
+}
+.signalValue > span { font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.signalValue > strong { overflow: hidden; color: #f5f8fb; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.signalValue > em { display: inline-flex; align-items: center; gap: 3px; color: #dce5ee; font-size: 9px; font-style: normal; white-space: nowrap; }
+.noSignal { color: #778496; font-size: 10px !important; font-weight: 800; }
 .teamSignals .advertised { background: linear-gradient(145deg, rgba(255, 102, 126, 0.12), transparent); }
 .teamSignals .advertised small { color: #ff8e9f; }
+.teamSignals .advertised .signalValue > span { color: #ff91a2; }
 .teamSignals .hidden { background: linear-gradient(145deg, rgba(61, 220, 151, 0.11), transparent); }
 .teamSignals .hidden small { color: #55e0a2; }
+.teamSignals .hidden .signalValue > span { color: #63e7ad; }
 .teamWindows > span { display: flex; gap: 4px; }
 .teamWindows button {
   min-width: 29px;
@@ -753,9 +784,21 @@
 .baselineValue { display: inline-flex; min-width: 82px; flex-direction: column; gap: 5px; padding: 8px 7px; border: 1px solid transparent; border-radius: 8px; }
 .baselineValue b { font-size: 12px; line-height: 1; }
 .baselineValue small { color: #a5b0bf; font-size: 7px; font-weight: 850; letter-spacing: .025em; white-space: nowrap; }
-.baselineAdvertised { color: #54e6a2; border-color: rgba(77, 226, 161, .2); background: rgba(77, 226, 161, .1); }
-.baselineHidden { color: #ff8193; border-color: rgba(255, 102, 126, .2); background: rgba(255, 102, 126, .1); }
+.baselineAdvertised { color: #ff8193; border-color: rgba(255, 102, 126, .2); background: rgba(255, 102, 126, .1); }
+.baselineHidden { color: #54e6a2; border-color: rgba(77, 226, 161, .2); background: rgba(77, 226, 161, .1); }
 .baselineFlat { color: #ffd16d; border-color: rgba(255, 189, 69, .18); background: rgba(255, 189, 69, .08); }
+.ratioValue {
+  display: inline-flex;
+  min-width: 72px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 6px;
+  border: 1px solid rgba(53, 215, 255, .18);
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(53, 215, 255, .095), rgba(167, 255, 63, .035));
+}
+.ratioValue b { color: #e7f9ff; font-size: 12px; line-height: 1; }
+.ratioValue small { color: #73cfe5; font-size: 6px; font-weight: 900; letter-spacing: .08em; }
 .marketSave,
 .marketSaved {
   position: absolute;
@@ -997,6 +1040,7 @@
   .gameLines { grid-template-columns: 1fr; }
   .gameLines > header { flex-direction: row; align-items: center; justify-content: space-between; border-right: 0; border-bottom: 1px solid var(--line); }
   .gameLines > header div { display: flex; align-items: center; gap: 8px; }
+  .gameLines > header span { width: auto; }
   .gameLines > div { grid-auto-columns: minmax(350px, 92vw); }
   .marketSave { opacity: 0.7; }
   .toolsPanel { overflow-x: auto; }
@@ -1005,8 +1049,8 @@
   .roleTabs { margin-top: -5px; }
   .teamHeader { min-height: 0; }
   .teamIdentity { padding: 11px; }
-  .teamSignals { grid-template-columns: 230px repeat(5, 142px); }
-  .teamSignals > div { min-width: 142px; padding: 9px 11px; }
+  .teamSignals { grid-template-columns: 230px repeat(5, 154px); }
+  .teamSignals > div { min-width: 154px; padding: 9px 11px; }
   .boardTable td { height: 84px; }
   .playerCell { grid-template-columns: 17px 42px minmax(82px, 1fr) 30px 30px; gap: 5px; }
   .stickyCell { box-shadow: 5px 0 11px rgba(0, 0, 0, 0.35); }
@@ -1041,8 +1085,8 @@
   .storyGrid > article:nth-child(3) { grid-column: 1 / -1; }
   .storyGrid > article:nth-child(4) { grid-column: 1 / -1; }
   .teamIdentity strong { font-size: 14px; }
-  .teamSignals { grid-template-columns: 220px repeat(5, 132px); }
-  .teamSignals > div { min-width: 132px; }
+  .teamSignals { grid-template-columns: 220px repeat(5, 150px); }
+  .teamSignals > div { min-width: 150px; }
 }
 
 @media (min-width: 1900px) {

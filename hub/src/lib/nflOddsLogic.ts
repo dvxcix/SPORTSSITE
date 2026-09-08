@@ -1,4 +1,5 @@
 import type { NflOddsPlayer, NflTdBaseline, SidelineOddsBoard } from './nflOddsTypes'
+import { americanImpliedProbability, hiddenProbabilityPoints } from './nflMarketMath'
 
 const BOOK_ORDER = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'fanatics', 'betrivers', 'kalshi', 'polymarket']
 
@@ -10,6 +11,7 @@ export type NflTdBaselineRow = {
   vendor: string
   prop_type: 'anytime_td' | 'first_td'
   average_odds: number | string
+  average_implied_probability?: number | string | null
   sample_games: number
   first_sample_date: string | null
   through_date: string | null
@@ -36,18 +38,22 @@ export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaseli
       const baselines: NflTdBaseline[] = (byPlayer.get(player.id) ?? []).map(row => {
         const averageOdds = Number(row.average_odds)
         const current = milestoneOdds(player, row.prop_type, row.vendor)
+        const averageProbability = row.average_implied_probability == null
+          ? americanImpliedProbability(averageOdds)
+          : Number(row.average_implied_probability)
+        const currentProbability = americanImpliedProbability(current)
+        const deltaProbabilityPoints = hiddenProbabilityPoints(averageProbability, currentProbability)
         return {
           propType: row.prop_type,
           vendor: row.vendor,
           averageOdds,
+          averageProbability: Number.isFinite(averageProbability) ? averageProbability : null,
+          currentProbability,
           sampleGames: row.sample_games,
           firstSampleDate: row.first_sample_date,
           throughDate: row.through_date,
-          // Match The Dugout's canonical FHR% / HR% calculation exactly,
-          // including the signed denominator for negative American prices.
-          deltaPct: current == null || !Number.isFinite(averageOdds) || averageOdds === 0
-            ? null
-            : (current - averageOdds) / averageOdds,
+          deltaProbabilityPoints,
+          deltaPct: deltaProbabilityPoints == null ? null : deltaProbabilityPoints / 100,
           deltaOdds: current == null || !Number.isFinite(averageOdds) ? null : current - averageOdds,
         }
       })

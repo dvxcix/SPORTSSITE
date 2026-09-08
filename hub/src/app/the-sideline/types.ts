@@ -24,6 +24,15 @@ export type SidelineGame = {
   home: SidelineTeam
 }
 
+export type SidelineRosterPlayer = {
+  id: string
+  bdlId: number
+  teamId: number | null
+  team: string
+  name: string
+  position: string
+}
+
 export type SidelineTeamProfile = {
   team: SidelineTeam
   plays: number
@@ -107,6 +116,9 @@ export type SidelineLens = {
     usesPriorSeason: boolean
     label: string
     detail: string
+    currentProductionSeason?: number | null
+    currentProductionPhase?: string | null
+    currentProductionGames?: number
   }
   windows: Record<SidelineWindow, SidelineWindowData>
 }

@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getNflBdlCurrentSeasonStats, type NflBdlPlayerStat } from '@/lib/nflOdds'
 import type {
   SidelineGame,
   SidelineLens,
@@ -8,6 +9,7 @@ import type {
   SidelineTeamProfile,
   SidelineWindow,
   SidelineWindowData,
+  SidelineRosterPlayer,
 } from './types'
 
 type Row = Record<string, unknown>
@@ -20,6 +22,13 @@ const truthy = (value: unknown) => value === true || value === 1 || value === '1
 const clamp = (value: number, minimum = 0, maximum = 100) => Math.min(maximum, Math.max(minimum, value))
 const percent = (part: number, total: number) => total > 0 ? Math.round((part / total) * 1000) / 10 : 0
 const round1 = (value: number) => Math.round(value * 10) / 10
+const TEAM_ALIASES: Record<string, string> = { LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' }
+const canonicalTeam = (value: unknown) => {
+  const upper = String(value ?? '').toUpperCase()
+  return TEAM_ALIASES[upper] ?? upper
+}
+
+type CurrentStatRow = NflBdlPlayerStat & { sampleIndex: number }
 
 function emptyTeamProfile(team: SidelineGame['home']): SidelineTeamProfile {
   return {
@@ -161,6 +170,8 @@ function buildPlayers(
   teams: SidelineGame['home'][],
   bio: Map<string, { headshot: string | null; headshotFallbacks: string[]; jersey: number | null; position: string | null; rookieSeason: number | null; latestTeam: string | null; rosterStatus: string | null }>,
   rosterTeams: Map<string, string>,
+  currentStats: CurrentStatRow[],
+  roster: SidelineRosterPlayer[],
 ): SidelinePlayer[] {
   const playerMap = new Map<string, PlayerAccumulator>()
   const teamTargets = new Map<string, number>()
@@ -207,11 +218,80 @@ function buildPlayers(
     player.passAttempts += attempts
     player.completions += numeric(row.completions)
     player.passingYards += numeric(row.pass_yards)
-    player.touchdowns += numeric(row.pass_touchdowns)
     addWeighted(player, 'airYardsTotal', 'airYardsWeight', row.avg_intended_air_yards, attempts)
     addWeighted(player, 'cpoeTotal', 'cpoeWeight', row.completion_percentage_above_expectation, attempts)
     addWeighted(player, 'timeToThrowTotal', 'timeToThrowWeight', row.avg_time_to_throw, attempts)
     teamPassAttempts.set(player.team, (teamPassAttempts.get(player.team) ?? 0) + attempts)
+  }
+
+  // BDL's general stats endpoint includes preseason. Its current-season volume
+  // must replace (not add to) the prior-season NGS volume; NGS remains the
+  // supporting geometry sample until current-season tracking is published.
+  if (currentStats.length) {
+    const rosterByBdl = new Map(roster.map(player => [player.bdlId, player]))
+    const currentByPlayer = new Map<string, PlayerAccumulator>()
+    const currentTeamTargets = new Map<string, number>()
+    const currentTeamCarries = new Map<string, number>()
+    const currentTeamPassAttempts = new Map<string, number>()
+    for (const row of currentStats) {
+      const statTeam = canonicalTeam(row.team?.abbreviation ?? row.player.team?.abbreviation)
+      if (!teams.some(team => team.abbr === statTeam)) continue
+      const targets = numeric(row.receiving_targets)
+      const carries = numeric(row.rushing_attempts ?? row.rush_attempts)
+      const passAttempts = numeric(row.passing_attempts)
+      currentTeamTargets.set(statTeam, (currentTeamTargets.get(statTeam) ?? 0) + targets)
+      currentTeamCarries.set(statTeam, (currentTeamCarries.get(statTeam) ?? 0) + carries)
+      currentTeamPassAttempts.set(statTeam, (currentTeamPassAttempts.get(statTeam) ?? 0) + passAttempts)
+
+      const rosterPlayer = rosterByBdl.get(row.player.id)
+      if (!rosterPlayer) continue
+      let player = currentByPlayer.get(rosterPlayer.id)
+      if (!player) {
+        player = ensurePlayer(new Map(), {
+          player_gsis_id: rosterPlayer.id,
+          player_display_name: rosterPlayer.name,
+          player_position: rosterPlayer.position,
+          team_abbr: rosterPlayer.team,
+        }, rosterPlayer.position)!
+        currentByPlayer.set(rosterPlayer.id, player)
+      }
+      player.team = rosterPlayer.team || statTeam
+      if (row.sampleIndex > 0) player.games.add(row.sampleIndex)
+      player.targets += targets
+      player.receptions += numeric(row.receptions)
+      player.receivingYards += numeric(row.receiving_yards)
+      player.carries += carries
+      player.rushingYards += numeric(row.rushing_yards)
+      player.passAttempts += passAttempts
+      player.completions += numeric(row.passing_completions)
+      player.passingYards += numeric(row.passing_yards)
+      // ATD/FTD concern touchdowns scored by the player, not QB passing TDs.
+      player.touchdowns += numeric(row.receiving_touchdowns) + numeric(row.rushing_touchdowns)
+    }
+    for (const [id, current] of currentByPlayer) {
+      const historical = playerMap.get(id)
+      if (historical) {
+        historical.name = current.name
+        historical.team = current.team
+        historical.games = current.games
+        historical.targets = current.targets
+        historical.receptions = current.receptions
+        historical.receivingYards = current.receivingYards
+        historical.carries = current.carries
+        historical.rushingYards = current.rushingYards
+        historical.passAttempts = current.passAttempts
+        historical.completions = current.completions
+        historical.passingYards = current.passingYards
+        historical.touchdowns = current.touchdowns
+      } else {
+        playerMap.set(id, current)
+      }
+    }
+    for (const team of teams) {
+      teamTargets.set(team.abbr, currentTeamTargets.get(team.abbr) ?? 0)
+      teamCarries.set(team.abbr, currentTeamCarries.get(team.abbr) ?? 0)
+      teamPassAttempts.set(team.abbr, currentTeamPassAttempts.get(team.abbr) ?? 0)
+    }
   }
 
   const byName = new Map(Array.from(playerMap.values()).map(player => [player.name.toLowerCase(), player]))
@@ -325,11 +405,12 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
   return { script, detail, aggressor: aggressor.team.abbr }
 }
 
-async function querySeason(game: SidelineGame, season: number, roster: { id: string; team: string }[]) {
+async function querySeason(game: SidelineGame, season: number, roster: SidelineRosterPlayer[]) {
   const admin = createAdminClient()
   const teams = [game.away.abbr, game.home.abbr]
-  const rosterIds = Array.from(new Set(roster.map(player => player.id).filter(Boolean)))
-  const [pbpResult, receivingResult, rushingResult, passingResult] = await Promise.all([
+  const rosterIds = Array.from(new Set(roster.map(player => player.id).filter(id => id && !id.startsWith('bdl-'))))
+  const teamIds = Array.from(new Set(roster.map(player => player.teamId).filter((id): id is number => id != null)))
+  const [pbpResult, receivingResult, rushingResult, passingResult, currentStatsRaw] = await Promise.all([
     admin.from('nfl_pbp')
       .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
       .eq('season', season).eq('season_type', 'REG')
@@ -343,6 +424,10 @@ async function querySeason(game: SidelineGame, season: number, roster: { id: str
     admin.from('nfl_ngs_passing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
       .eq('season', season).eq('season_type', 'REG').in('team_abbr', teams),
+    getNflBdlCurrentSeasonStats(game.season, teamIds).catch(error => {
+      console.error('[the-sideline] current-season BDL stats unavailable', game.id, error)
+      return []
+    }),
   ])
 
   const rosterReceiving = rosterIds.length ? await admin.from('nfl_ngs_receiving')
@@ -383,6 +468,13 @@ async function querySeason(game: SidelineGame, season: number, roster: { id: str
       rosterStatus: row.status ?? null,
     })
   }
+  const currentGameKeys = Array.from(new Set(currentStatsRaw.map(row => `${row.game?.date ?? ''}:${row.game?.id ?? ''}`)))
+    .sort((a, b) => a.localeCompare(b))
+  const sampleIndex = new Map(currentGameKeys.map((key, index) => [key, index + 1]))
+  const currentStats: CurrentStatRow[] = currentStatsRaw.map(row => ({
+    ...row,
+    sampleIndex: sampleIndex.get(`${row.game?.date ?? ''}:${row.game?.id ?? ''}`) ?? 0,
+  }))
   return {
     pbp: (pbpResult.data ?? []) as Row[],
     receiving,
@@ -390,10 +482,14 @@ async function querySeason(game: SidelineGame, season: number, roster: { id: str
     passing,
     bio,
     rosterTeams: new Map(roster.map(player => [player.id, player.team])),
+    currentStats,
+    roster,
   }
 }
 
 function availableWeeks(data: Awaited<ReturnType<typeof querySeason>>) {
+  const currentSamples = Array.from(new Set(data.currentStats.map(row => row.sampleIndex).filter(index => index > 0))).sort((a, b) => b - a)
+  if (currentSamples.length) return currentSamples
   return Array.from(new Set([
     ...data.pbp.map(row => numeric(row.week)),
     ...data.receiving.map(row => numeric(row.week)),
@@ -412,19 +508,28 @@ function rowsForWeeks(rows: Row[], weeks: number[] | null) {
 }
 
 function buildWindow(game: SidelineGame, data: Awaited<ReturnType<typeof querySeason>>, weeks: number[] | null): SidelineWindowData {
-  const pbp = weeks == null ? data.pbp : rowsForWeeks(data.pbp, weeks)
+  const currentSample = data.currentStats.length > 0
+  const historicalWeeks = currentSample && weeks != null
+    ? Array.from(new Set(data.pbp.map(row => numeric(row.week)).filter(week => week > 0))).sort((a, b) => b - a).slice(0, weeks.length)
+    : weeks
+  const pbp = historicalWeeks == null ? data.pbp : rowsForWeeks(data.pbp, historicalWeeks)
+  const currentStats = weeks == null
+    ? data.currentStats
+    : data.currentStats.filter(row => new Set(weeks).has(row.sampleIndex))
   return {
     plays: pbp.length,
     weeks: weeks ?? availableWeeks(data),
     teams: [profileTeam(game.away, pbp), profileTeam(game.home, pbp)],
     players: buildPlayers(
-      rowsForWeeks(data.receiving, weeks),
-      rowsForWeeks(data.rushing, weeks),
-      rowsForWeeks(data.passing, weeks),
+      rowsForWeeks(data.receiving, historicalWeeks),
+      rowsForWeeks(data.rushing, historicalWeeks),
+      rowsForWeeks(data.passing, historicalWeeks),
       pbp,
       [game.away, game.home],
       data.bio,
       data.rosterTeams,
+      currentStats,
+      data.roster,
     ),
   }
 }
@@ -433,7 +538,7 @@ function emptyWindow(game: SidelineGame): SidelineWindowData {
   return { plays: 0, weeks: [], teams: [emptyTeamProfile(game.away), emptyTeamProfile(game.home)], players: [] }
 }
 
-export async function getSidelineBoardLens(game: SidelineGame, roster: { id: string; team: string }[] = []): Promise<SidelineLens> {
+export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineRosterPlayer[] = []): Promise<SidelineLens> {
   const preferredSeason = game.gameType === 'REG' && game.week > 3 ? game.season : game.season - 1
   try {
     let season = preferredSeason
@@ -452,6 +557,8 @@ export async function getSidelineBoardLens(game: SidelineGame, roster: { id: str
     }
     const headline = buildHeadline(windows.season.teams[0], windows.season.teams[1])
     const hasData = Object.values(windows).some(window => window.plays || window.players.length)
+    const currentProductionGames = new Set(data.currentStats.map(row => row.game?.id).filter(Boolean)).size
+    const hasCurrentProduction = currentProductionGames > 0
     return {
       season,
       status: hasData ? 'calculated' : 'awaiting-data',
@@ -464,8 +571,13 @@ export async function getSidelineBoardLens(game: SidelineGame, roster: { id: str
         trackingStart: 2016,
         playByPlayStart: 2022,
         usesPriorSeason: season < game.season,
-        label: `${season} NGS + play-by-play sample`,
-        detail: `Schedule and historical stat storage begins in 1999. NFL Next Gen Stats begins in 2016; the loaded play-by-play archive currently begins in 2022.`,
+        label: hasCurrentProduction ? `${game.season} preseason/regular production + ${season} tracking context` : `${season} NGS + play-by-play sample`,
+        detail: hasCurrentProduction
+          ? `${currentProductionGames} current-season game samples drive volume. ${season} NGS and play-by-play provide route, separation and field-geometry context until current tracking publishes.`
+          : `Schedule and historical stat storage begins in 1999. NFL Next Gen Stats begins in 2016; the loaded play-by-play archive currently begins in 2022.`,
+        currentProductionSeason: hasCurrentProduction ? game.season : null,
+        currentProductionPhase: hasCurrentProduction && game.week <= 1 ? 'PRESEASON + CURRENT' : hasCurrentProduction ? 'CURRENT SEASON' : null,
+        currentProductionGames,
       },
       windows,
     }

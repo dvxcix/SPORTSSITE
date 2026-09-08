@@ -38,7 +38,14 @@ export default async function SidelinePage({ searchParams }: {
   }
 
   const market = await getSidelineOddsBundle(selected)
-  const roster = market.odds.players.flatMap(player => player.gsisId ? [{ id: player.gsisId, team: player.team }] : [])
+  const roster = market.odds.players.map(player => ({
+    id: player.gsisId ?? `bdl-${player.id}`,
+    bdlId: player.id,
+    teamId: player.teamId ?? null,
+    team: player.team,
+    name: player.name,
+    position: player.position,
+  }))
   const lens = await getCachedSidelineBoardLens(selected, roster)
   const { odds, history } = market
   return <SidelineBoardClient key={selected.id} games={games} selectedId={selected.id} selectedDate={date} lens={lens} odds={odds} history={history} />

@@ -28,15 +28,21 @@ export type NflTdBaseline = {
   propType: 'anytime_td' | 'first_td'
   vendor: string
   averageOdds: number
+  averageProbability: number | null
+  currentProbability: number | null
   sampleGames: number
   firstSampleDate: string | null
   throughDate: string | null
+  /** Probability-point displacement: positive = quieter/hidden, negative = louder/advertised. */
+  deltaProbabilityPoints: number | null
+  /** Compatibility alias stored as a decimal probability delta. */
   deltaPct: number | null
   deltaOdds: number | null
 }
 
 export type NflOddsPlayer = {
   id: number
+  teamId?: number | null
   name: string
   team: string
   position: string

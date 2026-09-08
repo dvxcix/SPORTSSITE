@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { attachNflTdBaselines, mergeNflOddsBoards, nflOddsPayloadHash } from '../src/lib/nflOddsLogic.ts'
+import { americanImpliedProbability, hiddenProbabilityPoints, probabilityToAmerican } from '../src/lib/nflMarketMath.ts'
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 
 function board(currentOdds: number, openingOnly = false): SidelineOddsBoard {
@@ -37,7 +38,7 @@ test('an opening-only response never overwrites the last captured live price', (
   assert.equal(merged.gameLines[0].moneylineHome, -150)
 })
 
-test('ATD and FTD baselines remain slate-frozen and calculate raw-price movement', () => {
+test('ATD and FTD baselines remain slate-frozen and compare implied probabilities', () => {
   const enriched = attachNflTdBaselines(board(120), [{
     slate_date: '2026-09-07', player_id: 7, player_name: 'Test Runner', team_abbr: 'BUF',
     vendor: 'fanduel', prop_type: 'anytime_td', average_odds: 150, sample_games: 8,
@@ -47,7 +48,8 @@ test('ATD and FTD baselines remain slate-frozen and calculate raw-price movement
   assert.equal(baseline?.averageOdds, 150)
   assert.equal(baseline?.sampleGames, 8)
   assert.equal(baseline?.deltaOdds, -30)
-  assert.equal(baseline?.deltaPct, -0.2)
+  assert.equal(baseline?.deltaProbabilityPoints, -5.5)
+  assert.equal(baseline?.deltaPct, -0.055)
 
   const negativePrice = attachNflTdBaselines(board(-130), [{
     slate_date: '2026-09-07', player_id: 7, player_name: 'Test Runner', team_abbr: 'BUF',
@@ -55,7 +57,16 @@ test('ATD and FTD baselines remain slate-frozen and calculate raw-price movement
     first_sample_date: '2025-10-19', through_date: '2026-01-18',
   }]).players[0].tdBaselines?.[0]
   assert.equal(negativePrice?.deltaOdds, -20)
-  assert.equal(negativePrice?.deltaPct, (-130 - -110) / -110)
+  assert.equal(negativePrice?.deltaProbabilityPoints, -4.1)
+  assert.ok(Math.abs((negativePrice?.deltaPct ?? 0) - -0.041) < Number.EPSILON * 2)
+})
+
+test('mixed positive and negative American prices are averaged in probability space', () => {
+  const probabilities = [-110, 250].map(americanImpliedProbability).filter((value): value is number => value != null)
+  const average = probabilities.reduce((sum, value) => sum + value, 0) / probabilities.length
+  assert.ok(average > 0.4 && average < 0.41)
+  assert.ok((probabilityToAmerican(average) ?? 0) > 140)
+  assert.equal(hiddenProbabilityPoints(average, americanImpliedProbability(250)), 11.9)
 })
 
 test('baseline enrichment does not create a false market-story frame', () => {
