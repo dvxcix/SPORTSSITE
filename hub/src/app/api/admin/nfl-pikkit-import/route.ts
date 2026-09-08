@@ -3,7 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { canonicalizeNflPikkitMarket, normalizeNflPikkitName, type NflPikkitMarket, type NflPikkitSnapshot } from '@/lib/nflPikkit'
+import { canonicalizeNflPikkitMarket, normalizeNflPikkitName, resolveNflPikkitEntry, type NflPikkitIdentity, type NflPikkitMarket, type NflPikkitSnapshot } from '@/lib/nflPikkit'
 import type { PikkitScrapePayload } from '@/lib/scrapers/pikkitScraper'
 
 export const revalidate = 0
@@ -27,6 +27,25 @@ type PlayerIdentity = {
   position: string | null
 }
 
+type OddsBoardPlayer = { name?: unknown; team?: unknown; position?: unknown }
+
+async function loadRosterIdentities(admin: ReturnType<typeof createAdminClient>, teams: string[]) {
+  const rows: PlayerIdentity[] = []
+  const pageSize = 1000
+  for (let from = 0; from < 5000; from += pageSize) {
+    const { data, error } = await admin
+      .from('nfl_players')
+      .select('display_name,short_name,football_name,latest_team,position')
+      .in('latest_team', teams)
+      .range(from, from + pageSize - 1)
+    if (error) throw new Error(`NFL player identity read failed: ${error.message}`)
+    const page = (data ?? []) as PlayerIdentity[]
+    rows.push(...page)
+    if (page.length < pageSize) break
+  }
+  return rows
+}
+
 export async function POST(req: Request) {
   const authError = await requireAdmin(req)
   if (authError) return authError
@@ -47,31 +66,75 @@ export async function POST(req: Request) {
     .maybeSingle()
   if (gameError || !game) return NextResponse.json({ error: 'NFL game not found' }, { status: 404 })
 
-  const { data: identityRows } = await admin
-    .from('nfl_players')
-    .select('display_name,short_name,football_name,latest_team,position')
-    .in('latest_team', [game.away_team, game.home_team])
-    .limit(500)
-  const identities = new Map<string, PlayerIdentity>()
-  ;((identityRows ?? []) as PlayerIdentity[]).forEach(player => {
-    ;[player.display_name, player.short_name, player.football_name].forEach(name => {
-      if (name) identities.set(normalizeNflPikkitName(name), player)
+  const [{ data: oddsRow }, identityRows] = await Promise.all([
+    admin.from('nfl_odds_current').select('board').eq('game_id', game.game_id).maybeSingle(),
+    loadRosterIdentities(admin, [game.away_team, game.home_team]),
+  ])
+  const identitiesByName = new Map<string, NflPikkitIdentity>()
+  const addIdentity = (identity: NflPikkitIdentity) => {
+    const key = normalizeNflPikkitName(identity.name)
+    if (!key) return
+    const existing = identitiesByName.get(key)
+    identitiesByName.set(key, existing ? {
+      ...existing,
+      team: existing.team ?? identity.team,
+      position: existing.position ?? identity.position,
+      aliases: [...new Set([...(existing.aliases ?? []), ...(identity.aliases ?? [])])],
+    } : identity)
+  }
+  const board = oddsRow?.board as { players?: OddsBoardPlayer[] } | null
+  ;(board?.players ?? []).forEach(player => {
+    if (typeof player.name !== 'string') return
+    addIdentity({
+      name: player.name,
+      team: typeof player.team === 'string' ? player.team : null,
+      position: typeof player.position === 'string' ? player.position : null,
     })
   })
+  identityRows.forEach(player => {
+    if (!player.display_name) return
+    addIdentity({
+      name: player.display_name,
+      team: player.latest_team,
+      position: player.position,
+      aliases: [player.short_name].filter((name): name is string => Boolean(name)),
+    })
+  })
+  const identities = [...identitiesByName.values()]
 
-  const markets: NflPikkitMarket[] = []
+  const groupedMarkets = new Map<string, NflPikkitMarket>()
   for (const [rawKey, rawPlayers] of Object.entries(parsed.props)) {
     if (!rawPlayers || typeof rawPlayers !== 'object' || Array.isArray(rawPlayers)) continue
-    const rawLabel = parsed.marketLabels?.[rawKey] ?? rawKey
-    const propType = canonicalizeNflPikkitMarket(rawKey, rawLabel)
-    const players = Object.entries(rawPlayers).flatMap(([playerName, picks]) => {
-      if (typeof picks !== 'number' || !Number.isInteger(picks) || picks < 0 || picks > 1_000_000 || playerName.length < 2 || playerName.length > 120) return []
-      const playerKey = normalizeNflPikkitName(playerName)
-      const identity = identities.get(playerKey)
-      return [{ playerName, playerKey, team: identity?.latest_team ?? null, position: identity?.position ?? null, picks }]
+    const categoryLabel = parsed.marketLabels?.[rawKey] ?? rawKey
+    Object.entries(rawPlayers).forEach(([rawPlayerName, picks]) => {
+      if (typeof picks !== 'number' || !Number.isInteger(picks) || picks < 0 || picks > 1_000_000 || rawPlayerName.length < 2 || rawPlayerName.length > 120) return
+      const resolved = resolveNflPikkitEntry(rawPlayerName, categoryLabel, identities)
+      if (!resolved) return
+      const propType = canonicalizeNflPikkitMarket(rawKey, resolved.marketLabel)
+      const groupKey = `${rawKey}:${propType}`
+      const market = groupedMarkets.get(groupKey) ?? {
+        propType,
+        label: resolved.marketLabel.slice(0, 120),
+        rawKey: groupKey.slice(0, 120),
+        rawLabel: resolved.marketLabel.slice(0, 120),
+        players: [],
+      }
+      const playerKey = normalizeNflPikkitName(resolved.identity.name)
+      const priorPlayer = market.players.find(player => player.playerKey === playerKey)
+      if (!priorPlayer || picks > priorPlayer.picks) {
+        if (priorPlayer) market.players.splice(market.players.indexOf(priorPlayer), 1)
+        market.players.push({
+          playerName: resolved.identity.name,
+          playerKey,
+          team: resolved.identity.team,
+          position: resolved.identity.position,
+          picks,
+        })
+      }
+      groupedMarkets.set(groupKey, market)
     })
-    if (players.length) markets.push({ propType, label: rawLabel.slice(0, 120), rawKey: rawKey.slice(0, 120), rawLabel: rawLabel.slice(0, 120), players })
   }
+  const markets = [...groupedMarkets.values()].filter(market => market.players.length)
   if (!markets.length) return NextResponse.json({ error: 'No valid NFL public picks found' }, { status: 400 })
 
   const capturedAt = Number.isFinite(Date.parse(parsed.capturedAt)) ? parsed.capturedAt : new Date().toISOString()

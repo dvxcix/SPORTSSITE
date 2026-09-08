@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { attachNflPikkitSnapshot, canonicalizeNflPikkitMarket, type NflPikkitSnapshot } from '../src/lib/nflPikkit.ts'
+import { attachNflPikkitSnapshot, canonicalizeNflPikkitMarket, resolveNflPikkitEntry, type NflPikkitSnapshot } from '../src/lib/nflPikkit.ts'
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 
 test('NFL Pikkit labels map to Sideline prop keys without dropping unknown markets', () => {
@@ -9,6 +9,21 @@ test('NFL Pikkit labels map to Sideline prop keys without dropping unknown marke
   assert.equal(canonicalizeNflPikkitMarket('two_tds', 'To Score 2+ Touchdowns'), 'two_plus_td')
   assert.equal(canonicalizeNflPikkitMarket('rush_rec', 'Rushing + Receiving Yards'), 'rushing_receiving_yards')
   assert.equal(canonicalizeNflPikkitMarket('custom-special', 'Quarterback Kneel Downs'), 'quarterback_kneel_downs')
+  assert.equal(canonicalizeNflPikkitMarket('passing', 'Matthew Stafford Pass Yards'), 'passing_yards')
+  assert.equal(canonicalizeNflPikkitMarket('kicking', 'Harrison Mevis FG Made'), 'field_goals_made')
+})
+
+test('broad NFL tabs resolve real players and reject market-total headings', () => {
+  const identities = [{ name: 'Matthew Stafford', team: 'LA', position: 'QB' }, { name: 'Christian McCaffrey', team: 'SF', position: 'RB' }]
+  assert.deepEqual(resolveNflPikkitEntry('Matthew Stafford Pass Yards', 'Passing', identities), {
+    identity: identities[0],
+    marketLabel: 'Pass Yards',
+  })
+  assert.deepEqual(resolveNflPikkitEntry('Christian McCaffrey', 'Receiving', identities), {
+    identity: identities[1],
+    marketLabel: 'Receiving Yards',
+  })
+  assert.equal(resolveNflPikkitEntry('Anytime TD Scorer', 'Touchdowns', identities), null)
 })
 
 test('Pikkit picks attach by normalized player and team identity', () => {
