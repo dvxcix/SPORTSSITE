@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createPersistentContext } from '@/lib/browserbase'
 
@@ -13,24 +13,29 @@ async function requireAdmin() {
   return {}
 }
 
-// One-time setup, run by hand from a signed-in admin browser tab (not a
-// cron job) — mints a durable Browserbase context and returns a Live View
-// URL. Open that URL, sign into Pikkit yourself inside it (this codebase
-// never sees the password), then save the returned contextId as
-// PIKKIT_CONTEXT_ID in Vercel's env vars. Every future scrape-pikkit cron
-// run resumes that same signed-in context — no re-login needed unless
-// Pikkit's session actually expires. Re-running this mints a BRAND NEW,
-// separately-unauthenticated context — it doesn't refresh the old one, so
-// there's no reason to hit this again unless you need to re-auth.
-export async function GET() {
+// Manual setup from a signed-in admin browser. Normal requests deliberately
+// reuse the current Pikkit manual-auth session (or its persisted context)
+// so a retry does not look like another new device to Cloudflare. Add
+// ?fresh=1 only when the admin explicitly wants to discard that continuity.
+export async function GET(request: NextRequest) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
-  const setup = await createPersistentContext()
+  const fresh = request.nextUrl.searchParams.get('fresh') === '1'
+  const setup = await createPersistentContext(undefined, { fresh })
+  console.info('[pikkit-context] manual auth ready', {
+    session: setup.sessionId.slice(-8),
+    context: setup.contextId.slice(-8),
+    continuity: setup.continuity,
+    region: setup.region,
+    proxyMode: setup.proxyMode,
+    expiresAt: setup.expiresAt,
+  })
   return NextResponse.json({
     ...setup,
     verification: 'manual',
-    instructions: 'Open liveViewUrl and complete Pikkit sign-in and SMS verification yourself. Do not start a Pikkit scrape with this context until the Live View login is complete.',
+    instructions: 'Open liveViewUrl and complete Pikkit sign-in and SMS verification yourself. Keep using this same setup URL if you need to reopen Live View; it now preserves the active browser identity instead of starting over.',
     afterLogin: 'After the signed-in Pikkit page is visible, release sessionId from the Browserbase Sessions dashboard, wait a few seconds for the context to persist, then save contextId as PIKKIT_CONTEXT_ID and redeploy.',
-    cloudflareNote: 'If Cloudflare still shows "Please complete verification" or crashed_retry, the hosted browser is being refused before Pikkit 2FA. Do not keep retrying; use Pikkit/Cloudflare support or an approved Browserbase identity integration.',
+    cloudflareNote: 'Complete Cloudflare manually in Live View. Do not open fresh=1 or create another Browserbase session during the same login attempt; changing identity can invalidate the verification.',
+    freshSessionUrl: `${request.nextUrl.origin}${request.nextUrl.pathname}?fresh=1`,
   })
 }

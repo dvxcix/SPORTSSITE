@@ -24,6 +24,8 @@ function optionalProjectId(): string | undefined {
 }
 
 const BROWSERBASE_REGION = 'us-east-1' as const
+const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
+const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
 
 function pikkitGeoState(): string | undefined {
   const value = process.env.PIKKIT_BROWSER_GEO_STATE?.trim().toUpperCase()
@@ -117,27 +119,91 @@ export async function openPikkitSession(contextId: string, metadata: Record<stri
 // so every future openSession({ contextId }) call for Pikkit starts already
 // logged in. No password is ever read, stored, or typed by this codebase —
 // you do the actual sign-in by hand, once, in the Live View.
-export async function createPersistentContext(navigateUrl = 'https://app.pikkit.com/leagues/mlb'): Promise<{
+export type PersistentContextSetup = {
   contextId: string
   sessionId: string
   liveViewUrl: string
   region: typeof BROWSERBASE_REGION
   proxyMode: 'managed' | 'geolocated'
+  expiresAt: string
+  continuity: 'running-session' | 'persisted-context' | 'new-context'
+}
+
+function isPikkitManualAuthSession(session: {
+  contextId?: string
+  userMetadata?: Record<string, unknown>
+}): boolean {
+  return Boolean(
+    session.contextId
+      && session.userMetadata?.book === 'pikkit'
+      && session.userMetadata?.mode === 'manual-auth',
+  )
+}
+
+function newestFirst<T extends { updatedAt: string }>(sessions: T[]): T[] {
+  return [...sessions].sort(
+    (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
+  )
+}
+
+// Pikkit and Cloudflare should see one durable browser identity throughout
+// the human login flow. Repeatedly minting a new context for every retry
+// changes the browser storage and proxy session at exactly the point where
+// Cloudflare is trying to establish trust. Reuse a still-running manual
+// session first; otherwise resume the most recent persisted context.
+async function findPikkitManualAuthIdentity(bb: Browserbase): Promise<{
+  running?: Awaited<ReturnType<typeof bb.sessions.list>>[number]
+  contextId?: string
 }> {
+  const running = newestFirst(
+    (await bb.sessions.list({ status: 'RUNNING' })).filter(isPikkitManualAuthSession),
+  )[0]
+  if (running?.contextId) return { running, contextId: running.contextId }
+
+  const cutoff = Date.now() - PIKKIT_CONTEXT_REUSE_MS
+  const recent = newestFirst(
+    (await bb.sessions.list()).filter((session) => (
+      isPikkitManualAuthSession(session)
+        && Date.parse(session.updatedAt) >= cutoff
+    )),
+  )[0]
+  return recent?.contextId ? { contextId: recent.contextId } : {}
+}
+
+export async function createPersistentContext(
+  navigateUrl = 'https://app.pikkit.com/leagues/mlb',
+  options: { fresh?: boolean } = {},
+): Promise<PersistentContextSetup> {
   const bb = client()
   const pid = optionalProjectId()
   const geoState = pikkitGeoState()
   const proxies = geoState
     ? [{ type: 'browserbase' as const, geolocation: { country: 'US', state: geoState } }]
     : true
-  const context = await bb.contexts.create(pid ? { projectId: pid } : {})
+  const existing = options.fresh ? {} : await findPikkitManualAuthIdentity(bb)
+  if (existing.running?.contextId) {
+    const live = await bb.sessions.debug(existing.running.id)
+    return {
+      contextId: existing.running.contextId,
+      sessionId: existing.running.id,
+      liveViewUrl: live.debuggerFullscreenUrl,
+      region: BROWSERBASE_REGION,
+      proxyMode: geoState ? 'geolocated' : 'managed',
+      expiresAt: existing.running.expiresAt,
+      continuity: 'running-session',
+    }
+  }
+
+  const contextId = existing.contextId
+    ?? (await bb.contexts.create(pid ? { projectId: pid } : {})).id
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
     proxies,
     keepAlive: true,
+    timeout: PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS,
     browserSettings: {
-      context: { id: context.id, persist: true },
+      context: { id: contextId, persist: true },
       // This session is deliberately handed to a human in Live View. Do not
       // let Browserbase's automatic CAPTCHA interaction compete with the
       // admin while Cloudflare is asking for an ordinary manual verification.
@@ -159,10 +225,12 @@ export async function createPersistentContext(navigateUrl = 'https://app.pikkit.
   await page.goto(navigateUrl, { waitUntil: 'domcontentloaded' }).catch(() => {})
   const live = await bb.sessions.debug(session.id)
   return {
-    contextId: context.id,
+    contextId,
     sessionId: session.id,
     liveViewUrl: live.debuggerFullscreenUrl,
     region: BROWSERBASE_REGION,
     proxyMode: geoState ? 'geolocated' : 'managed',
+    expiresAt: session.expiresAt,
+    continuity: existing.contextId ? 'persisted-context' : 'new-context',
   }
 }
