@@ -30,6 +30,7 @@ export async function GET() {
     ...setup,
     verification: 'manual',
     instructions: 'Open liveViewUrl and complete Pikkit sign-in and SMS verification yourself. Do not start a Pikkit scrape with this context until the Live View login is complete.',
+    afterLogin: 'After the signed-in Pikkit page is visible, release sessionId from the Browserbase Sessions dashboard, wait a few seconds for the context to persist, then save contextId as PIKKIT_CONTEXT_ID and redeploy.',
     cloudflareNote: 'If Cloudflare still shows "Please complete verification" or crashed_retry, the hosted browser is being refused before Pikkit 2FA. Do not keep retrying; use Pikkit/Cloudflare support or an approved Browserbase identity integration.',
   })
 }
