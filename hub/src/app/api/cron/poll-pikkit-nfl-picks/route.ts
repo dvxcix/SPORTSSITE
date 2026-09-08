@@ -56,7 +56,13 @@ async function run(req: Request) {
       })
     })
   }
-  return NextResponse.json({ games: games.length, attempted: candidates.length, succeeded: results.length - failed.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
+  const allSkipped = results.length > 0 && results.every(result => result.skipped)
+  const summary = { games: games.length, attempted: candidates.length, succeeded: results.length - failed.length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
+  console.info('[poll-pikkit-nfl-picks] complete', { ...summary, results })
+  if (allSkipped) {
+    return NextResponse.json({ ...summary, reason: 'Pikkit has not exposed NFL public-pick markets for the scheduled games yet', results }, { status: 425 })
+  }
+  return NextResponse.json({ ...summary, results }, { status: failed.length ? 502 : 200 })
 }
 
 export const GET = withPipelineHealth('poll-pikkit-nfl-picks', run, { allowSecondarySecret: true })

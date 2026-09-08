@@ -44,7 +44,10 @@ export async function GET(req: Request) {
       await bb.page.waitForTimeout(2500)
       clicked = await findAndClickPikkitGame(bb.page, game.awayName, game.homeName)
     }
-    if (!clicked) return NextResponse.json({ gameId, skipped: true, error: 'NFL game link not found on Pikkit' })
+    if (!clicked) {
+      console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'listing', reason: 'game-link-not-found' })
+      return NextResponse.json({ gameId, skipped: true, error: 'NFL game link not found on Pikkit' })
+    }
     await bb.page.waitForTimeout(3000)
     const pageText = await bb.page.evaluate(() => document.body?.innerText ?? '')
     const away = escapeRe(distinguishingSuffix(game.awayName))
@@ -57,7 +60,10 @@ export async function GET(req: Request) {
     const propsFound = await clickPlayerProps(bb.page)
     const scrape = await bb.page.evaluate(runPikkitScrape)
     const marketCount = Object.keys(scrape.props).length
-    if (!marketCount) return NextResponse.json({ gameId, skipped: true, error: 'No NFL public-pick markets found', propsFound })
+    if (!marketCount) {
+      console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'markets', reason: 'no-public-pick-markets', propsFound })
+      return NextResponse.json({ gameId, skipped: true, error: 'No NFL public-pick markets found', propsFound })
+    }
 
     const imported = await fetch(`${PLATFORM_URL}/api/admin/nfl-pikkit-import`, {
       method: 'POST',
@@ -66,6 +72,7 @@ export async function GET(req: Request) {
       signal: AbortSignal.timeout(45_000),
     })
     const result = await imported.json().catch(() => null)
+    console.info('[scrape-pikkit-nfl] complete', { gameId, marketCount, importOk: imported.ok, changed: result?.changed ?? null })
     return NextResponse.json({ gameId, marketCount, imported: result }, { status: imported.ok ? 200 : 502 })
   } catch (error) {
     console.error('[scrape-pikkit-nfl] failed', { gameId, type: error instanceof Error ? error.name : typeof error })
