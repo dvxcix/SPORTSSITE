@@ -38,7 +38,7 @@ test('an opening-only response never overwrites the last captured live price', (
   assert.equal(merged.gameLines[0].moneylineHome, -150)
 })
 
-test('ATD and FTD baselines remain slate-frozen and compare implied probabilities', () => {
+test('ATD and FTD baselines retain probability points and TheDugout-style price percentages', () => {
   const enriched = attachNflTdBaselines(board(120), [{
     slate_date: '2026-09-07', player_id: 7, player_name: 'Test Runner', team_abbr: 'BUF',
     vendor: 'fanduel', prop_type: 'anytime_td', average_odds: 150, sample_games: 8,
@@ -49,7 +49,7 @@ test('ATD and FTD baselines remain slate-frozen and compare implied probabilitie
   assert.equal(baseline?.sampleGames, 8)
   assert.equal(baseline?.deltaOdds, -30)
   assert.equal(baseline?.deltaProbabilityPoints, -5.5)
-  assert.equal(baseline?.deltaPct, -0.055)
+  assert.equal(baseline?.deltaPct, -0.2)
 
   const negativePrice = attachNflTdBaselines(board(-130), [{
     slate_date: '2026-09-07', player_id: 7, player_name: 'Test Runner', team_abbr: 'BUF',
@@ -58,7 +58,7 @@ test('ATD and FTD baselines remain slate-frozen and compare implied probabilitie
   }]).players[0].tdBaselines?.[0]
   assert.equal(negativePrice?.deltaOdds, -20)
   assert.equal(negativePrice?.deltaProbabilityPoints, -4.1)
-  assert.ok(Math.abs((negativePrice?.deltaPct ?? 0) - -0.041) < Number.EPSILON * 2)
+  assert.ok(Math.abs((negativePrice?.deltaPct ?? 0) - (-20 / 110)) < Number.EPSILON * 2)
 })
 
 test('mixed positive and negative American prices are averaged in probability space', () => {

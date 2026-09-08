@@ -43,6 +43,9 @@ export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaseli
           : Number(row.average_implied_probability)
         const currentProbability = americanImpliedProbability(current)
         const deltaProbabilityPoints = hiddenProbabilityPoints(averageProbability, currentProbability)
+        const deltaPct = current == null || !Number.isFinite(averageOdds) || averageOdds === 0
+          ? null
+          : (current - averageOdds) / Math.abs(averageOdds)
         return {
           propType: row.prop_type,
           vendor: row.vendor,
@@ -53,7 +56,9 @@ export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaseli
           firstSampleDate: row.first_sample_date,
           throughDate: row.through_date,
           deltaProbabilityPoints,
-          deltaPct: deltaProbabilityPoints == null ? null : deltaProbabilityPoints / 100,
+          // Match TheDugout's FHR% / HR% contract: current American price
+          // versus the player's own historical average price.
+          deltaPct,
           deltaOdds: current == null || !Number.isFinite(averageOdds) ? null : current - averageOdds,
         }
       })

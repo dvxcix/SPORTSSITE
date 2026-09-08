@@ -725,6 +725,31 @@
 .boardTable th span { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
 .boardTable th em { color: var(--lime); font-size: 9px; font-style: normal; }
 .scoreLogo { flex: 0 0 auto; width: 12px; height: 15px; }
+.boardTable .pikkitColumn {
+  border-right-color: rgba(167, 255, 63, .3);
+  border-left: 1px solid rgba(167, 255, 63, .16);
+  background:
+    linear-gradient(145deg, rgba(167, 255, 63, .065), rgba(53, 215, 255, .025)),
+    #090f16;
+}
+.boardTable td.pikkitColumn.heatCell {
+  background:
+    linear-gradient(0deg, rgba(167, 255, 63, calc(var(--cell-heat) * .22)), rgba(167, 255, 63, calc(var(--cell-heat) * .22))),
+    #08100d;
+}
+.pikkitHeaderMark {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(167, 255, 63, .5);
+  border-radius: 50%;
+  background: rgba(167, 255, 63, .12);
+  color: var(--lime);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+}
 
 .boardTable td {
   height: 78px;
@@ -856,19 +881,22 @@
 .comparisonGrid article > header b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .comparisonGrid article > header small { color: #788598; font-size: 9px; }
 .comparisonGrid article > header button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; }
-.compareScore { display: grid; grid-template-columns: 1.25fr 1fr 1fr; border-bottom: 1px solid #1d2834; }
+.compareScore { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid #1d2834; }
 .compareScore > span,
 .compareMetrics > span { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 10px; border-right: 1px solid #1d2834; }
 .compareScore > span:last-child,
 .compareMetrics > span:last-child { border-right: 0; }
 .compareScore small { display: flex; align-items: center; gap: 4px; }
 .compareScore b { font-size: 17px; }
+.compareScore i { color: #8e9bad; font-size: 8px; font-style: normal; font-weight: 850; }
+.comparePikkit { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: rgba(167, 255, 63, .13); color: var(--lime); font-weight: 950; }
 .compareMetrics { display: grid; grid-template-columns: repeat(4, 1fr); }
 .compareMetrics b { font-size: 12px; }
 .compareMarkets { border-top: 1px solid #1d2834; }
 .compareMarkets > div { display: grid; grid-template-columns: 108px minmax(0, 1fr); align-items: stretch; border-top: 1px solid #151e28; }
 .compareMarkets > div:first-child { border-top: 0; }
 .compareMarkets > div > small { display: flex; align-items: center; padding: 10px 12px; color: #aab5c4; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.compareMarkets > div > small b { margin-left: auto; color: var(--lime); font-size: 8px; }
 .compareMarkets > div > span { display: flex; gap: 7px; padding: 7px; overflow-x: auto; }
 .compareMarkets em { min-width: 92px; display: grid; grid-template-columns: 16px 1fr; align-items: center; gap: 2px 5px; padding: 6px 8px; border: 1px solid #263442; border-radius: 8px; background: #0a1017; font-style: normal; }
 .compareMarkets em b { font-size: 12px; }

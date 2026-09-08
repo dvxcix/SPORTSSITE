@@ -109,11 +109,11 @@ export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
   if (has('passing', 'yard')) return 'passing_yards'
   if (has('pass', 'yard')) return 'passing_yards'
   if (has('passing', 'touchdown') || has('pass', 'touchdown') || has('pass', 'td')) return 'passing_tds'
-  if (has('passing', 'attempt') || has('pass', 'attempt')) return 'passing_attempts'
-  if (has('passing', 'completion') || has('pass', 'completion') || has('completions')) return 'passing_completions'
+  if (has('passing', 'attempt') || has('pass', 'attempt') || has('pass', 'att')) return 'passing_attempts'
+  if (has('passing', 'completion') || has('pass', 'completion') || has('pass', 'comp') || has('completions')) return 'passing_completions'
   if (has('interception')) return 'interceptions'
   if ((has('longest', 'rush') || has('long', 'rush'))) return 'longest_rush'
-  if (has('rushing', 'attempt') || has('rush', 'attempt') || has('carries')) return 'rushing_attempts'
+  if (has('rushing', 'attempt') || has('rush', 'attempt') || has('rush', 'att') || has('carries')) return 'rushing_attempts'
   if (has('rushing', 'yard') || has('rush', 'yard')) return 'rushing_yards'
   if ((has('longest', 'reception') || has('long', 'reception'))) return 'longest_reception'
   if (has('receiving', 'yard') || has('receiver', 'yard')) return 'receiving_yards'
@@ -130,10 +130,13 @@ export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflP
   if (!snapshot) return { ...board, pikkitCapturedAt: null, players: board.players.map(player => ({ ...player, publicPicks: [] })) }
   const picksByPlayer = new Map<string, NonNullable<NflOddsPlayer['publicPicks']>>()
   for (const market of snapshot.markets) {
+    // Normalize again at read time so already-stored captures from an older
+    // importer immediately populate the correct Sideline column.
+    const propType = canonicalizeNflPikkitMarket(market.propType || market.rawKey, market.rawLabel || market.label)
     for (const player of market.players) {
       const key = `${normalizeNflPikkitName(player.team ?? '')}:${player.playerKey}`
       const fallback = `:${player.playerKey}`
-      const pick = { propType: market.propType, label: market.label, rawMarket: market.rawLabel, picks: player.picks, capturedAt: snapshot.capturedAt }
+      const pick = { propType, label: market.label, rawMarket: market.rawLabel, picks: player.picks, capturedAt: snapshot.capturedAt }
       picksByPlayer.set(key, [...(picksByPlayer.get(key) ?? []), pick])
       if (fallback !== key) picksByPlayer.set(fallback, [...(picksByPlayer.get(fallback) ?? []), pick])
     }
