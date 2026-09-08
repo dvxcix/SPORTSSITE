@@ -306,15 +306,20 @@ function metricDisplay(value: number, suffix = '', decimals = 0) {
 }
 
 function TeamLogo({ team, size = 28 }: { team: SidelineTeam; size?: number }) {
-  if (team.logo) return <Image unoptimized className={styles.teamLogo} src={team.logo} alt={`${team.name} logo`} width={size} height={size} />
+  const [failedSource, setFailedSource] = useState<string | null>(null)
+  if (team.logo && team.logo !== failedSource) return <Image unoptimized className={styles.teamLogo} src={team.logo} alt={`${team.name} logo`} width={size} height={size} onError={() => setFailedSource(team.logo)} />
   return <span className={styles.teamFallback} style={{ width: size, height: size, background: team.color }}>{team.abbr.slice(0, 2)}</span>
 }
 
 function PlayerAvatar({ player, team }: { player: PlayerRow; team: SidelineTeam }) {
+  const sources = useMemo(() => Array.from(new Set([player.headshot, ...(player.headshotFallbacks ?? [])].filter((source): source is string => Boolean(source)))), [player.headshot, player.headshotFallbacks])
+  const [failedSources, setFailedSources] = useState<string[]>([])
+  const [failedTeamLogo, setFailedTeamLogo] = useState<string | null>(null)
+  const source = sources.find(candidate => !failedSources.includes(candidate)) ?? null
   return (
     <span className={styles.avatar} style={{ background: `linear-gradient(145deg, ${team.color}, ${team.color2 || '#111820'})` }}>
-      {player.headshot ? <Image unoptimized src={player.headshot} alt="" width={42} height={42} /> : <b>{player.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}
-      {team.logo ? <Image unoptimized className={styles.avatarTeam} src={team.logo} alt="" width={17} height={17} /> : null}
+      {source ? <Image unoptimized src={source} alt={`${player.name} headshot`} width={42} height={42} onError={() => setFailedSources(current => current.includes(source) ? current : [...current, source])} /> : <b>{player.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}
+      {team.logo && team.logo !== failedTeamLogo ? <Image unoptimized className={styles.avatarTeam} src={team.logo} alt={`${team.name} logo`} width={17} height={17} onError={() => setFailedTeamLogo(team.logo)} /> : null}
     </span>
   )
 }
@@ -360,12 +365,17 @@ function shortDate(date: string) {
 
 function buildEmptyPlayer(market: NflOddsPlayer): SidelinePlayer {
   return {
-    id: `bdl-${market.id}`,
+    id: market.gsisId ?? `bdl-${market.id}`,
     name: market.name,
     team: normalizedTeam(market.team),
-    position: market.position || '—',
-    headshot: null,
-    jersey: null,
+    position: market.position || '-',
+    headshot: market.headshot ?? null,
+    headshotFallbacks: market.headshotFallbacks ?? [],
+    jersey: market.jersey ?? null,
+    rookieSeason: market.rookieSeason ?? null,
+    latestTeam: market.latestTeam ?? null,
+    rosterStatus: market.rosterStatus ?? null,
+    sampleTeam: null,
     games: 0,
     index: 0,
     volume: 0,
@@ -396,7 +406,25 @@ function buildEmptyPlayer(market: NflOddsPlayer): SidelinePlayer {
     redZoneLooks: 0,
     goalLineLooks: 0,
     explosivePlays: 0,
-    lane: 'Market only',
+    lane: market.rookieSeason && market.rookieSeason >= 2026 ? 'Rookie · market posted' : 'Market posted · tracking pending',
+  }
+}
+
+function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | null): SidelinePlayer {
+  if (!market) return player
+  const fallbacks = Array.from(new Set([
+    ...(player.headshotFallbacks ?? []),
+    ...(market.headshotFallbacks ?? []),
+    market.headshot,
+  ].filter((source): source is string => Boolean(source && source !== player.headshot))))
+  return {
+    ...player,
+    headshot: player.headshot ?? market.headshot ?? fallbacks[0] ?? null,
+    headshotFallbacks: fallbacks,
+    jersey: player.jersey ?? market.jersey ?? null,
+    rookieSeason: player.rookieSeason ?? market.rookieSeason ?? null,
+    latestTeam: market.latestTeam ?? player.latestTeam ?? null,
+    rosterStatus: market.rosterStatus ?? player.rosterStatus ?? null,
   }
 }
 
@@ -580,7 +608,7 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
       <div className={styles.teamIdentity}>
         <button type="button" className={`${styles.collapseTeam} ${collapsed ? styles.teamCollapsed : ''}`} onClick={onToggle} aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${team.name}`}><ChevronDown size={16} /></button>
         <TeamLogo team={team} size={34} />
-        <div><strong>{team.name}</strong><span>vs {opponent.abbr} · {rows.length} market players</span></div>
+        <div><strong>{team.name}</strong><span>vs {opponent.abbr} · {rows.filter(row => row.market).length} markets · {rows.filter(row => row.hasTracking).length} tracked</span></div>
       </div>
       <div className={styles.teamSignals}>
         <div className={styles.teamWindows}><small>WINDOW</small><span>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={selectedWindow === option.id ? styles.teamWindowActive : ''} onClick={() => onSelectWindow(option.id)}>{option.label.replace('Last ', 'L')}</button>)}</span></div>
@@ -659,7 +687,7 @@ function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onC
           <div className={styles.modalWindows}>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>{option.label}</button>)}</div>
           {tab === 'matchup' ? (
             <>
-              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY READ · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><p>Usage, field geometry, scoring role, explosive ability and sample strength in the selected window.</p></div></div>
+              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY READ · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><div className={styles.identityBadges}>{activePlayer.rookieSeason === lens.season ? <span>ROOKIE</span> : null}{activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}{activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}</div><p>{activePlayer.hasTracking ? 'Usage, field geometry, scoring role, explosive ability and sample strength in the selected window.' : activePlayer.rookieSeason === lens.season ? 'Player markets are live. NFL tracking history will populate after the rookie records qualifying regular-season usage.' : 'Player markets are live, but no qualifying tracking sample exists in this selected window.'}</p></div></div>
               <div className={styles.metricCards}>
                 {[['Volume', activePlayer.volume], ['Geometry', activePlayer.geometry], ['Red zone', activePlayer.redZone], ['Breakaway', activePlayer.breakaway], ['Evidence', activePlayer.evidence], ['RZ looks', activePlayer.redZoneLooks]].map(([label, value]) => <div key={label}><small>{label}</small><b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b></div>)}
               </div>
@@ -821,9 +849,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const columns = useColumnDefinitions({ markets: availableMarkets, books: availableBooks, savedKeys, onToggleSaved: toggleSavedMarket })
   const defaultOrder = useMemo(() => columns.map(column => column.id), [columns])
   const defaultVisible = useMemo(() => new Set(columns.filter(column =>
-    ['player', 'index', 'lane', 'bestFtd', 'bestAtd', 'ftdPct', 'atdPct', 'volume', 'redZone', 'roleOpps', 'roleShare', 'roleYards', 'targets', 'targetShare', 'carries', 'carryShare', 'airYards', 'separation', 'redZoneLooks'].includes(column.id)
-    || (['fanduel', 'betmgm', 'draftkings'].includes(column.vendor ?? '') && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
-    || (column.vendor === 'fanduel' && ['receptions', 'receiving_yards', 'rushing_yards', 'passing_yards'].includes(column.propType ?? ''))
+    ['player', 'index', 'lane', 'bestFtd', 'bestAtd', 'ftdPct', 'atdPct', 'roleOpps', 'roleShare', 'roleYards', 'redZoneLooks'].includes(column.id)
+    || (column.vendor === 'fanduel' && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
   ).map(column => column.id)), [columns])
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultOrder)
   const [visibleIds, setVisibleIds] = useState<Set<string>>(defaultVisible)
@@ -890,12 +917,19 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
     const byId = new Map<string, PlayerRow>()
     for (const player of windowData.players) {
       const market = findMarketPlayer(board, player)
-      byId.set(player.id, { ...player, market, hasTracking: true, teamProfile: profileFor(player.team), opponentProfile: opponentFor(player.team) })
+      const identified = mergePlayerIdentity(player, market)
+      byId.set(player.id, { ...identified, market, hasTracking: true, teamProfile: profileFor(player.team), opponentProfile: opponentFor(player.team) })
     }
     for (const market of board.players) {
       if (![selected.away.abbr, selected.home.abbr].map(normalizedTeam).includes(normalizedTeam(market.team))) continue
       const tracked = tracking.get(`${normalizedTeam(market.team)}:${normalizedName(market.name)}`)
       if (tracked) continue
+      const trackedById = market.gsisId ? byId.get(market.gsisId) : null
+      if (trackedById) {
+        const identified = mergePlayerIdentity(trackedById, market)
+        byId.set(market.gsisId!, { ...trackedById, ...identified, market })
+        continue
+      }
       const empty = buildEmptyPlayer(market)
       byId.set(empty.id, { ...empty, market, hasTracking: false, teamProfile: profileFor(empty.team), opponentProfile: opponentFor(empty.team) })
     }
@@ -970,7 +1004,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
     })
     return result
-  }, [board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
+  }, [lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
 
   const resolvedColumns = useMemo(() => {
     const ordered = columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
@@ -980,7 +1014,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
     const activeRows = rows.filter(row => !erased.has(row.id) && (!positions.length || positions.includes(row.position)))
     const hasValue = (column: ColumnDefinition) => foundations.has(column.id) || activeRows.some(row => column.value(row) != null)
     if (view === 'all') return ordered.filter(hasValue)
-    return ordered.filter(column => foundations.has(column.id) || (column.group === view && !column.vendor && hasValue(column)))
+    return ordered.filter(column => foundations.has(column.id) || (column.group === view && hasValue(column)))
   }, [columnOrder, columns, erased, roleFilter, rows, view, visibleIds])
 
   const columnById = useMemo(() => new Map(columns.map(column => [column.id, column])), [columns])
@@ -1050,8 +1084,9 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
     <div className={`${styles.page} ${isPending ? styles.loading : ''}`}>
       <header className={styles.brandHeader}>
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
-        <div><h1>The Sideline <span>ULTIMATE</span></h1><p>Proprietary NFL game matrix · built from TheDugout system</p></div>
+        <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
         <div className={styles.brandActions}>
+          <span className={styles.coverageBadge} title={lens.coverage.detail}>1999 STATS · 2016 NGS · 2022 PBP</span>
           <a className={styles.filmLink} href={`/the-sideline?mode=film&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}`}><Film size={14} /> Routes + history</a>
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>
@@ -1083,7 +1118,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       <section className={styles.storyGrid}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}><small>STADIUM / CONDITIONS</small><strong>{selected.stadium ?? 'Stadium TBD'}</strong><span>{selected.temp != null ? `${selected.temp}°F` : 'Weather syncing'} · {selected.wind != null ? `${selected.wind} mph wind` : selected.roof ?? 'Roof TBD'} · {selected.surface ?? 'Surface TBD'}</span></article>
         <article><small>GAME STATUS</small><strong>{selected.gametime ?? 'TBD'}</strong><span>{selected.gameType} · Week {selected.week}</span></article>
-        <article><small>MATCHUP STORY</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></article>
+        <article title={lens.coverage.detail}><small>MATCHUP + DATA</small><strong>{lens.headline}</strong><span>{lens.coverage.label} · {lens.headlineDetail}</span></article>
         <article><small>FANDUEL GAME LINE</small><strong>{selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}</strong><span>{board.gameLines.length} sportsbooks captured</span></article>
         <article className={styles.marketStory}>
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
@@ -1091,6 +1126,10 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
           <span>{history.length} captures · {capturedLabel}</span>
         </article>
       </section>
+
+      {board.status !== 'ready' ? <section className={styles.marketStatus}>
+        <div><strong>{board.status === 'not-posted' ? 'Player markets have not posted yet' : 'Sportsbook feed is temporarily unavailable'}</strong><span>{board.status === 'not-posted' ? 'Tracking, matchup and team context remain available. Odds columns will appear automatically when books publish this game.' : 'The board is showing the last valid context without inventing or zero-filling missing prices.'}</span></div>
+      </section> : null}
 
       <GameLines game={selected} board={board} />
 
@@ -1140,7 +1179,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
                     const matches = matrixMatches.get(player.id) ?? []
                     return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
                       {column.id === 'player' && matches.length ? <span className={styles.matrixRail} title={matches.map(matrix => matrix.name).join(' · ')}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
-                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
+                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === lens.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
                     </td>
                   })}
                 </tr>

@@ -159,7 +159,8 @@ function buildPlayers(
   passing: Row[],
   pbp: Row[],
   teams: SidelineGame['home'][],
-  bio: Map<string, { headshot: string | null; jersey: number | null; position: string | null }>,
+  bio: Map<string, { headshot: string | null; headshotFallbacks: string[]; jersey: number | null; position: string | null; rookieSeason: number | null; latestTeam: string | null; rosterStatus: string | null }>,
+  rosterTeams: Map<string, string>,
 ): SidelinePlayer[] {
   const playerMap = new Map<string, PlayerAccumulator>()
   const teamTargets = new Map<string, number>()
@@ -230,13 +231,19 @@ function buildPlayers(
   }
 
   return Array.from(playerMap.values())
-    .filter(player => teams.some(team => team.abbr === player.team) && player.targets + player.carries + player.passAttempts > 0)
+    .filter(player => (
+      teams.some(team => team.abbr === player.team)
+      || teams.some(team => team.abbr === rosterTeams.get(player.id))
+    ) && player.targets + player.carries + player.passAttempts > 0)
     .map(player => {
       const playerBio = bio.get(player.id)
+      const sampleTeam = player.team
+      const rosterTeam = rosterTeams.get(player.id)
+      if (rosterTeam) player.team = rosterTeam
       const touches = player.targets + player.carries
-      const targetShare = percent(player.targets, teamTargets.get(player.team) ?? 0)
-      const carryShare = percent(player.carries, teamCarries.get(player.team) ?? 0)
-      const passShare = percent(player.passAttempts, teamPassAttempts.get(player.team) ?? 0)
+      const targetShare = percent(player.targets, teamTargets.get(sampleTeam) ?? 0)
+      const carryShare = percent(player.carries, teamCarries.get(sampleTeam) ?? 0)
+      const passShare = percent(player.passAttempts, teamPassAttempts.get(sampleTeam) ?? 0)
       const airYards = player.airYardsWeight ? player.airYardsTotal / player.airYardsWeight : 0
       const airYardsShare = player.airShareWeight ? player.airShareTotal / player.airShareWeight : 0
       const separation = player.separationWeight ? player.separationTotal / player.separationWeight : 0
@@ -268,7 +275,12 @@ function buildPlayers(
         team: player.team,
         position: playerBio?.position ?? player.position,
         headshot: playerBio?.headshot ?? null,
+        headshotFallbacks: playerBio?.headshotFallbacks ?? [],
         jersey: playerBio?.jersey ?? null,
+        rookieSeason: playerBio?.rookieSeason ?? null,
+        latestTeam: playerBio?.latestTeam ?? null,
+        rosterStatus: playerBio?.rosterStatus ?? null,
+        sampleTeam,
         games: player.games.size || 1,
         index,
         volume: Math.round(volume),
@@ -313,10 +325,11 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
   return { script, detail, aggressor: aggressor.team.abbr }
 }
 
-async function querySeason(game: SidelineGame, season: number) {
+async function querySeason(game: SidelineGame, season: number, roster: { id: string; team: string }[]) {
   const admin = createAdminClient()
   const teams = [game.away.abbr, game.home.abbr]
-  const [pbpResult, receivingResult, rushingResult, passingResult, bioResult] = await Promise.all([
+  const rosterIds = Array.from(new Set(roster.map(player => player.id).filter(Boolean)))
+  const [pbpResult, receivingResult, rushingResult, passingResult] = await Promise.all([
     admin.from('nfl_pbp')
       .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
       .eq('season', season).eq('season_type', 'REG')
@@ -330,19 +343,53 @@ async function querySeason(game: SidelineGame, season: number) {
     admin.from('nfl_ngs_passing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
       .eq('season', season).eq('season_type', 'REG').in('team_abbr', teams),
-    admin.from('nfl_players').select('gsis_id,headshot,jersey_number,position').in('latest_team', teams),
   ])
 
-  const bio = new Map<string, { headshot: string | null; jersey: number | null; position: string | null }>()
+  const rosterReceiving = rosterIds.length ? await admin.from('nfl_ngs_receiving')
+    .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
+    .eq('season', season).eq('season_type', 'REG').in('player_gsis_id', rosterIds) : { data: [] }
+  const rosterRushing = rosterIds.length ? await admin.from('nfl_ngs_rushing')
+    .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
+    .eq('season', season).eq('season_type', 'REG').in('player_gsis_id', rosterIds) : { data: [] }
+  const rosterPassing = rosterIds.length ? await admin.from('nfl_ngs_passing')
+    .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
+    .eq('season', season).eq('season_type', 'REG').in('player_gsis_id', rosterIds) : { data: [] }
+
+  const uniqueRows = (rows: Row[]) => Array.from(new Map(rows.map(row => [`${row.player_gsis_id}:${row.week}`, row])).values())
+  const receiving = uniqueRows([...(receivingResult.data ?? []) as Row[], ...(rosterReceiving.data ?? []) as Row[]])
+  const rushing = uniqueRows([...(rushingResult.data ?? []) as Row[], ...(rosterRushing.data ?? []) as Row[]])
+  const passing = uniqueRows([...(passingResult.data ?? []) as Row[], ...(rosterPassing.data ?? []) as Row[]])
+  const actualIds = Array.from(new Set([
+    ...receiving.map(row => String(row.player_gsis_id ?? '')),
+    ...rushing.map(row => String(row.player_gsis_id ?? '')),
+    ...passing.map(row => String(row.player_gsis_id ?? '')),
+    ...rosterIds,
+  ].filter(Boolean)))
+  const bioResult = actualIds.length
+    ? await admin.from('nfl_players').select('gsis_id,headshot,jersey_number,position,rookie_season,last_season,latest_team,status,espn_id').in('gsis_id', actualIds)
+    : { data: [] }
+
+  const bio = new Map<string, { headshot: string | null; headshotFallbacks: string[]; jersey: number | null; position: string | null; rookieSeason: number | null; latestTeam: string | null; rosterStatus: string | null }>()
   for (const row of bioResult.data ?? []) {
-    bio.set(String(row.gsis_id), { headshot: row.headshot ?? null, jersey: row.jersey_number ?? null, position: row.position ?? null })
+    const espn = row.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${row.espn_id}.png` : null
+    const headshotFallbacks = Array.from(new Set([row.headshot, espn].filter((value): value is string => Boolean(value))))
+    bio.set(String(row.gsis_id), {
+      headshot: headshotFallbacks[0] ?? null,
+      headshotFallbacks,
+      jersey: row.jersey_number ?? null,
+      position: row.position ?? null,
+      rookieSeason: row.rookie_season ?? null,
+      latestTeam: row.latest_team ?? null,
+      rosterStatus: row.status ?? null,
+    })
   }
   return {
     pbp: (pbpResult.data ?? []) as Row[],
-    receiving: (receivingResult.data ?? []) as Row[],
-    rushing: (rushingResult.data ?? []) as Row[],
-    passing: (passingResult.data ?? []) as Row[],
+    receiving,
+    rushing,
+    passing,
     bio,
+    rosterTeams: new Map(roster.map(player => [player.id, player.team])),
   }
 }
 
@@ -377,6 +424,7 @@ function buildWindow(game: SidelineGame, data: Awaited<ReturnType<typeof querySe
       pbp,
       [game.away, game.home],
       data.bio,
+      data.rosterTeams,
     ),
   }
 }
@@ -385,14 +433,14 @@ function emptyWindow(game: SidelineGame): SidelineWindowData {
   return { plays: 0, weeks: [], teams: [emptyTeamProfile(game.away), emptyTeamProfile(game.home)], players: [] }
 }
 
-export async function getSidelineBoardLens(game: SidelineGame): Promise<SidelineLens> {
+export async function getSidelineBoardLens(game: SidelineGame, roster: { id: string; team: string }[] = []): Promise<SidelineLens> {
   const preferredSeason = game.gameType === 'REG' && game.week > 3 ? game.season : game.season - 1
   try {
     let season = preferredSeason
-    let data = await querySeason(game, season)
+    let data = await querySeason(game, season, roster)
     if (!data.pbp.length && !data.receiving.length && season > 2020) {
       season -= 1
-      data = await querySeason(game, season)
+      data = await querySeason(game, season, roster)
     }
     const weeks = availableWeeks(data)
     const windows: Record<SidelineWindow, SidelineWindowData> = {
@@ -410,6 +458,15 @@ export async function getSidelineBoardLens(game: SidelineGame): Promise<Sideline
       headline: headline.script,
       headlineDetail: headline.detail,
       aggressor: headline.aggressor,
+      coverage: {
+        sampleSeason: season,
+        scheduleStart: 1999,
+        trackingStart: 2016,
+        playByPlayStart: 2022,
+        usesPriorSeason: season < game.season,
+        label: `${season} NGS + play-by-play sample`,
+        detail: `Schedule and historical stat storage begins in 1999. NFL Next Gen Stats begins in 2016; the loaded play-by-play archive currently begins in 2022.`,
+      },
       windows,
     }
   } catch (error) {
@@ -421,6 +478,15 @@ export async function getSidelineBoardLens(game: SidelineGame): Promise<Sideline
       headline: 'Data sync pending',
       headlineDetail: 'The market board is ready; historical NFL tracking data is not available in this environment.',
       aggressor: game.away.abbr,
+      coverage: {
+        sampleSeason: preferredSeason,
+        scheduleStart: 1999,
+        trackingStart: 2016,
+        playByPlayStart: 2022,
+        usesPriorSeason: preferredSeason < game.season,
+        label: 'Tracking sync pending',
+        detail: 'Market rows remain available while the historical NFL sample is loading.',
+      },
       windows: { season: empty, l1: empty, l3: empty, l5: empty, l10: empty },
     }
   }

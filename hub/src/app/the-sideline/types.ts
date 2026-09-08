@@ -45,7 +45,12 @@ export type SidelinePlayer = {
   team: string
   position: string
   headshot: string | null
+  headshotFallbacks?: string[]
   jersey: number | null
+  rookieSeason?: number | null
+  latestTeam?: string | null
+  rosterStatus?: string | null
+  sampleTeam?: string | null
   games: number
   index: number
   volume: number
@@ -94,6 +99,15 @@ export type SidelineLens = {
   headline: string
   headlineDetail: string
   aggressor: string
+  coverage: {
+    sampleSeason: number
+    scheduleStart: number
+    trackingStart: number
+    playByPlayStart: number
+    usesPriorSeason: boolean
+    label: string
+    detail: string
+  }
   windows: Record<SidelineWindow, SidelineWindowData>
 }
 

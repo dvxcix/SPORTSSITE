@@ -37,7 +37,9 @@ export default async function SidelinePage({ searchParams }: {
     return <SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}`} />
   }
 
-  const [lens, market] = await Promise.all([getCachedSidelineBoardLens(selected), getSidelineOddsBundle(selected)])
+  const market = await getSidelineOddsBundle(selected)
+  const roster = market.odds.players.flatMap(player => player.gsisId ? [{ id: player.gsisId, team: player.team }] : [])
+  const lens = await getCachedSidelineBoardLens(selected, roster)
   const { odds, history } = market
   return <SidelineBoardClient key={selected.id} games={games} selectedId={selected.id} selectedDate={date} lens={lens} odds={odds} history={history} />
 }

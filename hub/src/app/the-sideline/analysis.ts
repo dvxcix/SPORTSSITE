@@ -532,12 +532,13 @@ async function playRowsForGame(gameId: string) {
 async function queryHeadshots(playerIds: string[]) {
   const admin = createAdminClient()
   const playerResult = playerIds.length
-    ? await admin.from('nfl_players').select('gsis_id,headshot').in('gsis_id', playerIds)
+    ? await admin.from('nfl_players').select('gsis_id,headshot,espn_id').in('gsis_id', playerIds)
     : { data: [] as Row[] }
   const headshots = new Map<string, string>()
   for (const row of (playerResult.data ?? []) as Row[]) {
     const id = text(row.gsis_id)
-    const headshot = nullableText(row.headshot)
+    const espnId = nullableText(row.espn_id)
+    const headshot = nullableText(row.headshot) ?? (espnId ? `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png` : null)
     if (id && headshot) headshots.set(id, headshot)
   }
   return headshots

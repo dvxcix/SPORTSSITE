@@ -181,13 +181,15 @@ const views: { id: View; label: string; icon: typeof Film }[] = [
 ]
 
 function TeamLogo({ team, compact = false }: { team: Team; compact?: boolean }) {
-  if (team.logo) return <Image className={compact ? styles.teamLogoCompact : styles.teamLogo} src={team.logo} alt={`${team.name} logo`} width={compact ? 34 : 58} height={compact ? 34 : 58} unoptimized />
+  const [failedSource, setFailedSource] = useState<string | null>(null)
+  if (team.logo && team.logo !== failedSource) return <Image className={compact ? styles.teamLogoCompact : styles.teamLogo} src={team.logo} alt={`${team.name} logo`} width={compact ? 34 : 58} height={compact ? 34 : 58} unoptimized onError={() => setFailedSource(team.logo)} />
   return <span className={compact ? styles.teamFallbackCompact : styles.teamFallback} style={{ background: team.color }}>{team.abbr.slice(0, 2)}</span>
 }
 
 function PlayerAvatar({ src, name, size = 'normal' }: { src: string | null; name: string; size?: 'small' | 'normal' | 'large' }) {
   const initials = name.split(' ').map(part => part[0]).join('').slice(0, 2)
-  return <span className={`${styles.playerAvatar} ${styles[`playerAvatar_${size}`]}`}>{src ? <Image src={src} alt={`${name} headshot`} width={size === 'large' ? 94 : size === 'small' ? 42 : 62} height={size === 'large' ? 94 : size === 'small' ? 42 : 62} unoptimized /> : <b>{initials}</b>}</span>
+  const [failedSource, setFailedSource] = useState<string | null>(null)
+  return <span className={`${styles.playerAvatar} ${styles[`playerAvatar_${size}`]}`}>{src && src !== failedSource ? <Image src={src} alt={`${name} headshot`} width={size === 'large' ? 94 : size === 'small' ? 42 : 62} height={size === 'large' ? 94 : size === 'small' ? 42 : 62} unoptimized onError={() => setFailedSource(src)} /> : <b>{initials}</b>}</span>
 }
 
 function numberTone(value: number) {

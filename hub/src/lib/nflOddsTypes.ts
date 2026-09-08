@@ -40,6 +40,14 @@ export type NflOddsPlayer = {
   name: string
   team: string
   position: string
+  gsisId?: string | null
+  headshot?: string | null
+  headshotFallbacks?: string[]
+  jersey?: number | null
+  rookieSeason?: number | null
+  lastSeason?: number | null
+  latestTeam?: string | null
+  rosterStatus?: string | null
   markets: NflPlayerMarket[]
   tdBaselines?: NflTdBaseline[]
 }

@@ -6,9 +6,15 @@ import { attachNflTdBaselines, type NflTdBaselineRow } from '@/lib/nflMarketArch
 import { EMPTY_SIDELINE_ODDS, type SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import { getSidelineLens } from './analysis'
 import { getSidelineBoardLens } from './boardAnalysis'
+import { enrichSidelineOddsBoards } from './playerIdentity'
 import type { SidelineGame, SidelineOddsFrame } from './types'
 
-const HISTORY_PAGE_SIZE = 20
+// A populated NFL board is commonly 700-900 KB. Next/Vercel cache entries have
+// a 2 MB ceiling, so cache one capture per entry and load them in bounded
+// batches. This keeps every market-story stop cacheable without a cold-load
+// request stampede.
+const HISTORY_PAGE_SIZE = 1
+const HISTORY_LOAD_CONCURRENCY = 16
 const HISTORY_MAX_FRAMES = 720
 const WEEK_SECONDS = 60 * 60 * 24 * 7
 
@@ -106,8 +112,22 @@ async function loadHistoryPageRaw(gameId: string, page: number): Promise<Sidelin
     board: { ...(row.board as SidelineOddsBoard), capturedAt: row.captured_at, source: 'snapshot' },
   }))
 }
-const loadHistoryPageRecent = unstable_cache(loadHistoryPageRaw, ['sideline-odds-history-page-recent-v2'], { revalidate: 20, tags: ['sideline:nfl-odds'] })
-const loadHistoryPageHistorical = unstable_cache(loadHistoryPageRaw, ['sideline-odds-history-page-historical-v2'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
+const loadHistoryPageRecent = unstable_cache(loadHistoryPageRaw, ['sideline-odds-history-page-recent-v3'], { revalidate: 20, tags: ['sideline:nfl-odds'] })
+const loadHistoryPageHistorical = unstable_cache(loadHistoryPageRaw, ['sideline-odds-history-page-historical-v3'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
+
+async function loadHistoryPages(
+  pageCount: number,
+  loader: (gameId: string, page: number) => Promise<SidelineOddsFrame[]>,
+  gameId: string,
+) {
+  const pages: SidelineOddsFrame[][] = []
+  for (let start = 0; start < pageCount; start += HISTORY_LOAD_CONCURRENCY) {
+    const batchSize = Math.min(HISTORY_LOAD_CONCURRENCY, pageCount - start)
+    const batch = await Promise.all(Array.from({ length: batchSize }, (_, offset) => loader(gameId, start + offset)))
+    pages.push(...batch)
+  }
+  return pages
+}
 
 async function loadTdBaselinesRaw(date: string): Promise<NflTdBaselineRow[]> {
   const { data, error } = await createAdminClient()
@@ -132,18 +152,21 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
   const current = await currentLoader(game.id)
   const [count, baselines] = await Promise.all([countLoader(game.id), baselineLoader(game.gameday)])
   const pageCount = Math.ceil(count / HISTORY_PAGE_SIZE)
-  const pages = await Promise.all(Array.from({ length: pageCount }, (_, page) => pageLoader(game.id, page)))
-  const enrichedCurrent = attachNflTdBaselines(current, baselines)
-  const history = pages.flat().map(frame => ({ ...frame, board: attachNflTdBaselines(frame.board, baselines) }))
+  const pages = await loadHistoryPages(pageCount, pageLoader, game.id)
+  let enrichedCurrent = attachNflTdBaselines(current, baselines)
+  let history = pages.flat().map(frame => ({ ...frame, board: attachNflTdBaselines(frame.board, baselines) }))
   if (enrichedCurrent.capturedAt && history.at(-1)?.capturedAt !== enrichedCurrent.capturedAt) {
     history.push({ capturedAt: enrichedCurrent.capturedAt, board: enrichedCurrent })
   }
+  const identityBoards = await enrichSidelineOddsBoards(game, [enrichedCurrent, ...history.map(frame => frame.board)])
+  enrichedCurrent = identityBoards[0]
+  history = history.map((frame, index) => ({ ...frame, board: identityBoards[index + 1] }))
   return { odds: enrichedCurrent, history: history.length ? history : enrichedCurrent.capturedAt ? [{ capturedAt: enrichedCurrent.capturedAt, board: enrichedCurrent }] : [] }
 }
 
 export const getCachedSidelineBoardLens = unstable_cache(
-  async (game: SidelineGame) => getSidelineBoardLens(game),
-  ['sideline-board-lens-v2'],
+  async (game: SidelineGame, roster: { id: string; team: string }[]) => getSidelineBoardLens(game, roster),
+  ['sideline-board-lens-v3'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 
