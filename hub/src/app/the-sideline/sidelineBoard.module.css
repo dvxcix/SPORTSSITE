@@ -39,6 +39,7 @@
 .storyGrid,
 .toolsPanel,
 .viewTabs,
+.roleTabs,
 .gameLines,
 .teamBoard,
 .comparison {
@@ -503,6 +504,18 @@
 .viewTabs button { min-width: 76px; }
 .viewTabs .viewActive { border-color: var(--lime); color: var(--lime); background: var(--lime-soft); }
 
+.roleTabs {
+  display: flex;
+  gap: 6px;
+  padding: 7px;
+  margin: -4px 0 10px;
+  overflow-x: auto;
+  border-color: rgba(53, 215, 255, 0.18);
+  background: linear-gradient(90deg, rgba(53, 215, 255, 0.045), rgba(9, 14, 20, 0.96) 30%);
+}
+.roleTabs button { min-width: 78px; padding: 8px 12px; border: 1px solid #263341; border-radius: 8px; background: #0c131b; color: #8e9bad; font-size: 10px; font-weight: 900; cursor: pointer; }
+.roleTabs .roleActive { border-color: var(--cyan); color: #d7f7ff; background: rgba(53, 215, 255, 0.13); box-shadow: inset 0 0 0 1px rgba(53, 215, 255, 0.08); }
+
 .teamBoard {
   --team-color: #3a4554;
   overflow: hidden;
@@ -605,10 +618,23 @@
 
 .boardTable th,
 .boardTable td {
+  position: relative;
   border-right: 1px solid #18212c;
   border-bottom: 1px solid #18212c;
   background: #080d13;
   text-align: center;
+}
+
+.boardTable td.heatCell {
+  background:
+    linear-gradient(0deg, rgba(63, 221, 148, calc(var(--cell-heat) * .22)), rgba(63, 221, 148, calc(var(--cell-heat) * .22))),
+    #080d13;
+  box-shadow: inset 0 2px 0 rgba(90, 242, 165, calc(var(--cell-heat) * .42));
+}
+.boardTable tbody tr:hover td.heatCell {
+  background:
+    linear-gradient(0deg, rgba(63, 221, 148, calc(var(--cell-heat) * .27)), rgba(63, 221, 148, calc(var(--cell-heat) * .27))),
+    #0d141d;
 }
 
 .boardTable th {
@@ -669,6 +695,10 @@
   text-align: left;
 }
 
+.matrixRail { position: absolute; top: 6px; bottom: 6px; left: 2px; z-index: 9; display: flex; width: 4px; flex-direction: column; gap: 2px; }
+.matrixRail i { min-height: 6px; flex: 1; border-radius: 99px; box-shadow: 0 0 8px color-mix(in srgb, currentColor 45%, transparent); }
+.matrixRail b { position: absolute; left: 6px; bottom: 0; color: #dce6ef; font-size: 7px; }
+
 .depth { color: #758196; font-size: 10px; text-align: center; }
 .avatar { position: relative; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #334152; border-radius: 50%; overflow: visible; color: #fff; font-size: 11px; }
 .avatar > img:first-child { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
@@ -685,6 +715,10 @@
 .marketValue b i { margin-right: 4px; color: #96a4b6; font-size: 9px; font-style: normal; }
 .marketValue small { color: #8491a4; font-size: 8px; font-weight: 800; letter-spacing: 0.025em; }
 .marketValue em { position: absolute; top: -1px; right: -3px; font-size: 8px; font-style: normal; }
+.bestMarketValue { position: relative; display: grid; grid-template-columns: 18px 1fr; gap: 3px 5px; align-items: center; justify-content: center; min-width: 74px; text-align: left; }
+.bestMarketValue b { color: #f5f8fb; font-size: 13px; }
+.bestMarketValue small { grid-column: 1 / -1; color: #9ca8b8; font-size: 8px; font-weight: 850; text-align: center; }
+.bestMarketValue em { position: absolute; top: 1px; right: -2px; }
 .baselineValue { display: inline-flex; min-width: 82px; flex-direction: column; gap: 5px; padding: 8px 7px; border: 1px solid transparent; border-radius: 8px; }
 .baselineValue b { font-size: 12px; line-height: 1; }
 .baselineValue small { color: #a5b0bf; font-size: 7px; font-weight: 850; letter-spacing: .025em; white-space: nowrap; }
@@ -802,6 +836,8 @@
 .playerModal > header button,
 .columnModal > header button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; }
 .modalPlayer { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.modalHeaderActions { display: flex; align-items: center; gap: 7px; }
+.modalHeaderActions button:disabled { opacity: 0.32; cursor: not-allowed; }
 .modalPlayer h2,
 .columnModal h2 { margin: 3px 0 0; font-size: 20px; }
 .modalPlayer small,
@@ -811,6 +847,9 @@
 .playerModal > nav button { min-height: 42px; font-size: 11px; font-weight: 850; }
 .playerModal > nav .modalTabActive { border-color: var(--lime); color: var(--lime); background: var(--lime-soft); }
 .modalBody { min-height: 0; padding: 16px; overflow: auto; }
+.modalWindows { display: flex; gap: 6px; margin-bottom: 11px; overflow-x: auto; }
+.modalWindows button { min-width: 84px; padding: 8px 11px; font-size: 10px; font-weight: 900; white-space: nowrap; }
+.modalWindows .modalWindowActive { border-color: var(--lime); color: #071006; background: var(--lime); }
 .modalHero { display: grid; grid-template-columns: 130px 1fr; gap: 18px; align-items: center; padding: 15px; border: 1px solid #24313f; border-radius: 13px; background: #0e161f; }
 .modalHero > div:last-child { display: flex; flex-direction: column; gap: 7px; }
 .modalHero strong { font-size: 20px; }
@@ -829,7 +868,7 @@
 .modalMarkets article > div { display: grid; grid-template-columns: repeat(6, minmax(115px, 1fr)); }
 .modalMarkets article > div > span { display: grid; grid-template-columns: 22px 1fr; gap: 4px 7px; align-items: center; padding: 11px; border-right: 1px solid #202a35; }
 .modalMarkets article > div > span:last-child { border-right: 0; }
-.modalMarkets article > div b { font-size: 13px; }
+.modalMarkets article > div b { font-size: 13px; white-space: nowrap; }
 .modalMarkets article > div small { grid-column: 2; color: #8290a2; font-size: 8px; }
 .noData { margin: 0; padding: 40px; color: #8592a4; text-align: center; }
 
@@ -901,6 +940,7 @@
   .toolsPanel { overflow-x: auto; }
   .toolsPanel > button { white-space: nowrap; }
   .viewTabs { position: sticky; top: 166px; z-index: 20; background: rgba(8, 13, 19, 0.94); backdrop-filter: blur(14px); }
+  .roleTabs { margin-top: -5px; }
   .teamHeader { min-height: 0; }
   .teamIdentity { padding: 11px; }
   .teamSignals { grid-template-columns: 230px repeat(5, 142px); }

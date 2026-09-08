@@ -8,6 +8,7 @@ import { WatchlistProvider } from '@/context/WatchlistContext'
 import { WatchlistButton } from '@/components/dugout/WatchlistPanel'
 import { MyPicksButton } from '@/components/dugout/MyPicksPanel'
 import { MatrixButton } from '@/components/dugout/CustomMatrixPanel'
+import { NflMatrixButton } from '@/components/sideline/NflMatrixButton'
 import { DesktopCommandBar } from './DesktopCommandBar'
 import { useDesktopPlatform } from '@/lib/useDesktopPlatform'
 import { DesktopExperience } from '@/components/desktop/DesktopExperience'
@@ -60,6 +61,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // page-scoped. This just makes the same create/edit panel reachable from
   // both places too, instead of only the one it happened to be built on.
   const showMatrixButton = path === '/dugout' || path === '/daily-recap'
+  const showNflMatrixButton = path === '/the-sideline'
 
   return (
     <WatchlistProvider>
@@ -81,6 +83,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
       {!isDesktop && <MobileDock hidden={mobileNavOpen} onMenuClick={() => setMobileNavOpen(true)} />}
       <UtilityDock>
         {showMatrixButton && <MatrixButton />}
+        {showNflMatrixButton && <NflMatrixButton />}
         <MyPicksButton />
         <WatchlistButton />
       </UtilityDock>

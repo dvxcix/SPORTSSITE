@@ -27,11 +27,13 @@ import {
 } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { useWatchlist } from '@/context/WatchlistContext'
+import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineGame, SidelineLens, SidelineOddsFrame, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
 
 type BoardView = 'core' | 'touchdowns' | 'props' | 'usage' | 'tracking' | 'team' | 'all' | 'custom'
+type RoleFilter = 'all' | 'passing' | 'receiving' | 'rushing' | 'kicking' | 'defense'
 type ColumnGroup = Exclude<BoardView, 'all' | 'custom'>
 type SortEntry = { id: string; direction: 'asc' | 'desc' }
 type HighlightColor = 'lime' | 'cyan' | 'amber' | 'rose'
@@ -63,6 +65,8 @@ type ColumnDefinition = {
   vendor?: string
   propType?: string
   brand?: boolean
+  aggregate?: boolean
+  heat?: 'high' | 'low' | 'none'
   value: (row: PlayerRow) => number | string | null
   render: (row: PlayerRow) => ReactNode
 }
@@ -83,6 +87,14 @@ const VIEW_OPTIONS: { id: BoardView; label: string }[] = [
   { id: 'team', label: 'Team' },
   { id: 'all', label: 'All' },
   { id: 'custom', label: 'Custom' },
+]
+const ROLE_OPTIONS: { id: RoleFilter; label: string; positions: string[] }[] = [
+  { id: 'all', label: 'All roles', positions: [] },
+  { id: 'passing', label: 'QB', positions: ['QB'] },
+  { id: 'receiving', label: 'Receivers', positions: ['WR', 'TE'] },
+  { id: 'rushing', label: 'Backfield', positions: ['RB', 'FB'] },
+  { id: 'kicking', label: 'Kickers', positions: ['K'] },
+  { id: 'defense', label: 'Defense', positions: ['DEF', 'DST'] },
 ]
 const PREFERRED_BOOKS: BookSpec[] = [
   { id: 'fanduel', short: 'FD' },
@@ -197,6 +209,13 @@ function offerOpening(offer: NflMarketOffer | null) {
   return offer.type === 'milestone' ? offer.opening.odds ?? null : offer.opening.over ?? null
 }
 
+function offerSummary(offer: NflMarketOffer, phase: 'current' | 'opening') {
+  const value = phase === 'current' ? offer.current : offer.opening
+  if (!value) return '-'
+  if (offer.type === 'milestone') return oddsLabel(value.odds)
+  return `O ${oddsLabel(value.over)} · U ${oddsLabel(value.under)}`
+}
+
 function marketMove(player: NflOddsPlayer | null, propType = 'anytime_td', vendor = 'fanduel') {
   const baseline = player?.tdBaselines?.find(item => item.propType === propType && normalizedName(item.vendor) === normalizedName(vendor))
   if (baseline?.deltaPct != null) return Math.round(baseline.deltaPct * 1000) / 10
@@ -204,6 +223,49 @@ function marketMove(player: NflOddsPlayer | null, propType = 'anytime_td', vendo
   const current = offerCurrent(offer)
   const opening = offerOpening(offer)
   return current != null && opening != null && opening !== 0 ? Math.round(((current - opening) / Math.abs(opening)) * 1000) / 10 : null
+}
+
+function bestOffer(market: NflPlayerMarket | null) {
+  if (!market) return null
+  return market.offers
+    .map(offer => ({ offer, current: offerCurrent(offer) }))
+    .filter((entry): entry is { offer: NflMarketOffer; current: number } => entry.current != null)
+    .sort((a, b) => b.current - a.current)[0] ?? null
+}
+
+function BestMarketCell({ player, propType }: { player: PlayerRow; propType: string }) {
+  const market = findMarket(player.market, propType)
+  const best = bestOffer(market)
+  if (!market || !best) return <span className={styles.empty}>-</span>
+  const opening = offerOpening(best.offer)
+  const moved = opening == null ? 0 : best.current - opening
+  return <span className={styles.bestMarketValue}>
+    <BookLogo vendor={best.offer.vendor} size={15} />
+    <b>{oddsLabel(best.current)}</b>
+    <small>{opening == null ? 'OPEN -' : `OPEN ${oddsLabel(opening)}`}</small>
+    {moved ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
+  </span>
+}
+
+function roleOpportunity(row: PlayerRow) {
+  if (row.position === 'QB') return row.passAttempts
+  if (['RB', 'FB'].includes(row.position)) return row.carries + row.targets
+  if (['WR', 'TE'].includes(row.position)) return row.targets
+  return row.games
+}
+
+function roleShare(row: PlayerRow) {
+  if (['RB', 'FB'].includes(row.position)) return row.carryShare
+  if (['WR', 'TE'].includes(row.position)) return row.targetShare
+  if (row.position === 'QB') return row.completionRate
+  return row.evidence
+}
+
+function roleYards(row: PlayerRow) {
+  if (row.position === 'QB') return row.passingYards
+  if (['RB', 'FB'].includes(row.position)) return row.rushingYards + row.receivingYards
+  if (['WR', 'TE'].includes(row.position)) return row.receivingYards
+  return row.explosivePlays
 }
 
 function baselineMove(player: NflOddsPlayer | null, propType: 'first_td' | 'anytime_td', vendor = 'fanduel') {
@@ -223,6 +285,19 @@ function scoreTone(value: number) {
   if (value >= 55) return styles.good
   if (value >= 42) return styles.neutral
   return styles.weak
+}
+
+function heatStyle(column: ColumnDefinition, row: PlayerRow, peers: PlayerRow[]): CSSProperties | undefined {
+  if (!column.heat || column.heat === 'none' || column.id === 'player') return undefined
+  const current = column.value(row)
+  if (typeof current !== 'number' || !Number.isFinite(current)) return undefined
+  const values = peers.map(peer => column.value(peer)).filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  if (values.length < 2) return undefined
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  if (min === max) return { '--cell-heat': 0.34 } as CSSProperties
+  const normalized = (current - min) / (max - min)
+  return { '--cell-heat': column.heat === 'low' ? 1 - normalized : normalized } as CSSProperties
 }
 
 function metricDisplay(value: number, suffix = '', decimals = 0) {
@@ -347,6 +422,7 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
       title,
       group,
       width,
+      heat: 'high',
       value: row => row.hasTracking ? get(row) : null,
       render: row => row.hasTracking ? <b className={scoreTone(get(row))}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty}>-</span>,
     })
@@ -362,6 +438,7 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
       title,
       group: 'team',
       width: 92,
+      heat: inverse ? 'low' : 'high',
       value: get,
       render: row => {
         const value = get(row)
@@ -383,6 +460,16 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
         render: row => <span className={styles.lane}>{row.lane}</span>,
       },
       {
+        id: 'bestFtd', label: 'Best FTD', title: 'Best currently available first-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'low', propType: 'first_td',
+        value: row => bestOffer(findMarket(row.market, 'first_td'))?.current ?? null,
+        render: row => <BestMarketCell player={row} propType="first_td" />,
+      },
+      {
+        id: 'bestAtd', label: 'Best ATD', title: 'Best currently available anytime-touchdown price', group: 'core', width: 106, aggregate: true, heat: 'low', propType: 'anytime_td',
+        value: row => bestOffer(findMarket(row.market, 'anytime_td'))?.current ?? null,
+        render: row => <BestMarketCell player={row} propType="anytime_td" />,
+      },
+      {
         id: 'ftdPct', label: 'FTD%', title: 'FanDuel first-touchdown price versus this player’s own prior-game average', group: 'touchdowns', width: 108,
         value: row => baselineMove(row.market, 'first_td')?.deltaPct ?? null,
         render: row => <BaselineCell player={row.market} propType="first_td" />,
@@ -396,6 +483,9 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
       metric('geometry', 'GEO', 'Field geometry score', 'core', 70, row => row.geometry),
       metric('redZone', 'RZ', 'Red-zone role score', 'core', 70, row => row.redZone),
       metric('breakaway', 'BURST', 'Explosive-play score', 'core', 74, row => row.breakaway),
+      metric('roleOpps', 'OPPS', 'Role-aware opportunities: attempts for QBs, carries plus targets for backs, targets for receivers', 'core', 72, roleOpportunity),
+      metric('roleShare', 'SHARE', 'Role-aware team share or completion rate', 'core', 76, roleShare, '%', 1),
+      metric('roleYards', 'YARDS', 'Role-aware passing, scrimmage, or receiving yards', 'core', 78, roleYards),
       metric('targets', 'TGT', 'Targets in selected window', 'usage', 68, row => row.targets),
       metric('targetShare', 'TGT%', 'Share of team targets', 'usage', 74, row => row.targetShare, '%', 1),
       metric('receptions', 'REC', 'Receptions in selected window', 'usage', 68, row => row.receptions),
@@ -429,6 +519,24 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
       teamMetric('oppExplosiveAllowed', 'OPP EXP%', 'Opponent defensive explosive-play rate allowed', row => row.opponentProfile?.defenseExplosiveAllowed ?? null),
     ]
     for (const market of markets) {
+      columns.push({
+        id: `best:${market.key}`,
+        label: market.label,
+        title: `Best available ${market.title} price across sportsbooks`,
+        group: market.group,
+        width: Math.max(94, market.width),
+        aggregate: true,
+        propType: market.propType,
+        heat: 'low',
+        value: row => bestOffer(findMarketByKey(row.market, market.key))?.current ?? null,
+        render: row => {
+          const target = findMarketByKey(row.market, market.key)
+          const best = bestOffer(target)
+          if (!target || !best) return <span className={styles.empty}>-</span>
+          const opening = offerOpening(best.offer)
+          return <span className={styles.bestMarketValue}><BookLogo vendor={best.offer.vendor} size={15} /><b>{target.line != null ? <i>{target.line}</i> : null}{oddsLabel(best.current)}</b><small>{opening == null ? 'OPEN -' : `OPEN ${oddsLabel(opening)}`}</small></span>
+        },
+      })
       for (const book of books) {
         const id = `${book.id}:${market.key}`
         columns.push({
@@ -439,6 +547,7 @@ function useColumnDefinitions({ markets, books, savedKeys, onToggleSaved }: {
           width: market.width,
           vendor: book.id,
           propType: market.propType,
+          heat: 'low',
           value: row => offerCurrent(findOffer(findMarketByKey(row.market, market.key), book.id)),
           render: row => <MarketCell player={row} marketKey={market.key} vendor={book.id} saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${market.key}:${book.id}`)} onToggleSaved={onToggleSaved} />,
         })
@@ -507,8 +616,24 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
   )
 }
 
-function PlayerModal({ player, team, onClose }: { player: PlayerRow; team: SidelineTeam; onClose: () => void }) {
+function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onClose }: {
+  player: PlayerRow
+  players: PlayerRow[]
+  team: SidelineTeam
+  lens: SidelineLens
+  initialWindow: SidelineWindow
+  onSelect: (player: PlayerRow) => void
+  onClose: () => void
+}) {
   const [tab, setTab] = useState<'matchup' | 'tracking' | 'markets'>('matchup')
+  const [detailWindow, setDetailWindow] = useState<SidelineWindow>(initialWindow)
+  const playerIndex = players.findIndex(candidate => candidate.id === player.id)
+  const previousPlayer = playerIndex > 0 ? players[playerIndex - 1] : null
+  const nextPlayer = playerIndex >= 0 && playerIndex < players.length - 1 ? players[playerIndex + 1] : null
+  const activePlayer = useMemo<PlayerRow>(() => {
+    const found = lens.windows[detailWindow].players.find(candidate => normalizedTeam(candidate.team) === normalizedTeam(player.team) && normalizedName(candidate.name) === normalizedName(player.name))
+    return found ? { ...player, ...found } : player
+  }, [detailWindow, lens.windows, player])
   const markets = player.market?.markets ?? []
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
@@ -521,26 +646,31 @@ function PlayerModal({ player, team, onClose }: { player: PlayerRow; team: Sidel
       <section className={styles.playerModal} role="dialog" aria-modal="true" aria-label={`${player.name} NFL breakdown`}>
         <header>
           <div className={styles.modalPlayer}><PlayerAvatar player={player} team={team} /><div><small>{team.abbr} · {player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small><h2>{player.name}</h2></div></div>
-          <button type="button" onClick={onClose}><X size={19} /> Close</button>
+          <div className={styles.modalHeaderActions}>
+            <button type="button" disabled={!previousPlayer} onClick={() => previousPlayer && onSelect(previousPlayer)} aria-label="Previous player"><ChevronLeft size={18} /></button>
+            <button type="button" disabled={!nextPlayer} onClick={() => nextPlayer && onSelect(nextPlayer)} aria-label="Next player"><ChevronRight size={18} /></button>
+            <button type="button" onClick={onClose}><X size={19} /> Close</button>
+          </div>
         </header>
         <nav>
           {(['matchup', 'tracking', 'markets'] as const).map(item => <button key={item} type="button" className={tab === item ? styles.modalTabActive : ''} onClick={() => setTab(item)}>{item === 'matchup' ? 'Matchup' : item === 'tracking' ? 'NFL Tracking' : 'Sportsbooks'}</button>)}
         </nav>
         <div className={styles.modalBody}>
+          <div className={styles.modalWindows}>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>{option.label}</button>)}</div>
           {tab === 'matchup' ? (
             <>
-              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{player.hasTracking ? player.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY READ</small><strong>{player.lane}</strong><p>Usage, field geometry, scoring role, explosive ability and sample strength in the selected window.</p></div></div>
+              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY READ · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><p>Usage, field geometry, scoring role, explosive ability and sample strength in the selected window.</p></div></div>
               <div className={styles.metricCards}>
-                {[['Volume', player.volume], ['Geometry', player.geometry], ['Red zone', player.redZone], ['Breakaway', player.breakaway], ['Evidence', player.evidence], ['RZ looks', player.redZoneLooks]].map(([label, value]) => <div key={label}><small>{label}</small><b className={scoreTone(Number(value))}>{player.hasTracking ? value : '—'}</b></div>)}
+                {[['Volume', activePlayer.volume], ['Geometry', activePlayer.geometry], ['Red zone', activePlayer.redZone], ['Breakaway', activePlayer.breakaway], ['Evidence', activePlayer.evidence], ['RZ looks', activePlayer.redZoneLooks]].map(([label, value]) => <div key={label}><small>{label}</small><b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b></div>)}
               </div>
             </>
           ) : tab === 'tracking' ? (
             <div className={styles.metricCards}>
-              {[['Targets', player.targets], ['Receptions', player.receptions], ['Target share', `${player.targetShare}%`], ['Carries', player.carries], ['Carry share', `${player.carryShare}%`], ['aDOT', player.airYards], ['Separation', player.separation], ['YACOE', player.yacAboveExpected], ['RYOE/A', player.rushOverExpected], ['Explosives', player.explosivePlays], ['Pass yards', player.passingYards], ['CPOE', player.cpoe]].map(([label, value]) => <div key={label}><small>{label}</small><b>{player.hasTracking ? value : '—'}</b></div>)}
+              {[['Targets', activePlayer.targets], ['Receptions', activePlayer.receptions], ['Target share', `${activePlayer.targetShare}%`], ['Carries', activePlayer.carries], ['Carry share', `${activePlayer.carryShare}%`], ['aDOT', activePlayer.airYards], ['Separation', activePlayer.separation], ['YACOE', activePlayer.yacAboveExpected], ['RYOE/A', activePlayer.rushOverExpected], ['Explosives', activePlayer.explosivePlays], ['Pass yards', activePlayer.passingYards], ['CPOE', activePlayer.cpoe]].map(([label, value]) => <div key={label}><small>{label}</small><b>{activePlayer.hasTracking ? value : '-'}</b></div>)}
             </div>
           ) : (
             <div className={styles.modalMarkets}>
-              {markets.map(market => <article key={market.key}><header><strong>{market.label}</strong>{market.line != null ? <span>Line {market.line}</span> : null}</header><div>{market.offers.map(offer => <span key={offer.vendor}><BookLogo vendor={offer.vendor} size={19} /><b>{oddsLabel(offerCurrent(offer))}</b><small>{offerOpening(offer) != null ? `OPEN ${oddsLabel(offerOpening(offer))}` : 'OPEN —'}</small></span>)}</div></article>)}
+              {markets.map(market => <article key={market.key}><header><strong>{market.label}</strong>{market.line != null ? <span>Line {market.line}</span> : null}</header><div>{market.offers.map(offer => <span key={offer.vendor}><BookLogo vendor={offer.vendor} size={19} /><b>{offerSummary(offer, 'current')}</b><small>{offer.openingLine != null && offer.openingLine !== offer.line ? `OPEN ${offer.openingLine} · ${offerSummary(offer, 'opening')}` : `OPEN ${offerSummary(offer, 'opening')}`}</small></span>)}</div></article>)}
               {!markets.length ? <p className={styles.noData}>No player markets posted in this capture.</p> : null}
             </div>
           )}
@@ -635,6 +765,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const [isPending, startTransition] = useTransition()
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
   const [view, setView] = useState<BoardView>('core')
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [frameIndex, setFrameIndex] = useState(Math.max(0, history.length - 1))
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -650,6 +781,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set())
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [highlightsReady, setHighlightsReady] = useState(false)
+  const [matrices, setMatrices] = useState<NflMatrix[]>([])
   const sourceBoards = useMemo(() => [odds, ...history.map(frame => frame.board)], [history, odds])
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
@@ -689,7 +821,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const columns = useColumnDefinitions({ markets: availableMarkets, books: availableBooks, savedKeys, onToggleSaved: toggleSavedMarket })
   const defaultOrder = useMemo(() => columns.map(column => column.id), [columns])
   const defaultVisible = useMemo(() => new Set(columns.filter(column =>
-    ['player', 'index', 'lane', 'ftdPct', 'atdPct', 'volume', 'redZone', 'targets', 'targetShare', 'carries', 'carryShare', 'airYards', 'separation', 'redZoneLooks'].includes(column.id)
+    ['player', 'index', 'lane', 'bestFtd', 'bestAtd', 'ftdPct', 'atdPct', 'volume', 'redZone', 'roleOpps', 'roleShare', 'roleYards', 'targets', 'targetShare', 'carries', 'carryShare', 'airYards', 'separation', 'redZoneLooks'].includes(column.id)
     || (['fanduel', 'betmgm', 'draftkings'].includes(column.vendor ?? '') && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
     || (column.vendor === 'fanduel' && ['receptions', 'receiving_yards', 'rushing_yards', 'passing_yards'].includes(column.propType ?? ''))
   ).map(column => column.id)), [columns])
@@ -697,6 +829,21 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const [visibleIds, setVisibleIds] = useState<Set<string>>(defaultVisible)
   const board = history[frameIndex]?.board ?? odds
   const windowData = lens.windows[windowId]
+
+  useEffect(() => {
+    let active = true
+    const loadMatrices = async () => {
+      try {
+        const response = await fetch('/api/nfl-matrices', { cache: 'no-store' })
+        if (!response.ok) return
+        const payload = await response.json() as { matrices?: NflMatrix[] }
+        if (active) setMatrices(payload.matrices ?? [])
+      } catch { /* signed-out and unavailable matrix states are non-fatal */ }
+    }
+    void loadMatrices()
+    window.addEventListener('ss:nfl-matrices-updated', loadMatrices)
+    return () => { active = false; window.removeEventListener('ss:nfl-matrices-updated', loadMatrices) }
+  }, [])
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -755,17 +902,94 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
     return Array.from(byId.values())
   }, [board, selected.away.abbr, selected.home.abbr, windowData.players, windowData.teams])
 
+  const matrixMatches = useMemo(() => {
+    if (!matrices.length) return new Map<string, NflMatrix[]>()
+    const playerByWindow = new Map<SidelineWindow, Map<string, SidelinePlayer>>()
+    const teamByWindow = new Map<SidelineWindow, Map<string, SidelineTeamProfile>>()
+    WINDOW_OPTIONS.forEach(option => {
+      playerByWindow.set(option.id, new Map(lens.windows[option.id].players.map(player => [`${normalizedTeam(player.team)}:${normalizedName(player.name)}`, player])))
+      teamByWindow.set(option.id, new Map(lens.windows[option.id].teams.map(profile => [normalizedTeam(profile.team.abbr), profile])))
+    })
+    const candidateFor = (row: PlayerRow) => ({
+      id: row.id,
+      team: normalizedTeam(row.team),
+      values: (factor: NflMatrixFactor) => {
+        if (factor.category === 'market') {
+          const market = row.market?.markets.find(item => item.propType === factor.propType && (!factor.field || factor.field === 'market')) ?? null
+          const offer = findOffer(market, factor.vendor ?? 'fanduel')
+          if (factor.marketValue === 'line') return market?.line ?? null
+          const current = offerCurrent(offer)
+          const opening = offerOpening(offer)
+          if (factor.marketValue === 'opening') return opening
+          if (factor.marketValue === 'move') return current != null && opening != null ? current - opening : null
+          return current
+        }
+        if (factor.category === 'baseline') {
+          const prop = factor.field === 'ftdPct' ? 'first_td' : 'anytime_td'
+          const delta = baselineMove(row.market, prop)?.deltaPct
+          return delta == null ? null : Math.round(delta * 1000) / 10
+        }
+        const key = `${normalizedTeam(row.team)}:${normalizedName(row.name)}`
+        const windowPlayer = playerByWindow.get(factor.window)?.get(key)
+        if (factor.category === 'team') {
+          const profile = teamByWindow.get(factor.window)?.get(normalizedTeam(row.team))
+          const opponent = teamByWindow.get(factor.window)?.get(normalizedTeam(row.team) === normalizedTeam(selected.away.abbr) ? normalizedTeam(selected.home.abbr) : normalizedTeam(selected.away.abbr))
+          const values: Record<string, number | undefined> = {
+            teamPassRate: profile?.passRate,
+            teamNeutralPassRate: profile?.neutralPassRate,
+            teamShotgunRate: profile?.shotgunRate,
+            teamNoHuddleRate: profile?.noHuddleRate,
+            teamSuccessRate: profile?.successRate,
+            teamExplosiveRate: profile?.explosiveRate,
+            teamRedZoneTdRate: profile?.redZoneTdRate,
+            teamThirdDownRate: profile?.thirdDownRate,
+            oppSuccessAllowed: opponent?.defenseSuccessAllowed,
+            oppExplosiveAllowed: opponent?.defenseExplosiveAllowed,
+          }
+          return values[factor.field] ?? null
+        }
+        if (!windowPlayer) return null
+        const values: Record<string, number> = {
+          index: windowPlayer.index, volume: windowPlayer.volume, geometry: windowPlayer.geometry, redZone: windowPlayer.redZone,
+          breakaway: windowPlayer.breakaway, evidence: windowPlayer.evidence, targets: windowPlayer.targets,
+          targetShare: windowPlayer.targetShare, receptions: windowPlayer.receptions, receivingYards: windowPlayer.receivingYards,
+          carries: windowPlayer.carries, carryShare: windowPlayer.carryShare, rushingYards: windowPlayer.rushingYards,
+          passAttempts: windowPlayer.passAttempts, completions: windowPlayer.completions, passingYards: windowPlayer.passingYards,
+          touchdowns: windowPlayer.touchdowns, redZoneLooks: windowPlayer.redZoneLooks, goalLineLooks: windowPlayer.goalLineLooks,
+          airYards: windowPlayer.airYards, airYardsShare: windowPlayer.airYardsShare, separation: windowPlayer.separation,
+          yacAboveExpected: windowPlayer.yacAboveExpected, rushOverExpected: windowPlayer.rushOverExpected,
+          catchRate: windowPlayer.catchRate, completionRate: windowPlayer.completionRate, cpoe: windowPlayer.cpoe,
+          timeToThrow: windowPlayer.timeToThrow, explosivePlays: windowPlayer.explosivePlays,
+        }
+        return values[factor.field] ?? null
+      },
+    })
+    const candidates = rows.map(candidateFor)
+    const result = new Map<string, NflMatrix[]>()
+    matrices.filter(matrix => matrix.enabled).forEach(matrix => {
+      evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
+    })
+    return result
+  }, [board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
+
   const resolvedColumns = useMemo(() => {
     const ordered = columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
-    if (view === 'all') return ordered
     if (view === 'custom') return ordered.filter(column => visibleIds.has(column.id))
     const foundations = new Set(['player', 'index', 'lane'])
-    return ordered.filter(column => foundations.has(column.id) || column.group === view)
-  }, [columnOrder, columns, view, visibleIds])
+    const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
+    const activeRows = rows.filter(row => !erased.has(row.id) && (!positions.length || positions.includes(row.position)))
+    const hasValue = (column: ColumnDefinition) => foundations.has(column.id) || activeRows.some(row => column.value(row) != null)
+    if (view === 'all') return ordered.filter(hasValue)
+    return ordered.filter(column => foundations.has(column.id) || (column.group === view && !column.vendor && hasValue(column)))
+  }, [columnOrder, columns, erased, roleFilter, rows, view, visibleIds])
 
   const columnById = useMemo(() => new Map(columns.map(column => [column.id, column])), [columns])
   const sortedRows = (team: string) => rows
-    .filter(row => normalizedTeam(row.team) === normalizedTeam(team) && !erased.has(row.id))
+    .filter(row => {
+      if (normalizedTeam(row.team) !== normalizedTeam(team) || erased.has(row.id)) return false
+      const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
+      return !positions.length || positions.includes(row.position)
+    })
     .sort((a, b) => {
       for (const sort of sorts) {
         const column = columnById.get(sort.id)
@@ -879,6 +1103,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       </section> : null}
 
       <nav className={styles.viewTabs} aria-label="NFL board column groups">{VIEW_OPTIONS.map(option => <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>{option.label}</button>)}</nav>
+      <nav className={styles.roleTabs} aria-label="NFL position lanes">{ROLE_OPTIONS.map(option => <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>{option.label}</button>)}</nav>
 
       {[{ team: selected.away, opponent: selected.home, rows: awayRows, side: 'away' as const }, { team: selected.home, opponent: selected.away, rows: homeRows, side: 'home' as const }].map(section => (
         <section className={styles.teamBoard} key={section.team.abbr} style={{ '--team-color': section.team.color } as CSSProperties}>
@@ -911,7 +1136,10 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
                 return <tr key={player.id} className={eraser ? styles.eraserRow : ''} onClick={() => { if (eraser) setErased(current => new Set([...current, player.id])) }}>
                   {resolvedColumns.map(column => {
                     const highlight = highlights[`${player.id}:${column.id}`]
-                    return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width }} onClick={() => toggleHighlight(player, column)}>
+                    const automaticHeat = heatStyle(column, player, section.rows)
+                    const matches = matrixMatches.get(player.id) ?? []
+                    return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
+                      {column.id === 'player' && matches.length ? <span className={styles.matrixRail} title={matches.map(matrix => matrix.name).join(' · ')}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
                       {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
                     </td>
                   })}
@@ -925,7 +1153,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
 
       <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
 
-      {expanded ? <PlayerModal player={expanded} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} onClose={() => setExpanded(null)} /> : null}
+      {expanded ? <PlayerModal player={expanded} players={rows} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} lens={lens} initialWindow={windowId} onSelect={setExpanded} onClose={() => setExpanded(null)} /> : null}
       {columnsOpen ? <ColumnManager columns={columns} visibleIds={visibleIds} order={columnOrder} onVisible={id => setVisibleIds(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); next.add('player'); return next })} onMove={moveColumn} onReset={() => { setColumnOrder(defaultOrder); setVisibleIds(defaultVisible) }} onClose={() => setColumnsOpen(false)} /> : null}
     </div>
   )
