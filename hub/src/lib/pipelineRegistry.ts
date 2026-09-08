@@ -18,6 +18,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'dispatch-scrapes', label: 'Lineup scrape dispatcher', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Odds' },
   { name: 'scrape-fanduel', label: 'FanDuel gap markets', schedule: 'Scheduled and lineup-triggered', staleAfterMinutes: 600, area: 'Odds' },
   { name: 'poll-pikkit-picks', label: 'Pikkit pick import', schedule: 'Every 30 minutes', staleAfterMinutes: everyThirtyMinutes, area: 'Picks' },
+  { name: 'poll-pikkit-nfl-picks', label: 'NFL Pikkit pick import', schedule: 'Every 30 minutes', staleAfterMinutes: everyThirtyMinutes, area: 'Picks' },
   { name: 'grade-live-picks', label: 'Live pick grading', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Picks' },
   { name: 'settle-picks', label: 'Daily pick settlement', schedule: 'Daily', staleAfterMinutes: daily, area: 'Picks' },
   { name: 'lineup-confirmed', label: 'Confirmed lineups', schedule: 'Every 5 minutes', staleAfterMinutes: everyFiveMinutes, area: 'MLB data' },

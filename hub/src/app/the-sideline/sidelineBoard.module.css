@@ -781,6 +781,9 @@
 .bestMarketValue b { color: #f5f8fb; font-size: 13px; }
 .bestMarketValue small { grid-column: 1 / -1; color: #9ca8b8; font-size: 8px; font-weight: 850; text-align: center; }
 .bestMarketValue em { position: absolute; top: 1px; right: -2px; }
+.publicPickValue { display: inline-grid; justify-items: center; gap: 3px; min-width: 54px; }
+.publicPickValue b { color: #f4f7fa; font-size: 13px; line-height: 1; font-variant-numeric: tabular-nums; }
+.publicPickValue small { color: #a7ff3f; font-size: 8px; font-weight: 900; letter-spacing: 0.08em; }
 .baselineValue { display: inline-flex; min-width: 82px; flex-direction: column; gap: 5px; padding: 8px 7px; border: 1px solid transparent; border-radius: 8px; }
 .baselineValue b { font-size: 12px; line-height: 1; }
 .baselineValue small { color: #a5b0bf; font-size: 7px; font-weight: 850; letter-spacing: .025em; white-space: nowrap; }

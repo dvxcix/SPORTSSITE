@@ -1,4 +1,4 @@
-export type NflMatrixCategory = 'score' | 'usage' | 'tracking' | 'team' | 'market' | 'baseline'
+export type NflMatrixCategory = 'score' | 'usage' | 'tracking' | 'team' | 'market' | 'baseline' | 'picks'
 export type NflMatrixOperator = 'gte' | 'lte' | 'eq' | 'up' | 'down' | 'flat' | 'is_available'
 export type NflMatrixWindow = 'season' | 'l1' | 'l3' | 'l5' | 'l10'
 export type NflMatrixJoin = 'and' | 'or'
@@ -97,6 +97,8 @@ export const NFL_MATRIX_FIELDS: NflMatrixField[] = [
 export const NFL_MATRIX_PROP_TYPES = [
   ['first_td', 'First touchdown'],
   ['anytime_td', 'Anytime touchdown'],
+  ['two_plus_td', '2+ touchdowns'],
+  ['three_plus_td', '3+ touchdowns'],
   ['anytime_td_1h', 'Anytime TD · first half'],
   ['passing_yards', 'Passing yards'],
   ['passing_tds', 'Passing touchdowns'],
@@ -110,6 +112,10 @@ export const NFL_MATRIX_PROP_TYPES = [
   ['rushing_receiving_yards', 'Rush + receiving yards'],
   ['longest_reception', 'Longest reception'],
   ['longest_rush', 'Longest rush'],
+  ['field_goals_made', 'Field goals made'],
+  ['kicking_points', 'Kicking points'],
+  ['extra_points', 'Extra points'],
+  ['defensive_td', 'Defensive touchdown'],
 ] as const
 
 export const NFL_MATRIX_BOOKS = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'fanatics', 'betrivers'] as const
@@ -184,7 +190,7 @@ export function validateNflMatrixDefinition(matrixType: 'classic' | 'pipeline', 
   const source = raw as Record<string, unknown>
   const rows = matrixType === 'classic' ? source.factors : source.steps
   if (!Array.isArray(rows) || rows.length < 1 || rows.length > 40) return null
-  const validCategories = new Set<NflMatrixCategory>(['score', 'usage', 'tracking', 'team', 'market', 'baseline'])
+  const validCategories = new Set<NflMatrixCategory>(['score', 'usage', 'tracking', 'team', 'market', 'baseline', 'picks'])
   const validOperators = new Set<NflMatrixOperator>(['gte', 'lte', 'eq', 'up', 'down', 'flat', 'is_available'])
   const validWindows = new Set<NflMatrixWindow>(['season', 'l1', 'l3', 'l5', 'l10'])
   const validFields = new Set(NFL_MATRIX_FIELDS.map(item => `${item.category}:${item.field}`))
@@ -193,8 +199,8 @@ export function validateNflMatrixDefinition(matrixType: 'classic' | 'pipeline', 
     if (!row || typeof row !== 'object') return []
     const value = row as Record<string, unknown>
     if (!validCategories.has(value.category as NflMatrixCategory) || typeof value.field !== 'string' || !validOperators.has(value.operator as NflMatrixOperator)) return []
-    if (value.category === 'market' && (typeof value.propType !== 'string' || !validProps.has(value.propType as typeof NFL_MATRIX_PROP_TYPES[number][0]))) return []
-    if (value.category !== 'market' && !validFields.has(`${value.category}:${value.field}`)) return []
+    if (['market', 'picks'].includes(value.category as string) && (typeof value.propType !== 'string' || !validProps.has(value.propType as typeof NFL_MATRIX_PROP_TYPES[number][0]))) return []
+    if (!['market', 'picks'].includes(value.category as string) && !validFields.has(`${value.category}:${value.field}`)) return []
     const operator = value.operator as NflMatrixOperator
     const numeric = typeof value.value === 'number' && Number.isFinite(value.value) ? value.value : null
     if (['gte', 'lte', 'eq'].includes(operator) && numeric == null) return []

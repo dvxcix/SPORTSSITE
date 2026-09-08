@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { attachNflPikkitSnapshot, canonicalizeNflPikkitMarket, type NflPikkitSnapshot } from '../src/lib/nflPikkit.ts'
+import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
+
+test('NFL Pikkit labels map to Sideline prop keys without dropping unknown markets', () => {
+  assert.equal(canonicalizeNflPikkitMarket('firstTouchdownScorer', 'First Touchdown Scorer'), 'first_td')
+  assert.equal(canonicalizeNflPikkitMarket('atd', 'Anytime Touchdown Scorer'), 'anytime_td')
+  assert.equal(canonicalizeNflPikkitMarket('two_tds', 'To Score 2+ Touchdowns'), 'two_plus_td')
+  assert.equal(canonicalizeNflPikkitMarket('rush_rec', 'Rushing + Receiving Yards'), 'rushing_receiving_yards')
+  assert.equal(canonicalizeNflPikkitMarket('custom-special', 'Quarterback Kneel Downs'), 'quarterback_kneel_downs')
+})
+
+test('Pikkit picks attach by normalized player and team identity', () => {
+  const board: SidelineOddsBoard = {
+    bdlGameId: 1,
+    status: 'ready',
+    capturedAt: '2026-09-09T16:00:00.000Z',
+    source: 'snapshot',
+    gameLines: [],
+    players: [{ id: 15, name: 'Patrick Mahomes II', team: 'KC', position: 'QB', markets: [] }],
+  }
+  const snapshot: NflPikkitSnapshot = {
+    gameId: 'game-1', gameDate: '2026-09-09', season: 2026, week: 1,
+    awayTeam: 'KC', homeTeam: 'LAC', capturedAt: '2026-09-09T15:55:00.000Z', sourceUrl: null,
+    markets: [{
+      propType: 'passing_yards', label: 'Passing Yards', rawKey: 'passing_yards', rawLabel: 'Passing Yards',
+      players: [{ playerName: 'Patrick Mahomes II', playerKey: 'patrickmahomesii', team: 'KC', position: 'QB', picks: 1234 }],
+    }],
+  }
+  const enriched = attachNflPikkitSnapshot(board, snapshot)
+  assert.equal(enriched.pikkitCapturedAt, snapshot.capturedAt)
+  assert.equal(enriched.players[0].publicPicks?.[0]?.picks, 1234)
+  assert.equal(enriched.players[0].publicPicks?.[0]?.propType, 'passing_yards')
+})
+
+test('missing Pikkit data remains unavailable rather than zero-filled', () => {
+  const board: SidelineOddsBoard = {
+    bdlGameId: 1, status: 'ready', capturedAt: null, source: 'live', gameLines: [],
+    players: [{ id: 3, name: 'Test Player', team: 'BUF', position: 'WR', markets: [] }],
+  }
+  const enriched = attachNflPikkitSnapshot(board, null)
+  assert.equal(enriched.pikkitCapturedAt, null)
+  assert.deepEqual(enriched.players[0].publicPicks, [])
+})

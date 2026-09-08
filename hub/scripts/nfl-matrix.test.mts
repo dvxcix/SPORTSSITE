@@ -39,3 +39,12 @@ test('server validation rejects MLB fields and unknown NFL markets', () => {
   assert.equal(validateNflMatrixDefinition('classic', { factors: [{ id: 'x', category: 'score', field: 'barrelPct', operator: 'gte', value: 10, window: 'l3' }] }), null)
   assert.equal(validateNflMatrixDefinition('classic', { factors: [{ id: 'x', category: 'market', field: 'market', propType: 'home_run', vendor: 'fanduel', marketValue: 'current', operator: 'lte', value: 500, window: 'season' }] }), null)
 })
+
+test('NFL matrices validate Pikkit pick-count criteria separately from sportsbook prices', () => {
+  const definition = validateNflMatrixDefinition('classic', { factors: [{
+    id: 'picks', category: 'picks', field: 'public_picks', propType: 'anytime_td', vendor: null,
+    marketValue: null, operator: 'gte', value: 100, window: 'season',
+  }] })
+  assert.equal(definition?.factors?.[0].category, 'picks')
+  assert.equal(definition?.factors?.[0].propType, 'anytime_td')
+})

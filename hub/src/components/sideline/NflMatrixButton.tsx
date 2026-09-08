@@ -1,8 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Clipboard, Copy, Grid3X3, Plus, Share2, SlidersHorizontal, Trash2, X } from 'lucide-react'
-import { BookLogo } from '@/components/BookLogo'
 import {
   NFL_MATRIX_BOOKS,
   NFL_MATRIX_FIELDS,
@@ -46,14 +45,16 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
   const step = factor as NflMatrixPipelineStep
   const setCategory = (category: NflMatrixCategory) => {
     const first = NFL_MATRIX_FIELDS.find(item => item.category === category)
-    onChange({ ...factor, category, field: category === 'market' ? 'market' : first?.field ?? 'index', vendor: category === 'market' ? 'fanduel' : null, propType: category === 'market' ? 'anytime_td' : null, marketValue: category === 'market' ? 'current' : null })
+    const isMarket = category === 'market'
+    const isPicks = category === 'picks'
+    onChange({ ...factor, category, field: isMarket ? 'market' : isPicks ? 'public_picks' : first?.field ?? 'index', vendor: isMarket ? 'fanduel' : null, propType: isMarket || isPicks ? 'anytime_td' : null, marketValue: isMarket ? 'current' : null })
   }
   return (
     <article className={styles.factor}>
       <div className={styles.factorTop}>
         {pipeline ? <select value={step.kind} onChange={event => onChange({ ...step, kind: event.target.value as 'filter' | 'rank' })}><option value="filter">Filter</option><option value="rank">Rank</option></select> : null}
         <select value={factor.category} onChange={event => setCategory(event.target.value as NflMatrixCategory)}>
-          <option value="score">SlipSurge score</option><option value="usage">Usage</option><option value="tracking">NFL tracking</option><option value="team">Team context</option><option value="baseline">TD baseline</option><option value="market">Sportsbook market</option>
+          <option value="score">SlipSurge score</option><option value="usage">Usage</option><option value="tracking">NFL tracking</option><option value="team">Team context</option><option value="baseline">TD baseline</option><option value="market">Sportsbook market</option><option value="picks">Pikkit public picks</option>
         </select>
         <button type="button" onClick={onRemove} aria-label="Remove condition"><Trash2 size={14} /></button>
       </div>
@@ -62,6 +63,11 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
           <select value={factor.propType ?? 'anytime_td'} onChange={event => onChange({ ...factor, propType: event.target.value })}>{NFL_MATRIX_PROP_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
           <select value={factor.vendor ?? 'fanduel'} onChange={event => onChange({ ...factor, vendor: event.target.value })}>{NFL_MATRIX_BOOKS.map(book => <option value={book} key={book}>{book}</option>)}</select>
           <select value={factor.marketValue ?? 'current'} onChange={event => onChange({ ...factor, marketValue: event.target.value as NflMatrixFactor['marketValue'] })}><option value="current">Current odds</option><option value="opening">Opening odds</option><option value="move">Current − open</option><option value="line">Prop line</option></select>
+        </div>
+      ) : factor.category === 'picks' ? (
+        <div className={styles.factorGrid}>
+          <select value={factor.propType ?? 'anytime_td'} onChange={event => onChange({ ...factor, propType: event.target.value })}>{NFL_MATRIX_PROP_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
+          <span className={styles.fixedContext}>Pikkit picks at selected Market Story capture</span>
         </div>
       ) : (
         <div className={styles.factorGrid}>
@@ -134,8 +140,15 @@ export function NflMatrixButton() {
   const refreshCommunity = useCallback(async () => {
     try { setListings((await request<{ listings: Listing[] }>('/api/nfl-matrix-marketplace')).listings) } catch { setListings([]) }
   }, [])
-  useEffect(() => { void refresh() }, [refresh])
-  useEffect(() => { if (open) void refreshCommunity() }, [open, refreshCommunity])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 0)
+    return () => window.clearTimeout(timer)
+  }, [refresh])
+  useEffect(() => {
+    if (!open) return
+    const timer = window.setTimeout(() => void refreshCommunity(), 0)
+    return () => window.clearTimeout(timer)
+  }, [open, refreshCommunity])
   const mutate = async (label: string, task: () => Promise<unknown>) => {
     setBusy(label); setMessage('')
     try { await task(); await refresh(); window.dispatchEvent(new Event('ss:nfl-matrices-updated')); setMessage('Done.') } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'Request failed.') } finally { setBusy('') }

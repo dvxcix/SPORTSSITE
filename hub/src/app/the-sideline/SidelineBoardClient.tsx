@@ -55,6 +55,12 @@ type MarketSpec = {
   category: NflPlayerMarket['category']
   vendors: string[]
 }
+type PublicPickSpec = {
+  propType: string
+  label: string
+  group: 'touchdowns' | 'props'
+  width: number
+}
 type BookSpec = { id: string; short: string }
 
 type ColumnDefinition = {
@@ -190,6 +196,35 @@ function marketCatalog(boards: SidelineOddsBoard[]): MarketSpec[] {
       || a.label.localeCompare(b.label)
       || (a.line ?? -Infinity) - (b.line ?? -Infinity)
   })
+}
+
+function publicPickCatalog(boards: SidelineOddsBoard[]): PublicPickSpec[] {
+  const seen = new Map<string, PublicPickSpec>()
+  const featured = new Map(FEATURED_MARKETS.map((market, index) => [market.prop, { ...market, index }]))
+  for (const board of boards) {
+    for (const player of board.players) {
+      for (const market of player.publicPicks ?? []) {
+        if (seen.has(market.propType)) continue
+        const known = featured.get(market.propType)
+        seen.set(market.propType, {
+          propType: market.propType,
+          label: known?.label ?? market.label,
+          group: known?.group ?? (market.propType.includes('td') ? 'touchdowns' : 'props'),
+          width: Math.max(94, known?.width ?? 104),
+        })
+      }
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => {
+    const aFeatured = featured.get(a.propType)?.index ?? 999
+    const bFeatured = featured.get(b.propType)?.index ?? 999
+    return aFeatured - bFeatured || a.label.localeCompare(b.label)
+  })
+}
+
+function publicPickCount(player: NflOddsPlayer | null, propType: string) {
+  const counts = (player?.publicPicks ?? []).filter(item => item.propType === propType).map(item => item.picks)
+  return counts.length ? Math.max(...counts) : null
 }
 
 function sportsbookCatalog(boards: SidelineOddsBoard[]): BookSpec[] {
@@ -452,8 +487,9 @@ function mergePlayerIdentity(player: SidelinePlayer, market: NflOddsPlayer | nul
   }
 }
 
-function useColumnDefinitions({ markets, books, board, game, savedKeys, onToggleSaved }: {
+function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedKeys, onToggleSaved }: {
   markets: MarketSpec[]
+  pickMarkets: PublicPickSpec[]
   books: BookSpec[]
   board: SidelineOddsBoard
   game: SidelineGame
@@ -600,6 +636,24 @@ function useColumnDefinitions({ markets, books, board, game, savedKeys, onToggle
       teamMetric('oppSuccessAllowed', 'OPP SUCC%', 'Opponent defensive success rate allowed', row => row.opponentProfile?.defenseSuccessAllowed ?? null),
       teamMetric('oppExplosiveAllowed', 'OPP EXP%', 'Opponent defensive explosive-play rate allowed', row => row.opponentProfile?.defenseExplosiveAllowed ?? null),
     ]
+    for (const market of pickMarkets) {
+      columns.push({
+        id: `pikkit:${market.propType}`,
+        label: `PICKS ${market.label}`,
+        title: `Pikkit public picks for ${market.label}`,
+        group: market.group,
+        width: market.width,
+        propType: market.propType,
+        heat: 'high',
+        value: row => publicPickCount(row.market, market.propType),
+        render: row => {
+          const count = publicPickCount(row.market, market.propType)
+          return count == null
+            ? <span className={styles.empty}>-</span>
+            : <span className={styles.publicPickValue}><b>{count.toLocaleString()}</b><small>PIKKIT</small></span>
+        },
+      })
+    }
     for (const market of markets) {
       columns.push({
         id: `best:${market.key}`,
@@ -637,7 +691,7 @@ function useColumnDefinitions({ markets, books, board, game, savedKeys, onToggle
       }
     }
     return columns
-  }, [board, books, game.home.abbr, markets, onToggleSaved, savedKeys])
+  }, [board, books, game.home.abbr, markets, onToggleSaved, pickMarkets, savedKeys])
 }
 
 function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedCount, collapsed, onToggle, onSelectWindow }: {
@@ -873,6 +927,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const board = history[frameIndex]?.board ?? odds
   const sourceBoards = useMemo(() => [odds, ...history.map(frame => frame.board)], [history, odds])
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
+  const availablePickMarkets = useMemo(() => publicPickCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
   const savedItems = useMemo(() => watchlistItems.filter(item => item.status === 'pending' && item.sport.toLowerCase() === 'nfl' && item.game_pk === selected.id), [selected.id, watchlistItems])
   const savedKeys = useMemo(() => new Set(savedItems.map(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}`)), [savedItems])
@@ -907,10 +962,11 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       odds_by_book: oddsByBook,
     }).catch(error => console.error('[the-sideline] failed to save market', error))
   }, [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id])
-  const columns = useColumnDefinitions({ markets: availableMarkets, books: availableBooks, board, game: selected, savedKeys, onToggleSaved: toggleSavedMarket })
+  const columns = useColumnDefinitions({ markets: availableMarkets, pickMarkets: availablePickMarkets, books: availableBooks, board, game: selected, savedKeys, onToggleSaved: toggleSavedMarket })
   const defaultOrder = useMemo(() => columns.map(column => column.id), [columns])
   const defaultVisible = useMemo(() => new Set(columns.filter(column =>
     ['player', 'index', 'lane', 'bestFtd', 'bestAtd', 'ftdAtdRatio', 'atdRecRatio', 'atdRecYdsRatio', 'atdRushYdsRatio', 'atdScrimYdsRatio', 'atdTeamMlRatio', 'ftdPct', 'atdPct', 'roleOpps', 'roleShare', 'roleYards', 'redZoneLooks'].includes(column.id)
+    || ['pikkit:first_td', 'pikkit:anytime_td'].includes(column.id)
     || (column.vendor === 'fanduel' && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
   ).map(column => column.id)), [columns])
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultOrder)
@@ -1008,6 +1064,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       id: row.id,
       team: normalizedTeam(row.team),
       values: (factor: NflMatrixFactor) => {
+        if (factor.category === 'picks') return publicPickCount(row.market, factor.propType ?? 'anytime_td')
         if (factor.category === 'market') {
           const market = row.market?.markets.find(item => item.propType === factor.propType && (!factor.field || factor.field === 'market')) ?? null
           const offer = findOffer(market, factor.vendor ?? 'fanduel')
@@ -1183,7 +1240,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <article className={styles.marketStory}>
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
           <input type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
-          <span>{history.length} captures · {capturedLabel}</span>
+          <span>{history.length} captures · {capturedLabel}{board.pikkitCapturedAt ? ` · Pikkit ${new Date(board.pikkitCapturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
         </article>
       </section>
 

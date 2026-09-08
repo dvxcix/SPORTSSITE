@@ -5,19 +5,36 @@
 // pages, which is why this always runs against a persisted Browserbase
 // context (see browserbase.ts's createPersistentContext) rather than a
 // fresh logged-out session.
-export async function runPikkitScrape(): Promise<{ url: string; game: string; props: Record<string, Record<string, number>> }> {
+export type PikkitScrapePayload = {
+  url: string
+  game: string
+  capturedAt: string
+  props: Record<string, Record<string, number>>
+  marketLabels: Record<string, string>
+}
+
+export async function runPikkitScrape(): Promise<PikkitScrapePayload> {
   function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)) }
-  const out: { url: string; game: string; props: Record<string, Record<string, number>> } = {
-    url: location.href, game: document.title || location.href, props: {},
+  const out: PikkitScrapePayload = {
+    url: location.href,
+    game: document.title || location.href,
+    capturedAt: new Date().toISOString(),
+    props: {},
+    marketLabels: {},
   }
-  function parsePage(): Record<string, number> {
+  function parsePage(marketLabel: string): Record<string, number> {
     const t = document.body.innerText
     const ls = t.split('\n').map(l => l.trim()).filter(Boolean)
     const res: Record<string, number> = {}
     for (let i = 1; i < ls.length; i++) {
       const pm = ls[i].match(/^([\d,]+)\s+Picks?$/)
       if (pm) {
-        const name = ls[i - 1].replace(/ Home Runs$| Total Bases$| Bases$| Hits$| Singles$| Doubles$| Triples$| RBI$| Runs$| Stolen Bases$| Hits \+ Runs \+ RBI$/, '').trim()
+        const name = ls[i - 1]
+          .replace(/\s+(?:Over|Under)\s+[+-]?\d+(?:\.\d+)?$/i, '')
+          .replace(/ Home Runs$| Total Bases$| Bases$| Hits$| Singles$| Doubles$| Triples$| RBI$| Runs$| Stolen Bases$| Hits \+ Runs \+ RBI$/i, '')
+          .replace(/ Anytime(?: First Half)? Touchdown(?: Scorer)?$| First Touchdown(?: Scorer)?$| Touchdowns?$| Passing Yards$| Passing Touchdowns?$| Passing Attempts?$| Passing Completions?$| Interceptions?$| Rushing Yards$| Rushing Attempts?$| Receiving Yards$| Receptions?$| Rushing \+ Receiving Yards$| Rush \+ Receiving Yards$| Longest Reception$| Longest Rush$| Field Goals Made$| Kicking Points$/i, '')
+          .replace(new RegExp(`\\s+${marketLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), '')
+          .trim()
         if (name && name.length > 2 && !/^(OVER|UNDER|Over|Under|\d)/.test(name)) res[name] = parseInt(pm[1].replace(/,/g, ''), 10)
       }
     }
@@ -34,15 +51,23 @@ export async function runPikkitScrape(): Promise<{ url: string; game: string; pr
   // market <select> instead of a fixed list picks up whatever Pikkit
   // actually offers (however many markets that is) without needing to guess
   // each one's exact option value string.
-  const sel = document.querySelector('select')
+  const selectors = Array.from(document.querySelectorAll('select')) as HTMLSelectElement[]
+  const marketWords = /touchdown|passing|rushing|receiving|reception|interception|field goal|home run|bases|hits|rbi|runs|stolen/i
+  const sel = selectors
+    .map(candidate => ({ candidate, score: Array.from(candidate.options).filter(option => marketWords.test(option.textContent ?? '') || marketWords.test(option.value)).length }))
+    .sort((a, b) => b.score - a.score)[0]?.candidate ?? null
   if (!sel) return out
-  const values = Array.from((sel as HTMLSelectElement).options).map(o => o.value).filter(Boolean)
-  for (const value of values) {
+  const options = Array.from(sel.options).map(option => ({ value: option.value, label: option.textContent?.trim() || option.value })).filter(option => option.value)
+  for (const option of options) {
+    const value = option.value
     ;(sel as HTMLSelectElement).value = value
     sel.dispatchEvent(new Event('change', { bubbles: true }))
     await sleep(900)
-    const d = parsePage()
-    if (Object.keys(d).length > 0) out.props[value] = d
+    const d = parsePage(option.label)
+    if (Object.keys(d).length > 0) {
+      out.props[value] = d
+      out.marketLabels[value] = option.label
+    }
   }
   return out
 }

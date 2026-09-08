@@ -56,6 +56,13 @@ export type NflOddsPlayer = {
   rosterStatus?: string | null
   markets: NflPlayerMarket[]
   tdBaselines?: NflTdBaseline[]
+  publicPicks?: Array<{
+    propType: string
+    label: string
+    rawMarket: string
+    picks: number
+    capturedAt: string
+  }>
 }
 
 export type NflGameLineBook = {
@@ -81,6 +88,7 @@ export type SidelineOddsBoard = {
   source: 'live' | 'opening' | 'snapshot' | 'none'
   gameLines: NflGameLineBook[]
   players: NflOddsPlayer[]
+  pikkitCapturedAt?: string | null
 }
 
 export const EMPTY_SIDELINE_ODDS: SidelineOddsBoard = {

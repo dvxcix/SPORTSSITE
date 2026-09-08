@@ -193,6 +193,10 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/cron/poll-pikkit-nfl-picks",
+      "schedule": "10,40 * * * *"
+    },
+    {
       "path": "/api/cron/whop-addon-reconcile",
       "schedule": "*/15 * * * *"
     },
