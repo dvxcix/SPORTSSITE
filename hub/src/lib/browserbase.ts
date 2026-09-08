@@ -23,6 +23,13 @@ function optionalProjectId(): string | undefined {
   return process.env.BROWSERBASE_PROJECT_ID || undefined
 }
 
+const BROWSERBASE_REGION = 'us-east-1' as const
+
+function pikkitGeoState(): string | undefined {
+  const value = process.env.PIKKIT_BROWSER_GEO_STATE?.trim().toUpperCase()
+  return value && /^[A-Z]{2}$/.test(value) ? value : undefined
+}
+
 export type BBSession = {
   page: Page
   sessionId: string
@@ -69,7 +76,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     : (opts.proxies ?? true)
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
-    region: 'us-east-1',
+    region: BROWSERBASE_REGION,
     proxies,
     browserSettings: {
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
@@ -87,6 +94,22 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   }
 }
 
+// Pikkit's manual authentication and every later context resume must use
+// the same Browserbase identity posture. In particular, do not mint the
+// authenticated context in Browserbase's default west/no-proxy session and
+// then resume it from east/proxied scraper sessions. That abrupt network and
+// region change is especially hostile to security-sensitive login sessions.
+// Set PIKKIT_BROWSER_GEO_STATE to a two-letter state code only when a stable
+// state is important; otherwise both setup and reuse use Browserbase's
+// managed proxy in us-east-1.
+export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}): Promise<BBSession> {
+  return openSession({
+    contextId,
+    geoState: pikkitGeoState(),
+    metadata: { book: 'pikkit', ...metadata },
+  })
+}
+
 // One-time setup, not called by the scrapers themselves — run this once
 // (e.g. from a scratch script) to mint a durable Browserbase context, then
 // open the returned Live View URL and sign into Pikkit yourself inside it.
@@ -94,14 +117,33 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
 // so every future openSession({ contextId }) call for Pikkit starts already
 // logged in. No password is ever read, stored, or typed by this codebase —
 // you do the actual sign-in by hand, once, in the Live View.
-export async function createPersistentContext(navigateUrl = 'https://app.pikkit.com/leagues/mlb'): Promise<{ contextId: string; liveViewUrl: string }> {
+export async function createPersistentContext(navigateUrl = 'https://app.pikkit.com/leagues/mlb'): Promise<{
+  contextId: string
+  sessionId: string
+  liveViewUrl: string
+  region: typeof BROWSERBASE_REGION
+  proxyMode: 'managed' | 'geolocated'
+}> {
   const bb = client()
   const pid = optionalProjectId()
+  const geoState = pikkitGeoState()
+  const proxies = geoState
+    ? [{ type: 'browserbase' as const, geolocation: { country: 'US', state: geoState } }]
+    : true
   const context = await bb.contexts.create(pid ? { projectId: pid } : {})
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
+    region: BROWSERBASE_REGION,
+    proxies,
     keepAlive: true,
-    browserSettings: { context: { id: context.id, persist: true } },
+    browserSettings: {
+      context: { id: context.id, persist: true },
+      // This session is deliberately handed to a human in Live View. Do not
+      // let Browserbase's automatic CAPTCHA interaction compete with the
+      // admin while Cloudflare is asking for an ordinary manual verification.
+      solveCaptchas: false,
+    },
+    userMetadata: { book: 'pikkit', mode: 'manual-auth' },
   })
   // The Live View has no address bar — it's just a viewport onto whatever
   // page the remote browser is already on. Without navigating it first, the
@@ -116,5 +158,11 @@ export async function createPersistentContext(navigateUrl = 'https://app.pikkit.
   const page = bctx.pages()[0] ?? await bctx.newPage()
   await page.goto(navigateUrl, { waitUntil: 'domcontentloaded' }).catch(() => {})
   const live = await bb.sessions.debug(session.id)
-  return { contextId: context.id, liveViewUrl: live.debuggerFullscreenUrl }
+  return {
+    contextId: context.id,
+    sessionId: session.id,
+    liveViewUrl: live.debuggerFullscreenUrl,
+    region: BROWSERBASE_REGION,
+    proxyMode: geoState ? 'geolocated' : 'managed',
+  }
 }

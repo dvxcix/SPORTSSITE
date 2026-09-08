@@ -25,6 +25,11 @@ async function requireAdmin() {
 export async function GET() {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
-  const { contextId, liveViewUrl } = await createPersistentContext()
-  return NextResponse.json({ contextId, liveViewUrl })
+  const setup = await createPersistentContext()
+  return NextResponse.json({
+    ...setup,
+    verification: 'manual',
+    instructions: 'Open liveViewUrl and complete Pikkit sign-in and SMS verification yourself. Do not start a Pikkit scrape with this context until the Live View login is complete.',
+    cloudflareNote: 'If Cloudflare still shows "Please complete verification" or crashed_retry, the hosted browser is being refused before Pikkit 2FA. Do not keep retrying; use Pikkit/Cloudflare support or an approved Browserbase identity integration.',
+  })
 }

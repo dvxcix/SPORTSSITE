@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
-import { openSession } from '@/lib/browserbase'
+import { openPikkitSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe, distinguishingSuffix } from '@/lib/scrapers/gameMatch'
 import { fanOutToSelf } from '@/lib/scrapers/fanout'
@@ -37,7 +37,7 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
 }
 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
-  const bb = await openSession({ contextId, metadata: { book: 'pikkit', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
+  const bb = await openPikkitSession(contextId, { mode: 'scrape', gameKey: g.gameKey, gamePk: String(g.gamePk) })
   try {
     // Pikkit scraping is pure text/DOM extraction (team names, a market
     // <select>, pick counts) — no visual rendering is ever needed, and

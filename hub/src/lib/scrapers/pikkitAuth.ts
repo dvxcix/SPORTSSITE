@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { openSession } from '@/lib/browserbase'
+import { openPikkitSession } from '@/lib/browserbase'
 import { brandedEmailHtml, sendEmail } from '@/lib/email'
 import { postAlert } from '@/lib/discord'
 
@@ -38,7 +38,7 @@ async function getAdminRecipients() {
 // sidebar always renders "Your Bets" once actually signed in; a signed-out
 // session bounces to a sign-in screen that never shows it.
 async function isPikkitSignedIn(contextId: string): Promise<boolean> {
-  const bb = await openSession({ contextId })
+  const bb = await openPikkitSession(contextId, { mode: 'auth-check' })
   try {
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(2500)

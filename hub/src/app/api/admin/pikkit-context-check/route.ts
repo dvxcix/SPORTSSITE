@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { openSession } from '@/lib/browserbase'
+import { openPikkitSession } from '@/lib/browserbase'
 import { safeApiError } from '@/lib/safeApiError'
 
 export const revalidate = 0
@@ -27,9 +27,9 @@ export async function GET(req: Request) {
     ? Math.min(10_000, Math.max(0, Math.trunc(requestedWaitMs)))
     : 2500
 
-  let bb: Awaited<ReturnType<typeof openSession>> | null = null
+  let bb: Awaited<ReturnType<typeof openPikkitSession>> | null = null
   try {
-    bb = await openSession({ contextId })
+    bb = await openPikkitSession(contextId, { mode: 'context-check' })
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(waitMs)
     const url = bb.page.url()
