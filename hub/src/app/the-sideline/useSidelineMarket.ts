@@ -15,8 +15,8 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
   const timeline = useMemo(() => [...new Set([
     ...times,
     ...(current.capturedAt ? [new Date(current.capturedAt).toISOString()] : []),
-    ...(current.pikkitCapturedAt ? [new Date(current.pikkitCapturedAt).toISOString()] : []),
-  ])].sort(), [times, current.capturedAt, current.pikkitCapturedAt])
+    ...(current.picksCapturedAt ? [new Date(current.picksCapturedAt).toISOString()] : []),
+  ])].sort(), [times, current.capturedAt, current.picksCapturedAt])
   const index = selectedAt == null ? Math.max(0, timeline.length - 1) : Math.max(0, timeline.indexOf(selectedAt))
 
   useEffect(() => {

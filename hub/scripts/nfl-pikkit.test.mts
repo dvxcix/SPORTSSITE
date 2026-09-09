@@ -47,7 +47,7 @@ test('Pikkit picks attach by normalized player and team identity', () => {
     }],
   }
   const enriched = attachNflPikkitSnapshot(board, snapshot)
-  assert.equal(enriched.pikkitCapturedAt, snapshot.capturedAt)
+  assert.equal(enriched.picksCapturedAt, snapshot.capturedAt)
   assert.equal(enriched.players[0].publicPicks?.[0]?.picks, 1234)
   assert.equal(enriched.players[0].publicPicks?.[0]?.propType, 'passing_yards')
 })
@@ -58,7 +58,7 @@ test('missing Pikkit data remains unavailable rather than zero-filled', () => {
     players: [{ id: 3, name: 'Test Player', team: 'BUF', position: 'WR', markets: [] }],
   }
   const enriched = attachNflPikkitSnapshot(board, null)
-  assert.equal(enriched.pikkitCapturedAt, null)
+  assert.equal(enriched.picksCapturedAt, null)
   assert.deepEqual(enriched.players[0].publicPicks, [])
 })
 

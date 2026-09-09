@@ -158,10 +158,10 @@ const GAME_DAY_ALWAYS_VISIBLE = new Set([
   ...GAME_DAY_FOUNDATIONS,
   'ftdPct', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio',
   'atdRecRatio', 'atdRecYdsRatio', 'atdRushYdsRatio', 'atdScrimYdsRatio',
-  'volume', 'geometry', 'redZone', 'breakaway', 'roleOpps', 'roleShare', 'roleYards', 'redZoneLooks',
-  // FTD and ATD are the permanent TD anchors. Other Pikkit columns appear as
+  'roleOpps', 'redZoneLooks',
+  // FTD and ATD are the permanent TD anchors. Other PublicPicks columns appear as
   // soon as that market has captures, avoiding empty game-day table sections.
-  'pikkit:first_td', 'pikkit:anytime_td',
+  'picks:first_td', 'picks:anytime_td',
 ])
 const POSITION_ORDER: Record<string, number> = { QB: 0, RB: 1, FB: 2, WR: 3, TE: 4, K: 5, DEF: 6, DST: 6 }
 const PREFS_KEY = 'slipsurge:sideline:columns:v2'
@@ -237,7 +237,7 @@ function marketCatalog(boards: SidelineOddsBoard[]): MarketSpec[] {
 }
 
 function publicPickCatalog(boards: SidelineOddsBoard[]): PublicPickSpec[] {
-  // Keep the core Pikkit columns stable before the first capture lands. This
+  // Keep the core PublicPicks columns stable before the first capture lands. This
   // prevents the game-day board from changing shape while markets populate.
   const seen = new Map(FIXED_PICK_MARKETS.map(market => [market.propType, market]))
   const featured = new Map(FEATURED_MARKETS.map((market, index) => [market.prop, { ...market, index }]))
@@ -679,9 +679,9 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
     ]
     for (const market of pickMarkets) {
       columns.push({
-        id: `pikkit:${market.propType}`,
+        id: `picks:${market.propType}`,
         label: `${market.label} PICKS`,
-        title: `Pikkit public picks for ${market.label}`,
+        title: `Public picks for ${market.label}`,
         group: market.group,
         width: market.width,
         propType: market.propType,
@@ -691,7 +691,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
           const count = publicPickCount(row.market, market.propType)
           return count == null
             ? <span className={styles.empty}>-</span>
-            : <span className={styles.publicPickValue}><b>{count.toLocaleString()}</b><small>PIKKIT</small></span>
+            : <span className={styles.publicPickValue}><b>{count.toLocaleString()}</b><small>PICKS</small></span>
         },
       })
     }
@@ -747,7 +747,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       if (fixed != null) return fixed
       if (column.propType) {
         const section = 20 + (propRank.get(column.propType) ?? 50) * 100
-        if (column.id.startsWith('pikkit:')) return section
+        if (column.id.startsWith('picks:')) return section
         if (column.id === 'bestFtd' || column.id === 'bestAtd') return section + 10
         if (column.aggregate) return section + 11
         if (column.vendor) return section + 20 + (bookRank.get(column.vendor) ?? 20)
@@ -945,9 +945,9 @@ function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
             <header><div><PlayerAvatar player={player} team={team} /><span><b>{player.name}</b><small>{player.team} · {player.position}</small></span></div><button type="button" onClick={() => onRemove(player.id)}><X size={14} /></button></header>
             <div className={styles.compareScore}>
               <span><small><Image src="/brand-bolt.png" alt="" width={9} height={13} /> SLIPSURGE SCORE</small><b className={scoreTone(player.index)}>{player.hasTracking ? player.index : '-'}</b></span>
-              <span><small><span className={styles.comparePikkit}>$</span> FTD PICKS</small><b>{publicPickCount(marketPlayer, 'first_td')?.toLocaleString() ?? '-'}</b></span>
+              <span><small><span className={styles.comparePublicPicks}>$</span> FTD PICKS</small><b>{publicPickCount(marketPlayer, 'first_td')?.toLocaleString() ?? '-'}</b></span>
               <span><small><BookLogo vendor="fanduel" size={13} /> FTD</small><b>{oddsLabel(offerCurrent(ftd))}</b><i>{ftdBaseline?.deltaPct == null ? 'FTD% -' : `FTD% ${(ftdBaseline.deltaPct * 100).toFixed(1)}%`}</i></span>
-              <span><small><span className={styles.comparePikkit}>$</span> ATD PICKS</small><b>{publicPickCount(marketPlayer, 'anytime_td')?.toLocaleString() ?? '-'}</b></span>
+              <span><small><span className={styles.comparePublicPicks}>$</span> ATD PICKS</small><b>{publicPickCount(marketPlayer, 'anytime_td')?.toLocaleString() ?? '-'}</b></span>
               <span><small><BookLogo vendor="fanduel" size={13} /> ATD</small><b>{oddsLabel(offerCurrent(atd))}</b><i>{atdBaseline?.deltaPct == null ? 'ATD% -' : `ATD% ${(atdBaseline.deltaPct * 100).toFixed(1)}%`}</i></span>
               <span><small>FTD:ATD</small><b>{ftdAtd?.toFixed(2) ?? '-'}</b><i>IMPLIED P</i></span>
             </div>
@@ -1214,8 +1214,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       return ordered.filter(column => {
         const isGameDayColumn = GAME_DAY_ALWAYS_VISIBLE.has(column.id)
           || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))
-        const defaultBook = !column.vendor || ['first_td', 'anytime_td'].includes(column.propType ?? '') || column.vendor === 'fanduel'
-        return isGameDayColumn && defaultBook && (GAME_DAY_ALWAYS_VISIBLE.has(column.id) || hasValue(column))
+        const defaultBook = !column.vendor || (column.vendor === 'fanduel' && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
+        return isGameDayColumn && defaultBook && (!column.id.startsWith('picks:') || GAME_DAY_ALWAYS_VISIBLE.has(column.id)) && (GAME_DAY_ALWAYS_VISIBLE.has(column.id) || hasValue(column))
       })
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
@@ -1328,7 +1328,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
           {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
           <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
-          <span>{marketStory.loading ? 'Loading selected capture · ' : ''}{history.length} captures · {capturedLabel}{board.pikkitCapturedAt ? ` · Pikkit ${new Date(board.pikkitCapturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
+          <span>{marketStory.loading ? 'Loading selected capture · ' : ''}{history.length} captures · {capturedLabel}{board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
         </article>
       </section>
 
@@ -1373,8 +1373,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
               <thead><tr>{resolvedColumns.map(column => {
                 const sort = sorts.find(item => item.id === column.id)
                 const rank = sorts.findIndex(item => item.id === column.id)
-                const isPikkit = column.id.startsWith('pikkit:')
-                return <th key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${isPikkit ? styles.pikkitColumn : ''}`} style={{ width: column.width, minWidth: column.width }} title={column.title}><button type="button" onClick={() => changeSort(column.id)}>{column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPikkit ? <i className={styles.pikkitHeaderMark}>$</i> : null}<span>{column.label}</span>{sort ? <em>{sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}{stickySort ? rank + 1 : ''}</em> : null}</button></th>
+                const isPublicPicks = column.id.startsWith('picks:')
+                return <th key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${isPublicPicks ? styles.picksColumn : ''}`} style={{ width: column.width, minWidth: column.width }} title={column.title}><button type="button" onClick={() => changeSort(column.id)}>{column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <i className={styles.picksHeaderMark}>$</i> : null}<span>{column.label}</span>{sort ? <em>{sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}{stickySort ? rank + 1 : ''}</em> : null}</button></th>
               })}</tr></thead>
               <tbody>{section.rows.map((player, index) => {
                 const compareActive = compareIds.includes(player.id)
@@ -1383,7 +1383,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
                     const highlight = highlights[`${player.id}:${column.id}`]
                     const automaticHeat = heatStyle(column, player, section.rows)
                     const matches = matrixMatches.get(player.id) ?? []
-                    return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('pikkit:') ? styles.pikkitColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
+                    return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('picks:') ? styles.picksColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
                       {column.id === 'player' && matches.length ? <span className={styles.matrixRail} title={matches.map(matrix => matrix.name).join(' · ')}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
                       {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === selected.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
                     </td>

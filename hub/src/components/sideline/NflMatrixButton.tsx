@@ -54,7 +54,7 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
       <div className={styles.factorTop}>
         {pipeline ? <select value={step.kind} onChange={event => onChange({ ...step, kind: event.target.value as 'filter' | 'rank' })}><option value="filter">Filter</option><option value="rank">Rank</option></select> : null}
         <select value={factor.category} onChange={event => setCategory(event.target.value as NflMatrixCategory)}>
-          <option value="score">SlipSurge score</option><option value="usage">Usage</option><option value="tracking">NFL tracking</option><option value="team">Team context</option><option value="baseline">TD baseline</option><option value="market">Sportsbook market</option><option value="picks">Pikkit public picks</option>
+          <option value="score">SlipSurge score</option><option value="usage">Usage</option><option value="tracking">NFL tracking</option><option value="team">Team context</option><option value="baseline">TD baseline</option><option value="market">Sportsbook market</option><option value="picks">Public picks</option>
         </select>
         <button type="button" onClick={onRemove} aria-label="Remove condition"><Trash2 size={14} /></button>
       </div>
@@ -67,7 +67,7 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
       ) : factor.category === 'picks' ? (
         <div className={styles.factorGrid}>
           <select value={factor.propType ?? 'anytime_td'} onChange={event => onChange({ ...factor, propType: event.target.value })}>{NFL_MATRIX_PROP_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
-          <span className={styles.fixedContext}>Pikkit picks at selected Market Story capture</span>
+          <span className={styles.fixedContext}>Picks at selected Market Story capture</span>
         </div>
       ) : (
         <div className={styles.factorGrid}>

@@ -88,7 +88,7 @@ export type SidelineOddsBoard = {
   source: 'live' | 'opening' | 'snapshot' | 'none'
   gameLines: NflGameLineBook[]
   players: NflOddsPlayer[]
-  pikkitCapturedAt?: string | null
+  picksCapturedAt?: string | null
 }
 
 export const EMPTY_SIDELINE_ODDS: SidelineOddsBoard = {

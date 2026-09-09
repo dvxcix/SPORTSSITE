@@ -127,7 +127,7 @@ export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
 }
 
 export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflPikkitSnapshot | null): SidelineOddsBoard {
-  if (!snapshot) return { ...board, pikkitCapturedAt: null, players: board.players.map(player => ({ ...player, publicPicks: [] })) }
+  if (!snapshot) return { ...board, picksCapturedAt: null, players: board.players.map(player => ({ ...player, publicPicks: [] })) }
   const picksByPlayer = new Map<string, NonNullable<NflOddsPlayer['publicPicks']>>()
   for (const market of snapshot.markets) {
     // Normalize again at read time so already-stored captures from an older
@@ -143,7 +143,7 @@ export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflP
   }
   return {
     ...board,
-    pikkitCapturedAt: snapshot.capturedAt,
+    picksCapturedAt: snapshot.capturedAt,
     players: board.players.map(player => {
       const name = normalizeNflPikkitName(player.name)
       const exact = picksByPlayer.get(`${normalizeNflPikkitName(player.team)}:${name}`)

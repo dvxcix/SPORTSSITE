@@ -729,19 +729,19 @@
 .boardTable th span { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
 .boardTable th em { color: var(--lime); font-size: 9px; font-style: normal; }
 .scoreLogo { flex: 0 0 auto; width: 12px; height: 15px; }
-.boardTable .pikkitColumn {
+.boardTable .picksColumn {
   border-right-color: rgba(167, 255, 63, .3);
   border-left: 1px solid rgba(167, 255, 63, .16);
   background:
     linear-gradient(145deg, rgba(167, 255, 63, .065), rgba(53, 215, 255, .025)),
     #090f16;
 }
-.boardTable td.pikkitColumn.heatCell {
+.boardTable td.picksColumn.heatCell {
   background:
     linear-gradient(0deg, rgba(167, 255, 63, calc(var(--cell-heat) * .22)), rgba(167, 255, 63, calc(var(--cell-heat) * .22))),
     #08100d;
 }
-.pikkitHeaderMark {
+.picksHeaderMark {
   display: grid;
   place-items: center;
   width: 16px;
@@ -893,7 +893,7 @@
 .compareScore small { display: flex; align-items: center; gap: 4px; }
 .compareScore b { font-size: 17px; }
 .compareScore i { color: #8e9bad; font-size: 8px; font-style: normal; font-weight: 850; }
-.comparePikkit { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: rgba(167, 255, 63, .13); color: var(--lime); font-weight: 950; }
+.comparePublicPicks { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: rgba(167, 255, 63, .13); color: var(--lime); font-weight: 950; }
 .compareMetrics { display: grid; grid-template-columns: repeat(4, 1fr); }
 .compareMetrics b { font-size: 12px; }
 .compareMarkets { border-top: 1px solid #1d2834; }
