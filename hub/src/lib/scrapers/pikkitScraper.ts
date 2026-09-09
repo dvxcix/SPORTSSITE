@@ -11,7 +11,7 @@ export type PikkitScrapePayload = {
   capturedAt: string
   props: Record<string, Record<string, number>>
   marketLabels: Record<string, string>
-  diagnostics?: { label: string; selectors: string[][]; touchdownLabels: string[]; controls: { label: string; tag: string; role: string | null; expanded: string | null }[] }[]
+  diagnostics?: { label: string; selectors: string[][]; touchdownLabels: string[]; subviews: { label: string; found: boolean; changed: boolean; rows: number }[]; controls: { label: string; tag: string; role: string | null; expanded: string | null }[] }[]
 }
 
 export async function runPikkitScrape(inspectTouchdowns: boolean | void = false): Promise<PikkitScrapePayload> {
@@ -73,6 +73,7 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
   if (!sel) return out
   const options = Array.from(sel.options).map(option => ({ value: option.value, label: option.textContent?.trim() || option.value })).filter(option => option.value)
   for (const option of options) {
+    const subviews: { label: string; found: boolean; changed: boolean; rows: number }[] = []
     const value = option.value
     ;(sel as HTMLSelectElement).value = value
     sel.dispatchEvent(new Event('change', { bubbles: true }))
@@ -91,13 +92,14 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
         const candidates = Array.from(document.querySelectorAll<HTMLElement>('*'))
           .filter(node => typeof node.click === 'function' && node.textContent?.trim() === label)
         const control = candidates.find(node => !candidates.some(child => child !== node && node.contains(child)))
-        if (!control) continue
+        if (!control) { subviews.push({ label, found: false, changed: false, rows: 0 }); continue }
         const before = document.body.innerText
         control.click()
         await sleep(1200)
         for (let attempt = 0; document.body.innerText === before && attempt < 3; attempt++) await sleep(400)
-        if (document.body.innerText === before) continue
+        if (document.body.innerText === before) { subviews.push({ label, found: true, changed: false, rows: 0 }); continue }
         const scoped = parsePage(option.label, label)
+        subviews.push({ label, found: true, changed: true, rows: Object.keys(scoped).length })
         // Explicit row suffixes take precedence. A control which did not
         // change the view must not relabel existing Anytime rows as First TD.
         Object.assign(d, scoped)
@@ -112,6 +114,7 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
       const marketLabel = /^(?:(?:Anytime|First|1st|Last|Total|Player|Passing|Rushing|Receiving|First Half|Second Half)\s+)?(?:Touchdowns?|TDs?)(?:\s+Scorer)?$/i
       ;(out.diagnostics ??= []).push({
         label: option.label,
+        subviews,
         selectors: Array.from(document.querySelectorAll('select')).map(select => Array.from(select.options).map(item => item.textContent?.trim() ?? '').filter(text => marketWords.test(text) && text.length < 60)),
         touchdownLabels: [...new Set(document.body.innerText.split('\n').map(text => text.trim()).filter(text => marketLabel.test(text)))],
         controls: Array.from(document.querySelectorAll('button,[role="button"],[aria-expanded]')).flatMap(node => {

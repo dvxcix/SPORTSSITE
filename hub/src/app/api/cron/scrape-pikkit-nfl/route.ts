@@ -3,6 +3,7 @@ import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { openPikkitSession } from '@/lib/browserbase'
 import { PLATFORM_URL } from '@/lib/platform'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { clickTabByText, distinguishingSuffix, escapeRe, findAndClickPikkitGame } from '@/lib/scrapers/gameMatch'
 
@@ -43,6 +44,17 @@ export async function GET(req: Request) {
     if (!clicked) {
       await bb.page.waitForTimeout(2500)
       clicked = await findAndClickPikkitGame(bb.page, game.awayName, game.homeName)
+    }
+    if (!clicked) {
+      // A previously verified event can remain accessible while the league
+      // listing is still loading or has reordered. Never invent event URLs.
+      const { data } = await createAdminClient().from('nfl_pikkit_picks_current')
+        .select('snapshot').eq('game_id', gameId).maybeSingle()
+      const priorUrl = data?.snapshot?.sourceUrl
+      if (typeof priorUrl === 'string' && /^https:\/\/app\.pikkit\.com\/event\/[a-z0-9-]+$/i.test(priorUrl)) {
+        await bb.page.goto(priorUrl, { waitUntil: 'domcontentloaded' })
+        clicked = true
+      }
     }
     if (!clicked) {
       console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'listing', reason: 'game-link-not-found' })
