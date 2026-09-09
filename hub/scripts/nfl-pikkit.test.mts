@@ -91,6 +91,26 @@ test('NFL scorer subviews are clicked independently of the category dropdown', a
   }
 })
 
+test('expanding Last TD does not relabel bare players in an already-open First TD section', async () => {
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  const body = { innerText: 'Anytime TD Scorer\nTest Player\n700 Picks\nFirst TD Scorer\nLast TD Scorer' }
+  const controls = [{ textContent: 'First TD Scorer', contains: () => false, click: () => { body.innerText = 'Anytime TD Scorer\nTest Player\n700 Picks\nFirst TD Scorer\nTest Player\n90 Picks\nLast TD Scorer' } }, { textContent: 'Last TD Scorer', contains: () => false, click: () => { body.innerText += '\nOther Player\n1 Pick' } }]
+  const select = { value: 'player_touchdown', options: [{ value: 'player_touchdown', textContent: 'Touchdowns' }], dispatchEvent: () => true }
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { title: 'NFL', querySelectorAll: (selector: string) => selector === 'select' ? [select] : controls, body } })
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { href: 'https://app.pikkit.com/event/test' } })
+  try {
+    const capture = await runPikkitScrape()
+    assert.deepEqual(capture.props.player_touchdown, { 'Test Player Anytime TD Scorer': 700, 'Test Player First TD Scorer': 90, 'Other Player Last TD Scorer': 1 })
+    assert.equal(capture.props.player_touchdown['Test Player Last TD Scorer'], undefined)
+  } finally {
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
+    else Reflect.deleteProperty(globalThis, 'document')
+    if (originalLocation) Object.defineProperty(globalThis, 'location', originalLocation)
+    else Reflect.deleteProperty(globalThis, 'location')
+  }
+})
+
 test('broad NFL tabs resolve real players and reject market-total headings', () => {
   const identities = [{ name: 'Matthew Stafford', team: 'LA', position: 'QB' }, { name: 'Christian McCaffrey', team: 'SF', position: 'RB' }]
   assert.deepEqual(resolveNflPikkitEntry('Matthew Stafford Pass Yards', 'Passing', identities), {
