@@ -14,7 +14,7 @@ async function clickPlayerProps(page: Awaited<ReturnType<typeof openPikkitSessio
     Array.from((select as HTMLSelectElement).options).filter(option => /touchdown|passing|rushing|receiving|reception|interception|field goal/i.test(`${option.textContent ?? ''} ${option.value}`)).length >= 2
   ))
   if (await hasMarketSelect()) return true
-  for (const label of ['Player Props', 'Player prop', 'Touchdown Props', 'Props']) {
+  for (const label of ['Player Props', 'Player prop', 'Touchdown Props', 'Props', 'Player Touchdowns', 'Touchdowns']) {
     if (await clickTabByText(page, label, false)) {
       await page.waitForTimeout(1500)
       if (await hasMarketSelect()) return true
@@ -57,11 +57,21 @@ export async function GET(req: Request) {
     }
     await clickTabByText(bb.page, 'Odds').catch(() => false)
     await bb.page.waitForTimeout(1600)
-    const propsFound = await clickPlayerProps(bb.page)
+    let propsFound = await clickPlayerProps(bb.page)
+    if (!propsFound) {
+      await bb.page.waitForTimeout(3000)
+      propsFound = await clickPlayerProps(bb.page)
+    }
     const scrape = await bb.page.evaluate(runPikkitScrape)
     const marketCount = Object.keys(scrape.props).length
     if (!marketCount) {
-      console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'markets', reason: 'no-public-pick-markets', propsFound })
+      const controls = await bb.page.evaluate(() => ({
+        path: location.pathname,
+        selects: Array.from(document.querySelectorAll('select')).map(select => Array.from(select.options).map(option => option.textContent?.trim()).slice(0, 30)),
+        tabs: Array.from(document.querySelectorAll('button,[role="tab"]')).map(node => node.textContent?.trim()).filter(Boolean).slice(0, 35),
+        verificationRequired: /complete verification|verify you are human/i.test(document.body.innerText),
+      }))
+      console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'markets', reason: 'no-public-pick-markets', propsFound, controls })
       return NextResponse.json({ gameId, skipped: true, error: 'No NFL public-pick markets found', propsFound })
     }
 
