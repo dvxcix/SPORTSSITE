@@ -84,7 +84,7 @@ async function loadDirectory(players: NflOddsPlayer[], game: SidelineGame) {
     ]),
     admin.from('nfl_players').select(select).in('latest_team', teams).gte('last_season', game.season - 1).limit(500),
   ]
-  const results = await Promise.all(queries)
+  const results = await Promise.all(queries.map(query => query.abortSignal(AbortSignal.timeout(10000))))
   const rows = new Map<string, PlayerDirectoryRow>()
   for (const result of results) {
     if (result.error) {

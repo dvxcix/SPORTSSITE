@@ -190,12 +190,14 @@ async function bdlGet<T>(path: string, freshness: 'live' | 'reference' = 'live')
 
 async function bdlGetPaged<T>(path: string, maxPages = 20): Promise<T[]> {
   const rows: T[] = []
+  const signal = AbortSignal.timeout(15000)
   let cursor: string | null = null
   for (let page = 0; page < maxPages; page += 1) {
     const joiner = path.includes('?') ? '&' : '?'
     const response: Response = await fetch(`${NFL_BDL_BASE}${path}${cursor ? `${joiner}cursor=${encodeURIComponent(cursor)}` : ''}`, {
       headers: bdlHeaders,
       next: { revalidate: 3600 },
+      signal,
     })
     if (!response.ok) throw new Error(`BDL NFL ${path} returned ${response.status}`)
     const payload: { data?: T[]; meta?: { next_cursor?: string | number | null } } = await response.json()

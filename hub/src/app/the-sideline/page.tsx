@@ -47,6 +47,5 @@ export default async function SidelinePage({ searchParams }: {
     position: player.position,
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster)
-  const { odds, history } = market
-  return <SidelineBoardClient key={selected.id} games={games} selectedId={selected.id} selectedDate={date} lens={lens} odds={odds} history={history} />
+  return <SidelineBoardClient key={selected.id} games={games} selectedId={selected.id} selectedDate={date} lens={lens} odds={market.odds} />
 }

@@ -26,11 +26,14 @@ import {
   X,
 } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
+import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { createPortal } from 'react-dom'
+import { useSidelineMarket } from './useSidelineMarket'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
-import type { SidelineGame, SidelineLens, SidelineOddsFrame, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
+import type { SidelineGame, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
 
 type BoardView = 'core' | 'touchdowns' | 'props' | 'usage' | 'tracking' | 'team' | 'all' | 'custom'
@@ -161,7 +164,7 @@ const GAME_DAY_ALWAYS_VISIBLE = new Set([
   'pikkit:first_td', 'pikkit:anytime_td',
 ])
 const POSITION_ORDER: Record<string, number> = { QB: 0, RB: 1, FB: 2, WR: 3, TE: 4, K: 5, DEF: 6, DST: 6 }
-const PREFS_KEY = 'slipsurge:sideline:columns:v1'
+const PREFS_KEY = 'slipsurge:sideline:columns:v2'
 
 function normalizedName(value: string) {
   return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
@@ -187,7 +190,8 @@ function findMarket(player: NflOddsPlayer | null, propType: string) {
   return player.markets.find(market => market.propType === propType) ?? null
 }
 
-function findMarketByKey(player: NflOddsPlayer | null, marketKey: string) {
+function findMarketByKey(player: NflOddsPlayer | null, marketKey: string, vendor?: string) {
+  if (marketKey.startsWith('primary:')) return nflPrimaryMarket(player, marketKey.slice(8), vendor)
   return player?.markets.find(market => market.key === marketKey) ?? null
 }
 
@@ -198,14 +202,15 @@ function marketCatalog(boards: SidelineOddsBoard[]): MarketSpec[] {
     for (const player of board.players) {
       for (const market of player.markets) {
         const presentVendors = market.offers.map(offer => offer.vendor)
-        const existing = seen.get(market.key)
+        const columnKey = `primary:${market.propType}`
+        const existing = seen.get(columnKey)
         if (existing) {
           existing.vendors = Array.from(new Set([...existing.vendors, ...presentVendors]))
           continue
         }
         const known = featured.get(market.propType)
-        seen.set(market.key, {
-          key: market.key,
+        seen.set(columnKey, {
+          key: columnKey,
           propType: market.propType,
           label: known?.label ?? market.label,
           title: market.label,
@@ -426,7 +431,7 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
   saved: boolean
   onToggleSaved: (player: PlayerRow, marketKey: string, vendor: string) => void
 }) {
-  const market = findMarketByKey(player.market, marketKey)
+  const market = findMarketByKey(player.market, marketKey, vendor)
   const offer = findOffer(market, vendor)
   if (!market || !offer) return <span className={styles.empty}>—</span>
   const current = offerCurrent(offer)
@@ -442,7 +447,7 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
         className={saved ? styles.marketSaved : styles.marketSave}
         aria-label={`${saved ? 'Remove' : 'Add'} ${player.name} ${market.label} ${vendor} ${saved ? 'from' : 'to'} watchlist`}
         title={saved ? 'Remove saved market' : 'Save this market'}
-        onClick={event => { event.stopPropagation(); onToggleSaved(player, marketKey, vendor) }}
+        onClick={event => { event.stopPropagation(); onToggleSaved(player, market.key, vendor) }}
       ><Star size={10} fill={saved ? 'currentColor' : 'none'} /></button>
     </span>
   )
@@ -723,8 +728,8 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
           vendor: book.id,
           propType: market.propType,
           heat: 'high',
-          value: row => americanImpliedProbability(offerCurrent(findOffer(findMarketByKey(row.market, market.key), book.id))),
-          render: row => <MarketCell player={row} marketKey={market.key} vendor={book.id} saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${market.key}:${book.id}`)} onToggleSaved={onToggleSaved} />,
+          value: row => americanImpliedProbability(offerCurrent(findOffer(findMarketByKey(row.market, market.key, book.id), book.id))),
+          render: row => <MarketCell player={row} marketKey={market.key} vendor={book.id} saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${findMarketByKey(row.market, market.key, book.id)?.key}:${book.id}`)} onToggleSaved={onToggleSaved} />,
         })
       }
     }
@@ -818,12 +823,13 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
   )
 }
 
-function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onClose }: {
+function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onClose, gameSeason }: {
   player: PlayerRow
   players: PlayerRow[]
   team: SidelineTeam
   lens: SidelineLens
   initialWindow: SidelineWindow
+  gameSeason: number
   onSelect: (player: PlayerRow) => void
   onClose: () => void
 }) {
@@ -861,7 +867,7 @@ function PlayerModal({ player, players, team, lens, initialWindow, onSelect, onC
           <div className={styles.modalWindows}>{WINDOW_OPTIONS.map(option => <button type="button" key={option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>{option.label}</button>)}</div>
           {tab === 'matchup' ? (
             <>
-              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY EDGE · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><div className={styles.identityBadges}>{activePlayer.rookieSeason === lens.season ? <span>ROOKIE</span> : null}{activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}{activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}</div><p>{activePlayer.hasTracking ? 'Current production, role, field geometry and matchup context in the selected window.' : activePlayer.rookieSeason === lens.season ? 'Player markets are live. Production will populate after the rookie records a qualifying game.' : 'Player markets are live, but no qualifying production sample exists in this selected window.'}</p></div></div>
+              <div className={styles.modalHero}><div className={styles.scoreRing}><Image src="/brand-bolt.png" alt="" width={13} height={18} /><b>{activePlayer.hasTracking ? activePlayer.index : '-'}</b><span>SLIPSURGE SCORE</span></div><div><small>PRIMARY EDGE · {WINDOW_OPTIONS.find(option => option.id === detailWindow)?.label}</small><strong>{activePlayer.lane}</strong><div className={styles.identityBadges}>{activePlayer.rookieSeason === gameSeason ? <span>ROOKIE</span> : null}{activePlayer.sampleTeam && normalizedTeam(activePlayer.sampleTeam) !== normalizedTeam(activePlayer.team) ? <span>PRIOR TEAM: {activePlayer.sampleTeam}</span> : null}{activePlayer.rosterStatus ? <span>{activePlayer.rosterStatus}</span> : null}</div><p>{activePlayer.hasTracking ? 'Current production, role, field geometry and matchup context in the selected window.' : activePlayer.rookieSeason === gameSeason ? 'Player markets are live. Production will populate after the rookie records a qualifying game.' : 'Player markets are live, but no qualifying production sample exists in this selected window.'}</p></div></div>
               <div className={styles.metricCards}>
                 {[['Volume', activePlayer.volume], ['Geometry', activePlayer.geometry], ['Red zone', activePlayer.redZone], ['Breakaway', activePlayer.breakaway], ['Evidence', activePlayer.evidence], ['RZ looks', activePlayer.redZoneLooks]].map(([label, value]) => <div key={label}><small>{label}</small><b className={scoreTone(Number(value))}>{activePlayer.hasTracking ? value : '-'}</b></div>)}
               </div>
@@ -966,13 +972,12 @@ function gameMoneyline(board: SidelineOddsBoard, side: 'away' | 'home') {
   return side === 'away' ? book?.moneylineAway : book?.moneylineHome
 }
 
-export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odds, history }: {
+export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odds }: {
   games: SidelineGame[]
   selectedId: string
   selectedDate: string
   lens: SidelineLens
   odds: SidelineOddsBoard
-  history: SidelineOddsFrame[]
 }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
@@ -981,7 +986,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [frameIndex, setFrameIndex] = useState(Math.max(0, history.length - 1))
+  const marketStory = useSidelineMarket(selectedId, odds)
+  const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
   const [highlighter, setHighlighter] = useState(false)
@@ -997,18 +1003,19 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [highlightsReady, setHighlightsReady] = useState(false)
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
-  const board = history[frameIndex]?.board ?? odds
-  const sourceBoards = useMemo(() => [odds, ...history.map(frame => frame.board)], [history, odds])
+  const board = marketStory.board
+  const currentBoard = marketStory.current
+  const sourceBoards = useMemo(() => [currentBoard, board], [currentBoard, board])
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
   const availablePickMarkets = useMemo(() => publicPickCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
   const savedItems = useMemo(() => watchlistItems.filter(item => item.status === 'pending' && item.sport.toLowerCase() === 'nfl' && item.game_pk === selected.id), [selected.id, watchlistItems])
   const savedKeys = useMemo(() => new Set(savedItems.map(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}`)), [savedItems])
   const toggleSavedMarket = useCallback((player: PlayerRow, marketKey: string, vendor: string) => {
-    const market = findMarketByKey(player.market, marketKey)
+    const market = findMarketByKey(player.market, marketKey, vendor)
     const offer = findOffer(market, vendor)
     if (!market || !offer) return
-    const key = `${normalizedTeam(player.team)}:${normalizedName(player.name)}:${marketKey}:${vendor}`
+    const key = `${normalizedTeam(player.team)}:${normalizedName(player.name)}:${market.key}:${vendor}`
     const existing = savedItems.find(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}` === key)
     if (existing) {
       void removeWatchlist(existing.id).catch(error => console.error('[the-sideline] failed to remove saved market', error))
@@ -1036,7 +1043,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
     }).catch(error => console.error('[the-sideline] failed to save market', error))
   }, [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id])
   const columns = useColumnDefinitions({ markets: availableMarkets, pickMarkets: availablePickMarkets, books: availableBooks, board, game: selected, savedKeys, onToggleSaved: toggleSavedMarket })
-  const defaultOrder = useMemo(() => columns.map(column => column.id), [columns])
+  const columnSignature = columns.map(column => column.id).join('|')
+  const defaultOrder = useMemo(() => columnSignature.split('|'), [columnSignature])
   const defaultVisible = useMemo(() => new Set(columns.filter(column =>
     GAME_DAY_ALWAYS_VISIBLE.has(column.id)
     || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))
@@ -1206,7 +1214,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
       return ordered.filter(column => {
         const isGameDayColumn = GAME_DAY_ALWAYS_VISIBLE.has(column.id)
           || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))
-        return isGameDayColumn && (GAME_DAY_ALWAYS_VISIBLE.has(column.id) || hasValue(column))
+        const defaultBook = !column.vendor || ['first_td', 'anytime_td'].includes(column.propType ?? '') || column.vendor === 'fanduel'
+        return isGameDayColumn && defaultBook && (GAME_DAY_ALWAYS_VISIBLE.has(column.id) || hasValue(column))
       })
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
@@ -1272,8 +1281,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
   })
 
   if (!selected) return null
-  const frameTime = history[frameIndex]?.capturedAt ?? board.capturedAt
-  const capturedLabel = frameTime ? new Date(frameTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Awaiting markets'
+  const frameTime = marketStory.capturedAt ?? board.capturedAt
+  const capturedLabel = frameTime ? new Date(frameTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : 'Awaiting markets'
 
   return (
     <div className={`${styles.page} ${isPending ? styles.loading : ''}`}>
@@ -1317,8 +1326,9 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <article><small>FANDUEL GAME LINE</small><strong>{selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}</strong><span>{board.gameLines.length} sportsbooks captured</span></article>
         <article className={styles.marketStory}>
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
-          <input type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
-          <span>{history.length} captures · {capturedLabel}{board.pikkitCapturedAt ? ` · Pikkit ${new Date(board.pikkitCapturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
+          {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
+          <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
+          <span>{marketStory.loading ? 'Loading selected capture · ' : ''}{history.length} captures · {capturedLabel}{board.pikkitCapturedAt ? ` · Pikkit ${new Date(board.pikkitCapturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
         </article>
       </section>
 
@@ -1375,7 +1385,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
                     const matches = matrixMatches.get(player.id) ?? []
                     return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('pikkit:') ? styles.pikkitColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
                       {column.id === 'player' && matches.length ? <span className={styles.matrixRail} title={matches.map(matrix => matrix.name).join(' · ')}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
-                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === lens.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
+                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === selected.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
                     </td>
                   })}
                 </tr>
@@ -1388,8 +1398,10 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
 
       <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
 
-      {expanded ? <PlayerModal player={expanded} players={rows} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} lens={lens} initialWindow={windowId} onSelect={setExpanded} onClose={() => setExpanded(null)} /> : null}
-      {columnsOpen ? <ColumnManager columns={columns} visibleIds={visibleIds} order={columnOrder} onVisible={id => setVisibleIds(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); next.add('player'); return next })} onMove={moveColumn} onReset={() => { setColumnOrder(defaultOrder); setVisibleIds(defaultVisible) }} onClose={() => setColumnsOpen(false)} /> : null}
+      {(expanded || columnsOpen) ? createPortal(<div className={styles.modalTheme}>
+        {expanded ? <PlayerModal player={expanded} players={rows} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} lens={lens} gameSeason={selected.season} initialWindow={windowId} onSelect={setExpanded} onClose={() => setExpanded(null)} /> : null}
+        {columnsOpen ? <ColumnManager columns={columns} visibleIds={visibleIds} order={columnOrder} onVisible={id => setVisibleIds(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); next.add('player'); return next })} onMove={moveColumn} onReset={() => { setColumnOrder(defaultOrder); setVisibleIds(defaultVisible) }} onClose={() => setColumnsOpen(false)} /> : null}
+      </div>, document.body) : null}
     </div>
   )
 }

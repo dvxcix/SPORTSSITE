@@ -1,4 +1,4 @@
-.page {
+.page, .modalTheme {
   --lime: #a7ff3f;
   --lime-soft: rgba(167, 255, 63, 0.12);
   --cyan: #35d7ff;
@@ -9,6 +9,10 @@
   --line: #202a36;
   --panel: #0c1219;
   --panel-2: #101822;
+}
+
+.modalTheme { color: var(--ink); font-size: 14px; }
+.page {
   width: 100%;
   max-width: none;
   min-height: 100vh;
@@ -393,7 +397,7 @@
 .marketStory div { display: flex; flex-direction: column; }
 .marketStory input { width: 100%; accent-color: var(--lime); cursor: pointer; }
 .marketStory input:disabled { cursor: not-allowed; opacity: 0.45; }
-.marketStory > span { white-space: nowrap; }
+.marketStory > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 
 .marketStatus {
   display: flex;
@@ -951,7 +955,7 @@
 .playerModal > nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 9px; border-bottom: 1px solid #26313e; }
 .playerModal > nav button { min-height: 42px; font-size: 11px; font-weight: 850; }
 .playerModal > nav .modalTabActive { border-color: var(--lime); color: var(--lime); background: var(--lime-soft); }
-.modalBody { min-height: 0; padding: 16px; overflow: auto; }
+.modalBody { min-height: 0; padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); overflow: auto; overscroll-behavior: contain; }
 .modalWindows { display: flex; gap: 6px; margin-bottom: 11px; overflow-x: auto; }
 .modalWindows button { min-width: 84px; padding: 8px 11px; font-size: 10px; font-weight: 900; white-space: nowrap; }
 .modalWindows .modalWindowActive { border-color: var(--lime); color: #071006; background: var(--lime); }
@@ -996,6 +1000,8 @@
 .columnModal footer .primaryButton { color: #071006; border-color: var(--lime); background: var(--lime); font-weight: 900; }
 
 @media (max-width: 1180px) {
+  .marketStory { grid-template-columns: minmax(0, 160px) minmax(0, 1fr); gap: 8px 12px; }
+  .marketStory > span { grid-column: 1 / -1; }
   .storyGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .storyGrid > article:nth-child(2) { border-right: 0; }
   .storyGrid > article:nth-child(3),

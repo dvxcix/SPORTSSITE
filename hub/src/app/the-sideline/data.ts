@@ -8,15 +8,9 @@ import { attachNflPikkitSnapshot, type NflPikkitSnapshot } from '@/lib/nflPikkit
 import { getSidelineLens } from './analysis'
 import { getSidelineBoardLens } from './boardAnalysis'
 import { enrichSidelineOddsBoards } from './playerIdentity'
-import type { SidelineGame, SidelineOddsFrame, SidelineRosterPlayer } from './types'
+import type { SidelineGame, SidelineRosterPlayer } from './types'
 
-// A populated NFL board is commonly 700-900 KB. Next/Vercel cache entries have
-// a 2 MB ceiling, so cache one capture per entry and load them in bounded
-// batches. This keeps every market-story stop cacheable without a cold-load
-// request stampede.
-const HISTORY_PAGE_SIZE = 1
-const HISTORY_LOAD_CONCURRENCY = 16
-const HISTORY_MAX_FRAMES = 720
+// Cache current and selected boards separately; never serialize the full archive.
 const WEEK_SECONDS = 60 * 60 * 24 * 7
 
 function isPastSlate(date: string) {
@@ -24,12 +18,12 @@ function isPastSlate(date: string) {
 }
 
 const resolveGameDate = unstable_cache(async (gameId: string) => {
-  const { data } = await createAdminClient().from('nfl_schedule').select('gameday').eq('game_id', gameId).maybeSingle()
+  const { data } = await createAdminClient().from('nfl_schedule').select('gameday').eq('game_id', gameId).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
   return data?.gameday as string | undefined
 }, ['sideline-game-date-v1'], { revalidate: 3600, tags: ['sideline:nfl-schedule'] })
 
 const resolveNextGameDate = unstable_cache(async (today: string) => {
-  const { data } = await createAdminClient().from('nfl_schedule').select('gameday').gte('gameday', today).order('gameday').limit(1).maybeSingle()
+  const { data } = await createAdminClient().from('nfl_schedule').select('gameday').gte('gameday', today).order('gameday').limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
   return data?.gameday as string | undefined
 }, ['sideline-next-game-date-v1'], { revalidate: 300, tags: ['sideline:nfl-schedule'] })
 
@@ -40,7 +34,7 @@ const loadGamesForDate = unstable_cache(async (date: string): Promise<SidelineGa
     .select('game_id, season, game_type, week, gameday, gametime, away_team, home_team, stadium, roof, surface, temp, wind')
     .eq('gameday', date)
     .order('gametime', { ascending: true })
-    .limit(24)
+    .limit(24).abortSignal(AbortSignal.timeout(10000))
   if (error) throw new Error(`NFL schedule unavailable: ${error.message}`)
   if (!schedule?.length) return []
 
@@ -48,7 +42,7 @@ const loadGamesForDate = unstable_cache(async (date: string): Promise<SidelineGa
   const { data: teams, error: teamsError } = await admin
     .from('nfl_teams')
     .select('team_abbr, team_name, team_color, team_color2, team_logo_espn')
-    .in('team_abbr', abbreviations)
+    .in('team_abbr', abbreviations).abortSignal(AbortSignal.timeout(10000))
   if (teamsError) throw new Error(`NFL teams unavailable: ${teamsError.message}`)
   const teamByAbbr = new Map((teams ?? []).map(team => [team.team_abbr, team]))
   const team = (abbr: string) => {
@@ -82,7 +76,7 @@ export async function getSidelineGames(requestedDate?: string, requestedGame?: s
 }
 
 async function loadCurrentBoardRaw(gameId: string): Promise<SidelineOddsBoard> {
-  const { data, error } = await createAdminClient().from('nfl_odds_current').select('board,captured_at').eq('game_id', gameId).maybeSingle()
+  const { data, error } = await createAdminClient().from('nfl_odds_current').select('board,captured_at').eq('game_id', gameId).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
   if (error) throw new Error(`NFL current odds unavailable: ${error.message}`)
   return data?.board
     ? { ...(data.board as SidelineOddsBoard), capturedAt: data.captured_at, source: 'snapshot' }
@@ -91,50 +85,11 @@ async function loadCurrentBoardRaw(gameId: string): Promise<SidelineOddsBoard> {
 const loadCurrentBoardRecent = unstable_cache(loadCurrentBoardRaw, ['sideline-current-odds-recent-v3'], { revalidate: 20, tags: ['sideline:nfl-odds'] })
 const loadCurrentBoardHistorical = unstable_cache(loadCurrentBoardRaw, ['sideline-current-odds-historical-v3'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
 
-async function loadHistoryCountRaw(gameId: string) {
-  const { count, error } = await createAdminClient().from('nfl_odds_snapshot_history').select('id', { count: 'exact', head: true }).eq('game_id', gameId)
-  if (error) throw new Error(`NFL odds history count unavailable: ${error.message}`)
-  return Math.min(count ?? 0, HISTORY_MAX_FRAMES)
-}
-const loadHistoryCountRecent = unstable_cache(loadHistoryCountRaw, ['sideline-odds-history-count-recent-v2'], { revalidate: 20, tags: ['sideline:nfl-odds'] })
-const loadHistoryCountHistorical = unstable_cache(loadHistoryCountRaw, ['sideline-odds-history-count-historical-v2'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
-
-async function loadHistoryPageRaw(gameId: string, page: number): Promise<SidelineOddsFrame[]> {
-  const from = page * HISTORY_PAGE_SIZE
-  const { data, error } = await createAdminClient()
-    .from('nfl_odds_snapshot_history')
-    .select('board,captured_at')
-    .eq('game_id', gameId)
-    .order('captured_at', { ascending: true })
-    .range(from, from + HISTORY_PAGE_SIZE - 1)
-  if (error) throw new Error(`NFL odds history unavailable: ${error.message}`)
-  return (data ?? []).map(row => ({
-    capturedAt: row.captured_at,
-    board: { ...(row.board as SidelineOddsBoard), capturedAt: row.captured_at, source: 'snapshot' },
-  }))
-}
-const loadHistoryPageRecent = unstable_cache(loadHistoryPageRaw, ['sideline-odds-history-page-recent-v3'], { revalidate: 20, tags: ['sideline:nfl-odds'] })
-const loadHistoryPageHistorical = unstable_cache(loadHistoryPageRaw, ['sideline-odds-history-page-historical-v3'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
-
-async function loadHistoryPages(
-  pageCount: number,
-  loader: (gameId: string, page: number) => Promise<SidelineOddsFrame[]>,
-  gameId: string,
-) {
-  const pages: SidelineOddsFrame[][] = []
-  for (let start = 0; start < pageCount; start += HISTORY_LOAD_CONCURRENCY) {
-    const batchSize = Math.min(HISTORY_LOAD_CONCURRENCY, pageCount - start)
-    const batch = await Promise.all(Array.from({ length: batchSize }, (_, offset) => loader(gameId, start + offset)))
-    pages.push(...batch)
-  }
-  return pages
-}
-
 async function loadTdBaselinesRaw(date: string): Promise<NflTdBaselineRow[]> {
   const { data, error } = await createAdminClient()
     .from('nfl_td_baseline_daily')
     .select('slate_date,player_id,player_name,team_abbr,vendor,prop_type,average_odds,average_implied_probability,sample_games,first_sample_date,through_date')
-    .eq('slate_date', date)
+    .eq('slate_date', date).abortSignal(AbortSignal.timeout(10000))
   if (error) {
     if (error.code === '42P01') return []
     throw new Error(`NFL TD baselines unavailable: ${error.message}`)
@@ -145,7 +100,7 @@ const loadTdBaselinesRecent = unstable_cache(loadTdBaselinesRaw, ['sideline-td-b
 const loadTdBaselinesHistorical = unstable_cache(loadTdBaselinesRaw, ['sideline-td-baselines-historical-v2'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-odds'] })
 
 async function loadPikkitCurrentRaw(gameId: string): Promise<NflPikkitSnapshot | null> {
-  const { data, error } = await createAdminClient().from('nfl_pikkit_picks_current').select('snapshot').eq('game_id', gameId).maybeSingle()
+  const { data, error } = await createAdminClient().from('nfl_pikkit_picks_current').select('snapshot').eq('game_id', gameId).abortSignal(AbortSignal.timeout(10000)).maybeSingle()
   if (error) {
     if (error.code === '42P01') return null
     throw new Error(`NFL public picks unavailable: ${error.message}`)
@@ -155,84 +110,52 @@ async function loadPikkitCurrentRaw(gameId: string): Promise<NflPikkitSnapshot |
 const loadPikkitCurrentRecent = unstable_cache(loadPikkitCurrentRaw, ['sideline-pikkit-current-recent-v1'], { revalidate: 30, tags: ['sideline:nfl-picks'] })
 const loadPikkitCurrentHistorical = unstable_cache(loadPikkitCurrentRaw, ['sideline-pikkit-current-historical-v1'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-picks'] })
 
-async function loadPikkitHistoryRaw(gameId: string): Promise<NflPikkitSnapshot[]> {
-  const { data, error } = await createAdminClient()
-    .from('nfl_pikkit_picks_snapshot_history')
-    .select('snapshot,captured_at')
-    .eq('game_id', gameId)
-    .order('captured_at', { ascending: true })
-    .limit(240)
-  if (error) {
-    if (error.code === '42P01') return []
-    throw new Error(`NFL public-pick history unavailable: ${error.message}`)
+// The timeline includes pick-only changes, not just odds changes.
+export const getSidelineTimeline = unstable_cache(async (gameId: string): Promise<string[]> => {
+  const admin = createAdminClient()
+  const times = new Set<string>()
+  for (const table of ['nfl_odds_snapshot_history', 'nfl_pikkit_picks_snapshot_history']) {
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await admin.from(table).select('captured_at')
+        .eq('game_id', gameId).order('captured_at').range(offset, offset + 999)
+        .abortSignal(AbortSignal.timeout(10000))
+      if (error) throw new Error('NFL timeline unavailable')
+      for (const row of data ?? []) times.add(new Date(row.captured_at).toISOString())
+      if ((data?.length ?? 0) < 1000) break
+    }
   }
-  return (data ?? []).map(row => ({ ...(row.snapshot as NflPikkitSnapshot), capturedAt: row.captured_at }))
-}
-const loadPikkitHistoryRecent = unstable_cache(loadPikkitHistoryRaw, ['sideline-pikkit-history-recent-v1'], { revalidate: 30, tags: ['sideline:nfl-picks'] })
-const loadPikkitHistoryHistorical = unstable_cache(loadPikkitHistoryRaw, ['sideline-pikkit-history-historical-v1'], { revalidate: WEEK_SECONDS, tags: ['sideline:nfl-picks'] })
+  return [...times].sort()
+}, ['sideline-timeline-index-v1'], { revalidate: 20, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
-function pikkitAt(snapshots: NflPikkitSnapshot[], capturedAt: string) {
-  const target = Date.parse(capturedAt)
-  let selected: NflPikkitSnapshot | null = null
-  for (const snapshot of snapshots) {
-    if (Date.parse(snapshot.capturedAt) > target) break
-    selected = snapshot
-  }
-  return selected
-}
-
-function mergeOddsAndPikkitFrames(
-  oddsFrames: SidelineOddsFrame[],
-  pikkitSnapshots: NflPikkitSnapshot[],
-) {
-  const times = Array.from(new Set([
-    ...oddsFrames.map(frame => frame.capturedAt),
-    ...pikkitSnapshots.map(snapshot => snapshot.capturedAt),
-  ])).filter(value => Number.isFinite(Date.parse(value))).sort((a, b) => Date.parse(a) - Date.parse(b))
-  const merged: SidelineOddsFrame[] = []
-  let oddsIndex = -1
-  for (const capturedAt of times) {
-    while (oddsIndex + 1 < oddsFrames.length && Date.parse(oddsFrames[oddsIndex + 1].capturedAt) <= Date.parse(capturedAt)) oddsIndex += 1
-    if (oddsIndex < 0) continue
-    merged.push({
-      capturedAt,
-      board: attachNflPikkitSnapshot(oddsFrames[oddsIndex].board, pikkitAt(pikkitSnapshots, capturedAt)),
-    })
-  }
-  return merged
-}
-
-export async function getSidelineOddsBundle(game: SidelineGame) {
+export const getSidelineOddsBundle = unstable_cache(async (game: SidelineGame) => {
   const historical = isPastSlate(game.gameday)
-  const currentLoader = historical ? loadCurrentBoardHistorical : loadCurrentBoardRecent
-  const countLoader = historical ? loadHistoryCountHistorical : loadHistoryCountRecent
-  const pageLoader = historical ? loadHistoryPageHistorical : loadHistoryPageRecent
-  const baselineLoader = historical ? loadTdBaselinesHistorical : loadTdBaselinesRecent
-  const pikkitCurrentLoader = historical ? loadPikkitCurrentHistorical : loadPikkitCurrentRecent
-  const pikkitHistoryLoader = historical ? loadPikkitHistoryHistorical : loadPikkitHistoryRecent
-  const current = await currentLoader(game.id)
-  const [count, baselines, pikkitCurrent, pikkitHistory] = await Promise.all([
-    countLoader(game.id),
-    baselineLoader(game.gameday),
-    pikkitCurrentLoader(game.id),
-    pikkitHistoryLoader(game.id),
+  const [current, baselines, picks] = await Promise.all([
+    (historical ? loadCurrentBoardHistorical : loadCurrentBoardRecent)(game.id),
+    (historical ? loadTdBaselinesHistorical : loadTdBaselinesRecent)(game.gameday),
+    (historical ? loadPikkitCurrentHistorical : loadPikkitCurrentRecent)(game.id),
   ])
-  const pageCount = Math.ceil(count / HISTORY_PAGE_SIZE)
-  const pages = await loadHistoryPages(pageCount, pageLoader, game.id)
-  let enrichedCurrent = attachNflTdBaselines(current, baselines)
-  let history = pages.flat().map(frame => ({ ...frame, board: attachNflTdBaselines(frame.board, baselines) }))
-  if (enrichedCurrent.capturedAt && history.at(-1)?.capturedAt !== enrichedCurrent.capturedAt) {
-    history.push({ capturedAt: enrichedCurrent.capturedAt, board: enrichedCurrent })
-  }
-  const identityBoards = await enrichSidelineOddsBoards(game, [enrichedCurrent, ...history.map(frame => frame.board)])
-  enrichedCurrent = attachNflPikkitSnapshot(identityBoards[0], pikkitCurrent)
-  const identityHistory = history.map((frame, index) => ({ ...frame, board: identityBoards[index + 1] }))
-  const pikkitSnapshots = [...pikkitHistory]
-  if (pikkitCurrent && !pikkitSnapshots.some(snapshot => snapshot.capturedAt === pikkitCurrent.capturedAt)) pikkitSnapshots.push(pikkitCurrent)
-  pikkitSnapshots.sort((a, b) => Date.parse(a.capturedAt) - Date.parse(b.capturedAt))
-  history = mergeOddsAndPikkitFrames(identityHistory, pikkitSnapshots)
-  return { odds: enrichedCurrent, history: history.length ? history : enrichedCurrent.capturedAt ? [{ capturedAt: enrichedCurrent.capturedAt, board: enrichedCurrent }] : [] }
-}
+  const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(current, baselines)])
+  return { odds: attachNflPikkitSnapshot(identified, picks) }
+}, ['sideline-enriched-current-v1'], { revalidate: 20, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+
+export const getSidelineCapture = unstable_cache(async (game: SidelineGame, capturedAt: string) => {
+  const admin = createAdminClient()
+  const [oddsResult, picksResult, baselines] = await Promise.all([
+    admin.from('nfl_odds_snapshot_history').select('board,captured_at')
+      .eq('game_id', game.id).lte('captured_at', capturedAt).order('captured_at', { ascending: false })
+      .limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle(),
+    admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at')
+      .eq('game_id', game.id).lte('captured_at', capturedAt).order('captured_at', { ascending: false })
+      .limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle(),
+    (isPastSlate(game.gameday) ? loadTdBaselinesHistorical : loadTdBaselinesRecent)(game.gameday),
+  ])
+  if (oddsResult.error || picksResult.error) throw new Error('NFL capture unavailable')
+  if (!oddsResult.data) return null
+  const raw = { ...(oddsResult.data.board as SidelineOddsBoard), capturedAt: oddsResult.data.captured_at, source: 'snapshot' as const }
+  const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(raw, baselines)])
+  const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
+  return { capturedAt, board: attachNflPikkitSnapshot(identified, picks) }
+}, ['sideline-selected-capture-v1'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export const getCachedSidelineBoardLens = unstable_cache(
   async (game: SidelineGame, roster: SidelineRosterPlayer[]) => getSidelineBoardLens(game, roster),

@@ -88,6 +88,8 @@ const nextConfig: NextConfig = {
     '/api/cron/scrape-mgm': ['./node_modules/playwright-core/**/*'],
     '/api/cron/scrape-pikkit': ['./node_modules/playwright-core/**/*'],
     '/api/cron/poll-pikkit-picks': ['./node_modules/playwright-core/**/*'],
+    '/api/cron/scrape-pikkit-nfl': ['./node_modules/playwright-core/**/*'],
+    '/api/cron/poll-pikkit-nfl-picks': ['./node_modules/playwright-core/**/*'],
     '/api/admin/contact-recap-export': [
       './node_modules/ffmpeg-static/**/*',
       './node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf',

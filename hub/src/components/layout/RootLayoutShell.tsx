@@ -19,6 +19,12 @@ import { MobileDock } from './MobileDock'
 import { MfaGate } from '@/components/security/MfaGate'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
+  // Keep context stable across streamed route changes, including transitions
+  // from the admin panel. Sideline market cells consume this on first render.
+  return <WatchlistProvider><RootLayoutShellContent>{children}</RootLayoutShellContent></WatchlistProvider>
+}
+
+function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const isAdmin = path.startsWith('/admin')
   const isAuthPage = path.startsWith('/auth/')
@@ -64,7 +70,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   const showNflMatrixButton = path === '/the-sideline'
 
   return (
-    <WatchlistProvider>
+    <>
       <MfaGate />
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
@@ -88,6 +94,6 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
         <WatchlistButton />
       </UtilityDock>
       {isDesktop && <DesktopExperience />}
-    </WatchlistProvider>
+    </>
   )
 }
