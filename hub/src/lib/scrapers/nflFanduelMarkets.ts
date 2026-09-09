@@ -8,11 +8,11 @@ export function nflFdMarket(label: string): { prop: string; category: NflPlayerM
   // Do not silently import period/team/combo markets as full-game individual props.
   if (/quarter|\b[1-4]q\b|team total|each|both|combined|first drive|next touchdown|last touchdown/.test(s)) return null
   if (/half/.test(s) && !/(first|1st) half.*touchdown|touchdown.*(first|1st) half/.test(s)) return null
-  if (/(first|1st) half/.test(s) && /touchdown/.test(s)) return { prop: 'anytime_td_1h', category: 'touchdowns', line: 1 }
-  if (/(first|1st).*touchdown/.test(s)) return { prop: 'first_td', category: 'touchdowns', line: 1 }
+  if (/(first|1st) half/.test(s) && /touchdown/.test(s)) return { prop: 'anytime_td_1h', category: 'touchdowns', line: 0.5 }
+  if (/(first|1st).*touchdown/.test(s)) return { prop: 'first_td', category: 'touchdowns', line: 0.5 }
   if (/touchdown/.test(s) && !/pass/.test(s)) {
     const threshold = s.match(/\b([23])\s*(?:\+|or more)/)
-    return { prop: threshold ? `${threshold[1] === '2' ? 'two' : 'three'}_plus_td` : 'anytime_td', category: 'touchdowns', line: threshold ? Number(threshold[1]) : 1 }
+    return { prop: threshold ? `${threshold[1] === '2' ? 'two' : 'three'}_plus_td` : 'anytime_td', category: 'touchdowns', line: threshold ? Number(threshold[1]) : 0.5 }
   }
   const rules: [RegExp, string, NflPlayerMarket['category']][] = [
     [/rush.*receiv.*yard/, 'rushing_receiving_yards', 'rushing'],

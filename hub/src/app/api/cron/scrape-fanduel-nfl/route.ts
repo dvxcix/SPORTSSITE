@@ -37,7 +37,17 @@ export async function GET(req: Request) {
   try {
     await session.page.goto('https://sportsbook.fanduel.com/navigation/nfl', { waitUntil: 'domcontentloaded' })
     await session.page.waitForTimeout(2500)
-    if (!await findAndClickGame(session.page, game.awayName, game.homeName)) return NextResponse.json({ error: 'NFL game link not found' }, { status: 425 })
+    await session.page.getByText('GAMES', { exact: true }).first().click({ timeout: 4000 }).catch(() => {})
+    let clicked = await findAndClickGame(session.page, game.awayName, game.homeName)
+    if (!clicked) {
+      await session.page.waitForTimeout(4000)
+      clicked = await findAndClickGame(session.page, game.awayName, game.homeName)
+    }
+    if (!clicked) return NextResponse.json({ error: 'NFL game link not found', ...(url.searchParams.get('dryRun') === '1' ? {
+      title: await session.page.title(), url: session.page.url(),
+      text: (await session.page.locator('body').innerText()).slice(0, 6000),
+      links: await session.page.locator('a').evaluateAll(nodes => nodes.map(n => ({ text: n.textContent, href: n.getAttribute('href') })).filter(n => /patriots|seahawks|new england|seattle/i.test(n.text ?? '')).slice(0, 10)),
+    } : {}) }, { status: 425 })
     await session.page.waitForTimeout(2500)
     const tabs = await session.page.evaluate(runFanduelScrape) as FdTab[]
     const away = game.awayName.split(' ').at(-1)!.toLowerCase()
