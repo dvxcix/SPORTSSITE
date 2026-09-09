@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { SidelineBoardClient } from './SidelineBoardClient'
 import { SidelineClient } from './SidelineClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
+import { SidelineNavigation } from './SidelineNavigation'
+import { SidelineMatchupLab } from './SidelineMatchupLab'
 import { getCachedSidelineBoardLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
 
 export const dynamic = 'force-dynamic'
@@ -35,16 +37,17 @@ export default async function SidelinePage({ searchParams }: {
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
+  const navigation = <SidelineNavigation games={games} selected={selected} sample={sample} mode={mode ?? ''} />
   if (mode === 'film') {
     const lens = await getCachedSidelineLens(selected)
-    return <SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}`} />
+    return <>{navigation}<SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
   }
 
   const market = await getSidelineOddsBundle(selected)
-  if (mode === 'public' || mode === 'markets') return <SidelineResearchClient
+  if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
-    boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} />
+    boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
   const roster = market.odds.players.map(player => ({
     id: player.gsisId ?? `bdl-${player.id}`,
     bdlId: player.id,
@@ -54,5 +57,6 @@ export default async function SidelinePage({ searchParams }: {
     position: player.position,
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
-  return <SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={market.odds} />
+  if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={market.odds} /></>
 }

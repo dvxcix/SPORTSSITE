@@ -163,7 +163,7 @@ function addWeighted(player: PlayerAccumulator, totalKey: keyof PlayerAccumulato
   ;(player[weightKey] as number) += weight
 }
 
-function buildPlayers(
+export function buildPlayers(
   receiving: Row[],
   rushing: Row[],
   passing: Row[],
@@ -225,9 +225,50 @@ function buildPlayers(
     teamPassAttempts.set(player.team, (teamPassAttempts.get(player.team) ?? 0) + attempts)
   }
 
+  // Tracking rows have qualification thresholds; their weekly rows are not a
+  // complete volume ledger. Use the full play sample for counts and shares.
+  if (pbp.length) {
+    for (const player of playerMap.values()) {
+      if (!teams.some(team => team.abbr === player.team)) continue
+      player.games.clear()
+      player.targets = player.receptions = player.receivingYards = player.carries = player.rushingYards = player.passAttempts = player.completions = player.passingYards = player.touchdowns = 0
+    }
+    teamTargets.clear(); teamCarries.clear(); teamPassAttempts.clear()
+    for (const row of pbp) {
+      const team = String(row.posteam ?? '')
+      if (!teams.some(item => item.abbr === team)) continue
+      const receiverId = String(row.receiver_player_id ?? '')
+      const rusherId = String(row.rusher_player_id ?? '')
+      const passerId = String(row.passer_player_id ?? '')
+      const findPlayer = (id: string) => {
+        const existing = playerMap.get(id)
+        if (existing) return existing
+        const identity = roster.find(player => player.id === id)
+        return identity ? ensurePlayer(playerMap, { player_gsis_id: id, player_display_name: identity.name, player_position: identity.position, team_abbr: team }, identity.position) : null
+      }
+      const week = numeric(row.week)
+      const yards = numeric(row.yards_gained)
+      if (truthy(row.pass_attempt) && receiverId) {
+        teamTargets.set(team, (teamTargets.get(team) ?? 0) + 1)
+        const player = findPlayer(receiverId)
+        if (player) { player.games.add(week); player.targets++; if (truthy(row.complete_pass)) { player.receptions++; player.receivingYards += yards } if (truthy(row.pass_touchdown)) player.touchdowns++ }
+      }
+      if (truthy(row.rush_attempt) && rusherId) {
+        teamCarries.set(team, (teamCarries.get(team) ?? 0) + 1)
+        const player = findPlayer(rusherId)
+        if (player) { player.games.add(week); player.carries++; player.rushingYards += yards; if (truthy(row.rush_touchdown)) player.touchdowns++ }
+      }
+      if (truthy(row.pass_attempt) && passerId && !truthy(row.sack)) {
+        teamPassAttempts.set(team, (teamPassAttempts.get(team) ?? 0) + 1)
+        const player = findPlayer(passerId)
+        if (player) { player.games.add(week); player.passAttempts++; if (truthy(row.complete_pass)) { player.completions++; player.passingYards += yards } }
+      }
+    }
+  }
+
   // Box-score volume replaces NGS volume within the same selected season/phase.
   // Never add these overlapping sources or borrow another season's tracking.
-  if (currentStats.length) {
+  if (currentStats.length && !pbp.length && !receiving.length && !rushing.length && !passing.length) {
     const rosterByBdl = new Map(roster.map(player => [player.bdlId, player]))
     const currentByPlayer = new Map<string, PlayerAccumulator>()
     const currentTeamTargets = new Map<string, number>()
@@ -255,7 +296,7 @@ function buildPlayers(
         }, rosterPlayer.position)!
         currentByPlayer.set(rosterPlayer.id, player)
       }
-      player.team = rosterPlayer.team || statTeam
+      player.team = statTeam
       if (row.sampleIndex > 0) player.games.add(row.sampleIndex)
       player.targets += targets
       player.receptions += numeric(row.receptions)
@@ -321,9 +362,10 @@ function buildPlayers(
       const rosterTeam = rosterTeams.get(player.id)
       if (rosterTeam) player.team = rosterTeam
       const touches = player.targets + player.carries
-      const targetShare = percent(player.targets, teamTargets.get(sampleTeam) ?? 0)
-      const carryShare = percent(player.carries, teamCarries.get(sampleTeam) ?? 0)
-      const passShare = percent(player.passAttempts, teamPassAttempts.get(sampleTeam) ?? 0)
+      const hasTeamSample = teams.some(team => team.abbr === sampleTeam)
+      const targetShare = hasTeamSample ? percent(player.targets, teamTargets.get(sampleTeam) ?? 0) : 0
+      const carryShare = hasTeamSample ? percent(player.carries, teamCarries.get(sampleTeam) ?? 0) : 0
+      const passShare = hasTeamSample ? percent(player.passAttempts, teamPassAttempts.get(sampleTeam) ?? 0) : 0
       const airYards = player.airYardsWeight ? player.airYardsTotal / player.airYardsWeight : 0
       const airYardsShare = player.airShareWeight ? player.airShareTotal / player.airShareWeight : 0
       const separation = player.separationWeight ? player.separationTotal / player.separationWeight : 0
@@ -352,6 +394,7 @@ function buildPlayers(
       return {
         id: player.id,
         unavailableMetrics: [
+          ...(!hasTeamSample ? ['targetShare', 'carryShare'] : []),
           ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []),
           ...(!player.airYardsWeight ? ['airYards'] : []),
           ...(!player.airShareWeight ? ['airYardsShare'] : []),
@@ -371,7 +414,7 @@ function buildPlayers(
         latestTeam: playerBio?.latestTeam ?? null,
         rosterStatus: playerBio?.rosterStatus ?? null,
         sampleTeam,
-        games: player.games.size || 1,
+        games: player.games.size,
         index,
         volume: Math.round(volume),
         geometry: Math.round(geometry),
@@ -424,7 +467,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
     const rows: Row[] = []
     for (let offset = 0; offset < 20000; offset += 500) {
       const result = await admin.from('nfl_pbp')
-        .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+      .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,complete_pass,sack,passer_player_id,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
         .eq('season', season).eq('season_type', phase).lt('game_date', game.gameday)
         .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
         .order('game_id').order('play_id').range(offset, offset + 499)
@@ -511,7 +554,7 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
 
 function availableWeeks(data: Awaited<ReturnType<typeof querySeason>>) {
   const currentSamples = Array.from(new Set(data.currentStats.map(row => row.sampleIndex).filter(index => index > 0))).sort((a, b) => b - a)
-  if (currentSamples.length) return currentSamples
+  if (currentSamples.length && !data.receiving.length && !data.rushing.length && !data.passing.length) return currentSamples
   return Array.from(new Set([
     ...data.pbp.map(row => numeric(row.week)),
     ...data.receiving.map(row => numeric(row.week)),
@@ -522,15 +565,18 @@ function availableWeeks(data: Awaited<ReturnType<typeof querySeason>>) {
 
 function rowsForWeeks(rows: Row[], weeks: number[] | null) {
   if (weeks == null) {
+    // Tracking weekly rows are qualification-limited. Prefer season tracking
+    // aggregates per player, with complete volume calculated from plays above.
     const aggregate = rows.filter(row => numeric(row.week) === 0)
-    return aggregate.length ? aggregate : rows.filter(row => numeric(row.week) > 0)
+    const withAggregate = new Set(aggregate.map(row => row.player_gsis_id))
+    return [...aggregate, ...rows.filter(row => numeric(row.week) > 0 && !withAggregate.has(row.player_gsis_id))]
   }
   const set = new Set(weeks)
   return rows.filter(row => set.has(numeric(row.week)))
 }
 
 function buildWindow(game: SidelineGame, data: Awaited<ReturnType<typeof querySeason>>, weeks: number[] | null): SidelineWindowData {
-  const currentSample = data.currentStats.length > 0
+  const currentSample = data.currentStats.length > 0 && !data.receiving.length && !data.rushing.length && !data.passing.length
   const historicalWeeks = currentSample && weeks != null
     ? Array.from(new Set(data.pbp.map(row => numeric(row.week)).filter(week => week > 0))).sort((a, b) => b - a).slice(0, weeks.length)
     : weeks

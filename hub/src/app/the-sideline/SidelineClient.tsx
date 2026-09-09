@@ -382,7 +382,6 @@ function PropCommand({ lens }: { lens: SidelineLens }) {
       <div className={styles.projectionFoot}><span><b>{player.targetShare.toFixed(1)}%</b> target share</span><span><b>{player.carryShare.toFixed(1)}%</b> carry share</span><span><b>{player.airYards.toFixed(1)}</b> aDOT</span><span><b>{player.redZoneLooks}</b> red-zone looks</span></div>
     </article>)}</div>
     {!players.length && <EmptyState title="No players fit this filter" copy="Switch the team or market filter to restore the matchup projections." />}
-    <div className={styles.modelNote}><Shield size={18} /><div><strong>Projection, not a sportsbook line.</strong><span>Expected output blends season form, L3/L5 direction, the player&apos;s recorded game distribution, opponent positional allowance and matchup pace.</span></div></div>
   </section>
 }
 

@@ -15,7 +15,7 @@ import styles from './sidelineResearch.module.css'
 const price = (value: number) => value > 0 ? `+${value}` : String(value)
 const stamp = (value: string | null | undefined) => value ? value.replace('T', ' ').slice(0, 19) + ' UTC' : 'Time unavailable'
 
-function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?: SidelineTeam }) {
+export function PlayerIdentity({ player, team }: { player: NflOddsPlayer; team?: SidelineTeam }) {
   const [failed, setFailed] = useState<string[]>([])
   const sources = [...new Set([player.headshot, ...(player.headshotFallbacks ?? [])].filter((src): src is string => Boolean(src)))]
   const source = sources.find(src => !failed.includes(src))
@@ -67,8 +67,6 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams }:
   const theme = (team: string) => ({ '--team-color': teams.find(item => item.abbr === team)?.color ?? '#203d50' }) as CSSProperties
   return <main className={styles.root}>
     <header><Link href={boardHref}>← The Sideline</Link><p>{title}</p><h1>{mode === 'public' ? 'The Public · NFL' : 'NFL sportsbook comparison'}</h1>
-      <nav><Link href={`${boardHref}&mode=public`}>The Public</Link><Link href={`${boardHref}&mode=markets`}>Sportsbooks</Link></nav>
-      <details className={styles.explainer}><summary>About these numbers</summary><p>{mode === 'public' ? 'Tracked picks, not dollars wagered or a census of all bettors. Share uses only the filtered rows below.' : 'Like-for-like captured player markets. Best payout is not a prediction. Check each book’s timestamp; captures are not necessarily simultaneous.'}</p></details>
       <small>Captured: {stamp(mode === 'public' ? board.picksCapturedAt : board.capturedAt)}</small>
     </header>
     <section className={styles.controls} aria-label="Research filters">
@@ -77,8 +75,7 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams }:
       <span>{count} rows{mode === 'public' ? ` · ${totalPicks.toLocaleString()} tracked picks` : ''}</span>
     </section>
     <div className={controls.scrollRail} aria-label="Choose a market">{['all', ...options].map(option => <button type="button" key={option} aria-pressed={category === option} className={`${controls.pill} ${category === option ? controls.pillActive : ''}`} onClick={() => { setCategory(option); setPage(0) }}>{option === 'all' ? 'All markets' : marketLabel(option)}</button>)}</div>
-    <p className={styles.legend}>{mode === 'public' ? 'Colors identify market types. Pick-share bars are not win probabilities. Reference odds do not imply the tracked picks used that exact line.' : 'Colors identify market types. Best payout highlights compare the same line and side, not scoring probability.'}</p>
-    {count === 0 ? <p className={styles.empty}>No captured data matches this view. Missing data is not zero activity.</p> : <div className={styles.cards}>
+    {count === 0 ? <p className={styles.empty}>No captured data matches this view.</p> : <div className={styles.cards}>
       {mode === 'public' ? filteredPicks.slice(page * pageSize, (page + 1) * pageSize).map((row, index) => {
         const player = playersById.get(row.playerId)!
         const market = nflPrimaryMarket(player, row.propType)

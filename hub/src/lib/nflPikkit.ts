@@ -46,6 +46,7 @@ export type ResolvedNflPikkitEntry = {
 
 function defaultMarketLabel(category: string) {
   const normalized = category.toLowerCase()
+  if (/\b(first|1st)\s+(touchdown|td)\b|\bftd\b/.test(normalized)) return 'First Touchdown Scorer'
   if (normalized.includes('touchdown')) return 'Anytime Touchdown Scorer'
   if (normalized.includes('passing')) return 'Passing Yards'
   if (normalized.includes('receiving')) return 'Receiving Yards'
@@ -97,11 +98,13 @@ function slug(value: string) {
 }
 
 export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
-  const source = `${rawKey} ${rawLabel}`.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim()
+  // A bare TD total is not an Anytime/First scorer contract.
+  if (/^tds$/i.test((rawLabel || rawKey).trim())) return 'tds'
+  const source = `${rawKey} ${rawLabel}`.toLowerCase().replace(/[_-]+/g, ' ').replace(/\btds?\b/g, 'touchdown').replace(/\b1st\b/g, 'first').replace(/\s+/g, ' ').trim()
   const has = (...words: string[]) => words.every(word => source.includes(word))
 
   if ((has('first half') || has('1st half')) && has('touchdown')) return 'anytime_td_1h'
-  if (has('first', 'touchdown')) return 'first_td'
+  if (has('first', 'touchdown') || /\bftd\b/.test(source)) return 'first_td'
   if ((has('2+') || has('two plus') || has('2 or more')) && has('touchdown')) return 'two_plus_td'
   if ((has('3+') || has('three plus') || has('3 or more')) && has('touchdown')) return 'three_plus_td'
   if (has('anytime', 'touchdown') || has('touchdown scorer') || source === 'touchdowns' || source === 'touchdown') return 'anytime_td'
@@ -115,13 +118,13 @@ export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
   if ((has('longest', 'rush') || has('long', 'rush'))) return 'longest_rush'
   if (has('rushing', 'attempt') || has('rush', 'attempt') || has('rush', 'att') || has('carries')) return 'rushing_attempts'
   if (has('rushing', 'yard') || has('rush', 'yard')) return 'rushing_yards'
-  if ((has('longest', 'reception') || has('long', 'reception'))) return 'longest_reception'
+  if ((has('longest', 'reception') || has('long', 'reception') || /\blong\s+rec\b/.test(source))) return 'longest_reception'
   if (has('receiving', 'yard') || has('receiver', 'yard')) return 'receiving_yards'
   if (has('rec', 'yard')) return 'receiving_yards'
   if (has('reception') || has('catches') || source === 'rec' || has('rec', 'total')) return 'receptions'
   if (has('field', 'goal', 'made') || has('fg', 'made')) return 'field_goals_made'
-  if (has('kicking', 'point')) return 'kicking_points'
-  if (has('extra', 'point')) return 'extra_points'
+  if (has('kicking', 'point') || has('kicking', 'pts')) return 'kicking_points'
+  if (has('extra', 'point') || has('pat', 'made')) return 'extra_points'
   if (has('defensive', 'touchdown') || has('defense', 'touchdown')) return 'defensive_td'
   return slug(rawLabel || rawKey) || 'unknown'
 }

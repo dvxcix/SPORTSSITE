@@ -12,7 +12,6 @@ import {
   Columns3,
   Eraser,
   Eye,
-  Film,
   Highlighter,
   Layers3,
   LockKeyhole,
@@ -1285,15 +1284,12 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
         <div className={styles.brandActions}>
-          <a className={styles.filmLink} href={`/the-sideline?mode=public&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}&sample=${sample}`}>The Public · NFL</a>
-          <a className={styles.filmLink} href={`/the-sideline?mode=markets&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}&sample=${sample}`}>Compare sportsbooks</a>
           <label className={styles.sampleControl}>Stat sample
             <select aria-label="NFL statistical sample" value={sample} disabled={isPending} onChange={event => startTransition(() => router.replace(`/the-sideline?date=${selectedDate}&game=${encodeURIComponent(selected.id)}&sample=${event.target.value}`, { scroll: false }))}>
               {(['previous', 'preseason', 'regular'] as const).map(value => <option key={value} value={value}>{nflSampleReference(selected.season, value).label}</option>)}
             </select>
           </label>
           <span className={styles.coverageBadge} title={lens.coverage.detail}>{lens.coverage.label} · {lens.status === 'awaiting-data' ? 'Awaiting data' : 'Stored sample'}</span>
-          <a className={styles.filmLink} href={`/the-sideline?mode=film&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}`}><Film size={14} /> Routes + history</a>
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>
       </header>

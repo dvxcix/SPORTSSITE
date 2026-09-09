@@ -23,6 +23,7 @@ export async function runPikkitScrape(): Promise<PikkitScrapePayload> {
     marketLabels: {},
   }
   function parsePage(marketLabel: string): Record<string, number> {
+    const nflCategory = /touchdown|\btd\b|passing|rushing|receiving|defensive|kicking/i.test(marketLabel)
     const t = document.body.innerText
     const ls = t.split('\n').map(l => l.trim()).filter(Boolean)
     const res: Record<string, number> = {}
@@ -32,8 +33,9 @@ export async function runPikkitScrape(): Promise<PikkitScrapePayload> {
         const name = ls[i - 1]
           .replace(/\s+(?:Over|Under)\s+[+-]?\d+(?:\.\d+)?$/i, '')
           .replace(/ Home Runs$| Total Bases$| Bases$| Hits$| Singles$| Doubles$| Triples$| RBI$| Runs$| Stolen Bases$| Hits \+ Runs \+ RBI$/i, '')
-          .replace(/ Anytime(?: First Half)? Touchdown(?: Scorer)?$| First Touchdown(?: Scorer)?$| Touchdowns?$| Passing Yards$| Passing Touchdowns?$| Passing Attempts?$| Passing Completions?$| Interceptions?$| Rushing Yards$| Rushing Attempts?$| Receiving Yards$| Receptions?$| Rushing \+ Receiving Yards$| Rush \+ Receiving Yards$| Longest Reception$| Longest Rush$| Field Goals Made$| Kicking Points$/i, '')
-          .replace(new RegExp(`\\s+${marketLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), '')
+          // NFL selectors contain multiple contracts in one category. Preserve
+          // each row's suffix so First TD cannot collapse into Anytime TD.
+          .replace(new RegExp(`\\s+${marketLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), suffix => nflCategory ? suffix : '')
           .trim()
         if (name && name.length > 2 && !/^(OVER|UNDER|Over|Under|\d)/.test(name)) res[name] = parseInt(pm[1].replace(/,/g, ''), 10)
       }

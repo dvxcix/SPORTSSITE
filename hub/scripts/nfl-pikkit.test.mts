@@ -2,8 +2,35 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { attachNflPikkitSnapshot, canonicalizeNflPikkitMarket, resolveNflPikkitEntry, type NflPikkitSnapshot } from '../src/lib/nflPikkit.ts'
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
+import { runPikkitScrape } from '../src/lib/scrapers/pikkitScraper.ts'
+
+test('scraper preserves different NFL contracts for the same player', async () => {
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  const select = { value: 'player_touchdown', options: [{ value: 'player_touchdown', textContent: 'Touchdowns' }], dispatchEvent: () => true }
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { title: 'NFL', querySelectorAll: () => [select], body: { innerText: 'Test Player Anytime Touchdown Scorer\n100 Picks\nTest Player First Touchdown Scorer\n25 Picks\nTest Player TDs\n80 Picks' } } })
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { href: 'https://app.pikkit.com/event/test' } })
+  try {
+    const capture = await runPikkitScrape()
+    assert.deepEqual(capture.props.player_touchdown, { 'Test Player Anytime Touchdown Scorer': 100, 'Test Player First Touchdown Scorer': 25, 'Test Player TDs': 80 })
+    const identities = [{ name: 'Test Player', team: 'NE', position: 'WR' }]
+    const contracts = Object.keys(capture.props.player_touchdown).map(name => canonicalizeNflPikkitMarket('player_touchdown', resolveNflPikkitEntry(name, 'Touchdowns', identities)!.marketLabel))
+    assert.deepEqual(contracts, ['anytime_td', 'first_td', 'tds'])
+  } finally {
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
+    else Reflect.deleteProperty(globalThis, 'document')
+    if (originalLocation) Object.defineProperty(globalThis, 'location', originalLocation)
+    else Reflect.deleteProperty(globalThis, 'location')
+  }
+})
 
 test('NFL Pikkit labels map to Sideline prop keys without dropping unknown markets', () => {
+  for (const label of ['First TD', '1st TD Scorer', '1st Touchdown', 'FTD']) assert.equal(canonicalizeNflPikkitMarket('player_touchdown', label), 'first_td')
+  assert.equal(canonicalizeNflPikkitMarket('player_touchdown', 'TDs'), 'tds')
+  assert.equal(canonicalizeNflPikkitMarket('player_touchdown', 'First Half TD'), 'anytime_td_1h')
+  assert.equal(canonicalizeNflPikkitMarket('receiving', 'Long Rec.'), 'longest_reception')
+  assert.equal(canonicalizeNflPikkitMarket('kicking', 'PAT Made'), 'extra_points')
+  assert.equal(canonicalizeNflPikkitMarket('kicking', 'Kicking Pts.'), 'kicking_points')
   assert.equal(canonicalizeNflPikkitMarket('firstTouchdownScorer', 'First Touchdown Scorer'), 'first_td')
   assert.equal(canonicalizeNflPikkitMarket('atd', 'Anytime Touchdown Scorer'), 'anytime_td')
   assert.equal(canonicalizeNflPikkitMarket('two_tds', 'To Score 2+ Touchdowns'), 'two_plus_td')
@@ -27,6 +54,8 @@ test('broad NFL tabs resolve real players and reject market-total headings', () 
     marketLabel: 'Receiving Yards',
   })
   assert.equal(resolveNflPikkitEntry('Anytime TD Scorer', 'Touchdowns', identities), null)
+  assert.equal(resolveNflPikkitEntry('Christian McCaffrey First Touchdown Scorer', 'Touchdowns', identities)?.marketLabel, 'First Touchdown Scorer')
+  assert.equal(resolveNflPikkitEntry('Christian McCaffrey', 'First TD', identities)?.marketLabel, 'First Touchdown Scorer')
 })
 
 test('Pikkit picks attach by normalized player and team identity', () => {
