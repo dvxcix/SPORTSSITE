@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
+import { buildBoardHeat } from './boardHeat'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { useRouter } from 'next/navigation'
 import {
@@ -79,6 +80,8 @@ type ColumnDefinition = {
   brand?: boolean
   aggregate?: boolean
   heat?: 'high' | 'low' | 'none'
+  heatValue?: (row: PlayerRow) => number | null
+  roleHeat?: boolean
   value: (row: PlayerRow) => number | string | null
   render: (row: PlayerRow) => ReactNode
 }
@@ -105,8 +108,8 @@ const ROLE_OPTIONS: { id: RoleFilter; label: string; positions: string[] }[] = [
   { id: 'passing', label: 'QB', positions: ['QB'] },
   { id: 'receiving', label: 'Receivers', positions: ['WR', 'TE'] },
   { id: 'rushing', label: 'Backfield', positions: ['RB', 'FB'] },
-  { id: 'kicking', label: 'Kickers', positions: ['K'] },
-  { id: 'defense', label: 'Defense', positions: ['DEF', 'DST'] },
+  { id: 'kicking', label: 'Kickers', positions: ['K', 'PK'] },
+  { id: 'defense', label: 'Defense', positions: ['DEF', 'DST', 'CB', 'DB', 'FS', 'SS', 'LB', 'OLB', 'ILB', 'MLB', 'DE', 'DT', 'NT'] },
 ]
 const PREFERRED_BOOKS: BookSpec[] = [
   { id: 'fanduel', short: 'FD' },
@@ -151,6 +154,7 @@ const FIXED_PICK_MARKETS: PublicPickSpec[] = FEATURED_MARKETS
     width: Math.max(96, market.width),
   }))
 const GAME_DAY_FOUNDATIONS = new Set(['player', 'index'])
+const COMPACT_GAME_DAY = new Set(['player', 'index', 'picks:first_td', 'fanduel:primary:first_td', 'ftdPct', 'picks:anytime_td', 'fanduel:primary:anytime_td', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio', 'roleMarket', 'atdRoleRatio', 'roleOpps', 'roleShare', 'roleYards', 'touchdowns', 'redZoneLooks', 'breakaway'])
 const GAME_DAY_ALWAYS_VISIBLE = new Set([
   ...GAME_DAY_FOUNDATIONS,
   'ftdPct', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio',
@@ -377,17 +381,14 @@ function scoreTone(value: number) {
   return styles.weak
 }
 
-function heatStyle(column: ColumnDefinition, row: PlayerRow, peers: PlayerRow[]): CSSProperties | undefined {
-  if (!column.heat || column.heat === 'none' || column.id === 'player') return undefined
-  const current = column.value(row)
-  if (typeof current !== 'number' || !Number.isFinite(current)) return undefined
-  const values = peers.map(peer => column.value(peer)).filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
-  if (values.length < 2) return undefined
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  if (min === max) return { '--cell-heat': 0.34 } as CSSProperties
-  const normalized = (current - min) / (max - min)
-  return { '--cell-heat': column.heat === 'low' ? 1 - normalized : normalized } as CSSProperties
+function heatStyle(value: number | undefined): CSSProperties | undefined {
+  if (value == null) return undefined
+  const distance = Math.abs(value - .5) * 2
+  return { '--cell-heat': value, '--heat-rgb': value >= .5 ? '80, 220, 142' : '245, 91, 113', '--heat-alpha': .04 + distance * .24 } as CSSProperties
+}
+
+function roleProp(row: PlayerRow) {
+  return row.position === 'QB' ? 'passing_yards' : ['RB', 'FB'].includes(row.position) ? 'rushing_yards' : 'receiving_yards'
 }
 
 function metricDisplay(value: number, suffix = '', decimals = 0) {
@@ -538,8 +539,9 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       group,
       width,
       heat: 'high',
+      roleHeat: !['index', 'volume', 'geometry', 'redZone', 'breakaway'].includes(id),
       value: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? get(row) : null,
-      render: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? <b className={scoreTone(get(row))}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty} title="Not available in this statistical sample">-</span>,
+      render: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? <b className={id === 'index' ? scoreTone(get(row)) : undefined}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty} title="Not available in this statistical sample">-</span>,
     })
     const teamMetric = (
       id: string,
@@ -623,6 +625,16 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
         },
       },
       metric('volume', 'VOL', 'Volume score', 'core', 70, row => row.volume),
+      {
+        id: 'roleMarket', label: 'YDS LINE', title: 'FanDuel primary yards line: passing for QBs, rushing for backs, receiving for receivers', group: 'core', width: 78, heat: 'high', roleHeat: true,
+        value: row => findMarketByKey(row.market, `primary:${roleProp(row)}`, 'fanduel')?.line ?? null,
+        render: row => <span className={styles.roleMarket}><small>{row.position === 'QB' ? 'PASS' : ['RB', 'FB'].includes(row.position) ? 'RUSH' : 'REC'}</small><MarketCell player={row} marketKey={`primary:${roleProp(row)}`} vendor="fanduel" saved={savedKeys.has(`${normalizedTeam(row.team)}:${normalizedName(row.name)}:${findMarketByKey(row.market, `primary:${roleProp(row)}`, 'fanduel')?.key}:fanduel`)} onToggleSaved={onToggleSaved} /></span>,
+      },
+      {
+        id: 'atdRoleRatio', label: 'ATD:YDS', title: 'FanDuel ATD / role-specific yards implied-probability ratio; see YDS LINE for the contract', group: 'core', width: 64, heat: 'high', roleHeat: true,
+        value: row => impliedProbabilityRatio(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null, primaryMarketOffer(row.market, roleProp(row))?.odds ?? null),
+        render: row => <RatioCell numerator={primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null} denominator={primaryMarketOffer(row.market, roleProp(row))?.odds ?? null} detail={`FanDuel ATD / ${roleProp(row)}`} />,
+      },
       metric('geometry', 'GEO', 'Field geometry score', 'core', 70, row => row.geometry),
       metric('redZone', 'RZ', 'Red-zone role score', 'core', 70, row => row.redZone),
       metric('breakaway', 'BURST', 'Explosive-play score', 'core', 74, row => row.breakaway),
@@ -725,6 +737,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       ['atdRecRatio', 196], ['atdRecYdsRatio', 197], ['atdRushYdsRatio', 198], ['atdScrimYdsRatio', 199],
       ['volume', 9000], ['geometry', 9001], ['redZone', 9002], ['breakaway', 9003],
       ['roleOpps', 9004], ['roleShare', 9005], ['roleYards', 9006], ['redZoneLooks', 9007],
+      ['roleMarket', 200], ['atdRoleRatio', 201], ['touchdowns', 9008],
     ])
     const rank = (column: ColumnDefinition) => {
       const fixed = fixedRank.get(column.id)
@@ -991,7 +1004,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
   const board = marketStory.board
   const currentBoard = marketStory.current
-  const sourceBoards = useMemo(() => [currentBoard, board], [currentBoard, board])
+  const sourceBoards = useMemo(() => currentBoard === board ? [board] : [currentBoard, board], [currentBoard, board])
   const availableMarkets = useMemo(() => marketCatalog(sourceBoards), [sourceBoards])
   const availablePickMarkets = useMemo(() => publicPickCatalog(sourceBoards), [sourceBoards])
   const availableBooks = useMemo(() => sportsbookCatalog(sourceBoards), [sourceBoards])
@@ -1098,7 +1111,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
     const opponentFor = (team: string) => profileFor(normalizedTeam(team) === normalizedTeam(selected.away.abbr) ? selected.home.abbr : selected.away.abbr)
     const byId = new Map<string, PlayerRow>()
     for (const player of windowData.players) {
-      const market = findMarketPlayer(board, player)
+      const market = board.players.find(candidate => candidate.gsisId === player.id) ?? findMarketPlayer(board, player)
       const identified = mergePlayerIdentity(player, market)
       byId.set(player.id, { ...identified, market, hasTracking: true, teamProfile: profileFor(player.team), opponentProfile: opponentFor(player.team) })
     }
@@ -1197,12 +1210,8 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
     const hasValue = (column: ColumnDefinition) => GAME_DAY_FOUNDATIONS.has(column.id) || activeRows.some(row => column.value(row) != null)
     if (view === 'all') return ordered.filter(hasValue)
     if (view === 'core') {
-      return ordered.filter(column => {
-        const isGameDayColumn = GAME_DAY_ALWAYS_VISIBLE.has(column.id)
-          || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))
-        const defaultBook = !column.vendor || (column.vendor === 'fanduel' && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
-        return isGameDayColumn && defaultBook && (!column.id.startsWith('picks:') || GAME_DAY_ALWAYS_VISIBLE.has(column.id)) && hasValue(column)
-      })
+      if (roleFilter === 'kicking' || roleFilter === 'defense') return ordered.filter(hasValue)
+      return columns.filter(column => COMPACT_GAME_DAY.has(column.id) && hasValue(column)).map(column => ({ ...column, width: column.id === 'player' ? 204 : column.id === 'roleMarket' ? 82 : column.id.startsWith('picks:') ? 56 : column.id === 'index' ? 54 : 64 }))
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
   }, [columnOrder, columns, erased, roleFilter, rows, view, visibleIds])
@@ -1211,6 +1220,8 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   const sortedRows = (team: string) => rows
     .filter(row => {
       if (normalizedTeam(row.team) !== normalizedTeam(team) || erased.has(row.id)) return false
+      if (view === 'core' && currentBoard.players.length && !row.market) return false
+      if (view === 'core' && roleFilter === 'all' && !['QB', 'RB', 'FB', 'WR', 'TE'].includes(row.position)) return false
       const positions = ROLE_OPTIONS.find(option => option.id === roleFilter)?.positions ?? []
       return !positions.length || positions.includes(row.position)
     })
@@ -1231,6 +1242,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
 
   const awayRows = sortedRows(selected.away.abbr)
   const homeRows = sortedRows(selected.home.abbr)
+  const heat = buildBoardHeat(resolvedColumns, [...awayRows, ...homeRows])
   const comparePlayers = compareIds.map(id => rows.find(row => row.id === id)).filter(Boolean) as PlayerRow[]
   const allTeams = [selected.away, selected.home]
 
@@ -1271,7 +1283,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   const capturedLabel = frameTime ? new Date(frameTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : 'Awaiting markets'
 
   return (
-    <div className={`${styles.page} ${isPending ? styles.loading : ''}`}>
+    <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''} ${isPending ? styles.loading : ''}`}>
       <header className={styles.brandHeader}>
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
@@ -1312,7 +1324,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
           {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
           <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
-          <span>{marketStory.loading ? 'Loading selected capture · ' : ''}{history.length} captures · {capturedLabel}{board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</span>
+          <span>{marketStory.loading ? 'Loading selected capture · ' : ''}{history.length} captures · {capturedLabel}{board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET` : ''}</span>
         </article>
       </section>
 
@@ -1368,7 +1380,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
                 return <tr key={player.id} className={eraser ? styles.eraserRow : ''} onClick={() => { if (eraser) setErased(current => new Set([...current, player.id])) }}>
                   {resolvedColumns.map(column => {
                     const highlight = highlights[`${player.id}:${column.id}`]
-                    const automaticHeat = heatStyle(column, player, section.rows)
+                    const automaticHeat = heatStyle(heat.get(`${player.id}:${column.id}`))
                     const matches = matrixMatches.get(player.id) ?? []
                     return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('picks:') ? styles.picksColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
                       {column.id === 'player' && matches.length ? <span className={styles.matrixRail} title={matches.map(matrix => matrix.name).join(' · ')}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}

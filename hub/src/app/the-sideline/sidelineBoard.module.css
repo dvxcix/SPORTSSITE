@@ -696,13 +696,13 @@
 
 .boardTable td.heatCell {
   background:
-    linear-gradient(0deg, rgba(63, 221, 148, calc(var(--cell-heat) * .22)), rgba(63, 221, 148, calc(var(--cell-heat) * .22))),
+    linear-gradient(0deg, rgba(var(--heat-rgb), var(--heat-alpha)), rgba(var(--heat-rgb), var(--heat-alpha))),
     #080d13;
-  box-shadow: inset 0 2px 0 rgba(90, 242, 165, calc(var(--cell-heat) * .42));
+  box-shadow: inset 0 1px 0 rgba(var(--heat-rgb), .25);
 }
 .boardTable tbody tr:hover td.heatCell {
   background:
-    linear-gradient(0deg, rgba(63, 221, 148, calc(var(--cell-heat) * .27)), rgba(63, 221, 148, calc(var(--cell-heat) * .27))),
+    linear-gradient(0deg, rgba(var(--heat-rgb), var(--heat-alpha)), rgba(var(--heat-rgb), var(--heat-alpha))),
     #0d141d;
 }
 
@@ -741,7 +741,7 @@
 }
 .boardTable td.picksColumn.heatCell {
   background:
-    linear-gradient(0deg, rgba(167, 255, 63, calc(var(--cell-heat) * .22)), rgba(167, 255, 63, calc(var(--cell-heat) * .22))),
+    linear-gradient(0deg, rgba(var(--heat-rgb), var(--heat-alpha)), rgba(var(--heat-rgb), var(--heat-alpha))),
     #08100d;
 }
 .picksHeaderMark {
@@ -1146,3 +1146,25 @@
 .brandHeader > div { min-width: 0; }
 .sampleControl { display: flex; flex-direction: column; gap: 4px; color: #b9c5d3; font-size: 10px; font-weight: 700; }
 .sampleControl select { max-width: 100%; min-height: 36px; border: 1px solid #536834; border-radius: 9px; background: #101820; color: #f4f8ee; padding: 6px 10px; font: inherit; font-size: 12px; }
+.compactBoard .boardTable td { height: 58px; padding: 4px; font-size: 11px; }
+.compactBoard .boardTable th { height: 42px; }
+.compactBoard .boardTable th span { font-size: 8px; letter-spacing: .015em; }
+.compactBoard .playerCell { grid-template-columns: 12px 32px minmax(45px, 1fr) 23px 23px; gap: 4px; }
+.compactBoard .avatar { width: 32px; height: 32px; }
+.compactBoard .playerCell > button:not(.playerName) { width: 23px; height: 26px; border-radius: 6px; }
+.compactBoard .playerName b { font-size: 11px; }
+.compactBoard .marketValue { min-width: 0; gap: 3px; }
+.compactBoard .marketValue b { font-size: 11px; }
+.compactBoard .marketValue small { font-size: 7px; }
+.compactBoard .publicPickValue small { display: none; }
+.roleMarket { display: grid; justify-items: center; gap: 3px; }
+.roleMarket > small { color: #a9b9cc; font-size: 7px; font-weight: 800; }
+@media(min-width:1100px) {
+  .compactBoard .storyGrid { grid-template-columns: 1fr .7fr 1.3fr .9fr 1.4fr; }
+  .compactBoard .marketStory { grid-column: auto; grid-template-columns: minmax(0, 1fr); gap: 4px; border-top: 0; }
+  .compactBoard .marketStory div { flex-direction: row; justify-content: space-between; gap: 4px; }
+  .compactBoard .storyGrid > article { min-height: 64px; padding: 8px 12px; }
+  .compactBoard .gameRailSection { padding: 6px; }
+  .compactBoard .gameRailSection > header { display: none; }
+  .compactBoard .gameRail > button { min-height: 42px; }
+}
