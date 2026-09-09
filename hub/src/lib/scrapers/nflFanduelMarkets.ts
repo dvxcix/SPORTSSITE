@@ -4,9 +4,9 @@ export type FdTab = { scraped_at: string; event: { title: string; url?: string }
 const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
 export function nflFdMarket(label: string): { prop: string; category: NflPlayerMarket['category']; line: number | null } | null {
-  const s = label.toLowerCase()
+  const s = label.toLowerCase().replace(/\byds\b/g, 'yards').replace(/\btds?\b/g, 'touchdown')
   // Do not silently import period/team/combo markets as full-game individual props.
-  if (/quarter|\b[1-4]q\b|team total|each|both|combined|first drive|next touchdown|last touchdown/.test(s)) return null
+  if (/quarter|\b[1-4]q\b|\bteam\b|\bdrive\b|\bmost\b|\beither\b|special|each|both|combined|next touchdown|last touchdown/.test(s)) return null
   if (/half/.test(s) && !/(first|1st) half.*touchdown|touchdown.*(first|1st) half/.test(s)) return null
   if (/(first|1st) half/.test(s) && /touchdown/.test(s)) return { prop: 'anytime_td_1h', category: 'touchdowns', line: 0.5 }
   if (/(first|1st).*touchdown/.test(s)) return { prop: 'first_td', category: 'touchdowns', line: 0.5 }
@@ -35,7 +35,7 @@ export function parseNflFanduel(tabs: FdTab[], base: SidelineOddsBoard) {
   for (const tab of tabs) for (const [section, outcomes] of Object.entries(tab.sections ?? {})) for (const outcome of outcomes) {
     const parts = outcome.parts ?? [outcome.selection ?? '']
     const joined = parts.join(' ')
-    const matches = base.players.filter(p => parts.some(part => normalize(part) === normalize(p.name)) || normalize(joined).includes(normalize(p.name)))
+    const matches = base.players.filter(p => parts.some(part => normalize(part) === normalize(p.name)) || normalize(`${section} ${joined}`).includes(normalize(p.name)))
     if (matches.length !== 1) { rejected.add(section); continue }
     const identity = matches[0]
     const spec = nflFdMarket(`${section} ${outcome.market_hint ?? ''}`)

@@ -197,6 +197,10 @@
       "schedule": "10,40 * * * *"
     },
     {
+      "path": "/api/cron/poll-fanduel-nfl",
+      "schedule": "5,35 * * * *"
+    },
+    {
       "path": "/api/cron/whop-addon-reconcile",
       "schedule": "*/15 * * * *"
     },

@@ -5,7 +5,8 @@
 // the logic here without testing against a live page first. Dropped only
 // the on-page debug overlay and the auto-download-a-.json-file side effect,
 // neither of which make sense running headless.
-export async function runFanduelScrape(): Promise<any[]> {
+export async function runFanduelScrape(options: { maxDurationMs?: number } | void = undefined): Promise<any[]> {
+  const deadline = options?.maxDurationMs ? Date.now() + options.maxDurationMs : Infinity
   const SLEEP = (ms: number) => new Promise(r => setTimeout(r, ms))
   const QSA = (sel: string, root: ParentNode = document) => [...root.querySelectorAll(sel)]
 
@@ -74,9 +75,11 @@ export async function runFanduelScrape(): Promise<any[]> {
   }
   async function expandAllSections() {
     for (let pass = 0; pass < MAX_EXPAND_PASSES; pass++) {
+      if (Date.now() >= deadline) break
       const collapsed = getCollapsedSections()
       if (!collapsed.length) break
       for (const el of collapsed) {
+        if (Date.now() >= deadline) break
         try {
           ;(el as HTMLElement).scrollIntoView({ block: 'center' })
           ;(el as HTMLElement).click()
@@ -87,6 +90,7 @@ export async function runFanduelScrape(): Promise<any[]> {
   }
   async function clickAllShowMore() {
     for (let round = 0; round < MAX_SHOW_MORE_ROUNDS; round++) {
+      if (Date.now() >= deadline) break
       const btns = QSA('button,[role="button"]').filter(b => {
         const t = (b.textContent || '').trim().toLowerCase()
         return t === 'show more' || t === 'see more' || t === 'see all' || t === 'show all'
@@ -94,6 +98,7 @@ export async function runFanduelScrape(): Promise<any[]> {
       })
       if (!btns.length) break
       for (const b of btns) {
+        if (Date.now() >= deadline) break
         try {
           ;(b as HTMLElement).scrollIntoView({ block: 'center' })
           ;(b as HTMLElement).click()
@@ -180,6 +185,7 @@ export async function runFanduelScrape(): Promise<any[]> {
   }
 
   for (let i = 0; i < wanted.length; i++) {
+    if (Date.now() >= deadline) break
     const { el, label } = wanted[i]
     if (label === activeLabel) continue
     ;(el as HTMLElement).scrollIntoView({ block: 'center' })
@@ -188,5 +194,5 @@ export async function runFanduelScrape(): Promise<any[]> {
     allScrapes.push(await scrapeCurrentTab(label))
   }
 
-  return allScrapes
+  return allScrapes.map(scrape => ({ ...scrape, ...(options?.maxDurationMs ? { incomplete: Date.now() >= deadline, available_tabs: wanted.map(tab => tab.label) } : {}) }))
 }

@@ -18,6 +18,11 @@ test('NFL touchdown and period categories remain distinct', () => {
   assert.equal(nflFdMarket('First Half Anytime Touchdown')?.prop, 'anytime_td_1h')
   assert.equal(nflFdMarket('Second Half Passing Yards'), null)
   assert.equal(nflFdMarket('Both Players To Score A Touchdown'), null)
+  assert.equal(nflFdMarket('Anytime 1st Half TD Scorer')?.prop, 'anytime_td_1h')
+  assert.equal(nflFdMarket('1st Team Touchdown Scorer'), null)
+  assert.equal(nflFdMarket('Jadarian Price Drive 1 Rushing Yds SEA Seahawks'), null)
+  assert.equal(nflFdMarket('Sam Darnold - Passing TDs')?.prop, 'passing_tds')
+  assert.equal(nflFdMarket('Hunter Henry - Receiving Yds')?.prop, 'receiving_yards')
 })
 test('canonical NFL identity, sides, odds and opening prices import without zero filling', () => {
   const base = { ...EMPTY_SIDELINE_ODDS, players: [{ id: 1, name: 'Hunter Henry', team: 'NE', position: 'TE', markets: [] }] }
@@ -28,6 +33,7 @@ test('canonical NFL identity, sides, odds and opening prices import without zero
   assert.equal(result.board.players.length, 1)
   const markets = result.board.players[0].markets
   assert.equal(markets[0].offers[0].current.odds, 1200)
+  assert.equal(markets[0].key, 'first_td:0.5')
   assert.deepEqual(markets[1].offers[0].current, { over: -110, under: -115 })
   assert.deepEqual(markets[1].offers[0].opening, { over: -110, under: -115 })
 })

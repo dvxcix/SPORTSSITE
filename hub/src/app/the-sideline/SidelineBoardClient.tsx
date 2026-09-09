@@ -134,16 +134,12 @@ const FEATURED_MARKETS = [
 const GAME_DAY_PROP_TYPES = new Set([
   'first_td',
   'anytime_td',
-  'anytime_td_1h',
   'receptions',
   'receiving_yards',
   'rushing_yards',
-  'rushing_attempts',
   'rushing_receiving_yards',
   'passing_yards',
   'passing_tds',
-  'passing_attempts',
-  'passing_completions',
 ])
 const FIXED_PICK_MARKETS: PublicPickSpec[] = FEATURED_MARKETS
   .filter(market => GAME_DAY_PROP_TYPES.has(market.prop))
@@ -153,7 +149,7 @@ const FIXED_PICK_MARKETS: PublicPickSpec[] = FEATURED_MARKETS
     group: market.group,
     width: Math.max(96, market.width),
   }))
-const GAME_DAY_FOUNDATIONS = new Set(['player', 'index', 'lane'])
+const GAME_DAY_FOUNDATIONS = new Set(['player', 'index'])
 const GAME_DAY_ALWAYS_VISIBLE = new Set([
   ...GAME_DAY_FOUNDATIONS,
   'ftdPct', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio',
@@ -1336,7 +1332,10 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <div><strong>{board.status === 'not-posted' ? 'Player markets have not posted yet' : 'Sportsbook feed is temporarily unavailable'}</strong><span>{board.status === 'not-posted' ? 'Tracking, matchup and team context remain available. Odds columns will appear automatically when books publish this game.' : 'The board is showing the last valid context without inventing or zero-filling missing prices.'}</span></div>
       </section> : null}
 
-      <GameLines game={selected} board={board} />
+      <details className={styles.gameLinesDisclosure}>
+        <summary>Sportsbook game lines <span>{board.gameLines.length} books · moneyline, spread, total</span></summary>
+        <GameLines game={selected} board={board} />
+      </details>
 
       {toolsOpen ? <section className={styles.toolsPanel}>
         <button type="button" className={stickySort ? styles.toolActive : ''} onClick={() => setStickySort(value => !value)}><Layers3 size={15} /> Sticky sort {stickySort ? 'on' : 'off'}</button>

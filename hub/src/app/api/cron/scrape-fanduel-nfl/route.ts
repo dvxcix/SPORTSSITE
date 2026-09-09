@@ -49,12 +49,12 @@ export async function GET(req: Request) {
       links: await session.page.locator('a').evaluateAll(nodes => nodes.map(n => ({ text: n.textContent, href: n.getAttribute('href') })).filter(n => /patriots|seahawks|new england|seattle/i.test(n.text ?? '')).slice(0, 10)),
     } : {}) }, { status: 425 })
     await session.page.waitForTimeout(2500)
-    const tabs = await session.page.evaluate(runFanduelScrape) as FdTab[]
+    const tabs = await session.page.evaluate(runFanduelScrape, { maxDurationMs: 230000 }) as (FdTab & { incomplete?: boolean })[]
     const away = game.awayName.split(' ').at(-1)!.toLowerCase()
     const home = game.homeName.split(' ').at(-1)!.toLowerCase()
     if (!tabs.length || tabs.some(t => !t.event.title.toLowerCase().includes(away) || !t.event.title.toLowerCase().includes(home))) return NextResponse.json({ error: 'Event identity mismatch' }, { status: 502 })
     const parsed = parseNflFanduel(tabs, base)
-    const summary = { gameId, tabs: tabs.length, players: parsed.board.players.length, markets: parsed.board.players.reduce((sum, p) => sum + p.markets.length, 0), rejected: parsed.rejected }
+    const summary = { gameId, tabs: tabs.length, incomplete: tabs.some(t => t.incomplete), players: parsed.board.players.length, markets: parsed.board.players.reduce((sum, p) => sum + p.markets.length, 0), rejected: parsed.rejected }
     if (url.searchParams.get('dryRun') === '1') return NextResponse.json({ ...summary, raw: tabs })
     if (!parsed.board.players.length) return NextResponse.json({ ...summary, error: 'No recognized NFL markets' }, { status: 425 })
     if (!(await getUpcomingNflPikkitGames(7)).some(g => g.gameId === gameId)) return NextResponse.json({ error: 'Kickoff reached; capture discarded' }, { status: 409 })
