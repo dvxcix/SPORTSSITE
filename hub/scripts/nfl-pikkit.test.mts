@@ -71,6 +71,26 @@ test('touchdown section headings qualify bare names without overwriting other co
   }
 })
 
+test('NFL scorer subviews are clicked independently of the category dropdown', async () => {
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  const labels = ['First TD Scorer', 'Last TD Scorer']
+  const body = { innerText: 'Test Player Anytime TD Scorer\n700 Picks' }
+  const controls = labels.map((label, index) => ({ textContent: label, contains: () => false, click: () => { body.innerText = `Test Player ${label}\n${90 - index * 50} Picks` } }))
+  const select = { value: 'player_touchdown', options: [{ value: 'player_touchdown', textContent: 'Touchdowns' }], dispatchEvent: () => true }
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { title: 'NFL', querySelectorAll: (selector: string) => selector === 'select' ? [select] : controls, body } })
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { href: 'https://app.pikkit.com/event/test' } })
+  try {
+    const capture = await runPikkitScrape()
+    assert.deepEqual(capture.props.player_touchdown, { 'Test Player Anytime TD Scorer': 700, 'Test Player First TD Scorer': 90, 'Test Player Last TD Scorer': 40 })
+  } finally {
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
+    else Reflect.deleteProperty(globalThis, 'document')
+    if (originalLocation) Object.defineProperty(globalThis, 'location', originalLocation)
+    else Reflect.deleteProperty(globalThis, 'location')
+  }
+})
+
 test('broad NFL tabs resolve real players and reject market-total headings', () => {
   const identities = [{ name: 'Matthew Stafford', team: 'LA', position: 'QB' }, { name: 'Christian McCaffrey', team: 'SF', position: 'RB' }]
   assert.deepEqual(resolveNflPikkitEntry('Matthew Stafford Pass Yards', 'Passing', identities), {

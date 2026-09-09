@@ -23,17 +23,17 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
     props: {},
     marketLabels: {},
   }
-  function parsePage(marketLabel: string): Record<string, number> {
+  function parsePage(marketLabel: string, selectedScorer?: string): Record<string, number> {
     const nflCategory = /touchdown|\btd\b|passing|rushing|receiving|defensive|kicking/i.test(marketLabel)
     const t = document.body.innerText
     const ls = t.split('\n').map(l => l.trim()).filter(Boolean)
     const res: Record<string, number> = {}
     const touchdownSection = /^(?:(?:Anytime|First|1st|Last|Total|First Half|Second Half)\s+)(?:Touchdowns?|TDs?)(?:\s+Scorer)?$|^(?:TDs|Total Touchdowns)$/i
     const explicitTouchdown = /\s(?:(?:Anytime|First|1st|Last|Total|First Half|Second Half)\s+)?(?:Touchdowns?|TDs?)(?:\s+Scorer)?$/i
-    let section: string | null = null
+    let section: string | null = selectedScorer ?? null
     for (let i = 0; i < ls.length; i++) {
       if (nflCategory && /touchdown|\btd\b/i.test(marketLabel) && touchdownSection.test(ls[i])) {
-        section = ls[i]
+        if (!selectedScorer) section = ls[i]
         continue
       }
       const pm = ls[i].match(/^([\d,]+)\s+Picks?$/i)
@@ -83,6 +83,25 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
     for (let attempt = 0; !Object.keys(d).length && attempt < 10; attempt++) {
       await sleep(400)
       d = parsePage(option.label)
+    }
+    if (/touchdown/i.test(option.label)) {
+      // NFL also exposes scorer subviews as text controls, not <select>
+      // options. Merely seeing their labels does not load their player rows.
+      for (const label of ['Anytime TD Scorer', 'First TD Scorer', 'Last TD Scorer', 'Total TDs']) {
+        const candidates = Array.from(document.querySelectorAll<HTMLElement>('button,a,div,span,[role="tab"]'))
+          .filter(node => node.textContent?.trim() === label)
+        const control = candidates.find(node => !candidates.some(child => child !== node && node.contains(child)))
+        if (!control) continue
+        const before = document.body.innerText
+        control.click()
+        await sleep(1200)
+        for (let attempt = 0; document.body.innerText === before && attempt < 3; attempt++) await sleep(400)
+        if (document.body.innerText === before) continue
+        const scoped = parsePage(option.label, label)
+        // Explicit row suffixes take precedence. A control which did not
+        // change the view must not relabel existing Anytime rows as First TD.
+        Object.assign(d, scoped)
+      }
     }
     if (Object.keys(d).length > 0) {
       out.props[value] = d
