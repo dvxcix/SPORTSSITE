@@ -42,7 +42,7 @@ export default async function SidelinePage({ searchParams }: {
 
   const market = await getSidelineOddsBundle(selected)
   if (mode === 'public' || mode === 'markets') return <SidelineResearchClient
-    key={selected.id + mode} mode={mode} board={market.odds}
+    key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
     boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} />
   const roster = market.odds.players.map(player => ({
