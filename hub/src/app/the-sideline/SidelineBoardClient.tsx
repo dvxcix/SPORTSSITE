@@ -409,7 +409,7 @@ function PlayerAvatar({ player, team }: { player: PlayerRow; team: SidelineTeam 
   const source = sources.find(candidate => !failedSources.includes(candidate)) ?? null
   return (
     <span className={styles.avatar} style={{ background: `linear-gradient(145deg, ${team.color}, ${team.color2 || '#111820'})` }}>
-      {source ? <Image unoptimized src={source} alt={`${player.name} headshot`} width={42} height={42} onError={() => setFailedSources(current => current.includes(source) ? current : [...current, source])} /> : <b>{player.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}
+      {source ? <Image unoptimized={!source.startsWith('https://static.www.nfl.com/')} src={source} alt={`${player.name} headshot`} width={42} height={42} onError={() => setFailedSources(current => current.includes(source) ? current : [...current, source])} /> : <b>{player.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</b>}
       {team.logo && team.logo !== failedTeamLogo ? <Image unoptimized className={styles.avatarTeam} src={team.logo} alt={`${team.name} logo`} width={17} height={17} onError={() => setFailedTeamLogo(team.logo)} /> : null}
     </span>
   )

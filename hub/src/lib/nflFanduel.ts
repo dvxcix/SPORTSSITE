@@ -1,6 +1,7 @@
 import 'server-only'
 import { createAdminClient } from './supabase/admin'
 import { mergeNflOddsBoards } from './nflOddsLogic'
+import { normalizeNflSinglePlayContracts } from './scrapers/nflFanduelMarkets'
 import type { SidelineOddsBoard } from './nflOddsTypes'
 
 export async function loadNflFanduel(gameId: string, at?: string): Promise<SidelineOddsBoard | null> {
@@ -13,7 +14,9 @@ export async function loadNflFanduel(gameId: string, at?: string): Promise<Sidel
 
 /** Supplement missing offers, but never replace a newer observation with an older scrape. */
 export function attachNflFanduel(base: SidelineOddsBoard, supplement: SidelineOddsBoard | null): SidelineOddsBoard {
+  base = normalizeNflSinglePlayContracts(base)
   if (!supplement) return base
+  supplement = normalizeNflSinglePlayContracts(supplement)
   const filtered = { ...supplement, players: supplement.players.map(player => ({ ...player, markets: player.markets.map(market => ({ ...market, offers: market.offers.filter(offer => {
     const prior = base.players.find(p => p.id === player.id)?.markets.find(m => m.key === market.key)?.offers.find(o => o.vendor === offer.vendor)
     return !prior || Date.parse(offer.updatedAt ?? supplement.capturedAt ?? '') >= Date.parse(prior.updatedAt ?? base.capturedAt ?? '')

@@ -16,6 +16,9 @@ export function nflFdMarket(label: string): { prop: string; category: NflPlayerM
   }
   const rules: [RegExp, string, NflPlayerMarket['category']][] = [
     [/rush.*receiv.*yard/, 'rushing_receiving_yards', 'rushing'],
+    [/\byard\s+reception\b/, 'longest_reception', 'receiving'],
+    [/\byard\s+(?:rush|run)\b/, 'longest_rush', 'rushing'],
+    [/\byard\s+(?:pass|completion)\b/, 'longest_pass', 'passing'],
     [/longest.*(?:reception|receiving)/, 'longest_reception', 'receiving'],
     [/longest.*rush/, 'longest_rush', 'rushing'],
     [/longest.*(?:pass|completion)/, 'longest_pass', 'passing'],
@@ -27,6 +30,17 @@ export function nflFdMarket(label: string): { prop: string; category: NflPlayerM
   ]
   const rule = rules.find(([pattern]) => pattern.test(s))
   return rule ? { prop: rule[1], category: rule[2], line: null } : null
+}
+
+/** Repair explicitly labelled single-play milestones in old captures without
+ * inferring a contract from its numeric threshold or changing source history. */
+export function normalizeNflSinglePlayContracts(board: SidelineOddsBoard): SidelineOddsBoard {
+  return { ...board, players: board.players.map(player => ({ ...player, markets: player.markets.map(market => {
+    if (!/\byard\s+(?:reception|rush|run|pass|completion)\b/i.test(market.label)) return market
+    const spec = nflFdMarket(market.label)
+    if (!spec || !spec.prop.startsWith('longest_') || spec.prop === market.propType) return market
+    return { ...market, propType: spec.prop, category: spec.category, key: `${spec.prop}:${market.line}` }
+  }) })) }
 }
 
 export function parseNflFanduel(tabs: FdTab[], base: SidelineOddsBoard) {

@@ -153,7 +153,7 @@ export const getSidelineOddsBundle = unstable_cache(async (game: SidelineGame) =
   ])
   const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(current, supplement), baselines)])
   return { odds: sidelinePublicBoard(attachNflPikkitSnapshot(identified, picks)) }
-}, ['sideline-enriched-current-v1'], { revalidate: 20, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+}, ['sideline-enriched-current-v2-contracts'], { revalidate: 20, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export const getSidelineCapture = unstable_cache(async (game: SidelineGame, capturedAt: string) => {
   const admin = createAdminClient()
@@ -173,7 +173,7 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, capt
   const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(raw, supplement), baselines)])
   const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
   return { capturedAt, board: sidelinePublicBoard(attachNflPikkitSnapshot(identified, picks)) }
-}, ['sideline-selected-capture-v1'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
+}, ['sideline-selected-capture-v2-contracts'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export const getCachedSidelineBoardLens = unstable_cache(
   async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') => getSidelineBoardLens(game, roster, sample),
