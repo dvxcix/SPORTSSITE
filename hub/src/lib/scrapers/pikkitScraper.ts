@@ -11,7 +11,7 @@ export type PikkitScrapePayload = {
   capturedAt: string
   props: Record<string, Record<string, number>>
   marketLabels: Record<string, string>
-  diagnostics?: { label: string; selectors: string[][]; touchdownLabels: string[] }[]
+  diagnostics?: { label: string; selectors: string[][]; touchdownLabels: string[]; controls: { label: string; tag: string; role: string | null; expanded: string | null }[] }[]
 }
 
 export async function runPikkitScrape(inspectTouchdowns: boolean | void = false): Promise<PikkitScrapePayload> {
@@ -28,16 +28,27 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
     const t = document.body.innerText
     const ls = t.split('\n').map(l => l.trim()).filter(Boolean)
     const res: Record<string, number> = {}
-    for (let i = 1; i < ls.length; i++) {
-      const pm = ls[i].match(/^([\d,]+)\s+Picks?$/)
-      if (pm) {
-        const name = ls[i - 1]
+    const touchdownSection = /^(?:(?:Anytime|First|1st|Last|Total|First Half|Second Half)\s+)(?:Touchdowns?|TDs?)(?:\s+Scorer)?$|^(?:TDs|Total Touchdowns)$/i
+    const explicitTouchdown = /\s(?:(?:Anytime|First|1st|Last|Total|First Half|Second Half)\s+)?(?:Touchdowns?|TDs?)(?:\s+Scorer)?$/i
+    let section: string | null = null
+    for (let i = 0; i < ls.length; i++) {
+      if (nflCategory && /touchdown|\btd\b/i.test(marketLabel) && touchdownSection.test(ls[i])) {
+        section = ls[i]
+        continue
+      }
+      const pm = ls[i].match(/^([\d,]+)\s+Picks?$/i)
+      if (pm && i > 0) {
+        let name = ls[i - 1]
           .replace(/\s+(?:Over|Under)\s+[+-]?\d+(?:\.\d+)?$/i, '')
           .replace(/ Home Runs$| Total Bases$| Bases$| Hits$| Singles$| Doubles$| Triples$| RBI$| Runs$| Stolen Bases$| Hits \+ Runs \+ RBI$/i, '')
           // NFL selectors contain multiple contracts in one category. Preserve
           // each row's suffix so First TD cannot collapse into Anytime TD.
           .replace(new RegExp(`\\s+${marketLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), suffix => nflCategory ? suffix : '')
           .trim()
+        if (touchdownSection.test(name)) continue
+        // Scorer sections repeat bare player names. Keep the section contract
+        // in the key so First/Last cannot overwrite Anytime for that player.
+        if (section && !explicitTouchdown.test(name)) name = `${name} ${section}`
         if (name && name.length > 2 && !/^(OVER|UNDER|Over|Under|\d)/.test(name)) res[name] = parseInt(pm[1].replace(/,/g, ''), 10)
       }
     }
@@ -84,6 +95,10 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
         label: option.label,
         selectors: Array.from(document.querySelectorAll('select')).map(select => Array.from(select.options).map(item => item.textContent?.trim() ?? '').filter(text => marketWords.test(text) && text.length < 60)),
         touchdownLabels: [...new Set(document.body.innerText.split('\n').map(text => text.trim()).filter(text => marketLabel.test(text)))],
+        controls: Array.from(document.querySelectorAll('button,[role="button"],[aria-expanded]')).flatMap(node => {
+          const label = node.textContent?.trim() ?? ''
+          return marketLabel.test(label) ? [{ label, tag: node.tagName, role: node.getAttribute('role'), expanded: node.getAttribute('aria-expanded') }] : []
+        }),
       })
     }
   }

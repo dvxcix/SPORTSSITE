@@ -47,6 +47,30 @@ test('NFL Pikkit labels map to Sideline prop keys without dropping unknown marke
   assert.equal(canonicalizeNflPikkitMarket('kicking', 'Harrison Mevis FG Made'), 'field_goals_made')
 })
 
+test('touchdown section headings qualify bare names without overwriting other contracts', async () => {
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  const originalLocation = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  const select = { value: 'player_touchdown', options: [{ value: 'player_touchdown', textContent: 'Touchdowns' }], dispatchEvent: () => true }
+  const text = 'Anytime TD Scorer\n1,000 Picks\nTest Player\n700 Picks\nFirst TD Scorer\n300 Picks\nTest Player\n90 Picks\nLast TD Scorer\nTest Player\n40 Picks\nTDs\nTest Player TDs\n120 Picks\nTotal TDs\nTest Player\n30 Picks'
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { title: 'NFL', querySelectorAll: () => [select], body: { innerText: text } } })
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { href: 'https://app.pikkit.com/event/test' } })
+  try {
+    const capture = await runPikkitScrape()
+    assert.deepEqual(capture.props.player_touchdown, {
+      'Test Player Anytime TD Scorer': 700,
+      'Test Player First TD Scorer': 90,
+      'Test Player Last TD Scorer': 40,
+      'Test Player TDs': 120,
+      'Test Player Total TDs': 30,
+    })
+  } finally {
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
+    else Reflect.deleteProperty(globalThis, 'document')
+    if (originalLocation) Object.defineProperty(globalThis, 'location', originalLocation)
+    else Reflect.deleteProperty(globalThis, 'location')
+  }
+})
+
 test('broad NFL tabs resolve real players and reject market-total headings', () => {
   const identities = [{ name: 'Matthew Stafford', team: 'LA', position: 'QB' }, { name: 'Christian McCaffrey', team: 'SF', position: 'RB' }]
   assert.deepEqual(resolveNflPikkitEntry('Matthew Stafford Pass Yards', 'Passing', identities), {
