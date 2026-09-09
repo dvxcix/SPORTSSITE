@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { nflSampleReference, type NflSample } from '@/lib/nflSample'
 import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -183,7 +184,7 @@ function findMarketPlayer(board: SidelineOddsBoard, player: Pick<SidelinePlayer,
 
 function findMarket(player: NflOddsPlayer | null, propType: string) {
   if (!player) return null
-  return player.markets.find(market => market.propType === propType) ?? null
+  return nflPrimaryMarket(player, propType)
 }
 
 function findMarketByKey(player: NflOddsPlayer | null, marketKey: string, vendor?: string) {
@@ -306,13 +307,10 @@ function marketMove(player: NflOddsPlayer | null, propType = 'anytime_td', vendo
 }
 
 function primaryMarketOffer(player: NflOddsPlayer | null, propType: string, vendor = 'fanduel') {
-  if (!player) return null
-  for (const market of player.markets.filter(candidate => candidate.propType === propType)) {
-    const offer = findOffer(market, vendor)
-    const odds = offerCurrent(offer)
-    if (offer && odds != null) return { market, offer, odds }
-  }
-  return null
+  const market = nflPrimaryMarket(player, propType, vendor)
+  const offer = findOffer(market, vendor)
+  const odds = offerCurrent(offer)
+  return market && offer && odds != null ? { market, offer, odds } : null
 }
 
 function RatioCell({ numerator, denominator, detail }: { numerator: number | null; denominator: number | null; detail: string }) {
@@ -550,8 +548,8 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       group,
       width,
       heat: 'high',
-      value: row => row.hasTracking ? get(row) : null,
-      render: row => row.hasTracking ? <b className={scoreTone(get(row))}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty}>-</span>,
+      value: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? get(row) : null,
+      render: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? <b className={scoreTone(get(row))}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty} title="Not available in this statistical sample">-</span>,
     })
     const teamMetric = (
       id: string,
@@ -968,7 +966,8 @@ function gameMoneyline(board: SidelineOddsBoard, side: 'away' | 'home') {
   return side === 'away' ? book?.moneylineAway : book?.moneylineHome
 }
 
-export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odds }: {
+export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odds, sample = 'previous' }: {
+  sample?: NflSample
   games: SidelineGame[]
   selectedId: string
   selectedDate: string
@@ -1254,8 +1253,8 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
     })
   }
 
-  const selectGame = (game: SidelineGame) => startTransition(() => router.replace(`/the-sideline?date=${game.gameday}&game=${encodeURIComponent(game.id)}`, { scroll: false }))
-  const selectDate = (date: string) => startTransition(() => router.replace(`/the-sideline?date=${date}`, { scroll: false }))
+  const selectGame = (game: SidelineGame) => startTransition(() => router.replace(`/the-sideline?date=${game.gameday}&game=${encodeURIComponent(game.id)}&sample=${sample}`, { scroll: false }))
+  const selectDate = (date: string) => startTransition(() => router.replace(`/the-sideline?date=${date}&sample=${sample}`, { scroll: false }))
   const toggleCompare = (id: string) => setCompareIds(current => current.includes(id) ? current.filter(item => item !== id) : current.length < 4 ? [...current, id] : current)
   const toggleHighlight = (row: PlayerRow, column: ColumnDefinition) => {
     if (!highlighter || column.id === 'player') return
@@ -1286,7 +1285,14 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
         <div className={styles.brandActions}>
-          <span className={styles.coverageBadge} title={lens.coverage.detail}>{lens.coverage.currentProductionGames ? `${lens.coverage.currentProductionSeason} ${lens.coverage.currentProductionPhase} · ${lens.coverage.currentProductionGames}G LIVE` : `${lens.coverage.sampleSeason} HISTORY`} · NGS + PBP</span>
+          <a className={styles.filmLink} href={`/the-sideline?mode=public&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}&sample=${sample}`}>The Public · NFL</a>
+          <a className={styles.filmLink} href={`/the-sideline?mode=markets&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}&sample=${sample}`}>Compare sportsbooks</a>
+          <label className={styles.sampleControl}>Stat sample
+            <select aria-label="NFL statistical sample" value={sample} disabled={isPending} onChange={event => startTransition(() => router.replace(`/the-sideline?date=${selectedDate}&game=${encodeURIComponent(selected.id)}&sample=${event.target.value}`, { scroll: false }))}>
+              {(['previous', 'preseason', 'regular'] as const).map(value => <option key={value} value={value}>{nflSampleReference(selected.season, value).label}</option>)}
+            </select>
+          </label>
+          <span className={styles.coverageBadge} title={lens.coverage.detail}>{lens.coverage.label} · {lens.status === 'awaiting-data' ? 'Awaiting data' : 'Stored sample'}</span>
           <a className={styles.filmLink} href={`/the-sideline?mode=film&date=${selected.gameday}&game=${encodeURIComponent(selected.id)}`}><Film size={14} /> Routes + history</a>
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>

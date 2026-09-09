@@ -35,7 +35,7 @@ export type NflTdBaseline = {
   throughDate: string | null
   /** Probability-point displacement: positive = quieter/hidden, negative = louder/advertised. */
   deltaProbabilityPoints: number | null
-  /** Current American price versus average American price, stored as a decimal. */
+  /** Relative profit payout versus the reference price, stored as a decimal. */
   deltaPct: number | null
   deltaOdds: number | null
 }

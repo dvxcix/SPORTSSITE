@@ -9,6 +9,7 @@ import { sidelinePublicBoard } from '@/lib/sidelinePublicBoard'
 import { attachNflFanduel, loadNflFanduel } from '@/lib/nflFanduel'
 import { getSidelineLens } from './analysis'
 import { getSidelineBoardLens } from './boardAnalysis'
+import type { NflSample } from '@/lib/nflSample'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import type { SidelineGame, SidelineRosterPlayer } from './types'
 
@@ -162,8 +163,8 @@ export const getSidelineCapture = unstable_cache(async (game: SidelineGame, capt
 }, ['sideline-selected-capture-v1'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export const getCachedSidelineBoardLens = unstable_cache(
-  async (game: SidelineGame, roster: SidelineRosterPlayer[]) => getSidelineBoardLens(game, roster),
-  ['sideline-board-lens-v4'],
+  async (game: SidelineGame, roster: SidelineRosterPlayer[], sample: NflSample = 'previous') => getSidelineBoardLens(game, roster, sample),
+  ['sideline-board-lens-v5-isolated-samples'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )
 

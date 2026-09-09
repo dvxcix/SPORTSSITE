@@ -49,6 +49,7 @@ export type SidelineTeamProfile = {
 }
 
 export type SidelinePlayer = {
+  unavailableMetrics?: string[]
   id: string
   name: string
   team: string

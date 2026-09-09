@@ -1,4 +1,5 @@
 import 'server-only'
+import { nflSampleReference, type NflSample } from '@/lib/nflSample'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getNflBdlCurrentSeasonStats, type NflBdlPlayerStat } from '@/lib/nflOdds'
@@ -224,9 +225,8 @@ function buildPlayers(
     teamPassAttempts.set(player.team, (teamPassAttempts.get(player.team) ?? 0) + attempts)
   }
 
-  // BDL's general stats endpoint includes preseason. Its current-season volume
-  // must replace (not add to) the prior-season NGS volume; NGS remains the
-  // supporting geometry sample until current-season tracking is published.
+  // Box-score volume replaces NGS volume within the same selected season/phase.
+  // Never add these overlapping sources or borrow another season's tracking.
   if (currentStats.length) {
     const rosterByBdl = new Map(roster.map(player => [player.bdlId, player]))
     const currentByPlayer = new Map<string, PlayerAccumulator>()
@@ -351,6 +351,16 @@ function buildPlayers(
 
       return {
         id: player.id,
+        unavailableMetrics: [
+          ...(!pbp.some(row => row.posteam === sampleTeam) ? ['redZoneLooks', 'goalLineLooks', 'explosivePlays', 'redZone', 'breakaway'] : []),
+          ...(!player.airYardsWeight ? ['airYards'] : []),
+          ...(!player.airShareWeight ? ['airYardsShare'] : []),
+          ...(!player.separationWeight ? ['separation'] : []),
+          ...(!player.yacWeight ? ['yacAboveExpected'] : []),
+          ...(!player.rushOeWeight ? ['rushOverExpected'] : []),
+          ...(!player.cpoeWeight ? ['cpoe'] : []),
+          ...(!player.timeToThrowWeight ? ['timeToThrow'] : []),
+        ],
         name: player.name,
         team: player.team,
         position: playerBio?.position ?? player.position,
@@ -405,26 +415,37 @@ function buildHeadline(away: SidelineTeamProfile, home: SidelineTeamProfile) {
   return { script, detail, aggressor: aggressor.team.abbr }
 }
 
-async function querySeason(game: SidelineGame, season: number, roster: SidelineRosterPlayer[]) {
+async function querySeason(game: SidelineGame, season: number, roster: SidelineRosterPlayer[], phase: 'PRE' | 'REG') {
   const admin = createAdminClient()
   const teams = [game.away.abbr, game.home.abbr]
   const rosterIds = Array.from(new Set(roster.map(player => player.id).filter(id => id && !id.startsWith('bdl-'))))
   const teamIds = Array.from(new Set(roster.map(player => player.teamId).filter((id): id is number => id != null)))
+  const loadPlays = async () => {
+    const rows: Row[] = []
+    for (let offset = 0; offset < 20000; offset += 500) {
+      const result = await admin.from('nfl_pbp')
+        .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
+        .eq('season', season).eq('season_type', phase).lt('game_date', game.gameday)
+        .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`)
+        .order('game_id').order('play_id').range(offset, offset + 499)
+      if (result.error) throw new Error(`NFL play sample unavailable: ${result.error.message}`)
+      rows.push(...result.data)
+      if (result.data.length < 500) return { data: rows }
+    }
+    throw new Error('NFL play sample exceeded paging bound; refusing a partial sample')
+  }
   const [pbpResult, receivingResult, rushingResult, passingResult, currentStatsRaw] = await Promise.all([
-    admin.from('nfl_pbp')
-      .select('game_id,week,posteam,defteam,qtr,down,ydstogo,yards_gained,score_differential,yardline_100,shotgun,no_huddle,qb_dropback,pass_attempt,rush_attempt,success,pass_touchdown,rush_touchdown,receiver_player_id,receiver_player_name,rusher_player_id,rusher_player_name')
-      .eq('season', season).eq('season_type', 'REG')
-      .or(`posteam.in.(${teams.join(',')}),defteam.in.(${teams.join(',')})`).limit(7000),
+    loadPlays(),
     admin.from('nfl_ngs_receiving')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
-      .eq('season', season).eq('season_type', 'REG').in('team_abbr', teams),
+      .eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     admin.from('nfl_ngs_rushing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
-      .eq('season', season).eq('season_type', 'REG').in('team_abbr', teams),
+      .eq('season', season).eq('season_type', phase).in('team_abbr', teams),
     admin.from('nfl_ngs_passing')
       .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
-      .eq('season', season).eq('season_type', 'REG').in('team_abbr', teams),
-    getNflBdlCurrentSeasonStats(game.season, teamIds).catch(error => {
+      .eq('season', season).eq('season_type', phase).in('team_abbr', teams),
+    getNflBdlCurrentSeasonStats(season, teamIds, phase === 'PRE' ? 1 : 2).catch(error => {
       console.error('[the-sideline] current-season BDL stats unavailable', game.id, error)
       return []
     }),
@@ -432,13 +453,13 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
 
   const rosterReceiving = rosterIds.length ? await admin.from('nfl_ngs_receiving')
     .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,avg_separation,avg_intended_air_yards,percent_share_of_intended_air_yards,receptions,targets,yards,rec_touchdowns,avg_yac_above_expectation')
-    .eq('season', season).eq('season_type', 'REG').in('player_gsis_id', rosterIds) : { data: [] }
+    .eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
   const rosterRushing = rosterIds.length ? await admin.from('nfl_ngs_rushing')
     .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,rush_attempts,rush_yards,rush_touchdowns,rush_yards_over_expected_per_att')
-    .eq('season', season).eq('season_type', 'REG').in('player_gsis_id', rosterIds) : { data: [] }
+    .eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
   const rosterPassing = rosterIds.length ? await admin.from('nfl_ngs_passing')
     .select('player_gsis_id,player_display_name,player_short_name,player_position,team_abbr,week,attempts,completions,pass_yards,pass_touchdowns,avg_intended_air_yards,completion_percentage_above_expectation,avg_time_to_throw')
-    .eq('season', season).eq('season_type', 'REG').in('player_gsis_id', rosterIds) : { data: [] }
+    .eq('season', season).eq('season_type', phase).in('player_gsis_id', rosterIds) : { data: [] }
 
   const uniqueRows = (rows: Row[]) => Array.from(new Map(rows.map(row => [`${row.player_gsis_id}:${row.week}`, row])).values())
   const receiving = uniqueRows([...(receivingResult.data ?? []) as Row[], ...(rosterReceiving.data ?? []) as Row[]])
@@ -468,12 +489,13 @@ async function querySeason(game: SidelineGame, season: number, roster: SidelineR
       rosterStatus: row.status ?? null,
     })
   }
-  const currentGameKeys = Array.from(new Set(currentStatsRaw.map(row => `${row.game?.date ?? ''}:${row.game?.id ?? ''}`)))
+  const eligibleStats = currentStatsRaw.filter(row => row.game?.date && row.game.date.slice(0, 10) < game.gameday)
+  const currentGameKeys = Array.from(new Set(eligibleStats.map(row => `${row.game?.date ?? ''}:${row.game?.id ?? ''}`)))
     .sort((a, b) => a.localeCompare(b))
   const sampleIndex = new Map(currentGameKeys.map((key, index) => [key, index + 1]))
-  const currentStats: CurrentStatRow[] = currentStatsRaw.map(row => ({
+  const currentStats: CurrentStatRow[] = eligibleStats.map(row => ({
     ...row,
-    sampleIndex: sampleIndex.get(`${row.game?.date ?? ''}:${row.game?.id ?? ''}`) ?? 0,
+    sampleIndex: row.game?.week ?? sampleIndex.get(`${row.game?.date ?? ''}:${row.game?.id ?? ''}`) ?? 0,
   }))
   return {
     pbp: (pbpResult.data ?? []) as Row[],
@@ -538,15 +560,12 @@ function emptyWindow(game: SidelineGame): SidelineWindowData {
   return { plays: 0, weeks: [], teams: [emptyTeamProfile(game.away), emptyTeamProfile(game.home)], players: [] }
 }
 
-export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineRosterPlayer[] = []): Promise<SidelineLens> {
-  const preferredSeason = game.gameType === 'REG' && game.week > 3 ? game.season : game.season - 1
+export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineRosterPlayer[] = [], sample: NflSample = 'previous'): Promise<SidelineLens> {
+  const reference = nflSampleReference(game.season, sample)
+  const preferredSeason = reference.season
   try {
-    let season = preferredSeason
-    let data = await querySeason(game, season, roster)
-    if (!data.pbp.length && !data.receiving.length && season > 2020) {
-      season -= 1
-      data = await querySeason(game, season, roster)
-    }
+    const season = preferredSeason
+    const data = await querySeason(game, season, roster, reference.phase)
     const weeks = availableWeeks(data)
     const windows: Record<SidelineWindow, SidelineWindowData> = {
       season: buildWindow(game, data, null),
@@ -555,7 +574,11 @@ export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineR
       l5: buildWindow(game, data, weeks.slice(0, 5)),
       l10: buildWindow(game, data, weeks.slice(0, 10)),
     }
-    const headline = buildHeadline(windows.season.teams[0], windows.season.teams[1])
+    const headline = windows.season.plays > 0 ? buildHeadline(windows.season.teams[0], windows.season.teams[1]) : {
+      script: 'Play-by-play unavailable',
+      detail: 'Box-score production may be available, but this sample cannot establish defensive tendencies or red-zone context.',
+      aggressor: game.away.abbr,
+    }
     const hasData = Object.values(windows).some(window => window.plays || window.players.length)
     const currentProductionGames = new Set(data.currentStats.map(row => row.game?.id).filter(Boolean)).size
     const hasCurrentProduction = currentProductionGames > 0
@@ -571,12 +594,10 @@ export async function getSidelineBoardLens(game: SidelineGame, roster: SidelineR
         trackingStart: 2016,
         playByPlayStart: 2022,
         usesPriorSeason: season < game.season,
-        label: hasCurrentProduction ? `${game.season} preseason/regular production + ${season} tracking context` : `${season} NGS + play-by-play sample`,
-        detail: hasCurrentProduction
-          ? `${currentProductionGames} current-season game samples drive volume. ${season} NGS and play-by-play provide route, separation and field-geometry context until current tracking publishes.`
-          : `Schedule and historical stat storage begins in 1999. NFL Next Gen Stats begins in 2016; the loaded play-by-play archive currently begins in 2022.`,
-        currentProductionSeason: hasCurrentProduction ? game.season : null,
-        currentProductionPhase: hasCurrentProduction && game.week <= 1 ? 'PRESEASON + CURRENT' : hasCurrentProduction ? 'CURRENT SEASON' : null,
+        label: reference.label,
+        detail: `Only ${reference.label} data is used. Missing tracking is unavailable, never substituted from another season. Stats from prior teams remain identified on player rows.`,
+        currentProductionSeason: hasCurrentProduction ? season : null,
+        currentProductionPhase: reference.phase === 'PRE' ? 'PRESEASON' : 'REGULAR',
         currentProductionGames,
       },
       windows,

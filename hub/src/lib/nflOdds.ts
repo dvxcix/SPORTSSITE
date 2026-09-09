@@ -213,13 +213,12 @@ export async function getNflBdlGames(season: number, week: number): Promise<ApiG
   return bdlGet<ApiGame>(`/games?seasons[]=${season}&weeks[]=${week}&per_page=100`, 'reference')
 }
 
-export async function getNflBdlCurrentSeasonStats(season: number, teamIds: number[]): Promise<NflBdlPlayerStat[]> {
+export async function getNflBdlCurrentSeasonStats(season: number, teamIds: number[], phase?: 1 | 2): Promise<NflBdlPlayerStat[]> {
   const uniqueTeams = Array.from(new Set(teamIds.filter(id => Number.isFinite(id) && id > 0)))
   if (!uniqueTeams.length) return []
   const params = new URLSearchParams({ per_page: '100' })
   params.append('seasons[]', String(season))
-  params.append('season_types[]', '1')
-  params.append('season_types[]', '2')
+  for (const seasonType of phase == null ? [1, 2] : [phase]) params.append('season_types[]', String(seasonType))
   uniqueTeams.forEach(id => params.append('team_ids[]', String(id)))
   return bdlGetPaged<NflBdlPlayerStat>(`/stats?${params}`)
 }

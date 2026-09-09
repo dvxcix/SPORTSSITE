@@ -38,7 +38,7 @@ test('an opening-only response never overwrites the last captured live price', (
   assert.equal(merged.gameLines[0].moneylineHome, -150)
 })
 
-test('ATD and FTD baselines retain probability points and TheDugout-style price percentages', () => {
+test('ATD and FTD baselines retain probability points and comparable profit-price percentages', () => {
   const enriched = attachNflTdBaselines(board(120), [{
     slate_date: '2026-09-07', player_id: 7, player_name: 'Test Runner', team_abbr: 'BUF',
     vendor: 'fanduel', prop_type: 'anytime_td', average_odds: 150, sample_games: 8,
@@ -58,7 +58,9 @@ test('ATD and FTD baselines retain probability points and TheDugout-style price 
   }]).players[0].tdBaselines?.[0]
   assert.equal(negativePrice?.deltaOdds, -20)
   assert.equal(negativePrice?.deltaProbabilityPoints, -4.1)
-  assert.ok(Math.abs((negativePrice?.deltaPct ?? 0) - (-20 / 110)) < Number.EPSILON * 2)
+  // -110 pays 100/110 per dollar; -130 pays 100/130. Compare payouts,
+  // not signed American notation (which is discontinuous at even money).
+  assert.ok(Math.abs((negativePrice?.deltaPct ?? 0) - (110 / 130 - 1)) < 1e-10)
 })
 
 test('mixed positive and negative American prices are averaged in probability space', () => {

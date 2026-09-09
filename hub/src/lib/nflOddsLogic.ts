@@ -1,5 +1,6 @@
 import type { NflOddsPlayer, NflTdBaseline, SidelineOddsBoard } from './nflOddsTypes'
-import { americanImpliedProbability, hiddenProbabilityPoints } from './nflMarketMath'
+import { americanImpliedProbability, hiddenProbabilityPoints, nflPriceChange } from './nflMarketMath'
+import { nflPrimaryMarket } from './nflPrimaryMarket'
 
 const BOOK_ORDER = ['fanduel', 'draftkings', 'betmgm', 'caesars', 'fanatics', 'betrivers', 'kalshi', 'polymarket']
 
@@ -23,9 +24,9 @@ function bookRank(vendor: string) {
 }
 
 function milestoneOdds(player: NflOddsPlayer, propType: string, vendor: string) {
-  const market = player.markets.find(candidate => candidate.propType === propType)
+  const market = nflPrimaryMarket(player, propType, vendor)
   const offer = market?.offers.find(candidate => candidate.vendor === vendor)
-  return offer?.type === 'milestone' ? offer.current.odds ?? null : null
+  return offer?.current.odds ?? offer?.current.over ?? null
 }
 
 export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaselineRow[]): SidelineOddsBoard {
@@ -43,9 +44,7 @@ export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaseli
           : Number(row.average_implied_probability)
         const currentProbability = americanImpliedProbability(current)
         const deltaProbabilityPoints = hiddenProbabilityPoints(averageProbability, currentProbability)
-        const deltaPct = current == null || !Number.isFinite(averageOdds) || averageOdds === 0
-          ? null
-          : (current - averageOdds) / Math.abs(averageOdds)
+          const deltaPct = deltaProbabilityPoints == null ? null : nflPriceChange(current, averageOdds)
         return {
           propType: row.prop_type,
           vendor: row.vendor,
@@ -56,8 +55,8 @@ export function attachNflTdBaselines(board: SidelineOddsBoard, rows: NflTdBaseli
           firstSampleDate: row.first_sample_date,
           throughDate: row.through_date,
           deltaProbabilityPoints,
-          // Match TheDugout's FHR% / HR% contract: current American price
-          // versus the player's own historical average price.
+            // Profit-price movement versus the player's own reference; avoids
+            // a spurious 200% move at the +100 / -100 notation boundary.
           deltaPct,
           deltaOdds: current == null || !Number.isFinite(averageOdds) ? null : current - averageOdds,
         }
