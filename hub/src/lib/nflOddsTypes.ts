@@ -62,6 +62,9 @@ export type NflOddsPlayer = {
     rawMarket: string
     picks: number
     capturedAt: string
+    line?: number | null
+    side?: 'over' | 'under'
+    kind?: 'milestone' | 'over_under'
   }>
 }
 

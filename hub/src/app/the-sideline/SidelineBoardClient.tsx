@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
+import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
+import { ladderMatrixValue } from '@/lib/nflLadders'
+const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 import { buildBoardHeat } from './boardHeat'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { useRouter } from 'next/navigation'
@@ -976,7 +980,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   selectedId: string
   selectedDate: string
   lens: SidelineLens
-  odds: SidelineOddsBoard
+  odds: SidelineOddsBoard | PackedOdds
 }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
@@ -985,7 +989,8 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const marketStory = useSidelineMarket(selectedId, odds)
+  const initialOdds = useMemo(()=>unpackSidelineBoard(odds),[odds])
+  const marketStory = useSidelineMarket(selectedId, initialOdds)
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -1143,17 +1148,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
       id: row.id,
       team: normalizedTeam(row.team),
       values: (factor: NflMatrixFactor) => {
-        if (factor.category === 'picks') return publicPickCount(row.market, factor.propType ?? 'anytime_td')
-        if (factor.category === 'market') {
-          const market = row.market?.markets.find(item => item.propType === factor.propType && (!factor.field || factor.field === 'market')) ?? null
-          const offer = findOffer(market, factor.vendor ?? 'fanduel')
-          if (factor.marketValue === 'line') return market?.line ?? null
-          const current = offerCurrent(offer)
-          const opening = offerOpening(offer)
-          if (factor.marketValue === 'opening') return opening
-          if (factor.marketValue === 'move') return current != null && opening != null ? current - opening : null
-          return current
-        }
+        if (factor.category === 'picks' || factor.category === 'market') return ladderMatrixValue(findMarketPlayer(currentBoard, row), factor)
         if (factor.category === 'baseline') {
           const prop = factor.field === 'ftdPct' ? 'first_td' : 'anytime_td'
           const delta = baselineMove(row.market, prop)?.deltaPct
@@ -1200,7 +1195,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
       evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
     })
     return result
-  }, [lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
+  }, [currentBoard, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
 
   const resolvedColumns = useMemo(() => {
     const ordered = columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]
@@ -1345,10 +1340,10 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
         <button type="button" onClick={() => { setSorts([{ id: 'index', direction: 'desc' }]); setHighlights({}); setErased(new Set()) }}><RotateCcw size={15} /> Clear board tools</button>
       </section> : null}
 
-      <nav className={styles.viewTabs} aria-label="NFL board column groups">{VIEW_OPTIONS.map(option => <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>{option.label}</button>)}</nav>
+      <nav className={styles.viewTabs} style={view === 'props' ? { position: 'static' } : undefined} aria-label="NFL board column groups">{VIEW_OPTIONS.map(option => <button key={option.id} type="button" className={view === option.id ? styles.viewActive : ''} onClick={() => setView(option.id)}>{option.label}</button>)}</nav>
       <nav className={styles.roleTabs} aria-label="NFL position lanes">{ROLE_OPTIONS.map(option => <button key={option.id} type="button" className={roleFilter === option.id ? styles.roleActive : ''} onClick={() => setRoleFilter(option.id)}>{option.label}</button>)}</nav>
 
-      {[{ team: selected.away, opponent: selected.home, rows: awayRows, side: 'away' as const }, { team: selected.home, opponent: selected.away, rows: homeRows, side: 'home' as const }].map(section => (
+      {view === 'props' ? <LadderBoard board={board} onPlayer={id => { const row=rows.find(row=>row.market?.id===id); if(row)setExpanded(row) }} /> : [{ team: selected.away, opponent: selected.home, rows: awayRows, side: 'away' as const }, { team: selected.home, opponent: selected.away, rows: homeRows, side: 'home' as const }].map(section => (
         <section className={styles.teamBoard} key={section.team.abbr} style={{ '--team-color': section.team.color } as CSSProperties}>
           <TeamSummary
             team={section.team}
@@ -1398,7 +1393,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
       <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
 
       {(expanded || columnsOpen) ? createPortal(<div className={styles.modalTheme}>
-        {expanded ? <PlayerModal player={expanded} players={rows} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} lens={lens} gameSeason={selected.season} initialWindow={windowId} onSelect={setExpanded} onClose={() => setExpanded(null)} /> : null}
+        {expanded ? <PlayerModal player={rows.find(row=>row.id===expanded.id) ?? { ...expanded, market: null }} players={rows} team={allTeams.find(team => normalizedTeam(team.abbr) === normalizedTeam(expanded.team)) ?? selected.away} lens={lens} gameSeason={selected.season} initialWindow={windowId} onSelect={setExpanded} onClose={() => setExpanded(null)} /> : null}
         {columnsOpen ? <ColumnManager columns={columns} visibleIds={visibleIds} order={columnOrder} onVisible={id => setVisibleIds(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); next.add('player'); return next })} onMove={moveColumn} onReset={() => { setColumnOrder(defaultOrder); setVisibleIds(defaultVisible) }} onClose={() => setColumnsOpen(false)} /> : null}
       </div>, document.body) : null}
     </div>

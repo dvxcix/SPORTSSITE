@@ -12,7 +12,10 @@ export type NflMatrixFactor = {
   window: NflMatrixWindow
   vendor: string | null
   propType: string | null
-  marketValue: 'current' | 'opening' | 'move' | 'line' | null
+  marketValue: 'current' | 'opening' | 'move' | 'line' | 'probability_move' | 'ratio' | 'ratio_move' | 'estimated_picks' | null
+  marketLine?: number | null
+  marketSide?: 'over' | 'under'
+  marketKind?: 'milestone' | 'over_under'
 }
 
 export type NflMatrixPipelineStep = NflMatrixFactor & {
@@ -96,6 +99,7 @@ export const NFL_MATRIX_FIELDS: NflMatrixField[] = [
 
 export const NFL_MATRIX_PROP_TYPES = [
   ['first_td', 'First touchdown'],
+  ['last_td', 'Last touchdown'],
   ['anytime_td', 'Anytime touchdown'],
   ['two_plus_td', '2+ touchdowns'],
   ['three_plus_td', '3+ touchdowns'],
@@ -112,6 +116,12 @@ export const NFL_MATRIX_PROP_TYPES = [
   ['rushing_receiving_yards', 'Rush + receiving yards'],
   ['longest_reception', 'Longest reception'],
   ['longest_rush', 'Longest rush'],
+  ['longest_completion', 'Longest completion'],
+  ['fg_made', 'Field goals'],
+  ['passing_yards_1h', 'Passing yards first half'],
+  ['rushing_yards_1h', 'Rushing yards first half'],
+  ['receiving_yards_1h', 'Receiving yards first half'],
+  ['receptions_1h', 'Receptions first half'],
   ['field_goals_made', 'Field goals made'],
   ['kicking_points', 'Kicking points'],
   ['extra_points', 'Extra points'],
@@ -213,7 +223,10 @@ export function validateNflMatrixDefinition(matrixType: 'classic' | 'pipeline', 
       window: validWindows.has(value.window as NflMatrixWindow) ? value.window as NflMatrixWindow : 'season',
       vendor: typeof value.vendor === 'string' && NFL_MATRIX_BOOKS.includes(value.vendor as typeof NFL_MATRIX_BOOKS[number]) ? value.vendor : null,
       propType: typeof value.propType === 'string' ? value.propType : null,
-      marketValue: ['current', 'opening', 'move', 'line'].includes(value.marketValue as string) ? value.marketValue as NflMatrixFactor['marketValue'] : null,
+      marketValue: ['current', 'opening', 'move', 'line', 'probability_move', 'ratio', 'ratio_move', 'estimated_picks'].includes(value.marketValue as string) ? value.marketValue as NflMatrixFactor['marketValue'] : null,
+      marketLine: typeof value.marketLine === 'number' && Number.isFinite(value.marketLine) ? value.marketLine : null,
+      marketSide: value.marketSide === 'under' ? 'under' : 'over',
+      marketKind: value.marketKind === 'over_under' ? 'over_under' : value.marketKind === 'milestone' ? 'milestone' : undefined,
     }
     if (matrixType === 'classic') return [base]
     return [{

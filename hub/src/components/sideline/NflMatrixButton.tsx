@@ -62,12 +62,12 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
         <div className={styles.factorGrid}>
           <select value={factor.propType ?? 'anytime_td'} onChange={event => onChange({ ...factor, propType: event.target.value })}>{NFL_MATRIX_PROP_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
           <select value={factor.vendor ?? 'fanduel'} onChange={event => onChange({ ...factor, vendor: event.target.value })}>{NFL_MATRIX_BOOKS.map(book => <option value={book} key={book}>{book}</option>)}</select>
-          <select value={factor.marketValue ?? 'current'} onChange={event => onChange({ ...factor, marketValue: event.target.value as NflMatrixFactor['marketValue'] })}><option value="current">Current odds</option><option value="opening">Opening odds</option><option value="move">Current − open</option><option value="line">Prop line</option></select>
+          <select value={factor.marketValue ?? 'current'} onChange={event => onChange({ ...factor, marketValue: event.target.value as NflMatrixFactor['marketValue'] })}><option value="current">Current odds</option><option value="opening">Opening odds</option><option value="move">Current - open odds</option><option value="line">Prop line</option><option value="probability_move">Implied probability change (pp)</option><option value="ratio">ATD / contract ratio</option><option value="ratio_move">ATD / contract ratio change</option><option value="estimated_picks">Estimated OVER picks · model v1</option></select>
         </div>
       ) : factor.category === 'picks' ? (
         <div className={styles.factorGrid}>
           <select value={factor.propType ?? 'anytime_td'} onChange={event => onChange({ ...factor, propType: event.target.value })}>{NFL_MATRIX_PROP_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
-          <span className={styles.fixedContext}>Picks at selected Market Story capture</span>
+          <span className={styles.fixedContext}>Observed picks · latest board</span>
         </div>
       ) : (
         <div className={styles.factorGrid}>
@@ -75,6 +75,11 @@ function FactorEditor({ factor, pipeline, onChange, onRemove }: {
           {!['team', 'baseline'].includes(factor.category) ? <select value={factor.window} onChange={event => onChange({ ...factor, window: event.target.value as NflMatrixFactor['window'] })}>{WINDOWS.map(window => <option value={window} key={window}>{window === 'season' ? 'Season' : window.toUpperCase()}</option>)}</select> : <span className={styles.fixedContext}>Current game context</span>}
         </div>
       )}
+      {['market', 'picks'].includes(factor.category) ? <div className={styles.factorGrid}>
+        <label>Exact threshold<input aria-label="Exact market threshold" type="number" step="any" placeholder="Primary line" value={factor.marketLine ?? ''} onChange={event => onChange({ ...factor, marketLine: event.target.value === '' ? null : Number(event.target.value) })} /></label>
+        <select aria-label="Market side" value={factor.marketSide ?? 'over'} onChange={event => onChange({ ...factor, marketSide: event.target.value as 'over' | 'under' })}><option value="over">Over / milestone</option><option value="under">Under</option></select>
+        <select aria-label="Contract type" value={factor.marketKind ?? ''} onChange={event => onChange({ ...factor, marketKind: event.target.value ? event.target.value as 'milestone' | 'over_under' : undefined })}><option value="">Primary contract</option><option value="milestone">Milestone (+)</option><option value="over_under">Over / under line</option></select>
+      </div> : null}
       {pipeline && step.kind === 'rank' ? (
         <div className={styles.conditionRow}><span>Keep</span><input type="number" min={1} max={20} value={step.keep} onChange={event => onChange({ ...step, keep: Number(event.target.value) })} /><select value={step.direction} onChange={event => onChange({ ...step, direction: event.target.value as 'highest' | 'lowest' })}><option value="highest">highest</option><option value="lowest">lowest</option></select><select value={step.scope} onChange={event => onChange({ ...step, scope: event.target.value as 'team' | 'game' })}><option value="team">per team</option><option value="game">in game</option></select></div>
       ) : (

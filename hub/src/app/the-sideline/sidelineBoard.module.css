@@ -287,7 +287,7 @@
   padding: 7px;
   margin-bottom: 10px;
   background: rgba(8, 13, 19, 0.93);
-  backdrop-filter: blur(16px);
+  backdrop-filter: none;
 }
 
 .controlBar > button,
@@ -775,7 +775,7 @@
   position: sticky !important;
   left: 0;
   z-index: 6 !important;
-  box-shadow: 7px 0 15px rgba(0, 0, 0, 0.23);
+  box-shadow: 1px 0 0 #253343;
 }
 
 .boardTable th.stickyCell { z-index: 8 !important; }
@@ -1085,7 +1085,7 @@
   .marketSave { opacity: 0.7; }
   .toolsPanel { overflow-x: auto; }
   .toolsPanel > button { white-space: nowrap; }
-  .viewTabs { position: sticky; top: 166px; z-index: 20; background: rgba(8, 13, 19, 0.94); backdrop-filter: blur(14px); }
+  .viewTabs { position: sticky; top: 166px; z-index: 20; background: #080d13; backdrop-filter: none; }
   .roleTabs { margin-top: -5px; }
   .teamHeader { min-height: 0; }
   .teamIdentity { padding: 11px; }

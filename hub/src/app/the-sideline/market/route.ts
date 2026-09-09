@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { packSidelineBoard } from '@/lib/sidelineWire'
 import { createClient } from '@/lib/supabase/server'
 import { getSidelineCapture, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from '../data'
 
@@ -25,9 +26,10 @@ export async function GET(request: Request) {
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
     if (at) {
       const frame = await getSidelineCapture(game, new Date(at).toISOString())
-      return NextResponse.json({ frame }, { headers: { 'Cache-Control': 'private, no-store' } })
+      return NextResponse.json({ frame: frame && params.get('packed')==='1' ? {...frame,board:packSidelineBoard(frame.board)} : frame }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
-    return NextResponse.json(await getSidelineOddsBundle(game), { headers: { 'Cache-Control': 'private, no-store' } })
+    const bundle=await getSidelineOddsBundle(game)
+    return NextResponse.json(params.get('packed')==='1'?{odds:packSidelineBoard(bundle.odds)}:bundle, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     console.error('[the-sideline] market request failed', error)
     return NextResponse.json({ error: 'Market data temporarily unavailable. Retry shortly.' }, { status: 503 })

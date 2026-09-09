@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineOddsFrame } from './types'
+import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 
 export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard) {
   const [current, setCurrent] = useState(initialOdds)
@@ -24,16 +25,17 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
       else if (foreground) slots.current.waiting.unshift(resolve)
       else slots.current.waiting.push(resolve)
     })
-    const request = acquire.then(() => fetch('/the-sideline/market?game=' + encodeURIComponent(gameId) + '&at=' + encodeURIComponent(at), {
+    const request = acquire.then(() => fetch('/the-sideline/market?packed=1&game=' + encodeURIComponent(gameId) + '&at=' + encodeURIComponent(at), {
       signal: AbortSignal.timeout(20000),
     })).then(async response => {
       if (!response.ok) throw new Error('Capture unavailable')
-      const data = await response.json() as { frame: SidelineOddsFrame | null }
+      const data = await response.json() as { frame: (Omit<SidelineOddsFrame,'board'> & {board:SidelineOddsBoard|PackedOdds}) | null }
       if (!data.frame) throw new Error('No odds at this capture')
-      cache.current.set(at, data.frame)
+      const frame={...data.frame,board:unpackSidelineBoard(data.frame.board)}
+      cache.current.set(at, frame)
       // Bound memory without throwing away a stop every few slider movements.
-      if (cache.current.size > 96) cache.current.delete(cache.current.keys().next().value!)
-      return data.frame
+      if (cache.current.size > 32) cache.current.delete(cache.current.keys().next().value!)
+      return frame
     }).finally(() => {
       inFlight.current.delete(at)
       const next = slots.current.waiting.shift()
@@ -56,15 +58,15 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
       if (document.visibilityState === 'hidden') return
       try {
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20000)])
-        const base = '/the-sideline/market?game=' + encodeURIComponent(gameId)
+        const base = '/the-sideline/market?packed=1&game=' + encodeURIComponent(gameId)
         const [indexResponse, currentResponse] = await Promise.all([
           fetch(base + '&index=1', { signal }), fetch(base, { signal }),
         ])
         if (!indexResponse.ok || !currentResponse.ok) throw new Error('Refresh unavailable')
         const [indexData, currentData] = await Promise.all([indexResponse.json(), currentResponse.json()])
         if (controller.signal.aborted) return
-        setTimes(indexData.timeline ?? [])
-        if (currentData.odds) setCurrent(currentData.odds)
+        setTimes(previous => { const next: string[]=indexData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
+        if (currentData.odds) { const next=unpackSidelineBoard(currentData.odds); setCurrent(previous => JSON.stringify(previous)===JSON.stringify(next) ? previous : next) }
       } catch {
         if (!controller.signal.aborted) setError('Refresh unavailable. Showing the last loaded capture.')
       }
