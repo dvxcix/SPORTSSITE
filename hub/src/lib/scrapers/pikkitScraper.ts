@@ -11,9 +11,10 @@ export type PikkitScrapePayload = {
   capturedAt: string
   props: Record<string, Record<string, number>>
   marketLabels: Record<string, string>
+  diagnostics?: { label: string; selectors: string[][]; touchdownLabels: string[] }[]
 }
 
-export async function runPikkitScrape(): Promise<PikkitScrapePayload> {
+export async function runPikkitScrape(inspectTouchdowns: boolean | void = false): Promise<PikkitScrapePayload> {
   function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)) }
   const out: PikkitScrapePayload = {
     url: location.href,
@@ -75,6 +76,15 @@ export async function runPikkitScrape(): Promise<PikkitScrapePayload> {
     if (Object.keys(d).length > 0) {
       out.props[value] = d
       out.marketLabels[value] = option.label
+    }
+    if (inspectTouchdowns && /touchdown/i.test(option.label)) {
+      // Only exact market labels: no player names, account content, or raw DOM.
+      const marketLabel = /^(?:(?:Anytime|First|1st|Last|Total|Player|Passing|Rushing|Receiving|First Half|Second Half)\s+)?(?:Touchdowns?|TDs?)(?:\s+Scorer)?$/i
+      ;(out.diagnostics ??= []).push({
+        label: option.label,
+        selectors: Array.from(document.querySelectorAll('select')).map(select => Array.from(select.options).map(item => item.textContent?.trim() ?? '').filter(text => marketWords.test(text) && text.length < 60)),
+        touchdownLabels: [...new Set(document.body.innerText.split('\n').map(text => text.trim()).filter(text => marketLabel.test(text)))],
+      })
     }
   }
   return out

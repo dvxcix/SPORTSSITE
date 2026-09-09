@@ -62,7 +62,11 @@ export async function GET(req: Request) {
       await bb.page.waitForTimeout(3000)
       propsFound = await clickPlayerProps(bb.page)
     }
-    const scrape = await bb.page.evaluate(runPikkitScrape)
+    const scrape = await bb.page.evaluate(runPikkitScrape, true)
+    for (const diagnostic of scrape.diagnostics ?? []) {
+      console.info('[scrape-pikkit-nfl] market-controls', { gameId, ...diagnostic })
+    }
+    delete scrape.diagnostics
     const marketCount = Object.keys(scrape.props).length
     if (!marketCount) {
       const controls = await bb.page.evaluate(() => ({

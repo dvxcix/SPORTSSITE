@@ -46,7 +46,10 @@ export type ResolvedNflPikkitEntry = {
 
 function defaultMarketLabel(category: string) {
   const normalized = category.toLowerCase()
+  if (/\b(first|1st|second|2nd)\s+half\b/.test(normalized)) return category
   if (/\b(first|1st)\s+(touchdown|td)\b|\bftd\b/.test(normalized)) return 'First Touchdown Scorer'
+  if (/\blast\s+(touchdown|td)\b/.test(normalized)) return 'Last Touchdown Scorer'
+  if (/\btotal\s+(touchdowns?|tds?)\b/.test(normalized)) return 'Total TDs'
   if (normalized.includes('touchdown')) return 'Anytime Touchdown Scorer'
   if (normalized.includes('passing')) return 'Passing Yards'
   if (normalized.includes('receiving')) return 'Receiving Yards'
@@ -104,7 +107,10 @@ export function canonicalizeNflPikkitMarket(rawKey: string, rawLabel = '') {
   const has = (...words: string[]) => words.every(word => source.includes(word))
 
   if ((has('first half') || has('1st half')) && has('touchdown')) return 'anytime_td_1h'
+  if ((has('second half') || has('2nd half')) && has('touchdown')) return 'anytime_td_2h'
   if (has('first', 'touchdown') || /\bftd\b/.test(source)) return 'first_td'
+  if (has('last', 'touchdown')) return 'last_td'
+  if (has('total', 'touchdown')) return 'total_tds'
   if ((has('2+') || has('two plus') || has('2 or more')) && has('touchdown')) return 'two_plus_td'
   if ((has('3+') || has('three plus') || has('3 or more')) && has('touchdown')) return 'three_plus_td'
   if (has('anytime', 'touchdown') || has('touchdown scorer') || source === 'touchdowns' || source === 'touchdown') return 'anytime_td'
