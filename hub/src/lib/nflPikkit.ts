@@ -26,6 +26,8 @@ export type NflPikkitSnapshot = {
   capturedAt: string
   sourceUrl: string | null
   markets: NflPikkitMarket[]
+  /** Retained for admin audit, but excluded from display after a capture fault. */
+  invalidMarkets?: string[]
 }
 
 export function normalizeNflPikkitName(value: string) {
@@ -142,6 +144,7 @@ export function attachNflPikkitSnapshot(board: SidelineOddsBoard, snapshot: NflP
     // Normalize again at read time so already-stored captures from an older
     // importer immediately populate the correct Sideline column.
     const propType = canonicalizeNflPikkitMarket(market.propType || market.rawKey, market.rawLabel || market.label)
+    if (snapshot.invalidMarkets?.includes(propType)) continue
     for (const player of market.players) {
       const key = `${normalizeNflPikkitName(player.team ?? '')}:${player.playerKey}`
       const fallback = `:${player.playerKey}`

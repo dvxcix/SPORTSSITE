@@ -102,7 +102,7 @@ test('expanding Last TD does not relabel bare players in an already-open First T
   try {
     const capture = await runPikkitScrape()
     assert.deepEqual(capture.props.player_touchdown, { 'Test Player Anytime TD Scorer': 700, 'Test Player First TD Scorer': 90, 'Other Player Last TD Scorer': 1 })
-    assert.equal(capture.props.player_touchdown['Test Player Last TD Scorer'], undefined)
+    assert.equal(Object.hasOwn(capture.props.player_touchdown, 'Test Player Last TD Scorer'), false)
   } finally {
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
     else Reflect.deleteProperty(globalThis, 'document')
@@ -150,6 +150,7 @@ test('Pikkit picks attach by normalized player and team identity', () => {
   assert.equal(enriched.picksCapturedAt, snapshot.capturedAt)
   assert.equal(enriched.players[0].publicPicks?.[0]?.picks, 1234)
   assert.equal(enriched.players[0].publicPicks?.[0]?.propType, 'passing_yards')
+  assert.deepEqual(attachNflPikkitSnapshot(board, { ...snapshot, invalidMarkets: ['passing_yards'] }).players[0].publicPicks, [])
 })
 
 test('missing Pikkit data remains unavailable rather than zero-filled', () => {
