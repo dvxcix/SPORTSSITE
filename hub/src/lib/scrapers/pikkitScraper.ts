@@ -88,8 +88,8 @@ export async function runPikkitScrape(inspectTouchdowns: boolean | void = false)
       // NFL also exposes scorer subviews as text controls, not <select>
       // options. Merely seeing their labels does not load their player rows.
       for (const label of ['Anytime TD Scorer', 'First TD Scorer', 'Last TD Scorer', 'Total TDs']) {
-        const candidates = Array.from(document.querySelectorAll<HTMLElement>('button,a,div,span,[role="tab"]'))
-          .filter(node => node.textContent?.trim() === label)
+        const candidates = Array.from(document.querySelectorAll<HTMLElement>('*'))
+          .filter(node => typeof node.click === 'function' && node.textContent?.trim() === label)
         const control = candidates.find(node => !candidates.some(child => child !== node && node.contains(child)))
         if (!control) continue
         const before = document.body.innerText
