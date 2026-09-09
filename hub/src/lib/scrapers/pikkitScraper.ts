@@ -65,7 +65,13 @@ export async function runPikkitScrape(): Promise<PikkitScrapePayload> {
     ;(sel as HTMLSelectElement).value = value
     sel.dispatchEvent(new Event('change', { bubbles: true }))
     await sleep(900)
-    const d = parsePage(option.label)
+    let d = parsePage(option.label)
+    // Large event pages can render the selector before the pick rows arrive.
+    // Do not mistake an in-flight category load for an empty market.
+    for (let attempt = 0; !Object.keys(d).length && attempt < 10; attempt++) {
+      await sleep(400)
+      d = parsePage(option.label)
+    }
     if (Object.keys(d).length > 0) {
       out.props[value] = d
       out.marketLabels[value] = option.label

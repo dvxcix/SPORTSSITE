@@ -57,11 +57,13 @@ async function run(req: Request) {
     })
   }
   const allSkipped = results.length > 0 && results.every(result => result.skipped)
-  const summary = { games: games.length, attempted: candidates.length, succeeded: results.length - failed.length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
+  const summary = { games: games.length, attempted: candidates.length, succeeded: results.filter(result => result.ok && !result.skipped).length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
   console.info('[poll-pikkit-nfl-picks] complete', { ...summary, results })
   if (allSkipped) {
     return NextResponse.json({ ...summary, reason: 'Pikkit has not exposed NFL public-pick markets for the scheduled games yet', results }, { status: 425 })
   }
+  const missingToday = results.filter(result => result.skipped && games.find(game => game.gameId === result.gameId)?.gameDate === today)
+  if (missingToday.length && !failed.length) return NextResponse.json({ ...summary, reason: 'Today’s NFL picks were not refreshed', results }, { status: 425 })
   return NextResponse.json({ ...summary, results }, { status: failed.length ? 502 : 200 })
 }
 
