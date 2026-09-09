@@ -1,1 +1,6 @@
 .shell{background:#090e14;border:1px solid #28323d;border-radius:14px;margin:12px;color:#eef4fb;min-width:0;overflow:hidden}.context{display:flex;align-items:center;gap:12px;padding:12px;flex-wrap:wrap}.brand{color:#baff46;font-weight:950;letter-spacing:.12em}.context label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;color:#aebdce}.context input,.context select{color:#f4f8fc;background:#101822;border:1px solid #344150;border-radius:8px;padding:9px;min-width:0;color-scheme:dark}.tabs{display:flex;gap:6px;overflow-x:auto;padding:0 12px 12px;scrollbar-width:thin}.tabs a{flex-shrink:0;text-decoration:none;color:#becbdd;padding:11px 15px;border:1px solid transparent;border-radius:9px;font-size:12px;font-weight:850}.tabs a:hover{background:#172332}.tabs a[aria-current=page]{color:#baff46;border-color:#758d36;background:#233119}.tabs a:focus-visible{outline:2px solid #baff46;outline-offset:-2px}@media(max-width:600px){.context{gap:8px}.context label{flex:1;flex-direction:column;align-items:stretch}.brand{display:none}.context input,.context select{width:100%;padding:8px 4px}.shell{margin:8px}.tabs a{padding:10px}}
+.context label { min-width: 0; }
+@media(max-width:600px) {
+  .context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .context select { padding: 10px 8px; min-height: 42px; }
+}

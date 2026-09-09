@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { parseNflSample } from '@/lib/nflSample'
 import { createClient } from '@/lib/supabase/server'
@@ -31,13 +32,13 @@ export default async function SidelinePage({ searchParams }: {
   const requestedGame = Array.isArray(params.game) ? params.game[0] : params.game
   const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date
   const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode
-  const { games, date } = await getSidelineGames(requestedDate, requestedGame)
+  const { games, date, days } = await getSidelineGames(requestedDate, requestedGame)
   if (!games.length) {
-    return <main style={{ minHeight: '100vh', padding: 32, color: '#f5f8fb', background: '#060a0f' }}><h1>The Sideline</h1><p>No NFL games are scheduled for {date}.</p></main>
+    return <main style={{ minHeight: '100vh', padding: 32, color: '#f5f8fb', background: '#060a0f' }}><h1>The Sideline</h1><p>No NFL games are scheduled for {date}.</p><Link href="/the-sideline">Return to the current NFL slate</Link></main>
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
-  const navigation = <SidelineNavigation games={games} selected={selected} sample={sample} mode={mode ?? ''} />
+  const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode ?? ''} />
   if (mode === 'film') {
     const lens = await getCachedSidelineLens(selected)
     return <>{navigation}<SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
@@ -58,5 +59,5 @@ export default async function SidelinePage({ searchParams }: {
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={market.odds} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} days={days} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={market.odds} /></>
 }

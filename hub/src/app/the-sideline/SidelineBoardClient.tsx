@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
+import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
 import { useRouter } from 'next/navigation'
 import {
   BarChart3,
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
-import { nflSampleReference, type NflSample } from '@/lib/nflSample'
+import type { NflSample } from '@/lib/nflSample'
 import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -161,10 +162,6 @@ const GAME_DAY_ALWAYS_VISIBLE = new Set([
 ])
 const POSITION_ORDER: Record<string, number> = { QB: 0, RB: 1, FB: 2, WR: 3, TE: 4, K: 5, DEF: 6, DST: 6 }
 const PREFS_KEY = 'slipsurge:sideline:columns:v2'
-
-function normalizedName(value: string) {
-  return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
-}
 
 function normalizedTeam(value: string) {
   const upper = value.toUpperCase()
@@ -432,7 +429,7 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
   const moved = current != null && opening != null ? current - opening : 0
   return (
     <span className={styles.marketValue}>
-      <b>{market.line != null ? <i>{market.line}</i> : null}{oddsLabel(current)}</b>
+      <b>{market.line != null && !['anytime_td', 'first_td', 'last_td'].includes(market.propType) ? <i>{market.line}</i> : null}{oddsLabel(current)}</b>
       <small>{opening != null ? `OPEN ${oddsLabel(opening)}` : 'OPEN -'}</small>
       {moved !== 0 ? <em className={moved < 0 ? styles.moveUp : styles.moveDown}>{moved < 0 ? <ChevronDown size={9} /> : <ChevronUp size={9} />}</em> : null}
       <button
@@ -444,12 +441,6 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
       ><Star size={10} fill={saved ? 'currentColor' : 'none'} /></button>
     </span>
   )
-}
-
-function offsetDate(date: string, days: number) {
-  const next = new Date(`${date}T12:00:00Z`)
-  next.setUTCDate(next.getUTCDate() + days)
-  return next.toISOString().slice(0, 10)
 }
 
 function shortDate(date: string) {
@@ -965,7 +956,8 @@ function gameMoneyline(board: SidelineOddsBoard, side: 'away' | 'home') {
   return side === 'away' ? book?.moneylineAway : book?.moneylineHome
 }
 
-export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odds, sample = 'previous' }: {
+export function SidelineBoardClient({ games, days, selectedId, selectedDate, lens, odds, sample = 'previous' }: {
+  days: import('./scheduleNavigation').SidelineScheduleDay[]
   sample?: NflSample
   games: SidelineGame[]
   selectedId: string
@@ -1209,7 +1201,7 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         const isGameDayColumn = GAME_DAY_ALWAYS_VISIBLE.has(column.id)
           || (column.propType != null && GAME_DAY_PROP_TYPES.has(column.propType))
         const defaultBook = !column.vendor || (column.vendor === 'fanduel' && ['first_td', 'anytime_td'].includes(column.propType ?? ''))
-        return isGameDayColumn && defaultBook && (!column.id.startsWith('picks:') || GAME_DAY_ALWAYS_VISIBLE.has(column.id)) && (GAME_DAY_ALWAYS_VISIBLE.has(column.id) || hasValue(column))
+        return isGameDayColumn && defaultBook && (!column.id.startsWith('picks:') || GAME_DAY_ALWAYS_VISIBLE.has(column.id)) && hasValue(column)
       })
     }
     return ordered.filter(column => GAME_DAY_FOUNDATIONS.has(column.id) || (column.group === view && hasValue(column)))
@@ -1284,24 +1276,18 @@ export function SidelineBoardClient({ games, selectedId, selectedDate, lens, odd
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
         <div className={styles.brandActions}>
-          <label className={styles.sampleControl}>Stat sample
-            <select aria-label="NFL statistical sample" value={sample} disabled={isPending} onChange={event => startTransition(() => router.replace(`/the-sideline?date=${selectedDate}&game=${encodeURIComponent(selected.id)}&sample=${event.target.value}`, { scroll: false }))}>
-              {(['previous', 'preseason', 'regular'] as const).map(value => <option key={value} value={value}>{nflSampleReference(selected.season, value).label}</option>)}
-            </select>
-          </label>
           <span className={styles.coverageBadge} title={lens.coverage.detail}>{lens.coverage.label} · {lens.status === 'awaiting-data' ? 'Awaiting data' : 'Stored sample'}</span>
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>
       </header>
 
-      <nav className={styles.dateStrip} aria-label="NFL slate date">
-        <button type="button" onClick={() => selectDate(offsetDate(selectedDate, -1))}><ChevronLeft size={17} /></button>
-        {[-3, -2, -1, 0, 1, 2, 3].map(offset => {
-          const date = offsetDate(selectedDate, offset)
+      <nav className={styles.dateStrip} aria-label="NFL slate date" style={{ '--game-days': days.filter(day => day.season === selected.season && day.week === selected.week && day.gameType === selected.gameType).length } as CSSProperties}>
+        <button type="button" aria-label="Previous game day" disabled={isPending || days.findIndex(day => day.date === selectedDate) <= 0} onClick={() => selectDate(days[days.findIndex(day => day.date === selectedDate) - 1].date)}><ChevronLeft size={17} /></button>
+        {days.filter(day => day.season === selected.season && day.week === selected.week && day.gameType === selected.gameType).map(({ date }) => {
           const day = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })
-          return <button key={date} type="button" className={offset === 0 ? styles.dateActive : ''} onClick={() => selectDate(date)}><small>{day}</small><b>{shortDate(date)}</b></button>
+          return <button key={date} type="button" disabled={isPending} aria-current={date === selectedDate ? 'date' : undefined} className={date === selectedDate ? styles.dateActive : ''} onClick={() => selectDate(date)}><small>{day}</small><b>{shortDate(date)}</b></button>
         })}
-        <button type="button" onClick={() => selectDate(offsetDate(selectedDate, 1))}><ChevronRight size={17} /></button>
+        <button type="button" aria-label="Next game day" disabled={isPending || days.findIndex(day => day.date === selectedDate) >= days.length - 1} onClick={() => selectDate(days[days.findIndex(day => day.date === selectedDate) + 1].date)}><ChevronRight size={17} /></button>
       </nav>
 
       <section className={styles.gameRailSection}>

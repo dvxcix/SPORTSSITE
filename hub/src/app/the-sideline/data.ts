@@ -12,6 +12,7 @@ import { getSidelineBoardLens } from './boardAnalysis'
 import type { NflSample } from '@/lib/nflSample'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import type { SidelineGame, SidelineRosterPlayer } from './types'
+import { scheduledDate, type SidelineScheduleDay } from './scheduleNavigation'
 
 // Cache current and selected boards separately; never serialize the full archive.
 const WEEK_SECONDS = 60 * 60 * 24 * 7
@@ -69,13 +70,25 @@ const loadGamesForDate = unstable_cache(async (date: string): Promise<SidelineGa
   }))
 }, ['sideline-games-date-v2'], { revalidate: 300, tags: ['sideline:nfl-schedule'] })
 
+const loadScheduleDays = unstable_cache(async (year: number): Promise<SidelineScheduleDay[]> => {
+  const { data, error } = await createAdminClient().from('nfl_schedule')
+    .select('gameday,season,week,game_type').gte('season', year - 1).lte('season', year)
+    .order('gameday').limit(1000).abortSignal(AbortSignal.timeout(10000))
+  if (error) throw new Error(`NFL calendar unavailable: ${error.message}`)
+  return [...new Map((data ?? []).filter(row => row.gameday).map(row => [row.gameday, {
+    date: row.gameday, season: row.season, week: row.week, gameType: row.game_type,
+  }])).values()]
+}, ['sideline-calendar-v1'], { revalidate: 300, tags: ['sideline:nfl-schedule'] })
+
 export async function getSidelineGames(requestedDate?: string, requestedGame?: string) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const date = requestedDate
-    ?? (requestedGame ? await resolveGameDate(requestedGame) : undefined)
+  const requested = (requestedGame ? await resolveGameDate(requestedGame) : undefined)
+    ?? (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && Number.isFinite(Date.parse(requestedDate)) ? requestedDate : undefined)
     ?? await resolveNextGameDate(today)
     ?? today
-  return { games: await loadGamesForDate(date), date }
+  const days = await loadScheduleDays(Number(requested.slice(0, 4)))
+  const date = scheduledDate(days, requested) ?? requested
+  return { games: await loadGamesForDate(date), date, days }
 }
 
 async function loadCurrentBoardRaw(gameId: string): Promise<SidelineOddsBoard> {

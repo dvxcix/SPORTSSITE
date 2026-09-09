@@ -1,4 +1,5 @@
 import 'server-only'
+import { normalizeNflPlayerName as canonicalName } from '@/lib/nflPlayerName'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
@@ -24,15 +25,6 @@ const TEAM_ALIASES: Record<string, string> = { LA: 'LAR', JAC: 'JAX', OAK: 'LV',
 function canonicalTeam(value: string | null | undefined) {
   const upper = String(value ?? '').toUpperCase()
   return TEAM_ALIASES[upper] ?? upper
-}
-
-function canonicalName(value: string | null | undefined) {
-  return String(value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\b(jr|sr|ii|iii|iv|v)\b/g, '')
-    .replace(/[^a-z0-9]/g, '')
 }
 
 function namesFor(row: PlayerDirectoryRow) {

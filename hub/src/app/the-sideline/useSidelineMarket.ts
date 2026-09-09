@@ -12,6 +12,37 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const cache = useRef(new Map<string, SidelineOddsFrame>())
+  const inFlight = useRef(new Map<string, Promise<SidelineOddsFrame>>())
+  const slots = useRef({ active: 0, waiting: [] as (() => void)[] })
+  const loadFrame = useCallback((at: string, foreground = true) => {
+    const cached = cache.current.get(at)
+    if (cached) return Promise.resolve(cached)
+    const pending = inFlight.current.get(at)
+    if (pending) return pending
+    const acquire = new Promise<void>(resolve => {
+      if (slots.current.active < 3) { slots.current.active++; resolve() }
+      else if (foreground) slots.current.waiting.unshift(resolve)
+      else slots.current.waiting.push(resolve)
+    })
+    const request = acquire.then(() => fetch('/the-sideline/market?game=' + encodeURIComponent(gameId) + '&at=' + encodeURIComponent(at), {
+      signal: AbortSignal.timeout(20000),
+    })).then(async response => {
+      if (!response.ok) throw new Error('Capture unavailable')
+      const data = await response.json() as { frame: SidelineOddsFrame | null }
+      if (!data.frame) throw new Error('No odds at this capture')
+      cache.current.set(at, data.frame)
+      // Bound memory without throwing away a stop every few slider movements.
+      if (cache.current.size > 96) cache.current.delete(cache.current.keys().next().value!)
+      return data.frame
+    }).finally(() => {
+      inFlight.current.delete(at)
+      const next = slots.current.waiting.shift()
+      if (next) next()
+      else slots.current.active--
+    })
+    inFlight.current.set(at, request)
+    return request
+  }, [gameId])
   const timeline = useMemo(() => [...new Set([
     ...times,
     ...(current.capturedAt ? [new Date(current.capturedAt).toISOString()] : []),
@@ -46,31 +77,42 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
 
   useEffect(() => {
     if (!selectedAt) return
-    const controller = new AbortController()
-    const timer = window.setTimeout(async () => {
+    let active = true
+    void (async () => {
       try {
-        const cached = cache.current.get(selectedAt)
-        if (cached) { setFrame(cached); return }
-        const response = await fetch('/the-sideline/market?game=' + encodeURIComponent(gameId) + '&at=' + encodeURIComponent(selectedAt), {
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]),
-        })
-        if (!response.ok) throw new Error('Capture unavailable')
-        const data = await response.json() as { frame: SidelineOddsFrame | null }
-        if (!data.frame) throw new Error('No odds at this capture')
-        if (controller.signal.aborted) return
-        cache.current.set(selectedAt, data.frame)
-        if (cache.current.size > 8) cache.current.delete(cache.current.keys().next().value!)
-        setFrame(data.frame)
+        const loaded = await loadFrame(selectedAt)
+        if (active) setFrame(loaded)
       } catch {
-        if (!controller.signal.aborted) setError('That capture could not load. Showing the previous board; retry or choose another stop.')
+        if (active) setError('That capture could not load. Showing the previous board; retry or choose another stop.')
       }
-    }, 150)
-    return () => { controller.abort(); window.clearTimeout(timer) }
-  }, [gameId, selectedAt, refreshKey])
+    })()
+    return () => { active = false }
+  }, [loadFrame, selectedAt, refreshKey])
+
+  // Warm nearby stops before the user reaches them. Two workers keep this bounded;
+  // foreground requests share the same promise instead of repeating a DB read.
+  useEffect(() => {
+    let active = true
+    const queue = [timeline[0], ...Array.from({ length: 12 }, (_, offset) => [timeline[index - offset - 1], timeline[index + offset + 1]]).flat()]
+      .filter((at): at is string => Boolean(at) && !cache.current.has(at))
+    const worker = async () => {
+      while (active && queue.length) {
+        const at = queue.shift()!
+        try { await loadFrame(at, false) } catch { /* Explicit selection supplies retry UI. */ }
+      }
+    }
+    void worker(); void worker()
+    return () => { active = false }
+  }, [timeline, index, loadFrame])
 
   const select = useCallback((next: number) => {
     setError('')
-    setSelectedAt(next === timeline.length - 1 ? null : timeline[next] ?? null)
+    const at = next === timeline.length - 1 ? null : timeline[next] ?? null
+    if (at) {
+      const cached = cache.current.get(at)
+      if (cached) setFrame(cached)
+    }
+    setSelectedAt(at)
   }, [timeline])
   const retry = () => { setError(''); setRefreshKey(value => value + 1) }
   const board = selectedAt == null ? current : frame?.board ?? current
