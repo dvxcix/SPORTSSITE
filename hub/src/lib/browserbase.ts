@@ -128,6 +128,9 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
     : opts.proxyDomainPattern
       ? [proxied, { type: 'none' as const }]
       : (opts.proxies ?? true)
+  const userMetadata = opts.metadata
+    ? Object.fromEntries(Object.entries(opts.metadata).map(([key, value]) => [key, String(value)]))
+    : undefined
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
@@ -138,7 +141,7 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },
-    ...(opts.metadata ? { userMetadata: opts.metadata } : {}),
+    ...(userMetadata ? { userMetadata } : {}),
   })
   const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
   const context = browser.contexts()[0] ?? await browser.newContext()
