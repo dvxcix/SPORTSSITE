@@ -30,7 +30,7 @@ import {
   Star,
   X,
 } from 'lucide-react'
-import { BookLogo } from '@/components/BookLogo'
+import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
 import type { NflSample } from '@/lib/nflSample'
 import { createPortal } from 'react-dom'
@@ -177,8 +177,24 @@ function normalizedTeam(value: string) {
 }
 
 function oddsLabel(value: number | null | undefined) {
-  if (value == null) return '—'
+  if (value == null) return '-'
   return value > 0 ? `+${value}` : String(value)
+}
+
+function signedLine(value: number | null | undefined) {
+  return value == null ? '—' : `${value > 0 ? '+' : ''}${value}`
+}
+
+function openOdds(value: number | null | undefined) {
+  return value == null ? '—' : oddsLabel(value)
+}
+
+function spreadValue(line: number | null | undefined, odds: number | null | undefined) {
+  return line == null ? '—' : `${signedLine(line)}${odds == null ? '' : ` ${oddsLabel(odds)}`}`
+}
+
+function totalValue(side: 'O' | 'U', total: number | null | undefined, odds: number | null | undefined) {
+  return total == null ? '—' : `${side} ${total}${odds == null ? '' : ` ${oddsLabel(odds)}`}`
 }
 
 function findMarketPlayer(board: SidelineOddsBoard, player: Pick<SidelinePlayer, 'name' | 'team'>) {
@@ -805,16 +821,38 @@ function GameLines({ game, board }: { game: SidelineGame; board: SidelineOddsBoa
   if (!board.gameLines.length) return null
   return (
     <section className={styles.gameLines} aria-label="All sportsbook game lines">
-      <header><div><small>GAME MARKET</small><strong>Moneyline · spread · total</strong></div><span><b>{board.gameLines.length}</b> live books</span></header>
-      <div>
+      <header className={styles.gameLinesHeader}>
+        <div>
+          <small>GAME LINES</small>
+          <strong>{game.away.abbr} at {game.home.abbr}</strong>
+          <p>Compare both sides at every live book.</p>
+        </div>
+        <div className={styles.gameLineMarketKeys} aria-label="Available game markets">
+          <span>Moneyline</span><span>Spread</span><span>Total</span>
+        </div>
+        <span className={styles.liveBookCount}><b>{board.gameLines.length}</b> live books</span>
+      </header>
+      <div className={styles.gameLineRail}>
         {board.gameLines.map(line => (
-          <article className={styles.gameLineCard} key={line.vendor}>
-            <header><BookLogo vendor={line.vendor} size={19} /><b>{line.vendor}</b></header>
-            <dl>
-              <div><dt>{game.away.abbr} ML</dt><dd>{oddsLabel(line.moneylineAway)}</dd><small>{line.opening?.moneylineAway != null ? `OPEN ${oddsLabel(line.opening.moneylineAway)}` : 'OPEN -'}</small></div>
-              <div><dt>{game.home.abbr} ML</dt><dd>{oddsLabel(line.moneylineHome)}</dd><small>{line.opening?.moneylineHome != null ? `OPEN ${oddsLabel(line.opening.moneylineHome)}` : 'OPEN -'}</small></div>
-              <div><dt>{game.away.abbr} SPREAD</dt><dd>{line.spreadAway == null ? '-' : `${line.spreadAway > 0 ? '+' : ''}${line.spreadAway} ${oddsLabel(line.spreadAwayOdds)}`}</dd><small>{line.opening?.spreadAway == null ? 'OPEN -' : `OPEN ${line.opening.spreadAway > 0 ? '+' : ''}${line.opening.spreadAway}`}</small></div>
-              <div><dt>TOTAL</dt><dd>{line.total == null ? '-' : `${line.total} O ${oddsLabel(line.totalOverOdds)}`}</dd><small>{line.opening?.total == null ? 'OPEN -' : `OPEN ${line.opening.total}`}</small></div>
+          <article className={styles.gameLineCard} data-vendor={normalizeVendor(line.vendor)} data-opening-only={line.isOpeningOnly ? '' : undefined} key={line.vendor}>
+            <header>
+              <span className={styles.bookMark}><BookLogo vendor={line.vendor} size={24} /></span>
+              <div><b>{line.vendor}</b><small>{line.isOpeningOnly ? 'Opening line' : 'Live market'}</small></div>
+              <i aria-hidden="true" />
+            </header>
+            <dl className={styles.gameLineMarkets}>
+              <div className={styles.gameLineMarket}>
+                <dt>Moneyline</dt>
+                <dd><span><small>{game.away.abbr}</small><b>{oddsLabel(line.moneylineAway)}</b><em>Open {openOdds(line.opening?.moneylineAway)}</em></span><span><small>{game.home.abbr}</small><b>{oddsLabel(line.moneylineHome)}</b><em>Open {openOdds(line.opening?.moneylineHome)}</em></span></dd>
+              </div>
+              <div className={styles.gameLineMarket}>
+                <dt>Spread</dt>
+                <dd><span><small>{game.away.abbr}</small><b>{spreadValue(line.spreadAway, line.spreadAwayOdds)}</b><em>Open {spreadValue(line.opening?.spreadAway, line.opening?.spreadAwayOdds)}</em></span><span><small>{game.home.abbr}</small><b>{spreadValue(line.spreadHome, line.spreadHomeOdds)}</b><em>Open {spreadValue(line.opening?.spreadHome, line.opening?.spreadHomeOdds)}</em></span></dd>
+              </div>
+              <div className={styles.gameLineMarket}>
+                <dt>Total</dt>
+                <dd><span><small>OVER</small><b>{totalValue('O', line.total, line.totalOverOdds)}</b><em>Open {totalValue('O', line.opening?.total, line.opening?.totalOverOdds)}</em></span><span><small>UNDER</small><b>{totalValue('U', line.total, line.totalUnderOdds)}</b><em>Open {totalValue('U', line.opening?.total, line.opening?.totalUnderOdds)}</em></span></dd>
+              </div>
             </dl>
           </article>
         ))}

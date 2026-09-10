@@ -13,6 +13,8 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
   fanatics:   { favicon: '/sportsbooks/fanatics.svg',   initials: 'FAN', bg: '#DA1927', color: '#fff' },
+  kalshi:     { favicon: 'https://kalshi.com/Kalshi_Favicon.png?v=20260807', initials: 'K', bg: '#014737', color: '#00DD94' },
+  polymarket: { favicon: 'https://polymarket.com/images/brand/icon-blue.png', initials: 'PM', bg: '#071633', color: '#2E5CFF' },
 }
 
 // Normalize vendor key from any alias
@@ -24,6 +26,8 @@ export function normalizeVendor(v: string): string {
   if (k === 'caesars' || k === 'cz' || k === 'williamhillus' || k === 'williamhill') return 'caesars'
   if (k === 'fanatics' || k === 'fan') return 'fanatics'
   if (k === 'betrivers' || k === 'br') return 'betrivers'
+  if (k === 'kalshi' || k === 'kal') return 'kalshi'
+  if (k === 'polymarket' || k === 'poly' || k === 'pm') return 'polymarket'
   return k
 }
 
@@ -50,7 +54,7 @@ export function BookLogo({ vendor, size = 16 }: { vendor: string; size?: number 
     return (
       <img
         src={book.favicon}
-        alt={key}
+        alt={`${vendor} logo`}
         onError={() => setErr(true)}
         style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, verticalAlign: 'middle', borderRadius: 2 }}
       />

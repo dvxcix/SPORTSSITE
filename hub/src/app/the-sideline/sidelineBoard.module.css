@@ -12,9 +12,11 @@
 }
 
 .modalTheme { color: var(--ink); font-size: 14px; }
-.gameLinesDisclosure { border: 1px solid var(--line); border-radius: 12px; background: #0b1119; }
-.gameLinesDisclosure > summary { padding: 11px 14px; cursor: pointer; color: var(--ink); font-size: 12px; font-weight: 800; }
-.gameLinesDisclosure > summary span { margin-left: 10px; color: #a7b5c6; font-size: 10px; font-weight: 500; }
+.gameLinesDisclosure { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #0b1119; }
+.gameLinesDisclosure > summary { display: flex; align-items: baseline; gap: 10px; padding: 13px 15px; cursor: pointer; color: var(--ink); font-size: 14px; font-weight: 900; letter-spacing: -0.01em; }
+.gameLinesDisclosure > summary::marker { color: var(--cyan); }
+.gameLinesDisclosure > summary span { color: #8290a2; font-size: 11px; font-weight: 650; letter-spacing: 0; }
+.gameLinesDisclosure[open] > summary { border-bottom: 1px solid var(--line); background: linear-gradient(90deg, rgba(53, 215, 255, 0.06), transparent 42%); }
 .page {
   width: 100%;
   max-width: none;
@@ -421,116 +423,153 @@
 
 .gameLines {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   align-items: stretch;
-  margin-bottom: 10px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
+  box-shadow: none;
 }
 
-.gameLines > header {
+.gameLinesHeader {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
-  padding: 13px 15px;
+  gap: 10px;
+  padding: 18px;
   border-right: 1px solid var(--line);
   background:
-    radial-gradient(circle at 10% 15%, rgba(53, 215, 255, 0.15), transparent 48%),
-    linear-gradient(145deg, #101b27, #0a1118);
+    radial-gradient(circle at 12% 10%, rgba(53, 215, 255, 0.18), transparent 48%),
+    linear-gradient(145deg, #101c28, #090f16 72%);
 }
 
-.gameLines > header small {
+.gameLinesHeader > div:first-child { display: grid; gap: 3px; }
+.gameLinesHeader > div:first-child small {
   color: var(--cyan);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 950;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
 }
 
-.gameLines > header strong { font-size: 13px; line-height: 1.25; }
-.gameLines > header span {
+.gameLinesHeader strong { font-size: 17px; line-height: 1.2; letter-spacing: -0.025em; }
+.gameLinesHeader p { margin: 0; color: #8996a7; font-size: 10px; line-height: 1.4; }
+.gameLineMarketKeys { display: flex; flex-wrap: wrap; gap: 5px; }
+.gameLineMarketKeys span {
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  color: #aeb9c7;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 8px;
+  font-weight: 800;
+}
+.liveBookCount {
   display: inline-flex;
   width: max-content;
   align-items: center;
   gap: 4px;
-  padding: 4px 7px;
+  padding: 5px 8px;
   border: 1px solid rgba(53, 215, 255, 0.2);
   border-radius: 99px;
-  color: #a7b5c6;
+  color: #adbac9;
   background: rgba(53, 215, 255, 0.06);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 850;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-.gameLines > header span b { color: var(--cyan); font-size: 10px; }
+.liveBookCount b { color: var(--cyan); font-size: 11px; }
 
-.gameLines > div {
+.gameLineRail {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(365px, 1fr);
+  grid-auto-columns: minmax(330px, 1fr);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
   scrollbar-width: thin;
   scrollbar-color: rgba(53, 215, 255, 0.4) transparent;
 }
 
 .gameLineCard {
+  --book-accent: #35d7ff;
   min-width: 0;
-  padding: 9px 11px;
+  padding: 13px 14px 14px;
   border-right: 1px solid var(--line);
-  background: #0a1118;
+  border-top: 2px solid var(--book-accent);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--book-accent) 5%, #0a1118), #080e14 68%);
+  scroll-snap-align: start;
 }
+.gameLineCard[data-vendor='fanduel'] { --book-accent: #1493ff; }
+.gameLineCard[data-vendor='draftkings'] { --book-accent: #53a318; }
+.gameLineCard[data-vendor='betmgm'] { --book-accent: #d3ad35; }
+.gameLineCard[data-vendor='caesars'] { --book-accent: #c6a55d; }
+.gameLineCard[data-vendor='fanatics'] { --book-accent: #da1927; }
+.gameLineCard[data-vendor='betrivers'] { --book-accent: #f5c242; }
+.gameLineCard[data-vendor='kalshi'] { --book-accent: #00dd94; }
+.gameLineCard[data-vendor='polymarket'] { --book-accent: #2e5cff; }
+.gameLineCard[data-opening-only] { opacity: .78; }
+.gameLineCard[data-opening-only] > header i { background: #738094; box-shadow: none; }
 
 .gameLineCard > header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding-bottom: 7px;
+  gap: 9px;
+  min-height: 31px;
+  padding-bottom: 10px;
 }
 
+.bookMark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid color-mix(in srgb, var(--book-accent) 36%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--book-accent) 9%, #0a1017); }
+.gameLineCard > header > div { display: grid; gap: 1px; min-width: 0; }
 .gameLineCard > header b {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 12px;
+  letter-spacing: .02em;
   text-transform: uppercase;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.gameLineCard > header small { color: #758396; font-size: 8px; font-weight: 750; text-transform: uppercase; }
+.gameLineCard > header i { width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--book-accent); box-shadow: 0 0 10px color-mix(in srgb, var(--book-accent) 75%, transparent); }
 
-.gameLineCard dl {
+.gameLineMarkets {
   display: grid;
-  grid-template-columns: repeat(4, minmax(74px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.gameLineMarket {
+  display: grid;
   gap: 6px;
-  margin: 0;
-}
-
-.gameLineCard dl > div {
-  display: grid;
-  gap: 2px;
   min-width: 0;
-  padding: 7px;
+  padding: 8px;
   border: 1px solid #202b37;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.018);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.022);
 }
 
-.gameLineCard dt,
-.gameLineCard small {
-  overflow: hidden;
-  color: #7f8da0;
-  font-size: 7px;
-  font-weight: 850;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.gameLineMarket dt {
+  color: #8290a2;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
-
-.gameLineCard dd {
+.gameLineMarket dd { display: grid; gap: 5px; min-width: 0; margin: 0; }
+.gameLineMarket dd > span { display: grid; grid-template-columns: minmax(27px, auto) minmax(0, 1fr); align-items: baseline; gap: 4px; min-width: 0; }
+.gameLineMarket dd small { color: #9aa7b7; font-size: 8px; font-weight: 850; }
+.gameLineMarket dd b {
   overflow: hidden;
   margin: 0;
-  color: #eef4fa;
-  font-size: 11px;
+  color: #f4f8fc;
+  font-size: 12px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.gameLineMarket dd em { grid-column: 2; color: #677588; font-size: 7px; font-style: normal; font-weight: 700; text-transform: uppercase; }
 
 .toolsPanel {
   display: flex;
@@ -1013,7 +1052,7 @@
   .storyGrid > article:nth-child(3),
   .storyGrid > article:nth-child(4) { border-top: 1px solid var(--line); }
   .teamHeader { display: block; }
-  .gameLines { grid-template-columns: 145px minmax(0, 1fr); }
+  .gameLines { grid-template-columns: 190px minmax(0, 1fr); }
   .teamIdentity { min-width: 0; }
   .teamSignals { border-top: 1px solid var(--line); overflow-x: auto; }
   .teamSignals > div { min-width: 150px; }
@@ -1081,10 +1120,13 @@
   .marketStatus { padding: 11px 12px; }
   .marketStatus span { font-size: 10px; }
   .gameLines { grid-template-columns: 1fr; }
-  .gameLines > header { flex-direction: row; align-items: center; justify-content: space-between; border-right: 0; border-bottom: 1px solid var(--line); }
-  .gameLines > header div { display: flex; align-items: center; gap: 8px; }
-  .gameLines > header span { width: auto; }
-  .gameLines > div { grid-auto-columns: minmax(350px, 92vw); }
+  .gameLinesHeader { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 13px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .gameLinesHeader > div:first-child { display: grid; }
+  .gameLinesHeader p { display: none; }
+  .gameLineMarketKeys { grid-column: 1 / -1; grid-row: 2; }
+  .liveBookCount { width: auto; }
+  .gameLineRail { grid-auto-columns: minmax(320px, 88vw); }
+  .gameLineCard { padding: 12px; }
   .marketSave { opacity: 0.7; }
   .toolsPanel { overflow-x: auto; }
   .toolsPanel > button { white-space: nowrap; }
