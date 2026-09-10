@@ -253,6 +253,12 @@ export const getCachedSidelineBoardLens = unstable_cache(
 
 export const getCachedSidelineLens = unstable_cache(
   async (game: SidelineGame) => getSidelineLens(game),
-  ['sideline-film-lens-v2'],
+  ['sideline-film-lens-v3-cheatsheets'],
+  { revalidate: 3600, tags: ['sideline:nfl-data'] },
+)
+
+export const getCachedSidelineCheatsheetLens = unstable_cache(
+  async (game: SidelineGame) => getSidelineLens(game, false),
+  ['sideline-cheatsheet-lens-v1'],
   { revalidate: 3600, tags: ['sideline:nfl-data'] },
 )

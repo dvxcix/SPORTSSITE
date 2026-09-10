@@ -113,6 +113,51 @@ export type SidelinePlayer = {
   opponent: string
   games: number
   projections: SidelineProjection[]
+  gameLog: SidelinePlayerGameLine[]
+  receiving20: number
+  receiving30: number
+  receiving40: number
+  deepTargets: number
+  rushing10: number
+  rushing20: number
+  rushing30: number
+  rushing40: number
+}
+
+export type SidelinePlayerGameLine = {
+  gameId: string
+  receptions: number
+  receivingYards: number
+  carries: number
+  rushingYards: number
+  passAttempts: number
+  completions: number
+  passingYards: number
+  touchdowns: number
+  firstTouchdowns: number
+}
+
+export type SidelineRunGap = {
+  team: string
+  opponent: string
+  gap: string
+  attempts: number
+  yardsPerCarry: number
+  successRate: number
+  explosiveRate: number
+  defenseAttempts: number
+  defenseYardsPerCarry: number
+  defenseSuccessRate: number
+  defenseExplosiveRate: number
+  edge: number
+}
+
+export type SidelineDvpRow = {
+  defense: string
+  position: string
+  stat: string
+  pctDiff: number
+  games: number
 }
 
 export type SidelineProjection = {
@@ -168,6 +213,8 @@ export type SidelineLens = {
   historicalGames: SidelineHistoricalGame[]
   historicalPlays: SidelinePlay[]
   targets: SidelineTarget[]
+  runGaps: SidelineRunGap[]
+  dvp: SidelineDvpRow[]
 }
 
 type View = 'props' | 'routes' | 'film' | 'team-dna' | 'red-zone'

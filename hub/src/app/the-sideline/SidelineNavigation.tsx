@@ -7,7 +7,7 @@ import type { SidelineGame } from './types'
 import styles from './sidelineNavigation.module.css'
 import { scheduleWeekKey, scheduleWeekLabel, type SidelineScheduleDay } from './scheduleNavigation'
 
-const sections = [['', 'The Sideline'], ['public', 'The Public'], ['markets', 'Sportsbooks'], ['research', 'Matchup Lab'], ['film', 'Play Explorer']] as const
+const sections = [['', 'The Sideline'], ['cheatsheets', 'Cheatsheets'], ['public', 'The Public'], ['markets', 'Sportsbooks'], ['research', 'Matchup Lab'], ['film', 'Play Explorer']] as const
 
 export function SidelineNavigation({ games, days, selected, sample, mode }: { games: SidelineGame[]; days: SidelineScheduleDay[]; selected: SidelineGame; sample: string; mode: string }) {
   const router = useRouter()

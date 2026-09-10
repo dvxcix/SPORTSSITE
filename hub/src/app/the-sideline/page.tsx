@@ -9,7 +9,8 @@ import { SidelineClient } from './SidelineClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
 import { SidelineMatchupLab } from './SidelineMatchupLab'
-import { getCachedSidelineBoardLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
+import { SidelineCheatsheets } from './SidelineCheatsheets'
+import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +55,10 @@ export default async function SidelinePage({ searchParams }: {
   // fetched by the client after the useful first screen has rendered. The
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
   const market = await getSidelineOddsBundle(selected)
+  if (mode === 'cheatsheets') {
+    const lens = await getCachedSidelineCheatsheetLens(selected)
+    return <>{navigation}<SidelineCheatsheets key={selected.id} lens={lens} board={market.odds} /></>
+  }
   if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
