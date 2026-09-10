@@ -20,8 +20,20 @@ export type SidelineGame = {
   surface: string | null
   temp?: number | null
   wind?: number | null
+  awayScore?: number | null
+  homeScore?: number | null
   away: SidelineTeam
   home: SidelineTeam
+}
+
+export type SidelineGameState = {
+  status: string
+  statusState: 'scheduled' | 'in_progress' | 'final' | 'postponed' | 'canceled' | 'delayed' | 'suspended' | 'abandoned' | 'unknown'
+  awayScore: number | null
+  homeScore: number | null
+  awayByPeriod: Array<number | null>
+  homeByPeriod: Array<number | null>
+  summary: string | null
 }
 
 export type SidelineRosterPlayer = {

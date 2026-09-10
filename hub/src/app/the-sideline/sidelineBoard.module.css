@@ -401,6 +401,8 @@
 .marketStory input { width: 100%; accent-color: var(--lime); cursor: pointer; }
 .marketStory input:disabled { cursor: not-allowed; opacity: 0.45; }
 .marketStory > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.captureLoading::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 7px; border-radius: 50%; background: var(--lime); animation: capturePulse 800ms ease-in-out infinite alternate; }
+@keyframes capturePulse { to { opacity: .25; } }
 
 .marketStatus {
   display: flex;
@@ -800,6 +802,7 @@
 .playerName { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 4px 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .playerName b { overflow: hidden; color: #f5f8fb; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .playerName small { overflow: hidden; color: #9aa7b9; font-size: 9px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.availabilityBadge { display: inline-flex; margin-left: 5px; padding: 1px 4px; border: 1px solid rgba(255,102,126,.45); border-radius: 4px; color: #ff93a3; background: rgba(255,102,126,.11); font: inherit; }
 .playerCell > button:not(.playerName) { display: grid; place-items: center; width: 29px; height: 29px; padding: 0; border: 1px solid #25303e; border-radius: 8px; background: #111923; color: #7f8da0; cursor: pointer; }
 .playerCell > button:not(.playerName):hover { color: var(--lime); border-color: rgba(167, 255, 63, 0.5); }
 .playerCell .compareActive { color: #071006 !important; border-color: var(--lime) !important; background: var(--lime) !important; }

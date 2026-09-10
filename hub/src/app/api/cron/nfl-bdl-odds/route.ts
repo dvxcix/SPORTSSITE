@@ -18,6 +18,7 @@ import {
   type NflTdBaselineRow,
 } from '@/lib/nflMarketArchive'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
+import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -146,6 +147,8 @@ async function run(req: Request) {
 
   const now = Date.now()
   const captureSchedule = schedule.filter(game => {
+    const kickoff = nflKickoffAt(game)
+    if (kickoff && kickoff.getTime() <= now) return false
     const daysUntil = (new Date(`${game.gameday}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000
     const stored = previous.get(game.game_id)
     if (daysUntil <= 2 || !stored) return true
@@ -157,7 +160,7 @@ async function run(req: Request) {
   const gamePools = new Map<string, Awaited<ReturnType<typeof getNflBdlGames>>>()
   await Promise.all(weekKeys.map(async key => {
     const [season, week] = key.split(':').map(Number)
-    gamePools.set(key, await getNflBdlGames(season, week))
+    gamePools.set(key, await getNflBdlGames(season, week, 'live'))
   }))
 
   const results = await inBatches(captureSchedule, 3, async game => {

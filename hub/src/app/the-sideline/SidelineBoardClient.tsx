@@ -39,7 +39,7 @@ import { useWatchlist } from '@/context/WatchlistContext'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
-import type { SidelineGame, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
+import type { SidelineGame, SidelineGameState, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
 
 type BoardView = 'core' | 'touchdowns' | 'props' | 'usage' | 'tracking' | 'team' | 'all' | 'custom'
@@ -320,7 +320,7 @@ function primaryMarketOffer(player: NflOddsPlayer | null, propType: string, vend
 function RatioCell({ numerator, denominator, detail }: { numerator: number | null; denominator: number | null; detail: string }) {
   const ratio = impliedProbabilityRatio(numerator, denominator)
   if (ratio == null) return <span className={styles.empty}>-</span>
-  return <span className={styles.ratioValue} title={detail}><b>{ratio.toFixed(2)}</b><small>IMPLIED P</small></span>
+  return <span className={styles.ratioValue} aria-label={`${detail}: ${ratio.toFixed(2)}`}><b>{ratio.toFixed(2)}</b><small>IMPLIED P</small></span>
 }
 
 function bestOffer(market: NflPlayerMarket | null) {
@@ -375,7 +375,7 @@ function BaselineCell({ player, propType }: { player: NflOddsPlayer | null; prop
   if (baseline?.deltaPct == null || baseline.sampleGames < 2) return <span className={styles.empty}>-</span>
   const value = baseline.deltaPct * 100
   const tone = value <= -5 ? styles.baselineAdvertised : value >= 5 ? styles.baselineHidden : styles.baselineFlat
-  return <span className={`${styles.baselineValue} ${tone}`} title={`Current FanDuel price versus this player's ${baseline.sampleGames}-game average (${oddsLabel(Math.round(baseline.averageOdds))})`}><b>{value > 0 ? '+' : ''}{value.toFixed(1)}%</b><small>{baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}</small></span>
+  return <span className={`${styles.baselineValue} ${tone}`} aria-label={`Current FanDuel price versus this player's ${baseline.sampleGames}-game average: ${value.toFixed(1)} percent`}><b>{value > 0 ? '+' : ''}{value.toFixed(1)}%</b><small>{baseline.sampleGames}G AVG {oddsLabel(Math.round(baseline.averageOdds))}</small></span>
 }
 
 function scoreTone(value: number) {
@@ -441,7 +441,6 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
         type="button"
         className={saved ? styles.marketSaved : styles.marketSave}
         aria-label={`${saved ? 'Remove' : 'Add'} ${player.name} ${market.label} ${vendor} ${saved ? 'from' : 'to'} watchlist`}
-        title={saved ? 'Remove saved market' : 'Save this market'}
         onClick={event => { event.stopPropagation(); onToggleSaved(player, market.key, vendor) }}
       ><Star size={10} fill={saved ? 'currentColor' : 'none'} /></button>
     </span>
@@ -545,7 +544,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       heat: 'high',
       roleHeat: !['index', 'volume', 'geometry', 'redZone', 'breakaway'].includes(id),
       value: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? get(row) : null,
-      render: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? <b className={id === 'index' ? scoreTone(get(row)) : undefined}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty} title="Not available in this statistical sample">-</span>,
+      render: row => row.hasTracking && !row.unavailableMetrics?.includes(id) ? <b className={id === 'index' ? scoreTone(get(row)) : undefined}>{metricDisplay(get(row), suffix, decimals)}</b> : <span className={styles.empty} aria-label="Not available in this statistical sample">-</span>,
     })
     const teamMetric = (
       id: string,
@@ -973,7 +972,40 @@ function gameMoneyline(board: SidelineOddsBoard, side: 'away' | 'home') {
   return side === 'away' ? book?.moneylineAway : book?.moneylineHome
 }
 
-export function SidelineBoardClient({ games, days, selectedId, selectedDate, lens, odds, sample = 'previous' }: {
+function gameStatusCopy(game: SidelineGame, state: SidelineGameState | null) {
+  if (!state) return { headline: game.gametime ?? 'TBD', detail: `${game.gameType} · Week ${game.week}` }
+  if (state.statusState === 'final') return {
+    headline: `${game.away.abbr} ${state.awayScore ?? '-'} · ${game.home.abbr} ${state.homeScore ?? '-'}`,
+    detail: state.summary ?? 'Final',
+  }
+  if (state.statusState === 'in_progress') return {
+    headline: `${game.away.abbr} ${state.awayScore ?? 0} · ${game.home.abbr} ${state.homeScore ?? 0}`,
+    detail: state.status || 'Live',
+  }
+  return { headline: state.status || game.gametime || 'TBD', detail: `${game.gameType} · Week ${game.week}` }
+}
+
+function periodScoreCopy(state: SidelineGameState | null) {
+  if (!state || state.statusState === 'scheduled') return null
+  const count = Math.max(state.awayByPeriod.length, state.homeByPeriod.length)
+  if (!count) return null
+  return Array.from({ length: count }, (_, index) => {
+    const label = index < 4 ? `Q${index + 1}` : `OT${index === 4 ? '' : index - 3}`
+    return `${label} ${state.awayByPeriod[index] ?? 0}-${state.homeByPeriod[index] ?? 0}`
+  }).join(' · ')
+}
+
+function availabilityLabel(player: PlayerRow) {
+  const availability = player.market?.availability
+  if (!availability) return null
+  if (availability.active === false) return 'INACTIVE'
+  if (availability.didNotPlay === true) return 'DNP'
+  if (availability.gameStatus) return availability.gameStatus.toUpperCase()
+  if (availability.starter === true) return 'STARTER'
+  return null
+}
+
+export function SidelineBoardClient({ games, days, selectedId, selectedDate, lens, odds, gameState, timeline, sample = 'previous' }: {
   days: import('./scheduleNavigation').SidelineScheduleDay[]
   sample?: NflSample
   games: SidelineGame[]
@@ -981,6 +1013,8 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   selectedDate: string
   lens: SidelineLens
   odds: SidelineOddsBoard | PackedOdds
+  gameState: SidelineGameState | null
+  timeline: string[]
 }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
@@ -990,7 +1024,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const initialOdds = useMemo(()=>unpackSidelineBoard(odds),[odds])
-  const marketStory = useSidelineMarket(selectedId, initialOdds)
+  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, timeline)
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -1276,6 +1310,8 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   if (!selected) return null
   const frameTime = marketStory.capturedAt ?? board.capturedAt
   const capturedLabel = frameTime ? new Date(frameTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : 'Awaiting markets'
+  const statusCopy = gameStatusCopy(selected, marketStory.gameState)
+  const periodScores = periodScoreCopy(marketStory.gameState)
 
   return (
     <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''} ${isPending ? styles.loading : ''}`}>
@@ -1283,7 +1319,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
         <div className={styles.brandActions}>
-          <span className={styles.coverageBadge} title={lens.coverage.detail}>{lens.coverage.label} · {lens.status === 'awaiting-data' ? 'Awaiting data' : 'Stored sample'}</span>
+          <span className={styles.coverageBadge}>{lens.coverage.label} · {lens.status === 'awaiting-data' ? 'Awaiting data' : 'Stored sample'}</span>
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>
       </header>
@@ -1299,7 +1335,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
 
       <section className={styles.gameRailSection}>
         <header><span>Games</span><b>{games.findIndex(game => game.id === selected.id) + 1}/{games.length}</b></header>
-        <div className={styles.gameRail}>{games.map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : ''} onClick={() => selectGame(game)}><span><TeamLogo team={game.away} size={25} /><i>{game.away.abbr}</i></span><em>@</em><span><TeamLogo team={game.home} size={25} /><i>{game.home.abbr}</i></span><small>{game.gametime ?? 'TBD'}</small></button>)}</div>
+        <div className={styles.gameRail}>{games.map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : ''} onClick={() => selectGame(game)}><span><TeamLogo team={game.away} size={25} /><i>{game.away.abbr}</i></span><em>@</em><span><TeamLogo team={game.home} size={25} /><i>{game.home.abbr}</i></span><small>{game.awayScore != null && game.homeScore != null ? `${game.awayScore}-${game.homeScore} · FINAL` : game.gametime ?? 'TBD'}</small></button>)}</div>
       </section>
 
       <section className={styles.controlBar}>
@@ -1312,14 +1348,14 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
 
       <section className={styles.storyGrid}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}><small>STADIUM / CONDITIONS</small><strong>{selected.stadium ?? 'Stadium TBD'}</strong><span>{selected.temp != null ? `${selected.temp}°F` : 'Weather syncing'} · {selected.wind != null ? `${selected.wind} mph wind` : selected.roof ?? 'Roof TBD'} · {selected.surface ?? 'Surface TBD'}</span></article>
-        <article><small>GAME STATUS</small><strong>{selected.gametime ?? 'TBD'}</strong><span>{selected.gameType} · Week {selected.week}</span></article>
-        <article title={lens.coverage.detail}><small>MATCHUP + DATA</small><strong>{lens.headline}</strong><span>{lens.coverage.label} · {lens.headlineDetail}</span></article>
+        <article><small>GAME STATUS</small><strong>{statusCopy.headline}</strong><span>{periodScores ?? statusCopy.detail}</span></article>
+        <article><small>MATCHUP + DATA</small><strong>{lens.headline}</strong><span>{lens.coverage.label} · {lens.headlineDetail}</span></article>
         <article><small>FANDUEL GAME LINE</small><strong>{selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}</strong><span>{board.gameLines.length} sportsbooks captured</span></article>
         <article className={styles.marketStory}>
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
           {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
           <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />
-          <span>{marketStory.loading ? 'Loading selected capture · ' : ''}{history.length} captures · {capturedLabel}{board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET` : ''}</span>
+          <span className={marketStory.loading ? styles.captureLoading : undefined}>{history.length} captures · {capturedLabel}{board.picksCapturedAt ? ` · Picks ${new Date(board.picksCapturedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET` : ''}</span>
         </article>
       </section>
 
@@ -1368,7 +1404,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
                 const sort = sorts.find(item => item.id === column.id)
                 const rank = sorts.findIndex(item => item.id === column.id)
                 const isPublicPicks = column.id.startsWith('picks:')
-                return <th key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${isPublicPicks ? styles.picksColumn : ''}`} style={{ width: column.width, minWidth: column.width }} title={column.title}><button type="button" onClick={() => changeSort(column.id)}>{column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <i className={styles.picksHeaderMark}>$</i> : null}<span>{column.label}</span>{sort ? <em>{sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}{stickySort ? rank + 1 : ''}</em> : null}</button></th>
+                return <th key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${isPublicPicks ? styles.picksColumn : ''}`} style={{ width: column.width, minWidth: column.width }}><button type="button" aria-label={column.title} onClick={() => changeSort(column.id)}>{column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <i className={styles.picksHeaderMark}>$</i> : null}<span>{column.label}</span>{sort ? <em>{sort.direction === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}{stickySort ? rank + 1 : ''}</em> : null}</button></th>
               })}</tr></thead>
               <tbody>{section.rows.map((player, index) => {
                 const compareActive = compareIds.includes(player.id)
@@ -1378,8 +1414,8 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
                     const automaticHeat = heatStyle(heat.get(`${player.id}:${column.id}`))
                     const matches = matrixMatches.get(player.id) ?? []
                     return <td key={column.id} className={`${column.sticky ? styles.stickyCell : ''} ${column.id.startsWith('picks:') ? styles.picksColumn : ''} ${automaticHeat ? styles.heatCell : ''} ${highlight ? styles[`highlight${highlight.charAt(0).toUpperCase()}${highlight.slice(1)}`] : ''}`} style={{ width: column.width, minWidth: column.width, ...automaticHeat }} onClick={() => toggleHighlight(player, column)}>
-                      {column.id === 'player' && matches.length ? <span className={styles.matrixRail} title={matches.map(matrix => matrix.name).join(' · ')}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
-                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === selected.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
+                      {column.id === 'player' && matches.length ? <span className={styles.matrixRail} aria-label={`Matches ${matches.map(matrix => matrix.name).join(', ')}`}>{matches.slice(0, 5).map(matrix => <i key={matrix.id} style={{ background: matrix.color }} />)}{matches.length > 5 ? <b>+{matches.length - 5}</b> : null}</span> : null}
+                      {column.id === 'player' ? <div className={styles.playerCell}><span className={styles.depth}>{index + 1}</span><PlayerAvatar player={player} team={section.team} /><button type="button" className={styles.playerName} onClick={event => { event.stopPropagation(); setExpanded(player) }}><b>{player.name}</b><small>{player.position}{player.jersey ? ` · #${player.jersey}` : ''}{player.rookieSeason === selected.season ? ' · ROOKIE' : ''}{player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}{availabilityLabel(player) ? <mark className={styles.availabilityBadge} aria-label={player.market?.availability?.injury ?? availabilityLabel(player) ?? undefined}>{availabilityLabel(player)}</mark> : null}</small></button><button type="button" className={compareActive ? styles.compareActive : ''} onClick={event => { event.stopPropagation(); toggleCompare(player.id) }} aria-label={`Compare ${player.name}`}>{compareActive ? <Minus size={14} /> : <Plus size={14} />}</button><button type="button" onClick={event => { event.stopPropagation(); setExpanded(player) }} aria-label={`Open ${player.name}`}><ChevronDown size={14} /></button></div> : column.render(player)}
                     </td>
                   })}
                 </tr>

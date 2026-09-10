@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -29,6 +30,7 @@ async function run(req: Request) {
   const season = currentNflSeason()
   try {
     const count = await syncNflPbp(admin, season)
+    revalidateTag('sideline:nfl-data', 'max')
     return NextResponse.json({ synced: count, season })
   } catch (e: unknown) {
     // nflverse does not publish a season PBP asset until games exist. That is

@@ -18,12 +18,12 @@ export async function GET(request: Request) {
   const at = params.get('at')
   if (at && !Number.isFinite(Date.parse(at))) return NextResponse.json({ error: 'Invalid capture' }, { status: 400 })
   try {
-    if (params.get('index') === '1') {
-      return NextResponse.json({ timeline: await getSidelineTimeline(id) }, { headers: { 'Cache-Control': 'private, no-store' } })
-    }
     const { games } = await getSidelineGames(undefined, id)
     const game = games.find(item => item.id === id)
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
+    if (params.get('index') === '1') {
+      return NextResponse.json({ timeline: await getSidelineTimeline(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }
     if (at) {
       const frame = await getSidelineCapture(game, new Date(at).toISOString())
       return NextResponse.json({ frame: frame && params.get('packed')==='1' ? {...frame,board:packSidelineBoard(frame.board)} : frame }, { headers: { 'Cache-Control': 'private, no-store' } })

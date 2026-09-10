@@ -54,6 +54,14 @@ export type NflOddsPlayer = {
   lastSeason?: number | null
   latestTeam?: string | null
   rosterStatus?: string | null
+  availability?: {
+    gameStatus: string | null
+    injury: string | null
+    active: boolean | null
+    starter: boolean | null
+    didNotPlay: boolean | null
+    updatedAt: string | null
+  }
   markets: NflPlayerMarket[]
   tdBaselines?: NflTdBaseline[]
   publicPicks?: Array<{

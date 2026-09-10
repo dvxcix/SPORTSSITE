@@ -3,11 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { SidelineOddsFrame } from './types'
+import type { SidelineGameState } from './types'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
 
-export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard) {
+export function useSidelineMarket(
+  gameId: string,
+  initialOdds: SidelineOddsBoard,
+  initialGameState: SidelineGameState | null,
+  initialTimeline: string[],
+) {
   const [current, setCurrent] = useState(initialOdds)
-  const [times, setTimes] = useState<string[]>([])
+  const [gameState, setGameState] = useState(initialGameState)
+  const [times, setTimes] = useState<string[]>(initialTimeline)
   const [selectedAt, setSelectedAt] = useState<string | null>(null)
   const [frame, setFrame] = useState<SidelineOddsFrame | null>(null)
   const [error, setError] = useState('')
@@ -34,7 +41,7 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
       const frame={...data.frame,board:unpackSidelineBoard(data.frame.board)}
       cache.current.set(at, frame)
       // Bound memory without throwing away a stop every few slider movements.
-      if (cache.current.size > 32) cache.current.delete(cache.current.keys().next().value!)
+      if (cache.current.size > 64) cache.current.delete(cache.current.keys().next().value!)
       return frame
     }).finally(() => {
       inFlight.current.delete(at)
@@ -67,6 +74,7 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
         if (controller.signal.aborted) return
         setTimes(previous => { const next: string[]=indexData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
         if (currentData.odds) { const next=unpackSidelineBoard(currentData.odds); setCurrent(previous => JSON.stringify(previous)===JSON.stringify(next) ? previous : next) }
+        if ('gameState' in currentData) setGameState(currentData.gameState ?? null)
       } catch {
         if (!controller.signal.aborted) setError('Refresh unavailable. Showing the last loaded capture.')
       }
@@ -80,22 +88,22 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
   useEffect(() => {
     if (!selectedAt) return
     let active = true
-    void (async () => {
+    const timer = window.setTimeout(() => { void (async () => {
       try {
         const loaded = await loadFrame(selectedAt)
         if (active) setFrame(loaded)
       } catch {
         if (active) setError('That capture could not load. Showing the previous board; retry or choose another stop.')
       }
-    })()
-    return () => { active = false }
+    })() }, 75)
+    return () => { active = false; window.clearTimeout(timer) }
   }, [loadFrame, selectedAt, refreshKey])
 
-  // Warm nearby stops before the user reaches them. Two workers keep this bounded;
-  // foreground requests share the same promise instead of repeating a DB read.
+  // Warm only the opening and closest stops. Loading dozens of captures on mount
+  // competes with the board and makes the slider feel slower on mobile networks.
   useEffect(() => {
     let active = true
-    const queue = [timeline[0], ...Array.from({ length: 12 }, (_, offset) => [timeline[index - offset - 1], timeline[index + offset + 1]]).flat()]
+    const queue = [timeline[0], timeline[index - 1], timeline[index + 1], timeline[index - 2], timeline[index + 2]]
       .filter((at): at is string => Boolean(at) && !cache.current.has(at))
     const worker = async () => {
       while (active && queue.length) {
@@ -103,7 +111,7 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
         try { await loadFrame(at, false) } catch { /* Explicit selection supplies retry UI. */ }
       }
     }
-    void worker(); void worker()
+    void worker()
     return () => { active = false }
   }, [timeline, index, loadFrame])
 
@@ -113,13 +121,18 @@ export function useSidelineMarket(gameId: string, initialOdds: SidelineOddsBoard
     if (at) {
       const cached = cache.current.get(at)
       if (cached) setFrame(cached)
+      else {
+        const target = timeline.indexOf(at)
+        const nearest = [...cache.current.entries()].sort((a, b) => Math.abs(timeline.indexOf(a[0]) - target) - Math.abs(timeline.indexOf(b[0]) - target))[0]?.[1]
+        if (nearest) setFrame(nearest)
+      }
     }
     setSelectedAt(at)
   }, [timeline])
   const retry = () => { setError(''); setRefreshKey(value => value + 1) }
   const board = selectedAt == null ? current : frame?.board ?? current
   return {
-    board, current, timeline, index, select, retry, error,
+    board, current, gameState, timeline, index, select, retry, error,
     loading: selectedAt != null && frame?.capturedAt !== selectedAt && !error,
     capturedAt: selectedAt == null ? current.capturedAt : frame?.capturedAt ?? current.capturedAt,
   }

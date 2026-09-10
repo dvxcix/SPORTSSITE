@@ -9,7 +9,7 @@ import { SidelineClient } from './SidelineClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
 import { SidelineMatchupLab } from './SidelineMatchupLab'
-import { getCachedSidelineBoardLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
+import { getCachedSidelineBoardLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from './data'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +29,7 @@ export default async function SidelinePage({ searchParams }: {
   if (profile?.account_type !== 'admin') notFound()
 
   const params = await searchParams
-  const sample = parseNflSample(Array.isArray(params.sample) ? params.sample[0] : params.sample)
+  const requestedSample = Array.isArray(params.sample) ? params.sample[0] : params.sample
   const requestedGame = Array.isArray(params.game) ? params.game[0] : params.game
   const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date
   const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode
@@ -39,13 +39,21 @@ export default async function SidelinePage({ searchParams }: {
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const seasonStarted = days.some(day => day.season === selected.season && day.gameType === 'REG' && day.date <= today)
+  const sample = requestedSample
+    ? parseNflSample(requestedSample)
+    : selected.gameType === 'PRE' ? 'preseason' : seasonStarted ? 'regular' : 'previous'
   const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode ?? ''} />
   if (mode === 'film') {
     const lens = await getCachedSidelineLens(selected)
     return <>{navigation}<SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
   }
 
-  const market = await getSidelineOddsBundle(selected)
+  const [market, timeline] = await Promise.all([
+    getSidelineOddsBundle(selected),
+    getSidelineTimeline(selected),
+  ])
   if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
@@ -60,5 +68,5 @@ export default async function SidelinePage({ searchParams }: {
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} days={days} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} days={days} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} timeline={timeline} /></>
 }

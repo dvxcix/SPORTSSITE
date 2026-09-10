@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -15,6 +16,7 @@ async function run(req: Request) {
   const admin = createAdminClient()
   try {
     const count = await syncNflPlayerStats(admin)
+    revalidateTag('sideline:nfl-data', 'max')
     return NextResponse.json({ synced: count })
   } catch (e: any) {
     console.error('[nfl-sync-player-stats] failed', { type: e instanceof Error ? e.name : typeof e })

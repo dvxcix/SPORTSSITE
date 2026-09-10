@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -38,6 +39,7 @@ async function run(req: Request) {
       computeNflDvp(admin, season),
       computeNflDvp(admin, season - 1),
     ])
+    revalidateTag('sideline:nfl-data', 'max')
     return NextResponse.json({ current, prior, seasons: [season, season - 1] })
   } catch (e: any) {
     console.error('[nfl-compute-dvp] failed', { type: e instanceof Error ? e.name : typeof e })

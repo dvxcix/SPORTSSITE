@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
 import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -23,6 +24,7 @@ async function run(req: Request) {
       syncNflNgsReceiving(admin),
       syncNflNgsRushing(admin),
     ])
+    revalidateTag('sideline:nfl-data', 'max')
     return NextResponse.json({ passing, receiving, rushing })
   } catch (e: any) {
     console.error('[nfl-sync-ngs] failed', { type: e instanceof Error ? e.name : typeof e })
