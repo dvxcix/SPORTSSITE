@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Activity, AlertTriangle, Bell, CheckCircle2, Clock3, Download, Gauge, RotateCcw, Webhook, XCircle, type LucideIcon } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
+import { browserbasePlanUsage, getBrowserbaseUsageSummary } from '@/lib/browserbaseUsage'
 import { PipelineRetryButton } from './PipelineRetryButton'
 
 export const dynamic = 'force-dynamic'
@@ -128,6 +129,8 @@ export default async function PipelineHealthPage() {
     .limit(1)
     .maybeSingle()
   const integrity = integrityData as IntegrityRun | null
+  const browserbaseUsage = await getBrowserbaseUsageSummary().catch(() => null)
+  const browserbasePlan = browserbaseUsage ? browserbasePlanUsage(browserbaseUsage) : null
   const sourceUnavailable = Object.values(integrity?.checks?.pitch_log?.source_unavailable_fair_ball_metrics ?? {})
     .reduce((sum, value) => sum + Number(value || 0), 0)
   const latest = new Map<string, Run>()
@@ -244,6 +247,39 @@ export default async function PipelineHealthPage() {
         <QueueCard icon={Download} label="Contact recap exports" value={(activeRecapExports ?? 0) + (failedRecapExports ?? 0)} detail={`${activeRecapExports ?? 0} active · ${failedRecapExports ?? 0} failed`} href="/admin/contact-recap" tone={(failedRecapExports ?? 0) > 0 ? 'danger' : (activeRecapExports ?? 0) > 0 ? 'warning' : 'success'}/>
       </div>
 
+      {browserbaseUsage && browserbasePlan && (
+        <section className="mb-6 overflow-hidden rounded-2xl border border-cyan-500/20 bg-zinc-900/60">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400">Browser automation budget</p>
+              <h2 className="mt-1 text-base font-black text-white">Browserbase monthly usage</h2>
+            </div>
+            <p className="text-xs text-zinc-500">Cached for 5 minutes</p>
+          </div>
+          <div className="grid gap-px bg-zinc-800 sm:grid-cols-3">
+            <BudgetMetric label="Browser hours" value={`${browserbasePlan.browserHours.toFixed(1)} / 500`} detail={`${browserbasePlan.browserHoursRemaining.toFixed(1)} included hours remain`} percent={browserbasePlan.browserPercent} />
+            <BudgetMetric label="Proxy transfer" value={`${browserbasePlan.proxyGigabytes.toFixed(2)} / 5 GB`} detail={`${browserbasePlan.proxyGigabytesRemaining.toFixed(2)} included GB remain`} percent={browserbasePlan.proxyPercent} />
+            <BudgetMetric label="Running sessions" value={String(browserbaseUsage.runningSessions)} detail={browserbaseUsage.runningSessions === 0 ? 'No browser currently billing' : 'Inspect if this remains nonzero'} percent={browserbaseUsage.runningSessions > 0 ? 100 : 0} />
+          </div>
+          {browserbaseUsage.byWorkflow.length > 0 && (
+            <div className="overflow-x-auto px-5 py-4">
+              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">Retained-session attribution</div>
+              <div className="min-w-[560px] divide-y divide-zinc-800 text-xs">
+                {browserbaseUsage.byWorkflow.slice(0, 8).map(workflow => (
+                  <div key={workflow.name} className="grid grid-cols-[minmax(220px,1fr)_80px_100px_90px_90px] gap-3 py-2 text-zinc-300">
+                    <span className="truncate font-mono text-zinc-200">{workflow.name}</span>
+                    <span>{workflow.sessions} runs</span>
+                    <span>{(workflow.browserMinutes / 60).toFixed(2)} hours</span>
+                    <span>{(workflow.proxyBytes / 1_000_000_000).toFixed(3)} GB</span>
+                    <span className={workflow.errors + workflow.timedOut > 0 ? 'text-amber-300' : 'text-emerald-400'}>{workflow.errors + workflow.timedOut} failed</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {integrity && (
         <section className={`mb-6 rounded-2xl border p-5 ${integrity.status === 'failed' ? 'border-red-500/30 bg-red-500/8' : integrity.status === 'warning' ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/25 bg-emerald-500/8'}`}>
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -296,6 +332,12 @@ export default async function PipelineHealthPage() {
 
 function IntegrityMetric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
   return <div className="rounded-xl border border-white/8 bg-black/20 px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p><p className={`mt-1 text-xl font-black ${danger ? 'text-red-300' : 'text-white'}`}>{value.toLocaleString()}</p></div>
+}
+
+function BudgetMetric({ label, value, detail, percent }: { label: string; value: string; detail: string; percent: number }) {
+  const bounded = Math.max(0, Math.min(100, percent))
+  const tone = percent >= 85 ? 'bg-red-400' : percent >= 65 ? 'bg-amber-300' : 'bg-emerald-400'
+  return <div className="bg-zinc-950/70 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">{label}</p><p className="mt-1 text-xl font-black text-white">{value}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-800"><div className={`h-full rounded-full ${tone}`} style={{ width: `${bounded}%` }}/></div><p className="mt-2 text-xs text-zinc-500">{detail}</p></div>
 }
 
 function QueueCard({ icon: Icon, label, value, detail, tone, href }: {
