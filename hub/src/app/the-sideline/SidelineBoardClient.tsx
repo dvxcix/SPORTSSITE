@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useTransition, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
@@ -8,7 +8,6 @@ import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 import { buildBoardHeat } from './boardHeat'
 import { normalizeNflPlayerName as normalizedName } from '@/lib/nflPlayerName'
-import { useRouter } from 'next/navigation'
 import {
   BarChart3,
   ChevronDown,
@@ -32,7 +31,6 @@ import {
 } from 'lucide-react'
 import { BookLogo, normalizeVendor } from '@/components/BookLogo'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
-import type { NflSample } from '@/lib/nflSample'
 import { createPortal } from 'react-dom'
 import { useSidelineMarket } from './useSidelineMarket'
 import { useWatchlist } from '@/context/WatchlistContext'
@@ -461,10 +459,6 @@ function MarketCell({ player, marketKey, vendor, saved, onToggleSaved }: {
       ><Star size={10} fill={saved ? 'currentColor' : 'none'} /></button>
     </span>
   )
-}
-
-function shortDate(date: string) {
-  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
 function buildEmptyPlayer(market: NflOddsPlayer): SidelinePlayer {
@@ -1043,21 +1037,16 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, days, selectedId, selectedDate, lens, odds, gameState, timeline, sample = 'previous' }: {
-  days: import('./scheduleNavigation').SidelineScheduleDay[]
-  sample?: NflSample
+export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, timeline }: {
   games: SidelineGame[]
   selectedId: string
-  selectedDate: string
   lens: SidelineLens
   odds: SidelineOddsBoard | PackedOdds
   gameState: SidelineGameState | null
   timeline: string[]
 }) {
-  const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
-  const [isPending, startTransition] = useTransition()
   const [windowId, setWindowId] = useState<SidelineWindow>('season')
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
@@ -1323,8 +1312,6 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
     })
   }
 
-  const selectGame = (game: SidelineGame) => startTransition(() => router.replace(`/the-sideline?date=${game.gameday}&game=${encodeURIComponent(game.id)}&sample=${sample}`, { scroll: false }))
-  const selectDate = (date: string) => startTransition(() => router.replace(`/the-sideline?date=${date}&sample=${sample}`, { scroll: false }))
   const toggleCompare = (id: string) => setCompareIds(current => current.includes(id) ? current.filter(item => item !== id) : current.length < 4 ? [...current, id] : current)
   const toggleHighlight = (row: PlayerRow, column: ColumnDefinition) => {
     if (!highlighter || column.id === 'player') return
@@ -1352,7 +1339,7 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
   const periodScores = periodScoreCopy(marketStory.gameState)
 
   return (
-    <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''} ${isPending ? styles.loading : ''}`}>
+    <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
       <header className={styles.brandHeader}>
         <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
         <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
@@ -1361,20 +1348,6 @@ export function SidelineBoardClient({ games, days, selectedId, selectedDate, len
           <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
         </div>
       </header>
-
-      <nav className={styles.dateStrip} aria-label="NFL slate date" style={{ '--game-days': days.filter(day => day.season === selected.season && day.week === selected.week && day.gameType === selected.gameType).length } as CSSProperties}>
-        <button type="button" aria-label="Previous game day" disabled={isPending || days.findIndex(day => day.date === selectedDate) <= 0} onClick={() => selectDate(days[days.findIndex(day => day.date === selectedDate) - 1].date)}><ChevronLeft size={17} /></button>
-        {days.filter(day => day.season === selected.season && day.week === selected.week && day.gameType === selected.gameType).map(({ date }) => {
-          const day = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })
-          return <button key={date} type="button" disabled={isPending} aria-current={date === selectedDate ? 'date' : undefined} className={date === selectedDate ? styles.dateActive : ''} onClick={() => selectDate(date)}><small>{day}</small><b>{shortDate(date)}</b></button>
-        })}
-        <button type="button" aria-label="Next game day" disabled={isPending || days.findIndex(day => day.date === selectedDate) >= days.length - 1} onClick={() => selectDate(days[days.findIndex(day => day.date === selectedDate) + 1].date)}><ChevronRight size={17} /></button>
-      </nav>
-
-      <section className={styles.gameRailSection}>
-        <header><span>Games</span><b>{games.findIndex(game => game.id === selected.id) + 1}/{games.length}</b></header>
-        <div className={styles.gameRail}>{games.map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : ''} onClick={() => selectGame(game)}><span><TeamLogo team={game.away} size={25} /><i>{game.away.abbr}</i></span><em>@</em><span><TeamLogo team={game.home} size={25} /><i>{game.home.abbr}</i></span><small>{game.awayScore != null && game.homeScore != null ? `${game.awayScore}-${game.homeScore} · FINAL` : game.gametime ?? 'TBD'}</small></button>)}</div>
-      </section>
 
       <section className={styles.controlBar}>
         <div className={styles.matchupMini}><TeamLogo team={selected.away} size={28} /><b>{selected.away.abbr}</b><span>@</span><TeamLogo team={selected.home} size={28} /><b>{selected.home.abbr}</b></div>
