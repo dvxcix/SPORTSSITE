@@ -184,7 +184,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         }}
       >
       {/* Logo */}
-      <Link href="/feed" className="ss-sidebar-brand" style={{
+      <Link href="/feed" prefetch={false} className="ss-sidebar-brand" style={{
         display: 'flex', alignItems: 'center', gap: 10,
         justifyContent: isCollapsed ? 'center' : 'flex-start',
         padding: isCollapsed ? '20px 8px 18px' : '20px 16px 18px',
@@ -268,7 +268,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           // fill so only the 1.5px ring around the edge reads as lit.
           const idleBg = item.movingBorder ? 'var(--surface)' : 'transparent'
           const link = (
-            <Link key={item.href} href={item.href} className="nav-item" data-active={isActive} title={isCollapsed ? item.label : undefined} style={{
+            <Link key={item.href} href={item.href} prefetch={false} className="nav-item" data-active={isActive} title={isCollapsed ? item.label : undefined} style={{
               position: 'relative', display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
               justifyContent: isCollapsed ? 'center' : 'flex-start',
               padding: isCollapsed ? '8px' : '8px 10px', borderRadius: item.movingBorder ? 7 : 8,
@@ -317,7 +317,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
       {/* Bottom: Settings */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
-        <Link href="/settings" className="ss-sidebar-settings" title={isCollapsed ? 'Settings & Help' : undefined} style={{
+        <Link href="/settings" prefetch={false} className="ss-sidebar-settings" title={isCollapsed ? 'Settings & Help' : undefined} style={{
           display: 'flex', alignItems: 'center', gap: isCollapsed ? 0 : 10,
           justifyContent: isCollapsed ? 'center' : 'flex-start',
           padding: isCollapsed ? '8px' : '8px 10px', borderRadius: 8,

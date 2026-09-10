@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip, type TooltipCardData } from '@/components/ui/tooltip-card'
 import { useWatchlist } from '@/context/WatchlistContext'
+import { useAuth } from '@/context/AuthContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
@@ -4904,6 +4905,7 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
 
 // ─── DugoutClient ─────────────────────────────────────────────────────────────
 export function DugoutClient({ date }: { date: string }) {
+  const { user: authUser, profile: authProfile } = useAuth()
   const [data, setData]         = useState<any | null>(null)
   const [loading, setLoading]   = useState(true)
   const [err, setErr]           = useState<string | null>(null)
@@ -4947,35 +4949,21 @@ export function DugoutClient({ date }: { date: string }) {
       else window.sessionStorage.removeItem('ss:dugout-open-panel')
     } catch {}
   }, [showHrBoard, showNearHrBoard])
-  // Per-member Dugout column show/hide/reorder — fetched once on mount
-  // (null while loading behaves identically to "no prefs saved," i.e. show
-  // everything in default order, so there's no layout flash while this
-  // resolves) and written back through the same direct
-  // supabase.from('users').update() pattern PrivacySettingsForm already
-  // uses for every other member preference on this table.
+  // Reuse the private profile already loaded by the app-wide AuthProvider.
+  // Fetching /api/account/me again here doubled profile traffic for every
+  // Dugout visit and added an unnecessary auth/database round trip.
   const [columnPrefs, setColumnPrefsState] = useState<DugoutColumnPrefs | null>(null)
   const [showColumnPanel, setShowColumnPanel] = useState(false)
   useEffect(() => {
-    const supabase = createClient()
-    let cancelled = false
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || cancelled) return
-      const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
-      if (!response.ok || cancelled) return
-      const { profile } = await response.json()
-      if (!cancelled && profile?.id === user.id && profile?.dugout_column_prefs) {
-        setColumnPrefsState(profile.dugout_column_prefs as DugoutColumnPrefs)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
+    if (authProfile?.dugout_column_prefs) {
+      setColumnPrefsState(authProfile.dugout_column_prefs as DugoutColumnPrefs)
+    }
+  }, [authProfile?.dugout_column_prefs])
   const saveColumnPrefs = async (next: DugoutColumnPrefs) => {
-    setColumnPrefsState(next) // update the board immediately — don't wait on the write
+    setColumnPrefsState(next) // update the board immediately - don't wait on the write
+    if (!authUser) return
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('users').update({ dugout_column_prefs: next }).eq('id', user.id)
+    await supabase.from('users').update({ dugout_column_prefs: next }).eq('id', authUser.id)
   }
 
   // Deep link from elsewhere (e.g. Weather Lab's park-HR modal) — jump

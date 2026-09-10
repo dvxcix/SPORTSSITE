@@ -66,7 +66,7 @@ export function DesktopNavigation() {
   return (
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
       <div className="ss-desktop-app-rail">
-        <Link className="ss-desktop-rail-logo" href="/feed" aria-label="SlipSurge home">
+        <Link className="ss-desktop-rail-logo" href="/feed" prefetch={false} aria-label="SlipSurge home">
           <img src="/logo.png" alt="" />
         </Link>
         <nav aria-label="Desktop workspaces">
@@ -74,7 +74,7 @@ export function DesktopNavigation() {
             const Icon = item.icon
             const active = isActive(pathname, item.href)
             return (
-              <Link key={item.href} href={item.href} data-active={active} title={item.label} aria-label={item.label}>
+              <Link key={item.href} href={item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
                 <Icon size={19} />
                 {item.badge && <i>{item.badge === 'LIVE' ? '' : item.badge}</i>}
               </Link>
@@ -82,9 +82,9 @@ export function DesktopNavigation() {
           })}
         </nav>
         <div className="ss-desktop-rail-bottom">
-          <Link href="/search" title="Search" aria-label="Search"><Search size={18} /></Link>
-          <Link href="/notifications" title="Notifications" aria-label="Notifications"><Bell size={18} /></Link>
-          <Link href="/settings" title="Settings" aria-label="Settings"><Settings2 size={18} /></Link>
+          <Link href="/search" prefetch={false} title="Search" aria-label="Search"><Search size={18} /></Link>
+          <Link href="/notifications" prefetch={false} title="Notifications" aria-label="Notifications"><Bell size={18} /></Link>
+          <Link href="/settings" prefetch={false} title="Settings" aria-label="Settings"><Settings2 size={18} /></Link>
         </div>
       </div>
 
@@ -92,7 +92,7 @@ export function DesktopNavigation() {
         <div className="ss-desktop-context-nav">
           <header>
             <div><span>SLIPSURGE DESKTOP</span><strong>{currentSection}</strong></div>
-            <Link href="/pricing" title="Upgrade"><Crown size={15} /></Link>
+            <Link href="/pricing" prefetch={false} title="Upgrade"><Crown size={15} /></Link>
           </header>
           <button className="ss-desktop-context-toggle" type="button" onClick={toggle} aria-label={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'}>
             {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
@@ -103,7 +103,7 @@ export function DesktopNavigation() {
               const Icon = item.icon
               const active = isActive(pathname, item.href)
               return (
-                <Link key={item.href} href={item.href} data-active={active}>
+                <Link key={item.href} href={item.href} prefetch={false} data-active={active}>
                   <Icon size={15} />
                   <span>{item.label}</span>
                   {item.badge && <em>{item.badge}</em>}
@@ -112,11 +112,11 @@ export function DesktopNavigation() {
             })}
           </nav>
           <div className="ss-desktop-account-card">
-            <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} className="ss-desktop-avatar">
+            <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} prefetch={false} className="ss-desktop-avatar">
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{initials}</span>}
             </Link>
             <div><strong>{displayName}</strong><span>{profile?.tier || 'free'} workspace</span></div>
-            <Link href="/settings" aria-label="Account settings"><Settings2 size={14} /></Link>
+            <Link href="/settings" prefetch={false} aria-label="Account settings"><Settings2 size={14} /></Link>
           </div>
         </div>
       )}

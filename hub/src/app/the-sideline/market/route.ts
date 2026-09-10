@@ -28,8 +28,19 @@ export async function GET(request: Request) {
       const frame = await getSidelineCapture(game, new Date(at).toISOString())
       return NextResponse.json({ frame: frame && params.get('packed')==='1' ? {...frame,board:packSidelineBoard(frame.board)} : frame }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
-    const bundle=await getSidelineOddsBundle(game)
-    return NextResponse.json(params.get('packed')==='1'?{odds:packSidelineBoard(bundle.odds)}:bundle, { headers: { 'Cache-Control': 'private, no-store' } })
+    // Current-board polling also needs the slider index. Returning both in
+    // one authenticated response avoids a second Function invocation every
+    // 30 seconds for every open Sideline tab.
+    const [bundle, timeline] = await Promise.all([
+      getSidelineOddsBundle(game),
+      getSidelineTimeline(game),
+    ])
+    return NextResponse.json(
+      params.get('packed') === '1'
+        ? { odds: packSidelineBoard(bundle.odds), gameState: bundle.gameState, timeline }
+        : { ...bundle, timeline },
+      { headers: { 'Cache-Control': 'private, no-store' } },
+    )
   } catch (error) {
     console.error('[the-sideline] market request failed', error)
     return NextResponse.json({ error: 'Market data temporarily unavailable. Retry shortly.' }, { status: 503 })

@@ -881,6 +881,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
   useEffect(() => {
     if (!isLive) return
     const id = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
       try {
         const res = await fetch(`/api/mlb/game-feed?gamePk=${gamePk}`)
         if (res.ok) {

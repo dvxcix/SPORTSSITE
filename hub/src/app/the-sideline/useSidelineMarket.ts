@@ -66,13 +66,11 @@ export function useSidelineMarket(
       try {
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20000)])
         const base = '/the-sideline/market?packed=1&game=' + encodeURIComponent(gameId)
-        const [indexResponse, currentResponse] = await Promise.all([
-          fetch(base + '&index=1', { signal }), fetch(base, { signal }),
-        ])
-        if (!indexResponse.ok || !currentResponse.ok) throw new Error('Refresh unavailable')
-        const [indexData, currentData] = await Promise.all([indexResponse.json(), currentResponse.json()])
+        const currentResponse = await fetch(base, { signal })
+        if (!currentResponse.ok) throw new Error('Refresh unavailable')
+        const currentData = await currentResponse.json()
         if (controller.signal.aborted) return
-        setTimes(previous => { const next: string[]=indexData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
+        setTimes(previous => { const next: string[]=currentData.timeline ?? []; return previous.length===next.length && previous.every((at,i)=>at===next[i]) ? previous : next })
         if (currentData.odds) { const next=unpackSidelineBoard(currentData.odds); setCurrent(previous => JSON.stringify(previous)===JSON.stringify(next) ? previous : next) }
         if ('gameState' in currentData) setGameState(currentData.gameState ?? null)
       } catch {

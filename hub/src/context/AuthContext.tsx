@@ -27,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const pushSyncedForUser = useRef<string | null>(null)
+  const profileLoadedForUser = useRef<string | null>(null)
+  const profileRequest = useRef<{ userId: string; promise: Promise<void> } | null>(null)
   const [supabase] = useState(() => createClient())
 
   function repairPushRegistration(userId: string) {
@@ -39,18 +41,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  async function fetchProfile(userId: string) {
-    const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
-    if (!response.ok) {
-      setProfile(null)
-      return
-    }
-    const { profile } = await response.json()
-    if (profile?.id === userId) setProfile(profile)
+  async function fetchProfile(userId: string, force = false) {
+    if (!force && profileLoadedForUser.current === userId) return
+    if (!force && profileRequest.current?.userId === userId) return profileRequest.current.promise
+    const promise = (async () => {
+      const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
+      if (!response.ok) {
+        setProfile(null)
+        return
+      }
+      const { profile } = await response.json()
+      if (profile?.id === userId) {
+        setProfile(profile)
+        profileLoadedForUser.current = userId
+      }
+    })().finally(() => {
+      if (profileRequest.current?.promise === promise) profileRequest.current = null
+    })
+    profileRequest.current = { userId, promise }
+    return promise
   }
 
   async function refreshProfile() {
-    if (user) await fetchProfile(user.id)
+    if (user) await fetchProfile(user.id, true)
   }
 
   useEffect(() => {
@@ -72,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         repairPushRegistration(session.user.id)
       } else {
         setProfile(null)
+        profileLoadedForUser.current = null
+        profileRequest.current = null
         pushSyncedForUser.current = null
       }
       setLoading(false)
@@ -85,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setProfile(null)
     setSession(null)
+    profileLoadedForUser.current = null
+    profileRequest.current = null
   }
 
   return (

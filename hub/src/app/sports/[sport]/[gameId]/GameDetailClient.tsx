@@ -777,7 +777,10 @@ export function GameDetailClient({
 
   useEffect(() => {
     if (!isLive) return
-    const id = setInterval(() => window.location.reload(), 30000)
+    const refresh = () => {
+      if (document.visibilityState === 'visible') window.location.reload()
+    }
+    const id = setInterval(refresh, 30000)
     return () => clearInterval(id)
   }, [isLive])
 
