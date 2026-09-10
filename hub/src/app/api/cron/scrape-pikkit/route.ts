@@ -152,10 +152,24 @@ async function scrapeBatch(games: TodayGame[], date: string, contextId: string, 
     gamePks: games.map(game => game.gamePk).join(','),
   })
   try {
-    await installTextOnlyRouting(bb)
-    const results = []
-    for (const game of games) {
-      results.push(await scrapeOneGame(game, date, legIndexFor(game), contextId, dryRun, bb))
+    const results: Awaited<ReturnType<typeof scrapeOneGame>>[] = []
+    // Several isolated pages share one remote browser/session minimum. Four
+    // at a time keeps memory bounded while preserving one result per game.
+    for (let index = 0; index < games.length; index += 4) {
+      const group = games.slice(index, index + 4)
+      const pages = await Promise.all(group.map((_, pageIndex) => (
+        index === 0 && pageIndex === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()
+      )))
+      await Promise.all(pages.map(page => installTextOnlyRouting({ ...bb, page })))
+      results.push(...await Promise.all(group.map((game, gameIndex) => scrapeOneGame(
+        game,
+        date,
+        legIndexFor(game),
+        contextId,
+        dryRun,
+        { ...bb, page: pages[gameIndex] },
+      ))))
+      await Promise.all(pages.filter(page => page !== bb.page).map(page => page.close().catch(() => {})))
     }
     return results
   } finally {
@@ -181,7 +195,7 @@ export async function GET(req: Request) {
   const gamePksParam = reqUrl.searchParams.get('gamePks')
   const dryRun = reqUrl.searchParams.get('dryRun') === '1'
   if (gamePksParam) {
-    const requested = new Set(gamePksParam.split(',').map(Number).filter(Number.isFinite).slice(0, 4))
+    const requested = new Set(gamePksParam.split(',').map(Number).filter(Number.isFinite).slice(0, 40))
     const selected = games.filter(game => requested.has(game.gamePk))
     if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
     const results = await scrapeBatch(selected, date, contextId, dryRun)

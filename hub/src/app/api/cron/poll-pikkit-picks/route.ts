@@ -13,8 +13,6 @@ export const revalidate = 0
 export const maxDuration = 280
 
 const SCRAPE_TIMEOUT_MS = 260_000
-const GAMES_PER_BROWSER = 4
-
 async function scrapeBatch(gamePks: number[]) {
   try {
     const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePks=${gamePks.join(',')}`, {
@@ -36,9 +34,8 @@ async function scrapeBatch(gamePks: number[]) {
   }
 }
 
-// Captures seven meaningful pregame checkpoints rather than paying for 48
-// all-day polls. Four games share one Browserbase session, cutting both the
-// per-session browser minimum and the per-session proxy minimum.
+// Preserves the 30-minute pick history while the entire pregame slate shares
+// one Browserbase session. Each game still receives its own validated import.
 async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
@@ -48,11 +45,7 @@ async function run(req: Request) {
   const pregame = games.filter(g => isPregame(g.status))
   if (!pregame.length) return NextResponse.json({ date, games: games.length, pregame: 0, results: [] })
 
-  const batches: number[][] = []
-  for (let index = 0; index < pregame.length; index += GAMES_PER_BROWSER) {
-    batches.push(pregame.slice(index, index + GAMES_PER_BROWSER).map(game => game.gamePk))
-  }
-  const normalizedResults = (await Promise.all(batches.map(scrapeBatch))).flat()
+  const normalizedResults = await scrapeBatch(pregame.map(game => game.gamePk))
   const failed = normalizedResults.filter(result => !result.ok)
   const unavailableReason = `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`
   const allListingsUnavailable = normalizedResults.length > 0

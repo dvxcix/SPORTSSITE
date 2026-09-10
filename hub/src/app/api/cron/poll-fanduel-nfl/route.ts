@@ -24,7 +24,7 @@ async function run(req: Request) {
     const { data, error } = await admin.from('nfl_fanduel_capture_history').select('captured_at').eq('game_id', game.gameId).order('captured_at', { ascending: false }).limit(1).maybeSingle()
     if (error) throw new Error('Capture status unavailable')
     const capturedAt = data?.captured_at ? Date.parse(data.captured_at) : 0
-    return captureNeedsRefresh({ gameDate: game.gameDate, capturedAt }, now) ? { game, capturedAt } : null
+    return captureNeedsRefresh({ gameDate: game.gameDate, gameTime: game.gameTime, capturedAt }, now) ? { game, capturedAt } : null
   }))).filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null)
     .sort((a, b) => a.capturedAt - b.capturedAt || a.game.gameDate.localeCompare(b.game.gameDate))
   // Rotate the stalest six games each run. At a 30-minute cadence this covers

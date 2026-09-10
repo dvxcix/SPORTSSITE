@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, isPregame, type TodayGame } from '@slipsurge/core/mlbSchedule'
-import { openSession } from '@/lib/browserbase'
+import { openSession, type BBSession } from '@/lib/browserbase'
 import { runFanduelScrape } from '@/lib/scrapers/fanduelScraper'
 import { findAndClickGame, legIndexFor } from '@/lib/scrapers/gameMatch'
-import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/platform'
 import { addDaysToDateStr } from '@/lib/balldontlie'
 import { missingCoreMarkets } from '@/lib/scrapers/retryMarkets'
@@ -24,12 +23,9 @@ export const GET = withPipelineHealth('scrape-fanduel', run, { allowSecondarySec
 //
 // Called two ways:
 //   ?gamePk=123   -> scrapes just that one game, one Browserbase session.
-//   (no gamePk)   -> "sweep" mode: fans out one concurrent request per
-//                    today's game back to this same route instead of
-//                    looping in-process — wall time is bounded by the
-//                    slowest single game, not the sum of every game, which
-//                    is what let a full slate blow past the time budget
-//                    when it all ran sequentially in one loop.
+//   (no gamePk)   -> sweep mode: two isolated pages share each Browserbase
+//                    session, preserving per-game extraction in half as
+//                    many paid browser/proxy minimums.
 async function postImport(json: unknown, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
   const scrapes = Array.isArray(json) ? json : [json]
   const batches: unknown[][] = []
@@ -83,13 +79,17 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
   }
 }
 
-async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
-  const bb = await openSession({ metadata: { book: 'fanduel', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
+async function installExtractionRouting(bb: BBSession) {
+  await bb.page.route('**/*', route => {
+    const type = route.request().resourceType()
+    return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+  })
+}
+
+async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean, shared?: BBSession) {
+  const bb = shared ?? await openSession({ proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$', metadata: { book: 'fanduel', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
-    await bb.page.route('**/*', route => {
-      const type = route.request().resourceType()
-      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
-    })
+    if (!shared) await installExtractionRouting(bb)
     await bb.page.goto('https://sportsbook.fanduel.com/navigation/mlb', { waitUntil: 'domcontentloaded' })
     // Best-effort — harmless no-op if "GAMES" is already the active tab.
     await bb.page.getByText('GAMES', { exact: true }).first().click({ timeout: 5000 }).catch(() => {})
@@ -131,7 +131,7 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
   } catch {
     return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
-    await bb.close()
+    if (!shared) await bb.close()
   }
 }
 
@@ -150,11 +150,27 @@ async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, 
 // immediate second pass was the direct cause of the 300-second hard timeouts.
 // dispatch-scrapes already owns the bounded delayed retry for lineup-triggered
 // captures, while scheduled sweeps naturally retry on their next pass.
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
-  const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun)
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun: boolean, shared?: BBSession) {
+  const first = await scrapeOneGameAttempt(g, date, legIdx, dryRun, shared)
   if (dryRun || 'error' in first) return first
   const missing = missingCoreMarkets(first.imported?.body?.marketSummary ?? {})
   return missing.length ? { ...first, stillMissing: missing } : first
+}
+
+async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean) {
+  const bb = await openSession({
+    proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$',
+    metadata: { book: 'fanduel', mode: 'mlb-batch', gameCount: games.length, gamePks: games.map(game => game.gamePk).join(',') },
+  })
+  try {
+    const pages = await Promise.all(games.map((_, index) => index === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()))
+    await Promise.all(pages.map(page => installExtractionRouting({ ...bb, page })))
+    const results = await Promise.all(games.map((game, index) => scrapeOneGame(game, date, legIndexFor(game), dryRun, { ...bb, page: pages[index] })))
+    await Promise.all(pages.filter(page => page !== bb.page).map(page => page.close().catch(() => {})))
+    return results
+  } finally {
+    await bb.close()
+  }
 }
 
 async function run(req: Request) {
@@ -219,7 +235,14 @@ async function run(req: Request) {
   }
 
   const gamePkParam = url.searchParams.get('gamePk')
+  const gamePksParam = url.searchParams.get('gamePks')
   const dryRun = url.searchParams.get('dryRun') === '1'
+  if (gamePksParam) {
+    const requested = new Set(gamePksParam.split(',').map(Number).filter(Number.isFinite).slice(0, 2))
+    const selected = effectiveGames.filter(game => requested.has(game.gamePk))
+    if (!selected.length) return NextResponse.json({ error: 'No requested pregame games found' }, { status: 404 })
+    return NextResponse.json({ date, games: selected.length, results: await scrapeBatch(selected, date, dryRun) })
+  }
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
@@ -235,7 +258,8 @@ async function run(req: Request) {
   }
 
   if (!effectiveGames.length) return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results: [] })
-  const extraQuery = `&date=${date}${dryRun ? '&dryRun=1' : ''}`
-  const results = await fanOutToSelf('/api/cron/scrape-fanduel', effectiveGames.map(g => g.gamePk), extraQuery)
+  const batches: TodayGame[][] = []
+  for (let index = 0; index < effectiveGames.length; index += 2) batches.push(effectiveGames.slice(index, index + 2))
+  const results = (await Promise.all(batches.map(batch => scrapeBatch(batch, date, dryRun)))).flat()
   return NextResponse.json({ date, games: games.length, skippedAlreadyLive, skippedAmbiguous, results })
 }

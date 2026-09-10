@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   const { data, error } = await admin.from('nfl_odds_current').select('board').eq('game_id', gameId).maybeSingle()
   if (error || !data?.board?.players?.length) return NextResponse.json({ error: 'Canonical player identities not ready' }, { status: 425 })
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
-  const session = await openSession({ metadata: { book: 'fanduel', sport: 'nfl', gameId } })
+  const session = await openSession({ proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$', metadata: { book: 'fanduel', sport: 'nfl', gameId } })
   try {
     await session.page.route('**/*', route => {
       const type = route.request().resourceType()

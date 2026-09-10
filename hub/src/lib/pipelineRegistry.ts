@@ -10,13 +10,14 @@ const everyMinute = 4
 const everyTwoMinutes = 7
 const everyFiveMinutes = 12
 const everyFifteenMinutes = 35
+const everyThirtyMinutes = 70
 const daily = 1_560
 
 export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'bdl-odds', label: 'Live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
   { name: 'dispatch-scrapes', label: 'Lineup scrape dispatcher', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Odds' },
   { name: 'scrape-fanduel', label: 'FanDuel gap markets', schedule: 'Scheduled and lineup-triggered', staleAfterMinutes: 600, area: 'Odds' },
-  { name: 'poll-pikkit-picks', label: 'Pikkit pick import', schedule: 'Seven market checkpoints daily', staleAfterMinutes: 13 * 60, area: 'Picks' },
+  { name: 'poll-pikkit-picks', label: 'Pikkit pick import', schedule: 'Every 30 minutes, one batched session', staleAfterMinutes: everyThirtyMinutes, area: 'Picks' },
   { name: 'poll-pikkit-nfl-picks', label: 'NFL Pikkit pick import', schedule: 'Hourly with adaptive game freshness', staleAfterMinutes: 2 * 60, area: 'Picks' },
   { name: 'grade-live-picks', label: 'Live pick grading', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Picks' },
   { name: 'settle-picks', label: 'Daily pick settlement', schedule: 'Daily', staleAfterMinutes: daily, area: 'Picks' },

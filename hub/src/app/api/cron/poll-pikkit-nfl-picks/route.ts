@@ -29,7 +29,7 @@ async function run(req: Request) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const candidates = games.filter(game => {
     const captured = prior.get(game.gameId)
-    return captureNeedsRefresh({ gameDate: game.gameDate, capturedAt: captured }, now)
+    return captureNeedsRefresh({ gameDate: game.gameDate, gameTime: game.gameTime, capturedAt: captured }, now)
   }).sort((left, right) => (prior.get(left.gameId) ?? 0) - (prior.get(right.gameId) ?? 0))
 
   // Rotate the stalest games instead of opening a browser for the entire
