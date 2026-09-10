@@ -117,14 +117,24 @@ export function mergeNflOddsBoards(previous: SidelineOddsBoard | null, fresh: Si
 }
 
 export function nflOddsPayloadHash(board: SidelineOddsBoard) {
+  // Provider `updatedAt` values advance even when no price or line changed.
+  // Hashing those timestamps turned every one-minute poll into a brand-new
+  // ~70-170 KB historical board. Market Story only needs value changes.
   const stable = JSON.stringify({
-    gameLines: board.gameLines,
-    players: board.players.map(player => ({
+    gameLines: [...board.gameLines]
+      .sort((a, b) => a.vendor.localeCompare(b.vendor))
+      .map(({ updatedAt: _updatedAt, ...line }) => line),
+    players: [...board.players].sort((a, b) => a.id - b.id).map(player => ({
       id: player.id,
       name: player.name,
       team: player.team,
       position: player.position,
-      markets: player.markets,
+      markets: [...player.markets].sort((a, b) => a.key.localeCompare(b.key)).map(market => ({
+        ...market,
+        offers: [...market.offers]
+          .sort((a, b) => a.vendor.localeCompare(b.vendor))
+          .map(({ updatedAt: _updatedAt, ...offer }) => offer),
+      })),
     })),
   })
   let hash = 2166136261

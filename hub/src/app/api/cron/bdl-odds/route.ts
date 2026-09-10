@@ -46,6 +46,17 @@ export const revalidate = 0
 export const maxDuration = 60
 export const GET = withPipelineHealth('bdl-odds', run)
 
+function stablePayload(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stablePayload).join(',')}]`
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stablePayload(entry)}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value) ?? 'undefined'
+}
+
 // Runs every minute (see vercel.json) and is now the ONLY thing that ever
 // calls BDL live. Previously dugout/data/route.ts hit BDL fresh on every
 // single page load for every not-yet-started game — with hundreds of users
@@ -134,7 +145,7 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
   const allPlayerIds = matched.flatMap(x => x.props.map((p: any) => p.player_id))
   const playerNames = await getBDLPlayerNames(allPlayerIds)
 
-  const upserts = matched.map(entry => {
+  const candidateUpserts = matched.map(entry => {
     const propMap: BDLPropMap = buildPropMap(entry.props, playerNames)
     return {
       game_pk: entry.gamePk,
@@ -146,6 +157,23 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
       is_frozen: false,
       captured_at: new Date().toISOString(),
     }
+  })
+  // An upstream game can exist before it has any player props. Never replace
+  // a useful current board with `{}`, and never append empty minute-by-minute
+  // history while waiting for markets to post.
+  const upserts = candidateUpserts.filter(row => Object.keys(row.prop_map).length > 0)
+  const previousByGamePk = new Map<string, BDLPropMap>()
+  if (upserts.length) {
+    const { data: previousRows, error: previousError } = await admin
+      .from('pregame_odds_snapshots')
+      .select('game_pk,prop_map')
+      .in('game_pk', upserts.map(row => row.game_pk))
+    if (previousError) throw previousError
+    for (const row of previousRows ?? []) previousByGamePk.set(String(row.game_pk), (row.prop_map as BDLPropMap) ?? {})
+  }
+  const changedUpserts = upserts.filter(row => {
+    const previous = previousByGamePk.get(row.game_pk)
+    return !previous || stablePayload(previous) !== stablePayload(row.prop_map)
   })
 
   // Unified opening-price capture — whichever pipeline (this cron, or the
@@ -163,8 +191,10 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
   // own — that's not a real pregame_odds_snapshots column) by shared index,
   // since upserts was built via a straight 1:1 .map over matched above.
   const openingRows: { game_date: string; game_key: string; name_norm: string; market: string; book: string; opening_price: number; opening_source: 'bdl' }[] = []
-  upserts.forEach((u, i) => {
-    const gameKey = matched[i].gameKey
+  const gameKeyByGamePk = new Map(matched.map(entry => [entry.gamePk, entry.gameKey]))
+  changedUpserts.forEach(u => {
+    const gameKey = gameKeyByGamePk.get(u.game_pk)
+    if (!gameKey) return
     for (const entry of Object.values(u.prop_map)) {
       const nn = normName((entry as any).name || '')
       if (!nn) continue
@@ -189,10 +219,12 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
     // intraday trail of odds movement actually survives (see Batter Cost).
     // Best-effort: a failure here shouldn't affect the live snapshot the
     // rest of the app depends on.
-    const { error: historyError } = await admin.from('pregame_odds_snapshot_history').insert(
-      upserts.map(u => ({ game_pk: u.game_pk, game_date: u.game_date, prop_map: u.prop_map, captured_at: u.captured_at }))
-    )
-    if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', { date, code: historyError.code })
+    if (changedUpserts.length) {
+      const { error: historyError } = await admin.from('pregame_odds_snapshot_history').insert(
+        changedUpserts.map(u => ({ game_pk: u.game_pk, game_date: u.game_date, prop_map: u.prop_map, captured_at: u.captured_at }))
+      )
+      if (historyError) console.error('[bdl-odds cron] snapshot history insert failed', { date, code: historyError.code })
+    }
   }
 
   if (openingRows.length) {
@@ -202,7 +234,7 @@ async function processDate(admin: ReturnType<typeof createAdminClient>, date: st
     if (openingError) console.error('[bdl-odds cron] opening-price upsert failed', { date, code: openingError.code })
   }
 
-  return { date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, openingRowAttempts: openingRows.length }
+  return { date, pendingGames: pendingGames.length, bdlGamesSeen: bdlGames.length, matched: upserts.length, changed: changedUpserts.length, openingRowAttempts: openingRows.length }
 }
 
 async function run(req: Request) {

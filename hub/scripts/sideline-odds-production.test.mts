@@ -80,3 +80,19 @@ test('baseline enrichment does not create a false market-story frame', () => {
   }])
   assert.equal(nflOddsPayloadHash(plain), nflOddsPayloadHash(enriched))
 })
+
+test('provider timestamps do not create history frames but price changes do', () => {
+  const first = board(120)
+  first.gameLines[0].updatedAt = '2026-09-07T12:00:00.000Z'
+  first.players[0].markets[0].offers[0].updatedAt = '2026-09-07T12:00:00.000Z'
+
+  const timestampOnly = structuredClone(first)
+  timestampOnly.capturedAt = '2026-09-07T12:01:00.000Z'
+  timestampOnly.gameLines[0].updatedAt = '2026-09-07T12:01:00.000Z'
+  timestampOnly.players[0].markets[0].offers[0].updatedAt = '2026-09-07T12:01:00.000Z'
+  assert.equal(nflOddsPayloadHash(first), nflOddsPayloadHash(timestampOnly))
+
+  const priceChange = structuredClone(timestampOnly)
+  priceChange.players[0].markets[0].offers[0].current.odds = 115
+  assert.notEqual(nflOddsPayloadHash(first), nflOddsPayloadHash(priceChange))
+})
