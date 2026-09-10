@@ -36,7 +36,10 @@ async function run(req: Request) {
     try {
       const response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameId=${encodeURIComponent(game.gameId)}`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
-        signal: AbortSignal.timeout(120_000),
+        // Six-game slates can otherwise exceed the 300s dispatcher ceiling.
+        // The individual scraper owns its deeper browser timeout and will be
+        // retried by the next capture run without holding every other game.
+        signal: AbortSignal.timeout(85_000),
       })
       const body = await response.json().catch(() => null)
       const skipped = body?.skipped === true

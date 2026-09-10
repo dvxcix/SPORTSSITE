@@ -43,12 +43,25 @@ export async function findAndClickGame(page: Page, awayTeam: string, homeTeam: s
 // doubleheader), then clicks the nearest "More wagers" link that follows
 // it in document order.
 export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeTeam: string, legIndex = 0): Promise<boolean> {
-  const awayWord = escapeRe(distinguishingSuffix(awayTeam))
-  const awayRow = page.getByText(new RegExp(awayWord, 'i')).nth(legIndex)
-  if (!(await awayRow.count())) return false
-  const wagersLink = awayRow.locator('xpath=following::*[contains(text(), "More wagers") or contains(text(), "more wagers")][1]')
-  if (!(await wagersLink.count())) return false
-  await wagersLink.click({ timeout: 8000 })
+  const away = distinguishingSuffix(awayTeam).toLowerCase()
+  const home = distinguishingSuffix(homeTeam).toLowerCase()
+  const links = page.getByText(/more wagers/i)
+  const matches: typeof links[] = []
+  for (let index = 0; index < await links.count(); index++) {
+    const link = links.nth(index)
+    const belongsToGame = await link.evaluate((element, teams) => {
+      let node: HTMLElement | null = element as HTMLElement
+      for (let depth = 0; node && depth < 8; depth++, node = node.parentElement) {
+        const text = (node.innerText || '').toLowerCase()
+        if (text.includes(teams.away) && text.includes(teams.home)) return true
+      }
+      return false
+    }, { away, home }).catch(() => false)
+    if (belongsToGame) matches.push(link)
+  }
+  const target = matches[legIndex]
+  if (!target) return false
+  await target.click({ timeout: 8000 })
   return true
 }
 

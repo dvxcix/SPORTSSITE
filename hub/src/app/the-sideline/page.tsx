@@ -9,7 +9,7 @@ import { SidelineClient } from './SidelineClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
 import { SidelineMatchupLab } from './SidelineMatchupLab'
-import { getCachedSidelineBoardLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle, getSidelineTimeline } from './data'
+import { getCachedSidelineBoardLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,10 +50,10 @@ export default async function SidelinePage({ searchParams }: {
     return <>{navigation}<SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
   }
 
-  const [market, timeline] = await Promise.all([
-    getSidelineOddsBundle(selected),
-    getSidelineTimeline(selected),
-  ])
+  // Only the board needs Market Story. Its lightweight timestamp index is
+  // fetched by the client after the useful first screen has rendered. The
+  // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
+  const market = await getSidelineOddsBundle(selected)
   if (mode === 'public' || mode === 'markets') return <>{navigation}<SidelineResearchClient
     key={selected.id + mode} mode={mode} board={market.odds} teams={[selected.away, selected.home]}
     title={`${selected.away.abbr} @ ${selected.home.abbr} · ${date}`}
@@ -68,5 +68,5 @@ export default async function SidelinePage({ searchParams }: {
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} days={days} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} timeline={timeline} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} days={days} selectedId={selected.id} selectedDate={date} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} timeline={[]} /></>
 }

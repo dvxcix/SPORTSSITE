@@ -223,26 +223,26 @@ export const getSidelineOddsBundle = unstable_cache(async (game: SidelineGame) =
   return { odds: sidelinePublicBoard(attachDesignations(base, designations)), gameState: gameState ?? storedGameState(game) }
 }, ['sideline-enriched-current-v3-pregame-live'], { revalidate: 20, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-live'] })
 
-export const getSidelineCapture = unstable_cache(async (game: SidelineGame, capturedAt: string) => {
+export const getSidelineCapture = unstable_cache(async (game: SidelineGame, requestedCapture: string) => {
   const admin = createAdminClient()
   const kickoff = nflKickoffAt(game)?.toISOString()
-  const boundedCapture = kickoff && Date.parse(capturedAt) > Date.parse(kickoff) ? kickoff : capturedAt
+  const capturedAt = kickoff && Date.parse(requestedCapture) > Date.parse(kickoff) ? kickoff : requestedCapture
   const [oddsResult, picksResult, baselines, supplement] = await Promise.all([
     admin.from('nfl_odds_snapshot_history').select('board,captured_at')
-      .eq('game_id', game.id).lte('captured_at', boundedCapture).order('captured_at', { ascending: false })
+      .eq('game_id', game.id).lte('captured_at', capturedAt).order('captured_at', { ascending: false })
       .limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle(),
     admin.from('nfl_pikkit_picks_snapshot_history').select('snapshot,captured_at')
-      .eq('game_id', game.id).lte('captured_at', boundedCapture).order('captured_at', { ascending: false })
+      .eq('game_id', game.id).lte('captured_at', capturedAt).order('captured_at', { ascending: false })
       .limit(1).abortSignal(AbortSignal.timeout(10000)).maybeSingle(),
     (isPastSlate(game.gameday) ? loadTdBaselinesHistorical : loadTdBaselinesRecent)(game.gameday),
-    loadNflFanduel(game.id, boundedCapture),
+    loadNflFanduel(game.id, capturedAt),
   ])
   if (oddsResult.error || picksResult.error) throw new Error('NFL capture unavailable')
   if (!oddsResult.data) return null
   const raw = { ...(oddsResult.data.board as SidelineOddsBoard), capturedAt: oddsResult.data.captured_at, source: 'snapshot' as const }
   const [identified] = await enrichSidelineOddsBoards(game, [attachNflTdBaselines(attachNflFanduel(raw, supplement), baselines)])
   const picks = picksResult.data ? { ...(picksResult.data.snapshot as NflPikkitSnapshot), capturedAt: picksResult.data.captured_at } : null
-  return { capturedAt: boundedCapture, board: sidelinePublicBoard(attachNflPikkitSnapshot(identified, picks)) }
+  return { capturedAt, board: sidelinePublicBoard(attachNflPikkitSnapshot(identified, picks)) }
 }, ['sideline-selected-capture-v3-pregame'], { revalidate: 3600, tags: ['sideline:nfl-odds', 'sideline:nfl-picks'] })
 
 export const getCachedSidelineBoardLens = unstable_cache(
