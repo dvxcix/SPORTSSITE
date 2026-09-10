@@ -58,6 +58,10 @@ export async function GET(req: Request) {
         proxyBytes: usage.proxyBytes,
         proxyGigabytes: Number((usage.proxyBytes / 1_000_000_000).toFixed(3)),
       },
+      automatedSafetyLimits: {
+        browserMinutes: Number(process.env.BROWSERBASE_BROWSER_MINUTE_BUDGET) || 25_500,
+        proxyBytes: Number(process.env.BROWSERBASE_PROXY_BYTE_BUDGET) || 4_250_000_000,
+      },
       runningCount: summarized.length,
       sessions: summarized,
     })

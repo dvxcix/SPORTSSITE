@@ -25,8 +25,51 @@ function optionalProjectId(): string | undefined {
 
 const BROWSERBASE_REGION = 'us-east-1' as const
 const AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 * 60
+const DEFAULT_BROWSER_MINUTE_BUDGET = 425 * 60
+const DEFAULT_PROXY_BYTE_BUDGET = 4.25 * 1_000_000_000
+const USAGE_CACHE_MS = 60_000
 const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
 const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
+
+let projectIdCache: string | undefined
+let usageCache: { checkedAt: number; browserMinutes: number; proxyBytes: number } | undefined
+
+function positiveLimit(name: string, fallback: number): number {
+  const parsed = Number(process.env[name])
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+export class BrowserbaseBudgetExceededError extends Error {
+  constructor(public readonly resource: 'browser-minutes' | 'proxy-bytes') {
+    super(`Browserbase ${resource} safety budget reached`)
+    this.name = 'BrowserbaseBudgetExceededError'
+  }
+}
+
+async function resolveProjectId(bb: Browserbase, configured?: string): Promise<string> {
+  if (configured) return configured
+  if (projectIdCache) return projectIdCache
+  const project = (await bb.projects.list())[0]
+  if (!project) throw new Error('Browserbase project not found')
+  projectIdCache = project.id
+  return project.id
+}
+
+async function assertAutomatedUsageBudget(bb: Browserbase, configuredProjectId?: string): Promise<string> {
+  const projectId = await resolveProjectId(bb, configuredProjectId)
+  const now = Date.now()
+  const usage = usageCache && now - usageCache.checkedAt < USAGE_CACHE_MS
+    ? usageCache
+    : await bb.projects.usage(projectId).then(value => {
+      usageCache = { checkedAt: now, ...value }
+      return usageCache
+    })
+  const browserMinuteBudget = positiveLimit('BROWSERBASE_BROWSER_MINUTE_BUDGET', DEFAULT_BROWSER_MINUTE_BUDGET)
+  const proxyByteBudget = positiveLimit('BROWSERBASE_PROXY_BYTE_BUDGET', DEFAULT_PROXY_BYTE_BUDGET)
+  if (usage.browserMinutes >= browserMinuteBudget) throw new BrowserbaseBudgetExceededError('browser-minutes')
+  if (usage.proxyBytes >= proxyByteBudget) throw new BrowserbaseBudgetExceededError('proxy-bytes')
+  return projectId
+}
 
 function pikkitGeoState(): string | undefined {
   const value = process.env.PIKKIT_BROWSER_GEO_STATE?.trim().toUpperCase()
@@ -71,12 +114,20 @@ export type BBSession = {
 // Browserbase's own dashboard/Usage API so cost can be broken down by
 // which book/workflow is actually driving spend, per their own guidance
 // on measuring usage.
-export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
+export async function openSession(opts: { contextId?: string; stealth?: boolean; proxies?: boolean; geoState?: string; proxyDomainPattern?: string; metadata?: Record<string, unknown> } = {}): Promise<BBSession> {
   const bb = client()
-  const pid = optionalProjectId()
+  const configuredProjectId = optionalProjectId()
+  const pid = await assertAutomatedUsageBudget(bb, configuredProjectId)
+  const proxied = {
+    type: 'browserbase' as const,
+    ...(opts.geoState ? { geolocation: { country: 'US' as const, state: opts.geoState } } : {}),
+    ...(opts.proxyDomainPattern ? { domainPattern: opts.proxyDomainPattern } : {}),
+  }
   const proxies = opts.geoState
-    ? [{ type: 'browserbase' as const, geolocation: { country: 'US', state: opts.geoState } }]
-    : (opts.proxies ?? true)
+    ? [proxied, ...(opts.proxyDomainPattern ? [{ type: 'none' as const }] : [])]
+    : opts.proxyDomainPattern
+      ? [proxied, { type: 'none' as const }]
+      : (opts.proxies ?? true)
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
@@ -123,6 +174,9 @@ export async function openPikkitSession(contextId: string, metadata: Record<stri
   return openSession({
     contextId,
     geoState: pikkitGeoState(),
+    // Preserve one proxied identity for Pikkit and its Cloudflare challenge,
+    // while analytics/CDN traffic bypasses the metered residential proxy.
+    proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*(pikkit\\.com|pikkit\\.app|cloudflare\\.com)$',
     metadata: { book: 'pikkit', ...metadata },
   })
 }

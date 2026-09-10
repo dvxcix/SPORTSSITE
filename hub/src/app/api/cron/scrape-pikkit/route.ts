@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
-import { openPikkitSession } from '@/lib/browserbase'
+import { openPikkitSession, type BBSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe, distinguishingSuffix } from '@/lib/scrapers/gameMatch'
-import { fanOutToSelf } from '@/lib/scrapers/fanout'
 import { PLATFORM_URL } from '@/lib/platform'
 import { PIKKIT_SIGNED_OUT_ERROR, checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
 
@@ -19,13 +18,9 @@ export const maxDuration = 300
 // the three that requires being signed in — see /api/admin/pikkit-context
 // for the one-time login setup that produces that context id.
 //
-// Called two ways: ?gamePk=123 scrapes just that game; no gamePk fans out
-// one concurrent request per today's game back to this same route instead
-// of looping in-process (see fanOutToSelf). Every concurrent invocation
-// resumes the SAME persisted login context — unverified whether Pikkit's
-// own backend tolerates multiple simultaneous sessions on one signed-in
-// account cleanly; watch the first real multi-game day's Browserbase
-// replays for unexpected logouts before trusting this at full concurrency.
+// Single-game calls remain available for diagnostics. Scheduled and manual
+// slate sweeps use four-game batches so several event pages share one paid
+// browser/proxy minimum.
 async function postImport(json: unknown, gameDate: string, homeTeam: string, awayTeam: string, gameKey: string) {
   const res = await fetch(`${PLATFORM_URL}/api/admin/pikkit-import`, {
     method: 'POST',
@@ -36,8 +31,15 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
   return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
 }
 
-async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean) {
-  const bb = await openPikkitSession(contextId, { mode: 'scrape', gameKey: g.gameKey, gamePk: String(g.gamePk) })
+async function installTextOnlyRouting(bb: BBSession) {
+  await bb.page.route('**/*', route => {
+    const type = route.request().resourceType()
+    return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+  })
+}
+
+async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, shared?: BBSession) {
+  const bb = shared ?? await openPikkitSession(contextId, { mode: 'scrape', gameKey: g.gameKey, gamePk: String(g.gamePk) })
   try {
     // Pikkit scraping is pure text/DOM extraction (team names, a market
     // <select>, pick counts) — no visual rendering is ever needed, and
@@ -45,10 +47,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     // already signed in via a persisted context), so blocking images is
     // low-risk here specifically. Per Browserbase's own cost-optimization
     // guidance, this cuts proxy bandwidth without touching page behavior.
-    await bb.page.route('**/*', route => {
-      const type = route.request().resourceType()
-      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
-    })
+    if (!shared) await installTextOnlyRouting(bb)
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(1500)
 
@@ -142,6 +141,24 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     })
     return { gameKey: g.gameKey, error: 'scrape failed' }
   } finally {
+    if (!shared) await bb.close()
+  }
+}
+
+async function scrapeBatch(games: TodayGame[], date: string, contextId: string, dryRun: boolean) {
+  const bb = await openPikkitSession(contextId, {
+    mode: 'scrape-batch',
+    gameCount: games.length,
+    gamePks: games.map(game => game.gamePk).join(','),
+  })
+  try {
+    await installTextOnlyRouting(bb)
+    const results = []
+    for (const game of games) {
+      results.push(await scrapeOneGame(game, date, legIndexFor(game), contextId, dryRun, bb))
+    }
+    return results
+  } finally {
     await bb.close()
   }
 }
@@ -161,7 +178,15 @@ export async function GET(req: Request) {
 
   const reqUrl = new URL(req.url)
   const gamePkParam = reqUrl.searchParams.get('gamePk')
+  const gamePksParam = reqUrl.searchParams.get('gamePks')
   const dryRun = reqUrl.searchParams.get('dryRun') === '1'
+  if (gamePksParam) {
+    const requested = new Set(gamePksParam.split(',').map(Number).filter(Number.isFinite).slice(0, 4))
+    const selected = games.filter(game => requested.has(game.gamePk))
+    if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
+    const results = await scrapeBatch(selected, date, contextId, dryRun)
+    return NextResponse.json({ date, games: selected.length, results })
+  }
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
     const g = games.find(x => x.gamePk === gamePk)
@@ -172,18 +197,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ date, gamePk, result }, { status: failed ? 502 : 200 })
   }
 
-  const results = await fanOutToSelf('/api/cron/scrape-pikkit', games.map(g => g.gamePk), dryRun ? '&dryRun=1' : '')
+  const batches: TodayGame[][] = []
+  for (let index = 0; index < games.length; index += 4) batches.push(games.slice(index, index + 4))
+  const results = (await Promise.all(batches.map(batch => scrapeBatch(batch, date, contextId, dryRun)))).flat()
 
   // Every game in the sweep hitting the exact same "not found" error is the
   // strong signal (one game missing a listing is normal noise; ALL of them
   // failing identically isn't) — worth spending one extra Browserbase
   // session to confirm directly whether that's a real sign-out. See
   // pikkitAuth.ts for why this can't just trust the error string alone.
-  const allSignedOutError = results.length > 0 && results.every(r => r.body?.result?.error === `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`)
+  const allSignedOutError = results.length > 0 && results.every(result => result.error === `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`)
   if (allSignedOutError) {
     await checkPikkitAuthAndAlert(contextId).catch(e => console.error('[scrape-pikkit] auth alert check failed', { type: e instanceof Error ? e.name : typeof e }))
   }
 
-  const failed = results.filter(result => result.error || result.status >= 400 || result.body?.result?.imported?.ok === false)
+  const failed = results.filter(result => ('error' in result && !('skipped' in result && result.skipped)) || ('imported' in result && result.imported?.ok === false))
   return NextResponse.json({ date, games: games.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
 }

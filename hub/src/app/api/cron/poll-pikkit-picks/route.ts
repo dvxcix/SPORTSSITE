@@ -12,78 +12,33 @@ import {
 export const revalidate = 0
 export const maxDuration = 280
 
-const SCRAPE_TIMEOUT_MS = 70_000
-// A failed scrape will be revisited by the next scheduled poll. Retrying here
-// immediately creates another paid browser session for the same stale page.
-const MAX_SCRAPE_ATTEMPTS = 1
+const SCRAPE_TIMEOUT_MS = 260_000
+const GAMES_PER_BROWSER = 4
 
-async function scrapeGame(gamePk: number) {
-  let lastResult = {
-    gamePk,
-    status: 502,
-    ok: false,
-    skipped: false,
-    attempts: 0,
-    error: 'scrape request failed',
-    reason: 'scrape request failed',
-    rowsImported: 0,
+async function scrapeBatch(gamePks: number[]) {
+  try {
+    const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePks=${gamePks.join(',')}`, {
+      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+      signal: AbortSignal.timeout(SCRAPE_TIMEOUT_MS),
+    })
+    const body = await res.json().catch(() => null)
+    const rows = Array.isArray(body?.results) ? body.results : []
+    return gamePks.map((gamePk, index) => {
+      const result = rows[index]
+      const skipped = result?.skipped === true
+      const reason = typeof result?.error === 'string' ? result.error : typeof body?.error === 'string' ? body.error : ''
+      const rowsImported = Number(result?.imported?.body?.rowsImported ?? 0)
+      const ok = res.ok && Boolean(result) && result?.imported?.ok !== false && (!reason || skipped)
+      return { gamePk, status: res.status, ok, skipped, attempts: 1, error: ok ? '' : 'scrape or import failed', reason, rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0 }
+    })
+  } catch {
+    return gamePks.map(gamePk => ({ gamePk, status: 502, ok: false, skipped: false, attempts: 1, error: 'scrape request failed', reason: 'scrape request failed', rowsImported: 0 }))
   }
-
-  for (let attempt = 1; attempt <= MAX_SCRAPE_ATTEMPTS; attempt += 1) {
-    try {
-      const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePk=${gamePk}`, {
-        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-        signal: AbortSignal.timeout(SCRAPE_TIMEOUT_MS),
-      })
-      const body = await res.json().catch(() => null)
-      const ok = res.ok && body?.result?.imported?.ok !== false
-      const skipped = body?.result?.skipped === true
-      const reason = typeof body?.result?.error === 'string'
-        ? body.result.error
-        : typeof body?.error === 'string' ? body.error : ''
-      const rowsImported = Number(body?.result?.imported?.body?.rowsImported ?? 0)
-
-      lastResult = {
-        gamePk,
-        status: res.status,
-        ok,
-        skipped,
-        attempts: attempt,
-        error: ok ? '' : 'scrape or import failed',
-        reason,
-        rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0,
-      }
-
-      if (ok || skipped) return lastResult
-    } catch {
-      lastResult = {
-        gamePk,
-        status: 502,
-        ok: false,
-        skipped: false,
-        attempts: attempt,
-        error: 'scrape request failed',
-        reason: 'scrape request failed',
-        rowsImported: 0,
-      }
-    }
-
-    if (attempt < MAX_SCRAPE_ATTEMPTS) {
-      console.warn('[poll-pikkit-picks] retrying game scrape', { gamePk, attempt })
-    }
-  }
-
-  return lastResult
 }
 
-// Runs every 30 minutes (see vercel.json). Unlike FanDuel/BetMGM — which
-// only need ONE scrape per game, right when the opening line appears —
-// Pikkit's community pick counts keep changing throughout the whole
-// pregame window and the picks section itself disappears once a game
-// starts, so this re-scrapes every game that hasn't started yet, every
-// run, for as long as it stays pregame. Fans out one concurrent request
-// per game to scrape-pikkit?gamePk=... (see fanOutToSelf's reasoning in
-// that route) rather than looping — bounded by the slowest single game.
+// Captures seven meaningful pregame checkpoints rather than paying for 48
+// all-day polls. Four games share one Browserbase session, cutting both the
+// per-session browser minimum and the per-session proxy minimum.
 async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
@@ -93,13 +48,11 @@ async function run(req: Request) {
   const pregame = games.filter(g => isPregame(g.status))
   if (!pregame.length) return NextResponse.json({ date, games: games.length, pregame: 0, results: [] })
 
-  const results = await Promise.allSettled(
-    pregame.map(g => scrapeGame(g.gamePk))
-  )
-
-  const normalizedResults = results.map((result, index) => result.status === 'fulfilled'
-    ? result.value
-    : { gamePk: pregame[index].gamePk, status: 502, ok: false, skipped: false, attempts: MAX_SCRAPE_ATTEMPTS, error: 'scrape request failed', reason: 'scrape request failed', rowsImported: 0 })
+  const batches: number[][] = []
+  for (let index = 0; index < pregame.length; index += GAMES_PER_BROWSER) {
+    batches.push(pregame.slice(index, index + GAMES_PER_BROWSER).map(game => game.gamePk))
+  }
+  const normalizedResults = (await Promise.all(batches.map(scrapeBatch))).flat()
   const failed = normalizedResults.filter(result => !result.ok)
   const unavailableReason = `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`
   const allListingsUnavailable = normalizedResults.length > 0

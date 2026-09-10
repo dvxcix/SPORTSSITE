@@ -170,15 +170,7 @@
     },
     {
       "path": "/api/cron/scrape-fanduel",
-      "schedule": "0 14,16,18,20,22,0,2 * * *"
-    },
-    {
-      "path": "/api/cron/scrape-fanduel?dayAhead=1",
-      "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/cron/scrape-fanduel?dayAhead=1",
-      "schedule": "0 1 * * *"
+      "schedule": "0 14,18,22,2 * * *"
     },
     {
       "path": "/api/cron/scrape-fanduel?dayAhead=1",
@@ -190,15 +182,15 @@
     },
     {
       "path": "/api/cron/poll-pikkit-picks",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 1,13,15,17,19,21,23 * * *"
     },
     {
       "path": "/api/cron/poll-pikkit-nfl-picks",
-      "schedule": "7,37 * * * *"
+      "schedule": "7 * * * *"
     },
     {
       "path": "/api/cron/poll-fanduel-nfl",
-      "schedule": "2,32 * * * *"
+      "schedule": "2 * * * *"
     },
     {
       "path": "/api/cron/whop-addon-reconcile",
