@@ -37,7 +37,10 @@ export async function GET(req: Request) {
 
   const bb = await openPikkitSession(contextId, { mode: 'scrape-nfl', gameId })
   try {
-    await bb.page.route('**/*', route => route.request().resourceType() === 'image' ? route.abort() : route.continue())
+    await bb.page.route('**/*', route => {
+      const type = route.request().resourceType()
+      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+    })
     await bb.page.goto('https://app.pikkit.com/leagues/nfl', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(1800)
     let clicked = await findAndClickPikkitGame(bb.page, game.awayName, game.homeName)

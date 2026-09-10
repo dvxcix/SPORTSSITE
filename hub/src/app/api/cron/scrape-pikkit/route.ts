@@ -45,9 +45,10 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     // already signed in via a persisted context), so blocking images is
     // low-risk here specifically. Per Browserbase's own cost-optimization
     // guidance, this cuts proxy bandwidth without touching page behavior.
-    await bb.page.route('**/*', route =>
-      route.request().resourceType() === 'image' ? route.abort() : route.continue()
-    )
+    await bb.page.route('**/*', route => {
+      const type = route.request().resourceType()
+      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+    })
     await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
     await bb.page.waitForTimeout(1500)
 

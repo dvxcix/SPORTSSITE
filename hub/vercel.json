@@ -194,11 +194,11 @@
     },
     {
       "path": "/api/cron/poll-pikkit-nfl-picks",
-      "schedule": "7,22,37,52 * * * *"
+      "schedule": "7,37 * * * *"
     },
     {
       "path": "/api/cron/poll-fanduel-nfl",
-      "schedule": "2,17,32,47 * * * *"
+      "schedule": "2,32 * * * *"
     },
     {
       "path": "/api/cron/whop-addon-reconcile",

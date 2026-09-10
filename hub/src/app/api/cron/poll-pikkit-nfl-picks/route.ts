@@ -5,6 +5,7 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
+import { captureNeedsRefresh } from '@/lib/browserbaseRefresh'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -24,15 +25,18 @@ async function run(req: Request) {
   const admin = createAdminClient()
   const { data: existing } = await admin.from('nfl_pikkit_picks_current').select('game_id,captured_at').in('game_id', games.map(game => game.gameId))
   const prior = new Map((existing ?? []).map(row => [row.game_id, Date.parse(row.captured_at)]))
-  const now = Date.now()
+  const now = new Date()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const candidates = games.filter(game => {
-    const daysUntil = (new Date(`${game.gameDate}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000
     const captured = prior.get(game.gameId)
-    return daysUntil <= 2 || !captured || now - captured >= 6 * 60 * 60_000
-  })
+    return captureNeedsRefresh({ gameDate: game.gameDate, capturedAt: captured }, now)
+  }).sort((left, right) => (prior.get(left.gameId) ?? 0) - (prior.get(right.gameId) ?? 0))
 
-  const results = await inBatches(candidates, 2, async game => {
+  // Rotate the stalest games instead of opening a browser for the entire
+  // slate in one invocation. Two 8-game rotations cover a full Sunday slate.
+  const selected = candidates.slice(0, 8)
+
+  const results = await inBatches(selected, 2, async game => {
     try {
       const response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameId=${encodeURIComponent(game.gameId)}`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -60,7 +64,7 @@ async function run(req: Request) {
     })
   }
   const allSkipped = results.length > 0 && results.every(result => result.skipped)
-  const summary = { games: games.length, attempted: candidates.length, succeeded: results.filter(result => result.ok && !result.skipped).length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
+  const summary = { games: games.length, stale: candidates.length, attempted: selected.length, succeeded: results.filter(result => result.ok && !result.skipped).length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
   console.info('[poll-pikkit-nfl-picks] complete', { ...summary, results })
   if (allSkipped) {
     return NextResponse.json({ ...summary, reason: 'Pikkit has not exposed NFL public-pick markets for the scheduled games yet', results }, { status: 425 })

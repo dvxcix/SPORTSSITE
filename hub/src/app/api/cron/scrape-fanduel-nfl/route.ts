@@ -35,6 +35,10 @@ export async function GET(req: Request) {
   const base = attachNflFanduel(data.board as SidelineOddsBoard, await loadNflFanduel(gameId))
   const session = await openSession({ metadata: { book: 'fanduel', sport: 'nfl', gameId } })
   try {
+    await session.page.route('**/*', route => {
+      const type = route.request().resourceType()
+      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+    })
     await session.page.goto('https://sportsbook.fanduel.com/navigation/nfl', { waitUntil: 'domcontentloaded' })
     await session.page.waitForTimeout(2500)
     await session.page.getByText('GAMES', { exact: true }).first().click({ timeout: 4000 }).catch(() => {})

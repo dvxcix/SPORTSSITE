@@ -4,6 +4,7 @@ import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withPipelineHealth } from '@/lib/pipelineHealth'
+import { captureNeedsRefresh } from '@/lib/browserbaseRefresh'
 
 export const maxDuration = 300
 export const revalidate = 0
@@ -17,17 +18,16 @@ async function run(req: Request) {
   const auth = requireBrowserbaseCronAuth(req)
   if (auth) return auth
   const upcoming = await getUpcomingNflPikkitGames(7)
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const now = new Date()
   const admin = createAdminClient()
   const candidates = (await Promise.all(upcoming.map(async game => {
     const { data, error } = await admin.from('nfl_fanduel_capture_history').select('captured_at').eq('game_id', game.gameId).order('captured_at', { ascending: false }).limit(1).maybeSingle()
     if (error) throw new Error('Capture status unavailable')
     const capturedAt = data?.captured_at ? Date.parse(data.captured_at) : 0
-    const refreshAfter = game.gameDate === today ? 12 * 60_000 : 6 * 3_600_000
-    return !capturedAt || Date.now() - capturedAt >= refreshAfter ? { game, capturedAt } : null
+    return captureNeedsRefresh({ gameDate: game.gameDate, capturedAt }, now) ? { game, capturedAt } : null
   }))).filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null)
     .sort((a, b) => a.capturedAt - b.capturedAt || a.game.gameDate.localeCompare(b.game.gameDate))
-  // Rotate the stalest six games each run. At a 15-minute cadence this covers
+  // Rotate the stalest six games each run. At a 30-minute cadence this covers
   // a full Sunday slate without a single dispatcher attempting 16 browsers.
   const games = candidates.slice(0, 6).map(candidate => candidate.game)
   // Browser sessions are memory-heavy. Two at a time keeps the dispatcher

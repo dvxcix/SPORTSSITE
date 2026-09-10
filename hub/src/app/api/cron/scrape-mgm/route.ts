@@ -36,6 +36,10 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
   // body (the site loads, but the events/odds content never appears).
   const bb = await openSession({ geoState: 'NC', metadata: { book: 'mgm', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
+    await bb.page.route('**/*', route => {
+      const type = route.request().resourceType()
+      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+    })
     await bb.page.goto('https://www.nc.betmgm.com/en/sports/baseball-23/betting/usa-9/mlb-75', { waitUntil: 'domcontentloaded' })
     // "EVENTS" not "Futures" — best-effort, harmless if already active.
     await clickTabByText(bb.page, 'EVENTS')

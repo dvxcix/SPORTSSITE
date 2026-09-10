@@ -86,6 +86,10 @@ async function postImport(json: unknown, gameDate: string, homeTeam: string, awa
 async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean) {
   const bb = await openSession({ metadata: { book: 'fanduel', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
+    await bb.page.route('**/*', route => {
+      const type = route.request().resourceType()
+      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+    })
     await bb.page.goto('https://sportsbook.fanduel.com/navigation/mlb', { waitUntil: 'domcontentloaded' })
     // Best-effort — harmless no-op if "GAMES" is already the active tab.
     await bb.page.getByText('GAMES', { exact: true }).first().click({ timeout: 5000 }).catch(() => {})

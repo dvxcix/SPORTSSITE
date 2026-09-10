@@ -24,6 +24,7 @@ function optionalProjectId(): string | undefined {
 }
 
 const BROWSERBASE_REGION = 'us-east-1' as const
+const AUTOMATED_SESSION_TIMEOUT_SECONDS = 5 * 60
 const PIKKIT_MANUAL_AUTH_TIMEOUT_SECONDS = 60 * 60
 const PIKKIT_CONTEXT_REUSE_MS = 12 * 60 * 60 * 1000
 
@@ -79,8 +80,10 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   const session = await bb.sessions.create({
     ...(pid ? { projectId: pid } : {}),
     region: BROWSERBASE_REGION,
+    timeout: AUTOMATED_SESSION_TIMEOUT_SECONDS,
     proxies,
     browserSettings: {
+      blockAds: true,
       ...(opts.contextId ? { context: { id: opts.contextId, persist: true } } : {}),
       ...(opts.stealth ? { advancedStealth: true } : {}),
     },
@@ -89,10 +92,22 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
   const browser: Browser = await chromium.connectOverCDP(session.connectUrl)
   const context = browser.contexts()[0] ?? await browser.newContext()
   const page = context.pages()[0] ?? await context.newPage()
+  let closed = false
   return {
     page,
     sessionId: session.id,
-    close: async () => { await browser.close() },
+    close: async () => {
+      if (closed) return
+      closed = true
+      await browser.close().catch(() => {})
+      // Browserbase documents REQUEST_RELEASE as the way to stop billing
+      // before timeout. Disconnect normally completes a non-keepAlive session,
+      // but an explicit release protects us when CDP teardown is interrupted.
+      await bb.sessions.update(session.id, {
+        status: 'REQUEST_RELEASE',
+        ...(pid ? { projectId: pid } : {}),
+      }).catch(() => {})
+    },
   }
 }
 

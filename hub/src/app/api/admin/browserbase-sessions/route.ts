@@ -22,9 +22,16 @@ export async function GET(req: Request) {
 
   try {
     const bb = new Browserbase({ apiKey })
+    const configuredProjectId = process.env.BROWSERBASE_PROJECT_ID
+    const projectId = configuredProjectId ?? (await bb.projects.list())[0]?.id
+    if (!projectId) return NextResponse.json({ error: 'Browserbase project not found' }, { status: 502 })
+
     let timeout: ReturnType<typeof setTimeout> | undefined
-    const sessions = await Promise.race([
-      bb.sessions.list({ status: 'RUNNING' }),
+    const [sessions, usage] = await Promise.race([
+      Promise.all([
+        bb.sessions.list({ status: 'RUNNING' }),
+        bb.projects.usage(projectId),
+      ]),
       new Promise<never>((_, reject) => {
         timeout = setTimeout(() => reject(new Error('Browserbase request timed out')), 12_000)
       }),
@@ -43,7 +50,17 @@ export async function GET(req: Request) {
       ageMinutes: Math.round((now - new Date(s.createdAt).getTime()) / 60000),
     }))
 
-    return NextResponse.json({ runningCount: summarized.length, sessions: summarized })
+    return NextResponse.json({
+      projectIdSuffix: projectId.slice(-8),
+      usage: {
+        browserMinutes: usage.browserMinutes,
+        browserHours: Number((usage.browserMinutes / 60).toFixed(2)),
+        proxyBytes: usage.proxyBytes,
+        proxyGigabytes: Number((usage.proxyBytes / 1_000_000_000).toFixed(3)),
+      },
+      runningCount: summarized.length,
+      sessions: summarized,
+    })
   } catch (cause) {
     return safeApiError('admin-browserbase-sessions', cause, 'Browser session check failed', 502)
   }

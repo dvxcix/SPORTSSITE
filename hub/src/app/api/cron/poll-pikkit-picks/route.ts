@@ -13,7 +13,9 @@ export const revalidate = 0
 export const maxDuration = 280
 
 const SCRAPE_TIMEOUT_MS = 70_000
-const MAX_SCRAPE_ATTEMPTS = 2
+// A failed scrape will be revisited by the next scheduled poll. Retrying here
+// immediately creates another paid browser session for the same stale page.
+const MAX_SCRAPE_ATTEMPTS = 1
 
 async function scrapeGame(gamePk: number) {
   let lastResult = {
