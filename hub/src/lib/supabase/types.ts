@@ -7,6 +7,7 @@ export interface User {
   avatar_url?: string
   banner_url?: string
   sport_preferences: string[]
+  favorite_sports?: string[]
   account_type: 'user' | 'creator' | 'admin'
   is_verified: boolean
   is_active_member: boolean

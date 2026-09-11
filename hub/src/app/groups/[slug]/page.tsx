@@ -34,9 +34,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function GroupPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: group } = await supabase.from('groups').select('*').eq('slug', slug).single()
+  const [{ data: { user } }, { data: group }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('groups').select('*').eq('slug', slug).single(),
+  ])
   if (!group) notFound()
 
   let isMember = false
@@ -73,24 +74,21 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   // already worked.
   const canViewContent = group.is_public || isMember
 
-  const { data: members } = await supabase
-    .from('group_members')
-    .select('user:users(id, username, display_name, avatar_url, is_verified)')
-    .eq('group_id', group.id)
-    .limit(8)
-
-  let posts: any[] = []
-  if (canViewContent) {
+  const postsPromise = async () => {
+    if (!canViewContent) return []
     const { data: rawPosts } = await supabase
       .from('posts')
       .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)')
       .eq('group_id', group.id)
       .order('created_at', { ascending: false })
       .limit(20)
-    posts = await attachUserReactions(rawPosts ?? [], user?.id)
+    return attachUserReactions(rawPosts ?? [], user?.id)
   }
-
-  const chatMessages = canViewContent && group.channel_id ? await getChannelMessages(group.channel_id, 50) : []
+  const [{ data: members }, posts, chatMessages] = await Promise.all([
+    supabase.from('group_members').select('user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).limit(8),
+    postsPromise(),
+    canViewContent && group.channel_id ? getChannelMessages(group.channel_id, 50) : Promise.resolve([]),
+  ])
 
   const canPost = isMember
 

@@ -20,9 +20,11 @@ export default async function ChannelPage({ params }: Props) {
 
   if (!channel) notFound()
 
-  const messages = await getChannelMessages(channel.id, 50)
-  const channels = await getChannels()
-  const { data: { user } } = await supabase.auth.getUser()
+  const [messages, channels, { data: { user } }] = await Promise.all([
+    getChannelMessages(channel.id, 50),
+    getChannels(),
+    supabase.auth.getUser(),
+  ])
 
   return (
     <div className="ss-community-room-layout">
@@ -45,7 +47,7 @@ export default async function ChannelPage({ params }: Props) {
           <h1>{channel.name}</h1>
           {channel.description && <p>{channel.description}</p>}
         </div>
-        <div className="ss-channel-members"><Users size={14}/><span>{channel.member_count}</span></div>
+        <div className="ss-channel-members"><Users size={14}/><span>{channel.member_count ?? 0}</span></div>
       </header>
 
       <ChatRoom

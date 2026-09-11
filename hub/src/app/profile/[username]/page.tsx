@@ -291,9 +291,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           ]} />
 
           {/* Sport badges */}
-          {profile.sport_preferences?.length > 0 && (
+          {((profile.favorite_sports?.length ?? 0) > 0 || profile.sport_preferences?.length > 0) && (
             <div className="flex gap-1.5 pt-1 flex-wrap">
-              {profile.sport_preferences.map((s: string) => <Badge key={s}>{s}</Badge>)}
+              {(profile.favorite_sports?.length ? profile.favorite_sports : profile.sport_preferences).map((s: string) => <Badge key={s}>{s}</Badge>)}
             </div>
           )}
         </div>

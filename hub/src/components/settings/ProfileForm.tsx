@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
@@ -36,7 +36,7 @@ type PlayerSearchResult = { mlbId: number; name: string; position: string | null
 
 export function ProfileForm({ profile }: { profile: any }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
     display_name: profile?.display_name ?? '',
     username: profile?.username ?? '',
@@ -62,7 +62,7 @@ export function ProfileForm({ profile }: { profile: any }) {
   useEffect(() => {
     supabase.from('social_platforms').select('*').order('sort_order').order('name')
       .then(({ data }) => setPlatforms((data ?? []) as SocialPlatform[]))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase])
 
   // Real, verified handles from Supabase's own linked OAuth identities —
   // separate from the free-text social_links a user can type in unverified.
