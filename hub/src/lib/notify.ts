@@ -37,7 +37,7 @@ export const SETTINGS_KEY_BY_TYPE: Record<NotificationType, string> = {
 // would make "email only, no push" impossible, since email delivery reads
 // off this same row.
 export async function notify(supabase: SupabaseClient, {
-  userId, actorId, type, message, link, targetId, targetType,
+  userId, actorId, type, message, link, targetId, targetType, data,
 }: {
   userId: string
   actorId?: string | null
@@ -46,6 +46,7 @@ export async function notify(supabase: SupabaseClient, {
   link?: string | null
   targetId?: string | null
   targetType?: string | null
+  data?: Record<string, unknown> | null
 }) {
   if (!userId || userId === actorId) return // never notify yourself
 
@@ -57,6 +58,7 @@ export async function notify(supabase: SupabaseClient, {
     link: link ?? null,
     target_id: targetId ?? null,
     target_type: targetType ?? null,
+    data: data ?? {},
   })
   // Every caller (follows, reactions, comments, etc.) treats its own action
   // as already-succeeded by the time it calls notify() — this is purely a

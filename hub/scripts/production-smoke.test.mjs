@@ -405,6 +405,17 @@ test('forum counters and activity ordering stay synchronized', async () => {
   assert.ok(migration.includes('revoke all on function public.sync_forum_thread_metrics() from public, anon, authenticated'))
 })
 
+test('discussion replies and reactions feed the shared activity center', async () => {
+  const replyForm = await read('src/components/forum/ThreadReplyForm.tsx')
+  const reactions = await read('src/components/forum/ForumReactions.tsx')
+  const notify = await read('src/lib/notify.ts')
+  assert.ok(replyForm.includes("message: 'replied to your discussion'"))
+  assert.ok(replyForm.includes("notifyMentions(supabase"))
+  assert.ok(reactions.includes('reacted ${emoji} to your discussion'))
+  assert.ok(reactions.includes("data: { emoji }"))
+  assert.ok(notify.includes('data: data ?? {}'))
+})
+
 test('Ultimate-only Matrix tools do not call protected APIs for lower tiers', async () => {
   const matrixPanel = await read('src/components/dugout/CustomMatrixPanel.tsx')
   assert.ok(matrixPanel.includes('const hasUltimate = !!profile'))

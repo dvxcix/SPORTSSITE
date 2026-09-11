@@ -4,9 +4,11 @@ import { useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Send } from 'lucide-react'
+import { notify } from '@/lib/notify'
+import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 
-export function ThreadReplyForm({ userId, threadId }: { userId: string; threadId: string }) {
+export function ThreadReplyForm({ userId, threadId, threadAuthorId }: { userId: string; threadId: string; threadAuthorId: string }) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [content, setContent] = useState('')
@@ -30,13 +32,17 @@ export function ThreadReplyForm({ userId, threadId }: { userId: string; threadId
     if (!content.trim()) return
     setSubmitting(true)
     setError('')
-    const { error: err } = await supabase.from('forum_replies').insert({ thread_id: threadId, author_id: userId, content: content.trim() })
+    const reply = content.trim()
+    const { error: err } = await supabase.from('forum_replies').insert({ thread_id: threadId, author_id: userId, content: reply })
     setSubmitting(false)
     // Previously cleared the textarea and refreshed unconditionally — a
     // failed insert silently ate whatever was typed with no sign anything
     // went wrong.
     if (err) { setError('Could not post reply — please try again.'); return }
     setContent('')
+    const link = `/forum/thread/${threadId}`
+    await notify(supabase, { userId: threadAuthorId, actorId: userId, type: 'comment', message: 'replied to your discussion', link, targetId: threadId, targetType: 'forum_thread' })
+    await notifyMentions(supabase, userId, reply, link, threadId, 'a discussion reply', [threadAuthorId])
     router.refresh()
   }
 

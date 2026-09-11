@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 
 const QUICK_REACTIONS = ['🔥', '👍', '💡', '👀'] as const
 
@@ -15,12 +16,14 @@ export function ForumReactions({
   targetId,
   targetType,
   userId,
+  ownerId,
   initialReactions,
   returnPath,
 }: {
   targetId: string
   targetType: 'forum_thread' | 'forum_reply'
   userId?: string
+  ownerId: string
   initialReactions: ForumReaction[]
   returnPath: string
 }) {
@@ -51,6 +54,17 @@ export function ForumReactions({
     if (requestError) {
       setReactions(previous)
       setError('Could not update reaction.')
+    } else if (!mine) {
+      await notify(supabase, {
+        userId: ownerId,
+        actorId: userId,
+        type: 'reaction',
+        message: `reacted ${emoji} to your discussion`,
+        link: returnPath,
+        targetId,
+        targetType,
+        data: { emoji },
+      })
     }
     setPending(null)
   }

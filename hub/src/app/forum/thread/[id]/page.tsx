@@ -70,7 +70,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         {thread.content && <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{thread.content}</p>}
-        <ForumReactions targetId={thread.id} targetType="forum_thread" userId={user?.id} initialReactions={reactionsByTarget.get(thread.id) ?? []} returnPath={returnPath} />
+        <ForumReactions targetId={thread.id} targetType="forum_thread" userId={user?.id} ownerId={thread.author_id} initialReactions={reactionsByTarget.get(thread.id) ?? []} returnPath={returnPath} />
       </article>
 
       {/* Replies */}
@@ -89,13 +89,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
               <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{r.content}</p>
-              <ForumReactions targetId={r.id} targetType="forum_reply" userId={user?.id} initialReactions={reactionsByTarget.get(r.id) ?? []} returnPath={returnPath} />
+              <ForumReactions targetId={r.id} targetType="forum_reply" userId={user?.id} ownerId={r.author_id} initialReactions={reactionsByTarget.get(r.id) ?? []} returnPath={returnPath} />
             </article>
           ))}
         </div>
       )}
 
-      {!thread.is_locked && user && <ThreadReplyForm userId={user.id} threadId={thread.id} />}
+      {!thread.is_locked && user && <ThreadReplyForm userId={user.id} threadId={thread.id} threadAuthorId={thread.author_id} />}
       {!thread.is_locked && !user && (
         <ProductPanel padded className="text-center">
           <p className="text-sm text-zinc-400 mb-3">Sign in to reply</p>
