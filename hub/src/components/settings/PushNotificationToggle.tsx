@@ -99,17 +99,14 @@ export function PushNotificationToggle() {
   if (status === 'unsupported') return null // e.g. Safari on iOS without the app added to the home screen
 
   return (
-    <div style={{
-      background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-      padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
-    }}>
-      {status === 'on' ? <BellRing size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-        : <Bell size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
+    <div className="ss-settings-card mb-4 flex items-center gap-3 !p-4">
+      {status === 'on' ? <BellRing size={18} className="shrink-0 text-lime-300" />
+        : <Bell size={18} className="shrink-0 text-zinc-500" />}
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-bold text-white">
           {isSlipSurgeDesktop() ? 'Desktop notifications' : 'Push notifications'}
         </p>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+        <p className="mt-0.5 text-xs leading-5 text-zinc-500">
           {status === 'denied'
             ? isSlipSurgeDesktop()
               ? 'Blocked by Windows. Enable SlipSurge in Settings > System > Notifications.'
@@ -118,20 +115,13 @@ export function PushNotificationToggle() {
             ? 'Enabled on this device/browser.'
             : 'Get notified on this device even when SlipSurge isn\'t open.'}
         </p>
-        {error && <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>{error}</p>}
+        {error && <p role="alert" className="mt-1 text-xs text-red-400">{error}</p>}
       </div>
       {status !== 'denied' && (
         <button
           onClick={status === 'on' ? disable : enable}
           disabled={status === 'working'}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-            padding: '7px 14px', borderRadius: 'var(--radius-sm)', fontSize: 12, fontWeight: 700,
-            border: status === 'on' ? '1px solid var(--border)' : 'none',
-            background: status === 'on' ? 'transparent' : 'var(--accent)',
-            color: status === 'on' ? 'var(--text-2)' : 'var(--accent-fg)',
-            cursor: status === 'working' ? 'default' : 'pointer', opacity: status === 'working' ? 0.6 : 1,
-          }}>
+          className={status === 'on' ? 'ss-settings-secondary' : 'ss-settings-primary'}>
           {status === 'on' ? <><BellOff size={12} /> Disable</> : 'Enable'}
         </button>
       )}

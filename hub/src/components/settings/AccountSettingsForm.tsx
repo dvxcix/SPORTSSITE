@@ -41,43 +41,43 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
     fetch('/api/settings/notify-password-changed', { method: 'POST' }).catch(() => {})
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = "w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-lime-400/50"
 
   return (
     <div className="space-y-6">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><Mail size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Verified identity</p><p className="mt-1 truncate text-[11px] text-zinc-500">{profile?.email || 'Account email'}</p></div>
         <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><KeyRound size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Password access</p><p className="mt-1 text-[11px] text-zinc-500">Change it securely below</p></div>
         <div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><ShieldCheck size={17} className="mb-3 text-lime-300" /><p className="text-xs font-black text-white">Privacy controls</p><p className="mt-1 text-[11px] text-zinc-500">Manage visibility and messages</p></div>
       </div>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <h3 className="font-bold text-white mb-3">Email Address</h3>
+      <section className="ss-settings-card">
+        <h2 className="mb-3 font-black text-white">Email address</h2>
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass + ' mb-3'} />
-        <button onClick={updateEmail} disabled={saving} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
-          {saved === 'email' ? <><Check size={13} /> Saved!</> : 'Update Email'}
+        <button onClick={updateEmail} disabled={saving} className="ss-settings-primary">
+          {saved === 'email' ? <><Check size={13} /> Saved</> : 'Update email'}
         </button>
-      </div>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-black/25 text-lime-300"><Database size={17} /></span><div><h3 className="font-bold text-white">Your data</h3><p className="mt-1 text-xs leading-5 text-zinc-500">Create a portable JSON copy of your profile, posts, picks, social activity, memberships, and account records. Downloads are private and expire after seven days.</p><DataExportControl /></div></div>
-      </div>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <h3 className="font-bold text-white mb-3">Change Password</h3>
+      </section>
+      <section className="ss-settings-card">
+        <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-black/25 text-lime-300"><Database size={17} /></span><div><h2 className="font-black text-white">Your data</h2><p className="mt-1 text-xs leading-5 text-zinc-500">Download a private copy of your account data.</p><DataExportControl /></div></div>
+      </section>
+      <section className="ss-settings-card">
+        <h2 className="mb-3 font-black text-white">Change password</h2>
         <div className="space-y-3">
           <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password" className={inputClass} />
           <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={inputClass} />
         </div>
-        <button onClick={updatePassword} disabled={saving || !newPassword} className="mt-3 flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
-          {saved === 'password' ? <><Check size={13} /> Updated!</> : 'Change Password'}
+        <button onClick={updatePassword} disabled={saving || !newPassword} className="ss-settings-primary mt-3">
+          {saved === 'password' ? <><Check size={13} /> Updated</> : 'Change password'}
         </button>
-      </div>
-      <div className="bg-zinc-900 border border-red-500/20 rounded-xl p-4">
-        <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
+      </section>
+      <section className="ss-settings-card !border-red-500/20">
+        <h2 className="mb-2 font-black text-red-400">Delete account</h2>
         <p className="text-xs text-zinc-500 mb-3">
           Permanently delete your account and all your data. This cannot be undone. We'll email you to confirm before anything is removed.
         </p>
         <AccountDeletionControl hasPaidTier={hasPaidTier} />
-      </div>
+      </section>
     </div>
   )
 }

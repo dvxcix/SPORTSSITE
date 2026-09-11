@@ -13,8 +13,8 @@ export default async function PrivacySettingsPage() {
   return <SettingsShell active="/settings/privacy" title="Privacy and visibility" description="Control who can view your activity, contact you, and see performance details.">
       <PrivacySettingsForm settings={{ is_private: profile?.is_private ?? false, allow_dms: profile?.allow_dms ?? true, hide_win_rate: profile?.hide_win_rate ?? false }} />
       <Link href="/settings/blocked"
-        className="flex items-center gap-4 px-4 py-3.5 mt-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors group">
-        <div className="p-2 rounded-lg bg-zinc-800 group-hover:bg-zinc-700 transition-colors">
+        className="ss-settings-card group mt-4 flex items-center gap-4 !p-4 transition hover:border-lime-400/20">
+        <div className="rounded-xl border border-white/[.07] bg-black/25 p-2.5 transition-colors group-hover:bg-white/[.05]">
           <UserX size={16} className="text-zinc-400" />
         </div>
         <div className="flex-1">

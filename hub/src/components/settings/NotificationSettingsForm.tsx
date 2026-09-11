@@ -61,21 +61,21 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => setAll('', true)} className="text-xs font-bold text-zinc-300 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors">
+        <button onClick={() => setAll('', true)} className="ss-settings-secondary">
           Enable all push
         </button>
-        <button onClick={() => setAll('', false)} className="text-xs font-bold text-zinc-300 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors">
+        <button onClick={() => setAll('', false)} className="ss-settings-secondary">
           Disable all push
         </button>
-        <button onClick={() => setAll('_email', true)} className="text-xs font-bold text-zinc-300 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors">
+        <button onClick={() => setAll('_email', true)} className="ss-settings-secondary">
           Enable all email
         </button>
-        <button onClick={() => setAll('_email', false)} className="text-xs font-bold text-zinc-300 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors">
+        <button onClick={() => setAll('_email', false)} className="ss-settings-secondary">
           Disable all email
         </button>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+      <div className="ss-settings-card !p-0 divide-y divide-white/[.07] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5">
           <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Notification</span>
           <div className="flex items-center gap-6">
@@ -100,9 +100,9 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
           </div>
         ))}
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      <button onClick={save} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
-        {saved ? <><Check size={13} /> Saved!</> : 'Save Preferences'}
+      {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+      <button onClick={save} className="ss-settings-primary">
+        {saved ? <><Check size={13} /> Saved</> : 'Save preferences'}
       </button>
     </div>
   )

@@ -22,9 +22,6 @@ export default async function BlockedUsersPage() {
 
   return (
     <SettingsShell active="/settings/blocked" title="Blocked accounts" description="Review accounts you have blocked and restore access whenever you choose.">
-      <p className="text-sm text-zinc-500 mb-6">
-        Blocked accounts can't see your posts, profile, or send you messages — and you won't see theirs either.
-      </p>
       <BlockedUsersList currentUserId={user.id} initialBlocked={blocked} />
     </SettingsShell>
   )

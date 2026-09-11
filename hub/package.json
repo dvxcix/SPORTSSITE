@@ -29,6 +29,7 @@
     "test:sideline-matrices": "node --experimental-strip-types --test scripts/nfl-matrix.test.mts",
     "test:sideline-pikkit": "tsx --test scripts/nfl-pikkit.test.mts",
     "test:sideline-kickoff": "tsx --test scripts/sideline-kickoff.test.mts",
+    "test:sideline-public": "node --experimental-strip-types --test src/lib/sidelinePublicBoard.test.ts",
     "test:statcast-mappers": "node scripts/statcast-mapper-contract.test.mjs",
     "test:hr-mechanics": "node --test scripts/hr-mechanics-priors.test.mjs",
     "test:statcast-mechanics-readiness": "tsx --test scripts/statcast-mechanics-readiness.test.mts",

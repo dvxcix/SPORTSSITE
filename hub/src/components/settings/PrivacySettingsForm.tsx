@@ -34,20 +34,20 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
 
   return (
     <div className="space-y-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+      <div className="ss-settings-card !p-0 divide-y divide-white/[.07] overflow-hidden">
         {toggleItems.map(s => (
-          <div key={s.label} className="flex items-center justify-between px-4 py-3">
-            <div>
+          <div key={s.label} className="flex min-h-[72px] items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
               <p className="text-sm font-bold text-white">{s.label}</p>
-              <p className="text-xs text-zinc-500">{s.desc}</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-500">{s.desc}</p>
             </div>
             <Switch checked={s.value} onChange={s.set} ariaLabel={s.label} />
           </div>
         ))}
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      <button type="button" onClick={save} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2.5 rounded-xl text-sm transition-colors">
-        {saved ? <><Check size={13} /> Saved!</> : 'Save Privacy Settings'}
+      {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+      <button type="button" onClick={save} className="ss-settings-primary">
+        {saved ? <><Check size={13} /> Saved</> : 'Save privacy settings'}
       </button>
     </div>
   )
