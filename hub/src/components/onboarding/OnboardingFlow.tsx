@@ -103,13 +103,19 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         <Meteors number={12} className="opacity-60" />
       </div>
-      <div className="w-full max-w-md" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="ss-onboarding-card">
       {/* Progress */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="ss-onboarding-progress">
+        <div className="ss-onboarding-progress-copy">
+          <span>ACCOUNT SETUP</span>
+          <strong>{STEPS[step]}</strong>
+          <small>Step {step + 1} of {STEPS.length}</small>
+        </div>
+        <div className="ss-onboarding-progress-track" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1} aria-label={`Onboarding: ${STEPS[step]}`}>
         {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center" style={{ flex: i < STEPS.length - 1 ? 1 : undefined }}>
+          <div key={s} className="ss-onboarding-progress-step" style={{ flex: i < STEPS.length - 1 ? 1 : undefined }}>
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all"
+              className="ss-onboarding-progress-dot"
               style={{
                 background: i < step ? 'var(--accent)' : i === step ? 'var(--surface-3)' : 'var(--surface-2)',
                 color: i < step ? 'var(--accent-fg)' : i === step ? 'var(--text-1)' : 'var(--text-3)',
@@ -119,10 +125,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
               {i < step ? <Check size={12} /> : i + 1}
             </div>
             {i < STEPS.length - 1 && (
-              <div className="flex-1 h-0.5 mx-1" style={{ background: i < step ? 'var(--accent)' : 'var(--border)' }} />
+              <div className="ss-onboarding-progress-line" style={{ background: i < step ? 'var(--accent)' : 'var(--border)' }} />
             )}
           </div>
         ))}
+        </div>
       </div>
 
       {error && (
@@ -132,7 +139,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       )}
 
       <AnimatePresence mode="wait">
-        <motion.div key={step} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+        <motion.div className="ss-onboarding-stage" key={step} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
 
           {step === 0 && (
             <div className="text-center space-y-6">

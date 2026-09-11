@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { BadgeCheck } from 'lucide-react'
 import { FollowButton } from './FollowButton'
 import { UserBadges } from './UserBadges'
+import { MemberAvatar } from './MemberAvatar'
 
 export type SuggestedUser = {
   id: string
@@ -32,12 +33,7 @@ export function SuggestedUsers({ users, currentUserId }: {
       {users.map(u => (
         <div key={u.id} className="ss-suggested-user">
           <Link href={`/profile/${u.username}`} className="shrink-0">
-            <div className="ss-suggested-avatar">
-              {u.avatar_url
-                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                : (u.display_name || u.username)[0]?.toUpperCase()
-              }
-            </div>
+            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={42} tone={u.tier === 'ultimate' ? 'ultimate' : u.tier === 'advanced' ? 'advanced' : u.account_type === 'creator' ? 'creator' : 'default'} />
           </Link>
           <div className="ss-suggested-copy">
             <div className="ss-suggested-name">

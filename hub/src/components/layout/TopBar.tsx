@@ -13,6 +13,7 @@ import { useCustomEmojis } from '@/lib/emoji'
 import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { Badge } from '@/components/ui/badge'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { SafeImage } from '@/components/ui/SafeImage'
 
@@ -362,9 +363,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <button key={`u-${u.id}`} onClick={() => goTo(`/profile/${u.username}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
-                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'var(--text-3)' }}>
-                      <SafeImage src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={(u.display_name || u.username)[0].toUpperCase()} />
-                    </div>
+                    <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={26} />
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)' }}>{u.display_name || u.username}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-3)' }}>@{u.username}</span>
                   </button>
@@ -533,15 +532,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 130ms',
               }}>
-                <div className="ss-topbar-profile-avatar" style={{
-                  width: 26, height: 26, borderRadius: '50%',
-                  background: 'var(--accent-dim)', overflow: 'hidden',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flex: '0 0 26px', aspectRatio: '1 / 1',
-                  fontSize: 11, fontWeight: 900, color: 'var(--accent)',
-                }}>
-                  <SafeImage src={profile?.avatar_url} alt="" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={(profile?.display_name || profile?.username || '?')[0].toUpperCase()} />
-                </div>
+                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={26} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} />
                 <span className="ss-topbar-profile-copy hidden sm:flex">
                   <strong>{profile?.display_name || profile?.username || 'Me'}</strong>
                   <small>{tierLabel}</small>

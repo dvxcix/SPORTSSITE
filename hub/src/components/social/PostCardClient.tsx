@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2, Heart } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2, Heart, BadgeCheck } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -25,6 +25,7 @@ import { EmojiPicker } from './EmojiPicker'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { useCustomEmojis } from '@/lib/emoji'
 import { UserBadges } from './UserBadges'
+import { MemberAvatar } from './MemberAvatar'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 interface PostCardClientProps {
@@ -574,18 +575,12 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
           <div style={{ display: 'flex', gap: 12 }}>
             {/* Avatar */}
             <Link href={`/profile/${post.author.username}`} style={{ flexShrink: 0 }}>
-              <div className="ss-post-avatar" style={{
-                width: 46, height: 46, borderRadius: '50%',
-                background: 'var(--surface-3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, fontWeight: 900, color: 'var(--text-2)',
-                overflow: 'hidden',
-              }}>
-                {post.author.avatar_url
-                  ? <img src={post.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : (post.author.display_name || post.author.username)[0].toUpperCase()
-                }
-              </div>
+              <MemberAvatar
+                src={post.author.avatar_url}
+                name={post.author.display_name || post.author.username}
+                size={46}
+                tone={post.author.tier === 'ultimate' ? 'ultimate' : post.author.tier === 'advanced' ? 'advanced' : post.author.account_type === 'creator' ? 'creator' : 'default'}
+              />
             </Link>
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -597,7 +592,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   </Link>
                   <UserBadges userId={post.author.id} size={18} />
                   {post.author.is_verified && (
-                    <span style={{ fontSize: 11, color: 'var(--green)' }}>✓</span>
+                    <BadgeCheck size={15} aria-label="Verified" style={{ color: 'var(--green)', flexShrink: 0 }} />
                   )}
                   <Link href={`/profile/${post.author.username}`} style={{ color: 'var(--text-3)', fontSize: 12, textDecoration: 'none' }}>
                     @{post.author.username}
@@ -881,6 +876,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         <button className="ss-reaction-pill"
                           onClick={() => toggleReaction(emoji)}
                           disabled={!user}
+                          aria-pressed={mine}
+                          aria-label={`${mine ? 'Remove' : 'Add'} ${emoji} reaction`}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999,
                             border: `1px solid ${mine ? 'var(--accent)' : 'var(--border)'}`,
@@ -1249,9 +1246,11 @@ function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onCl
 }) {
   const [hovered, setHovered] = useState(false)
   return (
-    <button className="ss-post-action" onClick={onClick}
+    <motion.button className="ss-post-action" onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      whileTap={{ scale: 0.92 }}
+      aria-pressed={active === undefined ? undefined : active}
       style={{
         display: 'flex', alignItems: 'center', gap: 5,
         padding: '6px 8px', borderRadius: 8, border: 'none',
@@ -1261,6 +1260,6 @@ function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onCl
       }}>
       {icon}
       {label && <span>{label}</span>}
-    </button>
+    </motion.button>
   )
 }

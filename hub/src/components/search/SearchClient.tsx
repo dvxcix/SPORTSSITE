@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Search, TrendingUp, Users, Zap, Hash, Activity } from 'lucide-react'
+import { Search, TrendingUp, Users, Zap, Hash, Activity, BadgeCheck } from 'lucide-react'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import { UserBadges } from '@/components/social/UserBadges'
@@ -12,6 +12,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb' | 'nfl'
 
@@ -179,7 +180,7 @@ export function SearchClient() {
               <div className="space-y-2">
                 {teams.map(t => (
                   <Link key={t.abbr} href={t.gamePk ? `/sports/mlb/${t.gamePk}` : '/sports'}
-                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                    className="ss-search-result flex items-center gap-3 p-3">
                     <TeamLogo logo={mlbTeamLogo(t.id)} name={t.abbr} size={40} />
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-white text-sm truncate">{t.name}</p>
@@ -193,7 +194,7 @@ export function SearchClient() {
                   </Link>
                 ))}
                 {players.map(p => (
-                  <div key={p.mlbId} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  <div key={p.mlbId} className="ss-search-result flex items-center gap-3 p-3">
                     <Link href={`/players/${p.mlbId}`} className="flex items-center gap-3 flex-1 min-w-0">
                       <PlayerAvatar
                         headshot={mlbHeadshot(p.mlbId)}
@@ -249,7 +250,7 @@ export function SearchClient() {
               <div className="space-y-2">
                 {nflTeams.map(t => (
                   <Link key={t.team_abbr} href={`/nfl/teams/${t.team_abbr}`}
-                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                    className="ss-search-result flex items-center gap-3 p-3">
                     {t.team_logo_espn ? (
                       <img src={t.team_logo_espn} alt={t.team_abbr} className="w-10 h-10 object-contain shrink-0" />
                     ) : (
@@ -263,7 +264,7 @@ export function SearchClient() {
                 ))}
                 {nflPlayers.map(p => (
                   <Link key={p.gsis_id} href={`/nfl/players/${p.gsis_id}`}
-                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
+                    className="ss-search-result flex items-center gap-3 p-3">
                     {p.headshot ? (
                       <img src={p.headshot} alt={p.display_name} className="w-11 h-11 rounded-full object-cover shrink-0" />
                     ) : (
@@ -294,15 +295,13 @@ export function SearchClient() {
               <div className="space-y-2">
                 {users.map((u: any) => (
                   <Link key={u.id} href={`/profile/${u.username}`}
-                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all">
-                    <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-black text-white overflow-hidden shrink-0">
-                      {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
-                    </div>
+                    className="ss-search-result flex items-center gap-3 p-3">
+                    <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} tone={u.account_type === 'creator' ? 'creator' : 'default'} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-white text-sm truncate">{u.display_name || u.username}</span>
                         <UserBadges userId={u.id} size={13} />
-                        {u.is_verified && <span className="text-green-400 text-xs">✓</span>}
+                        {u.is_verified && <BadgeCheck size={14} className="text-green-400" aria-label="Verified" />}
                         {u.account_type === 'creator' && <span className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-full">PRO</span>}
                       </div>
                       <p className="text-xs text-zinc-500">@{u.username} · {u.follower_count ?? 0} followers</p>
@@ -334,12 +333,10 @@ export function SearchClient() {
                       if (target.closest('a, button, input, textarea, select')) return
                       router.push(`/posts/${p.id}`)
                     }}
-                    className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-all cursor-pointer"
+                    className="ss-search-result p-3 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 overflow-hidden">
-                        {p.author?.avatar_url ? <img src={p.author.avatar_url} alt="" className="w-full h-full object-cover" /> : null}
-                      </div>
+                      <MemberAvatar src={p.author?.avatar_url} name={p.author?.display_name || p.author?.username || 'Member'} size={24} />
                       <Link href={`/profile/${p.author?.username}`} className="text-xs font-bold text-zinc-400 hover:text-white">
                         @{p.author?.username}
                       </Link>

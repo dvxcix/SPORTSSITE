@@ -316,45 +316,28 @@ export function ProfileForm({ profile }: { profile: any }) {
         <p className="mt-2 text-xs leading-5 text-zinc-400">Add a photo, banner, bio, links, teams, and players to make your profile easier to recognize and discover.</p>
       </section>
 
-      <div className="flex items-center gap-5">
+      <section className="ss-profile-editor-preview">
         <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'avatar'); e.target.value = '' }} />
-        <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading === 'avatar'}
-          className="relative w-20 h-20 rounded-2xl bg-zinc-700 overflow-hidden flex items-center justify-center text-3xl shrink-0 group">
-          {form.avatar_url ? <img src={form.avatar_url} alt="" className="w-full h-full object-cover" /> : (form.display_name || '?')[0]?.toUpperCase()}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-            {uploading === 'avatar' ? <Loader2 size={20} className="animate-spin text-white" /> : <Upload size={20} className="text-white" />}
-          </div>
-        </button>
-        <div className="flex-1">
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Profile Picture</label>
-          <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading === 'avatar'}
-            className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors disabled:opacity-60">
-            {uploading === 'avatar' ? 'Uploading…' : 'Upload image'}
-          </button>
-          <details className="mt-2">
-            <summary className="text-xs text-zinc-600 cursor-pointer hover:text-zinc-400">Or paste an image URL instead</summary>
-            <input value={form.avatar_url} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass + ' mt-2'} />
-          </details>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-bold text-zinc-400 mb-1.5">Banner</label>
         <input ref={bannerInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'banner'); e.target.value = '' }} />
-        <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploading === 'banner'}
-          className="relative w-full h-24 rounded-xl bg-zinc-700 overflow-hidden flex items-center justify-center group">
-          {form.banner_url ? <img src={form.banner_url} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-zinc-500">No banner set</span>}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-            {uploading === 'banner' ? <Loader2 size={20} className="animate-spin text-white" /> : <Upload size={20} className="text-white" />}
-          </div>
+        <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploading === 'banner'} className="ss-profile-editor-banner" aria-label="Change profile banner">
+          {form.banner_url ? <img src={form.banner_url} alt="" /> : <span>ADD A PROFILE BANNER</span>}
+          <span className="ss-profile-editor-upload">{uploading === 'banner' ? <Loader2 size={17} className="animate-spin" /> : <Upload size={17} />} Change banner</span>
         </button>
-        <details className="mt-2">
-          <summary className="text-xs text-zinc-600 cursor-pointer hover:text-zinc-400">Or paste an image URL instead</summary>
-          <input value={form.banner_url} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass + ' mt-2'} />
-        </details>
-      </div>
+        <div className="ss-profile-editor-identity">
+          <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading === 'avatar'} className="ss-profile-editor-avatar" aria-label="Change profile picture">
+            {form.avatar_url ? <img src={form.avatar_url} alt="" /> : (form.display_name || form.username || '?')[0]?.toUpperCase()}
+            <span>{uploading === 'avatar' ? <Loader2 size={19} className="animate-spin" /> : <Upload size={19} />}</span>
+          </button>
+          <div>
+            <strong>{form.display_name || 'Your display name'}</strong>
+            <span>@{form.username || 'username'}</span>
+            <p>{form.bio || 'Your bio and identity will preview here as you edit.'}</p>
+          </div>
+        </div>
+        <details className="ss-profile-editor-links"><summary>Use image URLs instead</summary><div><input value={form.avatar_url} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="Avatar URL" className={inputClass} /><input value={form.banner_url} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="Banner URL" className={inputClass} /></div></details>
+      </section>
 
       <div className="grid grid-cols-2 gap-4">
         <div>

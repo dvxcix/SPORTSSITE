@@ -15,10 +15,12 @@ const daily = 1_560
 
 export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'bdl-odds', label: 'Live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
+  { name: 'nfl-bdl-odds', label: 'NFL live odds capture', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Odds' },
   { name: 'dispatch-scrapes', label: 'Lineup scrape dispatcher', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Odds' },
   { name: 'scrape-fanduel', label: 'FanDuel gap markets', schedule: 'Scheduled and lineup-triggered', staleAfterMinutes: 600, area: 'Odds' },
   { name: 'poll-pikkit-picks', label: 'MLB pick import', schedule: 'T-10h, T-4h, then confirmed-lineup final capture', staleAfterMinutes: 12 * 60, area: 'Picks' },
   { name: 'poll-pikkit-nfl-picks', label: 'NFL Pikkit pick import', schedule: 'Hourly with adaptive game freshness', staleAfterMinutes: 2 * 60, area: 'Picks' },
+  { name: 'poll-fanduel-nfl', label: 'NFL FanDuel market import', schedule: 'Hourly with game-window freshness', staleAfterMinutes: 2 * 60, area: 'Odds' },
   { name: 'grade-live-picks', label: 'Live pick grading', schedule: 'Every 2 minutes', staleAfterMinutes: everyTwoMinutes, area: 'Picks' },
   { name: 'settle-picks', label: 'Daily pick settlement', schedule: 'Daily', staleAfterMinutes: daily, area: 'Picks' },
   { name: 'lineup-confirmed', label: 'Confirmed lineups', schedule: 'Every 5 minutes', staleAfterMinutes: everyFiveMinutes, area: 'MLB data' },

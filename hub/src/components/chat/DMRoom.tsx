@@ -7,6 +7,7 @@ import { ArrowLeft, LockKeyhole, Send, Sparkles } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
@@ -98,9 +99,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           <ArrowLeft size={18} />
         </Link>
         <Link href={`/profile/${partner.username}`} className="ss-dm-partner">
-          <div className="ss-dm-partner-avatar">
-            {partner.avatar_url ? <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" /> : (partner.display_name || partner.username)[0].toUpperCase()}
-          </div>
+          <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={40} online />
           <div>
             <p>{partner.display_name || partner.username}</p>
             <span>@{partner.username}</span>
@@ -125,9 +124,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           return (
             <div key={m.id} className={`ss-dm-message ${isMe ? 'is-mine' : ''}`}>
               {!isMe && (
-                <div className="ss-dm-message-avatar">
-                  {partner.avatar_url ? <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" /> : partner.username[0].toUpperCase()}
-                </div>
+                <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} />
               )}
               <div className="ss-dm-bubble-wrap">
                 <div className="ss-dm-bubble">{m.content}</div>

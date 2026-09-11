@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, MessageCircle, Search, X } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 type Conversation = {
   id: string
@@ -58,11 +59,7 @@ export function MessageInbox({ conversations }: { conversations: Conversation[] 
             return (
               <Link key={conversation.id} href={`/messages/${partner.username}`}
                 className="ss-conversation-row">
-                <div className="ss-conversation-avatar">
-                  {partner.avatarUrl
-                    ? <img src={partner.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    : (partner.displayName || partner.username || '?')[0].toUpperCase()}
-                </div>
+                <MemberAvatar src={partner.avatarUrl} name={partner.displayName || partner.username} size={46} />
                 <div className="ss-conversation-copy">
                   <div><strong>{partner.displayName || partner.username}</strong><span>@{partner.username}</span></div>
                   <p>{conversation.content || 'Open conversation'}</p>

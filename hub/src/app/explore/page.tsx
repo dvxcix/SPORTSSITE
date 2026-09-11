@@ -13,6 +13,7 @@ import { PostCardClient } from '@/components/social/PostCardClient'
 import { UserBadges } from '@/components/social/UserBadges'
 import { FollowButton } from '@/components/social/FollowButton'
 import { TierGate } from '@/components/layout/TierGate'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 export const revalidate = 60
 
@@ -260,5 +261,5 @@ function EmptyCard({ title, detail }: { title: string; detail: string }) {
 }
 
 function PeopleSection({ title, users, currentUserId, followingIds }: { title: string; users: ExploreUser[]; currentUserId: string | null; followingIds: Set<string> }) {
-  return <section className="ss-explore-people"><div className="ss-explore-directory-head"><span><Users size={15} />{title}</span><Link href="/leaderboard">See all</Link></div>{users.map(person => <div key={person.id} className="ss-explore-person"><Link href={`/profile/${person.username}`} className="ss-explore-person-avatar">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : (person.display_name || person.username)[0].toUpperCase()}</Link><div><span><Link href={`/profile/${person.username}`}>{person.display_name || person.username}</Link><UserBadges userId={person.id} size={12} maxVisible={2} /></span><small>@{person.username} · {person.follower_count ?? 0} followers</small></div>{currentUserId && currentUserId !== person.id ? <FollowButton currentUserId={currentUserId} targetUserId={person.id} initialFollowing={followingIds.has(person.id)} /> : null}</div>)}</section>
+  return <section className="ss-explore-people"><div className="ss-explore-directory-head"><span><Users size={15} />{title}</span><Link href="/leaderboard">See all</Link></div>{users.map(person => <div key={person.id} className="ss-explore-person"><Link href={`/profile/${person.username}`}><MemberAvatar src={person.avatar_url} name={person.display_name || person.username} size={36} tone={person.account_type === 'creator' ? 'creator' : 'default'} /></Link><div><span><Link href={`/profile/${person.username}`}>{person.display_name || person.username}</Link><UserBadges userId={person.id} size={12} maxVisible={2} /></span><small>@{person.username} · {person.follower_count ?? 0} followers</small></div>{currentUserId && currentUserId !== person.id ? <FollowButton currentUserId={currentUserId} targetUserId={person.id} initialFollowing={followingIds.has(person.id)} /> : null}</div>)}</section>
 }
