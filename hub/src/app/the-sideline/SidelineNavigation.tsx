@@ -72,9 +72,9 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
         <div className={styles.gamePickerTitle}><span>Games</span><b>{games.length}</b></div>
         <div className={styles.gameCards}>
           {games.map(game => <button key={game.id} type="button" className={game.id === selected.id ? styles.gameActive : ''} disabled={pending} aria-pressed={game.id === selected.id} onClick={() => change(href(mode, game.id, game.gameday))} style={{ '--away-color': game.away.color, '--home-color': game.home.color } as CSSProperties}>
-            <span className={styles.matchupLogos}><NavigationTeamLogo team={game.away} /><i>@</i><NavigationTeamLogo team={game.home} /></span>
-            <span className={styles.matchupNames}><strong>{game.away.abbr}</strong><i>at</i><strong>{game.home.abbr}</strong></span>
-            <small>{gameStatus(game)}</small>
+            <span className={styles.matchupTeam} data-side="away"><NavigationTeamLogo team={game.away} /><strong>{game.away.abbr}</strong></span>
+            <span className={styles.matchupCenter}><i>AT</i><small>{gameStatus(game)}</small></span>
+            <span className={styles.matchupTeam} data-side="home"><NavigationTeamLogo team={game.home} /><strong>{game.home.abbr}</strong></span>
           </button>)}
         </div>
       </div>

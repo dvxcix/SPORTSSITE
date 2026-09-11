@@ -21,7 +21,7 @@
   width: 100%;
   max-width: none;
   min-height: 100vh;
-  padding: 14px clamp(10px, 1.2vw, 24px) 110px;
+  padding: 12px clamp(10px, 1.2vw, 24px) 110px;
   color: var(--ink);
   background:
     radial-gradient(circle at 72% -20%, rgba(53, 215, 255, 0.07), transparent 33%),
@@ -51,7 +51,7 @@
 .comparison {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 13px;
   background: rgba(9, 14, 20, 0.96);
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.18);
 }
@@ -191,8 +191,10 @@
   min-height: 54px;
   padding: 7px;
   margin-bottom: 10px;
-  background: rgba(8, 13, 19, 0.93);
-  backdrop-filter: none;
+  border-color: #293747;
+  background: rgba(8, 13, 19, 0.88);
+  box-shadow: 0 10px 34px rgba(0,0,0,.26), inset 0 1px rgba(255,255,255,.025);
+  backdrop-filter: blur(18px) saturate(125%);
 }
 
 .controlBar > button,
@@ -248,7 +250,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 92px;
+  min-height: 86px;
   padding: 14px 16px;
   border-right: 1px solid var(--line);
   background: linear-gradient(150deg, rgba(255, 255, 255, 0.015), transparent);
@@ -519,7 +521,8 @@
   --team-color: #3a4554;
   overflow: hidden;
   margin-bottom: 12px;
-  border-top: 3px solid var(--team-color);
+  border-top: 2px solid var(--team-color);
+  box-shadow: 0 18px 48px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.018);
 }
 
 .teamHeader {
@@ -655,7 +658,8 @@
   top: 0;
   z-index: 5;
   height: 48px;
-  background: #090f16;
+  background: rgba(9,15,22,.96);
+  backdrop-filter: blur(14px);
 }
 
 .boardTable th button {
@@ -703,14 +707,15 @@
 }
 
 .boardTable td {
-  height: 78px;
+  height: 74px;
   padding: 7px;
   color: #d9e0e8;
   font-size: 13px;
   transition: background 140ms ease, opacity 140ms ease;
 }
 
-.boardTable tbody tr:hover td { background: #0d141d; }
+.boardTable tbody tr:hover td { background: #101923; }
+.boardTable tbody tr:focus-within td { box-shadow: inset 0 1px rgba(167,255,63,.2), inset 0 -1px rgba(167,255,63,.14); }
 .boardTable tbody tr:last-child td { border-bottom: 0; }
 .boardTable th:last-child,
 .boardTable td:last-child { border-right: 0; }
