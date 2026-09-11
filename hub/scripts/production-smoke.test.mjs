@@ -725,3 +725,12 @@ test('discussion authoring and rendering support rich mentions end to end', asyn
   assert.ok(reply.includes('onSubmit={reply}'))
   assert.ok(detail.includes('<LinkifiedText'))
 })
+
+test('page settings preserve sport identity and reject unsafe media links', async () => {
+  const settings = await read('src/components/pages/PageSettingsForm.tsx')
+  assert.ok(settings.includes('sport: page.sport'))
+  assert.ok(settings.includes('sport: form.sport || null'))
+  assert.ok(settings.includes('isSafeImageUrl(form.avatar_url)'))
+  assert.ok(settings.includes("['http:', 'https:'].includes"))
+  assert.ok(!settings.includes('setError(err.message)'))
+})
