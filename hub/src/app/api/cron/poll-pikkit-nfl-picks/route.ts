@@ -5,16 +5,11 @@ import { PLATFORM_URL } from '@/lib/platform'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
 import { checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
-import { captureNeedsRefresh } from '@/lib/browserbaseRefresh'
+import { easternKickoff } from '@/lib/browserbaseRefresh'
+import { pikkitCaptureDecision } from '@/lib/pikkitCaptureSchedule'
 
 export const revalidate = 0
 export const maxDuration = 300
-
-async function inBatches<T, R>(items: T[], size: number, worker: (item: T) => Promise<R>) {
-  const output: R[] = []
-  for (let index = 0; index < items.length; index += size) output.push(...await Promise.all(items.slice(index, index + size).map(worker)))
-  return output
-}
 
 async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
@@ -26,30 +21,45 @@ async function run(req: Request) {
   const { data: existing } = await admin.from('nfl_pikkit_picks_current').select('game_id,captured_at').in('game_id', games.map(game => game.gameId))
   const prior = new Map((existing ?? []).map(row => [row.game_id, Date.parse(row.captured_at)]))
   const now = new Date()
+  const force = new URL(req.url).searchParams.get('force') === '1'
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const candidates = games.filter(game => {
-    const captured = prior.get(game.gameId)
-    return captureNeedsRefresh({ gameDate: game.gameDate, gameTime: game.gameTime, capturedAt: captured }, now)
-  }).sort((left, right) => (prior.get(left.gameId) ?? 0) - (prior.get(right.gameId) ?? 0))
+  const decisions = games.map(game => {
+    const kickoff = easternKickoff(game.gameDate, game.gameTime)?.getTime() ?? NaN
+    return {
+      game,
+      decision: force
+        ? { due: Number.isFinite(kickoff) && kickoff > now.getTime(), slotHours: null, targetAt: null, reason: 'manual-force' }
+        : pikkitCaptureDecision('nfl', kickoff, prior.get(game.gameId) ?? null, now.getTime()),
+    }
+  })
+  const selected = decisions.filter(item => item.decision.due).map(item => item.game)
+  if (!selected.length) {
+    return NextResponse.json({
+      games: games.length, due: 0, attempted: 0, browserSessions: 0,
+      decisions: decisions.map(({ game, decision }) => ({ gameId: game.gameId, gameDate: game.gameDate, ...decision })),
+      results: [],
+    })
+  }
 
-  // Rotate the stalest games instead of opening a browser for the entire
-  // slate in one invocation. Two 8-game rotations cover a full Sunday slate.
-  const selected = candidates.slice(0, 8)
-
-  const results = await inBatches(selected, 2, async game => {
-    try {
-      const response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameId=${encodeURIComponent(game.gameId)}`, {
-        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
-        // Six-game slates can otherwise exceed the 300s dispatcher ceiling.
-        // The individual scraper owns its deeper browser timeout and will be
-        // retried by the next capture run without holding every other game.
-        signal: AbortSignal.timeout(85_000),
-      })
-      const body = await response.json().catch(() => null)
-      const skipped = body?.skipped === true
-      return { gameId: game.gameId, ok: response.ok || skipped, skipped, status: response.status, markets: Number(body?.marketCount ?? 0), error: body?.error ?? null }
-    } catch (error) {
-      return { gameId: game.gameId, ok: false, skipped: false, status: 502, markets: 0, error: error instanceof Error ? error.name : 'request failed' }
+  let response: Response
+  let body: { results?: Array<Record<string, unknown>> } | null = null
+  try {
+    response = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit-nfl?gameIds=${encodeURIComponent(selected.map(game => game.gameId).join(','))}`, {
+      headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      signal: AbortSignal.timeout(260_000),
+    })
+    body = await response.json().catch(() => null)
+  } catch {
+    response = new Response(null, { status: 502 })
+  }
+  const rawResults = Array.isArray(body?.results) ? body.results : []
+  const results = selected.map((game, index) => {
+    const result = rawResults[index]
+    const skipped = result?.skipped === true
+    const error = typeof result?.error === 'string' ? result.error : response.ok ? null : 'batch request failed'
+    return {
+      gameId: game.gameId, ok: (response.ok || skipped) && Boolean(result), skipped,
+      status: response.status, markets: Number(result?.marketCount ?? 0), error,
     }
   })
   const failed = results.filter(result => !result.ok)
@@ -64,14 +74,14 @@ async function run(req: Request) {
     })
   }
   const allSkipped = results.length > 0 && results.every(result => result.skipped)
-  const summary = { games: games.length, stale: candidates.length, attempted: selected.length, succeeded: results.filter(result => result.ok && !result.skipped).length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
+  const summary = { games: games.length, due: selected.length, attempted: selected.length, browserSessions: body ? 1 : 0, succeeded: results.filter(result => result.ok && !result.skipped).length, failed: failed.length, skipped: results.filter(result => result.skipped).length }
   console.info('[poll-pikkit-nfl-picks] complete', { ...summary, results })
   if (allSkipped) {
-    return NextResponse.json({ ...summary, reason: 'Pikkit has not exposed NFL public-pick markets for the scheduled games yet', results }, { status: 425 })
+    return NextResponse.json({ ...summary, reason: 'Pikkit has not exposed NFL public-pick markets for the scheduled games yet', decisions: decisions.map(({ game, decision }) => ({ gameId: game.gameId, gameDate: game.gameDate, ...decision })), results }, { status: 425 })
   }
   const missingToday = results.filter(result => result.skipped && games.find(game => game.gameId === result.gameId)?.gameDate === today)
-  if (missingToday.length && !failed.length) return NextResponse.json({ ...summary, reason: 'Today’s NFL picks were not refreshed', results }, { status: 425 })
-  return NextResponse.json({ ...summary, results }, { status: failed.length ? 502 : 200 })
+  if (missingToday.length && !failed.length) return NextResponse.json({ ...summary, reason: 'Today’s NFL picks were not refreshed', decisions: decisions.map(({ game, decision }) => ({ gameId: game.gameId, gameDate: game.gameDate, ...decision })), results }, { status: 425 })
+  return NextResponse.json({ ...summary, decisions: decisions.map(({ game, decision }) => ({ gameId: game.gameId, gameDate: game.gameDate, ...decision })), results }, { status: failed.length ? 502 : 200 })
 }
 
 export const GET = withPipelineHealth('poll-pikkit-nfl-picks', run, { allowSecondarySecret: true })

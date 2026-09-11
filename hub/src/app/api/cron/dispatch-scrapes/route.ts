@@ -21,11 +21,9 @@ export const GET = withPipelineHealth('dispatch-scrapes', run)
 // line-movement sweep — this route only handles the early, precise
 // opening-line trigger.
 //
-// FanDuel only — BetMGM automation is on hold (its page never renders real
-// content past the header/nav, unresolved as of now; left manual). Pikkit's
-// pick counts need continuous refreshing throughout the pregame window
-// instead (see poll-pikkit-picks, every 30 min), not a one-shot "opening"
-// capture.
+// FanDuel plus one definitive Pikkit capture. Baseline Pikkit reads are now
+// sparse; confirmed lineups define the real player universe, so this event
+// supplies the final pick checkpoint without blind 30-minute polling.
 //
 // Claims due rows atomically (UPDATE ... RETURNING) before firing anything,
 // so two overlapping dispatcher runs can't double-fire the same game. Rows
@@ -72,10 +70,23 @@ async function run(req: Request) {
   const live = due.filter(row => !isPregame(statusByGamePk.get(row.game_pk) ?? ''))
   const toScrape = due.filter(row => isPregame(statusByGamePk.get(row.game_pk) ?? ''))
 
-  const results = await Promise.allSettled(
+  const headers = { Authorization: `Bearer ${process.env.CRON_SECRET}` }
+  // FanDuel's delayed missing-market retry must not duplicate the already
+  // successful lineup pick capture. A real later lineup change resets the
+  // queue retry_count to zero and correctly earns one replacement capture.
+  const pikkitRows = toScrape.filter(row => row.retry_count === 0)
+  const pikkitPromise = pikkitRows.length
+    ? fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePks=${pikkitRows.map(row => row.game_pk).join(',')}`, {
+        headers,
+        signal: AbortSignal.timeout(260_000),
+      }).then(async response => ({ status: response.status, ok: response.ok, body: await response.json().catch(() => null) }))
+      .catch(() => ({ status: 502, ok: false, body: null }))
+    : Promise.resolve({ status: 200, ok: true, body: null })
+
+  const [results, pikkit] = await Promise.all([Promise.allSettled(
     toScrape.map(async row => {
       const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-fanduel?gamePk=${row.game_pk}`, {
-        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        headers,
         signal: AbortSignal.timeout(55_000),
       })
       const body = await res.json().catch(() => null)
@@ -87,7 +98,7 @@ async function run(req: Request) {
       const stillMissing = missingOpeningMarkets(body?.result?.imported?.body?.marketSummary ?? {})
       return { gamePk: row.game_pk, status: res.status, stillMissing, retryCount: row.retry_count }
     })
-  )
+  ), pikkitPromise])
 
   const fulfilled = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : [])
 
@@ -107,6 +118,7 @@ async function run(req: Request) {
     skippedAlreadyLive: live.map(r => r.game_pk),
     gamePks: toScrape.map(r => r.game_pk),
     retryQueued: needsRetry.map(r => ({ gamePk: r.gamePk, missing: r.stillMissing })),
+    pikkit: { ok: pikkit.ok, status: pikkit.status, games: pikkitRows.length },
     results: results.map(r => r.status === 'fulfilled' ? r.value : { error: 'dispatch failed' }),
   })
 }

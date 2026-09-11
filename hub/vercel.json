@@ -182,11 +182,11 @@
     },
     {
       "path": "/api/cron/poll-pikkit-picks",
-      "schedule": "*/30 * * * *"
+      "schedule": "15 * * * *"
     },
     {
       "path": "/api/cron/poll-pikkit-nfl-picks",
-      "schedule": "7 * * * *"
+      "schedule": "7,37 * * * *"
     },
     {
       "path": "/api/cron/poll-fanduel-nfl",

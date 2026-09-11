@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
-import { openPikkitSession } from '@/lib/browserbase'
+import { openPikkitSession, type BBSession } from '@/lib/browserbase'
 import { PLATFORM_URL } from '@/lib/platform'
-import { getUpcomingNflPikkitGames } from '@/lib/nflPikkitSchedule'
+import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nflPikkitSchedule'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { clickTabByText, distinguishingSuffix, escapeRe, findAndClickPikkitGame } from '@/lib/scrapers/gameMatch'
@@ -24,29 +24,22 @@ async function clickPlayerProps(page: Awaited<ReturnType<typeof openPikkitSessio
   return hasMarketSelect()
 }
 
-export async function GET(req: Request) {
-  const authError = requireBrowserbaseCronAuth(req)
-  if (authError) return authError
-  const contextId = process.env.PIKKIT_CONTEXT_ID
-  if (!contextId) return NextResponse.json({ error: 'PIKKIT_CONTEXT_ID is not configured' }, { status: 500 })
-  const gameId = new URL(req.url).searchParams.get('gameId')
-  if (!gameId) return NextResponse.json({ error: 'gameId is required' }, { status: 400 })
-  const games = await getUpcomingNflPikkitGames(7)
-  const game = games.find(candidate => candidate.gameId === gameId)
-  if (!game) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
+async function installTextOnlyRouting(session: BBSession) {
+  await session.page.route('**/*', route => {
+    const type = route.request().resourceType()
+    return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
+  })
+}
 
-  const bb = await openPikkitSession(contextId, { sport: 'nfl', mode: 'single-game', gameId })
+async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
+  const gameId = game.gameId
   try {
-    await bb.page.route('**/*', route => {
-      const type = route.request().resourceType()
-      return type === 'image' || type === 'media' || type === 'font' ? route.abort() : route.continue()
-    })
-    await bb.page.goto('https://app.pikkit.com/leagues/nfl', { waitUntil: 'domcontentloaded' })
-    await bb.page.waitForTimeout(1800)
-    let clicked = await findAndClickPikkitGame(bb.page, game.awayName, game.homeName)
+    await session.page.goto('https://app.pikkit.com/leagues/nfl', { waitUntil: 'domcontentloaded' })
+    await session.page.waitForTimeout(1800)
+    let clicked = await findAndClickPikkitGame(session.page, game.awayName, game.homeName)
     if (!clicked) {
-      await bb.page.waitForTimeout(2500)
-      clicked = await findAndClickPikkitGame(bb.page, game.awayName, game.homeName)
+      await session.page.waitForTimeout(2500)
+      clicked = await findAndClickPikkitGame(session.page, game.awayName, game.homeName)
     }
     if (!clicked) {
       // A previously verified event can remain accessible while the league
@@ -55,43 +48,43 @@ export async function GET(req: Request) {
         .select('snapshot').eq('game_id', gameId).maybeSingle()
       const priorUrl = data?.snapshot?.sourceUrl
       if (typeof priorUrl === 'string' && /^https:\/\/app\.pikkit\.com\/event\/[a-z0-9-]+$/i.test(priorUrl)) {
-        await bb.page.goto(priorUrl, { waitUntil: 'domcontentloaded' })
+        await session.page.goto(priorUrl, { waitUntil: 'domcontentloaded' })
         clicked = true
       }
     }
     if (!clicked) {
       console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'listing', reason: 'game-link-not-found' })
-      return NextResponse.json({ gameId, skipped: true, error: 'NFL game link not found on Pikkit' })
+      return { gameId, skipped: true, error: 'NFL game link not found on Pikkit' }
     }
-    await bb.page.waitForTimeout(3000)
-    const pageText = await bb.page.evaluate(() => document.body?.innerText ?? '')
+    await session.page.waitForTimeout(3000)
+    const pageText = await session.page.evaluate(() => document.body?.innerText ?? '')
     const away = escapeRe(distinguishingSuffix(game.awayName))
     const home = escapeRe(distinguishingSuffix(game.homeName))
     if (!new RegExp(away, 'i').test(pageText) || !new RegExp(home, 'i').test(pageText)) {
-      return NextResponse.json({ gameId, error: 'Pikkit navigation landed on the wrong NFL game' }, { status: 502 })
+      return { gameId, error: 'Pikkit navigation landed on the wrong NFL game' }
     }
-    await clickTabByText(bb.page, 'Odds').catch(() => false)
-    await bb.page.waitForTimeout(1600)
-    let propsFound = await clickPlayerProps(bb.page)
+    await clickTabByText(session.page, 'Odds').catch(() => false)
+    await session.page.waitForTimeout(1600)
+    let propsFound = await clickPlayerProps(session.page)
     if (!propsFound) {
-      await bb.page.waitForTimeout(3000)
-      propsFound = await clickPlayerProps(bb.page)
+      await session.page.waitForTimeout(3000)
+      propsFound = await clickPlayerProps(session.page)
     }
-    const scrape = await bb.page.evaluate(runPikkitScrape, true)
+    const scrape = await session.page.evaluate(runPikkitScrape, true)
     for (const diagnostic of scrape.diagnostics ?? []) {
       console.info('[scrape-pikkit-nfl] market-controls', { gameId, ...diagnostic })
     }
     delete scrape.diagnostics
     const marketCount = Object.keys(scrape.props).length
     if (!marketCount) {
-      const controls = await bb.page.evaluate(() => ({
+      const controls = await session.page.evaluate(() => ({
         path: location.pathname,
         selects: Array.from(document.querySelectorAll('select')).map(select => Array.from(select.options).map(option => option.textContent?.trim()).slice(0, 30)),
         tabs: Array.from(document.querySelectorAll('button,[role="tab"]')).map(node => node.textContent?.trim()).filter(Boolean).slice(0, 35),
         verificationRequired: /complete verification|verify you are human/i.test(document.body.innerText),
       }))
       console.info('[scrape-pikkit-nfl] skipped', { gameId, stage: 'markets', reason: 'no-public-pick-markets', propsFound, controls })
-      return NextResponse.json({ gameId, skipped: true, error: 'No NFL public-pick markets found', propsFound })
+      return { gameId, skipped: true, error: 'No NFL public-pick markets found', propsFound }
     }
 
     const imported = await fetch(`${PLATFORM_URL}/api/admin/nfl-pikkit-import`, {
@@ -102,10 +95,50 @@ export async function GET(req: Request) {
     })
     const result = await imported.json().catch(() => null)
     console.info('[scrape-pikkit-nfl] complete', { gameId, marketCount, importOk: imported.ok, changed: result?.changed ?? null })
-    return NextResponse.json({ gameId, marketCount, imported: result }, { status: imported.ok ? 200 : 502 })
+    return imported.ok
+      ? { gameId, marketCount, imported: result }
+      : { gameId, marketCount, error: 'NFL pick import failed', imported: result }
   } catch (error) {
     console.error('[scrape-pikkit-nfl] failed', { gameId, type: error instanceof Error ? error.name : typeof error })
-    return NextResponse.json({ gameId, error: 'NFL Pikkit scrape failed' }, { status: 502 })
+    return { gameId, error: 'NFL Pikkit scrape failed' }
+  }
+}
+
+export async function GET(req: Request) {
+  const authError = requireBrowserbaseCronAuth(req)
+  if (authError) return authError
+  const contextId = process.env.PIKKIT_CONTEXT_ID
+  if (!contextId) return NextResponse.json({ error: 'PIKKIT_CONTEXT_ID is not configured' }, { status: 500 })
+  const params = new URL(req.url).searchParams
+  const gameId = params.get('gameId')
+  const requested = new Set((params.get('gameIds') ?? gameId ?? '').split(',').map(value => value.trim()).filter(Boolean).slice(0, 20))
+  if (!requested.size) return NextResponse.json({ error: 'gameId or gameIds is required' }, { status: 400 })
+  const upcoming = await getUpcomingNflPikkitGames(7)
+  const games = upcoming.filter(game => requested.has(game.gameId))
+  if (!games.length) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
+
+  const bb = await openPikkitSession(contextId, {
+    sport: 'nfl', mode: games.length > 1 ? 'batch' : 'single-game',
+    gameCount: games.length, gameIds: games.map(game => game.gameId).join(','),
+  })
+  try {
+    const results: Awaited<ReturnType<typeof scrapeGame>>[] = []
+    for (let index = 0; index < games.length; index += 4) {
+      const group = games.slice(index, index + 4)
+      const pages = await Promise.all(group.map((_, pageIndex) => (
+        index === 0 && pageIndex === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()
+      )))
+      const sessions = pages.map(page => ({ ...bb, page }))
+      await Promise.all(sessions.map(installTextOnlyRouting))
+      results.push(...await Promise.all(group.map((game, gameIndex) => scrapeGame(game, sessions[gameIndex]))))
+      await Promise.all(pages.filter(page => page !== bb.page).map(page => page.close().catch(() => {})))
+    }
+    if (gameId && games.length === 1) {
+      const result = results[0]
+      return NextResponse.json(result, { status: result.error && !result.skipped ? 502 : 200 })
+    }
+    const failed = results.filter(result => result.error && !result.skipped)
+    return NextResponse.json({ games: games.length, browserSessions: 1, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   } finally {
     await bb.close()
   }

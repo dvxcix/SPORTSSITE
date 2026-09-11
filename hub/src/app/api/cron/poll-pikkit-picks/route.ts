@@ -8,11 +8,31 @@ import {
   checkPikkitAuthAndAlert,
   checkPikkitImportHealthAndAlert,
 } from '@/lib/scrapers/pikkitAuth'
+import { pikkitCaptureDecision } from '@/lib/pikkitCaptureSchedule'
 
 export const revalidate = 0
 export const maxDuration = 280
 
 const SCRAPE_TIMEOUT_MS = 260_000
+const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
+
+async function latestCapture(gameKey: string, date: string): Promise<number | null> {
+  const key = process.env.MLB_PARTY_SERVICE_ROLE_KEY
+  if (!key) throw new Error('MLB_PARTY_SERVICE_ROLE_KEY is not configured')
+  const query = new URLSearchParams({
+    select: 'updated_at', game_date: `eq.${date}`, game_key: `eq.${gameKey}`,
+    order: 'updated_at.desc', limit: '1',
+  })
+  const response = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?${query}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
+  })
+  // A freshness-read outage must not look like an empty history; that would
+  // launch a paid browser on every cron tick until first pitch.
+  if (!response.ok) throw new Error(`Pikkit freshness lookup failed (${response.status})`)
+  const row = (await response.json().catch(() => []))?.[0]
+  const captured = row?.updated_at ? Date.parse(row.updated_at) : NaN
+  return Number.isFinite(captured) ? captured : null
+}
 async function scrapeBatch(gamePks: number[]) {
   try {
     const res = await fetch(`${PLATFORM_URL}/api/cron/scrape-pikkit?gamePks=${gamePks.join(',')}`, {
@@ -34,8 +54,10 @@ async function scrapeBatch(gamePks: number[]) {
   }
 }
 
-// Preserves the 30-minute pick history while the entire pregame slate shares
-// one Browserbase session. Each game still receives its own validated import.
+// Cheap hourly scheduler. MLB gets two baseline checkpoints (about T-10h and
+// T-4h); both-confirmed lineups trigger the definitive final capture through
+// lineup-confirmed -> dispatch-scrapes. Browserbase is never opened merely
+// because a cron tick occurred.
 async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
@@ -45,7 +67,28 @@ async function run(req: Request) {
   const pregame = games.filter(g => isPregame(g.status))
   if (!pregame.length) return NextResponse.json({ date, games: games.length, pregame: 0, results: [] })
 
-  const normalizedResults = await scrapeBatch(pregame.map(game => game.gamePk))
+  const force = new URL(req.url).searchParams.get('force') === '1'
+  const captured = await Promise.all(pregame.map(game => latestCapture(game.gameKey, date)))
+  const decisions = pregame.map((game, index) => {
+    const lineupsConfirmed = game.homeLineupConfirmed && game.awayLineupConfirmed
+    const decision = force
+      ? { due: true, slotHours: null, targetAt: null, reason: 'manual-force' }
+      : lineupsConfirmed
+        ? { due: false, slotHours: null, targetAt: null, reason: 'lineup-triggered' }
+        : pikkitCaptureDecision('mlb', Date.parse(game.gameDate), captured[index])
+    return { game, decision }
+  })
+  const due = decisions.filter(item => item.decision.due).map(item => item.game)
+  if (!due.length) {
+    return NextResponse.json({
+      ok: true, date, games: games.length, pregame: pregame.length, due: 0,
+      browserSessions: 0,
+      decisions: decisions.map(({ game, decision }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision })),
+      results: [],
+    })
+  }
+
+  const normalizedResults = await scrapeBatch(due.map(game => game.gamePk))
   const failed = normalizedResults.filter(result => !result.ok)
   const unavailableReason = `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}`
   const allListingsUnavailable = normalizedResults.length > 0
@@ -62,7 +105,7 @@ async function run(req: Request) {
   }
 
   await checkPikkitImportHealthAndAlert({
-    pregame: pregame.length,
+    pregame: due.length,
     failedGamePks: failed.map(result => result.gamePk),
     accessUnavailable: allMarketDataUnavailable && authState !== 'signed-out',
   }).catch(error => console.error('[poll-pikkit-picks] health alert failed', {
@@ -82,11 +125,14 @@ async function run(req: Request) {
     date,
     games: games.length,
     pregame: pregame.length,
+    due: due.length,
+    browserSessions: 1,
     succeeded: normalizedResults.length - failed.length,
     skipped: normalizedResults.filter(result => result.skipped).length,
     failed: failed.length,
     rowsImported: normalizedResults.reduce((sum, result) => sum + result.rowsImported, 0),
     authState,
+    decisions: decisions.map(({ game, decision }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision })),
     results: normalizedResults,
   }, { status: failed.length ? 502 : 200 })
 }

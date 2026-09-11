@@ -29,7 +29,7 @@ export function browserbaseRefreshAfterMs(gameDate: string, now = new Date()): n
   return 12 * HOUR
 }
 
-function easternKickoff(gameDate: string, gameTime: string | null | undefined): Date | null {
+export function easternKickoff(gameDate: string, gameTime: string | null | undefined): Date | null {
   if (!gameTime || !/^\d{1,2}:\d{2}$/.test(gameTime)) return null
   const [year, month, day] = gameDate.split('-').map(Number)
   const [hour, minute] = gameTime.split(':').map(Number)
