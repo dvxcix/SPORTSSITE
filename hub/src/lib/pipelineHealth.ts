@@ -10,7 +10,7 @@ async function responseMetadata(response: Response) {
   try {
     const body = await response.clone().json() as Record<string, unknown>
     const reason = typeof body.reason === 'string' ? body.reason : `HTTP ${response.status}`
-    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt']
+    const details = Object.fromEntries(['deferred', 'stage', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results']
       .filter(key => body[key] !== undefined)
       .map(key => [key, body[key]]))
     return { error: reason.slice(0, 2000), details }

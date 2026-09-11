@@ -1287,13 +1287,13 @@ export async function GET(req: Request) {
     const pikkitByName: Record<string, Record<string, any>> = {}
     if (includeResearch || userMatrices.length) {
       for (const r of pikkit ?? []) {
-        if (r.game_key && r.game_key !== gameKey) continue
+        if (r.game_key && canonGameKey(r.game_key) !== gameKey) continue
         const nn = normName(r.player_name || '')
         const market = r.prop_type
         if (!nn || !market) continue
         if (!pikkitByName[nn]) pikkitByName[nn] = {}
         const existing = pikkitByName[nn][market]
-        if (!existing || (r.game_key && r.game_key === gameKey && !existing.game_key)) {
+        if (!existing || (r.game_key && canonGameKey(r.game_key) === gameKey && !existing.game_key)) {
           pikkitByName[nn][market] = r
         }
       }

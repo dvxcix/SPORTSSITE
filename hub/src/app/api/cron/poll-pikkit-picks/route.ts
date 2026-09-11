@@ -9,6 +9,7 @@ import {
   checkPikkitImportHealthAndAlert,
 } from '@/lib/scrapers/pikkitAuth'
 import { pikkitCaptureDecision } from '@/lib/pikkitCaptureSchedule'
+import { summarizePikkitRows, type PikkitCoverage } from '@/lib/pikkitCoverage'
 
 export const revalidate = 0
 export const maxDuration = 280
@@ -16,12 +17,14 @@ export const maxDuration = 280
 const SCRAPE_TIMEOUT_MS = 260_000
 const MP_URL = 'https://emllcbynioctxkbsdlwp.supabase.co'
 
-async function latestCapture(gameKey: string, date: string): Promise<number | null> {
+type CaptureState = PikkitCoverage & { capturedAt: number | null }
+
+async function latestCapture(gameKey: string, date: string): Promise<CaptureState> {
   const key = process.env.MLB_PARTY_SERVICE_ROLE_KEY
   if (!key) throw new Error('MLB_PARTY_SERVICE_ROLE_KEY is not configured')
   const query = new URLSearchParams({
-    select: 'updated_at', game_date: `eq.${date}`, game_key: `eq.${gameKey}`,
-    order: 'updated_at.desc', limit: '1',
+    select: 'updated_at,prop_type,player_name', game_date: `eq.${date}`, game_key: `eq.${gameKey}`,
+    order: 'updated_at.desc', limit: '1000',
   })
   const response = await fetch(`${MP_URL}/rest/v1/pikkit_public_picks?${query}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
@@ -29,9 +32,17 @@ async function latestCapture(gameKey: string, date: string): Promise<number | nu
   // A freshness-read outage must not look like an empty history; that would
   // launch a paid browser on every cron tick until first pitch.
   if (!response.ok) throw new Error(`Pikkit freshness lookup failed (${response.status})`)
-  const row = (await response.json().catch(() => []))?.[0]
-  const captured = row?.updated_at ? Date.parse(row.updated_at) : NaN
-  return Number.isFinite(captured) ? captured : null
+  const rows = await response.json().catch(() => [])
+  const captured = rows?.[0]?.updated_at ? Date.parse(rows[0].updated_at) : NaN
+  if (!Number.isFinite(captured)) return { capturedAt: null, ...summarizePikkitRows([]) }
+  // Every row in one import is timestamped within milliseconds. Evaluate
+  // only the newest batch: stale markets from an older, fuller capture must
+  // not make today's latest partial scrape look complete.
+  const newestBatch = rows.filter((row: { updated_at?: string }) => {
+    const timestamp = row.updated_at ? Date.parse(row.updated_at) : NaN
+    return Number.isFinite(timestamp) && captured - timestamp <= 30_000
+  })
+  return { capturedAt: captured, ...summarizePikkitRows(newestBatch) }
 }
 async function scrapeBatch(gamePks: number[]) {
   try {
@@ -46,8 +57,13 @@ async function scrapeBatch(gamePks: number[]) {
       const skipped = result?.skipped === true
       const reason = typeof result?.error === 'string' ? result.error : typeof body?.error === 'string' ? body.error : ''
       const rowsImported = Number(result?.imported?.body?.rowsImported ?? 0)
-      const ok = res.ok && Boolean(result) && result?.imported?.ok !== false && (!reason || skipped)
-      return { gamePk, status: res.status, ok, skipped, attempts: 1, error: ok ? '' : 'scrape or import failed', reason, rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0 }
+      const complete = result?.coverage?.complete === true
+      const incompleteReason = result?.coverage && !complete
+        ? `incomplete capture (${result.coverage.marketCount} markets, ${result.coverage.playerCount} players, ${result.coverage.rowCount} rows)`
+        : ''
+      const finalReason = reason || incompleteReason
+      const ok = res.ok && Boolean(result) && result?.imported?.ok !== false && (!finalReason || skipped)
+      return { gamePk, status: res.status, ok, skipped, attempts: Number(result?.attempts ?? 1), error: ok ? '' : 'scrape or import failed', reason: finalReason, rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0, coverage: result?.coverage ?? null }
     })
   } catch {
     return gamePks.map(gamePk => ({ gamePk, status: 502, ok: false, skipped: false, attempts: 1, error: 'scrape request failed', reason: 'scrape request failed', rowsImported: 0 }))
@@ -71,19 +87,24 @@ async function run(req: Request) {
   const captured = await Promise.all(pregame.map(game => latestCapture(game.gameKey, date)))
   const decisions = pregame.map((game, index) => {
     const lineupsConfirmed = game.homeLineupConfirmed && game.awayLineupConfirmed
+    const capture = captured[index]
+    const kickoff = Date.parse(game.gameDate)
+    const finalWindow = kickoff - 3 * 60 * 60 * 1000
+    const finalCaptureReady = capture.complete && capture.capturedAt != null && capture.capturedAt >= finalWindow
+    const requiresCompleteCapture = Date.now() >= kickoff - 4 * 60 * 60 * 1000
     const decision = force
       ? { due: true, slotHours: null, targetAt: null, reason: 'manual-force' }
       : lineupsConfirmed
-        ? { due: false, slotHours: null, targetAt: null, reason: 'lineup-triggered' }
-        : pikkitCaptureDecision('mlb', Date.parse(game.gameDate), captured[index])
-    return { game, decision }
+        ? { due: !finalCaptureReady, slotHours: null, targetAt: new Date(finalWindow).toISOString(), reason: finalCaptureReady ? 'lineup-final-ready' : 'lineup-final-missing' }
+        : pikkitCaptureDecision('mlb', kickoff, requiresCompleteCapture && !capture.complete ? null : capture.capturedAt)
+    return { game, decision, capture }
   })
   const due = decisions.filter(item => item.decision.due).map(item => item.game)
   if (!due.length) {
     return NextResponse.json({
       ok: true, date, games: games.length, pregame: pregame.length, due: 0,
       browserSessions: 0,
-      decisions: decisions.map(({ game, decision }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision })),
+      decisions: decisions.map(({ game, decision, capture }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision, capture })),
       results: [],
     })
   }
@@ -132,7 +153,8 @@ async function run(req: Request) {
     failed: failed.length,
     rowsImported: normalizedResults.reduce((sum, result) => sum + result.rowsImported, 0),
     authState,
-    decisions: decisions.map(({ game, decision }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision })),
+    reason: failed.length ? failed.map(result => `${result.gamePk}: ${result.reason || result.error}`).join('; ').slice(0, 1800) : undefined,
+    decisions: decisions.map(({ game, decision, capture }) => ({ gamePk: game.gamePk, gameKey: game.gameKey, ...decision, capture })),
     results: normalizedResults,
   }, { status: failed.length ? 502 : 200 })
 }

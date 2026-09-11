@@ -6,6 +6,7 @@ import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe, distinguishingSuffix } from '@/lib/scrapers/gameMatch'
 import { PLATFORM_URL } from '@/lib/platform'
 import { PIKKIT_SIGNED_OUT_ERROR, checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
+import { summarizePikkitPayload } from '@/lib/pikkitCoverage'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -48,23 +49,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     // low-risk here specifically. Per Browserbase's own cost-optimization
     // guidance, this cuts proxy bandwidth without touching page behavior.
     if (!shared) await installTextOnlyRouting(bb)
-    await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
-    await bb.page.waitForTimeout(1500)
-
-    // Pikkit's schedule list is row-per-team, not one element with both
-    // team names like FD/MGM — findAndClickPikkitGame locates the away
-    // team's row then clicks the nearest following "More wagers" link.
-    let clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
-    if (!clicked) {
-      await bb.page.waitForTimeout(3000)
-      clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
-    }
-    if (!clicked) return { gameKey: g.gameKey, skipped: true, error: `game link not found on Pikkit MLB listing page — ${PIKKIT_SIGNED_OUT_ERROR}` }
-    // "More wagers" navigates to a whole new page (the game's event page),
-    // not just an in-place DOM update — give it real time to load.
-    await bb.page.waitForTimeout(3000)
-
-    // Confirmed live: this click can land on the WRONG game's event page —
+    // Confirmed live: this click can land on the WRONG game's event page -
     // a debug dump for a game reporting "no markets scraped" (CWS@TEX)
     // showed a completely unrelated matchup (Orioles @ Red Sox) instead,
     // most likely findAndClickPikkitGame's "nearest following More wagers
@@ -75,54 +60,70 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     // one's — a real data-integrity risk, not just a missed scrape. Verify
     // both teams actually appear on the page before trusting anything
     // scraped from it.
-    const awayWord = escapeRe(distinguishingSuffix(g.awayTeam))
-    const homeWord = escapeRe(distinguishingSuffix(g.homeTeam))
-    const landedText = await bb.page.evaluate(() => document.body?.innerText ?? '').catch(() => '')
-    if (!new RegExp(awayWord, 'i').test(landedText) || !new RegExp(homeWord, 'i').test(landedText)) {
-      return {
-        gameKey: g.gameKey,
-        error: 'landed on the wrong game page after clicking "More wagers" on the Pikkit listing — expected teams not found',
-      }
-    }
-
-    let oddsClicked = await clickTabByText(bb.page, 'Odds')
-    if (!oddsClicked) {
-      await bb.page.waitForTimeout(2500)
-      oddsClicked = await clickTabByText(bb.page, 'Odds')
-    }
-    await bb.page.waitForTimeout(2000)
-
-    // Confirmed live: this one failed consistently across 2 real attempts
+    // Confirmed live: the Batting Props click failed consistently across 2 real attempts
     // even after the retry-for-timing fix, unlike Odds — reads as an exact-
     // text-match miss (clickTabByText defaults to exact), not a timing
     // issue. Pikkit likely renders something alongside the label itself
     // (a count badge, icon text) that breaks an exact match. Non-exact
     // (substring) match instead, still with one retry for genuine timing.
-    let propsClicked = await clickTabByText(bb.page, 'Batting Props', false)
-    if (!propsClicked) {
-      await bb.page.waitForTimeout(2500)
-      propsClicked = await clickTabByText(bb.page, 'Batting Props', false)
-    }
-    await bb.page.waitForTimeout(1500)
+    let scrape: Awaited<ReturnType<typeof runPikkitScrape>> | null = null
+    let stage = 'listing'
+    let oddsClicked = false
+    let propsClicked = false
+    let lastReason = ''
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      stage = 'listing'
+      await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
+      await bb.page.waitForTimeout(attempt === 1 ? 1500 : 3000)
+      const clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
+      if (!clicked) { lastReason = `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`; continue }
 
-    let scrape = await bb.page.evaluate(runPikkitScrape)
-    let marketCount = Object.keys(scrape.props).length
-    if (!marketCount) {
+      stage = 'event-page'
       await bb.page.waitForTimeout(3000)
+      const awayWord = escapeRe(distinguishingSuffix(g.awayTeam))
+      const homeWord = escapeRe(distinguishingSuffix(g.homeTeam))
+      const landedText = await bb.page.evaluate(() => document.body?.innerText ?? '').catch(() => '')
+      if (!new RegExp(awayWord, 'i').test(landedText) || !new RegExp(homeWord, 'i').test(landedText)) {
+        lastReason = 'landed on the wrong game page - expected teams not found'
+        continue
+      }
+
+      stage = 'odds-tab'
+      oddsClicked = await clickTabByText(bb.page, 'Odds')
+      if (!oddsClicked) {
+        await bb.page.waitForTimeout(2000)
+        oddsClicked = await clickTabByText(bb.page, 'Odds')
+      }
+      await bb.page.waitForTimeout(1500)
+
+      stage = 'batting-props-tab'
+      propsClicked = await clickTabByText(bb.page, 'Batting Props', false)
+      if (!propsClicked) {
+        await bb.page.waitForTimeout(2000)
+        propsClicked = await clickTabByText(bb.page, 'Batting Props', false)
+      }
+      await bb.page.waitForTimeout(1200)
+
+      stage = 'extract'
       scrape = await bb.page.evaluate(runPikkitScrape)
-      marketCount = Object.keys(scrape.props).length
+      if (Object.keys(scrape.props).length) break
+      lastReason = 'no markets scraped'
+      scrape = null
     }
-    if (!marketCount) {
-      // Diagnostic only, opt-in via ?debug=1 — dumps the actual page text at
-      // the point of failure instead of guessing why the Batting Props tab
-      // wasn't found (Pikkit renaming/restructuring the tab vs. it genuinely
-      // not existing yet for this game look identical from the outside
-      // otherwise). Not run on every cron invocation — this is extra page
-      // read time on top of an already long scrape.
-      return { gameKey: g.gameKey, skipped: true, error: 'no markets scraped', oddsTabFound: oddsClicked, battingPropsTabFound: propsClicked }
+    if (!scrape) return {
+      gameKey: g.gameKey,
+      skipped: lastReason.startsWith('game link not found'),
+      error: lastReason || 'no markets scraped',
+      stage,
+      attempts: 2,
+      oddsTabFound: oddsClicked,
+      battingPropsTabFound: propsClicked,
     }
 
-    if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, dryRun: true, scrape }
+    const coverage = summarizePikkitPayload(scrape)
+    const marketCount = coverage.marketCount
+
+    if (dryRun) return { gameKey: g.gameKey, marketsScraped: marketCount, coverage, dryRun: true, scrape }
 
     const imported = await postImport(scrape, date, g.homeTeam, g.awayTeam, g.gameKey)
     if (!imported.ok) {
@@ -131,15 +132,15 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
         status: imported.status,
         marketsScraped: marketCount,
       })
-      return { gameKey: g.gameKey, marketsScraped: marketCount, error: 'pick import failed', imported }
+      return { gameKey: g.gameKey, marketsScraped: marketCount, coverage, error: 'pick import failed', imported }
     }
-    return { gameKey: g.gameKey, marketsScraped: marketCount, imported }
+    return { gameKey: g.gameKey, marketsScraped: marketCount, coverage, partial: !coverage.complete, imported }
   } catch (error) {
     console.error('[scrape-pikkit] scrape failed', {
       gameKey: g.gameKey,
       type: error instanceof Error ? error.name : typeof error,
     })
-    return { gameKey: g.gameKey, error: 'scrape failed' }
+    return { gameKey: g.gameKey, error: error instanceof Error ? `scrape failed: ${error.message.slice(0, 300)}` : 'scrape failed' }
   } finally {
     if (!shared) await bb.close()
   }
@@ -200,7 +201,8 @@ export async function GET(req: Request) {
     const selected = games.filter(game => requested.has(game.gamePk))
     if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
     const results = await scrapeBatch(selected, date, contextId, dryRun)
-    return NextResponse.json({ date, games: selected.length, results })
+    const failed = results.filter(result => 'error' in result && !result.skipped)
+    return NextResponse.json({ date, games: selected.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   }
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)

@@ -13,6 +13,7 @@ import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor } from '@slipsurge/
 import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { canonicalProviderArchiveKey, normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { canonGameKey } from '@slipsurge/core/teamAbbr'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
 import { MatchupPitchBreakdown, type DugoutSpraySelection } from '@/components/dugout/MatchupPitchBreakdown'
 import { GameWeatherCard, GameWeatherSummary } from '@/components/dugout/GameWeatherCard'
@@ -162,8 +163,9 @@ export function buildSaAvgMap(data: any): Record<string, { fd?: number; cz?: num
 // tagged row for the other leg.
 export function buildCommunityPicksMap(data: any, gameKey: string | null) {
   const m: Record<string, Record<string, any>> = {}
+  const canonicalGameKey = gameKey ? canonGameKey(gameKey) : null
   for (const r of (data?.communityPicks ?? [])) {
-    if (r.game_key && gameKey && r.game_key !== gameKey) continue
+    if (r.game_key && canonicalGameKey && canonGameKey(r.game_key) !== canonicalGameKey) continue
     const nn = normName(r.player_name || '')
     const market = r.prop_type || r.market
     if (!nn || !market) continue
@@ -172,7 +174,7 @@ export function buildCommunityPicksMap(data: any, gameKey: string | null) {
     // A row explicitly tagged for THIS game always wins over a legacy/
     // untagged ('') row for the same player+market, regardless of which
     // one the API happened to return last.
-    if (!existing || (r.game_key && r.game_key === gameKey && !existing.game_key)) {
+    if (!existing || (r.game_key && canonicalGameKey && canonGameKey(r.game_key) === canonicalGameKey && !existing.game_key)) {
       m[nn][market] = r
     }
   }

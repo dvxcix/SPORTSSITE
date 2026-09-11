@@ -45,23 +45,35 @@ export async function findAndClickGame(page: Page, awayTeam: string, homeTeam: s
 export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeTeam: string, legIndex = 0): Promise<boolean> {
   const away = distinguishingSuffix(awayTeam).toLowerCase()
   const home = distinguishingSuffix(homeTeam).toLowerCase()
-  const links = page.getByText(/more wagers/i)
-  const matches: typeof links[] = []
+  const links = page.locator('a, button, [role="link"], [role="button"]').filter({ hasText: /more wagers/i })
+  const ranked: Array<{ index: number; depth: number; textLength: number }> = []
   for (let index = 0; index < await links.count(); index++) {
-    const link = links.nth(index)
-    const belongsToGame = await link.evaluate((element, teams) => {
+    const match = await links.nth(index).evaluate((element, teams) => {
       let node: HTMLElement | null = element as HTMLElement
-      for (let depth = 0; node && depth < 8; depth++, node = node.parentElement) {
+      // Pikkit has changed the nesting depth of its event cards more than
+      // once. Eight parents was enough for the old card but now leaves valid
+      // games invisible. Walk farther, while ranking the smallest matching
+      // ancestor so the page/root container can never turn every link into a
+      // false match merely because both team names occur elsewhere.
+      for (let depth = 0; node && depth < 16; depth++, node = node.parentElement) {
         const text = (node.innerText || '').toLowerCase()
-        if (text.includes(teams.away) && text.includes(teams.home)) return true
+        if (text.includes(teams.away) && text.includes(teams.home)) {
+          const wagerControls = Array.from(node.querySelectorAll('a, button, [role="link"], [role="button"]'))
+            .filter(control => /more wagers/i.test((control.textContent || '').trim())).length
+          // A game card has one wager control (occasionally two responsive
+          // variants). A slate/root wrapper has one for every game and must
+          // never qualify as the shared team container.
+          if (wagerControls <= 2) return { depth, textLength: text.length }
+        }
       }
-      return false
-    }, { away, home }).catch(() => false)
-    if (belongsToGame) matches.push(link)
+      return null
+    }, { away, home }).catch(() => null)
+    if (match) ranked.push({ index, ...match })
   }
-  const target = matches[legIndex]
+  ranked.sort((a, b) => a.textLength - b.textLength || a.depth - b.depth || a.index - b.index)
+  const target = ranked[legIndex]
   if (!target) return false
-  await target.click({ timeout: 8000 })
+  await links.nth(target.index).click({ timeout: 8000 })
   return true
 }
 
