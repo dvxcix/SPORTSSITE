@@ -33,11 +33,6 @@ export default async function FeedPage({
   ])
   const posts = await attachUserReactions(rawPosts, user?.id)
 
-  // Only fetched when actually needed — an empty feed (most commonly the
-  // "Following" tab for someone who hasn't followed anyone yet) previously
-  // just showed static text with no way forward. RightSidebar already
-  // solves this on desktop, but it's hidden below the xl breakpoint, so
-  // mobile — most of a real user base — saw nothing at all.
   let suggested: any[] = []
   if (posts.length === 0 && user) {
     const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', user.id)
@@ -71,12 +66,7 @@ export default async function FeedPage({
           </div>
           <Link href="/explore" className="ss-feed-explore"><Compass size={15} /> Explore</Link>
         </header>
-        {/* Stories — admin's Feature Flags toggle saved to site_settings but
-            nothing ever read it back out, so turning "Stories" off there had
-            zero effect on this bar. */}
         {storiesEnabled && <StoriesBar />}
-
-        {/* Filter tabs */}
         <nav className="ss-feed-filters" aria-label="Feed filters">
           {filters.map(f => {
             const Icon = f.icon
@@ -94,12 +84,10 @@ export default async function FeedPage({
           })}
         </nav>
 
-        {/* Post composer */}
         <div className="ss-feed-composer-wrap">
           <FeedComposer />
         </div>
 
-        {/* Posts */}
         {posts.length === 0 ? (
           <div className="ss-feed-empty">
             <PageState
@@ -109,17 +97,6 @@ export default async function FeedPage({
               actionLabel={filter === 'following' ? 'Explore members' : undefined}
               actionHref={filter === 'following' ? '/explore' : undefined}
             />
-            {/*
-            <div className="text-center mb-6">
-              <p className="text-4xl mb-3">🏟️</p>
-              <p className="text-zinc-400 font-medium">
-                {filter === 'following' ? "No posts from people you follow yet" : filter === 'picks' ? 'No picks posted yet' : 'No posts yet'}
-              </p>
-              <p className="text-zinc-600 text-sm mt-1">
-                {filter === 'following' ? 'Follow some bettors to see their picks here' : 'Be the first to drop a pick'}
-              </p>
-            </div>
-            */}
             {suggested.length > 0 && (
               <div className="max-w-sm mx-auto mt-6 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
