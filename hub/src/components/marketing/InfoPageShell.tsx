@@ -1,25 +1,29 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import Image from 'next/image'
+import styles from './InfoPageShell.module.css'
 
 export function InfoPageShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 80px', color: 'var(--text-1)' }}>
-      <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-3)', textDecoration: 'none', marginBottom: 20 }}>
-        <ArrowLeft size={14} /> Back to SlipSurge
-      </Link>
-      <h1 style={{ fontSize: 26, fontWeight: 900, marginBottom: subtitle ? 4 : 24 }}>{title}</h1>
-      {subtitle && <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28 }}>{subtitle}</p>}
-      {children}
+    <div className={styles.page}>
+      <header className={styles.nav}>
+        <Link href="/" className={styles.brand}><Image src="/logo.png" alt="" width={28} height={28}/><span>Slip<span>Surge</span></span></Link>
+        <Link href="/" className={styles.back}><ArrowLeft size={14} /> Home</Link>
+      </header>
+      <main className={styles.main}>
+        <header className={styles.hero}><span className={styles.eyebrow}>SlipSurge</span><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</header>
+        <div className={styles.content}>{children}</div>
+      </main>
     </div>
   )
 }
 
 export function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <div id={id} style={{ marginBottom: 24, scrollMarginTop: 20 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>{title}</h2>
-      <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-2)' }}>{children}</div>
-    </div>
+    <section id={id} className={styles.section}>
+      <h2>{title}</h2>
+      <div className={styles.sectionBody}>{children}</div>
+    </section>
   )
 }
 
@@ -27,22 +31,12 @@ export function Section({ id, title, children }: { id?: string; title: string; c
 // each pass the matching `id` to Section above.
 export function Toc({ items }: { items: { id: string; label: string }[] }) {
   return (
-    <nav
-      aria-label="Table of contents"
-      style={{
-        marginBottom: 32, padding: '14px 16px', background: 'var(--surface-2)',
-        border: '1px solid var(--border)', borderRadius: 10,
-      }}
-    >
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8 }}>
-        On this page
-      </div>
-      <ol style={{ margin: 0, padding: 0, listStyle: 'none', columns: 2, columnGap: 20 }}>
+    <nav aria-label="Table of contents" className={styles.toc}>
+      <strong>On this page</strong>
+      <ol>
         {items.map((item, i) => (
-          <li key={item.id} style={{ fontSize: 13, marginBottom: 6, breakInside: 'avoid' }}>
-            <a href={`#${item.id}`} style={{ color: 'var(--text-2)', textDecoration: 'none' }}>
-              {i + 1}. {item.label}
-            </a>
+          <li key={item.id}>
+            <a href={`#${item.id}`}>{i + 1}. {item.label}</a>
           </li>
         ))}
       </ol>

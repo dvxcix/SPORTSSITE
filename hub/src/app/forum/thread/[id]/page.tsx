@@ -5,6 +5,7 @@ import { Pin, Lock } from 'lucide-react'
 import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,13 +39,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     .order('created_at', { ascending: true })
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <div className="ss-forum-page max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
       <CommunityNav />
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
-          <a href="/forum" className="hover:text-zinc-300">Forum</a>
+          <Link href="/forum" className="hover:text-zinc-300">Forum</Link>
           <span>/</span>
-          <a href={`/forum/${thread.category?.slug}`} className="hover:text-zinc-300">{thread.category?.name}</a>
+          <Link href={`/forum/${thread.category?.slug}`} className="hover:text-zinc-300">{thread.category?.name}</Link>
         </div>
         <div className="flex items-start gap-2">
           {thread.is_pinned && <Pin size={14} className="text-green-400 mt-1 shrink-0" />}
@@ -54,9 +55,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* OP */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
+      <article className="ss-forum-post is-original">
         <div className="flex items-center gap-3 mb-3">
-          <MemberAvatar src={thread.author?.avatar_url} name={thread.author?.display_name || thread.author?.username || 'Member'} size={38} />
+          <Link href={`/profile/${thread.author?.username}`}><MemberAvatar src={thread.author?.avatar_url} name={thread.author?.display_name || thread.author?.username || 'Member'} size={38} /></Link>
           <div>
             <p className="text-sm font-bold text-white flex items-center gap-1">
               {thread.author?.display_name || thread.author?.username}
@@ -66,15 +67,15 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         {thread.content && <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{thread.content}</p>}
-      </div>
+      </article>
 
       {/* Replies */}
       {(replies?.length ?? 0) > 0 && (
         <div className="space-y-3 mb-4">
           {(replies ?? []).map((r: any, i: number) => (
-            <div key={r.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <article key={r.id} className="ss-forum-post">
               <div className="flex items-center gap-3 mb-3">
-                <MemberAvatar src={r.author?.avatar_url} name={r.author?.display_name || r.author?.username || 'Member'} size={34} />
+                <Link href={`/profile/${r.author?.username}`}><MemberAvatar src={r.author?.avatar_url} name={r.author?.display_name || r.author?.username || 'Member'} size={34} /></Link>
                 <div>
                   <p className="text-sm font-bold text-white flex items-center gap-1">
                     {r.author?.display_name || r.author?.username}
@@ -84,7 +85,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
               <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{r.content}</p>
-            </div>
+            </article>
           ))}
         </div>
       )}
@@ -93,7 +94,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       {!thread.is_locked && !user && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
           <p className="text-sm text-zinc-400 mb-3">Sign in to reply</p>
-          <a href="/auth/login" className="inline-block bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2 rounded-xl text-sm transition-colors">Sign In</a>
+          <Link href={`/auth/login?next=/forum/thread/${thread.id}`} className="inline-block bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2 rounded-xl text-sm transition-colors">Sign In</Link>
         </div>
       )}
       {thread.is_locked && (

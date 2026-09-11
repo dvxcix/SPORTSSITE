@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2 } from 'lucide-react'
 import { useCustomEmojis } from '@/lib/emoji'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const NOTIF_ICONS: Record<string, any> = {
   reaction: Heart,
@@ -39,7 +40,7 @@ function timeAgo(dateStr: string, nowMs: number) {
 }
 
 export function NotificationsList({ userId, initialNotifications }: { userId: string; initialNotifications: NotifRow[] }) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [renderedAt] = useState(() => Date.now())
   const [notifications, setNotifications] = useState(initialNotifications)
   const [clearing, setClearing] = useState(false)
@@ -164,10 +165,10 @@ function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; o
     const custom = n.data.emoji.match(/^:([a-z0-9_]+):$/)
     const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
     badge = customEmoji
-      ? <img src={customEmoji.image_url} alt={n.data.emoji} style={{ width: 11, height: 11, objectFit: 'contain' }} />
+      ? <SafeImage src={customEmoji.image_url} alt={n.data.emoji} style={{ width: 11, height: 11, objectFit: 'contain' }} fallback={<span style={{ fontSize: 10 }}>{n.data.emoji}</span>} />
       : <span style={{ fontSize: 10, lineHeight: 1 }}>{n.data.emoji}</span>
   } else if (n.type === 'pick_result' && n.data?.team_logo) {
-    badge = <img src={n.data.team_logo} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
+    badge = <SafeImage src={n.data.team_logo} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} fallback={<Icon size={10} style={{ color: 'var(--accent)' }} />} />
   }
 
   const inner = (
@@ -180,7 +181,7 @@ function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; o
             // square/transparent canvas — cover crops right into the
             // artwork; it needs to shrink to fit inside instead, with a
             // little breathing room so it doesn't touch the circle's edge.
-            <img
+            <SafeImage
               src={n.actor?.avatar_url || n.data?.avatar_url}
               alt=""
               style={{
@@ -259,7 +260,7 @@ function GroupedFollowRow({ items, nowMs, onDelete }: { items: NotifRow[]; nowMs
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
           {(latest.actor?.avatar_url || latest.data?.avatar_url) && (
-            <img src={latest.actor?.avatar_url || latest.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <SafeImage src={latest.actor?.avatar_url || latest.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
         </div>
         <div style={{

@@ -1,9 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
 import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
@@ -18,6 +19,7 @@ import { Switch } from '@/components/ui/Switch'
 const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
 const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Privacy', 'Follow', 'Done']
+const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
 
 const slide = {
   enter: { opacity: 0, x: 16 },
@@ -31,12 +33,13 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   accountType: 'user' | 'creator'
   suggestedUsers: SuggestedUser[]
 }) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [step, setStep] = useState(0)
   const [displayName, setDisplayName] = useState(initialProfile?.display_name ?? '')
   const [bio, setBio] = useState(initialProfile?.bio ?? '')
   const [avatarUrl, setAvatarUrl] = useState(initialProfile?.avatar_url ?? '')
   const [teams, setTeams] = useState<string[]>(initialProfile?.favorite_teams ?? [])
+  const [sports, setSports] = useState<string[]>(initialProfile?.favorite_sports ?? [])
   // Same two toggles/copy as Settings > Privacy (PrivacySettingsForm) — new
   // members had no way to know these existed at all before this step, since
   // nothing pointed them at Settings unless they went looking on their own.
@@ -49,6 +52,10 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 
   function toggleTeam(abbr: string) {
     setTeams(prev => prev.includes(abbr) ? prev.filter(x => x !== abbr) : [...prev, abbr])
+  }
+
+  function toggleSport(sport: string) {
+    setSports(prev => prev.includes(sport) ? prev.filter(value => value !== sport) : [...prev, sport])
   }
 
   async function uploadAvatar(file: File) {
@@ -72,6 +79,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       bio: bio.trim() || undefined,
       avatar_url: avatarUrl.trim() || undefined,
       favorite_teams: teams,
+      favorite_sports: sports,
       is_private: isPrivate,
       hide_win_rate: hideWinRate,
       // The proxy (src/lib/supabase/middleware.ts) redirects any
@@ -86,7 +94,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
     }
     // Best-effort — never blocks getting into the app if the email fails.
     fetch('/api/onboarding/notify-welcome', { method: 'POST', keepalive: true }).catch(() => {})
-    trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length })
+    trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length, favorite_sport_count: sports.length })
     // Use one full-document handoff after the confirmed profile write. Calling
     // router.push() and router.refresh() back-to-back creates competing RSC
     // navigations and can strand a new member on Next/Vercel's generic
@@ -206,7 +214,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                   className="relative rounded-full overflow-hidden flex items-center justify-center group"
                   style={{ width: 112, height: 112, background: 'var(--surface-2)', border: '2px solid var(--border-2)', fontSize: 36, fontWeight: 900, color: 'var(--text-3)' }}
                 >
-                  {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}
+                  {avatarUrl ? <Image src={avatarUrl} alt="" fill sizes="112px" className="object-cover" /> : initials}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.55)' }}>
                     {uploading ? <Loader2 size={22} className="animate-spin" color="#fff" /> : <Upload size={22} color="#fff" />}
                   </div>
@@ -222,26 +230,24 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Favorite Teams</h2>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>We'll personalize your feed and Dugout around these.</p>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Your Sports</h2>
+                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Choose what you follow. You can refine this anytime.</p>
               </div>
-              <div className="flex flex-wrap gap-2" style={{ maxHeight: 260, overflowY: 'auto' }}>
-                {MLB_TEAMS.map(t => (
-                  <button key={t.abbr} type="button" onClick={() => toggleTeam(t.abbr)}
-                    className="flex items-center gap-1.5"
-                    style={{
-                      padding: '7px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-                      border: `1px solid ${teams.includes(t.abbr) ? 'var(--accent)' : 'var(--border-2)'}`,
-                      background: teams.includes(t.abbr) ? 'var(--accent-dim)' : 'transparent',
-                      color: teams.includes(t.abbr) ? 'var(--accent)' : 'var(--text-3)',
-                      transition: 'all 130ms',
-                    }}>
-                    <img src={getTeamLogoUrl(t.abbr)} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
-                    {t.shortName}
-                  </button>
-                ))}
+              <div className="ss-onboarding-sports">
+                {SPORTS.map(sport => <button key={sport} type="button" className={sports.includes(sport) ? 'is-selected' : ''} onClick={() => toggleSport(sport)}>{sports.includes(sport) && <Check size={12}/>} {sport}</button>)}
               </div>
-              <StepNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={teams.length ? 'Next' : 'Skip for now'} />
+              {(sports.length === 0 || sports.includes('MLB')) && <div>
+                <p className="mb-2 text-xs font-black uppercase tracking-widest text-zinc-500">Favorite MLB teams</p>
+                <div className="ss-onboarding-teams">
+                  {MLB_TEAMS.map(t => (
+                    <button key={t.abbr} type="button" onClick={() => toggleTeam(t.abbr)} className={teams.includes(t.abbr) ? 'is-selected' : ''}>
+                      <Image src={getTeamLogoUrl(t.abbr) ?? '/logo.png'} alt="" width={18} height={18} />
+                      {t.shortName}
+                    </button>
+                  ))}
+                </div>
+              </div>}
+              <StepNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={sports.length || teams.length ? 'Next' : 'Skip for now'} />
             </div>
           )}
 

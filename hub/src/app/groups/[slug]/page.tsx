@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions, getChannelMessages } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import { FeedComposer } from '@/components/social/FeedComposer'
 import { GroupJoinButton } from '@/components/groups/GroupJoinButton'
@@ -12,6 +13,8 @@ import { Users, Lock, Globe, Settings } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import { GroupWorkspaceTabs } from '@/components/groups/GroupWorkspaceTabs'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,19 +92,19 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
   const chatMessages = canViewContent && group.channel_id ? await getChannelMessages(group.channel_id, 50) : []
 
-  const canPost = isMember || group.is_public
+  const canPost = isMember
 
   return (
-    <div className="max-w-4xl mx-auto px-3 py-4 sm:px-6 sm:py-8">
+    <div className="ss-group-page max-w-4xl mx-auto px-3 py-4 sm:px-6 sm:py-8">
       <CommunityNav />
       <div className="mt-4 overflow-hidden rounded-3xl border border-white/8 bg-[#0d100f]">
       <div className="h-36 bg-gradient-to-r from-zinc-800 to-zinc-700 relative overflow-hidden">
-        {group.banner_url && <img src={group.banner_url} alt="" className="w-full h-full object-cover" />}
+        {group.banner_url && <Image src={group.banner_url} alt="" fill sizes="(max-width: 768px) 100vw, 896px" className="object-cover" />}
         {group.sport && (
           <div className="absolute top-3 right-3">
             {sportLogoUrl(group.sport) ? (
               <span className="bg-blue-400/20 backdrop-blur p-1.5 rounded-full border border-blue-400/30 flex items-center">
-                <img src={sportLogoUrl(group.sport)} alt={group.sport} className="w-5 h-5 object-contain" />
+                <Image src={sportLogoUrl(group.sport)!} alt={group.sport} width={20} height={20} className="object-contain" />
               </span>
             ) : (
               <span className="text-xs font-bold text-blue-400 bg-blue-400/20 backdrop-blur px-2 py-1 rounded-full border border-blue-400/30">{group.sport}</span>
@@ -112,8 +115,8 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
       <div className="px-4 pb-4">
         <div className="relative z-10 flex items-end justify-between -mt-8 mb-4">
-          <div className="w-16 h-16 rounded-xl bg-zinc-800 border-4 border-zinc-950 flex items-center justify-center text-2xl shadow-lg">
-            {group.avatar_url ? <img src={group.avatar_url} alt="" className="w-full h-full object-cover rounded-lg" /> : (group.emoji || '👥')}
+          <div className="relative w-16 h-16 overflow-hidden rounded-xl bg-zinc-800 border-4 border-zinc-950 flex items-center justify-center text-2xl shadow-lg">
+            {group.avatar_url ? <Image src={group.avatar_url} alt="" fill sizes="64px" className="object-cover rounded-lg" /> : (group.emoji || '👥')}
           </div>
           <div className="flex gap-2">
             {isOwner && (
@@ -147,10 +150,10 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
         {/* Member previews */}
         {(members?.length ?? 0) > 0 && (
           <div className="flex items-center gap-1 mt-3">
-            {(members ?? []).slice(0, 6).map((m: any) => (
-              <div key={m.user?.id} className="w-7 h-7 rounded-full bg-zinc-700 border-2 border-zinc-950 overflow-hidden -ml-1 first:ml-0">
-                {m.user?.avatar_url && <img src={m.user.avatar_url} alt="" className="w-full h-full object-cover" />}
-              </div>
+            {(members ?? []).slice(0, 6).map((m: any) => m.user && (
+              <Link key={m.user.id} href={`/profile/${m.user.username}`} className="-ml-1 first:ml-0" aria-label={m.user.display_name || m.user.username}>
+                <MemberAvatar src={m.user.avatar_url} name={m.user.display_name || m.user.username} size={28} />
+              </Link>
             ))}
             {(group.member_count ?? 0) > 6 && <span className="text-xs text-zinc-500 ml-2">+{(group.member_count ?? 0) - 6} more</span>}
           </div>
@@ -178,8 +181,9 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           <p className="text-xs text-zinc-600 mt-1">Only members can see posts and chat here. Ask a member to invite you.</p>
         </div>
       ) : (
-        <>
-          <div className="px-4 py-4 space-y-3">
+        <GroupWorkspaceTabs
+          postCount={posts.length}
+          posts={<div className="px-4 py-4 space-y-3">
             {canPost && user && <FeedComposer groupId={group.id} />}
             {(posts?.length ?? 0) === 0 ? (
               <div className="text-center py-16">
@@ -192,14 +196,10 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
             ) : (
               posts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)
             )}
-          </div>
-
-          {group.channel_id && (
-            <div className="border-t border-zinc-800">
-              <div className="px-4 pt-4 pb-1">
-                <h2 className="text-sm font-black text-white">Live chat</h2>
-              </div>
-              <div className="h-[480px] flex flex-col border border-zinc-800 rounded-xl mx-4 mb-4 overflow-hidden">
+          </div>}
+          chat={group.channel_id && isMember ? (
+            <div className="ss-group-chat-shell">
+              <div className="h-[min(620px,70dvh)] min-h-[440px] flex flex-col overflow-hidden">
                 <ChatRoom
                   channelId={group.channel_id}
                   channelName={group.name}
@@ -208,8 +208,8 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
                 />
               </div>
             </div>
-          )}
-        </>
+          ) : undefined}
+        />
       )}
       </div>
     </div>

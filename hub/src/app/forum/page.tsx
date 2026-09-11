@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { MessageSquare, Plus } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import Image from 'next/image'
 
 export const revalidate = 60
 
@@ -16,7 +17,7 @@ export default async function ForumPage() {
     .order('sort_order', { ascending: true })
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <div className="ss-forum-page max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
       <CommunityNav />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -36,7 +37,7 @@ export default async function ForumPage() {
       <div className="space-y-2">
         {(categories ?? []).map((cat: any) => (
           <Link key={cat.id} href={`/forum/${cat.slug}`}
-            className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-all">
+            className="ss-forum-category">
             <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl shrink-0">
               {cat.icon}
             </div>
@@ -45,7 +46,7 @@ export default async function ForumPage() {
                 <p className="font-bold text-white">{cat.name}</p>
                 {cat.sport && (
                   sportLogoUrl(cat.sport)
-                    ? <img src={sportLogoUrl(cat.sport)} alt={cat.sport} className="w-3.5 h-3.5 object-contain" />
+                    ? <Image src={sportLogoUrl(cat.sport)!} alt={cat.sport} width={14} height={14} className="object-contain" />
                     : <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full">{cat.sport}</span>
                 )}
               </div>

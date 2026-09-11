@@ -24,7 +24,7 @@ export default async function ForumCategoryPage({ params }: { params: Promise<{ 
     .limit(30)
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <div className="ss-forum-page max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
       <CommunityNav />
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -55,7 +55,7 @@ export default async function ForumCategoryPage({ params }: { params: Promise<{ 
         <div className="space-y-2">
           {(threads ?? []).map((t: any) => (
             <Link key={t.id} href={`/forum/thread/${t.id}`}
-              className={`flex gap-4 bg-zinc-900 border rounded-xl p-4 hover:border-zinc-700 transition-all ${t.is_pinned ? 'border-green-500/30' : 'border-zinc-800'}`}>
+              className={`ss-forum-thread ${t.is_pinned ? 'is-pinned' : ''}`}>
               <MemberAvatar src={t.author?.avatar_url} name={t.author?.display_name || t.author?.username || 'Member'} size={38} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
