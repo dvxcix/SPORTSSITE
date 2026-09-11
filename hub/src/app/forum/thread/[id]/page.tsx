@@ -7,6 +7,7 @@ import { CommunityNav } from '@/components/community/CommunityNav'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import Link from 'next/link'
 import { ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
+import { ForumReactions, type ForumReaction } from '@/components/forum/ForumReactions'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,17 +25,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const [{ data: { user } }, { data: thread }] = await Promise.all([
+  const [{ data: { user } }, { data: thread }, { data: replies }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('forum_threads').select('*, author:users(username, display_name, avatar_url, is_verified), category:forum_categories(name, slug)').eq('id', id).single(),
+    supabase.from('forum_replies').select('*, author:users(username, display_name, avatar_url, is_verified)').eq('thread_id', id).order('created_at', { ascending: true }),
   ])
   if (!thread) notFound()
 
-  const { data: replies } = await supabase
-    .from('forum_replies')
-    .select('*, author:users(username, display_name, avatar_url, is_verified)')
-    .eq('thread_id', id)
-    .order('created_at', { ascending: true })
+  const targetIds = [thread.id, ...(replies ?? []).map(reply => reply.id)]
+  const { data: reactionRows } = targetIds.length
+    ? await supabase.from('reactions').select('target_id, emoji, user_id').in('target_id', targetIds).in('target_type', ['forum_thread', 'forum_reply'])
+    : { data: [] }
+  const reactionsByTarget = new Map<string, ForumReaction[]>()
+  for (const reaction of reactionRows ?? []) {
+    const current = reactionsByTarget.get(reaction.target_id) ?? []
+    current.push({ emoji: reaction.emoji, user_id: reaction.user_id })
+    reactionsByTarget.set(reaction.target_id, current)
+  }
+  const returnPath = `/forum/thread/${thread.id}`
 
   return (
     <ProductPageShell narrow>
@@ -62,6 +70,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         {thread.content && <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{thread.content}</p>}
+        <ForumReactions targetId={thread.id} targetType="forum_thread" userId={user?.id} initialReactions={reactionsByTarget.get(thread.id) ?? []} returnPath={returnPath} />
       </article>
 
       {/* Replies */}
@@ -80,6 +89,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
               <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{r.content}</p>
+              <ForumReactions targetId={r.id} targetType="forum_reply" userId={user?.id} initialReactions={reactionsByTarget.get(r.id) ?? []} returnPath={returnPath} />
             </article>
           ))}
         </div>
