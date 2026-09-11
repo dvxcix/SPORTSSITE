@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import { AuthStatus } from '@/components/auth/AuthShell'
 
 // The actual "log the user in" step. The callback route (server-side)
 // verified Whop, checked access, and provisioned/found the matching
@@ -30,27 +31,12 @@ function WhopCompleteInner() {
     })
   }, [searchParams, router, tokenHash])
 
-  return (
-    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-      {requestError || error ? (
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 12 }}>{requestError || error}</div>
-          <a href="/auth/login" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>Back to login →</a>
-        </div>
-      ) : (
-        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Signing you in…</div>
-      )}
-    </div>
-  )
+  return <AuthStatus error={requestError || error}>Signing you in…</AuthStatus>
 }
 
 export default function WhopCompletePage() {
   return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Loading…</div>
-      </div>
-    }>
+    <Suspense fallback={<AuthStatus>Loading…</AuthStatus>}>
       <WhopCompleteInner />
     </Suspense>
   )

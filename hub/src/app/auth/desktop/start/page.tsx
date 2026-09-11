@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { AuthStatus } from '@/components/auth/AuthShell'
 
 function DesktopAuthStartInner() {
   const searchParams = useSearchParams()
@@ -44,17 +45,7 @@ function DesktopAuthStartInner() {
 }
 
 function DesktopAuthStatus({ error }: { error: string }) {
-  return (
-    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#090b0f', color: '#f5f7fa' }}>
-      <div style={{ textAlign: 'center', maxWidth: 420, padding: 32 }}>
-        <img src="/logo.png" alt="SlipSurge" width={52} height={52} />
-        <h1 style={{ margin: '18px 0 8px', fontSize: 22 }}>SlipSurge desktop sign-in</h1>
-        <p style={{ color: error ? '#ff5f77' : '#9ca3af', lineHeight: 1.5 }}>
-          {error || 'Opening your secure sign-in…'}
-        </p>
-      </div>
-    </main>
-  )
+  return <AuthStatus error={error}>Opening secure sign-in…</AuthStatus>
 }
 
 export default function DesktopAuthStartPage() {

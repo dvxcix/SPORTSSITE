@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { AuthStatus } from '@/components/auth/AuthShell'
 
 function DesktopAuthCompleteInner() {
   const router = useRouter()
@@ -32,15 +33,9 @@ function DesktopAuthCompleteInner() {
     })
   }, [router, searchParams])
 
-  return (
-    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>
-      <p style={{ color: error ? 'var(--red)' : 'var(--text-3)', fontSize: 13 }}>
-        {error || 'Finishing desktop sign-in…'}
-      </p>
-    </main>
-  )
+  return <AuthStatus error={error}>Finishing desktop sign-in…</AuthStatus>
 }
 
 export default function DesktopAuthCompletePage() {
-  return <Suspense fallback={null}><DesktopAuthCompleteInner /></Suspense>
+  return <Suspense fallback={<AuthStatus>Loading…</AuthStatus>}><DesktopAuthCompleteInner /></Suspense>
 }

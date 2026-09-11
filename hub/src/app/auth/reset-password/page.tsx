@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { AuthShell } from '@/components/auth/AuthShell'
 
 // Supabase error labels for expired/already-used recovery links aren't
 // exactly the friendliest wording to show verbatim — map the ones that
@@ -85,57 +87,46 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link href="/" className="text-3xl font-black">
-            <span className="text-white">Slip</span><span className="text-green-400">Surge</span>
-          </Link>
-          <p className="text-zinc-400 text-sm mt-2">Set a new password</p>
-        </div>
-
+    <AuthShell eyebrow="Account recovery" title="Set a new password" description="Choose a strong password you don’t use elsewhere.">
         {linkStatus === 'checking' ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
-            <p className="text-sm text-zinc-400">Verifying your reset link…</p>
+          <div className="ss-auth-status" role="status">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-lime-300/25 border-t-lime-300" aria-hidden="true" />
+            <p>Verifying your reset link…</p>
           </div>
         ) : linkStatus === 'invalid' ? (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
-            <p className="text-2xl mb-3">⚠️</p>
-            <p className="font-bold text-white mb-1">Link didn’t work</p>
-            <p className="text-sm text-zinc-400">{linkError}</p>
-            <p className="text-xs text-zinc-500 mt-3">
-              If you opened this link on a different device or browser than the one you requested it from, open it on the original one instead — or just request a new link below.
-            </p>
-            <Link href="/auth/forgot-password" className="inline-block mt-4 bg-green-500 hover:bg-green-400 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+          <div className="ss-auth-card text-center">
+            <AlertTriangle size={26} className="mx-auto text-rose-400" aria-hidden="true" />
+            <strong className="text-white">Link didn’t work</strong>
+            <p className="text-xs leading-relaxed text-zinc-400">{linkError}</p>
+            <Link href="/auth/forgot-password" className="ss-auth-submit">
               Request a new link
             </Link>
           </div>
         ) : done ? (
-          <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-6 text-center">
-            <p className="text-2xl mb-3">✅</p>
-            <p className="font-bold text-white">Password updated!</p>
-            <p className="text-sm text-zinc-400 mt-1">Redirecting you to your feed…</p>
+          <div className="ss-auth-success">
+            <CheckCircle2 size={26} aria-hidden="true" />
+            <strong>Password updated</strong>
+            <p>Taking you back to your feed…</p>
           </div>
         ) : (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
-            {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+          <div className="ss-auth-card">
+            {error && <div role="alert" className="ss-auth-alert">{error}</div>}
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">New Password</label>
+              <label>New password</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all" />
+                autoComplete="new-password" className="ss-input" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Confirm Password</label>
+              <label>Confirm password</label>
               <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all" />
+                autoComplete="new-password" className="ss-input" />
             </div>
             <button onClick={reset} disabled={loading || !password || !confirm}
-              className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
-              {loading ? 'Updating…' : 'Set New Password'}
+              className="ss-auth-submit">
+              {loading ? 'Updating…' : 'Set new password'}
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </AuthShell>
   )
 }
