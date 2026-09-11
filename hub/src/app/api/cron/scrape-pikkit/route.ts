@@ -75,7 +75,18 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
     for (let attempt = 1; attempt <= 2; attempt++) {
       stage = 'listing'
       await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
-      await bb.page.waitForTimeout(attempt === 1 ? 1500 : 3000)
+      // The redesigned Events board hydrates matchup cards from a client-side
+      // request after the shell is ready. A fixed 1.5s sleep worked on quiet
+      // runs but intermittently inspected the shell before any teams existed
+      // when several pages shared a session. Wait for THIS game's two teams;
+      // a timeout still falls through to the bounded diagnostic below.
+      await bb.page.waitForFunction(({ away, home }) => {
+        const text = (document.body?.innerText || '').toLowerCase()
+        return text.includes(away) && text.includes(home)
+      }, {
+        away: distinguishingSuffix(g.awayTeam).toLowerCase(),
+        home: distinguishingSuffix(g.homeTeam).toLowerCase(),
+      }, { timeout: attempt === 1 ? 8_000 : 12_000 }).catch(() => {})
       const clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
       if (!clicked) {
         const listingState = await bb.page.evaluate(({ away, home }) => {
@@ -172,10 +183,12 @@ async function scrapeBatch(games: TodayGame[], date: string, contextId: string, 
   })
   try {
     const results: Awaited<ReturnType<typeof scrapeOneGame>>[] = []
-    // Several isolated pages share one remote browser/session minimum. Four
-    // at a time keeps memory bounded while preserving one result per game.
-    for (let index = 0; index < games.length; index += 4) {
-      const group = games.slice(index, index + 4)
+    // Pikkit's hydrated Events board becomes unreliable when four copies load
+    // simultaneously in one persisted account (the shell appears, but matchup
+    // cards do not). Two pages retains the single paid Browserbase session and
+    // meaningful speedup without starving those client-side requests.
+    for (let index = 0; index < games.length; index += 2) {
+      const group = games.slice(index, index + 2)
       const pages = await Promise.all(group.map((_, pageIndex) => (
         index === 0 && pageIndex === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()
       )))

@@ -65,7 +65,11 @@ async function scrapeBatch(gamePks: number[]) {
       // A requested capture that could not find its game is still a failed
       // capture. `skipped` describes the source condition for alerting; it
       // must never turn missing required data into an HTTP-200 success.
-      const ok = res.ok && Boolean(result) && result?.imported?.ok !== false && !finalReason
+      // The batch endpoint correctly returns 502 when ANY requested game
+      // fails. Do not stamp successful siblings as failures merely because
+      // the aggregate response is non-2xx; each result carries its own import
+      // and coverage outcome.
+      const ok = Boolean(result) && result?.imported?.ok === true && !finalReason
       return { gamePk, status: res.status, ok, skipped, attempts: Number(result?.attempts ?? 1), error: ok ? '' : 'scrape or import failed', reason: finalReason, rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0, coverage: result?.coverage ?? null }
     })
   } catch {
