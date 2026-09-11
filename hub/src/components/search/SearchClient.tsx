@@ -13,6 +13,7 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 
 type SearchTab = 'all' | 'users' | 'posts' | 'picks' | 'mlb' | 'nfl'
 
@@ -126,7 +127,8 @@ export function SearchClient() {
   const showNfl = tab === 'all' || tab === 'nfl'
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <ProductPageShell narrow>
+      <ProductHero icon={<Search size={21} />} eyebrow="Discover" title="Search SlipSurge" description="Players, teams, members, posts, and picks in one search." />
       {/* Search input */}
       <div className="relative mb-6">
         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -161,10 +163,10 @@ export function SearchClient() {
       {q.trim() && hasResults && (
         <>
           {/* Tabs */}
-          <div className="flex gap-1 mb-4 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+          <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 scrollbar-hide">
             {([['all', 'All'], ['mlb', 'MLB'], ['nfl', 'NFL'], ['users', 'Users'], ['posts', 'Posts'], ['picks', 'Picks']] as const).map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                className={`min-w-16 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${tab === k ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 {l}
               </button>
             ))}
@@ -372,6 +374,6 @@ export function SearchClient() {
           <p className="text-zinc-600 text-sm mt-1">Try a different search term</p>
         </div>
       )}
-    </div>
+    </ProductPageShell>
   )
 }
