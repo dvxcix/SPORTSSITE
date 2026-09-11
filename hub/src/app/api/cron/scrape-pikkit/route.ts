@@ -77,7 +77,23 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
       await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
       await bb.page.waitForTimeout(attempt === 1 ? 1500 : 3000)
       const clicked = await findAndClickPikkitGame(bb.page, g.awayTeam, g.homeTeam, legIdx)
-      if (!clicked) { lastReason = `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`; continue }
+      if (!clicked) {
+        const listingState = await bb.page.evaluate(({ away, home }) => {
+          const controls = Array.from(document.querySelectorAll<HTMLElement>('a[href], button, [role="link"], [role="button"]'))
+          return {
+            url: location.href,
+            hasYourBets: (document.body?.innerText || '').includes('Your Bets'),
+            hasAwayTeam: (document.body?.innerText || '').toLowerCase().includes(away.toLowerCase()),
+            hasHomeTeam: (document.body?.innerText || '').toLowerCase().includes(home.toLowerCase()),
+            controlCount: controls.length,
+            controlLabels: controls.map(control => (control.innerText || control.getAttribute('aria-label') || '').trim())
+              .filter(Boolean).slice(0, 40),
+          }
+        }, { away: distinguishingSuffix(g.awayTeam), home: distinguishingSuffix(g.homeTeam) }).catch(() => null)
+        console.warn('[scrape-pikkit] listing match failed', { gameKey: g.gameKey, attempt, listingState })
+        lastReason = `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`
+        continue
+      }
 
       stage = 'event-page'
       await bb.page.waitForTimeout(3000)

@@ -45,6 +45,21 @@ export async function findAndClickGame(page: Page, awayTeam: string, homeTeam: s
 export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeTeam: string, legIndex = 0): Promise<boolean> {
   const away = distinguishingSuffix(awayTeam).toLowerCase()
   const home = distinguishingSuffix(homeTeam).toLowerCase()
+
+  // Pikkit's September 2026 events redesign made the whole matchup card the
+  // navigation target and removed the visible "More wagers" label. Prefer a
+  // real interactive element that contains both teams before falling back to
+  // the legacy row-pair matcher below. Keeping the both-team requirement is
+  // important: matching only one row can silently open the neighboring game.
+  const pairedControls = page.locator('a[href], button, [role="link"], [role="button"]')
+    .filter({ hasText: new RegExp(escapeRe(away), 'i') })
+    .filter({ hasText: new RegExp(escapeRe(home), 'i') })
+  const pairedCount = await pairedControls.count()
+  if (pairedCount > legIndex) {
+    await pairedControls.nth(legIndex).click({ timeout: 8000 })
+    return true
+  }
+
   const links = page.locator('a, button, [role="link"], [role="button"]').filter({ hasText: /more wagers/i })
   const ranked: Array<{ index: number; depth: number; textLength: number }> = []
   for (let index = 0; index < await links.count(); index++) {
@@ -107,7 +122,35 @@ export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeT
     if (fallbackIndex != null) target = { index: fallbackIndex, depth: 99, textLength: 0 }
   }
 
-  if (!target) return false
+  if (!target) {
+    // Last-resort support for cards implemented as clickable divs. Find the
+    // smallest DOM container containing both team suffixes and click it (or a
+    // single unambiguous descendant control). This intentionally rejects
+    // broad slate wrappers and containers containing several navigation
+    // controls, which would otherwise make a wrong-game import possible.
+    const clickedCard = await page.evaluate(({ away, home, legIndex }) => {
+      const candidates = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+        .flatMap((element, index) => {
+          const text = (element.innerText || '').trim().toLowerCase()
+          if (!text.includes(away) || !text.includes(home) || text.length > 1800) return []
+          const childContainsBoth = Array.from(element.children).some(child => {
+            const childText = ((child as HTMLElement).innerText || '').trim().toLowerCase()
+            return childText.includes(away) && childText.includes(home)
+          })
+          if (childContainsBoth) return []
+          const controls = Array.from(element.querySelectorAll<HTMLElement>('a[href], button, [role="link"], [role="button"]'))
+          if (controls.length > 2) return []
+          return [{ element, index, textLength: text.length, controls }]
+        })
+        .sort((a, b) => a.textLength - b.textLength || a.index - b.index)
+      const candidate = candidates[legIndex]
+      if (!candidate) return false
+      const target = candidate.controls.length === 1 ? candidate.controls[0] : candidate.element
+      target.click()
+      return true
+    }, { away, home, legIndex }).catch(() => false)
+    return clickedCard
+  }
   await links.nth(target.index).click({ timeout: 8000 })
   return true
 }
