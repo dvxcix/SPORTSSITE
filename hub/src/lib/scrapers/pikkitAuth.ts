@@ -40,10 +40,19 @@ async function getAdminRecipients() {
 async function isPikkitSignedIn(contextId: string): Promise<boolean> {
   const bb = await openPikkitSession(contextId, { mode: 'auth-check' })
   try {
-    await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
-    await bb.page.waitForTimeout(2500)
+    // The league page briefly paints the authenticated shell (including
+    // "Your Bets") before Pikkit finishes redirecting an expired session to
+    // /login or /pro. That made the old 2.5s body-text check report a false
+    // positive while every real scrape failed. /events is an authenticated
+    // route exposed by Pikkit's own sidebar; wait for redirects to settle and
+    // require both the shell and a non-auth destination.
+    await bb.page.goto('https://app.pikkit.com/events', { waitUntil: 'domcontentloaded' })
+    await bb.page.waitForTimeout(7000)
+    const settledUrl = bb.page.url()
     const bodyText = await bb.page.evaluate(() => document.body?.innerText ?? '').catch(() => '')
-    return bodyText.includes('Your Bets')
+    const pathname = (() => { try { return new URL(settledUrl).pathname } catch { return '' } })()
+    const authDestination = !/^\/(?:login|join|pro)(?:\/|$)/i.test(pathname)
+    return authDestination && bodyText.includes('Your Bets')
   } finally {
     await bb.close()
   }

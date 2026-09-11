@@ -202,7 +202,11 @@ export async function GET(req: Request) {
     if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
     const results = await scrapeBatch(selected, date, contextId, dryRun)
     const failed = results.filter(result => 'error' in result)
-    return NextResponse.json({ date, games: selected.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
+    const allListingMisses = results.length > 0 && results.every(result => result.error === `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`)
+    const authState = allListingMisses
+      ? await checkPikkitAuthAndAlert(contextId).catch(() => 'unknown' as const)
+      : undefined
+    return NextResponse.json({ date, games: selected.length, failed: failed.length, authState, results }, { status: failed.length ? 502 : 200 })
   }
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)

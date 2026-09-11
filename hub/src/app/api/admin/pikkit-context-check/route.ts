@@ -30,17 +30,20 @@ export async function GET(req: Request) {
   let bb: Awaited<ReturnType<typeof openPikkitSession>> | null = null
   try {
     bb = await openPikkitSession(contextId, { mode: 'context-check' })
-    await bb.page.goto('https://app.pikkit.com/leagues/mlb', { waitUntil: 'domcontentloaded' })
-    await bb.page.waitForTimeout(waitMs)
+    await bb.page.goto('https://app.pikkit.com/events', { waitUntil: 'domcontentloaded' })
+    // Pikkit can render its sidebar before the auth redirect settles. Never
+    // let a short diagnostic wait recreate the false-positive auth check.
+    await bb.page.waitForTimeout(Math.max(waitMs, 7000))
     const url = bb.page.url()
     const title = await bb.page.title().catch(() => null)
     const pageState = await bb.page.evaluate(() => {
       const text = document.body?.innerText?.toLowerCase() ?? ''
       return {
         hasLoginPrompt: /log in|sign in/.test(text),
+        hasAuthenticatedShell: text.includes('your bets'),
         hasGameLinks: document.querySelectorAll('a[href*="game"], a[href*="matchup"]').length > 0,
       }
-    }).catch(() => ({ hasLoginPrompt: false, hasGameLinks: false }))
+    }).catch(() => ({ hasLoginPrompt: false, hasAuthenticatedShell: false, hasGameLinks: false }))
     return NextResponse.json({
       origin: (() => { try { return new URL(url).origin } catch { return null } })(),
       title: typeof title === 'string' ? title.slice(0, 160) : null,
