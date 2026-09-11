@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { ThreadReplyForm } from '@/components/forum/ThreadReplyForm'
 import { Pin, Lock } from 'lucide-react'
 import type { Metadata } from 'next'
+import { CommunityNav } from '@/components/community/CommunityNav'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +38,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     .order('created_at', { ascending: true })
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+      <CommunityNav />
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
           <a href="/forum" className="hover:text-zinc-300">Forum</a>
@@ -53,9 +56,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       {/* OP */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden">
-            {thread.author?.avatar_url && <img src={thread.author.avatar_url} alt="" className="w-full h-full object-cover" />}
-          </div>
+          <MemberAvatar src={thread.author?.avatar_url} name={thread.author?.display_name || thread.author?.username || 'Member'} size={38} />
           <div>
             <p className="text-sm font-bold text-white flex items-center gap-1">
               {thread.author?.display_name || thread.author?.username}
@@ -73,9 +74,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           {(replies ?? []).map((r: any, i: number) => (
             <div key={r.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-700 overflow-hidden">
-                  {r.author?.avatar_url && <img src={r.author.avatar_url} alt="" className="w-full h-full object-cover" />}
-                </div>
+                <MemberAvatar src={r.author?.avatar_url} name={r.author?.display_name || r.author?.username || 'Member'} size={34} />
                 <div>
                   <p className="text-sm font-bold text-white flex items-center gap-1">
                     {r.author?.display_name || r.author?.username}

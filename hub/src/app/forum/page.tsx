@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { MessageSquare, Plus, Pin } from 'lucide-react'
+import { MessageSquare, Plus } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const revalidate = 60
 
@@ -15,13 +16,13 @@ export default async function ForumPage() {
     .order('sort_order', { ascending: true })
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+      <CommunityNav />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-zinc-800 rounded-lg"><MessageSquare size={20} className="text-orange-400" /></div>
           <div>
-            <h1 className="text-xl font-black text-white">Forum</h1>
-            <p className="text-xs text-zinc-500">Threads, debates & pick discussions</p>
+            <h1 className="text-xl font-black text-white">Discussions</h1>
           </div>
         </div>
         {user && (

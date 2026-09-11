@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { hasCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
 import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Radio, Users } from 'lucide-react'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 type ChannelCardData = { id: string; slug: string; name: string; description?: string | null; icon?: string | null; channel_type?: string | null; member_count?: number | null }
 
@@ -20,9 +21,10 @@ export default async function ChannelsPage() {
   const community = (channels ?? []).filter(channel => channel.owner_id !== user?.id)
 
   return <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-    <header className="flex flex-col gap-5 rounded-3xl border border-lime-400/20 bg-[radial-gradient(circle_at_top_right,rgba(74,222,128,.14),transparent_35%),#0c0f0d] p-6 sm:flex-row sm:items-end sm:justify-between sm:p-9"><div><p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.18em] text-lime-300"><Radio size={14}/> Live community</p><h1 className="mt-2 text-3xl font-black text-white sm:text-5xl">Channels</h1><p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">Real-time rooms for creator communities, members, and live sports discussion.</p></div>{creator && <Link href="/groups/create" className="inline-flex items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-sm font-black text-black"><Plus size={16}/> New group and channel</Link>}</header>
+    <CommunityNav />
+    <header className="ss-community-hero"><div><p><Radio size={14}/> Live</p><h1>Channels</h1><span>Talk picks, games, and every live swing.</span></div>{creator && <Link href="/groups/create" className="ss-community-primary"><Plus size={16}/> New community</Link>}</header>
     {creator && (
-      <ChannelSection title="Your channels" eyebrow="Creator workspace" channels={owned} empty={<div className="rounded-2xl border border-dashed border-lime-400/25 bg-lime-400/[.04] p-6"><h3 className="font-black text-white">No creator channel yet</h3><p className="mt-1 text-sm text-zinc-400">Create a group and its channel will be created, connected, and ready for members automatically.</p><Link href="/groups/create" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-lime-300">Create your first group <ArrowRight size={14}/></Link></div>}/>
+      <ChannelSection title="Your channels" eyebrow="Your communities" channels={owned} empty={<div className="rounded-2xl border border-dashed border-lime-400/25 bg-lime-400/[.04] p-6"><h3 className="font-black text-white">No channels yet</h3><Link href="/groups/create" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-lime-300">Create a community <ArrowRight size={14}/></Link></div>}/>
     )}
     <ChannelSection title="Available channels" eyebrow="Conversations" channels={community} empty={<div className="rounded-2xl border border-white/8 bg-white/[.025] p-10 text-center text-sm text-zinc-500">No channels are available yet.</div>}/>
   </main>

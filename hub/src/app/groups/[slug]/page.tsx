@@ -11,6 +11,7 @@ import { ChatRoom } from '@/components/chat/ChatRoom'
 import { Users, Lock, Globe, Settings } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import type { Metadata } from 'next'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,8 +92,9 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   const canPost = isMember || group.is_public
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Banner */}
+    <div className="max-w-4xl mx-auto px-3 py-4 sm:px-6 sm:py-8">
+      <CommunityNav />
+      <div className="mt-4 overflow-hidden rounded-3xl border border-white/8 bg-[#0d100f]">
       <div className="h-36 bg-gradient-to-r from-zinc-800 to-zinc-700 relative overflow-hidden">
         {group.banner_url && <img src={group.banner_url} alt="" className="w-full h-full object-cover" />}
         {group.sport && (
@@ -195,7 +197,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           {group.channel_id && (
             <div className="border-t border-zinc-800">
               <div className="px-4 pt-4 pb-1">
-                <h2 className="text-sm font-black text-white">Group Chat</h2>
+                <h2 className="text-sm font-black text-white">Live chat</h2>
               </div>
               <div className="h-[480px] flex flex-col border border-zinc-800 rounded-xl mx-4 mb-4 overflow-hidden">
                 <ChatRoom
@@ -209,6 +211,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           )}
         </>
       )}
+      </div>
     </div>
   )
 }

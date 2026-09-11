@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
-  Bookmark, MessageSquare, Calendar, BookOpen, ShoppingBag, Zap,
+  Bookmark, Calendar, BookOpen, ShoppingBag,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
   ChevronLeft, ChevronRight, ChartSpline,
   type LucideIcon,
@@ -61,13 +61,11 @@ const nav: NavItem[] = [
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
   null,
   { section: 'Connect' },
-  { href: '/groups',      icon: Users,         label: 'Groups' },
+  { href: '/channels',    icon: Users,         label: 'Community' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
   { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
-  { href: '/forum',       icon: MessageSquare, label: 'Forum', flagKey: 'feature_forum' },
   { href: '/marketplace', icon: ShoppingBag,   label: 'Matrix Marketplace', badge: 'ULT', ultimateOnly: true },
-  { href: '/channels',    icon: Zap,           label: 'Channels' },
   null,
   { section: 'Discover' },
   { href: '/leaderboard', icon: Trophy,        label: 'Leaderboard' },

@@ -9,7 +9,7 @@ const items = [
   { href: '/feed', label: 'Home', icon: Home },
   { href: '/dugout', label: 'Research', icon: FlaskConical },
   { href: '/odds-terminal', label: 'Terminal', icon: ChartSpline },
-  { href: '/channels', label: 'Live', icon: MessagesSquare },
+  { href: '/channels', label: 'Community', icon: MessagesSquare },
 ]
 
 function isActive(pathname: string, href: string) {

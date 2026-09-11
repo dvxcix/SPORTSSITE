@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NewThreadForm } from '@/components/forum/NewThreadForm'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export default async function NewThreadPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const supabase = await createClient()
@@ -11,7 +12,8 @@ export default async function NewThreadPage({ searchParams }: { searchParams: Pr
   const { category } = await searchParams
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+      <CommunityNav />
       <h1 className="text-xl font-black text-white mb-6">New Thread</h1>
       <NewThreadForm userId={user.id} categories={categories ?? []} defaultCategory={category} />
     </div>
