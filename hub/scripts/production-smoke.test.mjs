@@ -371,6 +371,22 @@ test('public blog views are atomic and remain server controlled', async () => {
   assert.ok(migration.includes('grant execute on function public.record_blog_view(uuid) to service_role'))
 })
 
+test('article likes are member-scoped and atomically counted', async () => {
+  const button = await read('src/components/blog/BlogLikeButton.tsx')
+  const page = await read('src/app/blog/[slug]/page.tsx')
+  const route = await read('src/app/api/blogs/[id]/like/route.ts')
+  const migration = await read('supabase/migrations/20260911211000_harden_blog_reactions.sql')
+  assert.ok(button.includes("fetch(`/api/blogs/${blogId}/like`"))
+  assert.ok(!button.includes("from('blogs').update"))
+  assert.ok(page.includes("from('blog_likes').select('blog_id')"))
+  assert.ok(route.includes('supabase.auth.getUser()'))
+  assert.ok(route.includes("admin.rpc('toggle_blog_like'"))
+  assert.ok(migration.includes('blog_likes_user_id_idx'))
+  assert.ok(migration.includes('using ((select auth.uid()) = user_id)'))
+  assert.ok(migration.includes('revoke all on function public.toggle_blog_like(uuid, uuid) from public, anon, authenticated'))
+  assert.ok(migration.includes('grant execute on function public.toggle_blog_like(uuid, uuid) to service_role'))
+})
+
 test('Ultimate-only Matrix tools do not call protected APIs for lower tiers', async () => {
   const matrixPanel = await read('src/components/dugout/CustomMatrixPanel.tsx')
   assert.ok(matrixPanel.includes('const hasUltimate = !!profile'))
