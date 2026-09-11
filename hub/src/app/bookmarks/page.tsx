@@ -6,6 +6,7 @@ import { Bookmark, Compass } from 'lucide-react'
 import { TierGate } from '@/components/layout/TierGate'
 import { PageState } from '@/components/layout/PageState'
 import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,7 @@ export default async function BookmarksPage() {
   return (
     <TierGate requiredTier="basic" label="Bookmarks">
       <ProductPageShell narrow>
+        <CommunityNav />
         <ProductHero icon={<Bookmark size={23} />} eyebrow="Your saved library" title="Bookmarks" description="Keep picks, research notes, and community posts ready for your next visit." status={`${posts.length} saved`} actions={<ProductAction href="/explore"><Compass size={14} />Explore</ProductAction>} />
         {posts.length === 0 ? (
           <PageState kind="empty" title="Your saved library is empty" message="Use the bookmark action on a post to keep it here." actionLabel="Explore the community" actionHref="/explore" />

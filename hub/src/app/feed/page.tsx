@@ -12,6 +12,7 @@ import { FEATURE_FLAGS } from '@/lib/featureFlags'
 import Link from 'next/link'
 import { Zap, TrendingUp, Clock, Users, Activity, Compass } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,6 +58,7 @@ export default async function FeedPage({
     <div className="ss-feed-page">
       <div className="ss-feed-layout">
       <section className="ss-feed-primary" aria-labelledby="feed-title">
+        <CommunityNav />
         <header className="ss-feed-hero">
           <div className="ss-feed-hero-icon" aria-hidden="true"><Activity size={22} /></div>
           <div className="ss-feed-hero-copy">

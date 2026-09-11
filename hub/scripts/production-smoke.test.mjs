@@ -622,3 +622,23 @@ test('member avatars use the shared bounded renderer across social surfaces', as
     assert.ok(source.includes('MemberAvatar'), `${file} bypasses the bounded member avatar`)
   }
 })
+
+test('health checks remain machine-readable when dependencies are unavailable', async () => {
+  const health = await read('src/app/api/health/route.ts')
+  assert.ok(health.includes('try {'))
+  assert.ok(health.includes('} catch {'))
+  assert.ok(health.includes("status: healthy ? 200 : 503"))
+  assert.ok(health.includes("database: healthy ? 'reachable' : 'unavailable'"))
+})
+
+test('community destinations share navigation and route transition states', async () => {
+  const navigation = await read('src/components/community/CommunityNav.tsx')
+  for (const destination of ['/feed', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
+    assert.ok(navigation.includes(`href: '${destination}'`), `community navigation omits ${destination}`)
+  }
+
+  for (const route of ['channels', 'messages', 'groups', 'forum', 'notifications', 'bookmarks', 'profile', 'search', 'events', 'pages', 'blog', 'creators']) {
+    const loading = await read(`src/app/${route}/loading.tsx`)
+    assert.ok(loading.includes('DataRouteLoading'), `${route} lacks a shared transition state`)
+  }
+})

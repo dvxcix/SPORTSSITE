@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { NotificationsList, type NotifRow } from '@/components/social/NotificationsList'
 import { TierGate } from '@/components/layout/TierGate'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,7 @@ export default async function NotificationsPage() {
   return (
     <TierGate requiredTier="basic" label="Notifications">
       <div className="mx-auto max-w-3xl px-3 pb-24 pt-4 sm:px-5 sm:pt-7">
+        <CommunityNav />
         <div className="mb-5 overflow-hidden rounded-2xl border border-lime-400/20 bg-gradient-to-br from-lime-400/[0.09] via-zinc-950 to-zinc-950 p-4 shadow-2xl sm:p-5">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl border border-lime-400/25 bg-lime-400/10 text-lime-300"><Bell size={19} /></span><div><p className="text-[10px] font-black tracking-[0.18em] text-lime-300">ACTIVITY CENTER</p><h1 className="text-xl font-black text-white">Notifications</h1></div></div>

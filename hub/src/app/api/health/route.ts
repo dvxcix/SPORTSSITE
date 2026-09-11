@@ -5,9 +5,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const startedAt = Date.now()
-  const admin = createAdminClient()
-  const { error } = await admin.from('pipeline_runs').select('id').limit(1)
-  const healthy = !error
+  let healthy = false
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin.from('pipeline_runs').select('id').limit(1)
+    healthy = !error
+  } catch {
+    healthy = false
+  }
 
   return NextResponse.json(
     {

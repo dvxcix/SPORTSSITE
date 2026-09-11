@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { MessageCircle, Plus, ShieldCheck, Zap } from 'lucide-react'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,6 +67,7 @@ export default async function MessagesPage() {
 
   return (
     <div className="ss-messages-page">
+      <CommunityNav />
       <section className="ss-messages-hero">
         <div className="ss-messages-hero-copy">
           <div className="ss-messages-hero-icon">

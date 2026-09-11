@@ -100,6 +100,12 @@ async function verifyProtectedPage(context, path, options = {}) {
   }
 }
 
+async function runInBatches(items, size, worker) {
+  for (let index = 0; index < items.length; index += size) {
+    await Promise.all(items.slice(index, index + size).map(worker))
+  }
+}
+
 try {
   const request = await browser.newContext()
   const healthResponse = await request.request.get(`${baseUrl}/api/health`)
@@ -118,21 +124,15 @@ try {
     viewport: { width: 1440, height: 1000 },
     colorScheme: 'dark',
   })
-  await verifyPage(desktop, '/auth/login', 'Sign in')
-  await verifyPage(desktop, '/pricing', 'Ultimate')
-  await verifyPage(desktop, '/creators/apply', 'Give your audience more')
-  await verifyPage(desktop, '/creators', 'Find the people behind the edge')
-  await verifyPage(desktop, '/blog', 'Blog')
-  await verifyPage(desktop, '/about', 'SlipSurge')
-  await verifyPage(desktop, '/faq', 'Is SlipSurge a sportsbook?')
-  await verifyPage(desktop, '/support', 'Support')
-  await verifyPage(desktop, '/responsible-gambling', 'Responsible')
-  await verifyPage(desktop, '/privacy', 'Privacy')
-  await verifyPage(desktop, '/terms', 'Terms')
-  await verifyProtectedPage(desktop, '/feed')
-  await verifyProtectedPage(desktop, '/explore')
-  await verifyProtectedPage(desktop, '/leaderboard')
-  await verifyProtectedPage(desktop, '/settings/security')
+  await runInBatches([
+    ['/auth/login', 'Sign in'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
+    ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
+    ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'], ['/responsible-gambling', 'Responsible'],
+    ['/privacy', 'Privacy'], ['/terms', 'Terms'],
+  ], 4, ([path, expected]) => verifyPage(desktop, path, expected))
+  await runInBatches([
+    '/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings/security',
+  ], 4, path => verifyProtectedPage(desktop, path))
   await desktop.close()
 
   const mobile = await browser.newContext({
@@ -142,11 +142,12 @@ try {
     hasTouch: true,
     colorScheme: 'dark',
   })
-  await verifyPage(mobile, '/auth/login', 'Sign in', { label: 'mobile', checkOverflow: true })
-  await verifyPage(mobile, '/pricing', 'Ultimate', { label: 'mobile', checkOverflow: true })
-  await verifyPage(mobile, '/creators/apply', 'Give your audience more', { label: 'mobile', checkOverflow: true })
-  await verifyPage(mobile, '/creators', 'Find the people behind the edge', { label: 'mobile', checkOverflow: true })
-  await verifyProtectedPage(mobile, '/feed', { label: 'mobile' })
+  await runInBatches([
+    ['/auth/login', 'Sign in'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
+    ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
+    ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'],
+  ], 4, ([path, expected]) => verifyPage(mobile, path, expected, { label: 'mobile', checkOverflow: true }))
+  await runInBatches(['/feed', '/messages', '/notifications', '/bookmarks'], 4, path => verifyProtectedPage(mobile, path, { label: 'mobile' }))
   await mobile.close()
 } finally {
   await browser.close()
