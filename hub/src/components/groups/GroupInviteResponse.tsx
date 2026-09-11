@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -10,7 +10,7 @@ export function GroupInviteResponse({ inviteId, groupId, channelId, userId, invi
   const [loading, setLoading] = useState(false)
   const [declined, setDeclined] = useState(false)
   const [error, setError] = useState('')
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
   async function accept() {

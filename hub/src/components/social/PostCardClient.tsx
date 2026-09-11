@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMotionValue, motion, useMotionTemplate } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
@@ -141,7 +141,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [pollCounts, setPollCounts] = useState<number[]>(
     (initialPost.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
   )
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Live-graded pick_data — the grade-live-picks cron flips a leg to
   // win/loss the moment its stat threshold is crossed, mid-game, not just
@@ -1045,9 +1045,9 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
 // upfront for every emoji on every post in a feed.
 function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
   const [names, setNames] = useState<string[] | null>(null)
+  const supabase = useMemo(() => createClient(), [])
   useEffect(() => {
     let cancelled = false
-    const supabase = createClient()
     supabase.from('reactions')
       .select('user:users(username, display_name)')
       .eq('target_id', postId).eq('target_type', 'post').eq('emoji', emoji)
@@ -1057,7 +1057,7 @@ function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
         setNames((data ?? []).map((r: any) => r.user?.display_name || r.user?.username).filter(Boolean))
       })
     return () => { cancelled = true }
-  }, [postId, emoji])
+  }, [postId, emoji, supabase])
 
   if (names === null) return <span>Loading…</span>
   if (names.length === 0) return <span>No reactions yet</span>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { blockUser, unblockUser } from '@/lib/blocks'
@@ -23,7 +23,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
     if (blocked) {

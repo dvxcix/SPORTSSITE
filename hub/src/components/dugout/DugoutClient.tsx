@@ -5155,7 +5155,7 @@ export function DugoutClient({ date }: { date: string }) {
     <div>
       {!hasStats && (
         <div style={{ padding: '6px 12px', marginBottom: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 11, color: '#f87171' }}>
-          ⚠ Statcast unavailable — mlb-party Supabase anon key may not have read access (RLS). Odds from BDL still load normally.
+          Statcast data is temporarily unavailable. Odds remain available.
         </div>
       )}
 

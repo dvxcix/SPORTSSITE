@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { sportLogoUrl } from '@/lib/sportLogos'
@@ -9,7 +9,7 @@ const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 
 export function CreateEventForm({ userId }: { userId: string }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
     title: '', description: '', location: '', start_date: '', end_date: '', sport: '', is_online: false, link: ''
   })

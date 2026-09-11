@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { UserPlus, X } from 'lucide-react'
@@ -16,7 +16,7 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
   const [searching, setSearching] = useState(false)
   const [invited, setInvited] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function search() {
     if (!q.trim()) { setResults([]); return }

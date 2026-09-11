@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
@@ -36,7 +36,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [visibility, setVisibility] = useState<'public' | 'followers'>('public')
   const [visibilityOpen, setVisibilityOpen] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 

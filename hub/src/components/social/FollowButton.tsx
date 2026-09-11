@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { UserPlus, UserCheck } from 'lucide-react'
@@ -15,7 +15,7 @@ interface FollowButtonProps {
 export function FollowButton({ currentUserId, targetUserId, initialFollowing, compact = false }: FollowButtonProps) {
   const [following, setFollowing] = useState(initialFollowing)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
     setLoading(true)

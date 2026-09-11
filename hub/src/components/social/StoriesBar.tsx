@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -11,7 +11,7 @@ export function StoriesBar() {
   const [userId, setUserId] = useState<string | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerStart, setViewerStart] = useState(0)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     async function load() {
@@ -27,7 +27,7 @@ export function StoriesBar() {
       setStories((data as any[]) ?? [])
     }
     load()
-  }, [])
+  }, [supabase])
 
   function openViewer(idx: number) {
     setViewerStart(idx)

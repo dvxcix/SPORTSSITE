@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check, Star, X } from 'lucide-react'
 
@@ -11,7 +11,7 @@ export function EventRSVPButtons({ userId, eventId, initialRsvp }: {
 }) {
   const [rsvp, setRsvp] = useState<RSVPStatus>(initialRsvp as RSVPStatus)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function select(status: RSVPStatus) {
     setLoading(true)

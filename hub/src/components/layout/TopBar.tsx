@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, Sparkles, WalletCards } from 'lucide-react'
@@ -52,7 +52,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [notifications, setNotifications] = useState<NotifRow[]>([])
   const customEmojis = useCustomEmojis()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   // Read via the ref in both the notification-bell fetch and the quick-
@@ -171,7 +171,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         (payload: any) => { if (!blockedIdsRef.current.includes(payload.new?.actor_id)) setUnread(c => c + 1) })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [user])
+  }, [user, supabase])
 
   async function openNotifications() {
     const opening = !notifOpen

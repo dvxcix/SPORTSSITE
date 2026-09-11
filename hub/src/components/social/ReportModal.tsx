@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X, Flag } from 'lucide-react'
 
@@ -18,7 +18,7 @@ export function ReportModal({ targetType, targetId, onClose }: {
   targetId: string
   onClose: () => void
 }) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [reason, setReason] = useState('')
   const [details, setDetails] = useState('')
   const [submitting, setSubmitting] = useState(false)

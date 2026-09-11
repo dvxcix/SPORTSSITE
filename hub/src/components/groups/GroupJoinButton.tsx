@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function GroupJoinButton({ userId, groupId, channelId, initialMember }: {
@@ -8,7 +8,7 @@ export function GroupJoinButton({ userId, groupId, channelId, initialMember }: {
 }) {
   const [member, setMember] = useState(initialMember)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
     setLoading(true)
