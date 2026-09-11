@@ -1,15 +1,16 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
+import { Loader2, Send } from 'lucide-react'
 
 export function NewThreadForm({ userId, categories, defaultCategory }: {
   userId: string; categories: { id: string; name: string; slug: string }[]; defaultCategory?: string
 }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [categoryId, setCategoryId] = useState(defaultCategory ?? categories[0]?.id ?? '')
@@ -42,25 +43,21 @@ export function NewThreadForm({ userId, categories, defaultCategory }: {
       last_reply_at: new Date().toISOString(),
     }).select('id').single()
     if (err) { setError(err.message); setSubmitting(false); return }
-    const cat = categories.find(c => c.id === categoryId)
     router.push(`/forum/thread/${data?.id}`)
   }
 
   return (
-    <div className="space-y-4">
+    <div className="ss-flow-form">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
-      <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
-        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-green-500/50">
-        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-      </select>
-      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Thread title…"
-        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
-      <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="Write your post… (optional)" rows={8}
-        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 outline-none focus:border-green-500/50 resize-y" />
-      <EmojiPicker onSelect={insertAtCursor} />
+      <section className="ss-flow-card">
+        <div><label>Category</label><select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="ss-flow-input">{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+        <div><label>Title <span>*</span></label><input value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="Start with a clear title" className="ss-flow-input" /></div>
+        <div><label>Post</label><textarea ref={textareaRef} value={content} maxLength={5000} onChange={e => setContent(e.target.value)} placeholder="Share your take…" rows={9} className="ss-flow-input resize-y" /></div>
+        <div className="ss-flow-tools"><EmojiPicker onSelect={insertAtCursor} /><span>{content.length.toLocaleString()} / 5,000</span></div>
+      </section>
       <button onClick={submit} disabled={submitting || !title.trim()}
-        className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
-        {submitting ? 'Posting…' : 'Post Thread'}
+        className="ss-flow-submit">
+        {submitting ? <><Loader2 size={16} className="animate-spin" /> Posting…</> : <>Post thread <Send size={16} /></>}
       </button>
     </div>
   )

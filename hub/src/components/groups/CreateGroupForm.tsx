@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { Switch } from '@/components/ui/Switch'
+import Image from 'next/image'
+import { ArrowRight, Loader2 } from 'lucide-react'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '⚾', '🏀', '🏒', '⚽', '🥊', '🎉', '💎', '🚀', '👑', '🦁', '🎰']
@@ -13,7 +15,7 @@ type CreatorProduct = { id: string; title: string; price: number; currency: stri
 
 export function CreateGroupForm({ userId, products = [] }: { userId: string; products?: CreatorProduct[] }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({ name: '', description: '', sport: '', emoji: '👥', is_public: true })
   const [creatorProductId, setCreatorProductId] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -38,25 +40,11 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
       owner_id: userId,
       access_type: creatorProductId ? 'paid' : 'free',
       creator_product_id: creatorProductId || null,
-      // Not member_count: 1 here — the group_members insert right below
-      // fires the count-sync trigger, which would double it to 2.
     }).select('id, slug').single()
     if (err) { setError(err.message); setSubmitting(false); return }
     if (data?.id) {
       const { error: memberErr } = await supabase.from('group_members').insert({ group_id: data.id, user_id: userId, role: 'owner' })
-      // The group row itself already exists at this point, so a failure
-      // here would leave a group with no owner membership row at all —
-      // likely unmanageable afterward if group-editing RLS checks
-      // membership rather than just groups.owner_id. Surfacing this
-      // rather than silently continuing to create a channel for it.
       if (memberErr) { setError('Group created, but could not set you as owner — contact support.'); setSubmitting(false); return }
-
-      // Every group gets a chat channel — reuses the existing channels/
-      // messages/realtime infra rather than building a parallel chat
-      // system. channel_type gates who can even SELECT it (see the RLS
-      // policy): 'public' for a public group's chat (readable by anyone,
-      // matching the group's own openness), 'members_only' for a private
-      // group so non-members can't read the channel at all.
       const { data: channel } = await supabase.from('channels').insert({
         name: form.name.trim(),
         slug: `group-${groupSlug}`,
@@ -77,25 +65,24 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
   }
 
   return (
-    <div className="space-y-4">
+    <div className="ss-flow-form">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <section className="ss-flow-card">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Group Name *</label>
+          <label>Group name <span>*</span></label>
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="e.g. Yankees Nation, Parlay Kings…"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all" />
+            maxLength={60} className="ss-flow-input" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
+          <label>Description</label>
           <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
             placeholder="What is this group about?"
-            rows={3}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all resize-none" />
+            rows={4} maxLength={280} className="ss-flow-input resize-none" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Icon</label>
+          <label>Icon</label>
           <div className="flex flex-wrap gap-1.5">
             {EMOJIS.map(e => (
               <button key={e} type="button" onClick={() => setForm(f => ({ ...f, emoji: e }))}
@@ -108,7 +95,7 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport Category</label>
+          <label>Sport category</label>
           <div className="flex flex-wrap gap-1.5">
             {SPORTS.map(s => {
               const logo = sportLogoUrl(s)
@@ -119,7 +106,7 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
                       ? 'border-green-500 bg-green-500/10 text-green-400'
                       : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'
                   }`}>
-                  {logo && <img src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
+                  {logo && <Image src={logo} alt="" width={14} height={14} />}
                   {s}
                 </button>
               )
@@ -127,8 +114,8 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
           </div>
         </div>
         {products.length > 0 && <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Member access</label>
-          <select value={creatorProductId} onChange={event => setCreatorProductId(event.target.value)} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-green-500/50">
+          <label>Member access</label>
+          <select value={creatorProductId} onChange={event => setCreatorProductId(event.target.value)} className="ss-flow-input">
             <option value="">Free group</option>
             {products.map(product => <option key={product.id} value={product.id}>{product.title} · {product.currency.toUpperCase()} {Number(product.price).toFixed(2)}</option>)}
           </select>
@@ -141,11 +128,11 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
           </div>
           <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />
         </div>
-      </div>
+      </section>
 
       <button onClick={create} disabled={submitting || !form.name.trim()}
-        className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
-        {submitting ? 'Creating…' : 'Create Group'}
+        className="ss-flow-submit">
+        {submitting ? <><Loader2 size={16} className="animate-spin" /> Creating…</> : <>Create group <ArrowRight size={16} /></>}
       </button>
     </div>
   )

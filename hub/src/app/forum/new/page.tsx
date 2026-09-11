@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NewThreadForm } from '@/components/forum/NewThreadForm'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import Link from 'next/link'
+import { ArrowLeft, MessageSquarePlus } from 'lucide-react'
 
 export default async function NewThreadPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const supabase = await createClient()
@@ -12,10 +14,11 @@ export default async function NewThreadPage({ searchParams }: { searchParams: Pr
   const { category } = await searchParams
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <main className="ss-flow-page">
       <CommunityNav />
-      <h1 className="text-xl font-black text-white mb-6">New Thread</h1>
+      <Link href="/forum" className="ss-flow-back"><ArrowLeft size={15} /> Forum</Link>
+      <header className="ss-flow-heading"><span><MessageSquarePlus size={19} /></span><div><p>Start a conversation</p><h1>New thread</h1></div></header>
       <NewThreadForm userId={user.id} categories={categories ?? []} defaultCategory={category} />
-    </div>
+    </main>
   )
 }

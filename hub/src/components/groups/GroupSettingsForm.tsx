@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { Switch } from '@/components/ui/Switch'
+import Image from 'next/image'
+import { Loader2, Save, Trash2 } from 'lucide-react'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 
 export function GroupSettingsForm({ group }: { group: any }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
     name: group.name ?? '',
     description: group.description ?? '',
@@ -38,10 +40,6 @@ export function GroupSettingsForm({ group }: { group: any }) {
       is_public: form.is_public,
     }).eq('id', group.id)
     if (err) { setError(err.message); setSaving(false); return }
-    // The chat channel's own channel_type gates who can read it at all
-    // (see the RLS policy) — it has to track the group's own visibility,
-    // or a group flipped to private would still have a publicly-readable
-    // channel left over from when it was created public.
     if (group.channel_id && form.is_public !== group.is_public) {
       await supabase.from('channels').update({ channel_type: form.is_public ? 'public' : 'members_only' }).eq('id', group.channel_id)
     }
@@ -57,23 +55,23 @@ export function GroupSettingsForm({ group }: { group: any }) {
     router.push('/groups')
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = 'ss-flow-input'
 
   return (
-    <div className="space-y-4">
+    <div className="ss-flow-form">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <section className="ss-flow-card">
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Group Name *</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
+          <label>Group name <span>*</span></label>
+          <input value={form.name} maxLength={60} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
-          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={inputClass + ' resize-none'} />
+          <label>Description</label>
+          <textarea value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={inputClass + ' resize-none'} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
+          <label>Sport</label>
           <div className="flex flex-wrap gap-1.5">
             {SPORTS.map(s => {
               const logo = sportLogoUrl(s)
@@ -84,7 +82,7 @@ export function GroupSettingsForm({ group }: { group: any }) {
                       ? 'border-green-500 bg-green-500/10 text-green-400'
                       : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'
                   }`}>
-                  {logo && <img src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
+                  {logo && <Image src={logo} alt="" width={14} height={14} />}
                   {s}
                 </button>
               )
@@ -92,11 +90,11 @@ export function GroupSettingsForm({ group }: { group: any }) {
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Avatar Image URL</label>
+          <label>Avatar image URL</label>
           <input value={form.avatar_url} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Banner Image URL</label>
+          <label>Banner image URL</label>
           <input value={form.banner_url} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div className="flex items-center justify-between">
@@ -106,14 +104,14 @@ export function GroupSettingsForm({ group }: { group: any }) {
           </div>
           <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />
         </div>
-      </div>
+      </section>
 
       <button onClick={save} disabled={saving || !form.name.trim()}
-        className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
-        {saved ? <><Check size={14} /> Saved!</> : saving ? 'Saving…' : 'Save Changes'}
+        className="ss-flow-submit">
+        {saved ? <><Check size={15} /> Saved</> : saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Save size={16} /> Save changes</>}
       </button>
 
-      <div className="bg-zinc-900 border border-red-500/20 rounded-xl p-4">
+      <section className="ss-danger-card">
         <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
         <p className="text-xs text-zinc-500 mb-3">Permanently delete this group and all its posts. This cannot be undone.</p>
         {confirmingDelete ? (
@@ -125,10 +123,10 @@ export function GroupSettingsForm({ group }: { group: any }) {
           </div>
         ) : (
           <button onClick={() => setConfirmingDelete(true)} className="border border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
-            Delete Group
+            <Trash2 size={14} /> Delete group
           </button>
         )}
-      </div>
+      </section>
     </div>
   )
 }
