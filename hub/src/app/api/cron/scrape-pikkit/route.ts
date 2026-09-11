@@ -5,8 +5,9 @@ import { openPikkitSession, type BBSession } from '@/lib/browserbase'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { findAndClickPikkitGame, legIndexFor, clickTabByText, escapeRe, distinguishingSuffix } from '@/lib/scrapers/gameMatch'
 import { PLATFORM_URL } from '@/lib/platform'
-import { PIKKIT_SIGNED_OUT_ERROR, checkPikkitAuthAndAlert } from '@/lib/scrapers/pikkitAuth'
+import { PIKKIT_SIGNED_OUT_ERROR } from '@/lib/scrapers/pikkitAuth'
 import { summarizePikkitPayload } from '@/lib/pikkitCoverage'
+import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -179,7 +180,7 @@ async function scrapeBatch(games: TodayGame[], date: string, contextId: string, 
   }
 }
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
 
@@ -202,11 +203,7 @@ export async function GET(req: Request) {
     if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
     const results = await scrapeBatch(selected, date, contextId, dryRun)
     const failed = results.filter(result => 'error' in result)
-    const allListingMisses = results.length > 0 && results.every(result => result.error === `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`)
-    const authState = allListingMisses
-      ? await checkPikkitAuthAndAlert(contextId).catch(() => 'unknown' as const)
-      : undefined
-    return NextResponse.json({ date, games: selected.length, failed: failed.length, authState, results }, { status: failed.length ? 502 : 200 })
+    return NextResponse.json({ date, games: selected.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   }
   if (gamePkParam) {
     const gamePk = Number(gamePkParam)
@@ -222,16 +219,20 @@ export async function GET(req: Request) {
   for (let index = 0; index < games.length; index += 4) batches.push(games.slice(index, index + 4))
   const results = (await Promise.all(batches.map(batch => scrapeBatch(batch, date, contextId, dryRun)))).flat()
 
-  // Every game in the sweep hitting the exact same "not found" error is the
-  // strong signal (one game missing a listing is normal noise; ALL of them
-  // failing identically isn't) — worth spending one extra Browserbase
-  // session to confirm directly whether that's a real sign-out. See
-  // pikkitAuth.ts for why this can't just trust the error string alone.
-  const allSignedOutError = results.length > 0 && results.every(result => result.error === `game link not found on Pikkit MLB listing page - ${PIKKIT_SIGNED_OUT_ERROR}`)
-  if (allSignedOutError) {
-    await checkPikkitAuthAndAlert(contextId).catch(e => console.error('[scrape-pikkit] auth alert check failed', { type: e instanceof Error ? e.name : typeof e }))
-  }
-
   const failed = results.filter(result => ('error' in result && !('skipped' in result && result.skipped)) || ('imported' in result && result.imported?.ok === false))
   return NextResponse.json({ date, games: games.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
+}
+
+export async function GET(req: Request) {
+  const authError = requireBrowserbaseCronAuth(req)
+  if (authError) return authError
+  const lease = await acquirePikkitBrowserLease()
+  if (!lease) {
+    return NextResponse.json({ error: 'Pikkit persisted context is already in use; retry after the current capture finishes' }, { status: 423 })
+  }
+  try {
+    return await run(req)
+  } finally {
+    await lease.release()
+  }
 }

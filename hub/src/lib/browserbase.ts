@@ -174,6 +174,16 @@ export async function openSession(opts: { contextId?: string; stealth?: boolean;
 // state is important; otherwise both setup and reuse use Browserbase's
 // managed proxy in us-east-1.
 export async function openPikkitSession(contextId: string, metadata: Record<string, unknown> = {}): Promise<BBSession> {
+  const bb = client()
+  const running = await bb.sessions.list({ status: 'RUNNING' })
+  const manualLoginActive = running.some(session => (
+    session.contextId === contextId
+      && session.userMetadata?.book === 'pikkit'
+      && session.userMetadata?.mode === 'manual-auth'
+  ))
+  if (manualLoginActive) {
+    throw new Error('Pikkit manual authentication is still running; release it before automated reuse')
+  }
   return openSession({
     contextId,
     geoState: pikkitGeoState(),

@@ -6,6 +6,7 @@ import { getUpcomingNflPikkitGames, type NflPikkitScheduleGame } from '@/lib/nfl
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runPikkitScrape } from '@/lib/scrapers/pikkitScraper'
 import { clickTabByText, distinguishingSuffix, escapeRe, findAndClickPikkitGame } from '@/lib/scrapers/gameMatch'
+import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
 
 export const revalidate = 0
 export const maxDuration = 300
@@ -104,7 +105,7 @@ async function scrapeGame(game: NflPikkitScheduleGame, session: BBSession) {
   }
 }
 
-export async function GET(req: Request) {
+async function run(req: Request) {
   const authError = requireBrowserbaseCronAuth(req)
   if (authError) return authError
   const contextId = process.env.PIKKIT_CONTEXT_ID
@@ -141,5 +142,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ games: games.length, browserSessions: 1, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   } finally {
     await bb.close()
+  }
+}
+
+export async function GET(req: Request) {
+  const authError = requireBrowserbaseCronAuth(req)
+  if (authError) return authError
+  const lease = await acquirePikkitBrowserLease()
+  if (!lease) {
+    return NextResponse.json({ error: 'Pikkit persisted context is already in use; retry after the current capture finishes' }, { status: 423 })
+  }
+  try {
+    return await run(req)
+  } finally {
+    await lease.release()
   }
 }

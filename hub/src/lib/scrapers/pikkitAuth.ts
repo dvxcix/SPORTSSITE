@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { openPikkitSession } from '@/lib/browserbase'
 import { brandedEmailHtml, sendEmail } from '@/lib/email'
 import { postAlert } from '@/lib/discord'
+import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
 
 // scrape-pikkit's per-game "game link not found ... check the persisted
 // context is still signed in" error is a GUESS, not a confirmed diagnosis —
@@ -38,8 +39,18 @@ async function getAdminRecipients() {
 // sidebar always renders "Your Bets" once actually signed in; a signed-out
 // session bounces to a sign-in screen that never shows it.
 async function isPikkitSignedIn(contextId: string): Promise<boolean> {
-  const bb = await openPikkitSession(contextId, { mode: 'auth-check' })
+  // A scraper may have just closed a persisted Context. Browserbase asks
+  // callers to wait a few seconds for Context synchronization before reuse.
+  // The shared lease has an 8-second cooldown; retry once after that window.
+  let lease = await acquirePikkitBrowserLease()
+  if (!lease) {
+    await new Promise(resolve => setTimeout(resolve, 9_000))
+    lease = await acquirePikkitBrowserLease()
+  }
+  if (!lease) throw new Error('Pikkit context is busy')
+  let bb: Awaited<ReturnType<typeof openPikkitSession>> | null = null
   try {
+    bb = await openPikkitSession(contextId, { mode: 'auth-check' })
     // The league page briefly paints the authenticated shell (including
     // "Your Bets") before Pikkit finishes redirecting an expired session to
     // /login or /pro. That made the old 2.5s body-text check report a false
@@ -54,7 +65,8 @@ async function isPikkitSignedIn(contextId: string): Promise<boolean> {
     const authDestination = !/^\/(?:login|join|pro)(?:\/|$)/i.test(pathname)
     return authDestination && bodyText.includes('Your Bets')
   } finally {
-    await bb.close()
+    if (bb) await bb.close()
+    await lease.release()
   }
 }
 
