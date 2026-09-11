@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -67,7 +67,7 @@ const PLATFORM_ADVANTAGES = [
 export default function CreatorApplyPage() {
   const { user, profile } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [sports, setSports] = useState<string[]>([])
   const [whyCreator, setWhyCreator] = useState('')
   const [samplePicks, setSamplePicks] = useState('')
