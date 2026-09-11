@@ -5,6 +5,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
+import Image from 'next/image'
 
 export const revalidate = 60
 
@@ -50,7 +51,7 @@ function EventCard({ event, past = false }: { event: any; past?: boolean }) {
     <Link href={`/events/${event.id}`} className="group grid grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border border-white/[.08] bg-gradient-to-br from-white/[.04] to-white/[.015] p-4 shadow-[inset_0_1px_rgba(255,255,255,.025)] transition hover:-translate-y-0.5 hover:border-lime-400/25">
       <div className="grid h-[58px] place-content-center rounded-2xl border border-white/[.08] bg-black/25 text-center"><span className="text-[9px] font-black uppercase tracking-widest text-lime-300">{start.toLocaleDateString('en-US', { month: 'short' })}</span><strong className="text-xl font-black leading-none text-white">{start.getDate()}</strong></div>
       <div className="min-w-0">
-        <div className="flex items-center gap-2">{logo && <img src={logo} alt="" className="h-4 w-4 object-contain" />}<h2 className="truncate text-sm font-black text-white">{event.title}</h2>{past && <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[9px] font-black uppercase text-zinc-500">Ended</span>}</div>
+        <div className="flex items-center gap-2">{logo && <Image src={logo} alt="" width={16} height={16} className="object-contain" />}<h2 className="truncate text-sm font-black text-white">{event.title}</h2>{past && <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[9px] font-black uppercase text-zinc-500">Ended</span>}</div>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-zinc-500">
           <span className="flex items-center gap-1"><Clock3 size={11} />{start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
           {event.location && <span className="flex min-w-0 items-center gap-1"><MapPin size={11} /><span className="truncate">{event.location}</span></span>}

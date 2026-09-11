@@ -677,3 +677,12 @@ test('live chat supports rich mentions without dropping send failures', async ()
   assert.ok(room.includes("setSendError('Message not sent. Try again.')"))
   assert.ok(direct.includes('<LinkifiedText'))
 })
+
+test('community events preserve online intent and validate join links', async () => {
+  const form = await read('src/components/events/CreateEventForm.tsx')
+  assert.ok(form.includes('checked={form.is_online}'))
+  assert.ok(form.includes('form.is_online ? form.link.trim() : null'))
+  assert.ok(form.includes("['http:', 'https:'].includes(url.protocol)"))
+  assert.ok(form.includes("new Date(form.end_date) <= new Date(form.start_date)"))
+  assert.ok(form.includes('<form className="ss-flow-form" onSubmit={create}>'))
+})
