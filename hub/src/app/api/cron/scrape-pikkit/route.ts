@@ -215,9 +215,11 @@ async function run(req: Request) {
     return NextResponse.json({ date, gamePk, result }, { status: failed ? 502 : 200 })
   }
 
-  const batches: TodayGame[][] = []
-  for (let index = 0; index < games.length; index += 4) batches.push(games.slice(index, index + 4))
-  const results = (await Promise.all(batches.map(batch => scrapeBatch(batch, date, contextId, dryRun)))).flat()
+  // One persisted Pikkit Context must never back simultaneous Browserbase
+  // sessions. scrapeBatch already bounds work to four concurrent pages
+  // inside ONE browser; opening one session per four-game chunk here caused
+  // Pikkit to see several concurrent logins and invalidate the account.
+  const results = await scrapeBatch(games, date, contextId, dryRun)
 
   const failed = results.filter(result => ('error' in result && !('skipped' in result && result.skipped)) || ('imported' in result && result.imported?.ok === false))
   return NextResponse.json({ date, games: games.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })

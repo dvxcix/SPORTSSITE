@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireBrowserbaseCronAuth } from '@/lib/cron-auth'
 import { openPikkitSession } from '@/lib/browserbase'
 import { safeApiError } from '@/lib/safeApiError'
+import { acquirePikkitBrowserLease } from '@/lib/pikkitBrowserLease'
 
 export const revalidate = 0
 export const maxDuration = 60
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
     ? Math.min(10_000, Math.max(0, Math.trunc(requestedWaitMs)))
     : 2500
 
+  const lease = await acquirePikkitBrowserLease()
+  if (!lease) return NextResponse.json({ error: 'Pikkit context is currently in use; retry shortly' }, { status: 423 })
   let bb: Awaited<ReturnType<typeof openPikkitSession>> | null = null
   try {
     bb = await openPikkitSession(contextId, { mode: 'context-check' })
@@ -53,5 +56,6 @@ export async function GET(req: Request) {
     return safeApiError('admin-pikkit-context-check', cause, 'Pikkit context check failed', 502)
   } finally {
     if (bb) await bb.close().catch(() => undefined)
+    await lease.release()
   }
 }
