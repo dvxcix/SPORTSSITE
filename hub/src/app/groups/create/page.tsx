@@ -14,15 +14,14 @@ export default async function CreateGroupPage() {
     supabase.from('users').select('account_type').eq('id', user.id).single(),
     supabase.from('creator_applications').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle(),
   ])
-  const { data: products } = hasCreatorAccess(profile?.account_type, Boolean(approval))
-    ? await supabase.from('creator_products').select('id,title,price,currency').eq('creator_id', user.id).eq('status', 'active').order('created_at')
-    : { data: [] }
+  if (!hasCreatorAccess(profile?.account_type, Boolean(approval))) redirect('/creators/apply')
+  const { data: products } = await supabase.from('creator_products').select('id,title,price,currency').eq('creator_id', user.id).eq('status', 'active').order('created_at')
   return (
     <main className="ss-flow-page">
       <CommunityNav />
       <Link href="/groups" className="ss-flow-back"><ArrowLeft size={15} /> Groups</Link>
       <header className="ss-flow-heading"><span><UsersRound size={19} /></span><div><p>New community</p><h1>Create a group</h1></div></header>
-      <CreateGroupForm userId={user.id} products={products ?? []} />
+      <CreateGroupForm products={products ?? []} />
     </main>
   )
 }

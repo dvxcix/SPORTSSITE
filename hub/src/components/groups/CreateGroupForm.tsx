@@ -13,7 +13,7 @@ const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '
 
 type CreatorProduct = { id: string; title: string; price: number; currency: string }
 
-export function CreateGroupForm({ userId, products = [] }: { userId: string; products?: CreatorProduct[] }) {
+export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[] }) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({ name: '', description: '', sport: '', emoji: '👥', is_public: true })
@@ -25,47 +25,38 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   }
 
-  async function create() {
+  async function create(event: React.FormEvent) {
+    event.preventDefault()
     if (!form.name.trim()) { setError('Group name is required'); return }
     setSubmitting(true)
     setError('')
     const groupSlug = slug(form.name.trim())
-    const { data, error: err } = await supabase.from('groups').insert({
-      name: form.name.trim(),
-      slug: groupSlug,
-      description: form.description.trim() || null,
-      sport: form.sport || null,
-      emoji: form.emoji,
-      is_public: form.is_public,
-      owner_id: userId,
-      access_type: creatorProductId ? 'paid' : 'free',
-      creator_product_id: creatorProductId || null,
-    }).select('id, slug').single()
-    if (err) { setError(err.message); setSubmitting(false); return }
-    if (data?.id) {
-      const { error: memberErr } = await supabase.from('group_members').insert({ group_id: data.id, user_id: userId, role: 'owner' })
-      if (memberErr) { setError('Group created, but could not set you as owner — contact support.'); setSubmitting(false); return }
-      const { data: channel } = await supabase.from('channels').insert({
-        name: form.name.trim(),
-        slug: `group-${groupSlug}`,
-        description: form.description.trim() || null,
-        icon: form.emoji,
-        channel_type: form.is_public ? 'public' : 'members_only',
-        owner_id: userId,
-        member_count: 1,
-        group_id: data.id,
-        creator_product_id: creatorProductId || null,
-      }).select('id').single()
-      if (channel?.id) {
-        await supabase.from('channel_members').insert({ channel_id: channel.id, user_id: userId })
-        await supabase.from('groups').update({ channel_id: channel.id }).eq('id', data.id)
-      }
+    const { data, error: err } = await supabase.rpc('create_community_group', {
+      p_name: form.name.trim(),
+      p_slug: groupSlug,
+      p_description: form.description.trim() || null,
+      p_sport: form.sport || null,
+      p_emoji: form.emoji,
+      p_is_public: form.is_public,
+      p_creator_product_id: creatorProductId || null,
+    })
+    if (err) {
+      setError(err.code === '23505' ? 'That group name is already taken.' : 'The group could not be created. Try again.')
+      setSubmitting(false)
+      return
     }
-    router.push(`/groups/${data?.slug}`)
+    const created = Array.isArray(data) ? data[0] : data
+    if (!created?.group_slug) {
+      setError('The group could not be created. Try again.')
+      setSubmitting(false)
+      return
+    }
+    router.push(`/groups/${created.group_slug}`)
+    router.refresh()
   }
 
   return (
-    <div className="ss-flow-form">
+    <form className="ss-flow-form" onSubmit={create}>
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <section className="ss-flow-card">
@@ -130,10 +121,10 @@ export function CreateGroupForm({ userId, products = [] }: { userId: string; pro
         </div>
       </section>
 
-      <button onClick={create} disabled={submitting || !form.name.trim()}
+      <button type="submit" disabled={submitting || !form.name.trim()}
         className="ss-flow-submit">
         {submitting ? <><Loader2 size={16} className="animate-spin" /> Creating…</> : <>Create group <ArrowRight size={16} /></>}
       </button>
-    </div>
+    </form>
   )
 }
