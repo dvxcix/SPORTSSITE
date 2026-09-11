@@ -1,18 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Plus, Pin, Lock } from 'lucide-react'
+import { ArrowLeft, MessageSquare, Plus, Pin, Lock } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { ProductAction, ProductHero, ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ForumCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: cat } = await supabase.from('forum_categories').select('*').eq('slug', category).single()
+  const [{ data: { user } }, { data: cat }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('forum_categories').select('*').eq('slug', category).single(),
+  ])
   if (!cat) notFound()
 
   const { data: threads } = await supabase
@@ -24,33 +26,13 @@ export default async function ForumCategoryPage({ params }: { params: Promise<{ 
     .limit(30)
 
   return (
-    <div className="ss-forum-page max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <ProductPageShell narrow>
       <CommunityNav />
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link href="/forum" className="text-xs text-zinc-500 hover:text-zinc-300">Forum</Link>
-            <span className="text-zinc-700">/</span>
-            <span className="text-xs text-zinc-400">{cat.name}</span>
-          </div>
-          <h1 className="text-xl font-black text-white flex items-center gap-2">
-            {cat.icon} {cat.name}
-          </h1>
-          <p className="text-xs text-zinc-500 mt-1">{cat.description}</p>
-        </div>
-        {user && (
-          <Link href={`/forum/new?category=${cat.id}`}
-            className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-black px-3 py-2 rounded-lg transition-colors shrink-0">
-            <Plus size={14} /> New Thread
-          </Link>
-        )}
-      </div>
+      <Link href="/forum" className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 transition hover:text-white"><ArrowLeft size={13} /> Discussions</Link>
+      <ProductHero icon={<span className="text-xl">{cat.icon || <MessageSquare size={21} />}</span>} eyebrow="Discussion board" title={cat.name} description={cat.description || 'Community conversation'} actions={user ? <ProductAction href={`/forum/new?category=${cat.id}`}><Plus size={14} /> New thread</ProductAction> : undefined} />
 
       {(threads?.length ?? 0) === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-3xl mb-3">💬</p>
-          <p className="text-zinc-400">No threads yet — start the conversation</p>
-        </div>
+        <ProductPanel padded className="text-center"><MessageSquare size={28} className="mx-auto text-zinc-600"/><p className="mt-3 font-black text-white">No threads yet</p>{user && <Link href={`/forum/new?category=${cat.id}`} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black text-black"><Plus size={14}/> Start one</Link>}</ProductPanel>
       ) : (
         <div className="space-y-2">
           {(threads ?? []).map((t: any) => (
@@ -75,6 +57,6 @@ export default async function ForumCategoryPage({ params }: { params: Promise<{ 
           ))}
         </div>
       )}
-    </div>
+    </ProductPageShell>
   )
 }

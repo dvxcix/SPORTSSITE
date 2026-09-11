@@ -1,43 +1,29 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { MessageSquare, Plus } from 'lucide-react'
+import { ArrowRight, MessageSquare, Plus } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import Image from 'next/image'
+import { ProductAction, ProductHero, ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 
 export const revalidate = 60
 
 export default async function ForumPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: categories } = await supabase
-    .from('forum_categories')
-    .select('*')
-    .order('sort_order', { ascending: true })
+  const [{ data: { user } }, { data: categories }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('forum_categories').select('*').order('sort_order', { ascending: true }),
+  ])
 
   return (
-    <div className="ss-forum-page max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <ProductPageShell narrow>
       <CommunityNav />
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-zinc-800 rounded-lg"><MessageSquare size={20} className="text-orange-400" /></div>
-          <div>
-            <h1 className="text-xl font-black text-white">Discussions</h1>
-          </div>
-        </div>
-        {user && (
-          <Link href="/forum/new"
-            className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-black px-3 py-2 rounded-lg transition-colors">
-            <Plus size={14} /> New Thread
-          </Link>
-        )}
-      </div>
+      <ProductHero icon={<MessageSquare size={21} />} eyebrow="Community" title="Discussions" description="Questions, picks, and game-day conversation." actions={user ? <ProductAction href="/forum/new"><Plus size={14} /> New thread</ProductAction> : undefined} />
 
-      <div className="space-y-2">
+      {(categories?.length ?? 0) > 0 ? <div className="grid gap-3">
         {(categories ?? []).map((cat: any) => (
           <Link key={cat.id} href={`/forum/${cat.slug}`}
-            className="ss-forum-category">
+            className="ss-forum-category group">
             <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-2xl shrink-0">
               {cat.icon}
             </div>
@@ -56,9 +42,10 @@ export default async function ForumPage() {
               <p className="text-sm font-bold text-white">{cat.thread_count ?? 0}</p>
               <p className="text-xs text-zinc-600">threads</p>
             </div>
+            <ArrowRight size={15} className="shrink-0 text-zinc-700 transition group-hover:translate-x-1 group-hover:text-lime-300" />
           </Link>
         ))}
-      </div>
-    </div>
+      </div> : <ProductPanel padded className="text-center"><MessageSquare size={26} className="mx-auto text-zinc-600" /><p className="mt-3 font-black text-white">No discussions yet</p></ProductPanel>}
+    </ProductPageShell>
   )
 }

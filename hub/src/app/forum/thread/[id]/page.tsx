@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { ThreadReplyForm } from '@/components/forum/ThreadReplyForm'
-import { Pin, Lock } from 'lucide-react'
+import { ArrowLeft, Lock, MessageSquareText, Pin } from 'lucide-react'
 import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import Link from 'next/link'
+import { ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,13 +24,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: thread } = await supabase
-    .from('forum_threads')
-    .select('*, author:users(username, display_name, avatar_url, is_verified), category:forum_categories(name, slug)')
-    .eq('id', id)
-    .single()
+  const [{ data: { user } }, { data: thread }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('forum_threads').select('*, author:users(username, display_name, avatar_url, is_verified), category:forum_categories(name, slug)').eq('id', id).single(),
+  ])
   if (!thread) notFound()
 
   const { data: replies } = await supabase
@@ -39,20 +37,17 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     .order('created_at', { ascending: true })
 
   return (
-    <div className="ss-forum-page max-w-4xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+    <ProductPageShell narrow>
       <CommunityNav />
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
-          <Link href="/forum" className="hover:text-zinc-300">Forum</Link>
-          <span>/</span>
-          <Link href={`/forum/${thread.category?.slug}`} className="hover:text-zinc-300">{thread.category?.name}</Link>
-        </div>
+      <Link href={`/forum/${thread.category?.slug}`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 transition hover:text-white"><ArrowLeft size={13} /> {thread.category?.name || 'Discussions'}</Link>
+      <header className="mb-4 rounded-[22px] border border-white/[.08] bg-gradient-to-br from-lime-400/[.07] to-white/[.015] p-5 sm:p-6">
+        <p className="mb-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.16em] text-lime-300"><MessageSquareText size={12}/> Thread</p>
         <div className="flex items-start gap-2">
           {thread.is_pinned && <Pin size={14} className="text-green-400 mt-1 shrink-0" />}
           {thread.is_locked && <Lock size={14} className="text-zinc-500 mt-1 shrink-0" />}
-          <h1 className="text-xl font-black text-white leading-tight">{thread.title}</h1>
+          <h1 className="text-2xl font-black leading-tight tracking-[-.035em] text-white sm:text-3xl">{thread.title}</h1>
         </div>
-      </div>
+      </header>
 
       {/* OP */}
       <article className="ss-forum-post is-original">
@@ -92,16 +87,16 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
 
       {!thread.is_locked && user && <ThreadReplyForm userId={user.id} threadId={thread.id} />}
       {!thread.is_locked && !user && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
+        <ProductPanel padded className="text-center">
           <p className="text-sm text-zinc-400 mb-3">Sign in to reply</p>
           <Link href={`/auth/login?next=/forum/thread/${thread.id}`} className="inline-block bg-green-500 hover:bg-green-400 text-black font-black px-6 py-2 rounded-xl text-sm transition-colors">Sign In</Link>
-        </div>
+        </ProductPanel>
       )}
       {thread.is_locked && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
+        <ProductPanel padded className="text-center">
           <p className="text-sm text-zinc-500 flex items-center justify-center gap-2"><Lock size={14} /> This thread is locked</p>
-        </div>
+        </ProductPanel>
       )}
-    </div>
+    </ProductPageShell>
   )
 }
