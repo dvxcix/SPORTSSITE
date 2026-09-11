@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function PageFollowButton({ userId, pageId, initialFollowing }: {
@@ -8,7 +8,7 @@ export function PageFollowButton({ userId, pageId, initialFollowing }: {
 }) {
   const [following, setFollowing] = useState(initialFollowing)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
     setLoading(true)

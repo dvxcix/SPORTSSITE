@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
@@ -8,7 +8,7 @@ import { Upload, Type } from 'lucide-react'
 
 export function CreateStoryForm({ userId }: { userId: string }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [type, setType] = useState<'text' | 'image'>('text')
   const [text, setText] = useState('')
   const [bg, setBg] = useState('#111111')
@@ -17,9 +17,16 @@ export function CreateStoryForm({ userId }: { userId: string }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [preview])
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     if (!f) return
+    if (preview) URL.revokeObjectURL(preview)
     setFile(f)
     setPreview(URL.createObjectURL(f))
     setType('image')

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 
 export function PrivacySettingsForm({ settings }: { settings: { is_private: boolean; allow_dms: boolean; hide_win_rate: boolean } }) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [isPrivate, setIsPrivate] = useState(settings.is_private ?? false)
   const [allowDms, setAllowDms] = useState(settings.allow_dms ?? true)
   const [hideWinRate, setHideWinRate] = useState(settings.hide_win_rate ?? false)

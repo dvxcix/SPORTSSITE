@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { unblockUser } from '@/lib/blocks'
@@ -10,7 +10,7 @@ interface BlockedUser { id: string; username: string; display_name?: string; ava
 export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUserId: string; initialBlocked: BlockedUser[] }) {
   const [blocked, setBlocked] = useState(initialBlocked)
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function unblock(id: string) {
     setPendingId(id)

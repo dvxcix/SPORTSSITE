@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
@@ -29,7 +29,7 @@ const SETTINGS = [
 // changed, welcome, etc) — those aren't user-toggleable and aren't touched
 // here.
 export function NotificationSettingsForm({ settings }: { settings: Record<string, boolean> }) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [values, setValues] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {}
     for (const s of SETTINGS) {

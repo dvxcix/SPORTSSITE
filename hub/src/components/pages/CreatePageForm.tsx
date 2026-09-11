@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -8,7 +8,7 @@ const CATEGORIES = ['Team', 'Athlete', 'Media', 'Brand', 'Community', 'Podcast',
 
 export function CreatePageForm({ userId }: { userId: string }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({ name: '', description: '', category: '', emoji: '⭐', sport: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')

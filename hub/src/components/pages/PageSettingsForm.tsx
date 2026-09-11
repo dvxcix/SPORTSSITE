@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
@@ -11,7 +11,7 @@ const EMOJIS = ['⭐', '🏈', '⚾', '🏀', '🏒', '⚽', '🎯', '🔥', '�
 
 export function PageSettingsForm({ page }: { page: any }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
     name: page.name ?? '',
     description: page.description ?? '',

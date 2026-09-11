@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check, Database, KeyRound, Mail, ShieldCheck } from 'lucide-react'
 import { DataExportControl } from './DataExportControl'
 import { AccountDeletionControl } from './AccountDeletionControl'
 
 export function AccountSettingsForm({ profile }: { profile: any }) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   // Deleting the SlipSurge account has never touched Whop billing — support
   // got a real customer report of exactly this confusion, so this warning
   // has to be impossible to miss before someone deletes their account still

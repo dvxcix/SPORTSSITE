@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -40,7 +40,7 @@ export function SearchClient() {
   const [nflPlayers, setNflPlayers] = useState<NflPlayerResult[]>([])
   const [nflTeams, setNflTeams] = useState<NflTeamResult[]>([])
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   // Fetched once on mount rather than inside doSearch (which fires on every
   // debounced keystroke) — read via the ref so the memoized callback always
   // sees the latest value without needing blockedIds in its dependency array.
@@ -50,8 +50,7 @@ export function SearchClient() {
       if (!user) return
       getBlockedEitherWayIds(supabase, user.id).then(ids => { blockedIdsRef.current = ids })
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [supabase])
 
   const doSearch = useCallback(async (query: string) => {
     if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); return }
@@ -109,7 +108,7 @@ export function SearchClient() {
     setNflPlayers(nflData.players ?? [])
     setNflTeams(nflData.teams ?? [])
     setLoading(false)
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
     const t = setTimeout(() => doSearch(q), 300)
