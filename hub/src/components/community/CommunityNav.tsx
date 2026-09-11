@@ -2,12 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Hash, MessagesSquare, Users } from 'lucide-react'
+import { BookOpen, CalendarDays, Hash, House, LayoutGrid, MessagesSquare, Users } from 'lucide-react'
 
 const destinations = [
+  { href: '/feed', label: 'Feed', icon: House },
   { href: '/channels', label: 'Live', icon: MessagesSquare },
   { href: '/groups', label: 'Groups', icon: Users },
   { href: '/forum', label: 'Discussions', icon: Hash },
+  { href: '/pages', label: 'Pages', icon: LayoutGrid },
+  { href: '/events', label: 'Events', icon: CalendarDays },
+  { href: '/blog', label: 'Articles', icon: BookOpen },
 ]
 
 export function CommunityNav() {
