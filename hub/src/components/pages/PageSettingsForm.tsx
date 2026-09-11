@@ -55,10 +55,10 @@ export function PageSettingsForm({ page }: { page: any }) {
   const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
 
   return (
-    <div className="space-y-4">
+    <div className="ss-flow-form">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <div className="ss-flow-card">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Page Name *</label>
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
@@ -106,12 +106,11 @@ export function PageSettingsForm({ page }: { page: any }) {
         </div>
       </div>
 
-      <button onClick={save} disabled={saving || !form.name.trim()}
-        className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
+      <button onClick={save} disabled={saving || !form.name.trim()} className="ss-flow-submit">
         {saved ? <><Check size={14} /> Saved!</> : saving ? 'Saving…' : 'Save Changes'}
       </button>
 
-      <div className="bg-zinc-900 border border-red-500/20 rounded-xl p-4">
+      <div className="ss-danger-card">
         <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
         <p className="text-xs text-zinc-500 mb-3">Permanently delete this page and all its posts. This cannot be undone.</p>
         {confirmingDelete ? (

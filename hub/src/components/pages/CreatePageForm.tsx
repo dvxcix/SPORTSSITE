@@ -36,20 +36,20 @@ export function CreatePageForm({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="ss-flow-form">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <div className="ss-flow-card">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Page Name *</label>
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="e.g. Yankees Daily, MLB Picks Central…"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
+            className="ss-flow-input" />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
           <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3}
             placeholder="What is this page about?"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
+            className="ss-flow-input resize-none" />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
@@ -74,8 +74,7 @@ export function CreatePageForm({ userId }: { userId: string }) {
           </div>
         </div>
       </div>
-      <button onClick={create} disabled={submitting || !form.name.trim()}
-        className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
+      <button onClick={create} disabled={submitting || !form.name.trim()} className="ss-flow-submit">
         {submitting ? 'Creating…' : 'Create Page'}
       </button>
     </div>

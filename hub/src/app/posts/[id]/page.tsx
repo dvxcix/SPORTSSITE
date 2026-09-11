@@ -3,6 +3,9 @@ import { attachUserReactions } from '@/lib/queries'
 import { notFound } from 'next/navigation'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
+import { ProductPageShell } from '@/components/product/ProductPage'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -58,8 +61,9 @@ export default async function PostDetailPage({ params }: Props) {
   const [enriched] = await attachUserReactions([post], user?.id)
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <ProductPageShell narrow>
+      <Link href="/feed" className="ss-flow-back"><ChevronLeft size={14} /> Feed</Link>
       <PostCardClient post={enriched} detail />
-    </div>
+    </ProductPageShell>
   )
 }

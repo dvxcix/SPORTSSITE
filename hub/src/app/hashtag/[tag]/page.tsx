@@ -1,49 +1,30 @@
 import { createClient } from '@/lib/supabase/server'
 import { attachUserReactions } from '@/lib/queries'
 import { PostCardClient } from '@/components/social/PostCardClient'
-import { Hash } from 'lucide-react'
+import { Compass, Hash } from 'lucide-react'
 import { TierGate } from '@/components/layout/TierGate'
+import { getBlockedEitherWayIds } from '@/lib/blocks'
+import { PageState } from '@/components/layout/PageState'
+import { ProductAction, ProductHero, ProductPageShell, ProductSectionHeader } from '@/components/product/ProductPage'
 
 export const revalidate = 60
 
 export default async function HashtagPage({ params }: { params: Promise<{ tag: string }> }) {
-  const { tag } = await params
+  const rawTag = (await params).tag
+  const tag = rawTag.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: rawPosts } = await supabase
-    .from('posts')
-    .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)')
-    .eq('visibility', 'public')
-    .or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`)
-    .order('created_at', { ascending: false })
-    .limit(30)
+  const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
+  let query = supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)').eq('visibility', 'public').or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`).order('created_at', { ascending: false }).limit(30)
+  if (blockedIds.length) query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
+  const { data: rawPosts } = tag ? await query : { data: [] }
   const posts = await attachUserReactions(rawPosts ?? [], user?.id)
 
-  return (
-    <TierGate requiredTier="basic" label="Hashtags">
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-          <Hash size={20} className="text-blue-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-black text-white">#{tag}</h1>
-          <p className="text-xs text-zinc-500">{posts?.length ?? 0} posts</p>
-        </div>
-      </div>
-
-      {(posts?.length ?? 0) === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-4xl mb-3">🔍</p>
-          <p className="text-zinc-400 font-medium">No posts for #{tag}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {(posts ?? []).map((p: any) => <PostCardClient key={p.id} post={p} />)}
-        </div>
-      )}
-    </div>
-    </TierGate>
-  )
+  return <TierGate requiredTier="basic" label="Hashtags">
+    <ProductPageShell narrow>
+      <ProductHero icon={<Hash size={22} />} eyebrow="Topic" title={`#${tag || 'topic'}`} description="The latest community posts in this conversation." status={`${posts.length} posts`} actions={<ProductAction href="/explore"><Compass size={14} /> Explore</ProductAction>} />
+      <ProductSectionHeader title="Latest posts" />
+      {!posts.length ? <PageState kind="empty" title={`No posts for #${tag || 'topic'}`} message="New public posts will appear here." actionLabel="Explore the community" actionHref="/explore" /> : <div className="grid gap-3">{posts.map((post: any) => <PostCardClient key={post.id} post={post} />)}</div>}
+    </ProductPageShell>
+  </TierGate>
 }
