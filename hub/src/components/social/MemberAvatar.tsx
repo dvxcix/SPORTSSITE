@@ -27,12 +27,21 @@ export function MemberAvatar({
   const style = {
     '--member-size': `${size}px`,
     '--member-hue': hueFor(name),
+    width: size,
+    height: size,
+    minWidth: size,
+    maxWidth: size,
+    minHeight: size,
+    maxHeight: size,
+    flexBasis: size,
+    flexGrow: 0,
+    flexShrink: 0,
   } as CSSProperties
 
   return (
     <span className={`ss-member-avatar is-${tone} ${className}`} style={style} aria-hidden="true">
       <span className="ss-member-avatar-media">
-        {src ? <img src={src} alt="" /> : <span>{initials}</span>}
+        {src ? <img src={src} alt="" width={size} height={size} /> : <span>{initials}</span>}
       </span>
       {online && <span className="ss-member-presence" />}
     </span>

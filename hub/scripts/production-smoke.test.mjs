@@ -111,6 +111,17 @@ test('onboarding completion performs one durable handoff to the feed', async () 
   assert.ok(!/^\s*router\.refresh\(\)/m.test(onboarding), 'onboarding must not race a refresh against its redirect')
 })
 
+test('shared member avatars cannot expand top-bar or social layouts', async () => {
+  const avatar = await read('src/components/social/MemberAvatar.tsx')
+  const topbar = await read('src/components/layout/TopBar.tsx')
+  const css = await read('src/app/globals.css')
+  assert.ok(avatar.includes('maxWidth: size'))
+  assert.ok(avatar.includes('maxHeight: size'))
+  assert.ok(avatar.includes('width={size} height={size}'))
+  assert.ok(topbar.includes('className="ss-topbar-profile-avatar"'))
+  assert.ok(css.includes('.ss-topbar-profile-trigger > .ss-topbar-profile-avatar'))
+})
+
 test('critical pipelines write health telemetry', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   const jobs = [...new Set(vercel.crons.map(cron => cron.path.split('?')[0].split('/').at(-1)))]
