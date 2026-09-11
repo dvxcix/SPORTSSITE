@@ -5121,7 +5121,7 @@ export function DugoutClient({ date }: { date: string }) {
     <div style={{ display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', padding: '52px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}>
       <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>No games on this slate</div>
       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>There are no Dugout games available for {date}.</div>
-      <Link href="/scores" style={{ marginTop: 4, color: 'var(--accent)', fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>View scores</Link>
+      <Link href="/sports" style={{ marginTop: 4, color: 'var(--accent)', fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>View scores</Link>
     </div>
   )
 

@@ -111,6 +111,14 @@ test('onboarding completion performs one durable handoff to the feed', async () 
   assert.ok(!/^\s*router\.refresh\(\)/m.test(onboarding), 'onboarding must not race a refresh against its redirect')
 })
 
+test('legacy score links resolve into the unified score center', async () => {
+  const dugout = await read('src/components/dugout/DugoutClient.tsx')
+  const legacyScores = await read('src/app/scores/page.tsx')
+  assert.ok(dugout.includes('href="/sports"'))
+  assert.ok(!dugout.includes('href="/scores"'))
+  assert.ok(legacyScores.includes("redirect(date ? `/sports?date=${encodeURIComponent(date)}` : '/sports')"))
+})
+
 test('shared member avatars cannot expand top-bar or social layouts', async () => {
   const avatar = await read('src/components/social/MemberAvatar.tsx')
   const topbar = await read('src/components/layout/TopBar.tsx')
