@@ -36,12 +36,12 @@ export function CreateEventForm({ userId }: { userId: string }) {
     router.push(`/events/${data?.id}`)
   }
 
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
+  const inputClass = "ss-flow-input"
 
   return (
-    <div className="space-y-4">
+    <div className="ss-flow-form">
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+      <div className="ss-flow-card">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Event Title *</label>
           <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Yankees Watch Party, NFL Draft Night…" className={inputClass} />
@@ -50,7 +50,7 @@ export function CreateEventForm({ userId }: { userId: string }) {
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
           <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={inputClass + ' resize-none'} placeholder="What's happening?" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">Start Date & Time *</label>
             <input type="datetime-local" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className={inputClass} />
@@ -84,8 +84,7 @@ export function CreateEventForm({ userId }: { userId: string }) {
           </div>
         </div>
       </div>
-      <button onClick={create} disabled={submitting || !form.title.trim() || !form.start_date}
-        className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-3 rounded-xl transition-colors">
+      <button onClick={create} disabled={submitting || !form.title.trim() || !form.start_date} className="ss-flow-submit">
         {submitting ? 'Creating…' : 'Create Event'}
       </button>
     </div>
