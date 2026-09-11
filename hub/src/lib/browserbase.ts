@@ -72,7 +72,12 @@ async function assertAutomatedUsageBudget(bb: Browserbase, configuredProjectId?:
 }
 
 function pikkitGeoState(): string | undefined {
-  const value = process.env.PIKKIT_BROWSER_GEO_STATE?.trim().toUpperCase()
+  // Pikkit is authenticated manually from North Carolina. Browserbase's
+  // generic proxies:true is only a best-effort US location and may even use
+  // Canada when capacity is tight, which makes one persisted login appear
+  // to jump regions. Keep every manual and automated resume in NC unless an
+  // explicit two-letter override is configured.
+  const value = (process.env.PIKKIT_BROWSER_GEO_STATE || 'NC').trim().toUpperCase()
   return value && /^[A-Z]{2}$/.test(value) ? value : undefined
 }
 
