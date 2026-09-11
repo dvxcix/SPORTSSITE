@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Heart } from 'lucide-react'
 
-export function BlogLikeButton({ userId, blogId, likes }: { userId: string; blogId: string; likes: number }) {
+export function BlogLikeButton({ blogId, likes }: { blogId: string; likes: number }) {
   const [count, setCount] = useState(likes)
   const [liked, setLiked] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
     const next = !liked

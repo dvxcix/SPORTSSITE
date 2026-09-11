@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Sparkles, Loader2, ArrowRight } from 'lucide-react'
@@ -15,7 +15,7 @@ const SUGGESTIONS = [
 
 export function AIBlogWriter({ userId }: { userId: string }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [prompt, setPrompt] = useState('')
   const [sport, setSport] = useState('')
   const [tone, setTone] = useState('analytical')
@@ -23,10 +23,12 @@ export function AIBlogWriter({ userId }: { userId: string }) {
   const [draft, setDraft] = useState<{ title: string; content: string; excerpt: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [generationError, setGenerationError] = useState('')
 
   async function generate() {
     if (!prompt.trim()) return
     setGenerating(true)
+    setGenerationError('')
     try {
       const res = await fetch('/api/ai/blog', {
         method: 'POST',
@@ -37,19 +39,10 @@ export function AIBlogWriter({ userId }: { userId: string }) {
         const data = await res.json()
         setDraft(data)
       } else {
-        // Fallback: generate a simple placeholder so the UI doesn't break
-        setDraft({
-          title: prompt.trim(),
-          excerpt: `An in-depth look at: ${prompt.trim()}`,
-          content: `# ${prompt.trim()}\n\n[AI generation requires API key configuration. Edit this draft to add your content.]\n\n## Introduction\n\nThis article covers ${prompt.trim()}.\n\n## Key Points\n\n- Point one\n- Point two\n- Point three\n\n## Conclusion\n\nIn conclusion, ${prompt.trim()} is an important topic for sports bettors to understand.`,
-        })
+        setGenerationError('Could not create a draft. Please try again.')
       }
     } catch {
-      setDraft({
-        title: prompt.trim(),
-        excerpt: `Analysis: ${prompt.trim()}`,
-        content: `# ${prompt.trim()}\n\nEdit this draft to add your content.`,
-      })
+      setGenerationError('Could not create a draft. Please try again.')
     }
     setGenerating(false)
   }
@@ -122,6 +115,7 @@ export function AIBlogWriter({ userId }: { userId: string }) {
             ))}
           </div>
 
+          {generationError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{generationError}</div>}
           <button onClick={generate} disabled={generating || !prompt.trim()}
             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-black py-3 rounded-xl transition-colors">
             {generating ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate Article</>}

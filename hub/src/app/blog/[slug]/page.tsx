@@ -103,7 +103,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
         </Link>
         <div className="flex items-center gap-2">
-          {user && <BlogLikeButton userId={user.id} blogId={blog.id} likes={blog.like_count ?? 0} />}
+          {user && <BlogLikeButton blogId={blog.id} likes={blog.like_count ?? 0} />}
           {isOwner && (
             <Link href={`/blog/edit/${blog.id}`}
               className="text-xs font-bold text-zinc-400 border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg transition-colors">

@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Eye, Save, Send } from 'lucide-react'
+import { Save, Send } from 'lucide-react'
 
 const CATEGORIES = ['Analysis', 'Picks', 'News', 'Opinion', 'Preview', 'Recap', 'Fantasy', 'Betting Strategy']
 
 export function BlogEditor({ userId, initial, blogId }: { userId: string; initial?: any; blogId?: string }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({
     title: initial?.title ?? '',
     excerpt: initial?.excerpt ?? '',
@@ -18,7 +18,6 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
     cover_image: initial?.cover_image ?? '',
     sport: initial?.sport ?? '',
   })
-  const [status, setStatus] = useState<'draft' | 'published'>('draft')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,7 +28,6 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
   async function save(s: 'draft' | 'published') {
     if (!form.title.trim()) { setError('Title is required'); return }
     setSubmitting(true)
-    setStatus(s)
 
     if (blogId) {
       // Editing — keep the existing slug so links to this post don't break.
@@ -62,8 +60,6 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
     if (err) { setError(err.message); setSubmitting(false); return }
     router.push(s === 'published' ? `/blog/${data?.slug}` : '/blog/my')
   }
-
-  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
 
   return (
     <div className="space-y-4">

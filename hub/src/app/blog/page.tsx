@@ -1,86 +1,65 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { BookOpen, Plus, Clock, Eye } from 'lucide-react'
+import { ArrowRight, BookOpen, Clock, Eye, FilePenLine, Plus, Sparkles } from 'lucide-react'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { CommunityNav } from '@/components/community/CommunityNav'
+import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 
 export const revalidate = 60
 
+type Article = {
+  id: string
+  slug: string
+  title: string
+  excerpt?: string | null
+  category?: string | null
+  cover_image?: string | null
+  created_at: string
+  view_count?: number | null
+  author?: { username?: string | null; display_name?: string | null; avatar_url?: string | null } | null
+}
+
 export default async function BlogPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: blogs } = await supabase
-    .from('blogs')
-    .select('*, author:users(username, display_name, avatar_url, is_verified)')
-    .eq('status', 'published')
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const [{ data: { user } }, { data: blogs }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('blogs').select('*, author:users(username, display_name, avatar_url, is_verified)').eq('status', 'published').order('created_at', { ascending: false }).limit(20),
+  ])
+  const [lead, ...rest] = (blogs ?? []) as Article[]
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-zinc-800 rounded-lg"><BookOpen size={20} className="text-purple-400" /></div>
-          <div>
-            <h1 className="text-xl font-black text-white">Blog</h1>
-            <p className="text-xs text-zinc-500">Long-form takes, analysis & breakdowns</p>
-          </div>
-        </div>
-        {user && (
-          <div className="flex gap-2">
-            <Link href="/blog/create/ai"
-              className="flex items-center gap-1.5 border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-xs font-black px-3 py-2 rounded-lg transition-colors">
-              ✨ AI Write
-            </Link>
-            <Link href="/blog/create"
-              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-black px-3 py-2 rounded-lg transition-colors">
-              <Plus size={14} /> Write
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {(blogs?.length ?? 0) === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-4xl mb-3">📝</p>
-          <p className="text-zinc-400 font-medium">No articles yet</p>
-          {user && <Link href="/blog/create" className="inline-flex items-center gap-2 mt-4 bg-green-500 hover:bg-green-400 text-black text-sm font-bold px-4 py-2 rounded-lg transition-colors"><Plus size={14} /> Write the first one</Link>}
-        </div>
+    <ProductPageShell>
+      <CommunityNav />
+      <ProductHero
+        icon={<BookOpen size={22} />}
+        eyebrow="Editorial"
+        title="Stories & analysis"
+        description="Long-form breakdowns from the SlipSurge community."
+        actions={user ? <><ProductAction href="/blog/my"><FilePenLine size={14} /> My articles</ProductAction><ProductAction href="/blog/create"><Plus size={14} /> Write</ProductAction></> : undefined}
+      />
+      {!lead ? (
+        <ProductPanel padded className="text-center"><Sparkles className="mx-auto text-zinc-600" size={28} /><p className="mt-3 font-black text-white">No articles yet</p>{user && <Link href="/blog/create" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black text-black"><Plus size={14} /> Write the first article</Link>}</ProductPanel>
       ) : (
-        <div className="space-y-4">
-          {(blogs ?? []).map((b: any) => (
-            <Link key={b.id} href={`/blog/${b.slug}`}
-              className="block bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all overflow-hidden">
-              {b.cover_image && (
-                <div className="h-48 overflow-hidden">
-                  <img src={b.cover_image} alt={b.title} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="p-4">
-                {b.category && <span className="text-[10px] font-bold text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded-full">{b.category}</span>}
-                <h2 className="text-lg font-black text-white mt-2 leading-tight">{b.title}</h2>
-                {b.excerpt && <p className="text-sm text-zinc-400 mt-1.5 line-clamp-2">{b.excerpt}</p>}
-                <div className="flex items-center gap-4 mt-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-zinc-700 overflow-hidden shrink-0">
-                      {b.author?.avatar_url && <img src={b.author.avatar_url} alt="" className="w-full h-full object-cover" />}
-                    </div>
-                    <span className="text-xs font-medium text-zinc-400">{b.author?.display_name || b.author?.username}</span>
-                    {b.author?.is_verified && <span className="text-green-400 text-xs">✓</span>}
-                  </div>
-                  <span className="flex items-center gap-1 text-xs text-zinc-600">
-                    <Clock size={10} /> {new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                  {b.view_count > 0 && (
-                    <span className="flex items-center gap-1 text-xs text-zinc-600">
-                      <Eye size={10} /> {b.view_count}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <>
+          <ArticleCard article={lead} featured />
+          {rest.length > 0 && <><ProductSectionHeader title="Latest" meta={`${rest.length} articles`} /><div className="grid gap-3 md:grid-cols-2">{rest.map(article => <ArticleCard key={article.id} article={article} />)}</div></>}
+        </>
       )}
-    </div>
+    </ProductPageShell>
   )
+}
+
+function ArticleCard({ article, featured = false }: { article: Article; featured?: boolean }) {
+  return <Link href={`/blog/${article.slug}`} className={`group overflow-hidden rounded-[22px] border border-white/[.08] bg-gradient-to-br from-white/[.04] to-white/[.015] transition hover:-translate-y-0.5 hover:border-lime-400/25 ${featured ? 'grid md:grid-cols-[1.05fr_.95fr]' : 'block'}`}>
+    <div className={`relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.17),transparent_42%),#121612] ${featured ? 'min-h-64' : 'h-40'}`}>
+      {article.cover_image ? <img src={article.cover_image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]" /> : <BookOpen className="absolute bottom-6 left-6 text-lime-300/40" size={featured ? 54 : 38} />}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+    </div>
+      <div className={`flex flex-col ${featured ? 'justify-center p-6 sm:p-8' : 'p-4'}`}>
+      {article.category && <span className="text-[9px] font-black uppercase tracking-[.16em] text-lime-300">{article.category}</span>}
+      <h2 className={`mt-2 font-black leading-tight tracking-[-.03em] text-white ${featured ? 'text-2xl sm:text-3xl' : 'text-base'}`}>{article.title}</h2>
+      {article.excerpt && <p className="mt-2 line-clamp-3 text-sm leading-6 text-zinc-400">{article.excerpt}</p>}
+      <div className="mt-5 flex items-center gap-2.5"><MemberAvatar src={article.author?.avatar_url} name={article.author?.display_name || article.author?.username || 'Author'} size={28} /><span className="min-w-0 truncate text-xs font-bold text-zinc-300">{article.author?.display_name || article.author?.username}</span><span className="ml-auto flex shrink-0 items-center gap-3 text-[10px] font-bold text-zinc-600"><span className="flex items-center gap-1"><Clock size={11} />{new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>{(article.view_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye size={11} />{article.view_count}</span>}<ArrowRight size={13} className="transition group-hover:translate-x-1 group-hover:text-lime-300" /></span></div>
+    </div>
+  </Link>
 }
