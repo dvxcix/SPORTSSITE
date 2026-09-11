@@ -7,7 +7,6 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
-import { Highlight } from '@/components/ui/hero-highlight'
 import { safeInternalPath } from '@/lib/safeRedirect'
 
 // Meteors picks random delays/durations at render time — fine for a purely
@@ -107,11 +106,11 @@ function LoginForm() {
     }}>
       {/* Left panel — brand */}
       <div style={{
-        flex: 1, display: 'none', flexDirection: 'column', justifyContent: 'center',
+        flex: 1, flexDirection: 'column', justifyContent: 'center',
         padding: '60px', background: 'var(--surface)',
         borderRight: '1px solid var(--border)',
         position: 'relative', overflow: 'hidden',
-      }} className="lg:flex">
+      }} className="hidden lg:flex">
         {/* Background glow + animated beams/meteors */}
         <div style={{
           position: 'absolute', top: '30%', left: '20%',
@@ -132,9 +131,9 @@ function LoginForm() {
           </div>
           <h2 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: 16 }}>
             The social hub for{' '}
-            <Highlight className="text-black bg-gradient-to-r from-[#B4FF4D] to-[#E8FF9E] dark:from-[#B4FF4D] dark:to-[#E8FF9E]">
+            <span style={{ color: 'var(--accent)', textShadow: '0 0 28px rgba(180,255,77,.13)' }}>
               sports & picks.
-            </Highlight>
+            </span>
           </h2>
           <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 360 }}>
             Drop picks, follow cappers, watch live scores, join channels — all in one place.
@@ -152,9 +151,10 @@ function LoginForm() {
 
       {/* Right panel — form */}
       <div style={{
-        width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '40px 48px',
-      }} className="lg:w-[460px]">
+        width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '40px clamp(24px, 5vw, 54px)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,.016), transparent)',
+      }} className="mx-auto lg:mx-0 lg:w-[500px]">
         {/* Mobile logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }} className="lg:hidden">
           <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain' }} />

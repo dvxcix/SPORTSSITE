@@ -34,7 +34,7 @@ export function AdminShell({ email, children }: { email: string; children: React
       <a href="#admin-content" className="ss-skip-link">Skip to admin content</a>
       <AdminSidebar open={navOpen} onClose={closeNav} />
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-[var(--layer-sticky)] flex min-h-16 items-center gap-2 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-3 py-2 backdrop-blur-2xl sm:gap-3 sm:px-5 lg:px-6">
+        <header className="sticky top-0 z-[var(--layer-sticky)] flex min-h-16 items-center gap-2 border-b border-[var(--hairline)] bg-[color-mix(in_srgb,var(--glass-strong)_94%,transparent)] px-3 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-3xl sm:gap-3 sm:px-5 lg:px-6">
           <button type="button" aria-label="Open admin navigation" onClick={() => setNavOpen(true)} className="grid size-10 shrink-0 place-items-center rounded-xl border border-[var(--border-2)] bg-[var(--surface)] text-[var(--text-2)] transition hover:border-[color-mix(in_srgb,var(--accent)_32%,var(--border-2))] hover:text-[var(--accent)] lg:hidden">
             <Menu size={18} aria-hidden="true" />
           </button>

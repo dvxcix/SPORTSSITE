@@ -126,10 +126,10 @@ export default function RegisterPage() {
     <div style={{ minHeight: '100dvh', display: 'flex', background: 'var(--bg)' }}>
       {/* Left panel */}
       <div style={{
-        flex: 1, display: 'none', flexDirection: 'column', justifyContent: 'center',
+        flex: 1, flexDirection: 'column', justifyContent: 'center',
         padding: '60px', background: 'var(--surface)', borderRight: '1px solid var(--border)',
         position: 'relative', overflow: 'hidden',
-      }} className="lg:flex">
+      }} className="hidden lg:flex">
         <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,255,77,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <Spotlight className="left-0 top-0" fill="#B4FF4D" />
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
