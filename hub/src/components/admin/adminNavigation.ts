@@ -6,6 +6,7 @@ import {
   BookOpen,
   Bot,
   Calendar,
+  Cloud,
   Crosshair,
   CreditCard,
   Dna,
@@ -51,6 +52,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     links: [
       { href: '/admin', label: 'Control center', description: 'Platform overview and action queues', icon: LayoutDashboard, keywords: ['dashboard', 'home'] },
       { href: '/admin/pipeline-health', label: 'Pipeline health', description: 'Data, billing, and notification jobs', icon: Activity, keywords: ['cron', 'jobs', 'telemetry'] },
+      { href: '/admin/browserbase', label: 'Browser automation', description: 'Proxy cost, sessions, and scraper attribution', icon: Cloud, keywords: ['browserbase', 'proxy', 'usage', 'cost', 'scrapers'] },
       { href: '/admin/audit', label: 'Audit log', description: 'Administrative activity history', icon: ScrollText, keywords: ['security', 'history'] },
     ],
   },

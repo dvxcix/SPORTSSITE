@@ -87,7 +87,7 @@ async function installExtractionRouting(bb: BBSession) {
 }
 
 async function scrapeOneGameAttempt(g: TodayGame, date: string, legIdx: number, dryRun: boolean, shared?: BBSession) {
-  const bb = shared ?? await openSession({ proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$', metadata: { book: 'fanduel', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
+  const bb = shared ?? await openSession({ proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$', metadata: { book: 'fanduel', sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) } })
   try {
     if (!shared) await installExtractionRouting(bb)
     await bb.page.goto('https://sportsbook.fanduel.com/navigation/mlb', { waitUntil: 'domcontentloaded' })
@@ -160,7 +160,7 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, dryRun:
 async function scrapeBatch(games: TodayGame[], date: string, dryRun: boolean) {
   const bb = await openSession({
     proxyDomainPattern: '^([a-zA-Z0-9-]+\\.)*fanduel\\.com$',
-    metadata: { book: 'fanduel', mode: 'mlb-batch', gameCount: games.length, gamePks: games.map(game => game.gamePk).join(',') },
+    metadata: { book: 'fanduel', sport: 'mlb', mode: 'batch', gameCount: games.length, gamePks: games.map(game => game.gamePk).join(',') },
   })
   try {
     const pages = await Promise.all(games.map((_, index) => index === 0 ? Promise.resolve(bb.page) : bb.page.context().newPage()))

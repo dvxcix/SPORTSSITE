@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   const game = games.find(candidate => candidate.gameId === gameId)
   if (!game) return NextResponse.json({ error: 'Upcoming NFL game not found' }, { status: 404 })
 
-  const bb = await openPikkitSession(contextId, { mode: 'scrape-nfl', gameId })
+  const bb = await openPikkitSession(contextId, { sport: 'nfl', mode: 'single-game', gameId })
   try {
     await bb.page.route('**/*', route => {
       const type = route.request().resourceType()

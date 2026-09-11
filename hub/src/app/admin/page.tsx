@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Bell,
   CheckCircle2,
+  Cloud,
   FileText,
   Flag,
   LayoutDashboard,
@@ -157,6 +158,7 @@ export default async function AdminDashboard() {
             <WorkspaceLink href="/admin/users" icon={Users} label="Members" detail="Accounts, access, tiers, and restrictions" />
             <WorkspaceLink href="/admin/creators" icon={Zap} label="Creators" detail="Applications, offers, memberships, and payouts" />
             <WorkspaceLink href="/admin/pipeline-health" icon={Activity} label="Data operations" detail="Pipelines, telemetry, webhooks, and retention" />
+            <WorkspaceLink href="/admin/browserbase" icon={Cloud} label="Browser automation" detail="Proxy spend, scraper attribution, and session forensics" />
             <WorkspaceLink href="/admin/notifications" icon={Bell} label="Engagement" detail="Broadcasts, push delivery, and release messaging" />
             <WorkspaceLink href="/admin/live" icon={Radio} label="Live" detail="Rooms, streams, and realtime experiences" />
             <WorkspaceLink href="/admin/settings/features" icon={Settings} label="Platform controls" detail="Features, integrations, design, and configuration" />

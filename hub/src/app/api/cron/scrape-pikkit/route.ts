@@ -39,7 +39,7 @@ async function installTextOnlyRouting(bb: BBSession) {
 }
 
 async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, contextId: string, dryRun: boolean, shared?: BBSession) {
-  const bb = shared ?? await openPikkitSession(contextId, { mode: 'scrape', gameKey: g.gameKey, gamePk: String(g.gamePk) })
+  const bb = shared ?? await openPikkitSession(contextId, { sport: 'mlb', mode: 'single-game', gameKey: g.gameKey, gamePk: String(g.gamePk) })
   try {
     // Pikkit scraping is pure text/DOM extraction (team names, a market
     // <select>, pick counts) — no visual rendering is ever needed, and
@@ -147,7 +147,8 @@ async function scrapeOneGame(g: TodayGame, date: string, legIdx: number, context
 
 async function scrapeBatch(games: TodayGame[], date: string, contextId: string, dryRun: boolean) {
   const bb = await openPikkitSession(contextId, {
-    mode: 'scrape-batch',
+    sport: 'mlb',
+    mode: 'batch',
     gameCount: games.length,
     gamePks: games.map(game => game.gamePk).join(','),
   })

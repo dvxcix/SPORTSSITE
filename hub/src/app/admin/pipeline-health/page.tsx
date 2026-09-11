@@ -254,7 +254,7 @@ export default async function PipelineHealthPage() {
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400">Browser automation budget</p>
               <h2 className="mt-1 text-base font-black text-white">Browserbase monthly usage</h2>
             </div>
-            <p className="text-xs text-zinc-500">Cached for 5 minutes</p>
+            <div className="flex items-center gap-3"><p className="text-xs text-zinc-500">Cached for 5 minutes</p><Link href="/admin/browserbase" className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-cyan-300 transition hover:border-cyan-400/50 hover:text-cyan-200">Open cost center</Link></div>
           </div>
           <div className="grid gap-px bg-zinc-800 sm:grid-cols-3">
             <BudgetMetric label="Browser hours" value={`${browserbasePlan.browserHours.toFixed(1)} / 500`} detail={`${browserbasePlan.browserHoursRemaining.toFixed(1)} included hours remain`} percent={browserbasePlan.browserPercent} />
