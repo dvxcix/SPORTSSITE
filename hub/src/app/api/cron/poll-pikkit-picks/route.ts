@@ -62,7 +62,10 @@ async function scrapeBatch(gamePks: number[]) {
         ? `incomplete capture (${result.coverage.marketCount} markets, ${result.coverage.playerCount} players, ${result.coverage.rowCount} rows)`
         : ''
       const finalReason = reason || incompleteReason
-      const ok = res.ok && Boolean(result) && result?.imported?.ok !== false && (!finalReason || skipped)
+      // A requested capture that could not find its game is still a failed
+      // capture. `skipped` describes the source condition for alerting; it
+      // must never turn missing required data into an HTTP-200 success.
+      const ok = res.ok && Boolean(result) && result?.imported?.ok !== false && !finalReason
       return { gamePk, status: res.status, ok, skipped, attempts: Number(result?.attempts ?? 1), error: ok ? '' : 'scrape or import failed', reason: finalReason, rowsImported: Number.isFinite(rowsImported) ? rowsImported : 0, coverage: result?.coverage ?? null }
     })
   } catch {

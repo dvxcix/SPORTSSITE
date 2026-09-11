@@ -71,7 +71,42 @@ export async function findAndClickPikkitGame(page: Page, awayTeam: string, homeT
     if (match) ranked.push({ index, ...match })
   }
   ranked.sort((a, b) => a.textLength - b.textLength || a.depth - b.depth || a.index - b.index)
-  const target = ranked[legIndex]
+  let target = ranked[legIndex]
+
+  // Some responsive/list variants render the two team rows as siblings and
+  // put the wager control after both, with no small shared card ancestor.
+  // In that shape the ancestor matcher above correctly rejects the broad
+  // slate wrapper. Fall back to document order: for every wager control,
+  // find the nearest preceding away-team leaf and require the home team to
+  // occur inside the short DOM range between them. This preserves the
+  // critical both-team check while supporting Pikkit's row-pair layout.
+  if (!target) {
+    const fallbackIndexes = await page.evaluate(({ away, home }) => {
+      const controls = Array.from(document.querySelectorAll<HTMLElement>('a, button, [role="link"], [role="button"]'))
+        .filter(control => /more wagers/i.test((control.textContent || '').trim()))
+      const leaves = Array.from(document.querySelectorAll<HTMLElement>('body *')).filter(element => {
+        const text = (element.textContent || '').trim().toLowerCase()
+        if (!text.includes(away) || text.length > 120) return false
+        return !Array.from(element.children).some(child => (child.textContent || '').trim().toLowerCase().includes(away))
+      })
+      return controls.flatMap((control, controlIndex) => {
+        let bestLength = Number.POSITIVE_INFINITY
+        for (const leaf of leaves) {
+          if (!(leaf.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING)) continue
+          const range = document.createRange()
+          range.setStartBefore(leaf)
+          range.setEndAfter(control)
+          const text = (range.cloneContents().textContent || '').trim().toLowerCase()
+          if (text.length <= 2500 && text.includes(home)) bestLength = Math.min(bestLength, text.length)
+        }
+        return Number.isFinite(bestLength) ? [{ controlIndex, bestLength }] : []
+      }).sort((a, b) => a.bestLength - b.bestLength || a.controlIndex - b.controlIndex)
+        .map(candidate => candidate.controlIndex)
+    }, { away, home }).catch(() => [] as number[])
+    const fallbackIndex = fallbackIndexes[legIndex]
+    if (fallbackIndex != null) target = { index: fallbackIndex, depth: 99, textLength: 0 }
+  }
+
   if (!target) return false
   await links.nth(target.index).click({ timeout: 8000 })
   return true

@@ -201,7 +201,7 @@ export async function GET(req: Request) {
     const selected = games.filter(game => requested.has(game.gamePk))
     if (!selected.length) return NextResponse.json({ error: 'No requested games found' }, { status: 404 })
     const results = await scrapeBatch(selected, date, contextId, dryRun)
-    const failed = results.filter(result => 'error' in result && !result.skipped)
+    const failed = results.filter(result => 'error' in result)
     return NextResponse.json({ date, games: selected.length, failed: failed.length, results }, { status: failed.length ? 502 : 200 })
   }
   if (gamePkParam) {
