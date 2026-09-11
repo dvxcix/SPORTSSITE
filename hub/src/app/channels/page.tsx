@@ -3,6 +3,7 @@ import { hasCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
 import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Radio, Users } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 
 type ChannelCardData = { id: string; slug: string; name: string; description?: string | null; icon?: string | null; channel_type?: string | null; member_count?: number | null }
 
@@ -20,14 +21,14 @@ export default async function ChannelsPage() {
   const owned = (channels ?? []).filter(channel => channel.owner_id === user?.id)
   const community = (channels ?? []).filter(channel => channel.owner_id !== user?.id)
 
-  return <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+  return <ProductPageShell>
     <CommunityNav />
-    <header className="ss-community-hero"><div><p><Radio size={14}/> Live</p><h1>Channels</h1><span>Talk picks, games, and every live swing.</span></div>{creator && <Link href="/groups/create" className="ss-community-primary"><Plus size={16}/> New community</Link>}</header>
+    <ProductHero icon={<Radio size={21}/>} eyebrow="Live community" title="Channels" description="Talk picks, games, and every live swing." actions={creator ? <ProductAction href="/groups/create"><Plus size={15}/> New community</ProductAction> : undefined}/>
     {creator && (
       <ChannelSection title="Your channels" eyebrow="Your communities" channels={owned} empty={<div className="rounded-2xl border border-dashed border-lime-400/25 bg-lime-400/[.04] p-6"><h3 className="font-black text-white">No channels yet</h3><Link href="/groups/create" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-lime-300">Create a community <ArrowRight size={14}/></Link></div>}/>
     )}
     <ChannelSection title="Available channels" eyebrow="Conversations" channels={community} empty={<div className="rounded-2xl border border-white/8 bg-white/[.025] p-10 text-center text-sm text-zinc-500">No channels are available yet.</div>}/>
-  </main>
+  </ProductPageShell>
 }
 
 function ChannelSection({ title, eyebrow, channels, empty }: { title: string; eyebrow: string; channels: ChannelCardData[]; empty: React.ReactNode }) {

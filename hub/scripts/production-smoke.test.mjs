@@ -387,6 +387,16 @@ test('article likes are member-scoped and atomically counted', async () => {
   assert.ok(migration.includes('grant execute on function public.toggle_blog_like(uuid, uuid) to service_role'))
 })
 
+test('forum counters and activity ordering stay synchronized', async () => {
+  const migration = await read('supabase/migrations/20260911220000_forum_count_sync.sql')
+  assert.ok(migration.includes('after insert or update or delete on public.forum_replies'))
+  assert.ok(migration.includes('after insert or update of category_id or delete on public.forum_threads'))
+  assert.ok(migration.includes('set reply_count ='))
+  assert.ok(migration.includes('set thread_count ='))
+  assert.ok(migration.includes('last_reply_at = coalesce'))
+  assert.ok(migration.includes('revoke all on function public.sync_forum_thread_metrics() from public, anon, authenticated'))
+})
+
 test('Ultimate-only Matrix tools do not call protected APIs for lower tiers', async () => {
   const matrixPanel = await read('src/components/dugout/CustomMatrixPanel.tsx')
   assert.ok(matrixPanel.includes('const hasUltimate = !!profile'))

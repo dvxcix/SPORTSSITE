@@ -41,16 +41,16 @@ export function ThreadReplyForm({ userId, threadId }: { userId: string; threadId
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-      <p className="text-xs font-bold text-zinc-400 mb-2">Reply</p>
+    <div className="ss-flow-card mt-4">
+      <p className="mb-2 text-xs font-black uppercase tracking-[.12em] text-zinc-400">Reply</p>
       <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="Write a reply…" rows={4}
-        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none mb-3" />
-      {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
+        className="ss-flow-input mb-3 w-full resize-none" />
+      {error && <p role="alert" className="mb-2 text-xs text-red-400">{error}</p>}
       <div className="flex items-center justify-between">
         <EmojiPicker onSelect={insertAtCursor} />
         <button onClick={reply} disabled={submitting || !content.trim()}
-          className="flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-lg transition-colors text-sm">
-          <Send size={13} /> {submitting ? 'Posting…' : 'Post Reply'}
+          className="ss-flow-submit !w-auto !min-h-10 !px-4">
+          <Send size={13} /> {submitting ? 'Posting…' : 'Post reply'}
         </button>
       </div>
     </div>
