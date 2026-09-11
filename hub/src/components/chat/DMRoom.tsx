@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowLeft, LockKeyhole, Send, Sparkles } from 'lucide-react'
+import { ArrowDown, ArrowLeft, LockKeyhole, Send, Sparkles } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
@@ -20,9 +20,13 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [atBottom, setAtBottom] = useState(true)
+  const [unseenCount, setUnseenCount] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const textInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const textInputRef = useRef<HTMLTextAreaElement>(null)
+  const atBottomRef = useRef(true)
+  const supabase = useMemo(() => createClient(), [])
 
   function insertAtCursor(insertion: string) {
     const el = textInputRef.current
@@ -37,8 +41,14 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [atBottom, messages])
+
+  useEffect(() => {
+    requestAnimationFrame(() => bottomRef.current?.scrollIntoView())
+    void supabase.from('notifications').update({ read: true })
+      .eq('user_id', currentUserId).eq('actor_id', partner.id).eq('type', 'message').eq('read', false)
+  }, [currentUserId, partner.id, supabase])
 
   useEffect(() => {
     const channel = supabase.channel(`dm-${[currentUserId, partner.id].sort().join('-')}`)
@@ -48,11 +58,28 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
       }, async (payload) => {
         if (payload.new.sender_id !== partner.id) return
         const { data } = await supabase.from('users').select('username, display_name, avatar_url').eq('id', payload.new.sender_id).single()
-        setMessages(m => [...m, { ...payload.new, sender: data }])
+        setMessages(current => current.some(message => message.id === payload.new.id) ? current : [...current, { ...payload.new, sender: data }])
+        if (!atBottomRef.current) setUnseenCount(count => count + 1)
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [currentUserId, partner.id])
+    return () => { void supabase.removeChannel(channel) }
+  }, [currentUserId, partner.id, supabase])
+
+  function handleScroll() {
+    const viewport = scrollRef.current
+    if (!viewport) return
+    const nextAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80
+    atBottomRef.current = nextAtBottom
+    setAtBottom(nextAtBottom)
+    if (nextAtBottom) setUnseenCount(0)
+  }
+
+  function jumpToLatest() {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    atBottomRef.current = true
+    setAtBottom(true)
+    setUnseenCount(0)
+  }
 
   async function send() {
     if (!text.trim() || sending) return
@@ -99,7 +126,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           <ArrowLeft size={18} />
         </Link>
         <Link href={`/profile/${partner.username}`} className="ss-dm-partner">
-          <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={40} online />
+          <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={40} />
           <div>
             <p>{partner.display_name || partner.username}</p>
             <span>@{partner.username}</span>
@@ -117,7 +144,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
       {error && <p className="ss-dm-error">{error}</p>}
 
       {/* Messages */}
-      <div className="ss-dm-messages">
+      <div ref={scrollRef} onScroll={handleScroll} className="ss-dm-messages">
         <div className="ss-dm-thread-start"><Sparkles size={13} /><span>Your conversation with @{partner.username}</span></div>
         {messages.map(m => {
           const isMe = m.sender_id === currentUserId
@@ -136,16 +163,20 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
         <div ref={bottomRef} />
       </div>
 
+      {!atBottom && <button type="button" className="ss-dm-new" onClick={jumpToLatest}><ArrowDown size={14}/>{unseenCount ? `${unseenCount} new` : 'Latest'}</button>}
+
       {/* Input */}
       <div className="ss-dm-composer">
         <div className="ss-dm-composer-row">
-          <input
+          <textarea
             ref={textInputRef}
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={e => { setText(e.target.value); if (error) setError('') }}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
             placeholder={`Message @${partner.username}…`}
             className="ss-dm-input"
+            rows={1}
+            maxLength={1000}
           />
           <EmojiPicker onSelect={insertAtCursor} />
           <button onClick={send} disabled={!text.trim() || sending}

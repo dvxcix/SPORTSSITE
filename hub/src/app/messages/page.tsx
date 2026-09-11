@@ -12,7 +12,15 @@ export default async function MessagesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/messages')
 
-  const blockedIds = new Set(await getBlockedEitherWayIds(supabase, user.id))
+  const [blockedIdList, unreadResult] = await Promise.all([
+    getBlockedEitherWayIds(supabase, user.id),
+    supabase.from('notifications').select('actor_id').eq('user_id', user.id).eq('type', 'message').eq('read', false),
+  ])
+  const blockedIds = new Set(blockedIdList)
+  const unreadByPartner = new Map<string, number>()
+  for (const notification of unreadResult.data ?? []) {
+    if (notification.actor_id) unreadByPartner.set(notification.actor_id, (unreadByPartner.get(notification.actor_id) ?? 0) + 1)
+  }
 
   // Get DM threads (distinct conversations)
   const { data: threads } = await supabase
@@ -45,6 +53,8 @@ export default async function MessagesPage() {
       id: partner.id,
       content: conversation.content ?? '',
       createdAt: conversation.created_at,
+      unreadCount: unreadByPartner.get(partner.id) ?? 0,
+      lastIsMine: conversation.sender?.id === user.id,
       partner: {
         id: partner.id,
         username: partner.username,

@@ -10,6 +10,8 @@ type Conversation = {
   id: string
   content: string
   createdAt: string
+  unreadCount: number
+  lastIsMine: boolean
   partner: {
     id: string
     username: string
@@ -58,16 +60,17 @@ export function MessageInbox({ conversations }: { conversations: Conversation[] 
             const partner = conversation.partner
             return (
               <Link key={conversation.id} href={`/messages/${partner.username}`}
-                className="ss-conversation-row">
+                className={`ss-conversation-row ${conversation.unreadCount ? 'is-unread' : ''}`}>
                 <MemberAvatar src={partner.avatarUrl} name={partner.displayName || partner.username} size={46} />
                 <div className="ss-conversation-copy">
                   <div><strong>{partner.displayName || partner.username}</strong><span>@{partner.username}</span></div>
-                  <p>{conversation.content || 'Open conversation'}</p>
+                  <p>{conversation.lastIsMine ? 'You: ' : ''}{conversation.content || 'Open conversation'}</p>
                 </div>
                 <div className="ss-conversation-meta">
                   <span>
                   {new Date(conversation.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
+                  {conversation.unreadCount > 0 && <b className="ss-conversation-unread">{conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}</b>}
                   <ArrowUpRight size={14} />
                 </div>
               </Link>
