@@ -62,6 +62,7 @@ export function PlayerAvatar({
         width: size,
         height: size,
         flexShrink: 0,
+        filter: 'drop-shadow(0 8px 16px rgba(0,0,0,.24))',
         ...style,
       }}
     >
@@ -81,7 +82,8 @@ export function PlayerAvatar({
           fontSize: size * 0.32,
           fontWeight: 800,
           color: 'var(--accent)',
-          border: '1.5px solid var(--border)',
+          border: '1px solid color-mix(in srgb, white 17%, var(--border))',
+          boxShadow: 'inset 0 1px rgba(255,255,255,.12), 0 0 0 2px rgba(255,255,255,.025)',
         }}
       >
         {showHeadshot ? (
@@ -89,7 +91,7 @@ export function PlayerAvatar({
             src={headshot!}
             alt={name}
             onError={() => setHeadshotFailed(true)}
-            style={{ width: '112%', height: '112%', objectFit: 'contain', objectPosition: 'center 40%' }}
+            style={{ width: '112%', height: '112%', objectFit: 'contain', objectPosition: 'center 40%', filter: 'saturate(1.06) contrast(1.02)' }}
           />
         ) : (
           initials || '?'
@@ -106,8 +108,9 @@ export function PlayerAvatar({
             width: badgeSize,
             height: badgeSize,
             borderRadius: '50%',
-            background: 'var(--bg)',
-            border: '2px solid var(--bg)',
+            background: 'color-mix(in srgb, var(--surface-2) 92%, black)',
+            border: '2px solid color-mix(in srgb, var(--bg) 88%, transparent)',
+            boxShadow: '0 3px 9px rgba(0,0,0,.32)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -147,12 +150,14 @@ export function TeamLogo({
         width: size,
         height: size,
         borderRadius: '50%',
-        background: logo && !failed ? 'transparent' : 'var(--surface-2)',
+        background: logo && !failed ? 'rgba(255,255,255,.025)' : 'var(--surface-2)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
         flexShrink: 0,
+        border: '1px solid rgba(255,255,255,.065)',
+        boxShadow: 'inset 0 1px rgba(255,255,255,.04), 0 7px 18px rgba(0,0,0,.18)',
         ...style,
       }}
     >

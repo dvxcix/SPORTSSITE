@@ -429,6 +429,27 @@ img { max-width: 100%; }
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px) saturate(130%);
 }
+
+/* Route-level loading canvas: preserves the final page's hierarchy so a
+   transition feels instantaneous instead of collapsing into a lone spinner. */
+.ss-route-loading { position:relative; width:min(100%,var(--page-max)); min-height:64vh; margin-inline:auto; padding:clamp(18px,2.5vw,34px) var(--page-gutter) 80px; overflow:hidden; }
+.ss-route-loading::before { position:absolute; inset:-80px 8% auto; height:240px; border-radius:50%; background:var(--accent); opacity:.035; filter:blur(80px); content:''; pointer-events:none; }
+.ss-route-loading-hero,.ss-route-loading-toolbar,.ss-route-loading-grid section { border:1px solid var(--hairline); background:linear-gradient(145deg,rgba(255,255,255,.026),transparent 42%),var(--glass); box-shadow:var(--shadow-card); backdrop-filter:blur(18px); }
+.ss-route-loading-hero { height:112px; display:flex; align-items:center; gap:16px; padding:20px; border-radius:24px; }
+.ss-route-loading-icon { width:58px; height:58px; flex:0 0 auto; border-radius:18px; }
+.ss-route-loading-hero > div { width:min(420px,65%); display:grid; gap:10px; }
+.ss-route-loading-hero > div span:first-child { width:54%; height:20px; border-radius:8px; }
+.ss-route-loading-hero > div span:last-child { width:92%; height:11px; border-radius:6px; }
+.ss-route-loading-toolbar { height:54px; margin-top:14px; padding:8px; display:flex; gap:8px; border-radius:17px; }
+.ss-route-loading-toolbar span { width:96px; border-radius:11px; }
+.ss-route-loading-grid { margin-top:14px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.ss-route-loading-grid section { min-height:210px; padding:18px; display:grid; align-content:start; gap:13px; border-radius:20px; }
+.ss-route-loading-grid section span { height:12px; border-radius:7px; }
+.ss-route-loading-grid section span:first-child { width:42%; height:18px; }
+.ss-route-loading :is(.ss-route-loading-icon,.ss-route-loading-hero span,.ss-route-loading-toolbar span,.ss-route-loading-grid span) { background:linear-gradient(100deg,var(--surface-3) 24%,var(--surface-4) 44%,var(--surface-3) 64%); background-size:220% 100%; animation:ss-loading-sweep 1.35s ease-in-out infinite; }
+.ss-route-loading > p { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+@keyframes ss-loading-sweep { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
+@media (max-width:720px) { .ss-route-loading { padding-inline:12px; } .ss-route-loading-hero { height:96px; border-radius:20px; } .ss-route-loading-grid { grid-template-columns:1fr; } .ss-route-loading-grid section { min-height:150px; } .ss-route-loading-grid section:nth-child(n+3) { display:none; } }
 .ss-surface   { background: linear-gradient(155deg, rgba(255,255,255,.028), transparent 42%), var(--glass); }
 .ss-surface-2 { background: linear-gradient(155deg, rgba(255,255,255,.035), transparent 42%), var(--glass-strong); }
 .ss-card      { background: linear-gradient(155deg, rgba(255,255,255,.028), transparent 44%), var(--glass); transition: border-color 150ms, background 150ms, transform 150ms, box-shadow 150ms; }

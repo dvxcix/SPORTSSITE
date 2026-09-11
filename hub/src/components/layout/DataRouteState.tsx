@@ -21,10 +21,16 @@ export function DataRouteError({ error, reset, label = 'page' }: { error: Error 
 
 export function DataRouteLoading({ label = 'data' }: { label?: string }) {
   return (
-    <PageState
-      kind="loading"
-      title={`Loading ${label}`}
-      message="Syncing the latest available data and preparing your view."
-    />
+    <main className="ss-route-loading" aria-busy="true" aria-label={`Loading ${label}`}>
+      <div className="ss-route-loading-hero">
+        <span className="ss-route-loading-icon" />
+        <div><span /><span /></div>
+      </div>
+      <div className="ss-route-loading-toolbar">{[0, 1, 2, 3].map(item => <span key={item} />)}</div>
+      <div className="ss-route-loading-grid">
+        {[0, 1, 2].map(item => <section key={item}><span /><span /><span /><span /></section>)}
+      </div>
+      <p role="status">Loading {label}…</p>
+    </main>
   )
 }

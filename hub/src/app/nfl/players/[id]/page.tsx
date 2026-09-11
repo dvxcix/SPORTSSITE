@@ -127,8 +127,8 @@ const num = (v: unknown, digits = 0): string => (typeof v === 'number' ? v.toFix
 function statCell(label: string, value: unknown) {
   return (
     <div className="text-center">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
-      <div className="text-sm font-bold text-white tabular-nums">{typeof value === 'number' ? value : '—'}</div>
+      <div className={styles.metricLabel}>{label}</div>
+      <div className={styles.metricValue}>{typeof value === 'number' ? value : '-'}</div>
     </div>
   )
 }
@@ -142,9 +142,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 const bioRow = (label: string, value: React.ReactNode) =>
   value != null && value !== '' ? (
-    <div className="flex justify-between text-sm py-1.5 border-b border-zinc-800 last:border-0">
-      <span className="text-zinc-500">{label}</span>
-      <span className="text-white font-semibold">{value}</span>
+    <div className={styles.bioRow}>
+      <span className={styles.bioLabel}>{label}</span>
+      <span className={styles.bioValue}>{value}</span>
     </div>
   ) : null
 
@@ -177,15 +177,16 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
       >
         {player.headshot ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.headshot} alt={player.display_name} width={88} height={88} className="rounded-full object-cover" />
+          <div className={styles.avatar}><img src={player.headshot} alt={player.display_name} width={104} height={104} /></div>
         ) : (
-          <div className="w-[88px] h-[88px] rounded-full bg-zinc-800 flex items-center justify-center text-2xl text-zinc-500">
+          <div className={`${styles.avatar} grid place-items-center text-2xl font-black text-[var(--text-3)]`}>
             {player.position || '—'}
           </div>
         )}
-        <div>
-          <h1 className="text-2xl font-black text-white">{player.display_name}</h1>
-          <p className="text-sm text-zinc-300 flex items-center gap-1.5">
+        <div className={styles.identity}>
+          <p className={styles.eyebrow}>NFL player intelligence</p>
+          <h1 className={styles.title}>{player.display_name}</h1>
+          <p className={styles.meta}>
             <span>
               {player.position}
               {player.jersey_number != null ? ` · #${player.jersey_number}` : ''}
@@ -193,9 +194,9 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
             {team && (
               <>
                 <span>·</span>
-                <Link href={`/nfl/teams/${team.team_abbr}`} className="inline-flex items-center gap-1.5 hover:text-white">
+                <Link href={`/nfl/teams/${team.team_abbr}`} className={styles.metaPill}>
                   <NflTeamLogo abbr={team.team_abbr} logoUrl={team.team_logo_espn} size={18} />
-                  <span className="underline">{team.team_name}</span>
+                  <span>{team.team_name}</span>
                 </Link>
               </>
             )}
@@ -204,13 +205,13 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
       </div>
 
       {opponent && dvpByCategory.size > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6 overflow-x-auto">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+        <section className={`${styles.panel} ${styles.panelPad}`}>
+          <h2 className={styles.panelHeading}>
             <span>Next Matchup vs</span>
             <NflTeamLogo abbr={opponent.team_abbr} logoUrl={teamLogos[opponent.team_abbr]} size={18} />
-            <span className="normal-case text-zinc-600">({opponent.season} defense vs {player.position}, {opponent.games} games)</span>
+            <span className="normal-case tracking-normal text-[var(--text-3)]">({opponent.season} defense vs {player.position}, {opponent.games} games)</span>
           </h2>
-          <div className="flex gap-4 overflow-x-auto">
+          <div className={styles.metricRail}>
             {(isQb
               ? ['passing_yards', 'passing_tds', 'interceptions']
               : isRb
@@ -222,21 +223,21 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
               const pctDiff = row.pct_diff as number | null
               const favorable = pctDiff != null && pctDiff > 0
               return (
-                <div key={cat} className="flex-shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg p-3 min-w-[120px]">
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">{DVP_LABELS[cat] ?? cat}</div>
-                  <div className="text-sm font-bold text-white tabular-nums">{num(row.avg_allowed, 1)}/gm</div>
-                  <div className={`text-xs font-semibold tabular-nums ${pctDiff == null ? 'text-zinc-500' : favorable ? 'text-emerald-400' : 'text-red-400'}`}>
+                <div key={cat} className={styles.metricCard}>
+                  <div className={styles.metricLabel}>{DVP_LABELS[cat] ?? cat}</div>
+                  <div className={`${styles.metricValue} tabular-nums`}>{num(row.avg_allowed, 1)}/gm</div>
+                  <div className={`${styles.metricDelta} tabular-nums ${pctDiff == null ? 'text-[var(--text-3)]' : favorable ? 'text-emerald-400' : 'text-red-400'}`}>
                     {pctDiff != null ? `${pctDiff > 0 ? '+' : ''}${pctDiff.toFixed(1)}% vs avg` : '—'}
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
-        <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Bio</h2>
+      <section className={`${styles.panel} ${styles.panelPad}`}>
+        <h2 className={styles.panelHeading}>Player profile</h2>
         {bioRow('Status', player.status)}
         {bioRow('Experience', player.years_of_experience != null ? `${player.years_of_experience} yrs` : null)}
         {bioRow('Height / Weight', heightStr && player.weight ? `${heightStr}, ${player.weight} lbs` : null)}
@@ -248,12 +249,12 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
             {player.draft_team && <NflTeamLogo abbr={player.draft_team} logoUrl={teamLogos[player.draft_team]} size={16} />}
           </span>
         ) : null)}
-      </div>
+      </section>
 
       {seasonStats.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6 overflow-x-auto">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Season Stats</h2>
-          <table className="w-full text-sm min-w-[500px]">
+        <section className={`${styles.panel} ${styles.panelPad}`}>
+          <h2 className={styles.panelHeading}>Season performance</h2>
+          <div className={styles.tableWrap}><table className={styles.dataTable}>
             <thead>
               <tr className="text-zinc-500 text-xs uppercase text-left">
                 <th className="pb-2 font-semibold">Season</th>
@@ -314,16 +315,16 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </table></div>
+        </section>
       )}
 
       {recentGames.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6 overflow-x-auto">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Recent Games</h2>
-          <div className="flex gap-4 overflow-x-auto">
+        <section className={`${styles.panel} ${styles.panelPad}`}>
+          <h2 className={styles.panelHeading}>Recent games</h2>
+          <div className={styles.metricRail}>
             {recentGames.map((g, i) => (
-              <div key={i} className="flex-shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg p-3 min-w-[140px]">
+              <div key={i} className={styles.metricCard}>
                 <div className="text-[10px] text-zinc-500 mb-2 flex items-center gap-1">
                   <span>{String(g.season)} Wk {String(g.week)}</span>
                   {g.opponent_team ? (
@@ -356,13 +357,13 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {ngsRows.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 overflow-x-auto">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Next Gen Stats — Recent Games</h2>
-          <table className="w-full text-sm min-w-[500px]">
+        <section className={`${styles.panel} ${styles.panelPad}`}>
+          <h2 className={styles.panelHeading}>Next Gen Stats · recent games</h2>
+          <div className={styles.tableWrap}><table className={styles.dataTable}>
             <thead>
               <tr className="text-zinc-500 text-xs uppercase text-left">
                 <th className="pb-2 font-semibold">Season</th>
@@ -415,8 +416,8 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </table></div>
+        </section>
       )}
     </main>
     </TierGate>

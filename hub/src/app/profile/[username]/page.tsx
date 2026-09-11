@@ -14,7 +14,7 @@ import { FavoritesSection } from '@/components/profile/FavoritesSection'
 import { ProfileActions } from '@/components/profile/ProfileActions'
 import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight } from 'lucide-react'
+import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight, MessageSquareText, LockKeyhole, UserRoundX } from 'lucide-react'
 import { PROVIDER_BY_PLATFORM_KEY } from '@/lib/verifiedIdentity'
 import { hasCreatorAccess } from '@/lib/creator'
 import type { Metadata } from 'next'
@@ -79,7 +79,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   if (isBlocked) {
     return (
       <div className="max-w-2xl mx-auto text-center py-24 px-4">
-        <p className="text-4xl mb-3">🚫</p>
+        <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><UserRoundX size={24} /></span>
         <p className="text-white font-bold">This profile isn't available</p>
         <p className="text-zinc-500 text-sm mt-1">You or @{profile.username} have blocked each other.</p>
       </div>
@@ -166,7 +166,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   return (
     <main className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
-      <div className="overflow-hidden rounded-[28px] border border-white/[.08] bg-[#0b0d10] shadow-[0_30px_100px_rgba(0,0,0,.4)]">
+      <div className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[linear-gradient(145deg,rgba(15,18,22,.98),rgba(8,10,13,.98))] shadow-[inset_0_1px_rgba(255,255,255,.04),0_30px_100px_rgba(0,0,0,.42)]">
       {/* Banner */}
       <div className="h-44 sm:h-60 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 relative overflow-hidden">
         {profile.banner_url && <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />}
@@ -222,7 +222,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{profile.display_name || profile.username}</h1>
             <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
-            {profile.is_verified && <span className="text-green-400 text-sm">✓</span>}
+            {profile.is_verified && <BadgeCheck size={18} className="text-lime-400" aria-label="Verified" />}
             {isCreatorProfile && (
               <span className="text-xs font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">CREATOR</span>
             )}
@@ -258,7 +258,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <div className="flex flex-wrap items-center gap-2 pt-0.5">
               {connectedAccounts.map((a: any) => {
                 const content = (
-                  <span className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-full pl-1.5 pr-2.5 py-1 text-xs font-bold text-zinc-300">
+                  <span className="flex items-center gap-1.5 rounded-full border border-white/[.09] bg-white/[.035] py-1 pl-1.5 pr-2.5 text-xs font-bold text-zinc-300 shadow-[inset_0_1px_rgba(255,255,255,.035)]">
                     <img src={a.icon_url} alt={a.name} className="w-4 h-4 object-contain" />
                     {a.handle}
                     {a.isVerified && <BadgeCheck size={13} className="text-green-500" />}
@@ -271,7 +271,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 )
               })}
               {(profile.sportsbooks ?? []).map((book: string) => (
-                <span key={book} className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-1.5" title={book}>
+                <span key={book} className="flex items-center rounded-full border border-white/[.09] bg-white/[.035] p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)]" title={book}>
                   <BookLogo vendor={book} size={14} />
                 </span>
               ))}
@@ -307,7 +307,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           </div>
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             {(creatorProducts ?? []).map(product => <Link href={`/creators/offers/${product.id}`} key={product.id} className="rounded-xl border border-white/[0.08] bg-black/25 p-3 hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-white">{product.title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{product.description || 'Premium creator access on SlipSurge.'}</p></div><strong className="whitespace-nowrap text-sm text-lime-300">${Number(product.price).toFixed(2)}</strong></div></Link>)}
-            {(creatorGroups ?? []).map(group => <Link href={`/groups/${group.slug}`} key={group.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-3 hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-zinc-900 text-lg">{group.emoji || <Users size={16} />}</span><div className="min-w-0"><p className="truncate text-sm font-black text-white">{group.name}</p><p className="text-xs text-zinc-500">{group.member_count ?? 0} members · {group.access_type === 'paid' ? 'Member access' : 'Open community'}</p></div></Link>)}
+            {(creatorGroups ?? []).map(group => <Link href={`/groups/${group.slug}`} key={group.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-3 transition hover:-translate-y-px hover:border-lime-400/30 hover:bg-lime-400/[0.04]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-zinc-900 text-lg">{group.emoji || <Users size={16} />}</span><div className="min-w-0"><p className="truncate text-sm font-black text-white">{group.name}</p><p className="text-xs text-zinc-500">{group.member_count ?? 0} members · {group.access_type === 'paid' ? 'Member access' : 'Open community'}</p></div></Link>)}
             {(creatorProducts?.length ?? 0) === 0 && (creatorGroups?.length ?? 0) === 0 && <div className="sm:col-span-2 rounded-xl border border-dashed border-zinc-800 p-5 text-center text-xs text-zinc-500">This creator is setting up their first community and membership.</div>}
           </div>
         </section>
@@ -321,26 +321,27 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       {canViewContent ? (
         <>
           {/* Tabs */}
-          <div className="flex px-2 sm:px-5">
+          <nav aria-label="Profile content" className="mx-3 mt-4 flex gap-1 rounded-2xl border border-white/[.075] bg-black/25 p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)] sm:mx-6">
             {TABS.map(t => (
               <Link
                 key={t.key}
                 href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
-                className={`flex-1 text-center text-sm font-bold py-3 border-b-2 transition-colors ${
-                  tab === t.key ? 'text-white border-green-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                className={`relative flex-1 rounded-xl px-3 py-2.5 text-center text-xs font-black transition duration-200 sm:text-sm ${
+                  tab === t.key ? 'bg-white/[.085] text-white shadow-[inset_0_1px_rgba(255,255,255,.06),0_7px_20px_rgba(0,0,0,.22)]' : 'text-zinc-500 hover:bg-white/[.035] hover:text-zinc-300'
                 }`}
               >
+                {tab === t.key && <span className="absolute inset-x-6 -bottom-1.5 h-px bg-gradient-to-r from-transparent via-lime-300 to-transparent" />}
                 {t.label}
               </Link>
             ))}
-          </div>
+          </nav>
 
           {/* Posts */}
           <div className="px-3 py-4 sm:px-6 sm:py-6">
             {mappedPosts.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-4xl mb-3">📭</p>
-                <p className="text-zinc-400 font-medium">
+              <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center">
+                <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><MessageSquareText size={24} /></span>
+                <p className="font-bold text-zinc-300">
                   {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : 'No posts yet'}
                 </p>
                 {isOwnProfile && tab === 'all' && (
@@ -359,8 +360,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           </div>
         </>
       ) : (
-        <div className="text-center py-16 px-4">
-          <p className="text-4xl mb-3">🔒</p>
+        <div className="px-4 py-16 text-center">
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><LockKeyhole size={24} /></span>
           <p className="text-white font-bold">This account is private</p>
           <p className="text-zinc-500 text-sm mt-1">Follow @{profile.username} to see their posts and picks.</p>
         </div>
