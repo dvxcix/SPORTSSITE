@@ -7,6 +7,7 @@ import { Send } from 'lucide-react'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
+import { MentionInput } from '@/components/social/MentionInput'
 
 export function ThreadReplyForm({ userId, threadId, threadAuthorId }: { userId: string; threadId: string; threadAuthorId: string }) {
   const router = useRouter()
@@ -28,7 +29,8 @@ export function ThreadReplyForm({ userId, threadId, threadAuthorId }: { userId: 
     })
   }
 
-  async function reply() {
+  async function reply(event: React.FormEvent) {
+    event.preventDefault()
     if (!content.trim()) return
     setSubmitting(true)
     setError('')
@@ -47,18 +49,18 @@ export function ThreadReplyForm({ userId, threadId, threadAuthorId }: { userId: 
   }
 
   return (
-    <div className="ss-flow-card mt-4">
+    <form className="ss-flow-card mt-4" onSubmit={reply}>
       <p className="mb-2 text-xs font-black uppercase tracking-[.12em] text-zinc-400">Reply</p>
-      <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="Write a reply…" rows={4}
-        className="ss-flow-input mb-3 w-full resize-none" />
+      <MentionInput ref={textareaRef} value={content} onValueChange={setContent} currentUserId={userId} placeholder="Write a reply…" rows={4}
+        maxLength={5000} className="ss-flow-input mb-3 w-full resize-none" />
       {error && <p role="alert" className="mb-2 text-xs text-red-400">{error}</p>}
       <div className="flex items-center justify-between">
         <EmojiPicker onSelect={insertAtCursor} />
-        <button onClick={reply} disabled={submitting || !content.trim()}
+        <button type="submit" disabled={submitting || !content.trim()}
           className="ss-flow-submit !w-auto !min-h-10 !px-4">
           <Send size={13} /> {submitting ? 'Posting…' : 'Post reply'}
         </button>
       </div>
-    </div>
+    </form>
   )
 }

@@ -713,3 +713,15 @@ test('native community creation forms retain product context without leaking bac
   assert.ok(!event.includes('setError(err.message)'))
   assert.ok(!group.includes('setError(err.message)'))
 })
+
+test('discussion authoring and rendering support rich mentions end to end', async () => {
+  const thread = await read('src/components/forum/NewThreadForm.tsx')
+  const reply = await read('src/components/forum/ThreadReplyForm.tsx')
+  const detail = await read('src/app/forum/thread/[id]/page.tsx')
+  assert.ok(thread.includes('<MentionInput'))
+  assert.ok(thread.includes('await notifyMentions'))
+  assert.ok(thread.includes('<form className="ss-flow-form" onSubmit={submit}>'))
+  assert.ok(reply.includes('<MentionInput'))
+  assert.ok(reply.includes('onSubmit={reply}'))
+  assert.ok(detail.includes('<LinkifiedText'))
+})

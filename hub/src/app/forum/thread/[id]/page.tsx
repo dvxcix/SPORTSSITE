@@ -8,6 +8,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import Link from 'next/link'
 import { ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 import { ForumReactions, type ForumReaction } from '@/components/forum/ForumReactions'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,7 +70,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             <p className="text-xs text-zinc-500">{new Date(thread.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
           </div>
         </div>
-        {thread.content && <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{thread.content}</p>}
+        {thread.content && <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap"><LinkifiedText text={thread.content} /></p>}
         <ForumReactions targetId={thread.id} targetType="forum_thread" userId={user?.id} ownerId={thread.author_id} initialReactions={reactionsByTarget.get(thread.id) ?? []} returnPath={returnPath} />
       </article>
 
@@ -88,7 +89,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                   <p className="text-xs text-zinc-500">#{i + 1} · {new Date(r.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
-              <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{r.content}</p>
+              <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap"><LinkifiedText text={r.content || ''} /></p>
               <ForumReactions targetId={r.id} targetType="forum_reply" userId={user?.id} ownerId={r.author_id} initialReactions={reactionsByTarget.get(r.id) ?? []} returnPath={returnPath} />
             </article>
           ))}
