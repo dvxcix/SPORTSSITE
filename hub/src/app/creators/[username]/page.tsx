@@ -27,7 +27,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
 
     <section className={styles.content}>
       <div className={styles.main}>
-        <header><span>MEMBERSHIPS</span><h2>Choose your access</h2><p>Checkout is secured by Whop. Access connects automatically to your SlipSurge account.</p></header>
+        <header><span>MEMBERSHIPS</span><h2>Choose your access</h2></header>
         {products?.length ? <div className={styles.tiers}>{products.map((product, index) => <article className={index === 0 ? styles.featured : ''} key={product.id}>
           {index === 0 && <span className={styles.popular}>CREATOR PICK</span>}
           <div><span>{product.product_type === 'membership' ? 'Recurring membership' : 'One-time access'}</span><h3>{product.title}</h3><p>{product.description || 'Premium creator access and member experiences.'}</p></div>
@@ -37,7 +37,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
         </article>)}</div> : <div className={styles.empty}>This creator is preparing their first membership.</div>}
       </div>
       <aside>
-        <section className={styles.safety}><ShieldCheck size={20} /><div><h3>Protected access</h3><p>Entitlements are verified after checkout and removed automatically when access ends.</p></div></section>
+        <section className={styles.safety}><ShieldCheck size={20} /><div><h3>Protected access</h3><p>Your membership access stays connected to your SlipSurge account.</p></div></section>
         <section className={styles.communities}><span>COMMUNITIES</span><h3>Member spaces</h3>{groups?.length ? groups.slice(0,4).map(group => <div key={group.id}><i>{group.emoji || '◆'}</i><span><b>{group.name}</b><small>{group.access_type === 'paid' ? 'Membership required' : 'Open community'}</small></span><LockKeyhole size={14} /></div>) : <p>Member groups will appear here when published.</p>}</section>
         <section className={styles.about}><Users size={19} /><h3>One membership home</h3><p>Content, research, alerts, group access, and creator conversations stay connected to your SlipSurge identity.</p></section>
       </aside>
