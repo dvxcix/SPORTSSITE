@@ -594,3 +594,31 @@ test('release workflow validates before publishing', async () => {
   assert.ok(typecheck >= 0 && smoke > typecheck && publish > smoke)
   assert.ok(workflow.includes("github.ref == 'refs/heads/main'"))
 })
+
+test('member avatars use the shared bounded renderer across social surfaces', async () => {
+  const files = [
+    'src/components/chat/NewDMForm.tsx',
+    'src/components/desktop/DesktopNavigation.tsx',
+    'src/components/groups/GroupInviteModal.tsx',
+    'src/components/social/FeedComposer.tsx',
+    'src/components/social/MentionInput.tsx',
+    'src/components/social/MentionProfileCard.tsx',
+    'src/components/social/PostCardClient.tsx',
+    'src/components/social/StoriesBar.tsx',
+    'src/components/social/StoriesViewer.tsx',
+    'src/app/leaderboard/LeaderboardClient.tsx',
+    'src/components/marketplace/MatrixMarketplaceClient.tsx',
+    'src/components/marketplace/MatrixMarketplaceDetailClient.tsx',
+    'src/app/creators/offers/[productId]/page.tsx',
+  ]
+
+  const avatar = await read('src/components/social/MemberAvatar.tsx')
+  assert.ok(avatar.includes('maxWidth: size'))
+  assert.ok(avatar.includes('maxHeight: size'))
+  assert.ok(avatar.includes('flexShrink: 0'))
+
+  for (const file of files) {
+    const source = await read(file)
+    assert.ok(source.includes('MemberAvatar'), `${file} bypasses the bounded member avatar`)
+  }
+})

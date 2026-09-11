@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { UserBadges } from './UserBadges'
+import { MemberAvatar } from './MemberAvatar'
 
 export type MentionProfile = {
   id: string
@@ -19,7 +20,7 @@ export type MentionProfile = {
 export function MentionProfileCard({ profile }: { profile: MentionProfile }) {
   return <div className="ss-mention-profile-card">
     <div className="ss-mention-profile-top">
-      <span className="ss-mention-profile-avatar">{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : (profile.display_name || profile.username)[0].toUpperCase()}</span>
+      <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={42} />
       <span className="ss-mention-profile-id"><strong>{profile.display_name || profile.username}{profile.is_verified ? <i aria-label="Verified">&#10003;</i> : null}</strong><small>@{profile.username}</small></span>
       <UserBadges userId={profile.id} size={18} maxVisible={3} />
     </div>

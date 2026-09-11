@@ -991,12 +991,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             ))}
             {user && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--accent)' }}>
-                  {profile?.avatar_url
-                    ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : (profile?.display_name || profile?.username || '?')[0].toUpperCase()
-                  }
-                </div>
+                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={28} />
                 <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
                   <input
                     ref={commentInputRef}
@@ -1098,12 +1093,7 @@ function CommentItem({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8, marginLeft: indent }}>
-        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'var(--text-3)' }}>
-          {node.author?.avatar_url
-            ? <img src={node.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : (node.author?.display_name || node.author?.username || '?')[0].toUpperCase()
-          }
-        </div>
+        <MemberAvatar src={node.author?.avatar_url} name={node.author?.display_name || node.author?.username || 'Member'} size={28} />
         <div style={{
           flex: 1, borderRadius: 10, padding: '8px 12px',
           background: isOwn ? 'rgba(77,158,255,0.10)' : 'var(--surface-2)',
@@ -1177,12 +1167,7 @@ function CommentItem({
 
       {replyingTo === node.id && (
         <div style={{ display: 'flex', gap: 8, marginLeft: indent + 36 }}>
-          <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-dim)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'var(--accent)' }}>
-            {currentUserAvatar
-              ? <img src={currentUserAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : (currentUserDisplay || '?')[0].toUpperCase()
-            }
-          </div>
+          <MemberAvatar src={currentUserAvatar} name={currentUserDisplay || 'Member'} size={24} />
           <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
             <input
               autoFocus

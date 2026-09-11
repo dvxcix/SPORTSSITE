@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { UserPlus, X } from 'lucide-react'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 type FoundUser = { id: string; username: string; display_name: string | null; avatar_url: string | null }
 
@@ -81,9 +82,7 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
             <div className="space-y-1.5 max-h-64 overflow-y-auto">
               {results.map(u => (
                 <div key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-800/60">
-                  <div className="w-8 h-8 rounded-full bg-zinc-700 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-white">
-                    {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
-                  </div>
+                  <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={32} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{u.display_name || u.username}</p>
                     <p className="text-xs text-zinc-500 truncate">@{u.username}</p>

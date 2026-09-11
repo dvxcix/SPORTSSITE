@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { FollowButton } from "@/components/social/FollowButton";
 import { UserBadges } from "@/components/social/UserBadges";
+import { MemberAvatar } from "@/components/social/MemberAvatar";
 import {
   humanize,
   MatrixBlueprint,
@@ -191,11 +192,7 @@ export function MatrixMarketplaceDetailClient({
                 href={`/profile/${listing.author?.username}`}
                 className={styles.detailAvatar}
               >
-                {listing.author?.avatar_url ? (
-                  <img src={listing.author.avatar_url} alt="" />
-                ) : (
-                  authorName[0]
-                )}
+                <MemberAvatar src={listing.author?.avatar_url} name={authorName} size={43} />
               </Link>
               <div>
                 <span>

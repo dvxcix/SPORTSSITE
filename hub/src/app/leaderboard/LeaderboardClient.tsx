@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { TrendingUp, Target, Flame, Trophy } from 'lucide-react'
 import { UserBadges } from '@/components/social/UserBadges'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 import styles from './Leaderboard.module.css'
 
 type UserRow = {
@@ -31,20 +32,7 @@ const SPORT_LABELS: Record<string, string> = {
 }
 
 function Avatar({ user, size = 40 }: { user: UserRow; size?: number }) {
-  const initials = (user.display_name || user.username).slice(0, 2).toUpperCase()
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-      background: user.avatar_url ? 'transparent' : 'var(--accent-dim)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.35, fontWeight: 800, color: 'var(--accent)',
-    }}>
-      {user.avatar_url
-        ? <img src={user.avatar_url} alt={`${user.display_name || user.username}'s avatar`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        : initials
-      }
-    </div>
-  )
+  return <MemberAvatar src={user.avatar_url} name={user.display_name || user.username} size={size} />
 }
 
 function StreakBadge({ streak }: { streak: number }) {

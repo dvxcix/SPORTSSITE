@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { AtSign, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { UserBadges } from './UserBadges'
+import { MemberAvatar } from './MemberAvatar'
 
 export type MentionUser = {
   id: string
@@ -122,7 +123,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(f
           className={`ss-mention-option${index === activeIndex ? ' is-active' : ''}`}
           onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActiveIndex(index)} onClick={() => selectUser(person)}
         >
-          <span className="ss-mention-avatar">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : (person.display_name || person.username)[0].toUpperCase()}</span>
+          <MemberAvatar src={person.avatar_url} name={person.display_name || person.username} size={34} />
           <span className="ss-mention-identity"><span className="ss-mention-name">{person.display_name || person.username}{person.is_verified ? <i aria-label="Verified">&#10003;</i> : null}<UserBadges userId={person.id} size={15} maxVisible={3} /></span><small>@{person.username}</small></span>
           <AtSign className="ss-mention-action" size={16} />
         </button>)}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string; ultimateOnly?: boolean }
 
@@ -61,7 +62,6 @@ export function DesktopNavigation() {
   const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
   const items = (currentSection === 'Community' ? community : intelligence).filter(item => !item.ultimateOnly || hasUltimate)
   const displayName = profile?.display_name || profile?.username || 'SlipSurge member'
-  const initials = displayName.slice(0, 2).toUpperCase()
 
   return (
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
@@ -113,7 +113,7 @@ export function DesktopNavigation() {
           </nav>
           <div className="ss-desktop-account-card">
             <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} prefetch={false} className="ss-desktop-avatar">
-              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{initials}</span>}
+              <MemberAvatar src={profile?.avatar_url} name={displayName} size={36} />
             </Link>
             <div><strong>{displayName}</strong><span>{profile?.tier || 'free'} workspace</span></div>
             <Link href="/settings" prefetch={false} aria-label="Account settings"><Settings2 size={14} /></Link>

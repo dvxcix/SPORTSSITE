@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, BadgeCheck, Check, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { CheckoutButton } from './CheckoutButton'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 import styles from './CreatorOffer.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,7 @@ export default async function CreatorOfferPage({ params }: { params: Promise<{ p
     <section className={styles.card}>
       <div className={styles.summary}>
         <span className={styles.eyebrow}><LockKeyhole size={14} /> SECURE CREATOR ACCESS</span>
-        <div className={styles.creator}><div>{creator?.avatar_url ? <img src={creator.avatar_url} alt="" /> : (creator?.display_name || creator?.username || 'S')[0]}</div><span><strong>{creator?.display_name || creator?.username}</strong><small><BadgeCheck size={12} /> SlipSurge creator</small></span></div>
+        <div className={styles.creator}><MemberAvatar src={creator?.avatar_url} name={creator?.display_name || creator?.username || 'SlipSurge creator'} size={38} /><span><strong>{creator?.display_name || creator?.username}</strong><small><BadgeCheck size={12} /> SlipSurge creator</small></span></div>
         <h1>{product.title}</h1><p>{product.description || 'Premium creator content, research, and member community access.'}</p>
         <ul><li><Check size={15} /> Access linked to your SlipSurge account</li><li><Check size={15} /> Private content and communities unlock automatically</li><li><Check size={15} /> Whop-secured checkout and membership management</li></ul>
       </div>

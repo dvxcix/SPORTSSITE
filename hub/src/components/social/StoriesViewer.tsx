@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { MemberAvatar } from './MemberAvatar'
 
 interface Story {
   id: string
@@ -64,14 +65,7 @@ export function StoriesViewer({ stories, initialIndex, onClose }: StoriesViewerP
 
         {/* Author header */}
         <div className="absolute top-4 left-0 right-0 z-10 flex items-center gap-3 px-4 pt-4">
-          <div className="w-8 h-8 rounded-full bg-zinc-700 overflow-hidden border-2 border-white/30 shrink-0">
-            {story.author.avatar_url
-              ? <img src={story.author.avatar_url} alt="" className="w-full h-full object-cover" />
-              : <span className="flex items-center justify-center w-full h-full text-xs font-black text-white">
-                  {(story.author.display_name || story.author.username)[0].toUpperCase()}
-                </span>
-            }
-          </div>
+          <MemberAvatar src={story.author.avatar_url} name={story.author.display_name || story.author.username} size={32} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white">{story.author.display_name || story.author.username}</p>
             <p className="text-xs text-white/60">

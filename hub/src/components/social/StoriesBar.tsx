@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StoriesViewer } from './StoriesViewer'
+import { MemberAvatar } from './MemberAvatar'
 
 export function StoriesBar() {
   const [stories, setStories] = useState<any[]>([])
@@ -53,12 +54,7 @@ export function StoriesBar() {
             <button key={s.id} onClick={() => openViewer(i)} className="flex flex-col items-center gap-1.5 shrink-0">
               <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-br from-green-400 to-blue-500">
                 <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
-                  {s.author?.avatar_url
-                    ? <img src={s.author.avatar_url} alt="" className="w-full h-full object-cover" />
-                    : <span className="text-lg font-black text-white">
-                        {(s.author?.display_name || s.author?.username || '?')[0].toUpperCase()}
-                      </span>
-                  }
+                  <MemberAvatar src={s.author?.avatar_url} name={s.author?.display_name || s.author?.username || 'Member'} size={58} />
                 </div>
               </div>
               <span className="text-[10px] text-zinc-400 font-medium max-w-[64px] truncate text-center">

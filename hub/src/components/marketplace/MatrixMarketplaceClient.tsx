@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { FollowButton } from "@/components/social/FollowButton";
 import { UserBadges } from "@/components/social/UserBadges";
+import { MemberAvatar } from "@/components/social/MemberAvatar";
 import type { Badge } from "@/lib/badges";
 import styles from "./MatrixMarketplace.module.css";
 import { useFeedback } from "@/components/ui/FeedbackProvider";
@@ -365,17 +366,11 @@ export function MatrixMarketplaceClient({
                   href={`/profile/${listing.author?.username}`}
                   className={styles.avatar}
                 >
-                  {listing.author?.avatar_url ? (
-                    <img src={listing.author.avatar_url} alt="" />
-                  ) : (
-                    <span>
-                      {
-                        (listing.author?.display_name ||
-                          listing.author?.username ||
-                          "?")[0]
-                      }
-                    </span>
-                  )}
+                  <MemberAvatar
+                    src={listing.author?.avatar_url}
+                    name={listing.author?.display_name || listing.author?.username || "Member"}
+                    size={37}
+                  />
                 </Link>
                 <div className={styles.authorCopy}>
                   <span>

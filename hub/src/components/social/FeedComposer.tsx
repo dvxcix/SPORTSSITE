@@ -12,6 +12,7 @@ import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from './EmojiPicker'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { MentionInput } from './MentionInput'
+import { MemberAvatar } from './MemberAvatar'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -162,23 +163,10 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
   const charLimit = 500
   const remaining = charLimit - content.length
-  const initials = (profile.display_name || profile.username || '?')[0].toUpperCase()
-
   return (
     <div className="ss-feed-composer" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
       <div style={{ display: 'flex', gap: 12 }}>
-        {/* Avatar */}
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-          background: 'var(--accent-dim)', overflow: 'hidden',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 900, color: 'var(--accent)',
-        }}>
-          {profile.avatar_url
-            ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : initials
-          }
-        </div>
+        <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username || 'Member'} size={40} />
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <MentionInput

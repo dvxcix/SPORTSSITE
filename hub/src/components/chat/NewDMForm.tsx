@@ -1,15 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ArrowUpRight, Search } from 'lucide-react'
 import Link from 'next/link'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 interface User { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
 
 export function NewDMForm({ users }: { users: User[] }) {
   const [q, setQ] = useState('')
-  const router = useRouter()
 
   const filtered = users.filter(u =>
     u.username.toLowerCase().includes(q.toLowerCase()) ||
@@ -29,9 +28,7 @@ export function NewDMForm({ users }: { users: User[] }) {
         {filtered.map(u => (
           <Link key={u.id} href={`/messages/${u.username}`}
             className="ss-new-dm-person">
-            <div className="ss-new-dm-avatar">
-              {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
-            </div>
+            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} />
             <div className="ss-new-dm-person-copy">
               <div className="flex items-center gap-1.5">
                 <p className="font-bold text-white text-sm">{u.display_name || u.username}</p>
