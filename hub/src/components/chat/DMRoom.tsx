@@ -8,6 +8,7 @@ import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
@@ -154,7 +155,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
                 <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} />
               )}
               <div className="ss-dm-bubble-wrap">
-                <div className="ss-dm-bubble">{m.content}</div>
+                <div className="ss-dm-bubble"><LinkifiedText text={m.content || ''} /></div>
                 <time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>
               </div>
             </div>

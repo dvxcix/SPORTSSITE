@@ -667,3 +667,13 @@ test('desktop navigation classifies every social route as community', async () =
   }
   assert.ok(navigation.includes('communitySections.some'))
 })
+
+test('live chat supports rich mentions without dropping send failures', async () => {
+  const room = await read('src/components/chat/ChatRoom.tsx')
+  const direct = await read('src/components/chat/DMRoom.tsx')
+  assert.ok(room.includes('<MentionInput'))
+  assert.ok(room.includes('await notifyMentions'))
+  assert.ok(room.includes('<LinkifiedText'))
+  assert.ok(room.includes("setSendError('Message not sent. Try again.')"))
+  assert.ok(direct.includes('<LinkifiedText'))
+})

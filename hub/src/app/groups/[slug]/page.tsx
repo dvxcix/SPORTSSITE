@@ -84,10 +84,13 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       .limit(20)
     return attachUserReactions(rawPosts ?? [], user?.id)
   }
-  const [{ data: members }, posts, chatMessages] = await Promise.all([
+  const [{ data: members }, posts, chatMessages, { data: groupChannel }] = await Promise.all([
     supabase.from('group_members').select('user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).limit(8),
     postsPromise(),
     canViewContent && group.channel_id ? getChannelMessages(group.channel_id, 50) : Promise.resolve([]),
+    group.channel_id
+      ? supabase.from('channels').select('slug').eq('id', group.channel_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ])
 
   const canPost = isMember
@@ -200,6 +203,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
               <div className="h-[min(620px,70dvh)] min-h-[440px] flex flex-col overflow-hidden">
                 <ChatRoom
                   channelId={group.channel_id}
+                  channelSlug={groupChannel?.slug || `group-${slug}`}
                   channelName={group.name}
                   initialMessages={chatMessages}
                   currentUserId={user?.id}

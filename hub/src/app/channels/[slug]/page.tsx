@@ -4,6 +4,7 @@ import { getChannelMessages, getChannels } from '@/lib/queries'
 import { ChatRoom } from '@/components/chat/ChatRoom'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Hash, Menu, Users } from 'lucide-react'
 
 interface Props { params: Promise<{ slug: string }> }
@@ -29,7 +30,7 @@ export default async function ChannelPage({ params }: Props) {
   return (
     <div className="ss-community-room-layout">
       <aside className="ss-desktop-channel-rail">
-        <div className="ss-desktop-channel-brand"><img src="/logo.png" alt="" /><div><strong>Community</strong><span>SLIPSURGE</span></div></div>
+        <div className="ss-desktop-channel-brand"><Image src="/logo.png" alt="" width={30} height={30} priority /><div><strong>Community</strong><span>SLIPSURGE</span></div></div>
         <CommunityNav />
         <nav>
           {channels.map(item => (
@@ -53,6 +54,7 @@ export default async function ChannelPage({ params }: Props) {
       <ChatRoom
         key={channel.id}
         channelId={channel.id}
+        channelSlug={channel.slug}
         channelName={channel.name}
         initialMessages={messages}
         currentUserId={user?.id}

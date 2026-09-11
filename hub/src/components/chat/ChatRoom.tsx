@@ -8,15 +8,19 @@ import type { Message } from '@/lib/supabase/types'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { sendDesktopNotification } from '@/lib/desktopNotifications'
+import { MentionInput } from '@/components/social/MentionInput'
+import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { notifyMentions } from '@/lib/mentions'
 
 interface ChatRoomProps {
   channelId: string
+  channelSlug: string
   channelName: string
   initialMessages: Message[]
   currentUserId?: string
 }
 
-export function ChatRoom({ channelId, channelName, initialMessages, currentUserId }: ChatRoomProps) {
+export function ChatRoom({ channelId, channelSlug, channelName, initialMessages, currentUserId }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -91,13 +95,15 @@ export function ChatRoom({ channelId, channelName, initialMessages, currentUserI
   async function sendMessage(event: React.FormEvent) {
     event.preventDefault()
     if (!input.trim() || !currentUserId || sending) return
+    const content = input.trim()
     setSendError('')
     setSending(true)
-    const { error } = await supabase.from('messages').insert({
-      channel_id: channelId, sender_id: currentUserId, content: input.trim(), message_type: 'text',
-    })
-    if (!error) {
+    const { data, error } = await supabase.from('messages').insert({
+      channel_id: channelId, sender_id: currentUserId, content, message_type: 'text',
+    }).select('id').single()
+    if (!error && data) {
       setInput('')
+      await notifyMentions(supabase, currentUserId, content, `/channels/${channelSlug}`, data.id, 'a channel message')
       requestAnimationFrame(() => inputRef.current?.focus())
     } else {
       setSendError('Message not sent. Try again.')
@@ -121,7 +127,7 @@ export function ChatRoom({ channelId, channelName, initialMessages, currentUserI
           ) : <time>{stamp}</time>}
           <div className="ss-chat-message-body">
             {startsGroup && <header>{message.sender?.username ? <Link href={`/profile/${message.sender.username}`}>{name}</Link> : <strong>{name}</strong>}{message.sender?.is_verified && <span className="ss-chat-verified">✓</span>}<time>{stamp}</time></header>}
-            {message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p>{message.content}</p>}
+            {message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p><LinkifiedText text={message.content || ''} /></p>}
           </div>
         </article>
       })}
@@ -130,7 +136,7 @@ export function ChatRoom({ channelId, channelName, initialMessages, currentUserI
     {!atBottom && <button type="button" className="ss-chat-new" onClick={jumpToLatest}><ArrowDown size={14}/>{unseenCount ? `${unseenCount} new` : 'Latest'}</button>}
     <div className="ss-chat-composer-wrap">
       {!currentUserId ? <p className="ss-chat-signin"><Link href="/auth/login">Sign in</Link> to join the conversation</p> : <form onSubmit={sendMessage} className="ss-chat-composer">
-        <textarea ref={inputRef} value={input} onChange={event => { setInput(event.target.value); if (sendError) setSendError('') }} onKeyDown={event => {
+        <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {
           if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() }
         }} placeholder={`Message #${channelName}`} maxLength={1000} rows={1}/>
         <EmojiPicker onSelect={insertAtCursor}/>
