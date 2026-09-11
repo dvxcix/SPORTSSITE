@@ -48,7 +48,7 @@ export function CreateEventForm({ userId }: { userId: string }) {
       going_count: 0,
       interested_count: 0,
     }).select('id').single()
-    if (err) { setError(err.message); setSubmitting(false); return }
+    if (err) { setError('The event could not be created. Try again.'); setSubmitting(false); return }
     router.push(`/events/${data?.id}`)
   }
 

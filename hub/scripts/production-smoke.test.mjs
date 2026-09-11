@@ -701,3 +701,15 @@ test('community group creation is atomic and creator-scoped', async () => {
   assert.ok(migration.includes('grant execute on function public.create_community_group'))
   assert.ok(invoker.includes('security invoker'))
 })
+
+test('native community creation forms retain product context without leaking backend errors', async () => {
+  const page = await read('src/components/pages/CreatePageForm.tsx')
+  const event = await read('src/components/events/CreateEventForm.tsx')
+  const group = await read('src/components/groups/CreateGroupForm.tsx')
+  assert.ok(page.includes("const SPORTS = ['MLB', 'NFL'"))
+  assert.ok(page.includes('sportLogoUrl(sport)'))
+  assert.ok(page.includes('<form className="ss-flow-form" onSubmit={create}>'))
+  assert.ok(!page.includes('setError(err.message)'))
+  assert.ok(!event.includes('setError(err.message)'))
+  assert.ok(!group.includes('setError(err.message)'))
+})

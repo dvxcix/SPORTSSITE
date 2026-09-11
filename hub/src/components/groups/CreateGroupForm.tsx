@@ -31,6 +31,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
     setSubmitting(true)
     setError('')
     const groupSlug = slug(form.name.trim())
+    if (!groupSlug) { setError('Use at least one letter or number in the group name'); setSubmitting(false); return }
     const { data, error: err } = await supabase.rpc('create_community_group', {
       p_name: form.name.trim(),
       p_slug: groupSlug,
