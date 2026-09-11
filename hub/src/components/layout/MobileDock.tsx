@@ -9,7 +9,7 @@ const items = [
   { href: '/feed', label: 'Home', icon: Home },
   { href: '/dugout', label: 'Research', icon: FlaskConical },
   { href: '/odds-terminal', label: 'Terminal', icon: ChartSpline },
-  { href: '/channels', label: 'Community', icon: MessagesSquare },
+  { href: '/channels', label: 'Community', icon: MessagesSquare, sections: ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks'] },
 ]
 
 function isActive(pathname: string, href: string) {
@@ -24,7 +24,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
       <div className="ss-mobile-dock-surface">
         {items.map((item) => {
           const Icon = item.icon
-          const active = isActive(pathname, item.href)
+          const active = item.sections?.some(section => isActive(pathname, section)) ?? isActive(pathname, item.href)
           return (
             <Link key={item.href} href={item.href} prefetch={false} className={cn('ss-mobile-dock-item', active && 'is-active')} aria-current={active ? 'page' : undefined} data-label={item.label}>
               <span className="ss-mobile-dock-icon"><Icon size={18} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" /></span>

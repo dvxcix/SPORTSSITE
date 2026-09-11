@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, BadgeDollarSign, BarChart3, BellRing, Building2, Check, Copy, ExternalLink, Eye, Layers3, Loader2, LockKeyhole, MessageSquareText, Pause, Play, Plus, Radio, Rocket, ShieldCheck, Users } from 'lucide-react'
 import styles from './CreatorStudio.module.css'
 import { isTrustedSlipSurgeUrl, isTrustedWhopUrl } from '@/lib/whopUrl'
@@ -19,6 +20,7 @@ const BENEFITS = [
 ] as const
 
 export function CreatorStudioClient({ profile, products, groups, stats, events, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; events: Event[]; isTestAccount?: boolean }) {
+  const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({ title: '', description: '', price: '19.99', productType: 'membership' })
@@ -50,7 +52,8 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
       const res = await fetch('/api/creator/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, description, price: Number(form.price) }), signal: AbortSignal.timeout(20_000) })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error || 'Could not create membership')
-      window.location.reload()
+      setForm({ title: '', description: '', price: '19.99', productType: 'membership' })
+      router.refresh()
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : 'Could not create membership')
     } finally {
@@ -64,7 +67,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
       const res = await fetch('/api/creator/products', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productId, status }), signal: AbortSignal.timeout(20_000) })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error || 'Could not update membership')
-      window.location.reload()
+      router.refresh()
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : 'Could not update membership')
     } finally {

@@ -7,7 +7,7 @@ import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
   Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft, Crosshair,
-  ChevronRight, ShoppingBag, type LucideIcon,
+  ChevronRight, ShoppingBag, Hash, LayoutGrid, CalendarDays, BookOpen, type LucideIcon,
 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
@@ -41,9 +41,16 @@ const community: NavItem[] = [
   { href: '/channels', label: 'Live Channels', icon: Zap, badge: 'DESKTOP' },
   { href: '/messages', label: 'Direct Messages', icon: MessageCircle },
   { href: '/groups', label: 'Groups', icon: Users },
+  { href: '/forum', label: 'Discussions', icon: Hash },
+  { href: '/pages', label: 'Pages', icon: LayoutGrid },
+  { href: '/events', label: 'Events', icon: CalendarDays },
+  { href: '/blog', label: 'Articles', icon: BookOpen },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/bookmarks', label: 'Saved', icon: Bookmark },
 ]
+
+const communitySections = ['/feed', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']
+const communityRailSections = communitySections.filter(section => section !== '/feed')
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -55,7 +62,7 @@ export function DesktopNavigation() {
   const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
   const contextCollapsed = collapsed && !channelsWorkspace
-  const currentSection = pathname.startsWith('/messages') || pathname.startsWith('/groups') || pathname.startsWith('/notifications')
+  const currentSection = communitySections.some(section => isActive(pathname, section))
     ? 'Community'
     : 'Intelligence'
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
@@ -72,7 +79,9 @@ export function DesktopNavigation() {
         <nav aria-label="Desktop workspaces">
           {rail.map(item => {
             const Icon = item.icon
-            const active = isActive(pathname, item.href)
+            const active = item.href === '/channels'
+              ? communityRailSections.some(section => isActive(pathname, section))
+              : isActive(pathname, item.href)
             return (
               <Link key={item.href} href={item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
                 <Icon size={19} />

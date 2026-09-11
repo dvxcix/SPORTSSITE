@@ -66,7 +66,6 @@ export function CreateStoryForm({ userId }: { userId: string }) {
     if (insertErr) { setError('Could not post story — please try again.'); setSubmitting(false); return }
 
     router.push('/feed')
-    router.refresh()
   }
 
   return (

@@ -642,3 +642,28 @@ test('community destinations share navigation and route transition states', asyn
     assert.ok(loading.includes('DataRouteLoading'), `${route} lacks a shared transition state`)
   }
 })
+
+test('creator and story publishing avoid full-page reload handoffs', async () => {
+  const studio = await read('src/app/creators/studio/CreatorStudioClient.tsx')
+  const story = await read('src/components/social/CreateStoryForm.tsx')
+  assert.ok(studio.includes('router.refresh()'))
+  assert.ok(!studio.includes('window.location.reload()'))
+  assert.ok(story.includes("router.push('/feed')"))
+  assert.ok(!story.includes("router.push('/feed')\n    router.refresh()"))
+})
+
+test('mobile navigation keeps the community workspace active across every social route', async () => {
+  const dock = await read('src/components/layout/MobileDock.tsx')
+  for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
+    assert.ok(dock.includes(`'${route}'`), `mobile community state omits ${route}`)
+  }
+  assert.ok(dock.includes('item.sections?.some'))
+})
+
+test('desktop navigation classifies every social route as community', async () => {
+  const navigation = await read('src/components/desktop/DesktopNavigation.tsx')
+  for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
+    assert.ok(navigation.includes(`'${route}'`), `desktop community navigation omits ${route}`)
+  }
+  assert.ok(navigation.includes('communitySections.some'))
+})
