@@ -1728,3 +1728,18 @@ test('final Game Rooms summarize exact settled picks and durable community contr
   assert.match(sharedGame, /picks=\{communityPicks\}/)
   assert.match(mlbGame, /picks=\{communityPicks\}/)
 })
+
+test('shared dense-data grids preserve columns, density, sorting, bounded rows, and mobile cards', async () => {
+  const grid = await read('src/components/ui/DataGrid.tsx')
+  const styles = await read('src/components/ui/DataGrid.module.css')
+  const audit = await read('src/app/admin/product-audit/ProductAuditClient.tsx')
+  assert.match(grid, /window\.localStorage\.setItem\(`\$\{storageKey\}:columns`/)
+  assert.match(grid, /window\.localStorage\.setItem\(`\$\{storageKey\}:density`/)
+  assert.match(grid, /aria-label=\{`Sort by/)
+  assert.match(grid, /sortedRows\.slice\(0, limit\)/)
+  assert.match(grid, /setLimit\(current => current \+ initialRowLimit\)/)
+  assert.match(styles, /content-visibility:auto/)
+  assert.match(styles, /\.mobile\{display:grid/)
+  assert.match(styles, /prefers-reduced-motion:reduce/)
+  assert.match(audit, /<DataGrid ariaLabel="Product experience route audit"/)
+})

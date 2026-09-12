@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import { Check, CircleDashed, Filter, Search, TriangleAlert } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { PRODUCT_EXPERIENCE_ROUTES, AUDIT_DIMENSIONS, routeCompletion, type AuditState } from '@/lib/productExperienceAudit'
+import { DataGrid, type DataGridColumn } from '@/components/ui/DataGrid'
+import { PRODUCT_EXPERIENCE_ROUTES, AUDIT_DIMENSIONS, routeCompletion, type AuditState, type ExperienceRoute } from '@/lib/productExperienceAudit'
 import { cn } from '@/lib/utils'
 
 const STATE_META: Record<AuditState, { label: string; icon: typeof Check; className: string }> = {
@@ -35,6 +36,25 @@ export function ProductAuditClient() {
     if (family !== 'All' && route.family !== family) return false
     return !normalized || [route.route, route.label, route.family].some(value => value.toLowerCase().includes(normalized))
   }), [family, normalized, priority])
+  const columns = useMemo<DataGridColumn<ExperienceRoute>[]>(() => [
+    {
+      id: 'route', header: 'Route', mobileLabel: 'Surface', pinned: true,
+      sortValue: route => route.label,
+      cell: route => <div className="min-w-0"><p className="text-xs font-black text-[var(--text-1)]">{route.label}</p><p className="mt-0.5 font-mono text-[9px] text-[var(--text-3)]">{route.route} · {route.family}</p></div>,
+    },
+    {
+      id: 'priority', header: 'Priority', sortValue: route => route.priority, align: 'center',
+      cell: route => <Badge variant={route.priority === 'P0' ? 'danger' : route.priority === 'P1' ? 'pick' : 'default'}>{route.priority}</Badge>,
+    },
+    ...AUDIT_DIMENSIONS.map(dimension => ({
+      id: dimension, header: dimension, mobileLabel: dimension, sortValue: (route: ExperienceRoute) => route[dimension], align: 'center' as const,
+      cell: (route: ExperienceRoute) => <StateCell state={route[dimension]} />,
+    })),
+    {
+      id: 'progress', header: 'Progress', sortValue: routeCompletion, align: 'right',
+      cell: route => { const completion = routeCompletion(route); return <div className="ml-auto flex w-28 items-center gap-2"><span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]"><span className="block h-full rounded-full bg-[var(--accent)]" style={{ width: `${completion}%` }} /></span><b className="w-8 text-right font-mono text-[10px] text-[var(--text-2)]">{completion}%</b></div> },
+    },
+  ], [])
 
   return (
     <div className="space-y-4">
@@ -45,8 +65,8 @@ export function ProductAuditClient() {
         <Summary label="Missing state systems" value={PRODUCT_EXPERIENCE_ROUTES.filter(route => route.states === 'missing').length} tone="warning" />
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
-        <header className="flex flex-col gap-3 border-b border-[var(--border)] p-3 sm:p-4 xl:flex-row xl:items-center">
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] sm:p-4">
+        <header className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <label className="relative min-w-0 flex-1">
             <Search size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <span className="sr-only">Search routes</span>
@@ -67,38 +87,8 @@ export function ProductAuditClient() {
             </div>
           </div>
         </header>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left">
-            <thead className="sticky top-0 z-10 bg-[color-mix(in_srgb,var(--surface-2)_96%,transparent)] backdrop-blur-xl">
-              <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-[.12em] text-[var(--text-3)]">Route</th>
-                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[.12em] text-[var(--text-3)]">Priority</th>
-                {AUDIT_DIMENSIONS.map(dimension => <th key={dimension} className="px-3 py-3 text-[10px] font-black uppercase tracking-[.12em] text-[var(--text-3)]">{dimension}</th>)}
-                <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-[.12em] text-[var(--text-3)]">Progress</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--hairline)]">
-              {routes.map(route => {
-                const completion = routeCompletion(route)
-                return (
-                  <tr key={route.route} className="group transition-colors hover:bg-[var(--surface-2)]">
-                    <td className="px-4 py-3">
-                      <div className="min-w-0"><p className="text-xs font-black text-[var(--text-1)]">{route.label}</p><p className="mt-0.5 font-mono text-[9px] text-[var(--text-3)]">{route.route} · {route.family}</p></div>
-                    </td>
-                    <td className="px-3 py-3"><Badge variant={route.priority === 'P0' ? 'danger' : route.priority === 'P1' ? 'pick' : 'default'}>{route.priority}</Badge></td>
-                    {AUDIT_DIMENSIONS.map(dimension => <td key={dimension} className="px-3 py-3"><StateCell state={route[dimension]} /></td>)}
-                    <td className="px-4 py-3">
-                      <div className="ml-auto flex w-28 items-center gap-2"><span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]"><span className="block h-full rounded-full bg-[var(--accent)]" style={{ width: `${completion}%` }} /></span><b className="w-8 text-right font-mono text-[10px] text-[var(--text-2)]">{completion}%</b></div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          {routes.length === 0 ? <div className="grid min-h-44 place-items-center text-center"><div><Search size={20} className="mx-auto text-[var(--text-3)]" /><p className="mt-2 text-sm font-black text-[var(--text-1)]">No matching routes</p><p className="mt-1 text-xs text-[var(--text-3)]">Change a filter or search term.</p></div></div> : null}
-        </div>
       </section>
+      <DataGrid ariaLabel="Product experience route audit" rows={routes} columns={columns} getRowKey={route => route.route} storageKey="admin-product-audit" empty={<div><Search size={20} className="mx-auto text-[var(--text-3)]" /><p className="mt-2 text-sm font-black text-[var(--text-1)]">No matching routes</p><p className="mt-1 text-xs text-[var(--text-3)]">Change a filter or search term.</p></div>} />
     </div>
   )
 }
