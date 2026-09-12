@@ -679,6 +679,14 @@ test('creator and story publishing avoid full-page reload handoffs', async () =>
   assert.ok(!story.includes("router.push('/feed')\n    router.refresh()"))
 })
 
+test('creator studio validates offers and keeps provider failures private', async () => {
+  const studio = await read('src/app/creators/studio/CreatorStudioClient.tsx')
+  assert.ok(studio.includes('Number.isFinite(price)'))
+  assert.ok(studio.includes("setNotice('Storefront link copied.')"))
+  assert.ok(studio.includes('aria-live="polite"'))
+  assert.ok(!studio.includes('data?.error'))
+})
+
 test('mobile navigation keeps the community workspace active across every social route', async () => {
   const dock = await read('src/components/layout/MobileDock.tsx')
   for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {

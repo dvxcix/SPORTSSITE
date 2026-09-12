@@ -23,6 +23,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [form, setForm] = useState({ title: '', description: '', price: '19.99', productType: 'membership' })
   const [benefits, setBenefits] = useState<Record<string, boolean>>({ premiumContent: true, research: true, alerts: true, community: true })
 
@@ -30,14 +31,15 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
     if (isTestAccount) return setError('Test mode is active. Payment onboarding and money movement are disabled for this account.')
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       const res = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(20_000) })
       const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(data?.error || 'Could not start onboarding')
+      if (!res.ok) throw new Error('onboarding_failed')
       if (!isTrustedWhopUrl(data?.url)) throw new Error('Whop returned an invalid onboarding destination')
       window.location.assign(data.url)
-    } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : 'Could not start onboarding')
+    } catch {
+      setError('Could not start payment setup. Please try again.')
     } finally {
       setBusy(false)
     }
@@ -45,41 +47,47 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
 
   async function createProduct() {
     if (isTestAccount) return setError('Test mode is active. Use this workspace to review the creator experience without publishing a paid offer.')
-    setBusy(true); setError('')
+    const price = Number(form.price)
+    if (!form.title.trim()) return setError('Add an offer name before publishing.')
+    if (!Number.isFinite(price) || price <= 0) return setError('Enter a valid price greater than $0.')
+    setBusy(true); setError(''); setNotice('')
     const included = BENEFITS.filter(([key]) => benefits[key]).map(([, , label]) => label)
     const description = [form.description.trim(), included.length ? `Includes: ${included.join(', ')}.` : ''].filter(Boolean).join(' ')
     try {
-      const res = await fetch('/api/creator/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, description, price: Number(form.price) }), signal: AbortSignal.timeout(20_000) })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(data?.error || 'Could not create membership')
+      const res = await fetch('/api/creator/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, description, price }), signal: AbortSignal.timeout(20_000) })
+      if (!res.ok) throw new Error('publish_failed')
       setForm({ title: '', description: '', price: '19.99', productType: 'membership' })
+      setNotice('Offer published to your storefront.')
       router.refresh()
-    } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : 'Could not create membership')
+    } catch {
+      setError('Could not publish this offer. Please try again.')
     } finally {
       setBusy(false)
     }
   }
 
   async function setProductStatus(productId: string, status: 'active' | 'paused') {
-    setBusy(true); setError('')
+    setBusy(true); setError(''); setNotice('')
     try {
       const res = await fetch('/api/creator/products', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productId, status }), signal: AbortSignal.timeout(20_000) })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(data?.error || 'Could not update membership')
+      if (!res.ok) throw new Error('update_failed')
+      setNotice(status === 'active' ? 'Offer published.' : 'Offer paused.')
       router.refresh()
-    } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : 'Could not update membership')
+    } catch {
+      setError('Could not update this offer. Please try again.')
     } finally {
       setBusy(false)
     }
   }
 
   async function copyStorefront() {
+    setError('')
+    setNotice('')
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/creators/${profile.username}`)
+      setNotice('Storefront link copied.')
     } catch {
-      setError('Could not copy the storefront link')
+      setError('Could not copy the storefront link. Please try again.')
     }
   }
 
@@ -88,10 +96,13 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
   return <div className={styles.page}>
     <section className={styles.hero}>
       <div><span className={styles.kicker}><Radio size={13} /> CREATOR OPERATING CENTER</span><h1>Creator Studio</h1><p>Run memberships, member access, communities, and commerce from one workspace.</p></div>
-      <div className={styles.heroActions}><Link href={`/creators/${profile.username}`}><Eye size={15} /> View storefront</Link><button onClick={copyStorefront}><Copy size={15} /> Copy link</button></div>
+      <div className={styles.heroActions}><Link href={`/creators/${profile.username}`}><Eye size={15} /> View storefront</Link><button type="button" onClick={copyStorefront}><Copy size={15} /> Copy link</button></div>
     </section>
 
-    {error && <div className={styles.alert}>{error}</div>}
+    <div aria-live="polite">
+      {notice && <div className={styles.alert}>{notice}</div>}
+      {error && <div className={styles.alert} role="alert">{error}</div>}
+    </div>
     <section className={styles.stats}>
       <article><Users size={18} /><span><small>ACTIVE MEMBERS</small><strong>{stats.activeMembers}</strong></span></article>
       <article><BadgeDollarSign size={18} /><span><small>RECORDED REVENUE</small><strong>${stats.revenue.toFixed(2)}</strong></span></article>
