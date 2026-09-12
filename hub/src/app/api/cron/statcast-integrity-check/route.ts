@@ -109,6 +109,21 @@ async function run(req: Request) {
     if (persistError) return safeApiError('statcast-integrity-persist-official-schedule-unavailable', persistError)
   }
   await alertOnStatcastIntegrityFailure(admin, result)
+  const staleCategories = result.checks.category_freshness?.stale_categories ?? 0
+  const waitingOnlyOnSavant = result.status === 'warning'
+    && result.summary.failures === 0
+    && staleCategories > 0
+    && result.summary.warnings === staleCategories
+  if (waitingOnlyOnSavant) {
+    return NextResponse.json({
+      ...result,
+      deferred: true,
+      stage: 'savant-category-publication',
+      reason: `${staleCategories} Savant leaderboards are waiting for their next non-empty publication`,
+      requiredThroughDate: throughDate,
+      retryAt: 'next hourly integrity check',
+    }, { status: 425 })
+  }
   return NextResponse.json(result, { status: result.status === 'failed' ? 503 : 200 })
 }
 

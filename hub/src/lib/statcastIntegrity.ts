@@ -38,7 +38,21 @@ export type StatcastIntegrityResult = {
 }
 
 function fingerprint(result: StatcastIntegrityResult) {
-  return JSON.stringify({ status: result.status, through: result.through_date, checks: result.checks })
+  const pitch = result.checks.pitch_log
+  const coverage = result.checks.game_coverage
+  const official = result.checks.official_schedule
+  const homeRuns = result.checks.home_run_enrichment
+  return JSON.stringify({
+    through: result.through_date,
+    rawToTyped: pitch?.raw_to_typed_gaps ?? {},
+    classification: pitch?.classification_mismatches ?? 0,
+    missingDescriptions: pitch?.terminal_events_without_description ?? 0,
+    missingFairBallEvents: pitch?.fair_balls_without_event ?? 0,
+    storedGameGaps: coverage?.scheduled_games_without_pitch_log ?? 0,
+    suspiciousShortGames: coverage?.games_with_suspiciously_short_pitch_log ?? 0,
+    officialGamePks: official?.missing_game_pks ?? [],
+    missingHomeRunDetails: homeRuns?.missing_detail_events ?? 0,
+  })
 }
 
 async function adminEmails(admin: SupabaseClient) {
