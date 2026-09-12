@@ -64,8 +64,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       const result = await uploadMedia(file, 'avatars')
       if ('error' in result) { setError(result.error); return }
       setAvatarUrl(result.publicUrl)
-    } catch (e: any) {
-      setError(e?.message || 'Upload failed — please try again.')
+    } catch {
+      setError('Upload failed. Try again.')
     } finally {
       setUploading(false)
     }
@@ -74,34 +74,25 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   async function finish() {
     setError('')
     setSaving(true)
-    const { error: updateError } = await supabase.from('users').update({
-      display_name: displayName.trim() || undefined,
-      bio: bio.trim() || undefined,
-      avatar_url: avatarUrl.trim() || undefined,
-      favorite_teams: teams,
-      favorite_sports: sports,
-      is_private: isPrivate,
-      hide_win_rate: hideWinRate,
-      // The proxy (src/lib/supabase/middleware.ts) redirects any
-      // authenticated request back to /onboarding until this is set —
-      // this is the one place that ever sets it.
-      onboarding_completed_at: new Date().toISOString(),
-    }).eq('id', userId).select('id').single()
-    if (updateError) {
+    try {
+      const { error: updateError } = await supabase.from('users').update({
+        display_name: displayName.trim() || undefined,
+        bio: bio.trim() || undefined,
+        avatar_url: avatarUrl.trim() || undefined,
+        favorite_teams: teams,
+        favorite_sports: sports,
+        is_private: isPrivate,
+        hide_win_rate: hideWinRate,
+        onboarding_completed_at: new Date().toISOString(),
+      }).eq('id', userId).select('id').single()
+      if (updateError) throw updateError
+      fetch('/api/onboarding/notify-welcome', { method: 'POST', keepalive: true }).catch(() => {})
+      trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length, favorite_sport_count: sports.length })
+      window.location.replace('/feed')
+    } catch {
       setSaving(false)
       setError('We could not save your profile. Check your connection and try again.')
-      return
     }
-    // Best-effort — never blocks getting into the app if the email fails.
-    fetch('/api/onboarding/notify-welcome', { method: 'POST', keepalive: true }).catch(() => {})
-    trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length, favorite_sport_count: sports.length })
-    // Use one full-document handoff after the confirmed profile write. Calling
-    // router.push() and router.refresh() back-to-back creates competing RSC
-    // navigations and can strand a new member on Next/Vercel's generic
-    // recovery screen. replace() also keeps the completed wizard out of the
-    // Back stack and gives middleware a fresh request that sees the saved
-    // onboarding_completed_at value before loading /feed.
-    window.location.replace('/feed')
   }
 
   const initials = (displayName || initialProfile?.username || '?')[0]?.toUpperCase()
@@ -141,7 +132,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
+        <div role="alert" style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
           {error}
         </div>
       )}
@@ -189,11 +180,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
               <div className="space-y-3">
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Display Name</label>
-                  <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name or handle" className="ss-input" />
+                  <input value={displayName} maxLength={60} autoComplete="name" onChange={e => setDisplayName(e.target.value)} placeholder="Your name or handle" className="ss-input" />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Bio</label>
-                  <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell people who you are — your record, strategy, teams you follow…" rows={3} className="ss-input" style={{ resize: 'none' }} />
+                  <textarea value={bio} maxLength={280} onChange={e => setBio(e.target.value)} placeholder="Tell people who you are — your record, strategy, teams you follow…" rows={3} className="ss-input" style={{ resize: 'none' }} />
                 </div>
               </div>
               <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} />
@@ -234,13 +225,13 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                 <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Choose what you follow. You can refine this anytime.</p>
               </div>
               <div className="ss-onboarding-sports">
-                {SPORTS.map(sport => <button key={sport} type="button" className={sports.includes(sport) ? 'is-selected' : ''} onClick={() => toggleSport(sport)}>{sports.includes(sport) && <Check size={12}/>} {sport}</button>)}
+                {SPORTS.map(sport => <button key={sport} type="button" aria-pressed={sports.includes(sport)} className={sports.includes(sport) ? 'is-selected' : ''} onClick={() => toggleSport(sport)}>{sports.includes(sport) && <Check size={12}/>} {sport}</button>)}
               </div>
               {(sports.length === 0 || sports.includes('MLB')) && <div>
                 <p className="mb-2 text-xs font-black uppercase tracking-widest text-zinc-500">Favorite MLB teams</p>
                 <div className="ss-onboarding-teams">
                   {MLB_TEAMS.map(t => (
-                    <button key={t.abbr} type="button" onClick={() => toggleTeam(t.abbr)} className={teams.includes(t.abbr) ? 'is-selected' : ''}>
+                    <button key={t.abbr} type="button" aria-pressed={teams.includes(t.abbr)} onClick={() => toggleTeam(t.abbr)} className={teams.includes(t.abbr) ? 'is-selected' : ''}>
                       <Image src={getTeamLogoUrl(t.abbr) ?? '/logo.png'} alt="" width={18} height={18} />
                       {t.shortName}
                     </button>
@@ -305,8 +296,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                     : "Your feed is ready. Let's see what's happening."}
                 </p>
               </div>
-              <button onClick={finish} disabled={saving} className="ss-btn ss-btn-accent w-full justify-center" style={{ padding: '13px 20px', fontSize: 14, opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'Saving…' : 'Go to My Feed →'}
+              <button type="button" onClick={finish} disabled={saving} className="ss-btn ss-btn-accent w-full justify-center" style={{ padding: '13px 20px', fontSize: 14, opacity: saving ? 0.6 : 1 }}>
+                {saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Go to My Feed →'}
               </button>
             </div>
           )}
@@ -321,8 +312,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 function StepNav({ onBack, onNext, nextLabel = 'Next' }: { onBack: () => void; onNext: () => void; nextLabel?: string }) {
   return (
     <div className="flex gap-3">
-      <button onClick={onBack} className="ss-btn ss-btn-ghost flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>Back</button>
-      <button onClick={onNext} className="ss-btn ss-btn-accent flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>
+      <button type="button" onClick={onBack} className="ss-btn ss-btn-ghost flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>Back</button>
+      <button type="button" onClick={onNext} className="ss-btn ss-btn-accent flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>
         {nextLabel} <ChevronRight size={16} />
       </button>
     </div>

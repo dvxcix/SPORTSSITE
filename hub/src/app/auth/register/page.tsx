@@ -8,6 +8,8 @@ import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { Spotlight } from '@/components/ui/spotlight'
 import { sportLogoUrl } from '@/lib/sportLogos'
+import Image from 'next/image'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // Client-only — Meteors' random delays/durations differ between server and
 // client render, which React flags as a hydration mismatch otherwise.
@@ -44,14 +46,19 @@ export default function RegisterPage() {
       if (navigator.userAgent.includes('SlipSurgeDesktop/')) {
         const desktopState = crypto.randomUUID()
         localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
-        location.href = `/auth/desktop/start?provider=${provider}&next=${encodeURIComponent('/onboarding')}&state=${encodeURIComponent(desktopState)}`
+        router.push(`/auth/desktop/start?provider=${provider}&next=${encodeURIComponent('/onboarding')}&state=${encodeURIComponent(desktopState)}`)
         return
       }
-      const supabase = createClient()
-      await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: `${location.origin}/auth/callback?next=/onboarding` },
-      })
+      try {
+        const supabase = createClient()
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: `${location.origin}/auth/callback?next=/onboarding` },
+        })
+        if (oauthError) setError('Could not start sign-up. Try again.')
+      } catch {
+        setError('Could not start sign-up. Try again.')
+      }
     }
   }
   const handleDiscord = oauthHandler('discord')
@@ -62,10 +69,10 @@ export default function RegisterPage() {
     if (navigator.userAgent.includes('SlipSurgeDesktop/')) {
       const desktopState = crypto.randomUUID()
       localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
-      location.href = `/auth/desktop/start?provider=whop&next=${encodeURIComponent('/onboarding')}&state=${encodeURIComponent(desktopState)}`
+      router.push(`/auth/desktop/start?provider=whop&next=${encodeURIComponent('/onboarding')}&state=${encodeURIComponent(desktopState)}`)
       return
     }
-    location.href = `/auth/whop/login?next=${encodeURIComponent('/onboarding')}`
+    router.push(`/auth/whop/login?next=${encodeURIComponent('/onboarding')}`)
   }
 
   useEffect(() => {
@@ -82,9 +89,11 @@ export default function RegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     if (step === 'account') { setStep('profile'); return }
+    if (username.length < 2 || username.length > 30 || !/^[a-z0-9._]+$/.test(username)) { setError('Use 2–30 letters, numbers, periods, or underscores for your username.'); return }
     setLoading(true)
     setError('')
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
     // Without emailRedirectTo, Supabase falls back to the project's Site
     // URL for the confirmation link — worth double-checking that's set to
     // https://www.slipsurge.com (not a leftover localhost) in the Supabase
@@ -102,14 +111,14 @@ export default function RegisterPage() {
         data: { username, display_name: displayName || username, sport_preferences: sports },
       },
     })
-    if (signUpError) { setError(signUpError.message); setLoading(false); return }
+    if (signUpError) { setError('Could not create your account. Check your details and try again.'); return }
     if (data.user && data.session) {
       // The server derives all profile fields from the authenticated Auth
       // user and signup metadata. Browser sessions never receive INSERT
       // access to the users table.
-      await fetch('/api/account/bootstrap', { method: 'POST' })
+      const response = await fetch('/api/account/bootstrap', { method: 'POST' })
+      if (!response.ok) { setError('Your account was created, but setup could not finish. Sign in to continue.'); return }
     }
-    setLoading(false)
     if (data.session) {
       // Email confirmation is off (or already auto-confirmed) — real
       // session already exists, safe to go straight in.
@@ -119,6 +128,11 @@ export default function RegisterPage() {
       // gated would just bounce straight back to login. Tell them to check
       // their email instead of pretending signup finished.
       setConfirmationSent(true)
+    }
+    } catch {
+      setError('Sign-up is unavailable. Check your connection and try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -137,7 +151,7 @@ export default function RegisterPage() {
         </div>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
-            <img src="/logo.png" alt="SlipSurge" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+            <Image src="/logo.png" alt="SlipSurge" width={44} height={44} />
             <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></div>
           </div>
           <h2 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: 16 }}>
@@ -161,7 +175,7 @@ export default function RegisterPage() {
       <div style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px' }} className="lg:w-[460px]">
         {/* Mobile logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }} className="lg:hidden">
-          <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="SlipSurge" width={32} height={32} />
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
         </div>
 
@@ -221,7 +235,7 @@ export default function RegisterPage() {
               cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
               boxShadow: '0 4px 14px rgba(229,67,42,0.35)',
             }}>
-              <img src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
+              <Image src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
               Continue with Whop
             </button>
             <button type="button" onClick={handleDiscord} style={{
@@ -257,22 +271,22 @@ export default function RegisterPage() {
             <>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>EMAIL</label>
-                <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required className="ss-input" />
+                <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required maxLength={254} autoComplete="email" className="ss-input" />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>PASSWORD</label>
-                <input type="password" placeholder="Min 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} className="ss-input" />
+                <input type="password" placeholder="Min 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} maxLength={128} autoComplete="new-password" className="ss-input" />
               </div>
             </>
           ) : (
             <>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>USERNAME</label>
-                <input type="text" placeholder="capper_king" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} required className="ss-input" />
+                <input type="text" placeholder="capper_king" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} required minLength={2} maxLength={30} autoCapitalize="none" spellCheck={false} autoComplete="username" className="ss-input" />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>DISPLAY NAME</label>
-                <input type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} className="ss-input" />
+                <input type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60} autoComplete="name" className="ss-input" />
               </div>
 
               <div>
@@ -281,7 +295,7 @@ export default function RegisterPage() {
                   {SPORTS.map(s => {
                     const logo = sportLogoUrl(s)
                     return (
-                      <button key={s} type="button" onClick={() => toggleSport(s)} style={{
+                      <button key={s} type="button" aria-pressed={sports.includes(s)} onClick={() => toggleSport(s)} style={{
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
                         border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
@@ -289,7 +303,7 @@ export default function RegisterPage() {
                         color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
                         cursor: 'pointer', transition: 'all 130ms',
                       }}>
-                        {logo && <img src={logo} alt={s} style={{ width: 14, height: 14, objectFit: 'contain' }} />}
+                        {logo && <SafeImage src={logo} alt={s} style={{ width: 14, height: 14, objectFit: 'contain' }} />}
                         {s}
                       </button>
                     )
@@ -304,7 +318,7 @@ export default function RegisterPage() {
           )}
 
           {error && (
-            <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
+            <div role="alert" style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
               {error}
             </div>
           )}

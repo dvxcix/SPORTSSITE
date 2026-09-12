@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import Image from 'next/image'
 
 // Meteors picks random delays/durations at render time — fine for a purely
 // decorative background, but that randomness differs between the server
@@ -40,27 +41,28 @@ function LoginForm() {
     (typeof navigator !== 'undefined' && navigator.userAgent.includes('SlipSurgeDesktop/'))
   const oauthError = searchParams.get('error')
 
-  // Supabase's own OAuth errors (e.g. a provider not returning an email)
-  // land in the URL *hash* fragment, not the query string — our own
-  // ?error=auth_failed is a query param, so this is a separate read. Shows
-  // the real reason (e.g. "Error getting user email from external
-  // provider") instead of just the generic fallback message.
   const [hashErrorDescription, setHashErrorDescription] = useState('')
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const description = hash.get('error_description')
-    if (description) window.queueMicrotask(() => setHashErrorDescription(description.replace(/\+/g, ' ')))
+    if (description) window.queueMicrotask(() => setHashErrorDescription('Sign-in failed. Please try again.'))
   }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
-    router.push(next)
-    router.refresh()
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setError('Email or password is incorrect.'); return }
+      router.push(next)
+      router.refresh()
+    } catch {
+      setError('Sign-in is unavailable. Check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Discord/X use Supabase's standard OAuth flow — no custom callback route
@@ -72,14 +74,19 @@ function LoginForm() {
       if (isDesktop) {
         const desktopState = crypto.randomUUID()
         localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
-        location.href = `/auth/desktop/start?provider=${provider}&next=${encodeURIComponent(next)}&state=${encodeURIComponent(desktopState)}`
+        router.push(`/auth/desktop/start?provider=${provider}&next=${encodeURIComponent(next)}&state=${encodeURIComponent(desktopState)}`)
         return
       }
-      const supabase = createClient()
-      await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
-      })
+      try {
+        const supabase = createClient()
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+        })
+        if (error) setError('Could not start sign-in. Try again.')
+      } catch {
+        setError('Could not start sign-in. Try again.')
+      }
     }
   }
   const handleDiscord = oauthHandler('discord')
@@ -93,10 +100,10 @@ function LoginForm() {
     if (isDesktop) {
       const desktopState = crypto.randomUUID()
       localStorage.setItem('slipsurge_desktop_oauth_state', desktopState)
-      location.href = `/auth/desktop/start?provider=whop&next=${encodeURIComponent(next)}&state=${encodeURIComponent(desktopState)}`
+      router.push(`/auth/desktop/start?provider=whop&next=${encodeURIComponent(next)}&state=${encodeURIComponent(desktopState)}`)
       return
     }
-    location.href = `/auth/whop/login?next=${encodeURIComponent(next)}`
+    router.push(`/auth/whop/login?next=${encodeURIComponent(next)}`)
   }
 
   return (
@@ -124,7 +131,7 @@ function LoginForm() {
         </div>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
-            <img src="/logo.png" alt="SlipSurge" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+            <Image src="/logo.png" alt="SlipSurge" width={44} height={44} />
             <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
               Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
             </div>
@@ -157,7 +164,7 @@ function LoginForm() {
       }} className="mx-auto lg:mx-0 lg:w-[500px]">
         {/* Mobile logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }} className="lg:hidden">
-          <img src="/logo.png" alt="SlipSurge" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="SlipSurge" width={32} height={32} />
           <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
         </div>
 
@@ -175,7 +182,7 @@ function LoginForm() {
         }}
         onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #FF7355, #EF4E33)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #FF6243, #E5432A)')}>
-          <img src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
+          <Image src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
           Continue with Whop
         </button>
 
@@ -226,7 +233,7 @@ function LoginForm() {
             <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>EMAIL</label>
             <input
               type="email" placeholder="you@example.com" value={email}
-              onChange={e => setEmail(e.target.value)} required
+              onChange={e => setEmail(e.target.value)} required maxLength={254} autoComplete="email"
               className="ss-input"
             />
           </div>
@@ -234,13 +241,13 @@ function LoginForm() {
             <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>PASSWORD</label>
             <input
               type="password" placeholder="••••••••" value={password}
-              onChange={e => setPassword(e.target.value)} required
+              onChange={e => setPassword(e.target.value)} required maxLength={128} autoComplete="current-password"
               className="ss-input"
             />
           </div>
 
           {error && (
-            <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
+            <div role="alert" style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
               {error}
             </div>
           )}
