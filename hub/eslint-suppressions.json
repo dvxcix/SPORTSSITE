@@ -777,19 +777,11 @@
       "count": 1
     }
   },
-  "src/components/social/FeedComposer.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/components/social/FeedList.tsx": {
     "@typescript-eslint/no-explicit-any": {
       "count": 3
     },
     "react-hooks/set-state-in-effect": {
-      "count": 1
-    },
-    "react/no-unescaped-entities": {
       "count": 1
     }
   },

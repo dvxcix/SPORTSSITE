@@ -69,18 +69,19 @@ export function FeedList({ filter, initialPosts, initialCursor, initialHasMore }
   }, [loadMore])
 
   return (
-    <div className="ss-feed-list space-y-3">
+    <div className="ss-feed-list">
       {posts.map((post, i) => (
         <PostCardClient key={keyFor(post)} post={post} index={i} />
       ))}
       <div ref={sentinelRef} className="h-4" />
       {loading && (
-        <div className="flex justify-center py-6">
-          <div className="w-5 h-5 border-2 border-zinc-700 border-t-green-500 rounded-full animate-spin" />
+        <div className="ss-feed-loading" aria-label="Loading more posts">
+          <span><i /><b /><b /></span>
+          <span><i /><b /><b /></span>
         </div>
       )}
       {!hasMore && posts.length > 0 && (
-        <p className="text-center text-zinc-600 text-sm py-6">You're all caught up</p>
+        <p className="ss-feed-end">You&apos;re all caught up</p>
       )}
     </div>
   )

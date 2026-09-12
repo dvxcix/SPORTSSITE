@@ -827,6 +827,28 @@ test('feed publishing and interactions recover visibly from failed writes', asyn
   assert.ok(card.includes('<SafeImage'))
 })
 
+test('social feed renders as a continuous responsive timeline with familiar actions', async () => {
+  const page = await read('src/app/feed/page.tsx')
+  const composer = await read('src/components/social/FeedComposer.tsx')
+  const list = await read('src/components/social/FeedList.tsx')
+  const card = await read('src/components/social/PostCardClient.tsx')
+  const detail = await read('src/app/posts/[id]/page.tsx')
+  const css = await read('src/app/globals.css')
+  assert.ok(page.includes('className="ss-feed-timeline"'))
+  assert.ok(page.includes('className="ss-feed-timeline-head"'))
+  assert.ok(!page.includes('<CommunityNav'))
+  assert.ok(composer.includes('className="ss-composer-sport-menu"'))
+  assert.ok(composer.includes('sportMenuRef'))
+  assert.ok(composer.includes('visibilityMenuRef'))
+  assert.ok(list.includes('className="ss-feed-loading"'))
+  assert.ok(card.includes("toggleReaction('❤️')"))
+  assert.ok(card.includes('className="ss-post-media"'))
+  assert.ok(card.includes('postMenuRef'))
+  assert.ok(detail.includes('className="ss-post-detail-shell"'))
+  assert.ok(css.includes('Social timeline — one continuous reading surface'))
+  assert.ok(css.includes('.ss-feed-post {'))
+})
+
 test('public publishing and follow flows recover without leaking backend errors', async () => {
   const follow = await read('src/components/pages/PageFollowButton.tsx')
   const page = await read('src/components/pages/PageSettingsForm.tsx')

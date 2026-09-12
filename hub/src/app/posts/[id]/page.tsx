@@ -62,8 +62,13 @@ export default async function PostDetailPage({ params }: Props) {
 
   return (
     <ProductPageShell narrow>
-      <Link href="/feed" className="ss-flow-back"><ChevronLeft size={14} /> Feed</Link>
-      <PostCardClient post={enriched} detail />
+      <div className="ss-post-detail-shell">
+        <header className="ss-post-detail-head">
+          <Link href="/feed" aria-label="Back to feed"><ChevronLeft size={18} /></Link>
+          <div><strong>Post</strong><span>Conversation</span></div>
+        </header>
+        <PostCardClient post={enriched} detail />
+      </div>
     </ProductPageShell>
   )
 }

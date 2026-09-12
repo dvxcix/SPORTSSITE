@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
@@ -39,9 +39,33 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [visibility, setVisibility] = useState<'public' | 'followers'>('public')
   const [visibilityOpen, setVisibilityOpen] = useState(false)
+  const [sportOpen, setSportOpen] = useState(false)
   const supabase = useMemo(() => createClient(), [])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const sportMenuRef = useRef<HTMLDivElement>(null)
+  const visibilityMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!sportOpen && !visibilityOpen) return
+    function dismissMenus(event: MouseEvent) {
+      const target = event.target as Node
+      if (!sportMenuRef.current?.contains(target)) setSportOpen(false)
+      if (!visibilityMenuRef.current?.contains(target)) setVisibilityOpen(false)
+    }
+    function dismissWithKeyboard(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setSportOpen(false)
+        setVisibilityOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', dismissMenus)
+    document.addEventListener('keydown', dismissWithKeyboard)
+    return () => {
+      document.removeEventListener('mousedown', dismissMenus)
+      document.removeEventListener('keydown', dismissWithKeyboard)
+    }
+  }, [sportOpen, visibilityOpen])
 
   async function uploadImage(file: File) {
     if (!user) return
@@ -74,7 +98,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
   if (!user || !profile) {
     return (
-      <div className="ss-feed-composer" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', textAlign: 'center' }}>
+      <div className="ss-feed-composer ss-feed-composer-signed-out">
         <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
           <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
           {' '}to post picks and join the conversation
@@ -172,17 +196,17 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const charLimit = 500
   const remaining = charLimit - content.length
   return (
-    <div className="ss-feed-composer" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
-      <div style={{ display: 'flex', gap: 12 }}>
+    <div className="ss-feed-composer">
+      <div className="ss-feed-composer-layout">
         <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username || 'Member'} size={40} />
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="ss-feed-composer-main">
           <MentionInput
             ref={textareaRef}
             value={content}
             onValueChange={setContent}
             currentUserId={user.id}
-            placeholder="Drop a pick, share data, or make a post…"
+            placeholder="Share a pick or market angle…"
             maxLength={charLimit}
             rows={content.length > 80 ? 3 : 2}
             style={{
@@ -196,23 +220,22 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
           {/* Sport selector — hidden while adding a structured pick, since
               that flow only pulls real data for MLB right now. */}
           {!showPickForm && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              {SPORTS.map(s => {
-                const logo = sportLogoUrl(s)
-                return (
-                  <button key={s} type="button" onClick={() => setSport(s)} style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                    border: `1px solid ${sport === s ? 'var(--accent)' : 'var(--border-2)'}`,
-                    background: sport === s ? 'var(--accent-dim)' : 'transparent',
-                    color: sport === s ? 'var(--accent)' : 'var(--text-3)',
-                    cursor: 'pointer', transition: 'all 130ms',
-                  }}>
-                    {logo && <SafeImage src={logo} alt={s} style={{ width: 12, height: 12, objectFit: 'contain' }} />}
-                    {s}
-                  </button>
-                )
-              })}
+            <div className="ss-composer-sport-wrap" ref={sportMenuRef}>
+              <button type="button" className="ss-composer-sport-trigger" aria-expanded={sportOpen} onClick={() => setSportOpen(value => !value)}>
+                {sportLogoUrl(sport) ? <SafeImage src={sportLogoUrl(sport)} alt="" /> : null}
+                <span>{sport}</span><ChevronDown size={12} />
+              </button>
+              {sportOpen ? (
+                <div className="ss-composer-sport-menu" role="menu" aria-label="Choose a sport">
+                  {SPORTS.map(option => {
+                    const logo = sportLogoUrl(option)
+                    return <button key={option} type="button" role="menuitemradio" aria-checked={sport === option} onClick={() => { setSport(option); setSportOpen(false) }}>
+                      {logo ? <SafeImage src={logo} alt="" /> : <span className="ss-composer-sport-fallback">{option.slice(0, 1)}</span>}
+                      <span>{option}</span>{sport === option ? <span className="ss-composer-sport-check">✓</span> : null}
+                    </button>
+                  })}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -331,8 +354,8 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               on the left plus Public+Post on the right doesn't fit on one
               line under ~360px with labels shown, and used to just push
               Post off the right edge of the screen with no wrap. */}
-          <div className="flex-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', gap: 2 }}>
+          <div className="ss-feed-composer-actions">
+            <div className="ss-feed-composer-tools">
               <ComposerBtn
                 icon={<TrendingUp size={14} />}
                 label="Pick"
@@ -364,26 +387,19 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               />
               <EmojiPicker onSelect={insertAtCursor} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ position: 'relative' }}>
+            <div className="ss-feed-composer-submit">
+              <div className="ss-composer-visibility" ref={visibilityMenuRef}>
                 <button
                   type="button"
                   onClick={() => setVisibilityOpen(v => !v)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)',
-                    background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
-                  }}
+                  className="ss-composer-visibility-trigger"
                 >
                   {visibility === 'public' ? <Globe size={11} /> : <Users size={11} />}
                   <span className="hidden sm:inline">{visibility === 'public' ? 'Public' : 'Followers'}</span>
                   <ChevronDown size={11} />
                 </button>
                 {visibilityOpen && (
-                  <div style={{
-                    position: 'absolute', bottom: '100%', right: 0, marginBottom: 4, zIndex: 10,
-                    background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 8,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)', overflow: 'hidden', width: 150,
-                  }}>
+                  <div className="ss-composer-visibility-menu">
                     {([
                       { key: 'public' as const, icon: <Globe size={12} />, label: 'Public', desc: 'Anyone can see this' },
                       { key: 'followers' as const, icon: <Users size={12} />, label: 'Followers', desc: 'Only your followers' },
@@ -412,13 +428,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 const pickIncomplete = showPickForm && legs.length === 0
                 const disabled = (!content.trim() && !imageUrl) || posting || uploadingImage || pickIncomplete
                 const button = (
-                  <button type="button" onClick={handlePost} disabled={disabled} style={{
-                    padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 800,
-                    background: disabled ? 'var(--surface-3)' : 'var(--accent)',
-                    color: disabled ? 'var(--text-3)' : 'var(--accent-fg)',
-                    border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-                    transition: 'all 150ms',
-                  }}>
+                  <button type="button" onClick={handlePost} disabled={disabled} className="ss-composer-post-button">
                     {posting ? 'Posting…' : 'Post'}
                   </button>
                 )
@@ -437,12 +447,9 @@ function ComposerBtn({ icon, label, active, activeColor, activeFg, onClick }: {
   activeColor?: string; activeFg?: string; onClick: () => void
 }) {
   return (
-    <button onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 5,
-      padding: '6px 10px', borderRadius: 8, border: 'none',
-      background: active ? (activeColor ?? 'var(--surface-3)') : 'transparent',
-      color: active ? (activeFg ?? 'var(--text-1)') : 'var(--text-3)',
-      fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 130ms',
+    <button type="button" onClick={onClick} className="ss-composer-tool" style={{
+      background: active ? (activeColor ?? 'var(--surface-3)') : undefined,
+      color: active ? (activeFg ?? 'var(--text-1)') : undefined,
     }}
     onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
     onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = active ? (activeFg ?? 'var(--text-1)') : 'var(--text-3)'; }}>

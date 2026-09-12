@@ -137,6 +137,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [editText, setEditText] = useState('')
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
   const [showMenu, setShowMenu] = useState(false)
+  const postMenuRef = useRef<HTMLDivElement>(null)
   const [showReport, setShowReport] = useState(false)
   const [pollVoted, setPollVoted] = useState<number | null>(initialPost.user_poll_vote ?? null)
   const [pollCounts, setPollCounts] = useState<number[]>(
@@ -161,6 +162,22 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [renderedAt] = useState(() => Date.now())
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
   const post = { ...initialPost, pick_data: pickData, content }
+
+  useEffect(() => {
+    if (!showMenu) return
+    function dismissMenu(event: MouseEvent) {
+      if (!postMenuRef.current?.contains(event.target as Node)) setShowMenu(false)
+    }
+    function dismissWithKeyboard(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowMenu(false)
+    }
+    document.addEventListener('mousedown', dismissMenu)
+    document.addEventListener('keydown', dismissWithKeyboard)
+    return () => {
+      document.removeEventListener('mousedown', dismissMenu)
+      document.removeEventListener('keydown', dismissWithKeyboard)
+    }
+  }, [showMenu])
   const isOwnPost = !!user && user.id === post.author_id
   // Edit window matches the "edit within 10 minutes" behavior the rest of
   // the app doesn't otherwise enforce anywhere — delete has no such limit,
@@ -547,6 +564,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
 
   const pickBorderColor = pickResult === 'win' ? 'rgba(46,213,115,0.3)' : pickResult === 'loss' ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,77,0.2)'
   const pickBg = pickResult === 'win' ? 'rgba(46,213,115,0.05)' : pickResult === 'loss' ? 'rgba(255,77,106,0.05)' : 'rgba(255,184,77,0.04)'
+  const quickLikeCount = reactionSummary['❤️'] ?? 0
+  const quickLiked = myReactions.has('❤️')
 
   if (isDeleted) return null
 
@@ -556,7 +575,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         className={`ss-feed-post${post.author.tier === 'ultimate' ? ' ss-feed-post--ultimate' : post.author.tier === 'advanced' ? ' ss-feed-post--advanced' : ''}`}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: Math.min(index, 8) * 0.04 }}
+        transition={{ duration: 0.2, delay: Math.min(index, 4) * 0.025 }}
         style={{
           borderRadius: 'var(--radius)',
           transition: 'border-color 150ms, transform 150ms, box-shadow 150ms',
@@ -577,7 +596,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
           }}
         />
         {post.reposted_by && (
-          <div style={{ padding: '10px 16px 0', position: 'relative', zIndex: 1 }}>
+          <div className="ss-post-repost-label">
             <Link
               href={`/profile/${post.reposted_by.username}`}
               style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}
@@ -587,8 +606,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             </Link>
           </div>
         )}
-        <div style={{ padding: '14px 16px', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', gap: 12 }}>
+        <div className="ss-post-body">
+          <div className="ss-post-layout">
             {/* Avatar */}
             <Link href={`/profile/${post.author.username}`} style={{ flexShrink: 0 }}>
               <MemberAvatar
@@ -599,10 +618,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               />
             </Link>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="ss-post-main">
               {/* Header row */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+              <div className="ss-post-header">
+                <div className="ss-post-author-line">
                   <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 850, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
@@ -618,8 +637,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 </div>
 
                 {/* More menu */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <button onClick={() => setShowMenu(v => !v)} style={{
+                <div ref={postMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+                  <button type="button" className="ss-post-more" aria-expanded={showMenu} aria-label="More post actions" onClick={() => setShowMenu(v => !v)} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'var(--text-3)', padding: '2px 4px', borderRadius: 6,
                     display: 'flex', alignItems: 'center',
@@ -629,21 +648,21 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     <MoreHorizontal size={16} />
                   </button>
                   {showMenu && (
-                    <div className="ss-dropdown" style={{ position: 'absolute', right: 0, top: 28, minWidth: 150, zIndex: 30 }}>
+                    <div className="ss-dropdown ss-post-menu" role="menu">
                       {isOwnPost && canEditPost && (
-                        <button onClick={() => { startEditPost(); setShowMenu(false) }}
+                        <button type="button" onClick={() => { startEditPost(); setShowMenu(false) }}
                           className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Pencil size={12} /> Edit post
                         </button>
                       )}
                       {isOwnPost && (
-                        <button onClick={() => { deletePost(); setShowMenu(false) }}
+                        <button type="button" onClick={() => { deletePost(); setShowMenu(false) }}
                           className="ss-dropdown-item danger" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Trash2 size={12} /> Delete post
                         </button>
                       )}
                       {!isOwnPost && (
-                        <button onClick={() => { setShowReport(true); setShowMenu(false) }}
+                        <button type="button" onClick={() => { setShowReport(true); setShowMenu(false) }}
                           className="ss-dropdown-item danger" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Flag size={12} /> Report post
                         </button>
@@ -657,7 +676,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                           onDone={() => setShowMenu(false)}
                         />
                       )}
-                      <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
                         className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Link2 size={12} /> Copy link
                       </button>
@@ -723,7 +742,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 <SafeImage
                   src={post.media_urls[0]}
                   alt=""
-                  style={{ marginTop: 10, maxWidth: '100%', maxHeight: 420, borderRadius: 12, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }}
+                  className="ss-post-media"
                 />
               )}
 
@@ -732,7 +751,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   text only, no player link) fall back to the simple layout
                   since there's nothing richer to show for them. */}
               {post.pick_data && (
-                <div style={{
+                <div className="ss-post-pick-card" style={{
                   marginTop: 12, borderRadius: 10, border: `1px solid ${pickBorderColor}`,
                   background: pickBg, padding: '12px 14px',
                 }}>
@@ -882,7 +901,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   Hovering a pill lazily fetches who reacted with it
                   (ReactionNames below); clicking toggles your own. */}
               {(Object.keys(reactionSummary).length > 0 || user) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginTop: 12 }}>
+                <div className="ss-post-reactions">
                   {Object.entries(reactionSummary).sort((a, b) => b[1] - a[1]).map(([emoji, count]) => {
                     const mine = myReactions.has(emoji)
                     const custom = emoji.match(/^:([a-z0-9_]+):$/)
@@ -930,6 +949,15 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   hoverBg="rgba(46,213,115,0.08)"
                   hoverColor="var(--green)"
                   onClick={toggleRepost}
+                />
+                <ActionBtn
+                  icon={<Heart size={15} fill={quickLiked ? 'currentColor' : 'none'} />}
+                  label={quickLikeCount > 0 ? `${quickLikeCount} Like${quickLikeCount === 1 ? '' : 's'}` : 'Like'}
+                  active={quickLiked}
+                  activeColor="var(--red)"
+                  hoverBg="rgba(255,77,106,0.08)"
+                  hoverColor="var(--red)"
+                  onClick={() => toggleReaction('❤️')}
                 />
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                   <ActionBtn
@@ -1247,7 +1275,7 @@ function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onCl
 }) {
   const [hovered, setHovered] = useState(false)
   return (
-    <motion.button className="ss-post-action" onClick={onClick}
+    <motion.button type="button" className="ss-post-action" onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileTap={{ scale: 0.92 }}
