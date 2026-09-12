@@ -60,11 +60,11 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
         body: JSON.stringify({ planId }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Failed to start checkout')
+      if (!res.ok || typeof data?.sessionId !== 'string') throw new Error('checkout_session_failed')
       setSessionId(data.sessionId)
       trackProductEvent('pricing_checkout_opened', { plan_id: planId })
-    } catch (e: any) {
-      setError(e.message ?? 'Something went wrong')
+    } catch {
+      setError('Checkout could not be opened. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -73,6 +73,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
   return (
     <>
       <Button
+        type="button"
         onClick={startCheckout}
         disabled={loading}
         size="lg"
@@ -150,6 +151,7 @@ export function PricingCheckoutButton({ planId, label, loggedIn, highlight }: { 
               border: '1px solid var(--border)',
             }}>
               <button
+                type="button"
                 onClick={() => setSessionId(null)}
                 aria-label="Close checkout"
                 style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, zIndex: 1 }}

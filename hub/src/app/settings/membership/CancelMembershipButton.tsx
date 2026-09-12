@@ -14,9 +14,8 @@ export function CancelMembershipButton({ renewalDate }: { renewalDate: string | 
     setError(null)
     try {
       const res = await fetch('/api/whop/cancel-membership', { method: 'POST' })
-      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(data?.error || 'Something went wrong — please try again.')
+        setError('Your subscription could not be canceled. Please try again.')
         setSubmitting(false)
         return
       }
@@ -36,6 +35,7 @@ export function CancelMembershipButton({ renewalDate }: { renewalDate: string | 
         {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={handleConfirm}
             disabled={submitting}
             className="bg-red-500 hover:bg-red-400 disabled:opacity-60 text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors"
@@ -43,6 +43,7 @@ export function CancelMembershipButton({ renewalDate }: { renewalDate: string | 
             {submitting ? 'Cancelling…' : 'Yes, cancel'}
           </button>
           <button
+            type="button"
             onClick={() => { setConfirming(false); setError(null) }}
             disabled={submitting}
             className="border border-zinc-700 text-white hover:bg-zinc-800 disabled:opacity-60 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
@@ -56,6 +57,7 @@ export function CancelMembershipButton({ renewalDate }: { renewalDate: string | 
 
   return (
     <button
+      type="button"
       onClick={() => setConfirming(true)}
       className="border border-zinc-700 text-white hover:bg-zinc-800 font-bold px-4 py-2 rounded-xl text-sm transition-colors"
     >

@@ -699,6 +699,36 @@ test('creator checkout and payouts expose retryable product states without provi
   assert.ok(!apply.includes(': submitError.message'))
 })
 
+test('membership commerce and NFL identity retain safe public fallbacks', async () => {
+  const pricing = await read('src/app/pricing/PricingCheckoutButton.tsx')
+  const cancel = await read('src/app/settings/membership/CancelMembershipButton.tsx')
+  const logo = await read('src/components/shared/NflTeamLogo.tsx')
+  assert.ok(pricing.includes('Checkout could not be opened. Please try again.'))
+  assert.ok(!pricing.includes('data?.error'))
+  assert.ok(cancel.includes('Your subscription could not be canceled. Please try again.'))
+  assert.ok(!cancel.includes('data?.error'))
+  assert.ok(logo.includes('<SafeImage'))
+})
+
+test('public trust pages share one accessible information landmark', async () => {
+  const shell = await read('src/components/marketing/InfoPageShell.tsx')
+  assert.ok(shell.includes('className={styles.main}'))
+  assert.ok(shell.includes('aria-label="Table of contents"'))
+})
+
+test('core research routes provide branded transition and recovery states', async () => {
+  const routes = ['batter-cost', 'slate-breakdown', 'pitcher-report', 'weather-lab', 'spray-charts', 'synergy', 'the-public', 'daily-recap']
+  for (const route of routes) {
+    assert.ok((await read(`src/app/${route}/loading.tsx`)).includes('DataRouteLoading'), `${route} lacks route loading`)
+    assert.ok((await read(`src/app/${route}/error.tsx`)).includes('DataRouteError'), `${route} lacks route recovery`)
+  }
+  const recap = await read('src/app/daily-recap/page.tsx')
+  const sideline = await read('src/app/the-sideline/page.tsx')
+  assert.ok(recap.includes('<ProductPageShell>'))
+  assert.ok(!recap.includes('fallback={null}'))
+  assert.ok(sideline.includes('title="No games on this date"'))
+})
+
 test('mobile navigation keeps the community workspace active across every social route', async () => {
   const dock = await read('src/components/layout/MobileDock.tsx')
   for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {

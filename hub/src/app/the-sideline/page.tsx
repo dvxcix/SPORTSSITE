@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { notFound } from 'next/navigation'
 import { parseNflSample } from '@/lib/nflSample'
@@ -11,6 +10,9 @@ import { SidelineNavigation } from './SidelineNavigation'
 import { SidelineMatchupLab } from './SidelineMatchupLab'
 import { SidelineCheatsheets } from './SidelineCheatsheets'
 import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
+import { CalendarOff } from 'lucide-react'
+import { PageState } from '@/components/layout/PageState'
+import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +38,7 @@ export default async function SidelinePage({ searchParams }: {
   const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode
   const { games, date, days } = await getSidelineGames(requestedDate, requestedGame)
   if (!games.length) {
-    return <div style={{ minHeight: '100vh', padding: 32, color: '#f5f8fb', background: '#060a0f' }}><h1>The Sideline</h1><p>No NFL games are scheduled for {date}.</p><Link href="/the-sideline">Return to the current NFL slate</Link></div>
+    return <ProductPageShell narrow><ProductHero icon={<CalendarOff size={23} />} eyebrow="NFL schedule" title="The Sideline" description="Game-day research boards are organized around scheduled NFL slates." status={date} /><PageState kind="empty" title="No games on this date" message={`There are no NFL games scheduled for ${date}.`} actionLabel="Return to the current NFL slate" actionHref="/the-sideline" /></ProductPageShell>
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]

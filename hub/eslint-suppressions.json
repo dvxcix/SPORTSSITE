@@ -386,11 +386,6 @@
       "count": 2
     }
   },
-  "src/app/daily-recap/page.tsx": {
-    "react/no-unescaped-entities": {
-      "count": 1
-    }
-  },
   "src/app/events/page.tsx": {
     "@typescript-eslint/no-explicit-any": {
       "count": 3
@@ -454,11 +449,6 @@
   "src/app/picks/page.tsx": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2
-    }
-  },
-  "src/app/pricing/PricingCheckoutButton.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
     }
   },
   "src/app/profile/[username]/page.tsx": {
