@@ -967,6 +967,22 @@ test('canonical game pages include secure realtime Game Rooms', async () => {
   assert.ok(migration.includes('alter publication supabase_realtime add table public.game_room_messages'))
 })
 
+test('global discovery supports durable member-scoped saved searches', async () => {
+  const search = await read('src/components/search/SearchClient.tsx')
+  const migration = await read('supabase/migrations/20260912165058_saved_searches.sql')
+  assert.ok(search.includes(".from('saved_searches').select"))
+  assert.ok(search.includes(".from('saved_searches').upsert"))
+  assert.ok(search.includes("onConflict: 'user_id,query_key,result_tab'"))
+  assert.ok(search.includes(".from('saved_searches').delete"))
+  assert.ok(search.includes('setQ(saved.query); setTab(saved.result_tab)'))
+  assert.ok(search.includes('aria-labelledby="saved-searches-heading"'))
+  assert.ok(search.includes('role="alert"'))
+  assert.ok(migration.includes('alter table public.saved_searches enable row level security'))
+  assert.ok(migration.includes('user_id = (select auth.uid())'))
+  assert.ok(migration.includes('unique (user_id, query_key, result_tab)'))
+  assert.ok(!migration.includes('grant select on public.saved_searches to anon'))
+})
+
 test('product experience audit tracks every completed route dimension', async () => {
   const audit = await read('src/lib/productExperienceAudit.ts')
   assert.ok(audit.includes("accessibility: 'complete'"))

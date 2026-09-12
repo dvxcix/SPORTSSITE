@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Search, TrendingUp, Users, Zap, Hash, Activity, BadgeCheck, LayoutGrid, ArrowRight, Clock3, X } from 'lucide-react'
+import { Search, TrendingUp, Users, Zap, Hash, Activity, BadgeCheck, LayoutGrid, ArrowRight, Bookmark, BookmarkCheck, Clock3, X } from 'lucide-react'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import { UserBadges } from '@/components/social/UserBadges'
@@ -27,6 +27,7 @@ type NflPlayerResult = { gsis_id: string; display_name: string; position: string
 type NflTeamResult = { team_abbr: string; team_name: string; team_nick: string | null; team_logo_espn: string | null }
 type CommunityResult = { id: string; slug: string; name: string; description: string | null; avatar_url: string | null; emoji: string | null; count: number }
 type EventResult = { id: string; title: string; description: string | null; cover_image: string | null; start_date: string; going_count: number | null }
+type SavedSearch = { id: string; query: string; result_tab: SearchTab; last_used_at: string }
 
 export function SearchClient() {
   // The topbar's search box links here with ?q= already filled in — read
@@ -50,6 +51,10 @@ export function SearchClient() {
   const [events, setEvents] = useState<EventResult[]>([])
   const [loading, setLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [savingSearch, setSavingSearch] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const supabase = useMemo(() => createClient(), [])
   const searchRunRef = useRef(0)
   // Fetched once on mount rather than inside doSearch (which fires on every
@@ -73,7 +78,10 @@ export function SearchClient() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      setCurrentUserId(user.id)
       getBlockedEitherWayIds(supabase, user.id).then(ids => { blockedIdsRef.current = ids })
+      supabase.from('saved_searches').select('id,query,result_tab,last_used_at').eq('user_id', user.id).order('last_used_at', { ascending: false }).limit(12)
+        .then(({ data }) => setSavedSearches((data ?? []) as SavedSearch[]))
     })
   }, [supabase])
 
@@ -166,6 +174,37 @@ export function SearchClient() {
     window.localStorage.removeItem(RECENT_SEARCHES_KEY)
   }
 
+  async function saveSearch() {
+    const query = q.trim().slice(0, 64)
+    if (!query || !currentUserId || savingSearch) return
+    setSavingSearch(true); setSaveError('')
+    const lastUsedAt = new Date().toISOString()
+    const { data, error } = await supabase.from('saved_searches').upsert({
+      user_id: currentUserId,
+      query,
+      query_key: query.toLocaleLowerCase(),
+      result_tab: tab,
+      last_used_at: lastUsedAt,
+    }, { onConflict: 'user_id,query_key,result_tab' }).select('id,query,result_tab,last_used_at').single()
+    setSavingSearch(false)
+    if (error || !data) { setSaveError('Search not saved. Try again.'); return }
+    setSavedSearches(current => [data as SavedSearch, ...current.filter(item => item.id !== data.id)].slice(0, 12))
+  }
+
+  async function removeSavedSearch(id: string) {
+    const previous = savedSearches
+    setSavedSearches(current => current.filter(item => item.id !== id))
+    const { error } = await supabase.from('saved_searches').delete().eq('id', id).eq('user_id', currentUserId)
+    if (error) { setSavedSearches(previous); setSaveError('Saved search not removed. Try again.') }
+  }
+
+  async function openSavedSearch(saved: SavedSearch) {
+    setQ(saved.query); setTab(saved.result_tab)
+    const lastUsedAt = new Date().toISOString()
+    setSavedSearches(current => current.map(item => item.id === saved.id ? { ...item, last_used_at: lastUsedAt } : item).sort((a, b) => b.last_used_at.localeCompare(a.last_used_at)))
+    await supabase.from('saved_searches').update({ last_used_at: lastUsedAt }).eq('id', saved.id).eq('user_id', currentUserId)
+  }
+
   // Picks used to only match post_type === 'pick', silently excluding
   // parlays — same bug already found/fixed on /feed and /picks.
   const picks = posts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
@@ -192,15 +231,18 @@ export function SearchClient() {
           aria-label="Search SlipSurge"
           aria-busy={loading}
           placeholder="Search players, teams, picks, users…"
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 focus:ring-1 ring-green-500/20 transition-all"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-24 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 focus:ring-1 ring-green-500/20 transition-all"
         />
-        {loading && (
-          <div aria-label="Searching" role="status" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-zinc-600 border-t-green-400 rounded-full animate-spin" />
-        )}
+        {currentUserId && q.trim() ? <button type="button" className="ss-search-save" disabled={savingSearch} onClick={saveSearch}>{savingSearch || loading ? <span aria-label={savingSearch ? 'Saving search' : 'Searching'} role="status" className="h-3.5 w-3.5 rounded-full border-2 border-zinc-600 border-t-green-400 animate-spin"/> : savedSearches.some(item => item.query.toLowerCase() === q.trim().toLowerCase() && item.result_tab === tab) ? <BookmarkCheck size={14}/> : <Bookmark size={14}/>}<span>Save</span></button> : loading ? <div aria-label="Searching" role="status" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-zinc-600 border-t-green-400 rounded-full animate-spin"/> : null}
       </div>
+      {saveError && <p role="alert" className="-mt-3 mb-4 text-xs font-semibold text-red-400">{saveError}</p>}
 
       {!q.trim() && (
         <div className="space-y-6">
+          {savedSearches.length > 0 && <section aria-labelledby="saved-searches-heading">
+            <h2 id="saved-searches-heading" className="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-400"><Bookmark size={14}/> Saved searches</h2>
+            <div className="ss-saved-searches">{savedSearches.map(item => <div key={item.id}><button type="button" onClick={() => void openSavedSearch(item)}><BookmarkCheck size={13}/><span><strong>{item.query}</strong><small>{item.result_tab === 'all' ? 'All results' : item.result_tab.toUpperCase()}</small></span></button><button type="button" aria-label={`Remove saved search ${item.query}`} onClick={() => void removeSavedSearch(item.id)}><X size={12}/></button></div>)}</div>
+          </section>}
           {recentSearches.length > 0 && <section aria-labelledby="recent-searches-heading">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 id="recent-searches-heading" className="flex items-center gap-2 text-sm font-bold text-zinc-400"><Clock3 size={14} /> Recent</h2>
