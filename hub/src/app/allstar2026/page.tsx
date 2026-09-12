@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { AllStarClient } from '@/components/allstar/AllStarClient'
+import { PageState } from '@/components/layout/PageState'
 
 export const revalidate = 0
 
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function AllStar2026Page() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageState kind="loading" title="Loading All-Star workspace" message="Preparing players, tracking data, and markets." />}>
       <AllStarClient />
     </Suspense>
   )

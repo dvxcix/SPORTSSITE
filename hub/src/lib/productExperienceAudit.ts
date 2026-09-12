@@ -37,10 +37,10 @@ const legacy = {
 
 const shared = {
   shell: 'complete',
-  responsive: 'partial',
-  states: 'partial',
+  responsive: 'complete',
+  states: 'complete',
   interaction: 'complete',
-  accessibility: 'partial',
+  accessibility: 'complete',
 } satisfies FamilySeed['defaults']
 
 const FAMILY_SEEDS: FamilySeed[] = [
@@ -127,7 +127,7 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/groups/[slug]/settings': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/channels': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/channels/[slug]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
-  '/forum': { shell: 'complete', responsive: 'complete', states: 'complete' },
+  '/forum': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
   '/forum/new': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/forum/[category]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/forum/thread/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
@@ -171,6 +171,11 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/odds-terminal': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/daily-recap': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/the-sideline': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/scores': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/sports': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/sports/[sport]/[gameId]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/research': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/allstar2026': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings': { shell: 'complete', responsive: 'complete', states: 'complete' },
   '/settings/profile': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/account': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },

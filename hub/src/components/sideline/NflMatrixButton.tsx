@@ -139,11 +139,18 @@ export function NflMatrixButton() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
+  const [loadingMatrices, setLoadingMatrices] = useState(true)
+  const [loadingCommunity, setLoadingCommunity] = useState(false)
   const refresh = useCallback(async () => {
-    try { setMatrices((await request<{ matrices: NflMatrix[] }>('/api/nfl-matrices')).matrices) } catch { setMatrices([]) }
+    try { setMatrices((await request<{ matrices: NflMatrix[] }>('/api/nfl-matrices')).matrices) }
+    catch { setMessage('NFL Matrices could not load. Try again.') }
+    finally { setLoadingMatrices(false) }
   }, [])
   const refreshCommunity = useCallback(async () => {
-    try { setListings((await request<{ listings: Listing[] }>('/api/nfl-matrix-marketplace')).listings) } catch { setListings([]) }
+    setLoadingCommunity(true)
+    try { setListings((await request<{ listings: Listing[] }>('/api/nfl-matrix-marketplace')).listings) }
+    catch { setMessage('NFL community matrices could not load. Try again.') }
+    finally { setLoadingCommunity(false) }
   }, [])
   useEffect(() => {
     const timer = window.setTimeout(() => void refresh(), 0)
@@ -158,20 +165,24 @@ export function NflMatrixButton() {
     setBusy(label); setMessage('')
     try { await task(); await refresh(); window.dispatchEvent(new Event('ss:nfl-matrices-updated')); setMessage('Done.') } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'Request failed.') } finally { setBusy('') }
   }
+  const copyCode = async (value: string) => {
+    try { await navigator.clipboard.writeText(value); setMessage('Element code copied.') }
+    catch { setMessage('Element code could not be copied.') }
+  }
   return (
     <>
       <button type="button" className={`matrix-fab ${styles.fab}`} onClick={() => setOpen(true)}><Grid3X3 size={15} /> NFL Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
       {open ? <div className={styles.backdrop} onMouseDown={event => { if (event.currentTarget === event.target) setOpen(false) }}><section className={styles.drawer} role="dialog" aria-modal="true" aria-label="NFL Matrices">
-        <header><div><small>THE SIDELINE</small><h2>NFL Matrices</h2><p>Separate criteria, codes, and community posts from MLB.</p></div><button onClick={() => setOpen(false)}><X size={18} /></button></header>
-        <nav><button className={tab === 'mine' ? styles.active : ''} onClick={() => setTab('mine')}>My NFL Matrices</button><button className={tab === 'community' ? styles.active : ''} onClick={() => setTab('community')}>NFL Community</button></nav>
+        <header><div><small>THE SIDELINE</small><h2>NFL Matrices</h2><p>Separate criteria, codes, and community posts from MLB.</p></div><button type="button" aria-label="Close NFL Matrices" onClick={() => setOpen(false)}><X size={18} /></button></header>
+        <nav aria-label="NFL Matrix views"><button type="button" aria-pressed={tab === 'mine'} className={tab === 'mine' ? styles.active : ''} onClick={() => setTab('mine')}>My NFL Matrices</button><button type="button" aria-pressed={tab === 'community'} className={tab === 'community' ? styles.active : ''} onClick={() => setTab('community')}>NFL Community</button></nav>
         <div className={styles.drawerBody}>
           {tab === 'mine' ? <>
-            <button className={styles.newMatrix} onClick={() => setEditor({ matrix: null })}><Plus size={15} /> New NFL Matrix</button>
-            <div className={styles.matrixList}>{matrices.map(matrix => <article key={matrix.id} style={{ '--matrix-color': matrix.color } as React.CSSProperties}><header><i /><div><b>{matrix.name}</b><small>{matrix.matrix_type === 'pipeline' ? `${matrix.definition.steps?.length ?? 0} pipeline steps` : `${matrix.definition.factors?.length ?? 0} conditions`} · NFL only</small></div><button title={matrix.enabled ? 'Turn off' : 'Turn on'} onClick={() => mutate(matrix.id, () => request(`/api/nfl-matrices/${matrix.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !matrix.enabled }) }))}>{matrix.enabled ? <Check size={14} /> : <X size={14} />}</button></header><footer><button onClick={() => navigator.clipboard.writeText(matrix.element_code)}><Copy size={12} /> {matrix.element_code}</button><button onClick={() => setEditor({ matrix })}><SlidersHorizontal size={12} /> Edit</button><button onClick={() => mutate(`publish-${matrix.id}`, () => request('/api/nfl-matrix-marketplace', { method: 'POST', body: JSON.stringify({ matrix_id: matrix.id }) }))}><Share2 size={12} /> Publish</button><button onClick={() => mutate(`delete-${matrix.id}`, () => request(`/api/nfl-matrices/${matrix.id}`, { method: 'DELETE' }))}><Trash2 size={12} /></button></footer></article>)}</div>
-            {!matrices.length ? <div className={styles.emptyState}><Grid3X3 size={26} /><b>No NFL Matrices yet</b><span>Create one from NFL scores, usage, tracking, team context, or any posted player market.</span></div> : null}
-            <div className={styles.importBox}><label><Clipboard size={14} /> Import NFL Element Code</label><div><input value={code} onChange={event => setCode(event.target.value.toUpperCase())} placeholder="NFL-XXXXXXXX" /><button disabled={!code.trim() || busy === 'import'} onClick={() => mutate('import', () => request('/api/nfl-matrices/import', { method: 'POST', body: JSON.stringify({ element_code: code }) }))}>Import</button></div></div>
-          </> : <div className={styles.matrixList}>{listings.map(listing => <article key={listing.id} style={{ '--matrix-color': listing.color } as React.CSSProperties}><header><i /><div><b>{listing.title}</b><small>{listing.matrix_type} · {listing.copy_count} adds</small></div></header>{listing.description ? <p>{listing.description}</p> : null}<footer><button onClick={() => mutate(`community-${listing.id}`, () => request(`/api/nfl-matrix-marketplace/${listing.id}/import`, { method: 'POST' }))}><Plus size={12} /> Add to NFL Matrices</button></footer></article>)}{!listings.length ? <div className={styles.emptyState}><Share2 size={26} /><b>No NFL community posts yet</b><span>Publish one of your NFL Matrices from the My NFL Matrices tab.</span></div> : null}</div>}
-          {message ? <div className={styles.message}>{message}</div> : null}
+            <button type="button" className={styles.newMatrix} onClick={() => setEditor({ matrix: null })}><Plus size={15} /> New NFL Matrix</button>
+            <div className={styles.matrixList}>{matrices.map(matrix => <article key={matrix.id} style={{ '--matrix-color': matrix.color } as React.CSSProperties}><header><i /><div><b>{matrix.name}</b><small>{matrix.matrix_type === 'pipeline' ? `${matrix.definition.steps?.length ?? 0} pipeline steps` : `${matrix.definition.factors?.length ?? 0} conditions`} · NFL only</small></div><button type="button" title={matrix.enabled ? 'Turn off' : 'Turn on'} onClick={() => mutate(matrix.id, () => request(`/api/nfl-matrices/${matrix.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !matrix.enabled }) }))}>{matrix.enabled ? <Check size={14} /> : <X size={14} />}</button></header><footer><button type="button" onClick={() => void copyCode(matrix.element_code)}><Copy size={12} /> {matrix.element_code}</button><button type="button" onClick={() => setEditor({ matrix })}><SlidersHorizontal size={12} /> Edit</button><button type="button" onClick={() => mutate(`publish-${matrix.id}`, () => request('/api/nfl-matrix-marketplace', { method: 'POST', body: JSON.stringify({ matrix_id: matrix.id }) }))}><Share2 size={12} /> Publish</button><button type="button" aria-label={`Delete ${matrix.name}`} onClick={() => mutate(`delete-${matrix.id}`, () => request(`/api/nfl-matrices/${matrix.id}`, { method: 'DELETE' }))}><Trash2 size={12} /></button></footer></article>)}</div>
+            {!loadingMatrices && !matrices.length ? <div className={styles.emptyState}><Grid3X3 size={26} /><b>No NFL Matrices yet</b><span>Create one from NFL scores, usage, tracking, team context, or any posted player market.</span></div> : null}
+            <div className={styles.importBox}><label><Clipboard size={14} /> Import NFL Element Code</label><div><input value={code} onChange={event => setCode(event.target.value.toUpperCase())} placeholder="NFL-XXXXXXXX" /><button type="button" disabled={!code.trim() || busy === 'import'} onClick={() => mutate('import', () => request('/api/nfl-matrices/import', { method: 'POST', body: JSON.stringify({ element_code: code }) }))}>Import</button></div></div>
+          </> : <div className={styles.matrixList}>{listings.map(listing => <article key={listing.id} style={{ '--matrix-color': listing.color } as React.CSSProperties}><header><i /><div><b>{listing.title}</b><small>{listing.matrix_type} · {listing.copy_count} adds</small></div></header>{listing.description ? <p>{listing.description}</p> : null}<footer><button type="button" onClick={() => mutate(`community-${listing.id}`, () => request(`/api/nfl-matrix-marketplace/${listing.id}/import`, { method: 'POST' }))}><Plus size={12} /> Add to NFL Matrices</button></footer></article>)}{!loadingCommunity && !listings.length ? <div className={styles.emptyState}><Share2 size={26} /><b>No NFL community posts yet</b><span>Publish one of your NFL Matrices from the My NFL Matrices tab.</span></div> : null}</div>}
+          {message ? <div className={styles.message} role="status" aria-live="polite">{message}</div> : null}
         </div>
       </section></div> : null}
       {editor ? <MatrixEditor initial={editor.matrix} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); void refresh() }} /> : null}

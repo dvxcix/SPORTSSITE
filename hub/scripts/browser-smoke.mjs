@@ -52,6 +52,41 @@ async function verifyPage(context, path, expectedText, options = {}) {
     if (body.length < 40) routeFailures.push('rendered body is unexpectedly empty')
     if (hasOverlay) routeFailures.push('framework error overlay is visible')
 
+    if (options.checkAccessibility !== false) {
+      const accessibility = await page.evaluate(() => {
+        const visible = element => {
+          const style = getComputedStyle(element)
+          const rect = element.getBoundingClientRect()
+          return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
+        }
+        const hasName = element => Boolean(
+          element.getAttribute('aria-label')?.trim()
+          || element.getAttribute('aria-labelledby')?.trim()
+          || element.getAttribute('title')?.trim()
+          || element.textContent?.trim()
+          || element.querySelector('img[alt]:not([alt=""])'),
+        )
+        const unnamedActions = [...document.querySelectorAll('button,a[href]')]
+          .filter(element => visible(element) && !hasName(element)).length
+        const unnamedFields = [...document.querySelectorAll('input:not([type="hidden"]),select,textarea')]
+          .filter(element => visible(element))
+          .filter(element => {
+            const control = element
+            return !control.getAttribute('aria-label')?.trim()
+              && !control.getAttribute('aria-labelledby')?.trim()
+              && !control.getAttribute('title')?.trim()
+              && !(control.labels && control.labels.length)
+          }).length
+        const missingAlt = [...document.querySelectorAll('img')]
+          .filter(image => !image.hasAttribute('alt')).length
+        return { mainCount: document.querySelectorAll('main').length, unnamedActions, unnamedFields, missingAlt }
+      })
+      if (accessibility.mainCount !== 1) routeFailures.push(`expected one main landmark; found ${accessibility.mainCount}`)
+      if (accessibility.unnamedActions) routeFailures.push(`${accessibility.unnamedActions} visible actions lack an accessible name`)
+      if (accessibility.unnamedFields) routeFailures.push(`${accessibility.unnamedFields} visible fields lack an accessible label`)
+      if (accessibility.missingAlt) routeFailures.push(`${accessibility.missingAlt} images lack alt attributes`)
+    }
+
     if (options.checkOverflow) {
       const overflow = await page.evaluate(() => ({
         viewport: document.documentElement.clientWidth,

@@ -729,6 +729,46 @@ test('core research routes provide branded transition and recovery states', asyn
   assert.ok(sideline.includes('title="No games on this date"'))
 })
 
+test('score, research, and event workspaces avoid blank route states', async () => {
+  const allStar = await read('src/app/allstar2026/page.tsx')
+  assert.ok(!allStar.includes('fallback={null}'))
+  for (const route of ['research', 'allstar2026']) {
+    assert.ok((await read(`src/app/${route}/loading.tsx`)).includes('DataRouteLoading'))
+    assert.ok((await read(`src/app/${route}/error.tsx`)).includes('DataRouteError'))
+  }
+  assert.ok((await read('src/app/sports/page.tsx')).includes('ss-scores-empty'))
+  assert.ok((await read('src/app/sports/error.tsx')).includes('DataRouteError'))
+})
+
+test('forum discovery retains an actionable empty state for members and visitors', async () => {
+  const forum = await read('src/app/forum/page.tsx')
+  assert.ok(forum.includes("user ? 'Create a thread' : 'Sign in to participate'"))
+  assert.ok(forum.includes("user ? '/forum/new' : '/auth/login?next=/forum/new'"))
+})
+
+test('NFL Matrices distinguish loading failures from truthful empty states', async () => {
+  const matrix = await read('src/components/sideline/NflMatrixButton.tsx')
+  assert.ok(matrix.includes('loadingMatrices'))
+  assert.ok(matrix.includes('loadingCommunity'))
+  assert.ok(matrix.includes("setMessage('NFL Matrices could not load. Try again.')"))
+  assert.ok(matrix.includes("setMessage('Element code copied.')"))
+  assert.ok(matrix.includes('aria-live="polite"'))
+})
+
+test('browser verification enforces shared accessibility fundamentals', async () => {
+  const smoke = await read('scripts/browser-smoke.mjs')
+  assert.ok(smoke.includes('expected one main landmark'))
+  assert.ok(smoke.includes('visible actions lack an accessible name'))
+  assert.ok(smoke.includes('visible fields lack an accessible label'))
+  assert.ok(smoke.includes('images lack alt attributes'))
+})
+
+test('account recovery associates its visible label with the email field', async () => {
+  const recovery = await read('src/app/auth/forgot-password/page.tsx')
+  assert.ok(recovery.includes('htmlFor="recovery-email"'))
+  assert.ok(recovery.includes('id="recovery-email"'))
+})
+
 test('mobile navigation keeps the community workspace active across every social route', async () => {
   const dock = await read('src/components/layout/MobileDock.tsx')
   for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {

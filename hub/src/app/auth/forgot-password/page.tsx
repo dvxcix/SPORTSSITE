@@ -43,8 +43,8 @@ export default function ForgotPasswordPage() {
           <form className="ss-auth-card" onSubmit={event => { event.preventDefault(); void send() }}>
             {error && <div role="alert" className="ss-auth-alert">{error}</div>}
             <div>
-              <label>Email address</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <label htmlFor="recovery-email">Email address</label>
+              <input id="recovery-email" type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
                 maxLength={254}

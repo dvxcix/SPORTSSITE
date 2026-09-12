@@ -4,7 +4,8 @@ import { ArrowRight, MessageSquare, Plus } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import Image from 'next/image'
-import { ProductAction, ProductHero, ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
+import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
+import { PageState } from '@/components/layout/PageState'
 
 export const revalidate = 60
 
@@ -45,7 +46,7 @@ export default async function ForumPage() {
             <ArrowRight size={15} className="shrink-0 text-zinc-700 transition group-hover:translate-x-1 group-hover:text-lime-300" />
           </Link>
         ))}
-      </div> : <ProductPanel padded className="text-center"><MessageSquare size={26} className="mx-auto text-zinc-600" /><p className="mt-3 font-black text-white">No discussions yet</p></ProductPanel>}
+      </div> : <PageState kind="empty" title="No discussions yet" message="Start the first conversation for the community." actionLabel={user ? 'Create a thread' : 'Sign in to participate'} actionHref={user ? '/forum/new' : '/auth/login?next=/forum/new'} />}
     </ProductPageShell>
   )
 }
