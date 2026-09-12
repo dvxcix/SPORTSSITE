@@ -4942,11 +4942,15 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
 }
 
 // ─── DugoutClient ─────────────────────────────────────────────────────────────
+const dugoutSessionSnapshots = new Map<string, { data: any; activeGame: string | null; capturedAt: number }>()
+
 export function DugoutClient({ date }: { date: string }) {
   const { user: authUser, profile: authProfile } = useAuth()
-  const [data, setData]         = useState<any | null>(null)
-  const [loading, setLoading]   = useState(true)
+  const initialSnapshot = dugoutSessionSnapshots.get(date)
+  const [data, setData]         = useState<any | null>(() => initialSnapshot?.data ?? null)
+  const [loading, setLoading]   = useState(() => !initialSnapshot)
   const [err, setErr]           = useState<string | null>(null)
+  const [staleSnapshot, setStaleSnapshot] = useState(() => Boolean(initialSnapshot))
   const [reloadToken, setReloadToken] = useState(0)
   const [activeGame, setActive] = useState<string | null>(null)
   const [showHrBoard, setShowHrBoard] = useState(false)
@@ -5029,7 +5033,10 @@ export function DugoutClient({ date }: { date: string }) {
   const activeGameStorageKey = `ss:dugout-active-game:${date}`
 
   useEffect(() => {
-    setLoading(true); setErr(null); setData(null); setActive(null)
+    const snapshot = dugoutSessionSnapshots.get(date)
+    setLoading(!snapshot); setErr(null); setStaleSnapshot(Boolean(snapshot))
+    if (snapshot) { setData(snapshot.data); setActive(snapshot.activeGame) }
+    else { setData(null); setActive(null) }
     fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
       .then(d => {
@@ -5047,9 +5054,12 @@ export function DugoutClient({ date }: { date: string }) {
               g.awayLineup?.some((p: any) => p.mlb_id === highlightId))
           : null)
         setActive((targetGame ?? d.games?.[0])?.gameKey ?? null)
+        dugoutSessionSnapshots.set(date, { data: d, activeGame: (targetGame ?? d.games?.[0])?.gameKey ?? null, capturedAt: Date.now() })
+        if (dugoutSessionSnapshots.size > 3) dugoutSessionSnapshots.delete(dugoutSessionSnapshots.keys().next().value!)
+        setStaleSnapshot(false)
         setLoading(false)
       })
-      .catch(e => { setErr(String(e)); setLoading(false) })
+      .catch(() => { setErr('Live refresh is unavailable.'); setStaleSnapshot(Boolean(snapshot)); setLoading(false) })
   }, [activeGameStorageKey, date, highlightId, reloadToken])
 
   // Real gap (2026-07-24): saving/importing/deleting a Matrix elsewhere in
@@ -5068,12 +5078,12 @@ export function DugoutClient({ date }: { date: string }) {
     const onMatricesUpdated = () => {
       fetch(`/api/dugout/data?date=${date}`, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-        .then(d => setData(d))
+        .then(d => { setData(d); dugoutSessionSnapshots.set(date, { data: d, activeGame, capturedAt: Date.now() }); setStaleSnapshot(false) })
         .catch(() => {})
     }
     window.addEventListener('ss:matrices-updated', onMatricesUpdated)
     return () => window.removeEventListener('ss:matrices-updated', onMatricesUpdated)
-  }, [date])
+  }, [activeGame, date])
 
   // The one place that actually changes which game is active — keeps the
   // URL's ?game= in lockstep so a refresh (or a copy-pasted link) lands
@@ -5082,6 +5092,8 @@ export function DugoutClient({ date }: { date: string }) {
   // button history with dozens of entries.
   const setActiveGame = useCallback((gameKey: string | null) => {
     setActive(gameKey)
+    const snapshot = dugoutSessionSnapshots.get(date)
+    if (snapshot) dugoutSessionSnapshots.set(date, { ...snapshot, activeGame: gameKey })
     try {
       if (gameKey) window.localStorage.setItem(activeGameStorageKey, gameKey)
       else window.localStorage.removeItem(activeGameStorageKey)
@@ -5090,7 +5102,7 @@ export function DugoutClient({ date }: { date: string }) {
     if (gameKey) params.set('game', gameKey)
     else params.delete('game')
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [activeGameStorageKey, pathname, router, searchParams])
+  }, [activeGameStorageKey, date, pathname, router, searchParams])
 
   useEffect(() => {
     if (!activeGame) return
@@ -5148,7 +5160,7 @@ export function DugoutClient({ date }: { date: string }) {
     </div>
   )
 
-  if (err) return (
+  if (err && !data) return (
     <div role="alert" style={{ display: 'grid', justifyItems: 'center', gap: 10, textAlign: 'center', padding: '44px 20px', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 12, background: 'rgba(248,113,113,0.06)' }}>
       <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-1)' }}>The Dugout could not load</div>
       <div style={{ maxWidth: 520, fontSize: 11, color: 'var(--text-3)' }}>{err}</div>
@@ -5191,6 +5203,12 @@ export function DugoutClient({ date }: { date: string }) {
 
   return (
     <div>
+      {staleSnapshot && (
+        <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 11px', marginBottom: 12, border: '1px solid rgba(251,191,36,.28)', borderRadius: 9, background: 'rgba(251,191,36,.07)', color: '#fcd34d', fontSize: 10, fontWeight: 750 }}>
+          <span>Showing the last board loaded in this session. Live movement is paused.</span>
+          <button type="button" onClick={() => setReloadToken(value => value + 1)} style={{ flex: 'none', minHeight: 30, padding: '0 9px', border: '1px solid rgba(251,191,36,.35)', borderRadius: 7, background: 'transparent', color: 'inherit', fontSize: 9, fontWeight: 900 }}>Reconnect</button>
+        </div>
+      )}
       {!hasStats && (
         <div style={{ padding: '6px 12px', marginBottom: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 11, color: '#f87171' }}>
           Statcast data is temporarily unavailable. Odds remain available.

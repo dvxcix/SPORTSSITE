@@ -1834,3 +1834,17 @@ test('browser release QA enforces performance, overflow, touch, and responsive d
   assert.match(browser, /RESPONSIVE_CAPTURE_DIR/)
   assert.match(manifest, /"test:responsive": "node scripts\/browser-smoke\.mjs"/)
 })
+
+test('live research boards preserve only bounded in-session snapshots and label stale data', async () => {
+  const dugout = await read('src/components/dugout/DugoutClient.tsx')
+  const sideline = await read('src/app/the-sideline/useSidelineMarket.ts')
+  const worker = await read('public/sw.js')
+  assert.match(dugout, /const dugoutSessionSnapshots = new Map/)
+  assert.match(dugout, /dugoutSessionSnapshots\.size > 3/)
+  assert.match(dugout, /Showing the last board loaded in this session\. Live movement is paused\./)
+  assert.match(dugout, /if \(err && !data\)/)
+  assert.doesNotMatch(dugout, /localStorage\.setItem\([^\n]*dugoutSessionSnapshots/)
+  assert.match(sideline, /Showing the last loaded capture/)
+  assert.match(sideline, /cache\.current\.size > 64/)
+  assert.doesNotMatch(worker, /caches\.open|CacheStorage|respondWith/)
+})
