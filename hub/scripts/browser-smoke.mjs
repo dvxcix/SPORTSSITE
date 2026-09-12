@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core'
+import { mkdir } from 'node:fs/promises'
 
 const productionTarget = process.argv.includes('--production')
 const baseUrl = (
@@ -10,6 +11,8 @@ const isLocalTarget = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(baseU
 
 const browser = await chromium.launch({ executablePath: edgePath, headless: true })
 const failures = []
+const captureDir = process.env.RESPONSIVE_CAPTURE_DIR || ''
+if (captureDir) await mkdir(captureDir, { recursive: true })
 
 function excerpt(value) {
   return value.replace(/\s+/g, ' ').trim().slice(0, 220)
@@ -100,6 +103,38 @@ async function verifyPage(context, path, expectedText, options = {}) {
       }
     }
 
+    if (options.checkPerformance) {
+      const performance = await page.evaluate(() => {
+        const navigation = performance.getEntriesByType('navigation')[0]
+        const resources = performance.getEntriesByType('resource')
+        return {
+          domNodes: document.getElementsByTagName('*').length,
+          domContentLoadedMs: navigation ? Math.round(navigation.domContentLoadedEventEnd) : 0,
+          transferBytes: Math.round(resources.reduce((sum, item) => sum + (item.transferSize || 0), 0)),
+        }
+      })
+      if (performance.domNodes > 4_000) routeFailures.push(`DOM budget exceeded: ${performance.domNodes} nodes`)
+      if (performance.domContentLoadedMs > 5_000) routeFailures.push(`DOMContentLoaded budget exceeded: ${performance.domContentLoadedMs}ms`)
+      if (performance.transferBytes > 5_000_000) routeFailures.push(`transfer budget exceeded: ${Math.round(performance.transferBytes / 1024)}KB`)
+    }
+
+    if (options.checkTouchTargets) {
+      const undersized = await page.evaluate(() => [...document.querySelectorAll('button,a[href]')].filter(element => {
+        const style = getComputedStyle(element)
+        const rect = element.getBoundingClientRect()
+        if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false
+        const accessibleText = element.textContent?.trim() || element.querySelector('img[alt]:not([alt=""])')?.getAttribute('alt') || ''
+        const iconOnly = !accessibleText && Boolean(element.getAttribute('aria-label') || element.getAttribute('title'))
+        return iconOnly && (rect.width < 32 || rect.height < 32)
+      }).length)
+      if (undersized) routeFailures.push(`${undersized} icon actions are smaller than 32px`)
+    }
+
+    if (captureDir && options.captureName) {
+      const safePath = options.captureName.replace(/[^a-z0-9_-]+/gi, '-')
+      await page.screenshot({ path: `${captureDir}/${safePath}.png`, fullPage: true, animations: 'disabled' })
+    }
+
     if (routeFailures.length) {
       failures.push(...routeFailures.map(message => `${label}: ${message}`))
       console.error(`FAIL ${label} (${status})`)
@@ -167,7 +202,7 @@ try {
     ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
     ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'], ['/responsible-gambling', 'Responsible'],
     ['/privacy', 'Privacy'], ['/terms', 'Terms'],
-  ], 4, ([path, expected]) => verifyPage(desktop, path, expected, { checkOverflow: true }))
+  ], 4, ([path, expected]) => verifyPage(desktop, path, expected, { checkOverflow: true, checkPerformance: true, captureName: `desktop-${path}` }))
   await runInBatches([
     '/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership',
     '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline',
@@ -186,7 +221,7 @@ try {
     ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
     ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
     ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'],
-  ], 4, ([path, expected]) => verifyPage(mobile, path, expected, { label: 'mobile', checkOverflow: true }))
+  ], 4, ([path, expected]) => verifyPage(mobile, path, expected, { label: 'mobile', checkOverflow: true, checkPerformance: true, checkTouchTargets: true, captureName: `mobile-${path}` }))
   await runInBatches([
     '/feed', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages',
     '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public',
@@ -208,6 +243,30 @@ try {
     '/the-sideline', '/the-public',
   ], 3, path => verifyProtectedPage(fold, path, { label: 'fold' }))
   await fold.close()
+
+  const tablet = await browser.newContext({
+    viewport: { width: 768, height: 1024 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    colorScheme: 'dark',
+  })
+  await runInBatches([
+    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/pricing', 'Ultimate'], ['/creators', 'Find the people behind the edge'], ['/support', 'Support'],
+  ], 3, ([path, expected]) => verifyPage(tablet, path, expected, { label: 'tablet', checkOverflow: true, checkPerformance: true, checkTouchTargets: true, captureName: `tablet-${path}` }))
+  await tablet.close()
+
+  const narrow = await browser.newContext({
+    viewport: { width: 320, height: 700 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    colorScheme: 'dark',
+  })
+  await runInBatches([
+    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/pricing', 'Ultimate'], ['/support', 'Support'],
+  ], 2, ([path, expected]) => verifyPage(narrow, path, expected, { label: 'narrow', checkOverflow: true, checkTouchTargets: true, captureName: `narrow-${path}` }))
+  await narrow.close()
 } finally {
   await browser.close()
 }

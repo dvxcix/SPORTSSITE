@@ -17,6 +17,7 @@
     "test:production": "node --test scripts/production-smoke.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:browser:production": "node scripts/browser-smoke.mjs --production",
+    "test:responsive": "node scripts/browser-smoke.mjs",
     "test:hr-intelligence": "node --experimental-strip-types scripts/hr-intelligence-regression.mts",
     "test:fanduel-markets": "node --experimental-strip-types scripts/fanduel-market-regression.mts",
     "test:fanduel-archive": "node --experimental-strip-types scripts/fanduel-archive-regression.mts",

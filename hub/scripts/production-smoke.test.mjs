@@ -1821,3 +1821,16 @@ test('research workspaces support access-controlled collaboration, comments, pre
   assert.match(collaboration, /research_workspace_comments/)
   assert.match(collaboration, /invite_research_workspace_member/)
 })
+
+test('browser release QA enforces performance, overflow, touch, and responsive device budgets', async () => {
+  const browser = await read('scripts/browser-smoke.mjs')
+  const manifest = await read('package.json')
+  assert.match(browser, /performance\.domNodes > 4_000/)
+  assert.match(browser, /performance\.domContentLoadedMs > 5_000/)
+  assert.match(browser, /performance\.transferBytes > 5_000_000/)
+  assert.match(browser, /iconOnly && \(rect\.width < 32 \|\| rect\.height < 32\)/)
+  assert.match(browser, /viewport: \{ width: 768, height: 1024 \}/)
+  assert.match(browser, /viewport: \{ width: 320, height: 700 \}/)
+  assert.match(browser, /RESPONSIVE_CAPTURE_DIR/)
+  assert.match(manifest, /"test:responsive": "node scripts\/browser-smoke\.mjs"/)
+})
