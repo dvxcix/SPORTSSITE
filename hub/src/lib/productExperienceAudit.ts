@@ -77,7 +77,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Messaging', priority: 'P1', defaults: legacy,
-    routes: ['/messages', '/messages/new', '/messages/[username]'],
+    routes: ['/messages', '/messages/new', '/messages/[username]', '/messages/group/[id]'],
   },
   {
     family: 'Creator & commerce', priority: 'P2', defaults: partial,
@@ -145,6 +145,7 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/messages': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/messages/new': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/messages/[username]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/messages/group/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
   '/notifications': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/feed': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/explore': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },

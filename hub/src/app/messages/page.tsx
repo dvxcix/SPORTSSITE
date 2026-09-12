@@ -5,6 +5,7 @@ import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
+import { GroupConversationInbox } from '@/components/chat/GroupConversationInbox'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,10 +81,42 @@ export default async function MessagesPage() {
     }
   })
 
+  const { data: groupMemberships } = await supabase.from('group_conversation_members').select('conversation_id,last_read_at').eq('user_id', user.id)
+  const groupIds = (groupMemberships ?? []).map(membership => membership.conversation_id)
+  let groupConversations: Array<{
+    id: string; name: string; updatedAt: string; lastMessage: string; unreadCount: number
+    members: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarRingStyle: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null; avatarRingColor: string | null }>
+  }> = []
+  if (groupIds.length) {
+    const [{ data: groups }, { data: groupMessages }, { data: groupMembers }] = await Promise.all([
+      supabase.from('group_conversations').select('id,name,updated_at').in('id', groupIds).order('updated_at', { ascending: false }),
+      supabase.from('group_messages').select('id,conversation_id,sender_id,content,created_at,is_deleted').in('conversation_id', groupIds).order('created_at', { ascending: false }).limit(500),
+      supabase.from('group_conversation_members').select('conversation_id,user:users!group_conversation_members_user_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)').in('conversation_id', groupIds),
+    ])
+    const readByGroup = new Map((groupMemberships ?? []).map(membership => [membership.conversation_id, membership.last_read_at ? new Date(membership.last_read_at).getTime() : 0]))
+    groupConversations = (groups ?? []).map(group => {
+      const messages = (groupMessages ?? []).filter(message => message.conversation_id === group.id)
+      const participants = (groupMembers ?? [])
+        .filter(member => member.conversation_id === group.id)
+        .flatMap(member => Array.isArray(member.user) ? member.user : member.user ? [member.user] : [])
+      const readAt = readByGroup.get(group.id) ?? 0
+      return {
+        id: group.id,
+        name: group.name,
+        updatedAt: group.updated_at,
+        lastMessage: messages[0]?.is_deleted ? 'Message deleted' : messages[0]?.content ?? '',
+        unreadCount: messages.filter(message => message.sender_id !== user.id && new Date(message.created_at).getTime() > readAt).length,
+        members: participants.map(member => ({ id: member.id, username: member.username, displayName: member.display_name ?? null, avatarUrl: member.avatar_url ?? null, avatarRingStyle: member.avatar_ring_style ?? null, avatarRingColor: member.avatar_ring_color ?? null })),
+      }
+    })
+  }
+
   return (
     <ProductPageShell narrow className="ss-messages-page">
       <CommunityNav />
       <ProductHero icon={<MessageCircle size={21}/>} eyebrow="Member network" title="Messages" description="Private conversations with people across SlipSurge." actions={<ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction>}/>
+
+      {groupConversations.length > 0 && <><ProductSectionHeader title="Group conversations" meta={`${groupConversations.length} group${groupConversations.length === 1 ? '' : 's'}`}/><ProductPanel className="ss-messages-inbox-shell"><GroupConversationInbox conversations={groupConversations}/></ProductPanel></>}
 
       <ProductSectionHeader title="Inbox" meta={`${conversations.length} conversation${conversations.length === 1 ? '' : 's'}`}/>
       <ProductPanel className="ss-messages-inbox-shell">
