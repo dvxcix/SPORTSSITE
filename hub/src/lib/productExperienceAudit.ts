@@ -89,7 +89,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Settings', priority: 'P1', defaults: partial,
-    routes: ['/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership'],
+    routes: ['/settings', '/settings/profile', '/settings/interests', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership'],
   },
   {
     family: 'Admin operations', priority: 'P1', defaults: shared,
@@ -185,6 +185,7 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/settings/security': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/privacy': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/notifications': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/settings/interests': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/blocked': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/membership': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/blog': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },

@@ -12,7 +12,7 @@ export default async function OnboardingPage() {
   const admin = createAdminClient()
   const [{ data: profile }, { data: suggested }, { data: nflTeams }] = await Promise.all([
     admin.from('users')
-      .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
+      .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, interest_settings, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
       .eq('id', user.id)
       .single(),
     supabase.from('users')

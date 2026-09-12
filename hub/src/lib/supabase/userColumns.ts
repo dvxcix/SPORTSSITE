@@ -18,7 +18,7 @@ export const PUBLIC_USER_COLUMNS = [
 // session on the server.
 export const PRIVATE_ACCOUNT_COLUMNS = [
   PUBLIC_USER_COLUMNS,
-  'email', 'notification_settings', 'dugout_column_prefs',
+  'email', 'notification_settings', 'interest_settings', 'dugout_column_prefs',
   'discord_advanced_claimed', 'admin_granted_tier',
   'admin_granted_tier_by', 'admin_granted_tier_at',
   'admin_granted_tier_note', 'onboarding_completed_at',

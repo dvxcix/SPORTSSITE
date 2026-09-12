@@ -21,6 +21,14 @@ const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Mete
 
 const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Privacy', 'Alerts', 'Follow', 'Done']
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
+const CONTENT_INTERESTS = [
+  ['research', 'Research'], ['picks', 'Picks'], ['live-games', 'Live games'],
+  ['community', 'Community'], ['creators', 'Creators'], ['results', 'Results'],
+] as const
+const MARKET_INTERESTS = [
+  ['moneyline', 'Game lines'], ['player-props', 'Player props'], ['milestones', 'Ladders'],
+  ['first-score', 'First score'], ['live', 'Live markets'], ['matrices', 'Matrices'],
+] as const
 
 const slide = {
   enter: { opacity: 0, x: 16 },
@@ -42,6 +50,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   const [avatarUrl, setAvatarUrl] = useState(initialProfile?.avatar_url ?? '')
   const [teams, setTeams] = useState<string[]>(initialProfile?.favorite_teams ?? [])
   const [sports, setSports] = useState<string[]>(initialProfile?.favorite_sports ?? [])
+  const [contentMix, setContentMix] = useState<string[]>(initialProfile?.interest_settings?.content_mix ?? ['research', 'picks', 'live-games'])
+  const [marketFocus, setMarketFocus] = useState<string[]>(initialProfile?.interest_settings?.market_focus ?? ['player-props', 'milestones'])
   // Same two toggles/copy as Settings > Privacy (PrivacySettingsForm) — new
   // members had no way to know these existed at all before this step, since
   // nothing pointed them at Settings unless they went looking on their own.
@@ -65,7 +75,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
     try {
       const saved = localStorage.getItem(draftKey)
       if (saved) {
-        const draft = JSON.parse(saved) as { step?: number; displayName?: string; bio?: string; avatarUrl?: string; teams?: string[]; sports?: string[]; isPrivate?: boolean; hideWinRate?: boolean; alerts?: Record<string, boolean> }
+        const draft = JSON.parse(saved) as { step?: number; displayName?: string; bio?: string; avatarUrl?: string; teams?: string[]; sports?: string[]; contentMix?: string[]; marketFocus?: string[]; isPrivate?: boolean; hideWinRate?: boolean; alerts?: Record<string, boolean> }
         queueMicrotask(() => {
           if (!active) return
           if (Number.isInteger(draft.step)) setStep(Math.max(0, Math.min(STEPS.length - 1, draft.step!)))
@@ -74,6 +84,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
           if (typeof draft.avatarUrl === 'string') setAvatarUrl(draft.avatarUrl)
           if (Array.isArray(draft.teams)) setTeams(draft.teams.filter(value => typeof value === 'string'))
           if (Array.isArray(draft.sports)) setSports(draft.sports.filter(value => typeof value === 'string'))
+          if (Array.isArray(draft.contentMix)) setContentMix(draft.contentMix.filter(value => typeof value === 'string'))
+          if (Array.isArray(draft.marketFocus)) setMarketFocus(draft.marketFocus.filter(value => typeof value === 'string'))
           if (typeof draft.isPrivate === 'boolean') setIsPrivate(draft.isPrivate)
           if (typeof draft.hideWinRate === 'boolean') setHideWinRate(draft.hideWinRate)
           if (draft.alerts && typeof draft.alerts === 'object') setAlerts(current => ({ ...current, ...draft.alerts }))
@@ -88,8 +100,8 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 
   useEffect(() => {
     if (!draftReady.current) return
-    try { localStorage.setItem(draftKey, JSON.stringify({ step, displayName, bio, avatarUrl, teams, sports, isPrivate, hideWinRate, alerts })) } catch { /* storage may be unavailable */ }
-  }, [alerts, avatarUrl, bio, displayName, draftKey, hideWinRate, isPrivate, sports, step, teams])
+    try { localStorage.setItem(draftKey, JSON.stringify({ step, displayName, bio, avatarUrl, teams, sports, contentMix, marketFocus, isPrivate, hideWinRate, alerts })) } catch { /* storage may be unavailable */ }
+  }, [alerts, avatarUrl, bio, contentMix, displayName, draftKey, hideWinRate, isPrivate, marketFocus, sports, step, teams])
 
   function toggleTeam(abbr: string) {
     setTeams(prev => prev.includes(abbr) ? prev.filter(x => x !== abbr) : [...prev, abbr])
@@ -97,6 +109,10 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 
   function toggleSport(sport: string) {
     setSports(prev => prev.includes(sport) ? prev.filter(value => value !== sport) : [...prev, sport])
+  }
+
+  function toggleInterest(value: string, current: string[], setCurrent: (next: string[]) => void) {
+    setCurrent(current.includes(value) ? current.filter(item => item !== value) : [...current, value])
   }
 
   async function uploadAvatar(file: File) {
@@ -122,6 +138,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
         avatar_url: avatarUrl.trim() || undefined,
         favorite_teams: teams,
         favorite_sports: sports,
+        interest_settings: {
+          content_mix: contentMix,
+          market_focus: marketFocus,
+          discovery_mode: initialProfile?.interest_settings?.discovery_mode ?? 'balanced',
+        },
         is_private: isPrivate,
         hide_win_rate: hideWinRate,
         notification_settings: { ...(initialProfile?.notification_settings ?? {}), ...alerts },
@@ -277,6 +298,18 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                   ))}
                 </div>
               </div>}
+              <div>
+                <p className="ss-onboarding-kicker">What should lead your home?</p>
+                <div className="ss-onboarding-sports">
+                  {CONTENT_INTERESTS.map(([value, label]) => <button key={value} type="button" aria-pressed={contentMix.includes(value)} className={contentMix.includes(value) ? 'is-selected' : ''} onClick={() => toggleInterest(value, contentMix, setContentMix)}>{contentMix.includes(value) && <Check size={12}/>} {label}</button>)}
+                </div>
+              </div>
+              <div>
+                <p className="ss-onboarding-kicker">Markets you follow</p>
+                <div className="ss-onboarding-sports">
+                  {MARKET_INTERESTS.map(([value, label]) => <button key={value} type="button" aria-pressed={marketFocus.includes(value)} className={marketFocus.includes(value) ? 'is-selected' : ''} onClick={() => toggleInterest(value, marketFocus, setMarketFocus)}>{marketFocus.includes(value) && <Check size={12}/>} {label}</button>)}
+                </div>
+              </div>
               <StepNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={sports.length || teams.length ? 'Next' : 'Skip for now'} />
             </div>
           )}

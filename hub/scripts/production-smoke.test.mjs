@@ -179,7 +179,7 @@ test('private account fields are not exposed through public profile reads', asyn
   const columns = await read('src/lib/supabase/userColumns.ts')
   const auth = await read('src/context/AuthContext.tsx')
   const accountRoute = await read('src/app/api/account/me/route.ts')
-  for (const privateField of ['email', 'whop_connected_company_id', 'whop_membership_id', 'notification_settings']) {
+  for (const privateField of ['email', 'whop_connected_company_id', 'whop_membership_id', 'notification_settings', 'interest_settings']) {
     const publicSection = columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[0]
     assert.ok(!publicSection.includes(`'${privateField}'`), `${privateField} leaked into public user columns`)
   }
@@ -917,7 +917,7 @@ test('settings hub exposes every account workflow with an accessible shared shel
   const page = await read('src/app/settings/page.tsx')
   const shell = await read('src/components/settings/SettingsShell.tsx')
   const audit = await read('src/lib/productExperienceAudit.ts')
-  for (const href of ['/settings/profile', '/settings/account', '/settings/security', '/settings/notifications', '/settings/privacy', '/settings/blocked', '/settings/membership', '/creators/apply', '/faq', '/support']) {
+  for (const href of ['/settings/profile', '/settings/interests', '/settings/account', '/settings/security', '/settings/notifications', '/settings/privacy', '/settings/blocked', '/settings/membership', '/creators/apply', '/faq', '/support']) {
     assert.ok(page.includes(`href: '${href}'`), `settings hub omits ${href}`)
   }
   assert.ok(shell.includes('aria-label="Settings sections"'))
@@ -925,6 +925,25 @@ test('settings hub exposes every account workflow with an accessible shared shel
   assert.ok(shell.includes('aria-labelledby="settings-page-title"'))
   assert.ok(page.includes('aria-labelledby={`settings-${section.title.toLowerCase()}-heading`}'))
   assert.ok(audit.includes("'/settings': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' }"))
+})
+
+test('member interests persist across onboarding and remain privately editable', async () => {
+  const onboardingPage = await read('src/app/onboarding/page.tsx')
+  const onboarding = await read('src/components/onboarding/OnboardingFlow.tsx')
+  const interestsPage = await read('src/app/settings/interests/page.tsx')
+  const interests = await read('src/components/settings/InterestSettingsForm.tsx')
+  const migration = await read('supabase/migrations/20260912163558_member_interest_settings.sql')
+  const columns = await read('src/lib/supabase/userColumns.ts')
+  assert.ok(onboardingPage.includes('interest_settings'))
+  assert.ok(onboarding.includes('contentMix'))
+  assert.ok(onboarding.includes('marketFocus'))
+  assert.ok(onboarding.includes('interest_settings: {'))
+  assert.ok(interestsPage.includes("redirect('/auth/login?next=/settings/interests')"))
+  assert.ok(interests.includes(".from('users').update"))
+  assert.ok(interests.includes("discovery_mode"))
+  assert.ok(migration.includes("jsonb_typeof(interest_settings) = 'object'"))
+  assert.ok(columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[0].includes('interest_settings') === false)
+  assert.ok(columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[1].includes("'interest_settings'"))
 })
 
 test('product experience audit tracks every completed route dimension', async () => {

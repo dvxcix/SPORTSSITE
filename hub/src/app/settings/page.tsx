@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, KeyRound, MessageCircleQuestion, UserX } from 'lucide-react'
+import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, KeyRound, MessageCircleQuestion, UserX, Compass } from 'lucide-react'
 import { DesktopSettingsPanel } from '@/components/desktop/DesktopSettingsPanel'
 import { SettingsShell } from '@/components/settings/SettingsShell'
 import styles from './SettingsOverview.module.css'
@@ -25,6 +25,7 @@ export default async function SettingsPage() {
     {
       title: 'Preferences',
       items: [
+        { href: '/settings/interests', icon: Compass, label: 'Interests', desc: 'Sports, teams, markets, and feed mix' },
         { href: '/settings/notifications', icon: Bell, label: 'Notifications', desc: 'Push, email, in-app alerts' },
         { href: '/settings/privacy', icon: Eye, label: 'Privacy', desc: 'Who can see your posts and profile' },
         { href: '/settings/blocked', icon: UserX, label: 'Blocked Users', desc: 'Manage who you\'ve blocked' },
