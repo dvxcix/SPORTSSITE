@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
-import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe, Users, ChevronDown, MessageCircle, Microscope } from 'lucide-react'
+import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe, Users, ChevronDown, MessageCircle, Microscope, EyeOff } from 'lucide-react'
 import { PickComposer, type ComposedPick } from './PickComposer'
 import { combineOdds, calcPayout, fmtUsd } from '@slipsurge/core/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
@@ -42,6 +42,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [visibility, setVisibility] = useState<'public' | 'followers'>('public')
   const [visibilityOpen, setVisibilityOpen] = useState(false)
+  const [isSpoiler, setIsSpoiler] = useState(false)
   const [sportOpen, setSportOpen] = useState(false)
   const supabase = useMemo(() => createClient(), [])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -149,6 +150,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
           visibility,
           groupId: groupId ?? null,
           pageId: pageId ?? null,
+          isSpoiler,
         }),
       })
       const data = await res.json().catch(() => null)
@@ -160,7 +162,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
       if (data?.picksTracked === false) {
         setError('Posted, but your pick couldn’t be tracked for grading — it won’t show a result.')
       }
-      setContent(''); setLegs([]); setWager(''); setImageUrl('')
+      setContent(''); setLegs([]); setWager(''); setImageUrl(''); setIsSpoiler(false)
       setShowPickForm(false); setComposerMode('take'); setPosting(false)
       onPost?.()
       return
@@ -186,6 +188,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
       visibility,
       group_id: groupId ?? null,
       page_id: pageId ?? null,
+      is_spoiler: isSpoiler,
     }).select('id').single()
 
     if (err) {
@@ -199,6 +202,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
     setContent('')
     setPollOptions(['', ''])
     setImageUrl('')
+    setIsSpoiler(false)
     setShowPollForm(false)
     setComposerMode('take')
     setPosting(false)
@@ -387,6 +391,9 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
               />
               <EmojiPicker onSelect={insertAtCursor} />
               <GifPicker onSelect={setImageUrl} />
+              <button type="button" className="ss-composer-spoiler" data-active={isSpoiler} aria-pressed={isSpoiler} onClick={() => setIsSpoiler(value => !value)}>
+                <EyeOff size={14}/><span>Spoiler</span>
+              </button>
             </div>
             <div className="ss-feed-composer-submit">
               <div className="ss-composer-visibility" ref={visibilityMenuRef}>

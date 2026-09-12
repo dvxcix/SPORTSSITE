@@ -50,6 +50,7 @@ export async function POST(req: Request) {
   const visibility: string = body?.visibility === 'followers' ? 'followers' : 'public'
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
+  const isSpoiler = body?.isSpoiler === true
   const sport: 'MLB' | 'NFL' = body?.sport === 'NFL' ? 'NFL' : 'MLB'
 
   if (pageId) {
@@ -164,6 +165,7 @@ export async function POST(req: Request) {
     visibility,
     group_id: groupId,
     page_id: pageId,
+    is_spoiler: isSpoiler,
   }).select('id').single()
 
   if (postErr || !post) return NextResponse.json({ error: 'Failed to post. Please try again.' }, { status: 500 })

@@ -118,6 +118,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [myReactions, setMyReactions] = useState<Set<string>>(new Set(initialPost.user_reacted_emojis ?? []))
   const customEmojis = useCustomEmojis()
   const [bookmarked, setBookmarked] = useState(initialPost.user_bookmarked ?? false)
+  const [spoilerRevealed, setSpoilerRevealed] = useState(false)
   const [bookmarkCount, setBookmarkCount] = useState(initialPost.bookmark_count)
   const [reposted, setReposted] = useState(initialPost.user_reposted ?? false)
   const [repostCount, setRepostCount] = useState(initialPost.repost_count)
@@ -638,7 +639,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             </Link>
             </ProfileHoverTarget>
 
-            <div className="ss-post-main">
+            <div className={'ss-post-main' + (post.is_spoiler && !spoilerRevealed ? ' is-spoiler' : '')}>
               {/* Header row */}
               <div className="ss-post-header">
                 <div className="ss-post-author-line">
@@ -728,6 +729,11 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     <span className="sport-tag" style={{ display: 'inline-block', marginTop: 4 }}>{post.sport}</span>
                   )}
                 </Link>
+              )}
+              {post.is_spoiler && !spoilerRevealed && (
+                <button type="button" className="ss-post-spoiler-cover" onClick={(event) => { event.stopPropagation(); setSpoilerRevealed(true) }}>
+                  <EyeOff size={16}/><span><strong>Spoiler</strong><small>Show post</small></span>
+                </button>
               )}
 
               {/* Content */}

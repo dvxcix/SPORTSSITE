@@ -147,6 +147,7 @@ export interface Post {
     ends_at: string
   }
   visibility: 'public' | 'followers' | 'subscribers'
+  is_spoiler?: boolean
   is_premium: boolean
   reaction_count: number
   // Per-emoji breakdown, e.g. { "🔥": 5, "❤️": 2, ":ath:": 1 } — a custom

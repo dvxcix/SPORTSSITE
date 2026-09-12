@@ -1557,3 +1557,18 @@ test('Sideline Market Moments preserve an exact validated capture deep link', as
   assert.match(board, /aria-label="Share this Market Story capture"/)
   assert.match(board, /navigator\.share/)
 })
+
+test('spoiler controls persist across every social post type and require explicit reveal', async () => {
+  const migration = await read('supabase/migrations/20260912175337_post_spoiler_controls.sql')
+  const composer = await read('src/components/social/FeedComposer.tsx')
+  const pickRoute = await read('src/app/api/posts/pick/route.ts')
+  const card = await read('src/components/social/PostCardClient.tsx')
+  assert.match(migration, /is_spoiler boolean not null default false/)
+  assert.match(composer, /is_spoiler: isSpoiler/)
+  assert.match(composer, /isSpoiler,\s*\n/)
+  assert.match(composer, /aria-pressed=\{isSpoiler\}/)
+  assert.match(pickRoute, /const isSpoiler = body\?\.isSpoiler === true/)
+  assert.match(pickRoute, /is_spoiler: isSpoiler/)
+  assert.match(card, /post\.is_spoiler && !spoilerRevealed/)
+  assert.match(card, /setSpoilerRevealed\(true\)/)
+})
