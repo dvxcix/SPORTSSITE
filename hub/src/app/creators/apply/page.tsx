@@ -105,7 +105,7 @@ export default function CreatorApplyPage() {
     })
 
     if (submitError) {
-      setError(submitError.code === '23505' ? 'You already have an application under review.' : submitError.message)
+      setError(submitError.code === '23505' ? 'You already have an application under review.' : 'Your application could not be submitted. Please try again.')
       setSubmitting(false)
       return
     }

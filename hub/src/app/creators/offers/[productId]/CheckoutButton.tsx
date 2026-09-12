@@ -12,11 +12,11 @@ export function CheckoutButton({ productId }: { productId: string }) {
     try {
       const response = await fetch(`/api/creator/products/${productId}/checkout`, { method: 'POST', signal: AbortSignal.timeout(20_000) })
       const payload = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(payload?.error || 'Checkout could not be opened')
-      if (!isTrustedWhopUrl(payload?.url)) throw new Error('Checkout returned an invalid destination')
+      if (!response.ok) throw new Error('checkout_failed')
+      if (!isTrustedWhopUrl(payload?.url)) throw new Error('invalid_destination')
       window.location.assign(payload.url)
-    } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : 'Checkout could not be opened')
+    } catch {
+      setError('Checkout could not be opened. Please try again.')
     } finally {
       setLoading(false)
     }

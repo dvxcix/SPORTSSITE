@@ -687,6 +687,18 @@ test('creator studio validates offers and keeps provider failures private', asyn
   assert.ok(!studio.includes('data?.error'))
 })
 
+test('creator checkout and payouts expose retryable product states without provider errors', async () => {
+  const checkout = await read('src/app/creators/offers/[productId]/CheckoutButton.tsx')
+  const payouts = await read('src/app/creators/payouts/PayoutSetupClient.tsx')
+  const apply = await read('src/app/creators/apply/page.tsx')
+  assert.ok(checkout.includes('Checkout could not be opened. Please try again.'))
+  assert.ok(!checkout.includes('payload?.error'))
+  assert.ok(payouts.includes('loadPayoutTools'))
+  assert.ok(payouts.includes('Secure payout tools could not load. Please try again.'))
+  assert.ok(!payouts.includes('payload.error'))
+  assert.ok(!apply.includes(': submitError.message'))
+})
+
 test('mobile navigation keeps the community workspace active across every social route', async () => {
   const dock = await read('src/components/layout/MobileDock.tsx')
   for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {

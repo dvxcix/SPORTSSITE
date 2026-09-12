@@ -20,21 +20,45 @@ export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = fals
   const companyId = profile.whop_connected_company_id
   const connected = Boolean(companyId)
   const [loading, setLoading] = useState(false)
+  const [tokenLoading, setTokenLoading] = useState(connected && !isTestAccount)
   const [token, setToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  async function loadPayoutTools(signal?: AbortSignal) {
+    try {
+      const response = await fetch('/api/creator/payout-token', { method: 'POST', cache: 'no-store', signal })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || typeof payload?.token !== 'string') throw new Error('payout_session_failed')
+      setToken(payload.token)
+    } catch (reason: unknown) {
+      if (reason instanceof DOMException && reason.name === 'AbortError') return
+      setError('Secure payout tools could not load. Please try again.')
+    } finally {
+      if (!signal?.aborted) setTokenLoading(false)
+    }
+  }
+
+  async function retryPayoutTools() {
+    setTokenLoading(true)
+    setError(null)
+    await loadPayoutTools(AbortSignal.timeout(20_000))
+  }
 
   useEffect(() => {
     if (!connected || isTestAccount) return
     const controller = new AbortController()
     fetch('/api/creator/payout-token', { method: 'POST', cache: 'no-store', signal: controller.signal })
       .then(async response => {
-        const payload = await response.json()
-        if (!response.ok) throw new Error(payload.error || 'Could not open payouts')
+        const payload = await response.json().catch(() => null)
+        if (!response.ok || typeof payload?.token !== 'string') throw new Error('payout_session_failed')
         setToken(payload.token)
       })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === 'AbortError') return
-        setError(reason instanceof Error ? reason.message : 'Could not open payouts')
+        setError('Secure payout tools could not load. Please try again.')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTokenLoading(false)
       })
     return () => controller.abort()
   }, [connected, isTestAccount])
@@ -46,11 +70,11 @@ export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = fals
     try {
       const response = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(20_000) })
       const payload = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(payload?.error || 'Could not start onboarding')
-      if (!isTrustedWhopUrl(payload?.url)) throw new Error('Whop returned an invalid onboarding destination')
+      if (!response.ok) throw new Error('onboarding_failed')
+      if (!isTrustedWhopUrl(payload?.url)) throw new Error('invalid_destination')
       window.location.assign(payload.url)
-    } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : String(reason))
+    } catch {
+      setError('Could not start payment setup. Please try again.')
       setLoading(false)
     }
   }
@@ -82,7 +106,7 @@ export function PayoutSetupClient({ profile, recentPayouts, isTestAccount = fals
         </div>
       )}
 
-      {error && <div role="alert" className={styles.error}>{error}</div>}
+      {error && <div role="alert" className={styles.error}>{error}{connected && <button type="button" className={styles.primary} onClick={() => void retryPayoutTools()} disabled={tokenLoading}>Try again</button>}</div>}
       {connected && !token && !error && <div role="status" className={styles.loading}>Loading secure payout tools…</div>}
       {companyId && token && (
         <PayoutsSession token={token} companyId={companyId} currency="usd" redirectUrl={`${window.location.origin}/creators/payouts`}>
