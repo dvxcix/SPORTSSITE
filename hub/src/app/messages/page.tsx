@@ -28,8 +28,8 @@ export default async function MessagesPage() {
     .from('messages')
     .select(`
       id, content, created_at,
-      sender:users!messages_sender_id_fkey(id, username, display_name, avatar_url),
-      recipient:users!messages_dm_recipient_id_fkey(id, username, display_name, avatar_url)
+      sender:users!messages_sender_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color),
+      recipient:users!messages_dm_recipient_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)
     `)
     .or(`sender_id.eq.${user.id},dm_recipient_id.eq.${user.id}`)
     .not('dm_recipient_id', 'is', null)
@@ -61,6 +61,8 @@ export default async function MessagesPage() {
         username: partner.username,
         displayName: partner.display_name ?? null,
         avatarUrl: partner.avatar_url ?? null,
+        avatarRingStyle: partner.avatar_ring_style ?? null,
+        avatarRingColor: partner.avatar_ring_color ?? null,
       },
     }
   })

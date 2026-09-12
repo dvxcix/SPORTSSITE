@@ -21,7 +21,7 @@ export function StoriesBar() {
 
       const { data } = await supabase
         .from('stories')
-        .select('id, author:users(id, username, display_name, avatar_url), media_url, created_at')
+        .select('id, author:users(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), media_url, created_at')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(12)
@@ -53,7 +53,7 @@ export function StoriesBar() {
             <button type="button" key={s.id} onClick={() => openViewer(i)} className="ss-story-item" aria-label={`View ${s.author?.display_name || s.author?.username || 'member'}'s story`}>
               <div className="ss-story-ring">
                 <div>
-                  <MemberAvatar src={s.author?.avatar_url} name={s.author?.display_name || s.author?.username || 'Member'} size={58} />
+                  <MemberAvatar src={s.author?.avatar_url} name={s.author?.display_name || s.author?.username || 'Member'} size={58} ringStyle={s.author?.avatar_ring_style} ringColor={s.author?.avatar_ring_color} />
                 </div>
               </div>
               <span>{s.author?.display_name || s.author?.username}</span>

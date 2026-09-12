@@ -912,6 +912,24 @@ test('emoji and GIF media work across the shared social composer layer', async (
   assert.ok(invites.includes("from('group_invites')"))
 })
 
+test('social identity and publishing support custom rings and native post modes', async () => {
+  const avatar = await read('src/components/social/MemberAvatar.tsx')
+  const profile = await read('src/components/settings/ProfileForm.tsx')
+  const composer = await read('src/components/social/FeedComposer.tsx')
+  const post = await read('src/components/social/PostCardClient.tsx')
+  const columns = await read('src/lib/supabase/userColumns.ts')
+  const migration = await read('supabase/migrations/20260912143000_add_member_avatar_appearance.sql')
+  assert.ok(avatar.includes("ringStyle = 'surge'"))
+  assert.ok(avatar.includes("ring-${ringStyle || 'surge'}"))
+  assert.ok(profile.includes('ss-profile-ring-editor'))
+  assert.ok(profile.includes('avatar_ring_color: form.avatar_ring_color'))
+  for (const mode of ['take', 'pick', 'poll', 'research']) assert.ok(composer.includes(`key: '${mode}'`))
+  assert.ok(composer.includes("post_type: pollData ? 'poll' : composerMode === 'research' ? 'analysis' : 'text'"))
+  assert.ok(post.includes('<ProfileHoverTarget'))
+  assert.ok(columns.includes("'avatar_ring_style', 'avatar_ring_color'"))
+  assert.ok(migration.includes("check (avatar_ring_style in ('none', 'solid', 'surge', 'pulse', 'orbit'))"))
+})
+
 test('public publishing and follow flows recover without leaking backend errors', async () => {
   const follow = await read('src/components/pages/PageFollowButton.tsx')
   const page = await read('src/components/pages/PageSettingsForm.tsx')

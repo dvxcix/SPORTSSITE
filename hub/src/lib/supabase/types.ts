@@ -6,6 +6,8 @@ export interface User {
   bio?: string
   avatar_url?: string
   banner_url?: string
+  avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'
+  avatar_ring_color?: string
   sport_preferences: string[]
   favorite_sports?: string[]
   account_type: 'user' | 'creator' | 'admin'

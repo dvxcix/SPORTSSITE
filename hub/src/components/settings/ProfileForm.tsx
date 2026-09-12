@@ -14,6 +14,7 @@ import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { PROVIDER_BY_PLATFORM_KEY, extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
 
@@ -51,6 +52,8 @@ export function ProfileForm({ profile }: { profile: any }) {
     website: profile?.website ?? '',
     avatar_url: profile?.avatar_url ?? '',
     banner_url: profile?.banner_url ?? '',
+    avatar_ring_style: (profile?.avatar_ring_style ?? 'surge') as MemberRingStyle,
+    avatar_ring_color: profile?.avatar_ring_color ?? '#b6ff3b',
     favorite_sports: (profile?.favorite_sports ?? []) as string[],
     favorite_teams: (profile?.favorite_teams ?? []) as string[],
     favorite_players: (profile?.favorite_players ?? []) as FavoritePlayer[],
@@ -293,6 +296,8 @@ export function ProfileForm({ profile }: { profile: any }) {
         website: form.website.trim() || null,
         avatar_url: form.avatar_url.trim() || null,
         banner_url: form.banner_url.trim() || null,
+        avatar_ring_style: form.avatar_ring_style,
+        avatar_ring_color: form.avatar_ring_color,
         favorite_sports: form.favorite_sports,
         favorite_teams: form.favorite_teams,
         favorite_players: form.favorite_players,
@@ -344,6 +349,38 @@ export function ProfileForm({ profile }: { profile: any }) {
           </div>
         </div>
         <details className="ss-profile-editor-links"><summary>Use image URLs instead</summary><div><input type="url" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="Avatar URL" className={inputClass} /><input type="url" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="Banner URL" className={inputClass} /></div></details>
+      </section>
+
+      <section className="ss-profile-ring-editor">
+        <div className="ss-profile-ring-preview">
+          <MemberAvatar
+            src={form.avatar_url}
+            name={form.display_name || form.username || 'You'}
+            size={72}
+            ringStyle={form.avatar_ring_style}
+            ringColor={form.avatar_ring_color}
+          />
+          <div><strong>Profile ring</strong><span>Shown anywhere your profile picture appears.</span></div>
+        </div>
+        <div className="ss-profile-ring-styles" role="radiogroup" aria-label="Profile ring style">
+          {(['surge', 'pulse', 'orbit', 'solid', 'none'] as MemberRingStyle[]).map(style => (
+            <button key={style} type="button" role="radio" aria-checked={form.avatar_ring_style === style}
+              className={form.avatar_ring_style === style ? 'is-active' : ''}
+              onClick={() => setForm(current => ({ ...current, avatar_ring_style: style }))}>
+              {style[0].toUpperCase() + style.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="ss-profile-ring-colors">
+          {['#b6ff3b', '#39d9ff', '#a855f7', '#ff4d6a', '#f8c15c', '#ffffff'].map(color => (
+            <button key={color} type="button" aria-label={`Use ${color} profile ring`} aria-pressed={form.avatar_ring_color === color}
+              className={form.avatar_ring_color === color ? 'is-active' : ''}
+              style={{ '--ring-swatch': color } as React.CSSProperties}
+              onClick={() => setForm(current => ({ ...current, avatar_ring_color: color }))} />
+          ))}
+          <label className="ss-profile-ring-custom">Custom <input type="color" value={form.avatar_ring_color}
+            onChange={event => setForm(current => ({ ...current, avatar_ring_color: event.target.value }))} /></label>
+        </div>
       </section>
 
       <div className="grid grid-cols-2 gap-4">

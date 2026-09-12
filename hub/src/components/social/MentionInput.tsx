@@ -11,6 +11,8 @@ export type MentionUser = {
   username: string
   display_name: string | null
   avatar_url: string | null
+  avatar_ring_style: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+  avatar_ring_color: string | null
   is_verified: boolean
   tier: string | null
 }
@@ -61,7 +63,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(f
       setLoading(true)
       const query = mentionQuery.trim()
       let request = supabase.from('users')
-        .select('id, username, display_name, avatar_url, is_verified, tier')
+        .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, tier')
         .not('username', 'is', null)
         .order('follower_count', { ascending: false })
         .limit(8)
@@ -123,7 +125,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(f
           className={`ss-mention-option${index === activeIndex ? ' is-active' : ''}`}
           onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActiveIndex(index)} onClick={() => selectUser(person)}
         >
-          <MemberAvatar src={person.avatar_url} name={person.display_name || person.username} size={34} />
+          <MemberAvatar src={person.avatar_url} name={person.display_name || person.username} size={34} ringStyle={person.avatar_ring_style ?? undefined} ringColor={person.avatar_ring_color ?? undefined} />
           <span className="ss-mention-identity"><span className="ss-mention-name">{person.display_name || person.username}{person.is_verified ? <i aria-label="Verified">&#10003;</i> : null}<UserBadges userId={person.id} size={15} maxVisible={3} /></span><small>@{person.username}</small></span>
           <AtSign className="ss-mention-action" size={16} />
         </button>)}

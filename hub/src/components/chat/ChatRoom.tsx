@@ -60,7 +60,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
         const newMessage = payload.new as Message
         const { data: sender } = await supabase
           .from('users')
-          .select('id,username,display_name,avatar_url,is_verified,account_type')
+          .select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,is_verified,account_type')
           .eq('id', newMessage.sender_id)
           .single()
         const hydrated = { ...newMessage, sender: sender as Message['sender'] ?? undefined }
@@ -150,8 +150,8 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
         return <article id={`message-${message.id}`} key={message.id} className={`ss-chat-message ${startsGroup ? 'starts-group' : ''} ${message.sender_id === currentUserId ? 'is-own' : ''}`}>
           {startsGroup ? (
             message.sender?.username
-              ? <Link href={`/profile/${message.sender.username}`} className="ss-chat-avatar"><MemberAvatar src={message.sender.avatar_url} name={name} size={38} /></Link>
-              : <MemberAvatar src={message.sender?.avatar_url} name={name} size={38} />
+              ? <Link href={`/profile/${message.sender.username}`} className="ss-chat-avatar"><MemberAvatar src={message.sender.avatar_url} name={name} size={38} ringStyle={message.sender.avatar_ring_style} ringColor={message.sender.avatar_ring_color} /></Link>
+              : <MemberAvatar src={message.sender?.avatar_url} name={name} size={38} ringStyle={message.sender?.avatar_ring_style} ringColor={message.sender?.avatar_ring_color} />
           ) : <time>{stamp}</time>}
           <div className="ss-chat-message-body">
             {startsGroup && <header>{message.sender?.username ? <Link href={`/profile/${message.sender.username}`}>{name}</Link> : <strong>{name}</strong>}{message.sender?.is_verified && <span className="ss-chat-verified">✓</span>}<time>{stamp}</time></header>}

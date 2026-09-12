@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowUpRight, Search, X } from 'lucide-react'
 import Link from 'next/link'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 
-interface User { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
+interface User { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; is_verified?: boolean }
 
 export function NewDMForm({ users }: { users: User[] }) {
   const [q, setQ] = useState('')
@@ -31,7 +31,7 @@ export function NewDMForm({ users }: { users: User[] }) {
         {filtered.map(u => (
           <Link key={u.id} href={`/messages/${u.username}`}
             className="ss-new-dm-person">
-            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} />
+            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={40} ringStyle={u.avatar_ring_style} ringColor={u.avatar_ring_color} />
             <div className="ss-new-dm-person-copy">
               <div className="flex items-center gap-1.5">
                 <p className="font-bold text-white text-sm">{u.display_name || u.username}</p>

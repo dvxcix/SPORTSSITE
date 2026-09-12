@@ -32,7 +32,7 @@ export default async function PageDetailPage({ params }: { params: Promise<{ slu
   const isOwner = user?.id === page.owner_id
   const [{ data: follow }, { data: rawPosts }] = await Promise.all([
     user ? supabase.from('page_follows').select('id').eq('user_id', user.id).eq('page_id', page.id).maybeSingle() : Promise.resolve({ data: null }),
-    supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)').eq('page_id', page.id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)').eq('page_id', page.id).order('created_at', { ascending: false }).limit(20),
   ])
   const posts = await attachUserReactions(rawPosts ?? [], user?.id)
 

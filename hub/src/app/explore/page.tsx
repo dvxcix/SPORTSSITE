@@ -17,7 +17,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 export const revalidate = 60
 
-const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)`
+const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)`
 
 // Near-HR events live in the external MLB data project, not SlipSurge's
 // primary application database. Keep Explore on the same source and date
@@ -63,6 +63,8 @@ type ExploreUser = {
   username: string
   display_name: string | null
   avatar_url: string | null
+  avatar_ring_style: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+  avatar_ring_color: string | null
   is_verified: boolean
   account_type: string
   follower_count: number
@@ -91,9 +93,9 @@ export default async function ExplorePage() {
     { data: topCappers }, { data: topBettors }, { data: rawTopPosts },
     { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity,
   ] = await Promise.all([
-    supabase.from('users').select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
+    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record')
       .eq('is_active_member', true).eq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
-    supabase.from('users').select('id, username, display_name, avatar_url, is_verified, account_type, follower_count, pick_record')
+    supabase.from('users').select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record')
       .eq('is_active_member', true).neq('account_type', 'creator').order('follower_count', { ascending: false }).limit(4),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
       .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
@@ -261,5 +263,5 @@ function EmptyCard({ title, detail }: { title: string; detail: string }) {
 }
 
 function PeopleSection({ title, users, currentUserId, followingIds }: { title: string; users: ExploreUser[]; currentUserId: string | null; followingIds: Set<string> }) {
-  return <section className="ss-explore-people"><div className="ss-explore-directory-head"><span><Users size={15} />{title}</span><Link href="/leaderboard">See all</Link></div>{users.map(person => <div key={person.id} className="ss-explore-person"><Link href={`/profile/${person.username}`}><MemberAvatar src={person.avatar_url} name={person.display_name || person.username} size={36} tone={person.account_type === 'creator' ? 'creator' : 'default'} /></Link><div><span><Link href={`/profile/${person.username}`}>{person.display_name || person.username}</Link><UserBadges userId={person.id} size={12} maxVisible={2} /></span><small>@{person.username} · {person.follower_count ?? 0} followers</small></div>{currentUserId && currentUserId !== person.id ? <FollowButton currentUserId={currentUserId} targetUserId={person.id} initialFollowing={followingIds.has(person.id)} /> : null}</div>)}</section>
+  return <section className="ss-explore-people"><div className="ss-explore-directory-head"><span><Users size={15} />{title}</span><Link href="/leaderboard">See all</Link></div>{users.map(person => <div key={person.id} className="ss-explore-person"><Link href={`/profile/${person.username}`}><MemberAvatar src={person.avatar_url} name={person.display_name || person.username} size={36} tone={person.account_type === 'creator' ? 'creator' : 'default'} ringStyle={person.avatar_ring_style ?? undefined} ringColor={person.avatar_ring_color ?? undefined} /></Link><div><span><Link href={`/profile/${person.username}`}>{person.display_name || person.username}</Link><UserBadges userId={person.id} size={12} maxVisible={2} /></span><small>@{person.username} · {person.follower_count ?? 0} followers</small></div>{currentUserId && currentUserId !== person.id ? <FollowButton currentUserId={currentUserId} targetUserId={person.id} initialFollowing={followingIds.has(person.id)} /> : null}</div>)}</section>
 }

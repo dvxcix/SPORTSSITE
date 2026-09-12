@@ -4,6 +4,7 @@
 // contains the handle/profile URL rendered on a member's public profile.
 export const PUBLIC_USER_COLUMNS = [
   'id', 'username', 'display_name', 'bio', 'avatar_url', 'banner_url',
+  'avatar_ring_style', 'avatar_ring_color',
   'sport_preferences', 'account_type', 'is_verified', 'is_active_member',
   'follower_count', 'following_count', 'pick_record', 'favorite_teams',
   'favorite_sports',

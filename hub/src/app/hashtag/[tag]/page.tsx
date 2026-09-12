@@ -15,7 +15,7 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
-  let query = supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)').eq('visibility', 'public').or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`).order('created_at', { ascending: false }).limit(30)
+  let query = supabase.from('posts').select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)').eq('visibility', 'public').or(`sport.ilike.${tag},content.ilike.%${tag}%,content.ilike.%#${tag}%`).order('created_at', { ascending: false }).limit(30)
   if (blockedIds.length) query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
   const { data: rawPosts } = tag ? await query : { data: [] }
   const posts = await attachUserReactions(rawPosts ?? [], user?.id)

@@ -14,7 +14,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { GifPicker } from '@/components/social/GifPicker'
 
 interface DMRoomProps {
-  partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
+  partner: { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; is_verified?: boolean }
   currentUserId: string
   initialMessages: DMMessage[]
 }
@@ -25,7 +25,7 @@ export type DMMessage = {
   created_at: string
   sender_id: string
   reply_to_id?: string | null
-  sender?: { username?: string; display_name?: string; avatar_url?: string } | null
+  sender?: { username?: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string } | null
   reply_to?: Pick<DMMessage, 'id' | 'content' | 'sender_id'> | null
   media_urls?: string[] | null
 }
@@ -77,7 +77,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
       }, async (payload) => {
         const incoming = payload.new as DMMessage
         if (incoming.sender_id !== partner.id) return
-        const { data } = await supabase.from('users').select('username, display_name, avatar_url').eq('id', incoming.sender_id).single()
+        const { data } = await supabase.from('users').select('username, display_name, avatar_url, avatar_ring_style, avatar_ring_color').eq('id', incoming.sender_id).single()
         setMessages(current => current.some(message => message.id === incoming.id) ? current : [...current, { ...incoming, sender: data }])
         if (!atBottomRef.current) setUnseenCount(count => count + 1)
       })
@@ -158,7 +158,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           <ArrowLeft size={18} />
         </Link>
         <Link href={`/profile/${partner.username}`} className="ss-dm-partner">
-          <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={40} />
+          <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={40} ringStyle={partner.avatar_ring_style} ringColor={partner.avatar_ring_color} />
           <div>
             <p>{partner.display_name || partner.username}</p>
             <span>@{partner.username}</span>
@@ -184,7 +184,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           return (
             <div id={`message-${m.id}`} key={m.id} className={`ss-dm-message ${isMe ? 'is-mine' : ''}`}>
               {!isMe && (
-                <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} />
+                <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} ringStyle={partner.avatar_ring_style} ringColor={partner.avatar_ring_color} />
               )}
               <div className="ss-dm-bubble-wrap">
                 {replyTarget && <button type="button" className="ss-dm-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={10}/><span>{replyTarget.sender_id === currentUserId ? 'You' : partner.display_name || partner.username}</span><p>{replyTarget.content}</p></button>}

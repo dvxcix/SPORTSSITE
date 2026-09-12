@@ -11,7 +11,7 @@ export default async function NewDMPage() {
   const blockedIds = await getBlockedEitherWayIds(supabase, user.id)
   let usersQuery = supabase
     .from('users')
-    .select('id, username, display_name, avatar_url, is_verified')
+    .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified')
     .neq('id', user.id)
     .order('follower_count', { ascending: false })
     .limit(50)

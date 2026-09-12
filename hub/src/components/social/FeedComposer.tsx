@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
-import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe, Users, ChevronDown } from 'lucide-react'
+import { TrendingUp, Image as ImageIcon, X, BarChart2, Plus, Globe, Users, ChevronDown, MessageCircle, Microscope } from 'lucide-react'
 import { PickComposer, type ComposedPick } from './PickComposer'
 import { combineOdds, calcPayout, fmtUsd } from '@slipsurge/core/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
@@ -27,6 +27,7 @@ interface FeedComposerProps {
 export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const { user, profile } = useAuth()
   const [content, setContent] = useState('')
+  const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>('take')
   const [showPickForm, setShowPickForm] = useState(false)
   const [showPollForm, setShowPollForm] = useState(false)
   const [sport, setSport] = useState('MLB')
@@ -46,6 +47,13 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const sportMenuRef = useRef<HTMLDivElement>(null)
   const visibilityMenuRef = useRef<HTMLDivElement>(null)
+
+  function activateMode(mode: 'take' | 'pick' | 'poll' | 'research') {
+    setComposerMode(mode)
+    setShowPickForm(mode === 'pick')
+    setShowPollForm(mode === 'poll')
+    if (mode !== 'pick') { setLegs([]); setWager('') }
+  }
 
   useEffect(() => {
     if (!sportOpen && !visibilityOpen) return
@@ -109,7 +117,9 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   }
 
   async function handlePost() {
-    if ((!content.trim() && !imageUrl) || !user) return
+    const validPoll = showPollForm && pollOptions.filter(option => option.trim()).length >= 2
+    const validPick = showPickForm && legs.length > 0
+    if ((!content.trim() && !imageUrl && !validPoll && !validPick) || !user) return
     setPosting(true)
     setError('')
 
@@ -148,7 +158,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
         setError('Posted, but your pick couldn’t be tracked for grading — it won’t show a result.')
       }
       setContent(''); setLegs([]); setWager(''); setImageUrl('')
-      setShowPickForm(false); setPosting(false)
+      setShowPickForm(false); setComposerMode('take'); setPosting(false)
       onPost?.()
       return
     }
@@ -165,7 +175,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     const { data: post, error: err } = await supabase.from('posts').insert({
       author_id: user.id,
       content: content.trim(),
-      post_type: pollData ? 'poll' : 'text',
+      post_type: pollData ? 'poll' : composerMode === 'research' ? 'analysis' : 'text',
       sport: sport || null,
       pick_data: null,
       poll_data: pollData,
@@ -186,6 +196,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     setPollOptions(['', ''])
     setImageUrl('')
     setShowPollForm(false)
+    setComposerMode('take')
     setPosting(false)
     onPost?.()
     } catch {
@@ -199,15 +210,28 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
   return (
     <div className="ss-feed-composer">
       <div className="ss-feed-composer-layout">
-        <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username || 'Member'} size={40} />
+        <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username || 'Member'} size={40}
+          ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
 
         <div className="ss-feed-composer-main">
+          <div className="ss-composer-modes" role="tablist" aria-label="Post type">
+            {([
+              { key: 'take', label: 'Take', icon: <MessageCircle size={13} /> },
+              { key: 'pick', label: 'Pick', icon: <TrendingUp size={13} /> },
+              { key: 'poll', label: 'Poll', icon: <BarChart2 size={13} /> },
+              { key: 'research', label: 'Research', icon: <Microscope size={13} /> },
+            ] as const).map(option => (
+              <button key={option.key} type="button" role="tab" aria-selected={composerMode === option.key}
+                className={composerMode === option.key ? 'is-active' : ''}
+                onClick={() => activateMode(option.key)}>{option.icon}<span>{option.label}</span></button>
+            ))}
+          </div>
           <MentionInput
             ref={textareaRef}
             value={content}
             onValueChange={setContent}
             currentUserId={user.id}
-            placeholder="Share a pick or market angle…"
+            placeholder={composerMode === 'pick' ? 'Add your read on this pick…' : composerMode === 'poll' ? 'Ask the community…' : composerMode === 'research' ? 'Share the signal, chart, or board context…' : 'What are you seeing?'}
             maxLength={charLimit}
             rows={content.length > 80 ? 3 : 2}
             style={{
@@ -357,22 +381,6 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               Post off the right edge of the screen with no wrap. */}
           <div className="ss-feed-composer-actions">
             <div className="ss-feed-composer-tools">
-              <ComposerBtn
-                icon={<TrendingUp size={14} />}
-                label="Pick"
-                active={showPickForm}
-                activeColor="rgba(255,184,77,0.12)"
-                activeFg="var(--gold)"
-                onClick={() => { setShowPickForm(v => !v); setShowPollForm(false) }}
-              />
-              <ComposerBtn
-                icon={<BarChart2 size={14} />}
-                label="Poll"
-                active={showPollForm}
-                activeColor="rgba(168,85,247,0.12)"
-                activeFg="var(--purple)"
-                onClick={() => { setShowPollForm(v => !v); setShowPickForm(false) }}
-              />
               <input
                 ref={imageInputRef}
                 type="file"
@@ -428,7 +436,9 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
               )}
               {(() => {
                 const pickIncomplete = showPickForm && legs.length === 0
-                const disabled = (!content.trim() && !imageUrl) || posting || uploadingImage || pickIncomplete
+                const pollIncomplete = showPollForm && pollOptions.filter(option => option.trim()).length < 2
+                const hasPayload = !!content.trim() || !!imageUrl || (showPickForm && legs.length > 0) || (showPollForm && !pollIncomplete)
+                const disabled = !hasPayload || posting || uploadingImage || pickIncomplete || pollIncomplete
                 const button = (
                   <button type="button" onClick={handlePost} disabled={disabled} className="ss-composer-post-button">
                     {posting ? 'Posting…' : 'Post'}

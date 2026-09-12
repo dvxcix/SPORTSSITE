@@ -122,7 +122,7 @@ export function DesktopNavigation() {
           </nav>
           <div className="ss-desktop-account-card">
             <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} prefetch={false} className="ss-desktop-avatar">
-              <MemberAvatar src={profile?.avatar_url} name={displayName} size={36} />
+              <MemberAvatar src={profile?.avatar_url} name={displayName} size={36} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
             </Link>
             <div><strong>{displayName}</strong><span>{profile?.tier || 'free'} workspace</span></div>
             <Link href="/settings" prefetch={false} aria-label="Account settings"><Settings2 size={14} /></Link>

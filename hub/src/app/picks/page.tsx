@@ -25,7 +25,7 @@ export default async function PicksPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const blockedIds = user ? await getBlockedEitherWayIds(supabase, user.id) : []
-  const fields = '*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active)'
+  const fields = '*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)'
 
   let picksQuery = supabase.from('posts').select(fields).in('post_type', ['pick', 'parlay']).order('created_at', { ascending: false }).limit(30)
   if (activeSport !== 'All') picksQuery = picksQuery.eq('sport', activeSport)

@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'img.mlbstatic.com' },
       { protocol: 'https', hostname: 'www.mlbstatic.com' },
       { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: 'whop.com' },
       { protocol: 'https', hostname: '*.whop.com' },
     ],
   },

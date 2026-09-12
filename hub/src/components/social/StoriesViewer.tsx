@@ -9,7 +9,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 interface Story {
   id: string
   media_url: string
-  author: { username: string; display_name?: string; avatar_url?: string }
+  author: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string }
   created_at: string
 }
 
@@ -87,7 +87,7 @@ export function StoriesViewer({ stories, initialIndex, onClose }: StoriesViewerP
         </div>
 
         <header className="ss-story-viewer-head">
-          <Link href={`/profile/${story.author.username}`} onClick={onClose}><MemberAvatar src={story.author.avatar_url} name={story.author.display_name || story.author.username} size={34} /></Link>
+          <Link href={`/profile/${story.author.username}`} onClick={onClose}><MemberAvatar src={story.author.avatar_url} name={story.author.display_name || story.author.username} size={34} ringStyle={story.author.avatar_ring_style} ringColor={story.author.avatar_ring_color} /></Link>
           <Link href={`/profile/${story.author.username}`} onClick={onClose} className="ss-story-author">
             <strong>{story.author.display_name || story.author.username}</strong>
             <span>

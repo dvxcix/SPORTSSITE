@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type MemberTone = 'default' | 'creator' | 'advanced' | 'ultimate'
+export type MemberRingStyle = 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'
 
 function hueFor(value: string) {
   let hash = 0
@@ -13,6 +15,8 @@ export function MemberAvatar({
   name,
   size = 44,
   tone = 'default',
+  ringStyle = 'surge',
+  ringColor,
   online = false,
   className = '',
 }: {
@@ -20,6 +24,8 @@ export function MemberAvatar({
   name: string
   size?: number
   tone?: MemberTone
+  ringStyle?: MemberRingStyle | null
+  ringColor?: string | null
   online?: boolean
   className?: string
 }) {
@@ -27,6 +33,7 @@ export function MemberAvatar({
   const style = {
     '--member-size': `${size}px`,
     '--member-hue': hueFor(name),
+    '--member-custom-ring': ringColor || undefined,
     width: size,
     height: size,
     minWidth: size,
@@ -39,9 +46,9 @@ export function MemberAvatar({
   } as CSSProperties
 
   return (
-    <span className={`ss-member-avatar is-${tone} ${className}`} style={style} aria-hidden="true">
+    <span className={`ss-member-avatar is-${tone} ring-${ringStyle || 'surge'} ${className}`} style={style} aria-hidden="true">
       <span className="ss-member-avatar-media">
-        {src ? <img src={src} alt="" width={size} height={size} /> : <span>{initials}</span>}
+        <SafeImage src={src} alt="" width={size} height={size} fallback={<span>{initials}</span>} />
       </span>
       {online && <span className="ss-member-presence" />}
     </span>

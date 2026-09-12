@@ -11,6 +11,8 @@ export type MentionProfile = {
   username: string
   display_name: string | null
   avatar_url: string | null
+  avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+  avatar_ring_color?: string | null
   bio: string | null
   is_verified: boolean
   follower_count: number | null
@@ -20,7 +22,7 @@ export type MentionProfile = {
 export function MentionProfileCard({ profile }: { profile: MentionProfile }) {
   return <div className="ss-mention-profile-card">
     <div className="ss-mention-profile-top">
-      <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={42} />
+      <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={42} ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
       <span className="ss-mention-profile-id"><strong>{profile.display_name || profile.username}{profile.is_verified ? <i aria-label="Verified">&#10003;</i> : null}</strong><small>@{profile.username}</small></span>
       <UserBadges userId={profile.id} size={18} maxVisible={3} />
     </div>
@@ -47,6 +49,29 @@ export function MentionHoverLink({ profile }: { profile: MentionProfile }) {
 
   return <span ref={triggerRef} className="ss-mention-tooltip-trigger" onMouseEnter={show} onMouseLeave={() => setVisible(false)} onFocus={show} onBlur={() => setVisible(false)}>
     <Link href={`/profile/${profile.username}`} onClick={event => event.stopPropagation()} className="ss-mention-link">@{profile.username}</Link>
+    {visible ? createPortal(<div className="ss-mention-profile-popover" style={position}><MentionProfileCard profile={profile} /></div>, document.body) : null}
+  </span>
+}
+
+export function ProfileHoverTarget({ profile, children, className = '' }: { profile: MentionProfile; children: React.ReactNode; className?: string }) {
+  const triggerRef = useRef<HTMLSpanElement>(null)
+  const [visible, setVisible] = useState(false)
+  const [position, setPosition] = useState({ left: 0, top: 0 })
+
+  function show() {
+    if (window.matchMedia('(hover: none)').matches) return
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const width = 292
+    setPosition({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      top: rect.bottom + 200 > window.innerHeight ? Math.max(8, rect.top - 190) : rect.bottom + 10,
+    })
+    setVisible(true)
+  }
+
+  return <span ref={triggerRef} className={`ss-profile-hover-target ${className}`} onMouseEnter={show} onMouseLeave={() => setVisible(false)} onFocus={show} onBlur={() => setVisible(false)}>
+    {children}
     {visible ? createPortal(<div className="ss-mention-profile-popover" style={position}><MentionProfileCard profile={profile} /></div>, document.body) : null}
   </span>
 }

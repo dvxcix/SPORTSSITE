@@ -12,6 +12,7 @@ import { UserBadges } from '@/components/social/UserBadges'
 import { AchievementsSection } from '@/components/profile/AchievementsSection'
 import { FavoritesSection } from '@/components/profile/FavoritesSection'
 import { ProfileActions } from '@/components/profile/ProfileActions'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight, MessageSquareText, LockKeyhole, UserRoundX } from 'lucide-react'
@@ -179,14 +180,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       {/* Profile header */}
       <div className="px-4 pb-5 sm:px-7 sm:pb-7">
         <div className="relative z-10 flex items-end justify-between -mt-12 sm:-mt-16 mb-5">
-          <div className="relative avatar-glow-ring w-24 h-24 sm:h-32 sm:w-32 rounded-full">
-            <div className="w-full h-full rounded-full bg-zinc-700 border-4 border-zinc-950 flex items-center justify-center text-3xl font-black text-white overflow-hidden shadow-xl">
-              {profile.avatar_url
-                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                : (profile.display_name || profile.username)[0].toUpperCase()
-              }
-            </div>
-          </div>
+          <MemberAvatar src={profile.avatar_url} name={profile.display_name || profile.username} size={112}
+            tone={profile.tier === 'ultimate' ? 'ultimate' : profile.tier === 'advanced' ? 'advanced' : profile.account_type === 'creator' ? 'creator' : 'default'}
+            ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
           <div className="flex flex-wrap items-center justify-end gap-2">
             <ProfileActions username={profile.username} />
             {isOwnProfile ? (

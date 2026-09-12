@@ -11,6 +11,8 @@ export type SuggestedUser = {
   username: string
   display_name: string | null
   avatar_url: string | null
+  avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+  avatar_ring_color?: string | null
   is_verified?: boolean
   account_type?: string
   tier?: 'free' | 'basic' | 'advanced' | 'ultimate'
@@ -33,7 +35,7 @@ export function SuggestedUsers({ users, currentUserId }: {
       {users.map(u => (
         <div key={u.id} className="ss-suggested-user">
           <Link href={`/profile/${u.username}`} className="shrink-0">
-            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={42} tone={u.tier === 'ultimate' ? 'ultimate' : u.tier === 'advanced' ? 'advanced' : u.account_type === 'creator' ? 'creator' : 'default'} />
+            <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={42} tone={u.tier === 'ultimate' ? 'ultimate' : u.tier === 'advanced' ? 'advanced' : u.account_type === 'creator' ? 'creator' : 'default'} ringStyle={u.avatar_ring_style ?? undefined} ringColor={u.avatar_ring_color ?? undefined} />
           </Link>
           <div className="ss-suggested-copy">
             <div className="ss-suggested-name">

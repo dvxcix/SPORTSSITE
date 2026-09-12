@@ -17,6 +17,8 @@ type Conversation = {
     username: string
     displayName: string | null
     avatarUrl: string | null
+    avatarRingStyle: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit' | null
+    avatarRingColor: string | null
   }
 }
 
@@ -61,7 +63,7 @@ export function MessageInbox({ conversations }: { conversations: Conversation[] 
             return (
               <Link key={conversation.id} href={`/messages/${partner.username}`}
                 className={`ss-conversation-row ${conversation.unreadCount ? 'is-unread' : ''}`}>
-                <MemberAvatar src={partner.avatarUrl} name={partner.displayName || partner.username} size={46} />
+                <MemberAvatar src={partner.avatarUrl} name={partner.displayName || partner.username} size={46} ringStyle={partner.avatarRingStyle ?? undefined} ringColor={partner.avatarRingColor ?? undefined} />
                 <div className="ss-conversation-copy">
                   <div><strong>{partner.displayName || partner.username}</strong><span>@{partner.username}</span></div>
                   <p>{conversation.lastIsMine ? 'You: ' : ''}{conversation.content || 'Open conversation'}</p>

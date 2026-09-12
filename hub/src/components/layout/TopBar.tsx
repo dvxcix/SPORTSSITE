@@ -604,7 +604,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 130ms',
               }}>
-                <MemberAvatar className="ss-topbar-profile-avatar" src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={26} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} />
+                <MemberAvatar className="ss-topbar-profile-avatar" src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={26} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                 <span className="ss-topbar-profile-copy hidden sm:flex">
                   <strong>{profile?.display_name || profile?.username || 'Me'}</strong>
                   <small>{tierLabel}</small>
@@ -615,7 +615,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               {menuOpen && (
                 <div className="ss-dropdown ss-topbar-profile-menu" role="menu" aria-label="Account menu">
                   <div className="ss-topbar-account-card">
-                    <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={46} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} />
+                    <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={46} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                     <div className="ss-topbar-account-copy">
                       <strong>{profile?.display_name || profile?.username || 'Member'}</strong>
                       <span>@{profile?.username}</span>

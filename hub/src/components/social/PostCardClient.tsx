@@ -27,11 +27,12 @@ import { Tooltip } from '@/components/ui/tooltip-card'
 import { useCustomEmojis } from '@/lib/emoji'
 import { UserBadges } from './UserBadges'
 import { MemberAvatar } from './MemberAvatar'
+import { ProfileHoverTarget } from './MentionProfileCard'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
 
 interface PostCardClientProps {
-  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
+  post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
   index?: number
   // Set only by the dedicated /posts/[id] page — that's the one place the
   // card shouldn't navigate to itself on click, and where comments should
@@ -45,7 +46,7 @@ type CommentNode = {
   content: string
   author_id: string
   parent_id: string | null
-  author: { username: string; display_name?: string; avatar_url?: string } | null
+  author: { username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string } | null
   created_at: string
   updated_at: string
   reaction_count: number
@@ -370,7 +371,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     const [{ data: rows, error: commentsError }, { data: myLikes }] = await Promise.all([
       supabase
         .from('comments')
-        .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
+        .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
         .eq('post_id', post.id)
         .order('created_at', { ascending: true }),
       user
@@ -424,7 +425,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     const text = replyText.trim()
     const { data, error } = await supabase.from('comments')
       .insert({ post_id: post.id, author_id: user.id, parent_id: parentId, content: text })
-      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
+      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
       .single()
     if (error || !data) { showNotice({ title: 'Reply not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
     setCommentTree(t => insertReplyIntoTree(t, parentId, { ...(data as any), reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }))
@@ -455,7 +456,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     const text = commentText.trim()
     const { data, error } = await supabase.from('comments')
       .insert({ post_id: post.id, author_id: user.id, content: text })
-      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
+      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
       .single()
     // Only clear the input / fire notifications once the comment actually
     // saved — clearing it unconditionally meant a failed submit silently
@@ -610,22 +611,28 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         <div className="ss-post-body">
           <div className="ss-post-layout">
             {/* Avatar */}
-            <Link href={`/profile/${post.author.username}`} style={{ flexShrink: 0 }}>
+            <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
+            <Link href={`/profile/${post.author.username}`} style={{ display: 'block', flexShrink: 0 }}>
               <MemberAvatar
                 src={post.author.avatar_url}
                 name={post.author.display_name || post.author.username}
                 size={46}
                 tone={post.author.tier === 'ultimate' ? 'ultimate' : post.author.tier === 'advanced' ? 'advanced' : post.author.account_type === 'creator' ? 'creator' : 'default'}
+                ringStyle={post.author.avatar_ring_style}
+                ringColor={post.author.avatar_ring_color}
               />
             </Link>
+            </ProfileHoverTarget>
 
             <div className="ss-post-main">
               {/* Header row */}
               <div className="ss-post-header">
                 <div className="ss-post-author-line">
+                  <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
                   <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 850, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
+                  </ProfileHoverTarget>
                   <UserBadges userId={post.author.id} size={18} />
                   {post.author.is_verified && (
                     <BadgeCheck size={15} aria-label="Verified" style={{ color: 'var(--green)', flexShrink: 0 }} />
@@ -1016,6 +1023,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 currentUserId={user?.id}
                 currentUserAvatar={profile?.avatar_url}
                 currentUserDisplay={profile?.display_name || profile?.username}
+                currentUserRingStyle={profile?.avatar_ring_style}
+                currentUserRingColor={profile?.avatar_ring_color}
                 editingCommentId={editingCommentId}
                 editText={editText}
                 setEditText={setEditText}
@@ -1037,7 +1046,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             ))}
             {user && (
               <div style={{ display: 'flex', gap: 8 }}>
-                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={28} />
+                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={28} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                 <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
                   <input
                     ref={commentInputRef}
@@ -1115,7 +1124,7 @@ function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
 // live on the parent card), matching the single edit-in-place behavior
 // comments already had.
 function CommentItem({
-  node, depth, nowMs, currentUserId, currentUserAvatar, currentUserDisplay,
+  node, depth, nowMs, currentUserId, currentUserAvatar, currentUserDisplay, currentUserRingStyle, currentUserRingColor,
   editingCommentId, editText, setEditText, onStartEdit, onSaveEdit, onCancelEdit,
   onDelete, onReport, onToggleLike,
   replyingTo, replyText, setReplyText, onStartReply, onCancelReply, onSubmitReply,
@@ -1123,6 +1132,7 @@ function CommentItem({
 }: {
   node: CommentNode; depth: number; nowMs: number
   currentUserId?: string; currentUserAvatar?: string | null; currentUserDisplay?: string
+  currentUserRingStyle?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; currentUserRingColor?: string
   editingCommentId: string | null; editText: string; setEditText: (v: string) => void
   onStartEdit: (n: CommentNode) => void; onSaveEdit: (id: string) => void; onCancelEdit: () => void
   onDelete: (id: string) => void; onReport: (id: string) => void
@@ -1140,7 +1150,7 @@ function CommentItem({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8, marginLeft: indent }}>
-        <MemberAvatar src={node.author?.avatar_url} name={node.author?.display_name || node.author?.username || 'Member'} size={28} />
+        <MemberAvatar src={node.author?.avatar_url} name={node.author?.display_name || node.author?.username || 'Member'} size={28} ringStyle={node.author?.avatar_ring_style} ringColor={node.author?.avatar_ring_color} />
         <div style={{
           flex: 1, borderRadius: 10, padding: '8px 12px',
           background: isOwn ? 'rgba(77,158,255,0.10)' : 'var(--surface-2)',
@@ -1214,7 +1224,7 @@ function CommentItem({
 
       {replyingTo === node.id && (
         <div style={{ display: 'flex', gap: 8, marginLeft: indent + 36 }}>
-          <MemberAvatar src={currentUserAvatar} name={currentUserDisplay || 'Member'} size={24} />
+          <MemberAvatar src={currentUserAvatar} name={currentUserDisplay || 'Member'} size={24} ringStyle={currentUserRingStyle} ringColor={currentUserRingColor} />
           <div className="ss-nested-reply-composer">
             <input
               autoFocus
@@ -1251,6 +1261,8 @@ function CommentItem({
           currentUserId={currentUserId}
           currentUserAvatar={currentUserAvatar}
           currentUserDisplay={currentUserDisplay}
+          currentUserRingStyle={currentUserRingStyle}
+          currentUserRingColor={currentUserRingColor}
           editingCommentId={editingCommentId}
           editText={editText}
           setEditText={setEditText}

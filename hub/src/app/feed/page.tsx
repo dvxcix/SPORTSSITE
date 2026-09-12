@@ -39,7 +39,7 @@ export default async function FeedPage({
     const exclude = [...(following ?? []).map((f: any) => f.following_id), user.id, ...blockedIds]
     const { data } = await supabase
       .from('users')
-      .select('id, username, display_name, avatar_url, is_verified, account_type')
+      .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type')
       .not('id', 'in', `(${exclude.join(',') || user.id})`)
       .order('follower_count', { ascending: false })
       .limit(5)

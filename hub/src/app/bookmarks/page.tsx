@@ -17,7 +17,7 @@ export default async function BookmarksPage() {
 
   const { data: bookmarks } = await supabase
     .from('bookmarks')
-    .select(`post:posts(*,author:users!posts_author_id_fkey(id, username, display_name, avatar_url, is_verified, account_type, pick_record, tier, beta_access_active))`)
+    .select(`post:posts(*,author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active))`)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(30)
