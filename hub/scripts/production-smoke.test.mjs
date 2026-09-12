@@ -778,3 +778,16 @@ test('profile and account editors validate identity fields without exposing prov
   assert.ok(account.includes('autoComplete="new-password"'))
   assert.ok(!account.includes('setError(err.message)'))
 })
+
+test('feed publishing and interactions recover visibly from failed writes', async () => {
+  const composer = await read('src/components/social/FeedComposer.tsx')
+  const card = await read('src/components/social/PostCardClient.tsx')
+  assert.ok(composer.includes("setError('Failed to post. Try again.')"))
+  assert.ok(composer.includes('<SafeImage src={imageUrl}'))
+  assert.ok(composer.includes('<p role="alert"'))
+  for (const title of ['Reaction not saved', 'Repost not saved', 'Bookmark not saved', 'Comments unavailable', 'Reply not posted', 'Comment not posted', 'Vote not saved']) {
+    assert.ok(card.includes(title), `post interactions omit ${title}`)
+  }
+  assert.ok(card.includes("await navigator.clipboard.writeText(url)"))
+  assert.ok(card.includes('<SafeImage'))
+})

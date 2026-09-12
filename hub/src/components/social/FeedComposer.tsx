@@ -13,6 +13,8 @@ import { EmojiPicker } from './EmojiPicker'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { MentionInput } from './MentionInput'
 import { MemberAvatar } from './MemberAvatar'
+import { SafeImage } from '@/components/ui/SafeImage'
+import Link from 'next/link'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -49,8 +51,8 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
       const result = await uploadMedia(file, 'posts')
       if ('error' in result) { setError(result.error); return }
       setImageUrl(result.publicUrl)
-    } catch (e: any) {
-      setError(e?.message || 'Image upload failed — please try again.')
+    } catch {
+      setError('Image upload failed. Try again.')
     } finally {
       setUploadingImage(false)
     }
@@ -74,7 +76,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     return (
       <div className="ss-feed-composer" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', textAlign: 'center' }}>
         <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
-          <a href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</a>
+          <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
           {' '}to post picks and join the conversation
         </p>
       </div>
@@ -85,6 +87,8 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     if ((!content.trim() && !imageUrl) || !user) return
     setPosting(true)
     setError('')
+
+    try {
 
     const hasPick = showPickForm && legs.length > 0
     const wagerNum = parseFloat(wager)
@@ -111,7 +115,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(data?.error || 'Failed to post. Please try again.')
+        setError('Failed to post. Try again.')
         setPosting(false)
         return
       }
@@ -159,6 +163,10 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     setShowPollForm(false)
     setPosting(false)
     onPost?.()
+    } catch {
+      setError('Failed to post. Try again.')
+      setPosting(false)
+    }
   }
 
   const charLimit = 500
@@ -200,7 +208,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                     color: sport === s ? 'var(--accent)' : 'var(--text-3)',
                     cursor: 'pointer', transition: 'all 130ms',
                   }}>
-                    {logo && <img src={logo} alt={s} style={{ width: 12, height: 12, objectFit: 'contain' }} />}
+                    {logo && <SafeImage src={logo} alt={s} style={{ width: 12, height: 12, objectFit: 'contain' }} />}
                     {s}
                   </button>
                 )
@@ -246,7 +254,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             <div style={{ marginTop: 12, padding: '12px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid rgba(168,85,247,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--purple)' }}>📊 Poll</span>
-                <button onClick={() => setShowPollForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+                <button type="button" onClick={() => setShowPollForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
                   <X size={14} />
                 </button>
               </div>
@@ -256,7 +264,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                     <input value={opt} onChange={e => setPollOptions(opts => opts.map((o, j) => j === i ? e.target.value : o))}
                       placeholder={`Option ${i + 1}`} className="ss-input" style={{ flex: 1, fontSize: 13 }} />
                     {pollOptions.length > 2 && (
-                      <button onClick={() => setPollOptions(opts => opts.filter((_, j) => j !== i))}
+                      <button type="button" onClick={() => setPollOptions(opts => opts.filter((_, j) => j !== i))}
                         style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0 4px' }}>
                         <X size={14} />
                       </button>
@@ -264,7 +272,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                   </div>
                 ))}
                 {pollOptions.length < 4 && (
-                  <button onClick={() => setPollOptions(opts => [...opts, ''])}
+                  <button type="button" onClick={() => setPollOptions(opts => [...opts, ''])}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, padding: '2px 0' }}>
                     <Plus size={12} /> Add option
                   </button>
@@ -272,7 +280,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
                   <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Duration:</span>
                   {['1', '6', '24', '48', '72'].map(h => (
-                    <button key={h} onClick={() => setPollDuration(h)} style={{
+                    <button key={h} type="button" aria-pressed={pollDuration === h} onClick={() => setPollDuration(h)} style={{
                       padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
                       border: `1px solid ${pollDuration === h ? 'var(--purple)' : 'var(--border-2)'}`,
                       background: pollDuration === h ? 'rgba(168,85,247,0.1)' : 'transparent',
@@ -296,8 +304,9 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 </div>
               ) : (
                 <>
-                  <img src={imageUrl} alt="" style={{ maxWidth: 260, maxHeight: 220, borderRadius: 10, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }} />
+                  <SafeImage src={imageUrl} alt="" style={{ maxWidth: 260, maxHeight: 220, borderRadius: 10, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }} />
                   <button
+                    type="button"
                     onClick={() => setImageUrl('')}
                     style={{
                       position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
@@ -314,7 +323,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
           )}
 
           {error && (
-            <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{error}</p>
+            <p role="alert" style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{error}</p>
           )}
 
           {/* Action bar — button labels ("Pick"/"Poll"/"Photo") hide below
@@ -403,7 +412,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 const pickIncomplete = showPickForm && legs.length === 0
                 const disabled = (!content.trim() && !imageUrl) || posting || uploadingImage || pickIncomplete
                 const button = (
-                  <button onClick={handlePost} disabled={disabled} style={{
+                  <button type="button" onClick={handlePost} disabled={disabled} style={{
                     padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 800,
                     background: disabled ? 'var(--surface-3)' : 'var(--accent)',
                     color: disabled ? 'var(--text-3)' : 'var(--accent-fg)',

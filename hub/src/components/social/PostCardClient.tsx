@@ -27,6 +27,7 @@ import { useCustomEmojis } from '@/lib/emoji'
 import { UserBadges } from './UserBadges'
 import { MemberAvatar } from './MemberAvatar'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 interface PostCardClientProps {
   post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
@@ -271,6 +272,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         if (count <= 0) delete next[emoji]; else next[emoji] = count
         return next
       })
+      showNotice({ title: 'Reaction not saved', message: 'Please try again.', tone: 'error' })
     }
   }
 
@@ -294,6 +296,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     if (error && error.code !== '23505') {
       setReposted(wasReposted)
       setRepostCount(c => wasReposted ? c + 1 : c - 1)
+      showNotice({ title: 'Repost not saved', message: 'Please try again.', tone: 'error' })
     }
   }
 
@@ -308,6 +311,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     if (error && error.code !== '23505') {
       setBookmarked(wasBookmarked)
       setBookmarkCount(c => wasBookmarked ? c + 1 : c - 1)
+      showNotice({ title: 'Bookmark not saved', message: 'Please try again.', tone: 'error' })
     }
   }
 
@@ -319,9 +323,18 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // Everything else (plain text, polls, image-only posts) has no "card"
   // shape to render into an image, so those keep the original bare-link
   // native-share behavior.
-  function share() {
+  async function share() {
     if (!post.pick_data) {
-      navigator.share?.({ url: window.location.origin + '/posts/' + post.id })
+      const url = window.location.origin + '/posts/' + post.id
+      try {
+        if (navigator.share) await navigator.share({ url })
+        else {
+          await navigator.clipboard.writeText(url)
+          showNotice({ title: 'Link copied', message: 'The post link is ready to paste.', tone: 'success' })
+        }
+      } catch (error) {
+        if ((error as Error)?.name !== 'AbortError') showNotice({ title: 'Could not share', message: 'Copy the post link and try again.', tone: 'error' })
+      }
       return
     }
     setShareModalOpen(true)
@@ -336,7 +349,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     if (user && blockedIdsRef.current === null) {
       blockedIdsRef.current = await getBlockedEitherWayIds(supabase, user.id)
     }
-    const [{ data: rows }, { data: myLikes }] = await Promise.all([
+    const [{ data: rows, error: commentsError }, { data: myLikes }] = await Promise.all([
       supabase
         .from('comments')
         .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
@@ -346,6 +359,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         ? supabase.from('reactions').select('target_id').eq('target_type', 'comment').eq('user_id', user.id)
         : Promise.resolve({ data: [] as any[] }),
     ])
+    if (commentsError) { showNotice({ title: 'Comments unavailable', message: 'Please try again.', tone: 'error' }); return }
     const blockedSet = new Set(blockedIdsRef.current ?? [])
     const visibleRows = (rows ?? []).filter((r: any) => !blockedSet.has(r.author_id))
     const likedIds = new Set((myLikes ?? []).map((r: any) => r.target_id))
@@ -383,6 +397,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
       : await supabase.from('reactions').insert({ user_id: user.id, target_id: id, target_type: 'comment', emoji: '❤️' })
     if (error && error.code !== '23505') {
       setCommentTree(t => mapCommentTree(t, id, n => ({ ...n, liked_by_me: alreadyLiked, reaction_count: n.reaction_count + (alreadyLiked ? 1 : -1) })))
+      showNotice({ title: 'Reaction not saved', message: 'Please try again.', tone: 'error' })
     }
   }
 
@@ -393,7 +408,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
       .insert({ post_id: post.id, author_id: user.id, parent_id: parentId, content: text })
       .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url)')
       .single()
-    if (error || !data) return
+    if (error || !data) { showNotice({ title: 'Reply not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
     setCommentTree(t => insertReplyIntoTree(t, parentId, { ...(data as any), reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }))
     setCommentCount(c => c + 1)
     setReplyText('')
@@ -427,7 +442,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     // Only clear the input / fire notifications once the comment actually
     // saved — clearing it unconditionally meant a failed submit silently
     // ate whatever the user had typed.
-    if (error || !data) return
+    if (error || !data) { showNotice({ title: 'Comment not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
     setCommentTree(t => [...t, { ...(data as any), parent_id: null, reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }])
     setCommentCount(c => c + 1)
     setCommentText('')
@@ -448,7 +463,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     if (!text) return
     const nowIso = new Date().toISOString()
     const { error } = await supabase.from('comments').update({ content: text, updated_at: nowIso }).eq('id', id)
-    if (error) return
+    if (error) { showNotice({ title: 'Comment not updated', message: 'Please try again.', tone: 'error' }); return }
     setCommentTree(t => mapCommentTree(t, id, n => ({ ...n, content: text, updated_at: nowIso })))
     setEditingCommentId(null)
   }
@@ -461,7 +476,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   async function deleteComment(id: string) {
     if (!await confirmAction({ title: 'Delete comment?', message: 'The comment and all of its replies will be permanently removed.', confirmLabel: 'Delete comment', tone: 'error' })) return
     const { error } = await supabase.from('comments').delete().eq('id', id)
-    if (error) return
+    if (error) { showNotice({ title: 'Comment not deleted', message: 'Please try again.', tone: 'error' }); return }
     setCommentTree(t => removeFromCommentTree(t, id))
     setCommentCount(c => Math.max(0, c - 1))
   }
@@ -526,6 +541,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     } catch {
       setPollCounts(prevCounts)
       setPollVoted(null)
+      showNotice({ title: 'Vote not saved', message: 'Please try again.', tone: 'error' })
     }
   }
 
@@ -657,7 +673,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 <Link href={`/hashtag/${post.sport.toLowerCase()}`} style={{ textDecoration: 'none' }}>
                   {sportLogoUrl(post.sport) ? (
                     <span className="sport-tag" style={{ display: 'inline-flex', marginTop: 4, padding: '3px 8px' }}>
-                      <img src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 14, height: 14, objectFit: 'contain' }} />
+                      <SafeImage src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 14, height: 14, objectFit: 'contain' }} />
                     </span>
                   ) : (
                     <span className="sport-tag" style={{ display: 'inline-block', marginTop: 4 }}>{post.sport}</span>
@@ -704,7 +720,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   button was a no-op until now, so this was effectively
                   unreachable dead data). */}
               {post.media_urls?.[0] && (
-                <img
+                <SafeImage
                   src={post.media_urls[0]}
                   alt=""
                   style={{ marginTop: 10, maxWidth: '100%', maxHeight: 420, borderRadius: 12, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }}
@@ -725,7 +741,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.06em' }}>PICK</span>
                     {post.sport && (
                       sportLogoUrl(post.sport)
-                        ? <img src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 12, height: 12, objectFit: 'contain' }} />
+                        ? <SafeImage src={sportLogoUrl(post.sport)} alt={post.sport} style={{ width: 12, height: 12, objectFit: 'contain' }} />
                         : <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{post.sport}</span>
                     )}
                     {pickResult && pickResult !== 'pending' && (
@@ -747,7 +763,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{leg.player_name}</p>
                             <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-3)' }}>
                               {getTeamLogoUrl(leg.team)
-                                ? <img src={getTeamLogoUrl(leg.team)} alt={leg.team} style={{ width: 12, height: 12, objectFit: 'contain' }} />
+                                ? <SafeImage src={getTeamLogoUrl(leg.team)} alt={leg.team} style={{ width: 12, height: 12, objectFit: 'contain' }} />
                                 : <span>{leg.team}</span>}
                               · {leg.prop_label ?? leg.line}
                             </p>
@@ -782,7 +798,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{post.pick_data.player_name}</p>
                         <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>
                           {getTeamLogoUrl(post.pick_data.team)
-                            ? <img src={getTeamLogoUrl(post.pick_data.team)} alt={post.pick_data.team ?? ''} style={{ width: 13, height: 13, objectFit: 'contain' }} />
+                            ? <SafeImage src={getTeamLogoUrl(post.pick_data.team)} alt={post.pick_data.team ?? ''} style={{ width: 13, height: 13, objectFit: 'contain' }} />
                             : <span>{post.pick_data.team}</span>}
                           · {post.pick_data.prop_label ?? post.pick_data.line}
                         </p>
@@ -885,7 +901,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                             cursor: user ? 'pointer' : 'default', fontSize: 12,
                           }}>
                           {customEmoji
-                            ? <img src={customEmoji.image_url} alt={emoji} style={{ width: 14, height: 14, objectFit: 'contain' }} />
+                            ? <SafeImage src={customEmoji.image_url} alt={emoji} style={{ width: 14, height: 14, objectFit: 'contain' }} />
                             : <span style={{ fontSize: 13, lineHeight: 1 }}>{emoji}</span>
                           }
                           <span style={{ fontWeight: 700, color: mine ? 'var(--accent)' : 'var(--text-2)' }}>{count}</span>
