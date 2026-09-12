@@ -16,7 +16,7 @@ export default async function CreatorStudioPage() {
     supabase.from('groups').select('id,name,slug,emoji,access_type,creator_product_id').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('creator_entitlements').select('id,status,created_at,product_id').eq('creator_id', user.id),
     supabase.from('creator_commerce_events').select('id,event_type,amount,currency,status,created_at,product_id').eq('creator_id', user.id).order('created_at', { ascending: false }).limit(50),
-    supabase.from('creator_scheduled_posts').select('id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at').eq('creator_id', user.id).in('status', ['draft', 'scheduled', 'failed']).order('scheduled_for', { ascending: true }).limit(50),
+    supabase.from('creator_scheduled_posts').select('id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').eq('creator_id', user.id).in('status', ['draft', 'scheduled', 'failed']).order('scheduled_for', { ascending: true }).limit(50),
   ])
   if (!profile || !hasCreatorAccess(profile.account_type, Boolean(approval))) redirect('/creators/apply')
   const activeMembers = (entitlements ?? []).filter(item => ['active', 'trialing'].includes(item.status)).length
