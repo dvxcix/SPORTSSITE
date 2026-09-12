@@ -893,8 +893,12 @@ test('emoji and GIF media work across the shared social composer layer', async (
   const channel = await read('src/components/chat/ChatRoom.tsx')
   const dm = await read('src/components/chat/DMRoom.tsx')
   const forum = await read('src/components/forum/ThreadReplyForm.tsx')
+  const notifications = await read('src/components/social/NotificationsList.tsx')
+  const card = await read('src/components/social/PostCardClient.tsx')
+  const invites = await read('src/components/groups/GroupInviteModal.tsx')
   assert.ok(upload.includes("'posts', 'messages', 'stories'"))
   assert.ok(emoji.includes('placeholder="Search emoji"'))
+  assert.ok(emoji.includes("localStorage.setItem(RECENTS_KEY"))
   assert.ok(gif.includes("file.type !== 'image/gif'"))
   assert.ok(gif.includes("localStorage.setItem(RECENTS_KEY"))
   assert.ok(text.includes('className="ss-inline-gif"'))
@@ -902,6 +906,10 @@ test('emoji and GIF media work across the shared social composer layer', async (
   assert.ok(channel.includes('uploadKind="messages"'))
   assert.ok(dm.includes('uploadKind="messages"'))
   assert.ok(forum.includes('<GifPicker'))
+  assert.ok(card.includes('className="ss-nested-reply-composer"'))
+  assert.ok(notifications.includes('onClick={onRead}'))
+  assert.ok(invites.includes("from('group_members')"))
+  assert.ok(invites.includes("from('group_invites')"))
 })
 
 test('public publishing and follow flows recover without leaking backend errors', async () => {

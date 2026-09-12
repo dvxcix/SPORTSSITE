@@ -1215,7 +1215,7 @@ function CommentItem({
       {replyingTo === node.id && (
         <div style={{ display: 'flex', gap: 8, marginLeft: indent + 36 }}>
           <MemberAvatar src={currentUserAvatar} name={currentUserDisplay || 'Member'} size={24} />
-          <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
+          <div className="ss-nested-reply-composer">
             <input
               autoFocus
               value={replyText}
@@ -1225,6 +1225,8 @@ function CommentItem({
               className="ss-input"
               style={{ flex: 1, fontSize: 13, padding: '6px 12px' }}
             />
+            <EmojiPicker onSelect={value => setReplyText(`${replyText}${value}`)} />
+            <GifPicker onSelect={url => setReplyText(`${replyText}${replyText ? ' ' : ''}${url} `)} />
             <button onClick={() => onSubmitReply(node.id, node.author_id)} disabled={!replyText.trim()} style={{
               padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
               background: replyText.trim() ? 'var(--accent)' : 'var(--surface-3)',

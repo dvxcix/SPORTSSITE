@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { UserPlus, X } from 'lucide-react'
@@ -29,7 +29,7 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
     return () => document.removeEventListener('keydown', closeOnEscape)
   }, [open])
 
-  async function search() {
+  const search = useCallback(async () => {
     if (!q.trim()) { setResults([]); return }
     setSearching(true)
     setError('')
@@ -43,14 +43,33 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
         .neq('id', currentUserId)
         .limit(10)
       if (searchError) { setError('Search is unavailable. Try again.'); setResults([]); return }
-      setResults(data ?? [])
+      const candidates = data ?? []
+      const ids = candidates.map(user => user.id)
+      if (!ids.length) { setResults([]); return }
+      const [{ data: members }, { data: pending }] = await Promise.all([
+        supabase.from('group_members').select('user_id').eq('group_id', groupId).in('user_id', ids),
+        supabase.from('group_invites').select('invited_user_id').eq('group_id', groupId).eq('status', 'pending').in('invited_user_id', ids),
+      ])
+      const memberIds = new Set((members ?? []).map(row => row.user_id))
+      const pendingIds = new Set((pending ?? []).map(row => row.invited_user_id))
+      if (pendingIds.size) setInvited(current => new Set([...current, ...pendingIds]))
+      setResults(candidates.filter(user => !memberIds.has(user.id)))
     } catch {
       setError('Search is unavailable. Try again.')
       setResults([])
     } finally {
       setSearching(false)
     }
-  }
+  }, [currentUserId, groupId, q, supabase])
+
+  useEffect(() => {
+    if (!open) return
+    const timer = window.setTimeout(() => {
+      if (q.trim().length < 2) { setResults([]); return }
+      void search()
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [open, q, search])
 
   async function invite(u: FoundUser) {
     setError('')
@@ -95,13 +114,13 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
               <input
                 value={q}
                 onChange={e => setQ(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && search()}
+                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), void search())}
                 placeholder="Search by username…"
                 aria-label="Search members to invite"
                 maxLength={40}
                 className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50"
               />
-              <button type="button" onClick={search} disabled={searching}
+              <button type="button" onClick={() => void search()} disabled={searching}
                 className="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-3 rounded-lg transition-colors disabled:opacity-40">
                 Search
               </button>

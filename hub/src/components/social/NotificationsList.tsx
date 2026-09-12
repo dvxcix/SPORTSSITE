@@ -82,6 +82,18 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
     }
   }
 
+  function markRead(ids: string[]) {
+    const unreadIds = ids.filter(id => notifications.some(notification => notification.id === id && !notification.read))
+    if (!unreadIds.length) return
+    const unreadSet = new Set(unreadIds)
+    setNotifications(current => current.map(notification => unreadSet.has(notification.id) ? { ...notification, read: true } : notification))
+    void supabase.from('notifications').update({ read: true }).in('id', unreadIds).eq('user_id', userId).then(({ error }) => {
+      if (!error) return
+      setNotifications(current => current.map(notification => unreadSet.has(notification.id) ? { ...notification, read: false } : notification))
+      notify({ title: 'Activity not updated', message: 'Please try again.', tone: 'error' })
+    })
+  }
+
   const unreadCount = notifications.filter(notification => !notification.read).length
   const filteredNotifications = filter === 'unread'
     ? notifications.filter(notification => !notification.read)
@@ -133,8 +145,8 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
             <p className="ss-activity-date">{label}</p>
             <div className="ss-activity-rows">
               {entries.map(entry => Array.isArray(entry)
-                ? <GroupedFollowRow key={entry[0].id} items={entry} nowMs={renderedAt} onDelete={() => deleteMany(entry.map(n => n.id))} />
-                : <NotificationRow key={entry.id} n={entry} nowMs={renderedAt} onDelete={() => deleteMany([entry.id])} />
+                ? <GroupedFollowRow key={entry[0].id} items={entry} nowMs={renderedAt} onRead={() => markRead(entry.map(n => n.id))} onDelete={() => deleteMany(entry.map(n => n.id))} />
+                : <NotificationRow key={entry.id} n={entry} nowMs={renderedAt} onRead={() => markRead([entry.id])} onDelete={() => deleteMany([entry.id])} />
               )}
             </div>
           </div>
@@ -172,7 +184,7 @@ export function collapseConsecutiveFollows(items: NotifRow[]): (NotifRow | Notif
   return out
 }
 
-function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; onDelete: () => void }) {
+function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: number; onRead: () => void; onDelete: () => void }) {
   const customEmojis = useCustomEmojis()
   const Icon = NOTIF_ICONS[n.type] ?? Bell
   const actorName = n.actor?.display_name || n.actor?.username
@@ -243,7 +255,7 @@ function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; o
         background: n.read ? 'transparent' : 'var(--surface-2)', transition: 'background 130ms',
       }}>
       {n.link ? (
-        <Link href={n.link} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
+        <Link href={n.link} onClick={onRead} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
           {inner}
         </Link>
       ) : (
@@ -274,7 +286,7 @@ function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; o
 // avatar is the most recent follower's and the message names them plus how
 // many others. Clicking still goes to that most-recent follower's profile;
 // dismissing removes every underlying notification in the group at once.
-function GroupedFollowRow({ items, nowMs, onDelete }: { items: NotifRow[]; nowMs: number; onDelete: () => void }) {
+function GroupedFollowRow({ items, nowMs, onRead, onDelete }: { items: NotifRow[]; nowMs: number; onRead: () => void; onDelete: () => void }) {
   const latest = items[0]
   const actorName = latest.actor?.display_name || latest.actor?.username
   const othersCount = items.length - 1
@@ -318,7 +330,7 @@ function GroupedFollowRow({ items, nowMs, onDelete }: { items: NotifRow[]; nowMs
         background: anyUnread ? 'var(--surface-2)' : 'transparent', transition: 'background 130ms',
       }}>
       {latest.link ? (
-        <Link href={latest.link} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
+        <Link href={latest.link} onClick={onRead} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
           {inner}
         </Link>
       ) : (

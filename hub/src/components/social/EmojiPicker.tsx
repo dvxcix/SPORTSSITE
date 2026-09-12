@@ -7,6 +7,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 
 const PANEL_WIDTH = 280
 const VIEWPORT_MARGIN = 8
+const RECENTS_KEY = 'slipsurge:recent-emojis'
 
 // Click inserts the raw unicode character for a standard emoji, or the
 // :code: text for a custom one (LinkifiedText renders that back into the
@@ -18,6 +19,7 @@ const VIEWPORT_MARGIN = 8
 export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => void }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [recentKeys, setRecentKeys] = useState<string[]>([])
   const customEmojis = useCustomEmojis()
   const customGroups = groupCustomEmojisByCategory(customEmojis)
   const ref = useRef<HTMLDivElement>(null)
@@ -35,6 +37,32 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
   const needle = query.trim().toLowerCase()
   const visibleCustomGroups = useMemo(() => customGroups.map(group => ({ ...group, emoji: group.emoji.filter(item => !needle || item.code.includes(needle) || group.label.toLowerCase().includes(needle)) })).filter(group => group.emoji.length), [customGroups, needle])
   const visibleStandardGroups = useMemo(() => EMOJI_CATEGORIES.map(group => ({ ...group, emoji: group.emoji.filter(item => !needle || item.code.includes(needle) || item.char.includes(needle) || group.label.toLowerCase().includes(needle)) })).filter(group => group.emoji.length), [needle])
+  const recentEmoji = useMemo(() => recentKeys.map(key => {
+    if (key.startsWith('custom:')) {
+      const code = key.slice(7)
+      const custom = customEmojis.find(item => item.code === code)
+      return custom ? { key, code, text: `:${code}:`, imageUrl: custom.image_url } : null
+    }
+    const code = key.slice(9)
+    const standard = EMOJI_CATEGORIES.flatMap(group => group.emoji).find(item => item.code === code)
+    return standard ? { key, code, text: standard.char, imageUrl: null } : null
+  }).filter((item): item is { key: string; code: string; text: string; imageUrl: string | null } => Boolean(item)), [customEmojis, recentKeys])
+
+  useEffect(() => {
+    let stored: string[] = []
+    try { stored = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]').filter((item: unknown) => typeof item === 'string').slice(0, 14) } catch { /* ignore corrupt local state */ }
+    const timer = window.setTimeout(() => setRecentKeys(stored), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  function choose(key: string, text: string) {
+    const next = [key, ...recentKeys.filter(item => item !== key)].slice(0, 14)
+    setRecentKeys(next)
+    try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)) } catch { /* storage can be unavailable */ }
+    onSelect(text)
+    setQuery('')
+    setOpen(false)
+  }
 
   useLayoutEffect(() => {
     if (!open || !ref.current) { setPos(null); return }
@@ -96,6 +124,14 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
             boxShadow: '0 8px 24px rgba(0,0,0,0.35)', padding: 10,
           }}>
           <div className="ss-emoji-search"><Search size={13}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search emoji" aria-label="Search emoji"/>{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear emoji search"><X size={12}/></button>}</div>
+          {!needle && recentEmoji.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Recent</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                {recentEmoji.map(item => <button key={item.key} type="button" title={item.text} onClick={() => choose(item.key, item.text)} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer' }}>{item.imageUrl ? <SafeImage src={item.imageUrl} alt={item.code} style={{ width: 20, height: 20, objectFit: 'contain' }} /> : item.text}</button>)}
+              </div>
+            </div>
+          )}
           {visibleCustomGroups.map(group => (
             <div key={group.label} style={{ marginBottom: 10 }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
@@ -107,7 +143,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
                     key={e.code}
                     type="button"
                     title={`:${e.code}:`}
-                    onClick={() => { onSelect(`:${e.code}:`); setOpen(false) }}
+                    onClick={() => choose(`custom:${e.code}`, `:${e.code}:`)}
                     style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer' }}
                     onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--surface-3)')}
                     onMouseLeave={ev => (ev.currentTarget.style.background = 'transparent')}
@@ -129,7 +165,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
                     key={e.code}
                     type="button"
                     title={`:${e.code}:`}
-                    onClick={() => { onSelect(e.char); setOpen(false) }}
+                    onClick={() => choose(`standard:${e.code}`, e.char)}
                     style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer' }}
                     onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--surface-3)')}
                     onMouseLeave={ev => (ev.currentTarget.style.background = 'transparent')}
