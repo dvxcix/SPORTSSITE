@@ -165,6 +165,7 @@ export function MatrixMarketplaceClient({
   const [listings, setListings] = useState<Listing[]>([]);
   const [currentUserId, setCurrentUserId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [sort, setSort] = useState<"newest" | "popular">("newest");
   const [type, setType] = useState<"all" | "classic" | "pipeline">("all");
   const [query, setQuery] = useState("");
@@ -175,27 +176,35 @@ export function MatrixMarketplaceClient({
   const [toast, setToast] = useState<string | null>(null);
   const { confirm } = useFeedback();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
+    setLoadError(false);
     const params = new URLSearchParams({ sort });
     if (type !== "all") params.set("type", type);
     if (query.trim()) params.set("q", query.trim());
     if (mine) params.set("mine", "1");
     else if (authorId) params.set("author", authorId);
-    const response = await fetch(`/api/matrix-marketplace?${params}`, {
-      cache: "no-store",
-    });
-    const body = await response.json().catch(() => ({}));
-    if (response.ok) {
+    try {
+      const response = await fetch(`/api/matrix-marketplace?${params}`, {
+        cache: "no-store",
+        signal,
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error('marketplace unavailable');
       setListings(body.listings ?? []);
       setCurrentUserId(body.current_user_id ?? "");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setLoadError(true);
+    } finally {
+      if (!signal?.aborted) setLoading(false);
     }
-    setLoading(false);
   }, [authorId, mine, query, sort, type]);
 
   useEffect(() => {
-    const timer = setTimeout(load, 180);
-    return () => clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = setTimeout(() => void load(controller.signal), 180);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [load]);
   useEffect(() => {
     if (!toast) return;
@@ -275,8 +284,10 @@ export function MatrixMarketplaceClient({
         <div className={styles.segment} aria-label="Matrix type">
           {(["all", "classic", "pipeline"] as const).map((value) => (
             <button
+              type="button"
               key={value}
               data-active={type === value}
+              aria-pressed={type === value}
               onClick={() => setType(value)}
             >
               {value === "all" ? (
@@ -292,21 +303,27 @@ export function MatrixMarketplaceClient({
         </div>
         <div className={styles.segment} aria-label="Sort order">
           <button
+            type="button"
             data-active={sort === "newest"}
+            aria-pressed={sort === "newest"}
             onClick={() => setSort("newest")}
           >
             <Sparkles size={14} /> New
           </button>
           <button
+            type="button"
             data-active={sort === "popular"}
+            aria-pressed={sort === "popular"}
             onClick={() => setSort("popular")}
           >
             <TrendingUp size={14} /> Most added
           </button>
         </div>
         <button
+          type="button"
           className={styles.mineButton}
           data-active={mine}
+          aria-pressed={mine}
           onClick={() => {
             setMine((value) => !value);
             setAuthorId(null);
@@ -336,6 +353,13 @@ export function MatrixMarketplaceClient({
             <div key={item} />
           ))}
         </div>
+      ) : loadError ? (
+        <section className={styles.empty} role="alert">
+          <div><Layers3 size={28} /></div>
+          <h2>Marketplace could not load</h2>
+          <p>Your filters are still here. Try the request again.</p>
+          <button type="button" onClick={() => void load()}>Try again</button>
+        </section>
       ) : listings.length === 0 ? (
         <section className={styles.empty}>
           <div>

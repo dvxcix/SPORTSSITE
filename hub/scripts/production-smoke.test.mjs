@@ -1149,6 +1149,9 @@ test('matrix marketplace preserves universal creator identity themes', async () 
   assert.match(route, /avatar_ring_style, avatar_ring_color/)
   assert.match(listing, /ringStyle=\{listing\.author\?\.avatar_ring_style\}/)
   assert.match(detail, /ringColor=\{listing\.author\?\.avatar_ring_color\}/)
+  assert.match(listing, /controller\.abort\(\)/)
+  assert.match(listing, /Marketplace could not load/)
+  assert.match(listing, /aria-pressed=\{mine\}/)
 })
 
 test('publishing and social previews use resilient media and accessible share surfaces', async () => {

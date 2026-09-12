@@ -162,6 +162,9 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/blog/create': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/blog/create/ai': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/blog/edit/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/marketplace': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/marketplace/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/marketplace/sell': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
 }
 
 function routeLabel(route: string) {
