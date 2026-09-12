@@ -734,3 +734,17 @@ test('page settings preserve sport identity and reject unsafe media links', asyn
   assert.ok(settings.includes("['http:', 'https:'].includes"))
   assert.ok(!settings.includes('setError(err.message)'))
 })
+
+test('group settings synchronize workspace identity atomically', async () => {
+  const settings = await read('src/components/groups/GroupSettingsForm.tsx')
+  const migration = await read('supabase/migrations/20260911232000_atomic_community_group_settings.sql')
+  assert.ok(settings.includes("supabase.rpc('update_community_group'"))
+  assert.ok(!settings.includes("from('channels').update"))
+  assert.ok(settings.includes('isSafeImageUrl(form.avatar_url)'))
+  assert.ok(!settings.includes('setError(err.message)'))
+  assert.ok(migration.includes('security invoker'))
+  assert.ok(migration.includes('g.owner_id = v_user_id'))
+  assert.ok(migration.includes('update public.groups'))
+  assert.ok(migration.includes('update public.channels'))
+  assert.ok(migration.includes('grant execute on function public.update_community_group'))
+})
