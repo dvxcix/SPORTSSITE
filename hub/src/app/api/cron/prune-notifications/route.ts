@@ -25,6 +25,7 @@ async function run(req: Request) {
   const readCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()
   const absoluteCutoff = new Date(now - 180 * 24 * 60 * 60 * 1000).toISOString()
   const telemetryCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const productTelemetryCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()
   const webhookCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()
   const retryCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -47,6 +48,7 @@ async function run(req: Request) {
     admin.from('notifications').delete({ count: 'exact' }).lt('created_at', absoluteCutoff),
     admin.from('notification_delivery_attempts').delete({ count: 'exact' }).lt('attempted_at', telemetryCutoff),
     admin.from('pipeline_runs').delete({ count: 'exact' }).lt('started_at', telemetryCutoff),
+    admin.from('product_interaction_events').delete({ count: 'exact' }).lt('created_at', productTelemetryCutoff),
     admin.from('provider_webhook_events').delete({ count: 'exact' }).lt('received_at', webhookCutoff),
     expiredExports?.length
       ? admin.from('contact_recap_export_jobs').update({ status: 'expired', storage_path: null, updated_at: new Date(now).toISOString() }).in('id', expiredExports.map(row => row.id))
@@ -64,11 +66,12 @@ async function run(req: Request) {
       expired: results[2].count ?? 0,
       deliveryAttempts: results[3].count ?? 0,
       pipelineRuns: results[4].count ?? 0,
-      webhookReceipts: results[5].count ?? 0,
+      productInteractions: results[5].count ?? 0,
+      webhookReceipts: results[6].count ?? 0,
       expiredRecapExports: expiredExports?.length ?? 0,
-      operationalRetries: results[7].count ?? 0,
+      operationalRetries: results[8].count ?? 0,
     },
-    cutoffs: { lineupCutoff, readCutoff, absoluteCutoff, telemetryCutoff, webhookCutoff, retryCutoff },
+    cutoffs: { lineupCutoff, readCutoff, absoluteCutoff, telemetryCutoff, productTelemetryCutoff, webhookCutoff, retryCutoff },
   })
 }
 

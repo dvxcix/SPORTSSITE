@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import styles from './FeedbackProvider.module.css'
+import { recordProductInteraction } from '@/lib/productTelemetry'
 
 type FeedbackTone = 'default' | 'success' | 'warning' | 'error'
 
@@ -87,6 +88,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     const normalized = typeof options === 'string' ? { message: options } : options
     const notice = { ...normalized, id: ++idRef.current }
     setNotices((items) => [...items.slice(-3), notice])
+    if (normalized.tone === 'success') recordProductInteraction('action_success', { outcome: 'success' })
+    if (normalized.tone === 'error') recordProductInteraction('action_failure', { outcome: 'failure' })
   }, [])
 
   const closeConfirm = useCallback((confirmed: boolean) => {

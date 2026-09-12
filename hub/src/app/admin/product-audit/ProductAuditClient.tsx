@@ -25,7 +25,9 @@ function StateCell({ state }: { state: AuditState }) {
   )
 }
 
-export function ProductAuditClient() {
+type TelemetrySummary = { events: number; measuredRoutes: number; failures: number; slowInteractions: number; p95ReadyMs: number; deviceCoverage: number }
+
+export function ProductAuditClient({ telemetry }: { telemetry: TelemetrySummary }) {
   const [query, setQuery] = useState('')
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>('All')
   const [family, setFamily] = useState('All')
@@ -65,6 +67,15 @@ export function ProductAuditClient() {
         <Summary label="Missing state systems" value={PRODUCT_EXPERIENCE_ROUTES.filter(route => route.states === 'missing').length} tone="warning" />
       </section>
 
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6" aria-label="Recent product measurement sample">
+        <Summary label="Measured events" value={telemetry.events} />
+        <Summary label="Measured routes" value={telemetry.measuredRoutes} tone="success" />
+        <Summary label="Action failures" value={telemetry.failures} tone={telemetry.failures ? 'danger' : 'success'} />
+        <Summary label="Slow interactions" value={telemetry.slowInteractions} tone={telemetry.slowInteractions ? 'warning' : 'success'} />
+        <Summary label="P95 ready" value={`${telemetry.p95ReadyMs}ms`} tone={telemetry.p95ReadyMs > 2500 ? 'warning' : 'default'} />
+        <Summary label="Device classes" value={`${telemetry.deviceCoverage}/5`} />
+      </section>
+
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] sm:p-4">
         <header className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <label className="relative min-w-0 flex-1">
@@ -93,7 +104,7 @@ export function ProductAuditClient() {
   )
 }
 
-function Summary({ label, value, tone = 'default' }: { label: string; value: number; tone?: 'default' | 'success' | 'warning' | 'danger' }) {
+function Summary({ label, value, tone = 'default' }: { label: string; value: number | string; tone?: 'default' | 'success' | 'warning' | 'danger' }) {
   const colors = {
     default: 'text-[var(--text-1)]',
     success: 'text-emerald-300',

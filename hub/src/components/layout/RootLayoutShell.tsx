@@ -19,6 +19,7 @@ import { MobileDock } from './MobileDock'
 import { MfaGate } from '@/components/security/MfaGate'
 import { GlobalCommandPalette } from './GlobalCommandPalette'
 import { ContextHandoff } from './ContextHandoff'
+import { ProductTelemetry } from './ProductTelemetry'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // Keep context stable across streamed route changes, including transitions
@@ -39,11 +40,11 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
 
   if (isAdmin) {
     // Admin pages render their own full layout via admin/layout.tsx
-    return <><NetworkStatus />{children}</>
+    return <><NetworkStatus /><ProductTelemetry />{children}</>
   }
 
   if (isAuthPage || isLandingPage) {
-    return <><NetworkStatus /><main id="main-content">{children}</main></>
+    return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main></>
   }
 
   // WatchlistProvider (and its two FABs) used to live inside dugout/page.tsx
@@ -77,6 +78,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
       <GlobalCommandPalette />
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
+      <ProductTelemetry />
       <Suspense fallback={null}><ContextHandoff /></Suspense>
       <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         {isDesktop
