@@ -1517,3 +1517,17 @@ test('sports entity hubs bound upstream waits and preserve failed media layouts'
   assert.match(nflPlayer, /<SafeImage src=\{player\.headshot\}/)
   assert.ok(!nflPlayer.includes('<img src={player.headshot}'))
 })
+
+test('member mastery is private, server verified, and derived from durable activity', async () => {
+  const migration = await read('supabase/migrations/20260912173019_member_mastery.sql')
+  const page = await read('src/app/missions/page.tsx')
+  assert.match(migration, /security definer/)
+  assert.match(migration, /uuid := auth\.uid\(\)/)
+  assert.match(migration, /from public\.posts where author_id = member_id/)
+  assert.match(migration, /from public\.research_notes where user_id = member_id/)
+  assert.match(migration, /on conflict do nothing/)
+  assert.match(migration, /revoke all on function public\.get_member_mastery\(\) from public, anon/)
+  assert.match(page, /redirect\('\/auth\/login\?next=\/missions'\)/)
+  assert.match(page, /rpc\('get_member_mastery'\)/)
+  assert.match(page, /aria-label=\{Math\.round\(levelProgress\)/)
+})
