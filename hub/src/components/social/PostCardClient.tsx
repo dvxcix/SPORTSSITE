@@ -626,7 +626,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         <div className="ss-post-body">
           <div className="ss-post-layout">
             {/* Avatar */}
-            <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
+            <ProfileHoverTarget className="ss-post-avatar-trigger" profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
             <Link href={`/profile/${post.author.username}`} style={{ display: 'block', flexShrink: 0 }}>
               <MemberAvatar
                 src={post.author.avatar_url}

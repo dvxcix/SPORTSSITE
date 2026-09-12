@@ -45,7 +45,7 @@ function ProfilePreviewTarget({ profile, children, className }: { profile: Menti
 
   return <span ref={triggerRef} className={className} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
     {children}
-    <FloatingSurface open={visible} anchorRef={triggerRef} onClose={close} className="ss-mention-profile-popover" width={320} ariaLabel={`Profile preview for ${profile.display_name || profile.username}`} onPointerEnter={keepOpen} onPointerLeave={hide}>
+    <FloatingSurface open={visible} anchorRef={triggerRef} onClose={close} className="ss-mention-profile-popover" width={320} align="start" ariaLabel={`Profile preview for ${profile.display_name || profile.username}`} onPointerEnter={keepOpen} onPointerLeave={hide}>
       <MentionProfileCard profile={profile} />
     </FloatingSurface>
   </span>

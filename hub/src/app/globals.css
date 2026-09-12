@@ -1257,6 +1257,8 @@ img { max-width: 100%; }
 .ss-post-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 7px; }
 .ss-post-author-line { display: flex; min-width: 0; align-items: center; gap: 5px; flex-wrap: wrap; }
 .ss-profile-hover-target{display:inline-flex;min-width:0;align-items:center}
+.ss-post-avatar-trigger{align-self:flex-start;flex:0 0 auto;width:max-content;height:max-content;line-height:0}
+.ss-post-avatar-trigger>a{display:block;line-height:0}
 .ss-post-more { width: 30px; height: 30px; justify-content: center; border-radius: 50% !important; }
 .ss-post-menu { position: absolute; top: 32px; right: 0; z-index: var(--layer-popover); min-width: 190px; padding: 5px; border-radius: 13px; }
 .ss-post-menu .ss-dropdown-item { min-height: 38px; border-radius: 8px; }
@@ -1299,7 +1301,7 @@ img { max-width: 100%; }
   .ss-composer-post-button { min-width: 64px; padding-inline: 13px; }
   .ss-composer-sport-menu { position: fixed; top: auto; right: 10px; bottom: calc(var(--mobile-dock-clearance) + 8px); left: 10px; width: auto; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .ss-post-body { padding: 11px 11px 9px; }.ss-post-layout { gap: 9px; }
-  .ss-post-layout > a .ss-member-avatar { transform: scale(.9); transform-origin: top left; margin-right: -4px; }
+  .ss-post-avatar-trigger .ss-member-avatar { transform: scale(.9); transform-origin: top left; margin-right: -4px; }
   .ss-post-repost-label { padding-left: 58px; }
   .ss-post-author-line > a:first-child { max-width: 54vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ss-post-copy { font-size: 14px; line-height: 1.48; }
