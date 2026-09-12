@@ -52,7 +52,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
       setSubmitting(false)
       return
     }
-    router.push(`/groups/${created.group_slug}`)
+    router.push(`/groups/${created.group_slug}?setup=community`)
     router.refresh()
   }
 

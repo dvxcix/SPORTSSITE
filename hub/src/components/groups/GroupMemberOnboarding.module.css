@@ -1,0 +1,195 @@
+.setupButton,
+.preferencesButton {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 11px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.setupButton {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  color: var(--accent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.preferencesButton {
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.setupButton:hover,
+.preferencesButton:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--border-2));
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-3));
+  color: var(--text-1);
+}
+
+.modal { color: var(--text-1); }
+
+.header {
+  padding: 26px 28px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 42%),
+    linear-gradient(145deg, rgba(255,255,255,.025), transparent 42%);
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.header h2 { margin: 0; font-size: 23px; line-height: 1.15; letter-spacing: -.035em; }
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress li {
+  position: relative;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--surface-4);
+}
+
+.progress li span {
+  position: absolute;
+  top: -11px;
+  right: 0;
+  display: none;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.progressActive { background: var(--accent) !important; box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+.body { min-height: 300px; padding: 24px 28px; }
+.step { display: grid; gap: 16px; }
+.stepLead { margin: 0; color: var(--text-3); font-size: 13px; }
+
+.rulesCard {
+  max-height: 190px;
+  overflow: auto;
+  border: 1px solid var(--border-2);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--surface-2) 84%, transparent);
+  padding: 18px;
+}
+
+.rulesCard p { margin: 0; white-space: pre-wrap; color: var(--text-2); font-size: 13px; line-height: 1.65; }
+
+.acceptRow,
+.channelRow,
+.notifications label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.acceptRow {
+  min-height: 62px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-2));
+  padding: 12px 14px;
+}
+
+.acceptRow input,
+.channelRow input,
+.notifications input { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; }
+.acceptRow span,
+.channelCopy,
+.notifications label span { display: grid; min-width: 0; gap: 2px; }
+.acceptRow strong,
+.channelCopy strong,
+.notifications strong { font-size: 12px; color: var(--text-1); }
+.acceptRow small,
+.channelCopy small,
+.notifications small { color: var(--text-3); font-size: 10px; line-height: 1.35; }
+
+.channelList { display: grid; gap: 8px; }
+.channelRow { min-height: 58px; border: 1px solid var(--hairline); border-radius: 14px; background: var(--surface-1); padding: 10px 12px; }
+.channelSelected { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-2)); background: color-mix(in srgb, var(--accent) 7%, var(--surface-2)); }
+.channelIcon { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: var(--surface-3); color: var(--text-2); }
+.channelCopy { flex: 1; }
+.emptyChannels { border: 1px dashed var(--border-2); border-radius: 14px; padding: 28px; text-align: center; color: var(--text-3); font-size: 12px; }
+
+.field { position: relative; display: grid; gap: 7px; }
+.field label { color: var(--text-2); font-size: 11px; font-weight: 800; }
+.field label span { color: var(--text-4); font-weight: 650; }
+.field input { min-height: 44px; border: 1px solid var(--border-2); border-radius: 12px; background: var(--surface-1); padding: 0 48px 0 13px; color: var(--text-1); outline: none; }
+.field input:focus { border-color: color-mix(in srgb, var(--accent) 58%, var(--border-2)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent); }
+.field > small { position: absolute; right: 12px; bottom: 14px; color: var(--text-4); font-size: 9px; }
+
+.notifications { display: grid; gap: 7px; margin: 4px 0 0; padding: 0; border: 0; }
+.notifications legend { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; color: var(--text-2); font-size: 11px; font-weight: 800; }
+.notifications label { min-height: 53px; border: 1px solid var(--hairline); border-radius: 13px; padding: 9px 12px; }
+.notifications .notificationSelected { border-color: color-mix(in srgb, var(--accent) 35%, var(--border-2)); background: color-mix(in srgb, var(--accent) 7%, var(--surface-2)); }
+
+.error { margin: 14px 0 0; border-radius: 10px; background: rgba(244,63,94,.1); padding: 10px 12px; color: #fb7185; font-size: 11px; }
+
+.footer {
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--hairline);
+  padding: 12px 28px;
+}
+
+.backButton,
+.nextButton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.backButton { border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text-2); }
+.nextButton { border: 1px solid color-mix(in srgb, var(--accent) 78%, transparent); background: var(--accent); color: #071008; box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent); }
+.backButton:disabled,
+.nextButton:disabled { cursor: not-allowed; opacity: .45; }
+
+@media (max-width: 560px) {
+  .header { padding: 24px 20px 18px; }
+  .body { min-height: 330px; padding: 20px; }
+  .footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); }
+  .nextButton { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setupButton,
+  .preferencesButton { transition: none; }
+}

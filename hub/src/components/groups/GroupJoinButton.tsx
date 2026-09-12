@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { usePathname, useRouter } from 'next/navigation'
 
 export function GroupJoinButton({ groupId, initialMember }: {
   groupId: string; initialMember: boolean
@@ -10,6 +11,8 @@ export function GroupJoinButton({ groupId, initialMember }: {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = useMemo(() => createClient(), [])
+  const router = useRouter()
+  const pathname = usePathname()
 
   async function toggle() {
     if (loading) return
@@ -25,6 +28,8 @@ export function GroupJoinButton({ groupId, initialMember }: {
         return
       }
       setMember(Boolean(data))
+      if (data) router.replace(`${pathname}?setup=community`, { scroll: false })
+      else router.refresh()
     } catch {
       setError(member ? 'Could not leave the group.' : 'Could not join the group.')
     } finally {

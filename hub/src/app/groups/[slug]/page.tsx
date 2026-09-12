@@ -14,6 +14,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { GroupWorkspaceTabs } from '@/components/groups/GroupWorkspaceTabs'
+import { GroupMemberOnboarding } from '@/components/groups/GroupMemberOnboarding'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import styles from './GroupPage.module.css'
@@ -33,8 +34,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function GroupPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GroupPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ setup?: string }> }) {
   const { slug } = await params
+  const { setup } = await searchParams
   const supabase = await createClient()
   const [{ data: { user } }, { data: group }] = await Promise.all([
     supabase.auth.getUser(),
@@ -88,13 +90,30 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       .limit(20)
     return attachUserReactions(rawPosts ?? [], user?.id)
   }
-  const [{ data: members }, posts, chatMessages, { data: groupChannel }] = await Promise.all([
+  const [
+    { data: members },
+    posts,
+    chatMessages,
+    { data: groupChannel },
+    { data: groupChannels },
+    { data: memberPreferences },
+    { data: channelPreferences },
+  ] = await Promise.all([
     supabase.from('group_members').select('role,user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).order('role').limit(8),
     postsPromise(),
     canViewContent && group.channel_id ? getChannelMessages(group.channel_id, 50) : Promise.resolve([]),
     group.channel_id
       ? supabase.from('channels').select('slug').eq('id', group.channel_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    isMember
+      ? supabase.from('channels').select('id,name,description,icon').eq('group_id', group.id).order('created_at')
+      : Promise.resolve({ data: [], error: null }),
+    isMember && user
+      ? supabase.from('group_member_preferences').select('notification_level,flair,onboarding_completed_at,rules_accepted_at').eq('group_id', group.id).eq('user_id', user.id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    isMember && user
+      ? supabase.from('group_channel_preferences').select('channel_id').eq('group_id', group.id).eq('user_id', user.id)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   const canPost = isMember
@@ -142,6 +161,22 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
             )}
             {user && isMember && (
               <GroupInviteModal groupId={group.id} groupSlug={slug} groupName={group.name} currentUserId={user.id} />
+            )}
+            {user && isMember && (
+              <GroupMemberOnboarding
+                groupId={group.id}
+                groupName={group.name}
+                rules={group.rules}
+                channels={groupChannels ?? []}
+                initialPreferences={{
+                  notificationLevel: memberPreferences?.notification_level ?? 'highlights',
+                  flair: memberPreferences?.flair ?? '',
+                  channelIds: (channelPreferences ?? []).map(preference => preference.channel_id),
+                  completed: Boolean(memberPreferences?.onboarding_completed_at),
+                  rulesAccepted: Boolean(memberPreferences?.rules_accepted_at),
+                }}
+                autoOpen={setup === 'community' && !memberPreferences?.onboarding_completed_at}
+              />
             )}
             {!user && <Link href="/auth/login" className={styles.primaryAction}>Sign in</Link>}
           </div>

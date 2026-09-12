@@ -21,6 +21,7 @@ export function GroupSettingsForm({ group }: { group: any }) {
   const [form, setForm] = useState({
     name: group.name ?? '',
     description: group.description ?? '',
+    rules: group.rules ?? '',
     sport: group.sport ?? '',
     avatar_url: group.avatar_url ?? '',
     banner_url: group.banner_url ?? '',
@@ -47,6 +48,11 @@ export function GroupSettingsForm({ group }: { group: any }) {
       p_is_public: form.is_public,
     })
     if (err) { setError('The group could not be saved. Try again.'); setSaving(false); return }
+    const { error: rulesError } = await supabase.rpc('set_community_group_rules', {
+      p_group_id: group.id,
+      p_rules: form.rules.trim() || null,
+    })
+    if (rulesError) { setError('The community rules could not be saved. Try again.'); setSaving(false); return }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
     setSaving(false)
     router.refresh()
@@ -73,6 +79,11 @@ export function GroupSettingsForm({ group }: { group: any }) {
         <div>
           <label>Description</label>
           <textarea aria-label="Group description" value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={inputClass + ' resize-none'} />
+        </div>
+        <div>
+          <label>Community rules</label>
+          <textarea aria-label="Community rules" value={form.rules} maxLength={4000} onChange={e => setForm(f => ({ ...f, rules: e.target.value }))} rows={7} className={inputClass + ' resize-y'} placeholder="Add the rules members accept when they join." />
+          <p className="mt-1 text-right text-[10px] text-zinc-600">{form.rules.length}/4000</p>
         </div>
         <div>
           <label>Sport</label>
