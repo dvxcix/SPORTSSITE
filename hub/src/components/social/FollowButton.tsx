@@ -15,10 +15,12 @@ interface FollowButtonProps {
 export function FollowButton({ currentUserId, targetUserId, initialFollowing, compact = false }: FollowButtonProps) {
   const [following, setFollowing] = useState(initialFollowing)
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
     setLoading(true)
+    setFailed(false)
     if (following) {
       const { error } = await supabase.from('follows').delete()
         .match({ follower_id: currentUserId, following_id: targetUserId })
@@ -27,6 +29,7 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing, co
       // delete/insert (RLS, network blip, etc.) would show the wrong
       // state until the next full page load silently "fixed" it.
       if (!error) setFollowing(false)
+      else setFailed(true)
     } else {
       const { error } = await supabase.from('follows').insert({ follower_id: currentUserId, following_id: targetUserId })
       // A duplicate-key error (23505) just means the follow row already
@@ -44,12 +47,13 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing, co
             link: me?.username ? `/profile/${me.username}` : null,
           })
         }
-      }
+      } else setFailed(true)
     }
     setLoading(false)
   }
 
   return (
+    <span className="inline-flex flex-col items-end gap-1">
     <button
       type="button"
       onClick={toggle}
@@ -58,7 +62,9 @@ export function FollowButton({ currentUserId, targetUserId, initialFollowing, co
       aria-label={`${following ? 'Unfollow' : 'Follow'} this member`}
       className={`ss-follow-button ${compact ? 'is-compact' : ''} ${following ? 'is-following' : 'is-follow'}`}
     >
-      {following ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
+      {loading ? 'Saving…' : following ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
     </button>
+    {failed && <span role="alert" className="text-[10px] font-bold text-red-400">Try again</span>}
+    </span>
   )
 }

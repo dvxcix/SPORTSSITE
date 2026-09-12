@@ -22,15 +22,18 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
   const [blocked, setBlocked] = useState(initialBlocked)
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   async function toggle() {
+    setFailed(false)
     if (blocked) {
       setLoading(true)
       const { ok } = await unblockUser(supabase, currentUserId, targetUserId)
       setLoading(false)
       if (ok) { setBlocked(false); router.refresh(); onDone?.() }
+      else setFailed(true)
       return
     }
     if (!confirming) { setConfirming(true); return }
@@ -39,6 +42,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
     setLoading(false)
     setConfirming(false)
     if (ok) { setBlocked(true); router.refresh(); onDone?.() }
+    else setFailed(true)
   }
 
   const label = blocked ? 'Unblock' : confirming ? `Confirm block @${targetUsername}?` : `Block @${targetUsername}`
@@ -47,7 +51,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
     return (
       <button onClick={toggle} disabled={loading}
         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: blocked ? 'var(--text-3)' : 'var(--red, #f87171)' }}>
-        {label}
+        {failed ? 'Try again' : label}
       </button>
     )
   }
@@ -60,7 +64,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
             ? 'border border-zinc-700 text-zinc-300 hover:border-green-500/50 hover:text-green-400'
             : 'border border-red-500/30 text-red-400 hover:bg-red-500/10'
         }`}>
-        {blocked ? <><UserCheck size={14} /> Unblock</> : confirming ? 'Confirm block?' : <><UserX size={14} /> Block</>}
+        {failed ? 'Try again' : blocked ? <><UserCheck size={14} /> Unblock</> : confirming ? 'Confirm block?' : <><UserX size={14} /> Block</>}
       </button>
     )
   }
@@ -68,7 +72,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
   return (
     <button onClick={toggle} disabled={loading}
       className={`ss-dropdown-item ${blocked ? '' : 'danger'}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {blocked ? <UserCheck size={12} /> : <UserX size={12} />} {label}
+      {blocked ? <UserCheck size={12} /> : <UserX size={12} />} {failed ? 'Try again' : label}
     </button>
   )
 }

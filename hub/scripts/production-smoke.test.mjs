@@ -748,3 +748,17 @@ test('group settings synchronize workspace identity atomically', async () => {
   assert.ok(migration.includes('update public.channels'))
   assert.ok(migration.includes('grant execute on function public.update_community_group'))
 })
+
+test('blocking an account removes both relationship directions atomically', async () => {
+  const blocks = await read('src/lib/blocks.ts')
+  const migration = await read('supabase/migrations/20260911233000_atomic_account_blocking.sql')
+  const follow = await read('src/components/social/FollowButton.tsx')
+  assert.ok(blocks.includes("supabase.rpc('set_account_block'"))
+  assert.ok(!blocks.includes("from('follows').delete"))
+  assert.ok(migration.includes('security invoker'))
+  assert.ok(migration.includes("private.check_rate_limit('block:'"))
+  assert.ok(migration.includes('follower_id = p_target_id and following_id = v_user_id'))
+  assert.ok(migration.includes('revoke all on function public.set_account_block'))
+  assert.ok(follow.includes('setFailed(true)'))
+  assert.ok(follow.includes('role="alert"'))
+})

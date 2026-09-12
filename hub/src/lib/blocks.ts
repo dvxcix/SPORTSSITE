@@ -29,19 +29,13 @@ export async function isBlockedEitherWay(supabase: SupabaseClient, userIdA: stri
 // (mirrors FollowButton's own .delete().match() pattern), matching every
 // mainstream social app: blocking someone also unfollows them either way.
 export async function blockUser(supabase: SupabaseClient, blockerId: string, blockedId: string): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from('blocks').insert({ blocker_id: blockerId, blocked_id: blockedId })
-  // A duplicate-key error just means the block already existed — not a real
-  // failure (same reasoning as FollowButton's own 23505 handling).
-  if (error && error.code !== '23505') return { ok: false, error: 'Could not block this account.' }
-  await Promise.all([
-    supabase.from('follows').delete().match({ follower_id: blockerId, following_id: blockedId }),
-    supabase.from('follows').delete().match({ follower_id: blockedId, following_id: blockerId }),
-  ])
-  return { ok: true }
+  if (!blockerId || !blockedId || blockerId === blockedId) return { ok: false, error: 'Could not block this account.' }
+  const { error } = await supabase.rpc('set_account_block', { p_target_id: blockedId, p_blocked: true })
+  return error ? { ok: false, error: 'Could not block this account.' } : { ok: true }
 }
 
 export async function unblockUser(supabase: SupabaseClient, blockerId: string, blockedId: string): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from('blocks').delete().match({ blocker_id: blockerId, blocked_id: blockedId })
-  if (error) return { ok: false, error: 'Could not unblock this account.' }
-  return { ok: true }
+  if (!blockerId || !blockedId || blockerId === blockedId) return { ok: false, error: 'Could not unblock this account.' }
+  const { error } = await supabase.rpc('set_account_block', { p_target_id: blockedId, p_blocked: false })
+  return error ? { ok: false, error: 'Could not unblock this account.' } : { ok: true }
 }

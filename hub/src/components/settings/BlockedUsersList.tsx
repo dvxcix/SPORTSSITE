@@ -11,12 +11,15 @@ interface BlockedUser { id: string; username: string; display_name?: string; ava
 export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUserId: string; initialBlocked: BlockedUser[] }) {
   const [blocked, setBlocked] = useState(initialBlocked)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [failedId, setFailedId] = useState<string | null>(null)
   const supabase = useMemo(() => createClient(), [])
 
   async function unblock(id: string) {
     setPendingId(id)
+    setFailedId(null)
     const { ok } = await unblockUser(supabase, currentUserId, id)
     if (ok) setBlocked(b => b.filter(u => u.id !== id))
+    else setFailedId(id)
     setPendingId(null)
   }
 
@@ -42,7 +45,7 @@ export function BlockedUsersList({ currentUserId, initialBlocked }: { currentUse
           </Link>
           <button onClick={() => unblock(u.id)} disabled={pendingId === u.id}
             className="ss-settings-secondary shrink-0 disabled:opacity-40">
-            {pendingId === u.id ? 'Unblocking…' : 'Unblock'}
+            {pendingId === u.id ? 'Unblocking…' : failedId === u.id ? 'Try again' : 'Unblock'}
           </button>
         </div>
       ))}
