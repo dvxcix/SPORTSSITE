@@ -1714,3 +1714,17 @@ test('creator analytics are durable, bounded, deduplicated, and derived from suc
   assert.match(dashboard, /OFFER PERFORMANCE/)
   assert.match(dashboard, /role="table"/)
 })
+
+test('final Game Rooms summarize exact settled picks and durable community contribution', async () => {
+  const room = await read('src/components/community/GameRoom.tsx')
+  const sharedGame = await read('src/app/sports/[sport]/[gameId]/GameDetailClient.tsx')
+  const mlbGame = await read('src/app/sports/[sport]/[gameId]/MLBGameClient.tsx')
+  assert.match(room, /if \(phase !== 'post'\) return null/)
+  assert.match(room, /String\(leg\.game_pk\) === String\(gameId\)/)
+  assert.match(room, /gamePickResult\(pick, gameId\) === 'win'/)
+  assert.match(room, /What the community called/)
+  assert.match(room, /TOP CONTRIBUTORS/)
+  assert.match(room, /href=\{`\/posts\/\$\{pick\.id\}`\}/)
+  assert.match(sharedGame, /picks=\{communityPicks\}/)
+  assert.match(mlbGame, /picks=\{communityPicks\}/)
+})

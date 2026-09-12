@@ -1040,7 +1040,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
       {tab === 'Play-by-Play' && (
         <PlayByPlay feed={feed} reactions={reactions} onReact={handleReact} isLoggedIn={isLoggedIn} />
       )}
-      {tab === 'Game Room' && <GameRoom sport="mlb" gameId={String(gamePk)} phase={isLive ? 'in' : feed.gameData.status.abstractGameState === 'Final' ? 'post' : 'pre'} initialMessages={roomMessages} currentUserId={currentUserId}/>}
+      {tab === 'Game Room' && <GameRoom sport="mlb" gameId={String(gamePk)} phase={isLive ? 'in' : feed.gameData.status.abstractGameState === 'Final' ? 'post' : 'pre'} initialMessages={roomMessages} currentUserId={currentUserId} picks={communityPicks}/>}
       {tab === 'Box Score' && <BoxScore feed={feed} />}
       {tab === 'Picks' && <CommunityPicks picks={communityPicks} />}
     </div>

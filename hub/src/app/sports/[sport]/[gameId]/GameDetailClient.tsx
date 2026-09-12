@@ -863,7 +863,7 @@ export function GameDetailClient({
             <SummaryTab plays={plays} gameStatus={gameStatus} />
           </div>
         )}
-        {tab === 'room' && <GameRoom sport={sport} gameId={gameId} phase={gameStatus.state as 'pre' | 'in' | 'post'} initialMessages={roomMessages} currentUserId={currentUserId}/>}
+        {tab === 'room' && <GameRoom sport={sport} gameId={gameId} phase={gameStatus.state as 'pre' | 'in' | 'post'} initialMessages={roomMessages} currentUserId={currentUserId} picks={communityPicks}/>}
         {tab === 'plays' && (
           <PlayByPlay
             plays={plays}
