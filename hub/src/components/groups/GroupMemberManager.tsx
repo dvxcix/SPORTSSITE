@@ -15,7 +15,7 @@ const ROLES: Array<{ id: Exclude<Role, 'owner'>; label: string }> = [
   { id: 'subscriber', label: 'Subscriber' }, { id: 'member', label: 'Member' },
 ]
 
-export function GroupMemberManager({ groupId, initialMembers }: { groupId: string; initialMembers: Member[] }) {
+export function GroupMemberManager({ groupId, initialMembers, canChangeSystemRoles = true }: { groupId: string; initialMembers: Member[]; canChangeSystemRoles?: boolean }) {
   const supabase = useMemo(() => createClient(), [])
   const [members, setMembers] = useState(initialMembers)
   const [query, setQuery] = useState('')
@@ -48,9 +48,9 @@ export function GroupMemberManager({ groupId, initialMembers }: { groupId: strin
         <MemberAvatar src={member.user?.avatar_url} name={member.user?.display_name || member.user?.username || 'Member'} size={38}/>
         <div className={styles.identity}><strong>{member.user?.display_name || member.user?.username || 'Member'}</strong><small>@{member.user?.username || 'member'}</small></div>
         {member.role === 'owner' ? <span className={styles.owner}><Check size={12}/> Owner</span> : <>
-          <select value={member.role} disabled={busy === member.user_id} onChange={event => setRole(member, event.target.value as Exclude<Role, 'owner'>)} aria-label={`Role for ${member.user?.username}`}>
+          {canChangeSystemRoles ? <select value={member.role} disabled={busy === member.user_id} onChange={event => setRole(member, event.target.value as Exclude<Role, 'owner'>)} aria-label={`Role for ${member.user?.username}`}>
             {ROLES.map(role => <option value={role.id} key={role.id}>{role.label}</option>)}
-          </select>
+          </select> : <span className="flex min-h-8 items-center rounded-lg border border-white/10 px-2 text-[9px] font-extrabold capitalize text-zinc-500">{member.role}</span>}
           <button type="button" disabled={busy === member.user_id} onClick={() => remove(member)} aria-label={`Remove ${member.user?.username}`}><UserMinus size={15}/></button>
         </>}
       </article>)}

@@ -67,12 +67,12 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
     setError('')
     setInvitingId(u.id)
     try {
-      const { error: err } = await supabase.from('group_invites').insert({
-        group_id: groupId, invited_user_id: u.id, invited_by: currentUserId,
+      const { error: err } = await supabase.rpc('invite_community_member', {
+        p_group_id: groupId,
+        p_invited_user_id: u.id,
       })
       if (err) {
-        if (err.code === '23505') setInvited(s => new Set(s).add(u.id))
-        else setError('Could not send invite. Try again.')
+        setError('Could not send invite. Check your community permissions and try again.')
         return
       }
       setInvited(s => new Set(s).add(u.id))

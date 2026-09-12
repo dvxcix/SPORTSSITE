@@ -77,3 +77,5 @@
 .ss-floating-surface.ss-gif-panel header button{width:30px;height:30px;border-radius:9px}
 .ss-floating-surface.ss-gif-panel .ss-gif-upload{min-height:46px;border-radius:12px;background:linear-gradient(145deg,rgba(163,230,53,.09),rgba(163,230,53,.035))}
 @media(max-width:620px){.ss-floating-surface.ss-gif-panel{right:8px;bottom:calc(var(--mobile-dock-clearance,76px) + env(safe-area-inset-bottom) + 8px);left:8px;width:auto}}
+
+.ss-settings-jump{position:sticky;z-index:8;top:8px;display:flex;gap:5px;margin:0 0 12px;padding:5px;border:1px solid var(--border);border-radius:13px;background:color-mix(in srgb,var(--surface) 88%,transparent);box-shadow:0 12px 30px rgba(0,0,0,.22);backdrop-filter:blur(18px)}.ss-settings-jump a{display:flex;min-height:34px;flex:1;align-items:center;justify-content:center;border-radius:9px;color:var(--text-3);font-size:9px;font-weight:850}.ss-settings-jump a:hover,.ss-settings-jump a:focus-visible{background:var(--accent-dim);color:var(--accent)}

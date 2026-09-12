@@ -115,8 +115,19 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
   const activeChannel = workspaceChannels.find(item => item.slug === requestedChannel)
     ?? workspaceChannels.find(item => item.id === group.channel_id)
     ?? workspaceChannels[0]
+  const [{ data: groupCapabilities }, { data: channelCapabilities }] = user && isMember
+    ? await Promise.all([
+      supabase.rpc('get_my_community_permissions', { p_group_id: group.id }),
+      activeChannel ? supabase.rpc('get_my_channel_permissions', { p_channel_id: activeChannel.id }) : Promise.resolve({ data: null, error: null }),
+    ])
+    : [{ data: null }, { data: null }]
   const chatMessages = activeChannel && canViewContent && isMember ? await getChannelMessages(activeChannel.id, 80) : []
-  const canModerate = memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'
+  const canModerate = Boolean((channelCapabilities as { moderate?: boolean } | null)?.moderate)
+    || memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'
+  const canSendChannel = Boolean((channelCapabilities as { send?: boolean } | null)?.send)
+    || memberRole === 'owner' || memberRole === 'admin'
+  const canInvite = Boolean((groupCapabilities as { create_invites?: boolean } | null)?.create_invites)
+    || memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'
 
   const canPost = isMember
   const memberPreviews = (members ?? []).flatMap(member => {
@@ -161,7 +172,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
             {user && !isMember && group.is_public && (
               <GroupJoinButton groupId={group.id} initialMember={false} />
             )}
-            {user && isMember && (
+            {user && isMember && canInvite && (
               <GroupInviteModal groupId={group.id} groupSlug={slug} groupName={group.name} currentUserId={user.id} />
             )}
             {user && isMember && (
@@ -253,7 +264,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                   initialMessages={chatMessages}
                   currentUserId={user?.id}
                   canModerate={canModerate}
-                  readOnly={activeChannel.channel_kind === 'announcements' && !canModerate}
+                  readOnly={!canSendChannel}
                 />
               </div>
             </GroupChannelWorkspace>

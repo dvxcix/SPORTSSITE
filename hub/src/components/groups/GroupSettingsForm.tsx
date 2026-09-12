@@ -3,17 +3,13 @@
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, Save, Trash2 } from 'lucide-react'
+import { Camera, Check, ImagePlus, Loader2, Save, Trash2 } from 'lucide-react'
+import { uploadMedia } from '@/lib/uploadMedia'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { Switch } from '@/components/ui/Switch'
 import Image from 'next/image'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
-
-function isSafeImageUrl(value: string) {
-  if (!value.trim()) return true
-  try { return ['http:', 'https:'].includes(new URL(value.trim()).protocol) } catch { return false }
-}
 
 export function GroupSettingsForm({ group }: { group: any }) {
   const router = useRouter()
@@ -32,11 +28,20 @@ export function GroupSettingsForm({ group }: { group: any }) {
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [uploading, setUploading] = useState<'avatar' | 'banner' | ''>('')
+
+  async function selectImage(kind: 'avatar' | 'banner', file?: File) {
+    if (!file) return
+    setUploading(kind); setError('')
+    const result = await uploadMedia(file, kind === 'avatar' ? 'avatars' : 'banners')
+    if ('error' in result) setError(result.error)
+    else setForm(current => ({ ...current, [kind === 'avatar' ? 'avatar_url' : 'banner_url']: result.publicUrl }))
+    setUploading('')
+  }
 
   async function save(event: React.FormEvent) {
     event.preventDefault()
     if (form.name.trim().length < 2) { setError('Group name must be at least 2 characters'); return }
-    if (!isSafeImageUrl(form.avatar_url) || !isSafeImageUrl(form.banner_url)) { setError('Image links must begin with https://'); return }
     setSaving(true); setError('')
     const { error: err } = await supabase.rpc('update_community_group', {
       p_group_id: group.id,
@@ -105,12 +110,20 @@ export function GroupSettingsForm({ group }: { group: any }) {
           </div>
         </div>
         <div>
-          <label>Avatar image URL</label>
-          <input type="url" aria-label="Group avatar image URL" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
-        </div>
-        <div>
-          <label>Banner image URL</label>
-          <input type="url" aria-label="Group banner image URL" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <label>Community appearance</label>
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
+            <label className="relative flex h-32 cursor-pointer items-center justify-center overflow-hidden bg-gradient-to-br from-lime-400/15 via-cyan-400/5 to-transparent">
+              {form.banner_url ? <Image src={form.banner_url} alt="Community banner" fill unoptimized className="object-cover" /> : <span className="flex items-center gap-2 text-xs font-bold text-zinc-400"><ImagePlus size={16} /> Add banner</span>}
+              {uploading === 'banner' && <span className="absolute inset-0 grid place-items-center bg-black/60"><Loader2 size={18} className="animate-spin" /></span>}
+              <input className="sr-only" type="file" accept="image/*" onChange={event => selectImage('banner', event.target.files?.[0])} />
+            </label>
+            <label className="absolute bottom-4 left-5 grid h-20 w-20 cursor-pointer place-items-center overflow-hidden rounded-2xl border-4 border-[var(--surface)] bg-[var(--surface-3)] text-zinc-400 shadow-xl">
+              {form.avatar_url ? <Image src={form.avatar_url} alt="Community avatar" fill unoptimized className="object-cover" /> : <Camera size={22} />}
+              {uploading === 'avatar' && <span className="absolute inset-0 grid place-items-center bg-black/60"><Loader2 size={18} className="animate-spin" /></span>}
+              <input className="sr-only" type="file" accept="image/*" onChange={event => selectImage('avatar', event.target.files?.[0])} />
+            </label>
+            <div className="h-11" />
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <div>
