@@ -28,15 +28,19 @@ type RosterPlayer = {
 
 async function getTeam(id: string): Promise<{ team: Team; roster: RosterPlayer[] } | null> {
   if (!/^\d+$/.test(id)) return null
-  const [teamRes, rosterRes] = await Promise.all([
-    fetch(`https://statsapi.mlb.com/api/v1/teams/${id}`, { next: { revalidate } }),
-    fetch(`https://statsapi.mlb.com/api/v1/teams/${id}/roster?rosterType=active`, { next: { revalidate } }),
-  ])
-  if (!teamRes.ok || !rosterRes.ok) return null
-  const [teamPayload, rosterPayload] = await Promise.all([teamRes.json(), rosterRes.json()])
-  const team = teamPayload?.teams?.[0] as Team | undefined
-  if (!team) return null
-  return { team, roster: (rosterPayload?.roster ?? []) as RosterPlayer[] }
+  try {
+    const [teamRes, rosterRes] = await Promise.all([
+      fetch(`https://statsapi.mlb.com/api/v1/teams/${id}`, { next: { revalidate }, signal: AbortSignal.timeout(8000) }),
+      fetch(`https://statsapi.mlb.com/api/v1/teams/${id}/roster?rosterType=active`, { next: { revalidate }, signal: AbortSignal.timeout(8000) }),
+    ])
+    if (!teamRes.ok || !rosterRes.ok) return null
+    const [teamPayload, rosterPayload] = await Promise.all([teamRes.json(), rosterRes.json()])
+    const team = teamPayload?.teams?.[0] as Team | undefined
+    if (!team) return null
+    return { team, roster: (rosterPayload?.roster ?? []) as RosterPlayer[] }
+  } catch {
+    return null
+  }
 }
 
 const POSITION_ORDER = ['Pitcher', 'Catcher', 'Infielder', 'Outfielder', 'Designated Hitter', 'Two-Way Player']

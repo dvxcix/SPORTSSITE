@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { TierGate } from '@/components/layout/TierGate'
 import styles from '@/components/product/EntityPage.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const revalidate = 0
 
@@ -176,8 +177,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
         className={styles.hero}
       >
         {player.headshot ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <div className={styles.avatar}><img src={player.headshot} alt={player.display_name} width={104} height={104} /></div>
+          <div className={styles.avatar}><SafeImage src={player.headshot} alt={player.display_name} /></div>
         ) : (
           <div className={`${styles.avatar} grid place-items-center text-2xl font-black text-[var(--text-3)]`}>
             {player.position || '—'}

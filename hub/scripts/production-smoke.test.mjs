@@ -1171,3 +1171,12 @@ test('publishing and social previews use resilient media and accessible share su
   assert.match(share, /labelledBy="share-pick-title"/)
   assert.match(badges, /ss-user-badge-fallback/)
 })
+
+test('sports entity hubs bound upstream waits and preserve failed media layouts', async () => {
+  const mlbTeam = await read('src/app/mlb/teams/[id]/page.tsx')
+  const nflPlayer = await read('src/app/nfl/players/[id]/page.tsx')
+  assert.match(mlbTeam, /AbortSignal\.timeout\(8000\)/)
+  assert.match(mlbTeam, /catch \{\s*return null/)
+  assert.match(nflPlayer, /<SafeImage src=\{player\.headshot\}/)
+  assert.ok(!nflPlayer.includes('<img src={player.headshot}'))
+})
