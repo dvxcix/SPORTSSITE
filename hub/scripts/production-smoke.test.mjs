@@ -884,6 +884,26 @@ test('stories provide a polished keyboard, touch, and pauseable viewing flow', a
   assert.ok(css.includes('.ss-story-stage'))
 })
 
+test('emoji and GIF media work across the shared social composer layer', async () => {
+  const upload = await read('src/app/api/upload/route.ts')
+  const emoji = await read('src/components/social/EmojiPicker.tsx')
+  const gif = await read('src/components/social/GifPicker.tsx')
+  const text = await read('src/components/social/LinkifiedText.tsx')
+  const feed = await read('src/components/social/FeedComposer.tsx')
+  const channel = await read('src/components/chat/ChatRoom.tsx')
+  const dm = await read('src/components/chat/DMRoom.tsx')
+  const forum = await read('src/components/forum/ThreadReplyForm.tsx')
+  assert.ok(upload.includes("'posts', 'messages', 'stories'"))
+  assert.ok(emoji.includes('placeholder="Search emoji"'))
+  assert.ok(gif.includes("file.type !== 'image/gif'"))
+  assert.ok(gif.includes("localStorage.setItem(RECENTS_KEY"))
+  assert.ok(text.includes('className="ss-inline-gif"'))
+  assert.ok(feed.includes('<GifPicker onSelect={setImageUrl}'))
+  assert.ok(channel.includes('uploadKind="messages"'))
+  assert.ok(dm.includes('uploadKind="messages"'))
+  assert.ok(forum.includes('<GifPicker'))
+})
+
 test('public publishing and follow flows recover without leaking backend errors', async () => {
   const follow = await read('src/components/pages/PageFollowButton.tsx')
   const page = await read('src/components/pages/PageSettingsForm.tsx')

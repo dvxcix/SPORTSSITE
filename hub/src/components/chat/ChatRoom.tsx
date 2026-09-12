@@ -13,6 +13,7 @@ import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { notifyMentions } from '@/lib/mentions'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { GifPicker } from '@/components/social/GifPicker'
 
 interface ChatRoomProps {
   channelId: string
@@ -174,6 +175,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
         <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
         <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
         <EmojiPicker onSelect={insertAtCursor}/>
+        <GifPicker uploadKind="messages" onSelect={setImageUrl}/>
         <button type="submit" disabled={(!input.trim() && !imageUrl) || sending || uploadingImage} aria-label="Send message"><Send size={16}/></button>
       </form>}
       {sendError && <button type="button" className="ss-chat-send-error" onClick={() => inputRef.current?.form?.requestSubmit()}>{sendError}</button>}

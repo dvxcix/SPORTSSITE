@@ -45,7 +45,7 @@ async function normalizeImage(input: Buffer): Promise<{ buffer: Buffer; contentT
 // then the write happens with the service role, bypassing Storage's own
 // broken RLS check entirely.
 const ALLOWED_KINDS = new Set([
-  'avatars', 'banners', 'posts', 'stories', 'emojis', 'badges', 'badge-cards', 'social-platforms', 'changelog', 'discord-embeds',
+  'avatars', 'banners', 'posts', 'messages', 'stories', 'emojis', 'badges', 'badge-cards', 'social-platforms', 'changelog', 'discord-embeds',
 ])
 const ADMIN_KINDS = new Set(['emojis', 'badges', 'badge-cards', 'social-platforms', 'changelog', 'discord-embeds'])
 const MIME_EXTENSIONS = new Map([

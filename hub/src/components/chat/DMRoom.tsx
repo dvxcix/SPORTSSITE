@@ -11,6 +11,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { GifPicker } from '@/components/social/GifPicker'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
@@ -218,6 +219,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
           <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
           <EmojiPicker onSelect={insertAtCursor} />
+          <GifPicker uploadKind="messages" onSelect={setImageUrl}/>
           <button type="button" onClick={send} disabled={(!text.trim() && !imageUrl) || sending || uploadingImage}
             className="ss-dm-send" aria-label="Send message">
             <Send size={16} />

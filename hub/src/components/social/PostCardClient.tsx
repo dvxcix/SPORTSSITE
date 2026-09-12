@@ -22,6 +22,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { fmtUsd } from '@slipsurge/core/parlayCalc'
 import { LinkifiedText } from './LinkifiedText'
 import { EmojiPicker } from './EmojiPicker'
+import { GifPicker } from './GifPicker'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { useCustomEmojis } from '@/lib/emoji'
 import { UserBadges } from './UserBadges'
@@ -716,6 +717,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, justifyContent: 'space-between' }}>
                     <EmojiPicker onSelect={insertAtEditCursor} />
+                    <GifPicker onSelect={url => insertAtEditCursor(` ${url} `)} />
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => setIsEditingPost(false)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
@@ -1047,6 +1049,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     style={{ flex: 1, fontSize: 13, padding: '6px 12px' }}
                   />
                   <EmojiPicker onSelect={insertCommentEmoji} />
+                  <GifPicker onSelect={url => insertCommentEmoji(` ${url} `)} />
                   <button onClick={submitComment} disabled={!commentText.trim()} style={{
                     padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                     background: commentText.trim() ? 'var(--accent)' : 'var(--surface-3)',

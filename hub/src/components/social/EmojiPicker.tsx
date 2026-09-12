@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { Smile } from 'lucide-react'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { Search, Smile, X } from 'lucide-react'
 import { EMOJI_CATEGORIES, useCustomEmojis, groupCustomEmojisByCategory } from '@/lib/emoji'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const PANEL_WIDTH = 280
 const VIEWPORT_MARGIN = 8
@@ -16,6 +17,7 @@ const VIEWPORT_MARGIN = 8
 // a plain text input.
 export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => void }) {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const customEmojis = useCustomEmojis()
   const customGroups = groupCustomEmojisByCategory(customEmojis)
   const ref = useRef<HTMLDivElement>(null)
@@ -30,6 +32,9 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
   // Measured after render (real panel height varies with emoji group
   // count) and clamped to stay fully on-screen.
   const [pos, setPos] = useState<{ left: number; vertical: 'up' | 'down' } | null>(null)
+  const needle = query.trim().toLowerCase()
+  const visibleCustomGroups = useMemo(() => customGroups.map(group => ({ ...group, emoji: group.emoji.filter(item => !needle || item.code.includes(needle) || group.label.toLowerCase().includes(needle)) })).filter(group => group.emoji.length), [customGroups, needle])
+  const visibleStandardGroups = useMemo(() => EMOJI_CATEGORIES.map(group => ({ ...group, emoji: group.emoji.filter(item => !needle || item.code.includes(needle) || item.char.includes(needle) || group.label.toLowerCase().includes(needle)) })).filter(group => group.emoji.length), [needle])
 
   useLayoutEffect(() => {
     if (!open || !ref.current) { setPos(null); return }
@@ -55,8 +60,10 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
     function onClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
+    function onKeyDown(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('mousedown', onClickOutside); document.removeEventListener('keydown', onKeyDown) }
   }, [open])
 
   return (
@@ -88,7 +95,8 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
             background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
             boxShadow: '0 8px 24px rgba(0,0,0,0.35)', padding: 10,
           }}>
-          {customGroups.map(group => (
+          <div className="ss-emoji-search"><Search size={13}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search emoji" aria-label="Search emoji"/>{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear emoji search"><X size={12}/></button>}</div>
+          {visibleCustomGroups.map(group => (
             <div key={group.label} style={{ marginBottom: 10 }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
                 {group.label}
@@ -104,13 +112,13 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
                     onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--surface-3)')}
                     onMouseLeave={ev => (ev.currentTarget.style.background = 'transparent')}
                   >
-                    <img src={e.image_url} alt={e.code} style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                    <SafeImage src={e.image_url} alt={e.code} style={{ width: 20, height: 20, objectFit: 'contain' }} />
                   </button>
                 ))}
               </div>
             </div>
           ))}
-          {EMOJI_CATEGORIES.map(cat => (
+          {visibleStandardGroups.map(cat => (
             <div key={cat.label} style={{ marginBottom: 10 }}>
               <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
                 {cat.label}
@@ -132,6 +140,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
               </div>
             </div>
           ))}
+          {!visibleCustomGroups.length && !visibleStandardGroups.length && <p className="ss-emoji-empty">No matching emoji</p>}
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { MentionInput } from '@/components/social/MentionInput'
+import { GifPicker } from '@/components/social/GifPicker'
 
 export function ThreadReplyForm({ userId, threadId, threadAuthorId }: { userId: string; threadId: string; threadAuthorId: string }) {
   const router = useRouter()
@@ -55,7 +56,7 @@ export function ThreadReplyForm({ userId, threadId, threadAuthorId }: { userId: 
         maxLength={5000} className="ss-flow-input mb-3 w-full resize-none" />
       {error && <p role="alert" className="mb-2 text-xs text-red-400">{error}</p>}
       <div className="flex items-center justify-between">
-        <EmojiPicker onSelect={insertAtCursor} />
+        <div className="ss-flow-media-tools"><EmojiPicker onSelect={insertAtCursor} /><GifPicker onSelect={url => insertAtCursor(` ${url} `)} /></div>
         <button type="submit" disabled={submitting || !content.trim()}
           className="ss-flow-submit !w-auto !min-h-10 !px-4">
           <Send size={13} /> {submitting ? 'Posting…' : 'Post reply'}

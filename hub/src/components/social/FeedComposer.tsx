@@ -10,6 +10,7 @@ import { combineOdds, calcPayout, fmtUsd } from '@slipsurge/core/parlayCalc'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { notifyMentions } from '@/lib/mentions'
 import { EmojiPicker } from './EmojiPicker'
+import { GifPicker } from './GifPicker'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { MentionInput } from './MentionInput'
 import { MemberAvatar } from './MemberAvatar'
@@ -386,6 +387,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 onClick={() => imageInputRef.current?.click()}
               />
               <EmojiPicker onSelect={insertAtCursor} />
+              <GifPicker onSelect={setImageUrl} />
             </div>
             <div className="ss-feed-composer-submit">
               <div className="ss-composer-visibility" ref={visibilityMenuRef}>

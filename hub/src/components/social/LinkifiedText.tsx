@@ -5,6 +5,7 @@ import { useCustomEmojis, parseEmojiShortcodes } from '@/lib/emoji'
 import { createClient } from '@/lib/supabase/client'
 import { extractMentionedUsernames } from '@/lib/mentions'
 import { MentionHoverLink, type MentionProfile } from './MentionProfileCard'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const mentionProfileCache = new Map<string, MentionProfile | null>()
 
@@ -37,7 +38,7 @@ async function resolveProfiles(usernames: string[]) {
 // matching unicode emoji or an inline <img> for a custom one.
 export function LinkifiedText({ text }: { text: string }) {
   const customEmojis = useCustomEmojis()
-  const mentionParts = text.split(/(@[a-zA-Z0-9_.]{1,30})/g)
+  const contentParts = text.split(/(https:\/\/[^\s]+)/g)
   const usernameKey = useMemo(() => extractMentionedUsernames(text).join('|'), [text])
   const [profiles, setProfiles] = useState<Map<string, MentionProfile>>(() => new Map())
 
@@ -51,26 +52,29 @@ export function LinkifiedText({ text }: { text: string }) {
 
   return (
     <>
-      {mentionParts.map((part, i) => {
-        if (part.startsWith('@') && part.length > 1) {
-          const profile = profiles.get(part.slice(1).toLowerCase())
-          if (!profile) return <span key={i}>{part}</span>
-          return <MentionHoverLink key={i} profile={profile} />
+      {contentParts.map((contentPart, contentIndex) => {
+        if (contentPart.startsWith('https://')) {
+          const cleanUrl = contentPart.replace(/[),.!?]+$/, '')
+          let gif = false
+          try {
+            const parsed = new URL(cleanUrl)
+            gif = /\.gif$/i.test(parsed.pathname) || /(^|\.)(giphy\.com|tenor\.com|giphyusercontent\.com)$/.test(parsed.hostname)
+          } catch { /* leave invalid text untouched */ }
+          if (gif) return <a key={contentIndex} href={cleanUrl} target="_blank" rel="noopener noreferrer" className="ss-inline-gif-link"><SafeImage src={cleanUrl} alt="Shared GIF" className="ss-inline-gif"/></a>
+          return <a key={contentIndex} href={cleanUrl} target="_blank" rel="noopener noreferrer" className="ss-content-link">{contentPart}</a>
         }
-        const emojiParts = parseEmojiShortcodes(part, customEmojis)
+        const mentionParts = contentPart.split(/(@[a-zA-Z0-9_.]{1,30})/g)
         return (
-          <span key={i}>
-            {emojiParts.map((seg, j) =>
-              typeof seg === 'string' ? seg : (
-                <img
-                  key={j}
-                  src={seg.image_url}
-                  alt={`:${seg.code}:`}
-                  title={`:${seg.code}:`}
-                  style={{ height: '1.2em', width: '1.2em', verticalAlign: '-0.25em', objectFit: 'contain', display: 'inline-block' }}
-                />
-              )
-            )}
+          <span key={contentIndex}>
+            {mentionParts.map((part, mentionIndex) => {
+              if (part.startsWith('@') && part.length > 1) {
+                const profile = profiles.get(part.slice(1).toLowerCase())
+                if (!profile) return <span key={mentionIndex}>{part}</span>
+                return <MentionHoverLink key={mentionIndex} profile={profile} />
+              }
+              const emojiParts = parseEmojiShortcodes(part, customEmojis)
+              return <span key={mentionIndex}>{emojiParts.map((seg, emojiIndex) => typeof seg === 'string' ? seg : <SafeImage key={emojiIndex} src={seg.image_url} alt={`:${seg.code}:`} title={`:${seg.code}:`} className="ss-inline-emoji"/>)}</span>
+            })}
           </span>
         )
       })}

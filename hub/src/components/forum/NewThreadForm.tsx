@@ -7,6 +7,7 @@ import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { Loader2, Send } from 'lucide-react'
 import { MentionInput } from '@/components/social/MentionInput'
 import { notifyMentions } from '@/lib/mentions'
+import { GifPicker } from '@/components/social/GifPicker'
 
 export function NewThreadForm({ userId, categories, defaultCategory }: {
   userId: string; categories: { id: string; name: string; slug: string }[]; defaultCategory?: string
@@ -61,7 +62,7 @@ export function NewThreadForm({ userId, categories, defaultCategory }: {
         <div><label>Category</label><select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="ss-flow-input">{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
         <div><label>Title <span>*</span></label><input value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="Start with a clear title" className="ss-flow-input" /></div>
         <div><label>Post</label><MentionInput ref={textareaRef} value={content} maxLength={5000} onValueChange={setContent} currentUserId={userId} placeholder="Share your take…" rows={9} className="ss-flow-input resize-y" /></div>
-        <div className="ss-flow-tools"><EmojiPicker onSelect={insertAtCursor} /><span>{content.length.toLocaleString()} / 5,000</span></div>
+        <div className="ss-flow-tools"><div className="ss-flow-media-tools"><EmojiPicker onSelect={insertAtCursor} /><GifPicker onSelect={url => insertAtCursor(` ${url} `)} /></div><span>{content.length.toLocaleString()} / 5,000</span></div>
       </section>
       <button type="submit" disabled={submitting || !title.trim()}
         className="ss-flow-submit">
