@@ -18,6 +18,7 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     .single()
 
   if (!partner) redirect('/messages')
+  if (partner.id === user.id) redirect(`/profile/${partner.username}`)
 
   if (await isBlockedEitherWay(supabase, user.id, partner.id)) {
     return (

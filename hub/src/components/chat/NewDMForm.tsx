@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowUpRight, Search } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Search, X } from 'lucide-react'
 import Link from 'next/link'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 
@@ -17,11 +17,14 @@ export function NewDMForm({ users }: { users: User[] }) {
 
   return (
     <div className="ss-new-dm-form">
+      <Link href="/messages" className="ss-new-dm-back"><ArrowLeft size={14} /> Inbox</Link>
       <div className="ss-new-dm-search">
         <Search size={15} />
         <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+          aria-label="Search members"
           placeholder="Search people…"
           className="ss-new-dm-input" />
+        {q && <button type="button" onClick={() => setQ('')} aria-label="Clear member search"><X size={13} /></button>}
       </div>
 
       <div className="ss-new-dm-results">
@@ -40,7 +43,7 @@ export function NewDMForm({ users }: { users: User[] }) {
           </Link>
         ))}
         {q && filtered.length === 0 && (
-          <p className="text-center text-zinc-500 text-sm py-8">No users found for "{q}"</p>
+          <p className="text-center text-zinc-500 text-sm py-8" role="status">No users found for “{q}”</p>
         )}
       </div>
     </div>

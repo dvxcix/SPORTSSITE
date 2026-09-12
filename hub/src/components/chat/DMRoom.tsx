@@ -87,36 +87,32 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
     setSending(true)
     setError('')
     const content = text.trim()
-    const { data, error: err } = await supabase.from('messages')
-      .insert({ sender_id: currentUserId, dm_recipient_id: partner.id, content, message_type: 'text' })
-      .select('id, content, created_at, sender_id')
-      .single()
-    // Only clear the input once the message actually saved — clearing it
-    // unconditionally (the previous behavior) silently ate whatever was
-    // typed if the insert failed. A block (either direction) AND being
-    // rate-limited both hit the same messages RLS insert policy and come
-    // back as the identical 42501 error — Postgres RLS gives no way to tell
-    // which WITH CHECK clause actually failed — so this deliberately stays
-    // generic rather than guessing wrong and telling a merely-rate-limited
-    // person they're blocked.
-    if (err || !data) {
-      setError(err?.code === '42501' ? "Couldn't send that message — try again in a moment." : 'Message failed to send — please try again.')
+    try {
+      const { data, error: err } = await supabase.from('messages')
+        .insert({ sender_id: currentUserId, dm_recipient_id: partner.id, content, message_type: 'text' })
+        .select('id, content, created_at, sender_id')
+        .single()
+      if (err || !data) {
+        setError(err?.code === '42501' ? "Couldn't send that message — try again in a moment." : 'Message failed to send — please try again.')
+        return
+      }
+      setText('')
+      setMessages(current => current.some(message => message.id === data.id)
+        ? current
+        : [...current, { ...data, sender: null }])
+      requestAnimationFrame(jumpToLatest)
+
+      const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
+      void notify(supabase, {
+        userId: partner.id, actorId: currentUserId, type: 'message',
+        message: 'sent you a message', link: me?.username ? `/messages/${me.username}` : null,
+        targetId: currentUserId, targetType: 'user',
+      })
+    } catch {
+      setError('Message failed to send — please try again.')
+    } finally {
       setSending(false)
-      return
     }
-    setText('')
-    setMessages(m => [...m, { ...data, sender: null }])
-    // "Direct messages" has had a notification toggle in Settings since
-    // this session's notifications work, but nothing ever actually fired
-    // one — a DM landed with zero signal to the recipient beyond the
-    // realtime subscription updating an already-open thread.
-    const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
-    await notify(supabase, {
-      userId: partner.id, actorId: currentUserId, type: 'message',
-      message: 'sent you a message', link: me?.username ? `/messages/${me.username}` : null,
-      targetId: currentUserId, targetType: 'user',
-    })
-    setSending(false)
   }
 
   return (
@@ -142,7 +138,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           variant="button"
         />
       </div>
-      {error && <p className="ss-dm-error">{error}</p>}
+      {error && <p className="ss-dm-error" role="alert">{error}</p>}
 
       {/* Messages */}
       <div ref={scrollRef} onScroll={handleScroll} className="ss-dm-messages">
@@ -178,9 +174,10 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
             className="ss-dm-input"
             rows={1}
             maxLength={1000}
+            aria-label={`Message ${partner.display_name || partner.username}`}
           />
           <EmojiPicker onSelect={insertAtCursor} />
-          <button onClick={send} disabled={!text.trim() || sending}
+          <button type="button" onClick={send} disabled={!text.trim() || sending}
             className="ss-dm-send" aria-label="Send message">
             <Send size={16} />
           </button>

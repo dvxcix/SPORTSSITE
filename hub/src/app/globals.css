@@ -1171,6 +1171,9 @@ img { max-width: 100%; }
 .ss-new-message-heading { padding: 12px 2px 20px; }
 .ss-new-message-heading > span { color: var(--accent); font: 850 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .ss-new-message-shell { padding: 14px; }
+.ss-new-dm-back { display: inline-flex; min-height: 32px; margin-bottom: 10px; padding: 0 10px; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 10px; color: var(--text-2); background: var(--surface-2); font-size: 10px; font-weight: 850; text-decoration: none; transition: border-color var(--duration-fast), color var(--duration-fast), background var(--duration-fast); }
+.ss-new-dm-back:hover { border-color: color-mix(in srgb, var(--accent) 25%, var(--border)); color: var(--text-1); background: var(--surface-3); }
+.ss-new-dm-search > button { position: absolute; right: 9px; top: 50%; display: grid; width: 24px; height: 24px; translate: 0 -50%; place-items: center; border: 0; border-radius: 50%; color: var(--text-3); background: var(--surface-3); cursor: pointer; }
 .ss-new-dm-person-copy > div { display: flex; align-items: center; gap: 6px; }
 .ss-new-dm-person-copy > div p { color: var(--text-1); font-size: 12.5px; font-weight: 800; }
 .ss-new-dm-person > svg { color: var(--text-3); transition: color var(--duration-fast), transform var(--duration-fast); }
