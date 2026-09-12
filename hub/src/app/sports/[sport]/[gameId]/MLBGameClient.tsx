@@ -12,6 +12,7 @@ import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel, pitchOutcomeColor, pi
 import type { MLBGameFeed, MLBPlay, MLBBoxPlayer } from '@slipsurge/core/mlb-api'
 import styles from '@/components/product/GameDetail.module.css'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { GameRoom, type GameRoomMessage } from '@/components/community/GameRoom'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function fmt(n: number | undefined, dec = 0): string {
@@ -26,6 +27,8 @@ interface Props {
   communityPicks: any[]
   initialReactions: Record<string, Record<string, { count: number; mine: boolean }>>
   isLoggedIn: boolean
+  roomMessages: GameRoomMessage[]
+  currentUserId?: string
 }
 
 // ─── Sub-components ──────────────────────────────────────────────
@@ -855,10 +858,10 @@ function CommunityPicks({ picks }: { picks: any[] }) {
 }
 
 // ─── Main component ──────────────────────────────────────────────
-const TABS = ['Summary', 'Play-by-Play', 'Box Score', 'Picks'] as const
+const TABS = ['Summary', 'Game Room', 'Play-by-Play', 'Box Score', 'Picks'] as const
 type Tab = typeof TABS[number]
 
-export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initialReactions, isLoggedIn }: Props) {
+export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initialReactions, isLoggedIn, roomMessages, currentUserId }: Props) {
   const [tab, setTab] = useState<Tab>('Summary')
   const [feed, setFeed] = useState(initialFeed)
   const [reactions, setReactions] = useState(initialReactions)
@@ -960,7 +963,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
       <div className={styles.tabs} role="tablist" aria-label="Game details">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)} className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`} role="tab" aria-selected={tab === t}>
-            {t}{t === 'Picks' && communityPicks.length > 0 ? ` (${communityPicks.length})` : ''}
+            {t}{t === 'Picks' && communityPicks.length > 0 ? ` (${communityPicks.length})` : t === 'Game Room' && roomMessages.length > 0 ? ` (${roomMessages.length})` : ''}
           </button>
         ))}
       </div>
@@ -1037,6 +1040,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
       {tab === 'Play-by-Play' && (
         <PlayByPlay feed={feed} reactions={reactions} onReact={handleReact} isLoggedIn={isLoggedIn} />
       )}
+      {tab === 'Game Room' && <GameRoom sport="mlb" gameId={String(gamePk)} phase={isLive ? 'in' : feed.gameData.status.abstractGameState === 'Final' ? 'post' : 'pre'} initialMessages={roomMessages} currentUserId={currentUserId}/>}
       {tab === 'Box Score' && <BoxScore feed={feed} />}
       {tab === 'Picks' && <CommunityPicks picks={communityPicks} />}
     </div>

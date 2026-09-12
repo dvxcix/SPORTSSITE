@@ -946,6 +946,27 @@ test('member interests persist across onboarding and remain privately editable',
   assert.ok(columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[1].includes("'interest_settings'"))
 })
 
+test('canonical game pages include secure realtime Game Rooms', async () => {
+  const page = await read('src/app/sports/[sport]/[gameId]/page.tsx')
+  const room = await read('src/components/community/GameRoom.tsx')
+  const general = await read('src/app/sports/[sport]/[gameId]/GameDetailClient.tsx')
+  const mlb = await read('src/app/sports/[sport]/[gameId]/MLBGameClient.tsx')
+  const migration = await read('supabase/migrations/20260912164609_canonical_game_rooms.sql')
+  assert.ok(page.includes(".from('game_room_messages')"))
+  assert.ok(page.includes(".eq('sport', sport).eq('game_id', gameId)"))
+  assert.ok(room.includes(".channel(`game-room:${sport}:${gameId}`)"))
+  assert.ok(room.includes("filter: `game_id=eq.${gameId}`"))
+  assert.ok(room.includes("if (next.sport !== sport) return"))
+  assert.ok(room.includes(".from('game_room_messages').insert"))
+  assert.ok(room.includes('role="alert"'))
+  assert.ok(general.includes("{ id: 'room', label: 'Game Room'"))
+  assert.ok(mlb.includes("'Game Room'"))
+  assert.ok(migration.includes('alter table public.game_room_messages enable row level security'))
+  assert.ok(migration.includes("private.check_rate_limit('game-room:'"))
+  assert.ok(migration.includes('user_id = (select auth.uid())'))
+  assert.ok(migration.includes('alter publication supabase_realtime add table public.game_room_messages'))
+})
+
 test('product experience audit tracks every completed route dimension', async () => {
   const audit = await read('src/lib/productExperienceAudit.ts')
   assert.ok(audit.includes("accessibility: 'complete'"))

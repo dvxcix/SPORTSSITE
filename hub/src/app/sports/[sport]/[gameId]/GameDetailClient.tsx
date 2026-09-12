@@ -9,6 +9,7 @@ import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import styles from '@/components/product/GameDetail.module.css'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { GameRoom, type GameRoomMessage } from '@/components/community/GameRoom'
 
 type Reactions = Record<string, Record<string, { count: number; mine: boolean }>>
 type TeamInfo = { id: string; logo: string; color: string; altColor: string; abbr: string; name: string }
@@ -726,12 +727,13 @@ function SummaryTab({ plays, gameStatus }: { plays: ESPNPlay[]; gameStatus: { st
 }
 
 // ─── Main export ──────────────────────────────────────────────────
-type Tab = 'summary' | 'plays' | 'boxscore' | 'picks'
+type Tab = 'summary' | 'room' | 'plays' | 'boxscore' | 'picks'
 
 export function GameDetailClient({
   sport, gameId, sportLabel,
   game, summary, gameStatus: serverGameStatus,
   communityPicks, initialReactions, isLoggedIn,
+  roomMessages, currentUserId,
 }: {
   sport: SportKey
   gameId: string
@@ -743,6 +745,8 @@ export function GameDetailClient({
   communityPicks: any[]
   initialReactions: Reactions
   isLoggedIn: boolean
+  roomMessages: GameRoomMessage[]
+  currentUserId?: string
 }) {
   const [tab, setTab] = useState<Tab>('summary')
   const [reactions, setReactions] = useState<Reactions>(initialReactions)
@@ -796,6 +800,7 @@ export function GameDetailClient({
 
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'summary', label: 'Summary' },
+    { id: 'room', label: 'Game Room', count: roomMessages.length || undefined },
     { id: 'plays', label: 'Play-by-Play', count: plays.length || undefined },
     { id: 'boxscore', label: 'Box Score' },
     { id: 'picks', label: `Picks${communityPicks.length > 0 ? ` (${communityPicks.length})` : ''}` },
@@ -858,6 +863,7 @@ export function GameDetailClient({
             <SummaryTab plays={plays} gameStatus={gameStatus} />
           </div>
         )}
+        {tab === 'room' && <GameRoom sport={sport} gameId={gameId} phase={gameStatus.state as 'pre' | 'in' | 'post'} initialMessages={roomMessages} currentUserId={currentUserId}/>}
         {tab === 'plays' && (
           <PlayByPlay
             plays={plays}
