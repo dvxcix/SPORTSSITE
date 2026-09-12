@@ -7,7 +7,7 @@ import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
   Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft, Crosshair,
-  ChevronRight, ShoppingBag, Hash, LayoutGrid, CalendarDays, BookOpen, Layers3, Award, type LucideIcon,
+  ChevronRight, ShoppingBag, Hash, LayoutGrid, CalendarDays, BookOpen, Layers3, Award, History, type LucideIcon,
 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
@@ -50,6 +50,7 @@ const community: NavItem[] = [
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/bookmarks', label: 'Saved', icon: Bookmark },
   { href: '/missions', label: 'Missions', icon: Award },
+  { href: '/activity', label: 'Activity Replay', icon: History },
 ]
 
 const communitySections = ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events']

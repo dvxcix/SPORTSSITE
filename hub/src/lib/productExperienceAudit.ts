@@ -57,7 +57,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Social & discovery', priority: 'P1', defaults: partial,
-    routes: ['/feed', '/explore', '/search', '/notifications', '/bookmarks', '/picks', '/missions', '/hashtag/[tag]', '/posts/[id]', '/stories/create'],
+    routes: ['/feed', '/explore', '/search', '/notifications', '/bookmarks', '/picks', '/missions', '/activity', '/hashtag/[tag]', '/posts/[id]', '/stories/create'],
   },
   {
     family: 'Identity & sports entities', priority: 'P1', defaults: partial,
@@ -153,6 +153,7 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/bookmarks': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/picks': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/missions': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
+  '/activity': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
   '/hashtag/[tag]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/posts/[id]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/stories/create': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },

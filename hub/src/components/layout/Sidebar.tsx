@@ -8,7 +8,7 @@ import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
   Bookmark, Calendar, BookOpen, ShoppingBag,
   LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
-  ChevronLeft, ChevronRight, ChartSpline, Layers3, Award,
+  ChevronLeft, ChevronRight, ChartSpline, Layers3, Award, History,
   type LucideIcon,
 } from 'lucide-react'
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
@@ -71,6 +71,7 @@ const nav: NavItem[] = [
   { section: 'Discover' },
   { href: '/leaderboard', icon: Trophy,        label: 'Leaderboard' },
   { href: '/missions',    icon: Award,         label: 'Missions' },
+  { href: '/activity',    icon: History,       label: 'Activity Replay' },
   { href: '/creators',    icon: Star,          label: 'Creators' },
   { href: '/bookmarks',   icon: Bookmark,      label: 'Bookmarks' },
   { href: '/workspace',   icon: Layers3,       label: 'Research Workspace' },
