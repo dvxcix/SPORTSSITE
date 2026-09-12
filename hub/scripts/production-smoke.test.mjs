@@ -1572,3 +1572,18 @@ test('spoiler controls persist across every social post type and require explici
   assert.match(card, /post\.is_spoiler && !spoilerRevealed/)
   assert.match(card, /setSpoilerRevealed\(true\)/)
 })
+
+test('member context handoff is private, bounded, and restores exact product state', async () => {
+  const migration = await read('supabase/migrations/20260912175919_member_context_handoff.sql')
+  const handoff = await read('src/components/layout/ContextHandoff.tsx')
+  const shell = await read('src/components/layout/RootLayoutShell.tsx')
+  assert.match(migration, /alter table public\.member_context_handoff enable row level security/)
+  assert.match(migration, /\(select auth\.uid\(\)\) = user_id/)
+  assert.match(migration, /path !~ '\^\/\(api\|auth\|admin\)/)
+  assert.match(migration, /scroll_y between 0 and 10000000/)
+  assert.match(handoff, /sessionStorage\.setItem\(RESTORE_KEY, remoteContext\.path\)/)
+  assert.match(handoff, /window\.scrollTo\(\{ top: saved\.scroll_y/)
+  assert.match(handoff, /SYNC_DELAY_MS = 30_000/)
+  assert.match(handoff, /navigator\.onLine/)
+  assert.match(shell, /<Suspense fallback=\{null\}><ContextHandoff \/><\/Suspense>/)
+})

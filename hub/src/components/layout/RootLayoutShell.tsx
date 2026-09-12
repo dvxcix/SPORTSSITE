@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
@@ -18,6 +18,7 @@ import { UtilityDock } from './UtilityDock'
 import { MobileDock } from './MobileDock'
 import { MfaGate } from '@/components/security/MfaGate'
 import { GlobalCommandPalette } from './GlobalCommandPalette'
+import { ContextHandoff } from './ContextHandoff'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // Keep context stable across streamed route changes, including transitions
@@ -76,6 +77,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
       <GlobalCommandPalette />
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
+      <Suspense fallback={null}><ContextHandoff /></Suspense>
       <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
         {isDesktop
           ? <DesktopNavigation />
