@@ -1635,7 +1635,7 @@ test('Dugout Market Moments restore and share an exact validated capture', async
 })
 
 test('Community onboarding is durable, member-private, channel-bound, and permission-safe', async () => {
-  const migration = await read('supabase/migrations/20260912210000_community_member_onboarding.sql')
+  const migration = await read('supabase/migrations/20260913000000_community_member_onboarding.sql')
   const onboarding = await read('src/components/groups/GroupMemberOnboarding.tsx')
   const groupPage = await read('src/app/groups/[slug]/page.tsx')
   const settings = await read('src/components/groups/GroupSettingsForm.tsx')
@@ -1650,4 +1650,24 @@ test('Community onboarding is durable, member-private, channel-bound, and permis
   assert.match(onboarding, /role="alert"/)
   assert.match(groupPage, /setup === 'community'/)
   assert.match(settings, /rpc\('set_community_group_rules'/)
+})
+
+test('Community groups provide secure multi-channel workspaces and staff-only announcements', async () => {
+  const migration = await read('supabase/migrations/20260913001000_community_channel_workspaces.sql')
+  const manager = await read('src/components/groups/GroupChannelManager.tsx')
+  const workspace = await read('src/components/groups/GroupChannelWorkspace.tsx')
+  const groupPage = await read('src/app/groups/[slug]/page.tsx')
+  const chat = await read('src/components/chat/ChatRoom.tsx')
+  assert.match(migration, /channel_kind in \('text', 'live', 'picks', 'announcements'\)/)
+  assert.match(migration, /private\.can_manage_group_channels/)
+  assert.match(migration, /membership\.role in \('owner', 'admin', 'moderator'\)/)
+  assert.match(migration, /p_channel_id = v_primary_channel_id/)
+  assert.match(migration, /private\.can_post_channel\(channel_id/)
+  assert.match(manager, /rpc\('create_group_channel'/)
+  assert.match(manager, /rpc\('update_group_channel'/)
+  assert.match(manager, /rpc\('delete_group_channel'/)
+  assert.match(workspace, /aria-label="Community channels"/)
+  assert.match(groupPage, /requestedChannel/)
+  assert.match(groupPage, /readOnly=\{activeChannel\.channel_kind === 'announcements'/)
+  assert.match(chat, /Only community staff can post in this channel/)
 })

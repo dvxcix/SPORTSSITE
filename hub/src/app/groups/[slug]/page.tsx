@@ -15,6 +15,7 @@ import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { GroupWorkspaceTabs } from '@/components/groups/GroupWorkspaceTabs'
 import { GroupMemberOnboarding } from '@/components/groups/GroupMemberOnboarding'
+import { GroupChannelWorkspace, type GroupWorkspaceChannel } from '@/components/groups/GroupChannelWorkspace'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import styles from './GroupPage.module.css'
@@ -34,9 +35,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function GroupPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ setup?: string }> }) {
+export default async function GroupPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ setup?: string; channel?: string; view?: string }> }) {
   const { slug } = await params
-  const { setup } = await searchParams
+  const { setup, channel: requestedChannel, view } = await searchParams
   const supabase = await createClient()
   const [{ data: { user } }, { data: group }] = await Promise.all([
     supabase.auth.getUser(),
@@ -93,20 +94,14 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
   const [
     { data: members },
     posts,
-    chatMessages,
-    { data: groupChannel },
     { data: groupChannels },
     { data: memberPreferences },
     { data: channelPreferences },
   ] = await Promise.all([
     supabase.from('group_members').select('role,user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).order('role').limit(8),
     postsPromise(),
-    canViewContent && group.channel_id ? getChannelMessages(group.channel_id, 50) : Promise.resolve([]),
-    group.channel_id
-      ? supabase.from('channels').select('slug').eq('id', group.channel_id).maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
     isMember
-      ? supabase.from('channels').select('id,name,description,icon').eq('group_id', group.id).order('created_at')
+      ? supabase.from('channels').select('id,slug,name,description,icon,channel_kind,sort_order').eq('group_id', group.id).order('sort_order').order('created_at')
       : Promise.resolve({ data: [], error: null }),
     isMember && user
       ? supabase.from('group_member_preferences').select('notification_level,flair,onboarding_completed_at,rules_accepted_at').eq('group_id', group.id).eq('user_id', user.id).maybeSingle()
@@ -115,6 +110,13 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       ? supabase.from('group_channel_preferences').select('channel_id').eq('group_id', group.id).eq('user_id', user.id)
       : Promise.resolve({ data: [], error: null }),
   ])
+
+  const workspaceChannels = (groupChannels ?? []) as GroupWorkspaceChannel[]
+  const activeChannel = workspaceChannels.find(item => item.slug === requestedChannel)
+    ?? workspaceChannels.find(item => item.id === group.channel_id)
+    ?? workspaceChannels[0]
+  const chatMessages = activeChannel && canViewContent && isMember ? await getChannelMessages(activeChannel.id, 80) : []
+  const canModerate = memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'
 
   const canPost = isMember
   const memberPreviews = (members ?? []).flatMap(member => {
@@ -225,6 +227,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       ) : (
         <GroupWorkspaceTabs
           postCount={posts.length}
+          initialTab={view === 'chat' || Boolean(requestedChannel) ? 'chat' : 'posts'}
           posts={<div className={styles.posts}>
             {canPost && user && <FeedComposer groupId={group.id} />}
             {(posts?.length ?? 0) === 0 ? (
@@ -239,19 +242,21 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
               posts.map((p: any, i: number) => <PostCardClient key={p.id} post={p} index={i} />)
             )}
           </div>}
-          chat={group.channel_id && isMember ? (
-            <div className="ss-group-chat-shell">
+          chat={activeChannel && isMember ? (
+            <GroupChannelWorkspace groupSlug={slug} channels={workspaceChannels} activeChannel={activeChannel}>
               <div className={styles.chatViewport}>
                 <ChatRoom
-                  channelId={group.channel_id}
-                  channelSlug={groupChannel?.slug || `group-${slug}`}
-                  channelName={group.name}
+                  key={activeChannel.id}
+                  channelId={activeChannel.id}
+                  channelSlug={activeChannel.slug}
+                  channelName={activeChannel.name}
                   initialMessages={chatMessages}
                   currentUserId={user?.id}
-                  canModerate={memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'}
+                  canModerate={canModerate}
+                  readOnly={activeChannel.channel_kind === 'announcements' && !canModerate}
                 />
               </div>
-            </div>
+            </GroupChannelWorkspace>
           ) : undefined}
         />
       )}

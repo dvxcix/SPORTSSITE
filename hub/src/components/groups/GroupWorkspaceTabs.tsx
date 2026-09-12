@@ -7,10 +7,11 @@ type GroupWorkspaceTabsProps = {
   posts: ReactNode
   chat?: ReactNode
   postCount: number
+  initialTab?: 'posts' | 'chat'
 }
 
-export function GroupWorkspaceTabs({ posts, chat, postCount }: GroupWorkspaceTabsProps) {
-  const [active, setActive] = useState<'posts' | 'chat'>('posts')
+export function GroupWorkspaceTabs({ posts, chat, postCount, initialTab = 'posts' }: GroupWorkspaceTabsProps) {
+  const [active, setActive] = useState<'posts' | 'chat'>(initialTab === 'chat' && chat ? 'chat' : 'posts')
 
   return (
     <section className="ss-group-workspace">

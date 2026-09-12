@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Settings2 } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { GroupMemberManager, type GroupMemberManagerMember, type GroupRole } from '@/components/groups/GroupMemberManager'
+import { GroupChannelManager, type ManagedGroupChannel } from '@/components/groups/GroupChannelManager'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,9 +26,14 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
     .maybeSingle()
   if (member?.role !== 'owner') redirect(`/groups/${slug}`)
 
-  const { data: members } = await supabase.from('group_members')
-    .select('user_id,role,user:users(username,display_name,avatar_url,is_verified)')
-    .eq('group_id', group.id).order('created_at')
+  const [{ data: members }, { data: channels }] = await Promise.all([
+    supabase.from('group_members')
+      .select('user_id,role,user:users(username,display_name,avatar_url,is_verified)')
+      .eq('group_id', group.id).order('created_at'),
+    supabase.from('channels')
+      .select('id,slug,name,description,icon,channel_kind,sort_order')
+      .eq('group_id', group.id).order('sort_order').order('created_at'),
+  ])
   const memberRows: GroupMemberManagerMember[] = (members ?? []).map(row => ({
     user_id: row.user_id,
     role: row.role as GroupRole,
@@ -40,6 +46,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
       <Link href={`/groups/${slug}`} className="ss-flow-back"><ArrowLeft size={15} /> {group.name}</Link>
       <header className="ss-flow-heading"><span><Settings2 size={19} /></span><div><p>Community controls</p><h1>Group settings</h1></div></header>
       <GroupSettingsForm group={group} />
+      <GroupChannelManager groupId={group.id} primaryChannelId={group.channel_id} initialChannels={(channels ?? []) as ManagedGroupChannel[]} />
       <GroupMemberManager groupId={group.id} initialMembers={memberRows} />
     </div>
   )
