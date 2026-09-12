@@ -179,7 +179,7 @@ test('private account fields are not exposed through public profile reads', asyn
   const columns = await read('src/lib/supabase/userColumns.ts')
   const auth = await read('src/context/AuthContext.tsx')
   const accountRoute = await read('src/app/api/account/me/route.ts')
-  for (const privateField of ['email', 'whop_connected_company_id', 'whop_membership_id', 'notification_settings', 'interest_settings']) {
+  for (const privateField of ['email', 'whop_connected_company_id', 'whop_membership_id', 'notification_settings', 'notification_delivery_settings', 'interest_settings']) {
     const publicSection = columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[0]
     assert.ok(!publicSection.includes(`'${privateField}'`), `${privateField} leaked into public user columns`)
   }
@@ -981,6 +981,29 @@ test('global discovery supports durable member-scoped saved searches', async () 
   assert.ok(migration.includes('user_id = (select auth.uid())'))
   assert.ok(migration.includes('unique (user_id, query_key, result_tab)'))
   assert.ok(!migration.includes('grant select on public.saved_searches to anon'))
+})
+
+test('quiet hours gate real push and email delivery while preserving game priority', async () => {
+  const settingsPage = await read('src/app/settings/notifications/page.tsx')
+  const form = await read('src/components/settings/NotificationSettingsForm.tsx')
+  const delivery = await read('src/lib/notificationDelivery.ts')
+  const push = await read('src/app/api/push/send/route.ts')
+  const email = await read('src/app/api/email/send-notification/route.ts')
+  const columns = await read('src/lib/supabase/userColumns.ts')
+  const exportRoute = await read('src/app/api/account/data-export/[requestId]/download/route.ts')
+  const migration = await read('supabase/migrations/20260912165431_notification_delivery_controls.sql')
+  assert.ok(settingsPage.includes('notification_delivery_settings'))
+  assert.ok(form.includes('quiet_hours_enabled'))
+  assert.ok(form.includes('live_game_priority'))
+  assert.ok(form.includes('type="time"'))
+  assert.ok(delivery.includes('shouldSuppressNotificationDelivery'))
+  assert.ok(delivery.includes("type === 'lineup_confirmed'"))
+  assert.ok(push.includes('shouldSuppressNotificationDelivery'))
+  assert.ok(email.includes('shouldSuppressNotificationDelivery'))
+  assert.ok(email.includes("error: 'quiet hours'"))
+  assert.ok(columns.split('export const PRIVATE_ACCOUNT_COLUMNS')[0].includes('notification_delivery_settings') === false)
+  assert.ok(exportRoute.includes('notification_delivery_settings,interest_settings'))
+  assert.ok(migration.includes("jsonb_typeof(notification_delivery_settings) = 'object'"))
 })
 
 test('product experience audit tracks every completed route dimension', async () => {

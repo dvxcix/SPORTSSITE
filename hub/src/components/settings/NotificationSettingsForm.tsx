@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Check } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
+import type { NotificationDeliverySettings } from '@/lib/notificationDelivery'
 
 const SETTINGS = [
   { key: 'new_follower', label: 'New follower', desc: 'When someone follows you' },
@@ -28,7 +29,12 @@ const SETTINGS = [
 // This is entirely separate from transactional account emails (password
 // changed, welcome, etc) — those aren't user-toggleable and aren't touched
 // here.
-export function NotificationSettingsForm({ settings }: { settings: Record<string, boolean> }) {
+const TIMEZONES = [
+  ['America/New_York', 'Eastern'], ['America/Chicago', 'Central'], ['America/Denver', 'Mountain'],
+  ['America/Los_Angeles', 'Pacific'], ['America/Phoenix', 'Arizona'], ['America/Anchorage', 'Alaska'], ['Pacific/Honolulu', 'Hawaii'],
+] as const
+
+export function NotificationSettingsForm({ settings, deliverySettings }: { settings: Record<string, boolean>; deliverySettings: NotificationDeliverySettings }) {
   const supabase = useMemo(() => createClient(), [])
   const [values, setValues] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {}
@@ -40,12 +46,19 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
   })
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [delivery, setDelivery] = useState<NotificationDeliverySettings>({
+    quiet_hours_enabled: deliverySettings.quiet_hours_enabled ?? false,
+    quiet_start: deliverySettings.quiet_start ?? '22:00',
+    quiet_end: deliverySettings.quiet_end ?? '07:00',
+    timezone: deliverySettings.timezone ?? 'America/New_York',
+    live_game_priority: deliverySettings.live_game_priority ?? true,
+  })
 
   async function save() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setError('')
-    const { error: err } = await supabase.from('users').update({ notification_settings: values }).eq('id', user.id)
+    const { error: err } = await supabase.from('users').update({ notification_settings: values, notification_delivery_settings: delivery }).eq('id', user.id)
     if (err) { setError('Could not save — please try again.'); return }
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
@@ -60,6 +73,15 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
 
   return (
     <div className="space-y-4">
+      <section className="ss-notification-delivery" aria-labelledby="delivery-timing-heading">
+        <header><div><h2 id="delivery-timing-heading">Delivery timing</h2><p>Pause non-game push and email alerts on your schedule.</p></div><Switch checked={delivery.quiet_hours_enabled ?? false} onChange={checked => setDelivery(current => ({ ...current, quiet_hours_enabled: checked }))} ariaLabel="Quiet hours"/></header>
+        <div className="ss-notification-time-grid">
+          <label><span>Start</span><input type="time" value={delivery.quiet_start} onChange={event => setDelivery(current => ({ ...current, quiet_start: event.target.value }))}/></label>
+          <label><span>End</span><input type="time" value={delivery.quiet_end} onChange={event => setDelivery(current => ({ ...current, quiet_end: event.target.value }))}/></label>
+          <label><span>Time zone</span><select value={delivery.timezone} onChange={event => setDelivery(current => ({ ...current, timezone: event.target.value }))}>{TIMEZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        </div>
+        <div className="ss-notification-priority"><div><strong>Keep game alerts live</strong><small>Game-linked alerts can still arrive during quiet hours.</small></div><Switch checked={delivery.live_game_priority ?? true} onChange={checked => setDelivery(current => ({ ...current, live_game_priority: checked }))} ariaLabel="Keep game alerts live"/></div>
+      </section>
       <div className="ss-settings-actions">
         <button type="button" onClick={() => setAll('', true)} className="ss-settings-secondary">
           Enable all push

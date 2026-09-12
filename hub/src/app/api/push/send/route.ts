@@ -5,6 +5,7 @@ import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 import { isTrustedPushEndpoint } from '@/lib/pushEndpoint'
 import { hasBearerSecret } from '@/lib/requestAuth'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import { shouldSuppressNotificationDelivery, type NotificationDeliverySettings } from '@/lib/notificationDelivery'
 
 export const revalidate = 0
 
@@ -51,15 +52,19 @@ export async function POST(request: Request) {
 
   const { data: recipient } = await admin
     .from('users')
-    .select('notification_settings')
+    .select('notification_settings,notification_delivery_settings')
     .eq('id', notification.user_id)
     .maybeSingle()
   const settings = (recipient?.notification_settings as Record<string, boolean> | null) ?? {}
+  const deliverySettings = recipient?.notification_delivery_settings as NotificationDeliverySettings | null
   const settingsKey = SETTINGS_KEY_BY_TYPE[notification.type as NotificationType]
   // Push defaults to ON (matches NotificationSettingsForm) — only an
   // explicit `false` turns it off for this type.
   if (settingsKey && settings[settingsKey] === false) {
     return NextResponse.json({ ok: true, skipped: 'push disabled for this notification type' })
+  }
+  if (shouldSuppressNotificationDelivery(deliverySettings, notification.type as NotificationType, (notification.data ?? {}) as Record<string, unknown>)) {
+    return NextResponse.json({ ok: true, skipped: 'quiet hours' })
   }
 
   const { data: subscriptions } = await admin

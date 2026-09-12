@@ -4,6 +4,7 @@ import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
 import { hasBearerSecret } from '@/lib/requestAuth'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import { brandedEmailHtml, sendEmailWithResult } from '@/lib/email'
+import { shouldSuppressNotificationDelivery, type NotificationDeliverySettings } from '@/lib/notificationDelivery'
 
 export const revalidate = 0
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
   const { data: recipient } = await admin
     .from('users')
-    .select('email, notification_settings')
+    .select('email, notification_settings, notification_delivery_settings')
     .eq('id', notification.user_id)
     .maybeSingle()
   if (!recipient?.email) {
@@ -87,12 +88,17 @@ export async function POST(request: Request) {
   }
 
   const settings = (recipient.notification_settings as Record<string, boolean> | null) ?? {}
+  const deliverySettings = recipient.notification_delivery_settings as NotificationDeliverySettings | null
   const settingsKey = SETTINGS_KEY_BY_TYPE[notification.type as NotificationType]
   // Must be explicitly `true` — undefined/missing/false all mean "off",
   // opposite default from push.
   if (!settingsKey || settings[`${settingsKey}_email`] !== true) {
     await recordDelivery('skipped', { userId: notification.user_id, error: 'email disabled for notification type' })
     return NextResponse.json({ ok: true, skipped: 'email disabled for this notification type' })
+  }
+  if (shouldSuppressNotificationDelivery(deliverySettings, notification.type as NotificationType, (notification.data ?? {}) as Record<string, unknown>)) {
+    await recordDelivery('skipped', { userId: notification.user_id, error: 'quiet hours' })
+    return NextResponse.json({ ok: true, skipped: 'quiet hours' })
   }
 
   const { count: alreadyAccepted } = await admin

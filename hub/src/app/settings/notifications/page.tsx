@@ -10,8 +10,8 @@ export default async function NotificationSettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/settings/notifications')
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('users').select('notification_settings').eq('id', user.id).single()
+  const { data: profile } = await admin.from('users').select('notification_settings,notification_delivery_settings').eq('id', user.id).single()
   return <SettingsShell active="/settings/notifications" title="Notification center" description="Choose what reaches you, where it appears, and which alerts deserve your attention.">
-    <div className="space-y-4"><PushNotificationToggle /><NotificationSettingsForm settings={profile?.notification_settings ?? {}} /></div>
+    <div className="space-y-4"><PushNotificationToggle /><NotificationSettingsForm settings={profile?.notification_settings ?? {}} deliverySettings={profile?.notification_delivery_settings ?? {}} /></div>
   </SettingsShell>
 }

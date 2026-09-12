@@ -61,6 +61,13 @@ export interface User {
   // Null/absent means show every column, default order.
   dugout_column_prefs?: { hiddenGroups?: string[]; hiddenColumns?: string[]; columnOrder?: string[] } | null
   notification_settings?: Record<string, boolean> | null
+  notification_delivery_settings?: {
+    quiet_hours_enabled?: boolean
+    quiet_start?: string
+    quiet_end?: string
+    timezone?: string
+    live_game_priority?: boolean
+  } | null
   interest_settings?: {
     content_mix?: string[]
     market_focus?: string[]
