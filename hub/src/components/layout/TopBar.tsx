@@ -3,13 +3,13 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, Sparkles, WalletCards } from 'lucide-react'
+import { Search, Bell, ChevronDown, ChevronRight, LogOut, User, Settings, Shield, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, Sparkles, WalletCards, CheckCheck, Bookmark, CreditCard, CircleHelp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
-import { useCustomEmojis } from '@/lib/emoji'
+import { useCustomEmojis, type CustomEmoji } from '@/lib/emoji'
 import { collapseConsecutiveFollows } from '@/components/social/NotificationsList'
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +32,8 @@ type NotifRow = {
   data?: { avatar_url?: string; emoji?: string; team_logo?: string } | null
 }
 
+type NotificationFilter = 'all' | 'unread' | 'mentions'
+
 type QuickResults = {
   users: any[]; posts: any[]
   players: { mlbId: number; name: string; position: string | null; teamId: number | null; teamName: string | null }[]
@@ -41,6 +43,82 @@ type QuickResults = {
 }
 const EMPTY_RESULTS: QuickResults = { users: [], posts: [], players: [], teams: [], nflPlayers: [], nflTeams: [] }
 
+function compactTimeAgo(date: string) {
+  const elapsed = Math.max(0, Date.now() - new Date(date).getTime())
+  const minutes = Math.floor(elapsed / 60000)
+  if (minutes < 1) return 'Now'
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function TopbarNotificationEntry({
+  entry,
+  customEmojis,
+  onOpen,
+  onDelete,
+}: {
+  entry: NotifRow | NotifRow[]
+  customEmojis: CustomEmoji[]
+  onOpen: (notifications: NotifRow[]) => void
+  onDelete: (ids: string[]) => void
+}) {
+  const items = Array.isArray(entry) ? entry : [entry]
+  const notification = items[0]
+  const unread = items.some(item => !item.read)
+  const Icon = NOTIF_ICONS[notification.type] ?? Bell
+  const actorName = notification.actor?.display_name || notification.actor?.username
+  const message = items.length > 1
+    ? `${actorName ? `${actorName} ` : ''}and ${items.length - 1} other${items.length === 2 ? '' : 's'} followed you`
+    : `${actorName ? `${actorName} ` : ''}${notification.message || notification.body || 'interacted with you'}`
+  let badge: React.ReactNode = <Icon size={10} />
+  if (notification.type === 'reaction' && notification.data?.emoji) {
+    const customCode = notification.data.emoji.match(/^:([a-z0-9_]+):$/)?.[1]
+    const customEmoji = customCode ? customEmojis.find(emoji => emoji.code === customCode) : null
+    badge = customEmoji
+      ? <SafeImage src={customEmoji.image_url} alt={notification.data.emoji} className="ss-topbar-notification-badge-image" />
+      : <span className="ss-topbar-notification-emoji">{notification.data.emoji}</span>
+  } else if (notification.type === 'pick_result' && notification.data?.team_logo) {
+    badge = <SafeImage src={notification.data.team_logo} alt="" className="ss-topbar-notification-badge-image" />
+  }
+
+  const content = (
+    <>
+      <div className="ss-topbar-notification-avatar">
+        {notification.type === 'lineup_confirmed' ? (
+          <SafeImage src={notification.data?.avatar_url} alt="" className="ss-topbar-notification-team" />
+        ) : (
+          <MemberAvatar src={notification.actor?.avatar_url || notification.data?.avatar_url} name={actorName || 'SlipSurge'} size={38} />
+        )}
+        <span className="ss-topbar-notification-badge">{badge}</span>
+      </div>
+      <span className="ss-topbar-notification-copy">
+        <span>{message}</span>
+        <small>{compactTimeAgo(notification.created_at)}</small>
+      </span>
+      {unread ? <span className="ss-topbar-notification-unread" aria-label="Unread" /> : null}
+    </>
+  )
+
+  return (
+    <div className="ss-topbar-notification-row" data-unread={unread ? 'true' : 'false'}>
+      {notification.link ? (
+        <Link href={notification.link} className="ss-topbar-notification-link" onClick={() => onOpen(items)}>
+          {content}
+        </Link>
+      ) : (
+        <button type="button" className="ss-topbar-notification-link" onClick={() => onOpen(items)}>{content}</button>
+      )}
+      <button type="button" className="ss-topbar-notification-dismiss" onClick={() => onDelete(items.map(item => item.id))} aria-label="Dismiss notification">
+        <X size={13} />
+      </button>
+    </div>
+  )
+}
+
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, profile } = useAuth()
   const [search, setSearch] = useState('')
@@ -48,6 +126,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [discordSyncing, setDiscordSyncing] = useState(false)
   const [discordSyncMsg, setDiscordSyncMsg] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
+  const [notifFilter, setNotifFilter] = useState<NotificationFilter>('all')
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifError, setNotifError] = useState('')
   const [unread, setUnread] = useState(0)
   const [notifications, setNotifications] = useState<NotifRow[]>([])
   const customEmojis = useCustomEmojis()
@@ -133,9 +214,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       setQuickLoading(false)
     }, 250)
     return () => { cancelled = true; clearTimeout(t) }
-  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, supabase])
 
   const hasQuickResults = quickResults.users.length > 0 || quickResults.posts.length > 0 || quickResults.players.length > 0 || quickResults.teams.length > 0 || quickResults.nflPlayers.length > 0 || quickResults.nflTeams.length > 0
+  const visibleNotifications = useMemo(() => {
+    if (notifFilter === 'unread') return notifications.filter(notification => !notification.read)
+    if (notifFilter === 'mentions') return notifications.filter(notification => notification.type === 'mention')
+    return notifications
+  }, [notifFilter, notifications])
 
   // Same effectiveTier() fold used everywhere else tier is checked or shown
   // (TierGate, requireTier, /pricing, /settings/membership) — the profile
@@ -168,7 +254,12 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     const channel = supabase
       .channel(`notifications:${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload: any) => { if (!blockedIdsRef.current.includes(payload.new?.actor_id)) setUnread(c => c + 1) })
+        (payload: any) => {
+          if (blockedIdsRef.current.includes(payload.new?.actor_id)) return
+          const incoming = { ...payload.new, actor: null } as NotifRow
+          setUnread(count => count + 1)
+          setNotifications(current => current.some(item => item.id === incoming.id) ? current : [incoming, ...current].slice(0, 20))
+        })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user, supabase])
@@ -184,22 +275,51 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     // in the DB while the open dropdown kept showing stale contents.
     // Cheap enough (10 rows) to just refetch on every open.
     if (opening && user) {
-      const { data } = await supabase
+      setNotifLoading(true)
+      setNotifError('')
+      const { data, error } = await supabase
         .from('notifications')
         .select('id, type, message, body, link, read, created_at, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(20)
+      setNotifLoading(false)
+      if (error) {
+        setNotifError('Could not refresh activity.')
+        return
+      }
       const blockedSet = new Set(blockedIdsRef.current)
       setNotifications(((data as any) ?? []).filter((n: NotifRow) => !n.actor_id || !blockedSet.has(n.actor_id)))
     }
-    if (opening && unread > 0 && user) {
-      const prevUnread = unread
-      setUnread(0)
-      const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
-      if (error) { setUnread(prevUnread); return } // badge would under-report actual unread count otherwise
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  async function markAllNotificationsRead() {
+    if (!user || unread === 0) return
+    const previous = notifications
+    const previousUnread = unread
+    setUnread(0)
+    setNotifications(current => current.map(notification => ({ ...notification, read: true })))
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+    if (error) {
+      setNotifications(previous)
+      setUnread(previousUnread)
+      setNotifError('Could not mark activity as read.')
     }
+  }
+
+  function markNotificationsRead(rows: NotifRow[]) {
+    setNotifOpen(false)
+    if (!user) return
+    const unreadIds = rows.filter(row => !row.read).map(row => row.id)
+    if (!unreadIds.length) return
+    const idSet = new Set(unreadIds)
+    setNotifications(current => current.map(item => idSet.has(item.id) ? { ...item, read: true } : item))
+    setUnread(count => Math.max(0, count - unreadIds.length))
+    void supabase.from('notifications').update({ read: true }).in('id', unreadIds).eq('user_id', user.id).then(({ error }) => {
+      if (!error) return
+      setNotifications(current => current.map(item => idSet.has(item.id) ? { ...item, read: false } : item))
+      setUnread(count => count + unreadIds.length)
+    })
   }
 
   useEffect(() => {
@@ -209,7 +329,17 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setQuickOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      setMenuOpen(false)
+      setNotifOpen(false)
+      setQuickOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [])
 
   async function deleteNotif(ids: string | string[]) {
@@ -415,111 +545,53 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               </button>
 
               {notifOpen && (
-                <div className="ss-dropdown ss-topbar-notifications" role="dialog" aria-label="Notifications" style={{
-                  position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                  width: 360, maxHeight: 480, overflowY: 'auto',
-                }}>
+                <div className="ss-dropdown ss-topbar-notifications" role="dialog" aria-label="Notifications">
                   <div className="ss-topbar-notification-heading">
-                    <div><Bell size={14} /><span>Notifications</span></div>
-                    <span>{notifications.length ? `${notifications.length} recent` : 'All clear'}</span>
-                  </div>
-                  {notifications.length === 0 ? (
-                    <div style={{ padding: '28px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>
-                      You're all caught up
+                    <div>
+                      <span className="ss-topbar-panel-icon"><Bell size={15} /></span>
+                      <span><strong>Activity</strong><small>{unread ? `${unread} unread` : 'All caught up'}</small></span>
                     </div>
-                  ) : (
-                    collapseConsecutiveFollows(notifications).map(entry => {
-                      // A back-to-back run of follow notifications collapses
-                      // into one compact row here too, same as the full
-                      // /notifications page — otherwise picking up several
-                      // followers in a short span buries everything else in
-                      // this small dropdown under one row per follower.
-                      const isGroup = Array.isArray(entry)
-                      const n = isGroup ? entry[0] : entry
-                      const groupIds = isGroup ? entry.map(x => x.id) : [n.id]
-                      const othersCount = isGroup ? entry.length - 1 : 0
-                      const Icon = NOTIF_ICONS[n.type] ?? Bell
-                      const actorName = n.actor?.display_name || n.actor?.username
-                      const text = isGroup
-                        ? `${actorName ? `${actorName} ` : ''}and ${othersCount} other${othersCount === 1 ? '' : 's'} followed you`
-                        : (actorName ? `${actorName} ` : '') + (n.message || n.body || 'interacted with you')
-                      // Same badge logic as the full /notifications page —
-                      // actual emoji (or custom emoji image) for reactions,
-                      // team logo for pick results, generic type icon
-                      // otherwise.
-                      let badge: React.ReactNode = <Icon size={8} style={{ color: 'var(--accent)' }} />
-                      if (n.type === 'reaction' && n.data?.emoji) {
-                        const custom = n.data.emoji.match(/^:([a-z0-9_]+):$/)
-                        const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
-                        badge = customEmoji
-                          ? <img src={customEmoji.image_url} alt={n.data.emoji} style={{ width: 9, height: 9, objectFit: 'contain' }} />
-                          : <span style={{ fontSize: 8, lineHeight: 1 }}>{n.data.emoji}</span>
-                      } else if (n.type === 'pick_result' && n.data?.team_logo) {
-                        badge = <img src={n.data.team_logo} alt="" style={{ width: 11, height: 11, objectFit: 'contain' }} />
-                      }
-                      const inner = (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 32px 10px 14px' }}>
-                          <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
-                              {(n.actor?.avatar_url || n.data?.avatar_url) && (
-                                // A team logo (lineup_confirmed) is a flat
-                                // mark on a square/transparent canvas, not a
-                                // portrait — cover crops right into it, so
-                                // it needs contain + a little padding
-                                // instead (same fix as NotificationsList).
-                                <img
-                                  src={n.actor?.avatar_url || n.data?.avatar_url}
-                                  alt=""
-                                  style={{
-                                    width: '100%', height: '100%', boxSizing: 'border-box',
-                                    objectFit: n.type === 'lineup_confirmed' ? 'contain' : 'cover',
-                                    padding: n.type === 'lineup_confirmed' ? 5 : 0,
-                                  }}
-                                />
-                              )}
-                            </div>
-                            <div style={{ position: 'absolute', bottom: -3, right: -3, width: 16, height: 16, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {badge}
-                            </div>
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 12.5, color: 'var(--text-1)', lineHeight: 1.4 }}>{text}</p>
-                            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                              {new Date(n.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                      return (
-                        <div key={n.id} style={{ position: 'relative' }}>
-                          {n.link ? (
-                            <Link href={n.link} onClick={() => setNotifOpen(false)} style={{ textDecoration: 'none', display: 'block' }}
-                              className="notif-dropdown-item">
-                              {inner}
-                            </Link>
-                          ) : inner}
-                          <button
-                            onClick={e => { e.preventDefault(); e.stopPropagation(); deleteNotif(groupIds) }}
-                            aria-label="Dismiss notification"
-                            style={{
-                              position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%',
-                              background: 'transparent', border: 'none', color: 'var(--text-3)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--red)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)' }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
-                            <X size={11} />
-                          </button>
-                        </div>
-                      )
-                    })
-                  )}
-                  <Link href="/notifications" onClick={() => setNotifOpen(false)} style={{
-                    display: 'block', textAlign: 'center', padding: '10px', fontSize: 12, fontWeight: 700,
-                    color: 'var(--accent)', textDecoration: 'none', borderTop: '1px solid var(--border)',
-                  }}>
-                    View all
-                  </Link>
+                    <div className="ss-topbar-heading-actions">
+                      <button type="button" onClick={markAllNotificationsRead} disabled={!unread} aria-label="Mark all notifications as read" title="Mark all read"><CheckCheck size={15} /></button>
+                      <Link href="/settings/notifications" onClick={() => setNotifOpen(false)} aria-label="Notification settings" title="Notification settings"><Settings size={15} /></Link>
+                      <button type="button" className="ss-topbar-mobile-close" onClick={() => setNotifOpen(false)} aria-label="Close notifications"><X size={16} /></button>
+                    </div>
+                  </div>
+                  <div className="ss-topbar-notification-tabs" role="tablist" aria-label="Filter notifications">
+                    {(['all', 'unread', 'mentions'] as NotificationFilter[]).map(filter => (
+                      <button type="button" role="tab" aria-selected={notifFilter === filter} data-active={notifFilter === filter ? 'true' : 'false'} key={filter} onClick={() => setNotifFilter(filter)}>
+                        {filter === 'all' ? 'All' : filter === 'unread' ? 'Unread' : 'Mentions'}
+                        {filter === 'unread' && unread ? <span>{unread > 99 ? '99+' : unread}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ss-topbar-notification-feed">
+                    {notifError ? <button type="button" className="ss-topbar-notification-error" onClick={openNotifications}>{notifError} Try again</button> : null}
+                    {notifLoading ? (
+                      <div className="ss-topbar-notification-loading" aria-label="Loading notifications">
+                        {[0, 1, 2].map(item => <span key={item}><i /><b /><b /></span>)}
+                      </div>
+                    ) : visibleNotifications.length === 0 ? (
+                      <div className="ss-topbar-notification-empty">
+                        <span><CheckCheck size={20} /></span>
+                        <strong>{notifFilter === 'all' ? "You're all caught up" : `No ${notifFilter} activity`}</strong>
+                        <small>New activity will appear here.</small>
+                      </div>
+                    ) : (
+                      collapseConsecutiveFollows(visibleNotifications).map(entry => (
+                        <TopbarNotificationEntry
+                          key={Array.isArray(entry) ? entry.map(item => item.id).join(':') : entry.id}
+                          entry={entry}
+                          customEmojis={customEmojis}
+                          onOpen={markNotificationsRead}
+                          onDelete={deleteNotif}
+                        />
+                      ))
+                    )}
+                  </div>
+                  <div className="ss-topbar-notification-footer">
+                    <Link href="/notifications" onClick={() => setNotifOpen(false)}>See all activity <ChevronRight size={14} /></Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -541,50 +613,58 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               </button>
 
               {menuOpen && (
-                <div className="ss-dropdown ss-topbar-profile-menu" role="menu" style={{
-                  position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                  minWidth: 230,
-                }}>
+                <div className="ss-dropdown ss-topbar-profile-menu" role="menu" aria-label="Account menu">
                   <div className="ss-topbar-account-card">
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
-                      {profile?.display_name || profile?.username}
+                    <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={46} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} />
+                    <div className="ss-topbar-account-copy">
+                      <strong>{profile?.display_name || profile?.username || 'Member'}</strong>
+                      <span>@{profile?.username}</span>
+                      <Link href="/settings/membership" onClick={() => setMenuOpen(false)}><Badge variant="save">{tierLabel}</Badge></Link>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>@{profile?.username}</div>
-                    <Link href="/settings/membership" onClick={() => setMenuOpen(false)} style={{ display: 'inline-block', marginTop: 6, textDecoration: 'none' }}>
-                      <Badge variant="save">{tierLabel}</Badge>
-                    </Link>
+                    <Link href={`/profile/${profile?.username}`} className="ss-topbar-account-open" onClick={() => setMenuOpen(false)} aria-label="View your profile"><ChevronRight size={16} /></Link>
                   </div>
+                  <p className="ss-topbar-menu-label">Account</p>
                   <Link href={`/profile/${profile?.username}`} className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <User size={14} /> My Profile
+                    <User size={15} /><span>Profile</span><ChevronRight size={13} />
+                  </Link>
+                  <Link href="/bookmarks" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <Bookmark size={15} /><span>Bookmarks</span><ChevronRight size={13} />
                   </Link>
                   <Link href="/settings" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                    <Settings size={14} /> Settings
+                    <Settings size={15} /><span>Settings</span><ChevronRight size={13} />
+                  </Link>
+                  <Link href="/settings/membership" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <CreditCard size={15} /><span>Membership</span><ChevronRight size={13} />
                   </Link>
                   {(profile?.account_type === 'creator' || profile?.username?.toLowerCase() === 'slipsurge') && (
                     <>
-                      <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                      <p className="ss-topbar-menu-label">Creator</p>
                       <Link href="/creators/studio" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                        <Sparkles size={14} /> Creator Studio
+                        <Sparkles size={15} /><span>Creator Studio</span><ChevronRight size={13} />
                       </Link>
                       <Link href="/creators/payouts" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                        <WalletCards size={14} /> Payouts
+                        <WalletCards size={15} /><span>Payouts</span><ChevronRight size={13} />
                       </Link>
                     </>
                   )}
                   {profile?.account_type === 'admin' && (
                     <Link href="/admin" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
-                      <Shield size={14} /> Admin Panel
+                      <Shield size={15} /><span>Admin</span><ChevronRight size={13} />
                     </Link>
                   )}
-                  <button className="ss-dropdown-item" onClick={claimDiscordRole} disabled={discordSyncing} style={{ width: '100%', textAlign: 'left' }}>
+                  <p className="ss-topbar-menu-label">Support</p>
+                  <Link href="/support" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <CircleHelp size={15} /><span>Help & support</span><ChevronRight size={13} />
+                  </Link>
+                  <button type="button" className="ss-dropdown-item" onClick={claimDiscordRole} disabled={discordSyncing}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.955 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
                     </svg>
-                    {discordSyncMsg || (discordSyncing ? 'Syncing…' : 'Claim Discord Roles')}
+                    <span>{discordSyncMsg || (discordSyncing ? 'Syncing…' : 'Sync Discord access')}</span>
                   </button>
-                  <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-                  <button className="ss-dropdown-item danger" onClick={signOut}>
-                    <LogOut size={14} /> Sign out
+                  <div className="ss-topbar-menu-separator" />
+                  <button type="button" className="ss-dropdown-item danger" onClick={signOut}>
+                    <LogOut size={15} /><span>Sign out</span>
                   </button>
                 </div>
               )}

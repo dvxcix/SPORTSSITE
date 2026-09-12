@@ -662,7 +662,7 @@
       "count": 1
     },
     "react/no-unescaped-entities": {
-      "count": 5
+      "count": 4
     }
   },
   "src/components/odds-terminal/OddsTerminalClient.tsx": {
@@ -795,9 +795,6 @@
   },
   "src/components/social/NotificationsList.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    },
-    "react/no-unescaped-entities": {
       "count": 1
     }
   },

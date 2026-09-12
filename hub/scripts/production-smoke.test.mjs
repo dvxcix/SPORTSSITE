@@ -148,6 +148,25 @@ test('desktop notifications include realtime and reconnect catch-up', async () =
   assert.ok(source.includes("window.addEventListener('focus', resume)"))
 })
 
+test('activity and account menus preserve explicit unread state and complete navigation', async () => {
+  const topbar = await read('src/components/layout/TopBar.tsx')
+  const activityPage = await read('src/app/notifications/page.tsx')
+  const activityList = await read('src/components/social/NotificationsList.tsx')
+  const css = await read('src/app/globals.css')
+
+  for (const contract of ['NotificationFilter', 'markAllNotificationsRead', 'TopbarNotificationEntry', 'ss-topbar-notification-tabs']) {
+    assert.ok(topbar.includes(contract), `top bar activity center is missing ${contract}`)
+  }
+  for (const destination of ['/bookmarks', '/settings/membership', '/settings/notifications']) {
+    assert.ok(topbar.includes(destination), `account shell omits ${destination}`)
+  }
+  assert.ok(!activityPage.includes(".update({ read: true })"), 'opening the activity page must not silently mark every item read')
+  assert.ok(activityList.includes('markAllRead'))
+  assert.ok(activityList.includes('ss-activity-toolbar'))
+  assert.ok(css.includes(".ss-topbar-notification-row[data-unread='true']"))
+  assert.ok(css.includes('.ss-activity-toolbar'))
+})
+
 test('private account fields are not exposed through public profile reads', async () => {
   const columns = await read('src/lib/supabase/userColumns.ts')
   const auth = await read('src/context/AuthContext.tsx')

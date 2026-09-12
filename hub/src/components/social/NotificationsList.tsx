@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2 } from 'lucide-react'
+import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2, CheckCheck } from 'lucide-react'
 import { useCustomEmojis } from '@/lib/emoji'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -43,6 +43,7 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
   const supabase = useMemo(() => createClient(), [])
   const [renderedAt] = useState(() => Date.now())
   const [notifications, setNotifications] = useState(initialNotifications)
+  const [filter, setFilter] = useState<'all' | 'unread' | 'mentions'>('all')
   const [clearing, setClearing] = useState(false)
   const { confirm, notify } = useFeedback()
 
@@ -69,8 +70,27 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
     }
   }
 
+  async function markAllRead() {
+    const unreadRows = notifications.filter(notification => !notification.read)
+    if (!unreadRows.length) return
+    const unreadIds = new Set(unreadRows.map(notification => notification.id))
+    setNotifications(current => current.map(notification => unreadIds.has(notification.id) ? { ...notification, read: true } : notification))
+    const { error } = await supabase.from('notifications').update({ read: true }).in('id', [...unreadIds]).eq('user_id', userId)
+    if (error) {
+      setNotifications(current => current.map(notification => unreadIds.has(notification.id) ? { ...notification, read: false } : notification))
+      notify({ title: 'Activity not updated', message: 'Please try again.', tone: 'error' })
+    }
+  }
+
+  const unreadCount = notifications.filter(notification => !notification.read).length
+  const filteredNotifications = filter === 'unread'
+    ? notifications.filter(notification => !notification.read)
+    : filter === 'mentions'
+      ? notifications.filter(notification => notification.type === 'mention')
+      : notifications
+
   const groups: Record<string, NotifRow[]> = {}
-  for (const n of notifications) {
+  for (const n of filteredNotifications) {
     const diff = Math.floor((renderedAt - new Date(n.created_at).getTime()) / 86400000)
     const key = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff < 7 ? 'This Week' : 'Earlier'
     groups[key] = [...(groups[key] ?? []), n]
@@ -80,36 +100,38 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
 
   if (notifications.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-        <p style={{ fontSize: 40, marginBottom: 12 }}>🔔</p>
-        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)' }}>You're all caught up</p>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Notifications will appear here</p>
+      <div className="ss-activity-empty">
+        <span><Bell size={24} /></span>
+        <strong>You&apos;re all caught up</strong>
+        <p>New activity will appear here.</p>
       </div>
     )
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button onClick={clearAll} disabled={clearing} style={{
-          display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-sm)', padding: '6px 12px', fontSize: 12, fontWeight: 700,
-          color: 'var(--text-3)', cursor: clearing ? 'default' : 'pointer', opacity: clearing ? 0.6 : 1,
-          transition: 'all 130ms',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--red)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,77,106,0.35)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}>
-          <Trash2 size={12} /> Clear all
-        </button>
+    <div className="ss-activity-center">
+      <div className="ss-activity-toolbar">
+        <div className="ss-activity-tabs" role="tablist" aria-label="Filter notifications">
+          {(['all', 'unread', 'mentions'] as const).map(option => (
+            <button type="button" role="tab" aria-selected={filter === option} data-active={filter === option ? 'true' : 'false'} key={option} onClick={() => setFilter(option)}>
+              {option === 'all' ? 'All' : option === 'unread' ? 'Unread' : 'Mentions'}
+              {option === 'unread' && unreadCount ? <span>{unreadCount > 99 ? '99+' : unreadCount}</span> : null}
+            </button>
+          ))}
+        </div>
+        <div className="ss-activity-actions">
+          <button type="button" onClick={markAllRead} disabled={!unreadCount}><CheckCheck size={14} /> <span>Mark read</span></button>
+          <button type="button" onClick={clearAll} disabled={clearing} className="danger"><Trash2 size={13} /> <span>{clearing ? 'Clearing…' : 'Clear'}</span></button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {filteredNotifications.length === 0 ? (
+        <div className="ss-activity-filter-empty"><CheckCheck size={22} /><strong>No {filter} activity</strong><span>You&apos;re caught up here.</span></div>
+      ) : <div className="ss-activity-groups">
         {Object.entries(groupedGroups).map(([label, entries]) => (
           <div key={label}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-              {label}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <p className="ss-activity-date">{label}</p>
+            <div className="ss-activity-rows">
               {entries.map(entry => Array.isArray(entry)
                 ? <GroupedFollowRow key={entry[0].id} items={entry} nowMs={renderedAt} onDelete={() => deleteMany(entry.map(n => n.id))} />
                 : <NotificationRow key={entry.id} n={entry} nowMs={renderedAt} onDelete={() => deleteMany([entry.id])} />
@@ -117,7 +139,7 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   )
 }
@@ -213,6 +235,8 @@ function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; o
 
   return (
     <div
+      className="ss-activity-row"
+      data-unread={n.read ? 'false' : 'true'}
       style={{
         position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
         borderRadius: 'var(--radius)', border: n.read ? '1px solid transparent' : '1px solid var(--border)',
@@ -227,6 +251,8 @@ function NotificationRow({ n, nowMs, onDelete }: { n: NotifRow; nowMs: number; o
       )}
       {(
         <button
+          type="button"
+          className="ss-activity-dismiss"
           onClick={onDelete}
           aria-label="Dismiss notification"
           style={{
@@ -284,6 +310,8 @@ function GroupedFollowRow({ items, nowMs, onDelete }: { items: NotifRow[]; nowMs
 
   return (
     <div
+      className="ss-activity-row"
+      data-unread={anyUnread ? 'true' : 'false'}
       style={{
         position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
         borderRadius: 'var(--radius)', border: anyUnread ? '1px solid var(--border)' : '1px solid transparent',
@@ -298,6 +326,8 @@ function GroupedFollowRow({ items, nowMs, onDelete }: { items: NotifRow[]; nowMs
       )}
       {(
         <button
+          type="button"
+          className="ss-activity-dismiss"
           onClick={onDelete}
           aria-label="Dismiss notifications"
           style={{
