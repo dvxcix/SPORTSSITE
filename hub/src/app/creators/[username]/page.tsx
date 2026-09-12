@@ -4,6 +4,7 @@ import { ArrowLeft, BadgeCheck, BarChart3, BellRing, Check, LockKeyhole, Message
 import { createClient } from '@/lib/supabase/server'
 import styles from './CreatorStorefront.module.css'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { CreatorFunnelSignal } from '@/components/creator/CreatorFunnelSignal'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
   ])
 
   return <div className={styles.page}>
+    <CreatorFunnelSignal creatorId={creator.id} eventType="storefront_view" />
     <Link href="/creators" className={styles.back}><ArrowLeft size={15} /> Creator marketplace</Link>
     <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,rgba(7,10,8,.96),rgba(7,10,8,.68)),url(${creator.banner_url})` } : undefined}>
       <div className={styles.identity}><MemberAvatar src={creator.avatar_url} name={creator.display_name || creator.username} size={76} tone="creator" ringStyle={creator.avatar_ring_style} ringColor={creator.avatar_ring_color}/><div><span className={styles.verified}><BadgeCheck size={15} /> VERIFIED SLIPSURGE CREATOR</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>

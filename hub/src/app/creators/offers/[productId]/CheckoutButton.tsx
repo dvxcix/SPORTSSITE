@@ -2,14 +2,16 @@
 import { useState } from 'react'
 import { isTrustedWhopUrl } from '@/lib/whopUrl'
 import { ArrowRight, Loader2 } from 'lucide-react'
+import { recordCreatorFunnelEvent } from '@/components/creator/CreatorFunnelSignal'
 
-export function CheckoutButton({ productId }: { productId: string }) {
+export function CheckoutButton({ productId, creatorId }: { productId: string; creatorId: string }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   async function checkout() {
     setLoading(true)
     setError('')
     try {
+      void recordCreatorFunnelEvent(creatorId, 'checkout_started', productId)
       const response = await fetch(`/api/creator/products/${productId}/checkout`, { method: 'POST', signal: AbortSignal.timeout(20_000) })
       const payload = await response.json().catch(() => null)
       if (!response.ok) throw new Error('checkout_failed')
