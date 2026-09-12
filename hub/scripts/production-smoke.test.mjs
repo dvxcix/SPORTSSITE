@@ -1691,6 +1691,7 @@ test('direct messages provide private durable pins, search, and shared-media nav
 
 test('creator analytics are durable, bounded, deduplicated, and derived from successful commerce', async () => {
   const migration = await read('supabase/migrations/20260913003000_creator_funnel_analytics.sql')
+  const rateLimitFix = await read('supabase/migrations/20260913004000_correct_creator_funnel_rate_limit.sql')
   const route = await read('src/app/api/creator/funnel/route.ts')
   const signal = await read('src/components/creator/CreatorFunnelSignal.tsx')
   const studio = await read('src/app/creators/studio/page.tsx')
@@ -1699,9 +1700,12 @@ test('creator analytics are durable, bounded, deduplicated, and derived from suc
   assert.match(migration, /alter table public\.creator_funnel_events enable row level security/)
   assert.match(migration, /creator_id = \(select auth\.uid\(\)\)/)
   assert.match(migration, /creator_funnel_events_session_unique/)
-  assert.match(migration, /private\.check_rate_limit\('creator-funnel:'/)
   assert.match(migration, /on conflict do nothing/)
   assert.match(migration, /revoke all on public\.creator_funnel_events from public, anon, authenticated/)
+  assert.match(rateLimitFix, /v_rate_key text := 'creator-funnel:' \|\| p_session_id::text \|\| ':' \|\| p_creator_id::text/)
+  assert.match(rateLimitFix, /on conflict \(key\) do update set/)
+  assert.match(rateLimitFix, /if v_count > 12 then return false/)
+  assert.match(rateLimitFix, /grant execute on function public\.record_creator_funnel_event.*to anon, authenticated/)
   assert.match(route, /new URL\(origin\)\.host !== request\.nextUrl\.host/)
   assert.match(route, /'Cache-Control': 'no-store'/)
   assert.match(signal, /window\.sessionStorage\.getItem\(key\)/)
