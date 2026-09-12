@@ -24,7 +24,7 @@ import { computeDugoutMomentum, type DugoutMomentumResult, type DugoutMomentumWi
 import { computeHitFloorReads, computeHitPitchProfile, type HitFloorStatus } from '@/lib/hitFloorModel'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
-import { Activity, Ban, BarChart3, BookOpen, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Sparkles, Users, X } from 'lucide-react'
+import { Activity, Ban, BarChart3, BookOpen, Check, ChevronLeft, ChevronRight, ChevronUp, Flame, Lock, MousePointerClick, Search, Settings2, Share2, Sparkles, Users, X } from 'lucide-react'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
 import { computeDugoutPercentValue, getDugoutPercentStyle } from '@/lib/dugoutPercentColor'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
@@ -3456,7 +3456,7 @@ export function getDugoutHeaderCells(
   )
 }
 
-function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange, navigation, onOpenColumns }: {
+function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityPicksMap, openingMap, hrMap, nearMap, highlightMlbId, requestedCapture, date, statcastWindow, onStatcastWindowChange, columnPrefs, density, onDensityChange, navigation, onOpenColumns }: {
   game: any
   splitMap: SplitMap; pitcherMap: PitcherMap
   fhrAvgMap: Record<string, { fd?: number; cz?: number }>
@@ -3466,6 +3466,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   hrMap: Record<string, any[]>
   nearMap: Record<string, any>
   highlightMlbId?: number | null
+  requestedCapture?: string | null
   date: string
   statcastWindow: 'l1' | 'l3' | 'l5' | 'l10'
   onStatcastWindowChange: (w: 'l1' | 'l3' | 'l5' | 'l10') => void
@@ -3496,6 +3497,8 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
   const [stickyCols, setStickyCols] = useState<MultiSortEntry[]>(persistedView.stickyCols)
   const [marketSnapshot, setMarketSnapshot] = useState<DugoutMarketSnapshot>(persistedView.marketSnapshot)
   const [timelineIndex, setTimelineIndex] = useState<number | null>(persistedView.timelineIndex)
+  const [marketShareState, setMarketShareState] = useState<'idle' | 'copied'>('idle')
+  const requestedCaptureAppliedRef = useRef(false)
   const [viewPreset, setViewPreset] = useState<DugoutViewPreset>(persistedView.viewPreset)
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set(persistedView.collapsedTeams))
   const [activeGroup, setActiveGroup] = useState(persistedView.activeGroup)
@@ -3789,6 +3792,23 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       marketTimeline.length - 1,
     ))
   }, [marketTimeline.length, persistedView.marketSnapshot])
+  useEffect(() => {
+    if (!requestedCapture || requestedCaptureAppliedRef.current || !marketTimeline.length) return
+    const target = Date.parse(requestedCapture)
+    if (!Number.isFinite(target)) return
+    let nearestIndex = 0
+    let nearestDistance = Infinity
+    marketTimeline.forEach((point, index) => {
+      const distance = Math.abs(Date.parse(point.capturedAt) - target)
+      if (distance < nearestDistance) { nearestDistance = distance; nearestIndex = index }
+    })
+    requestedCaptureAppliedRef.current = true
+    const frame = window.requestAnimationFrame(() => {
+      setTimelineIndex(nearestIndex)
+      setMarketSnapshot(nearestIndex === 0 ? 'open' : 'now')
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [marketTimeline, requestedCapture])
   const selectedTimelineIndex = marketTimeline.length
     ? Math.min(timelineIndex ?? marketTimeline.length - 1, marketTimeline.length - 1)
     : null
@@ -3806,6 +3826,22 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     const bounded = Math.min(Math.max(index, 0), marketTimeline.length - 1)
     setTimelineIndex(bounded)
     setMarketSnapshot(bounded === 0 ? 'open' : 'now')
+  }
+  const shareMarketMoment = async () => {
+    if (!selectedTimelinePoint) return
+    const url = new URL(window.location.href)
+    url.searchParams.set('date', date)
+    url.searchParams.set('game', String(game.gameKey))
+    url.searchParams.set('at', new Date(selectedTimelinePoint.capturedAt).toISOString())
+    const shareData = { title: `${game.awayAbbr} at ${game.homeAbbr} Market Story`, text: `${selectedTimelineLabel} market capture`, url: url.toString() }
+    try {
+      if (navigator.share) await navigator.share(shareData)
+      else await navigator.clipboard.writeText(url.toString())
+      setMarketShareState('copied')
+      window.setTimeout(() => setMarketShareState('idle'), 1800)
+    } catch (error) {
+      if ((error as DOMException)?.name !== 'AbortError') setMarketShareState('idle')
+    }
   }
   const confirmedLineups = Number(!!game.homeLineupConfirmed) + Number(!!game.awayLineupConfirmed)
   const matchupStatus = game.status === 'Live' ? 'Live' : game.status === 'Final' ? 'Final' : 'Pregame'
@@ -4267,6 +4303,9 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
           </span>
           <em>{marketHistoryLoading ? 'Loading captures' : marketTimeline.length > 1 ? `${marketHistorySourceCount || marketTimeline.length} captures · ${selectedTimelineLabel}` : 'Open / latest only'}</em>
         </label>
+        <button type="button" className="dugout-market-share" onClick={() => void shareMarketMoment()} disabled={!selectedTimelinePoint} aria-label="Share this Market Story capture">
+          {marketShareState === 'copied' ? <Check size={14}/> : <Share2 size={14}/>}<span>{marketShareState === 'copied' ? 'Copied' : 'Share moment'}</span>
+        </button>
       </section>
       <nav className="dugout-timeline-phases" data-count={timelinePhaseIndices.length} aria-label="Market timeline phases">{timelinePhaseIndices.map(phase => <button key={phase.label} type="button" aria-pressed={selectedTimelineIndex === phase.index} onClick={() => chooseTimelineIndex(phase.index)}>{phase.label}</button>)}</nav>
       {activeSortKeys.length > 0 && (
@@ -4974,6 +5013,8 @@ export function DugoutClient({ date }: { date: string }) {
   const pathname = usePathname()
   const highlightMlbId = searchParams.get('highlight')
   const highlightId = highlightMlbId ? parseInt(highlightMlbId, 10) : null
+  const requestedCaptureValue = searchParams.get('at')
+  const requestedCapture = requestedCaptureValue && Number.isFinite(Date.parse(requestedCaptureValue)) ? requestedCaptureValue : null
 
   // Reported live: hitting refresh always landed back on the first game of
   // the day, even after picking a specific one — every other click here
@@ -5314,6 +5355,7 @@ export function DugoutClient({ date }: { date: string }) {
               hrMap={hrMap}
               nearMap={nearMap}
               highlightMlbId={highlightId}
+              requestedCapture={requestedCapture}
               statcastWindow={statcastWindow}
               onStatcastWindowChange={setStatcastWindow}
               columnPrefs={columnPrefs}
