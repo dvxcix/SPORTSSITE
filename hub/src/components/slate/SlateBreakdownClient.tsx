@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, type KeyboardEvent } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { TeamLogo } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import type { TodayGame } from '@slipsurge/core/mlbSchedule'
 import { GameMatchup } from './GameMatchup'
 import { GameLockedUpsell } from '@/components/layout/GameLockedUpsell'
-import { Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import controls from '@/components/product/ResearchControls.module.css'
+import styles from './SlateBreakdownClient.module.css'
 
 // `locked` is added server-side by /api/slate/games for below-Advanced
 // members — always `false` for Advanced+ (see that route for the exact
@@ -27,6 +28,9 @@ export function SlateBreakdownClient({ date, embedded = false, selectedGameKey, 
   const [games, setGames] = useState<SlateGame[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeGameKey, setActiveGameKeyState] = useState<string | null>(null)
+  const [railEdges, setRailEdges] = useState({ start: true, end: true })
+  const railRef = useRef<HTMLDivElement>(null)
+  const gameButtonRefs = useRef(new Map<string, HTMLButtonElement>())
 
   // Reported live (same fix as Dugout): refreshing always landed back on
   // the first game of the day. Captured once via a ref rather than read
@@ -52,6 +56,47 @@ export function SlateBreakdownClient({ date, embedded = false, selectedGameKey, 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [embedded, onGameChange, pathname, router, searchParams])
 
+  const syncRailEdges = useCallback(() => {
+    const rail = railRef.current
+    if (!rail) return
+    const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth)
+    setRailEdges({
+      start: rail.scrollLeft <= 2,
+      end: rail.scrollLeft >= maxScroll - 2,
+    })
+  }, [])
+
+  const scrollRail = useCallback((direction: -1 | 1) => {
+    const rail = railRef.current
+    if (!rail) return
+    rail.scrollBy({ left: direction * Math.max(280, rail.clientWidth * 0.72), behavior: 'smooth' })
+  }, [])
+
+  const handleRailWheel = useCallback((event: WheelEvent) => {
+    const rail = railRef.current
+    if (!rail || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return
+    const maxScroll = rail.scrollWidth - rail.clientWidth
+    const canMove = event.deltaY < 0 ? rail.scrollLeft > 0 : rail.scrollLeft < maxScroll - 1
+    if (!canMove) return
+    event.preventDefault()
+    rail.scrollLeft += event.deltaY
+  }, [])
+
+  const handleRailKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (!games?.length) return
+    const currentIndex = Math.max(0, games.findIndex(game => game.gameKey === (selectedGameKey ?? activeGameKey)))
+    let nextIndex = currentIndex
+    if (event.key === 'ArrowLeft') nextIndex = Math.max(0, currentIndex - 1)
+    else if (event.key === 'ArrowRight') nextIndex = Math.min(games.length - 1, currentIndex + 1)
+    else if (event.key === 'Home') nextIndex = 0
+    else if (event.key === 'End') nextIndex = games.length - 1
+    else return
+    event.preventDefault()
+    const game = games[nextIndex]
+    setActiveGameKey(game.gameKey)
+    gameButtonRefs.current.get(game.gameKey)?.focus()
+  }, [activeGameKey, games, selectedGameKey, setActiveGameKey])
+
   useEffect(() => {
     setGames(null)
     setError(null)
@@ -71,40 +116,99 @@ export function SlateBreakdownClient({ date, embedded = false, selectedGameKey, 
       .catch(() => setError('Failed to load the schedule for this date.'))
   }, [date])
 
+  const effectiveGameKey = selectedGameKey ?? activeGameKey
+
+  useEffect(() => {
+    const rail = railRef.current
+    if (!rail || !games?.length) return
+    rail.addEventListener('wheel', handleRailWheel, { passive: false })
+    return () => rail.removeEventListener('wheel', handleRailWheel)
+  }, [games, handleRailWheel])
+
+  useEffect(() => {
+    const rail = railRef.current
+    if (!rail || !games?.length) return
+    const frame = requestAnimationFrame(() => {
+      gameButtonRefs.current.get(effectiveGameKey ?? '')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      })
+      syncRailEdges()
+    })
+    const observer = new ResizeObserver(syncRailEdges)
+    observer.observe(rail)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [effectiveGameKey, games, syncRailEdges])
+
   if (error) return <PageState kind="error" title="Slate unavailable" message={error} />
   if (!games) return <PageState kind="loading" title="Loading slate" message="Preparing every matchup on the board." />
   if (!games.length) return <PageState kind="empty" title="No games scheduled" message="Choose another date to review a different slate." />
 
-  const effectiveGameKey = selectedGameKey ?? activeGameKey
   const activeGame = games.find(g => g.gameKey === effectiveGameKey) ?? games[0]
   const featuredGame = games.find(g => !g.locked)
 
   return (
     <div>
-      {!embedded && <div className={controls.scrollRail} aria-label="Choose a game">
-        {games.map(g => {
-          const isActive = g.gameKey === effectiveGameKey
-          return (
-            <button
-              key={g.gameKey}
-              onClick={() => setActiveGameKey(g.gameKey)}
-              aria-pressed={isActive}
-              className={`${controls.gameButton} ${isActive ? controls.gameButtonActive : ''}`}
-              style={{
-                opacity: g.locked ? 0.6 : 1,
-              }}
-            >
-              <TeamLogo logo={getTeamLogoUrl(g.awayAbbr)} name={g.awayAbbr} size={18} />
-              <span style={{ color: 'var(--text-3)', fontSize: 10 }}>@</span>
-              <TeamLogo logo={getTeamLogoUrl(g.homeAbbr)} name={g.homeAbbr} size={18} />
-              {!g.homePitcher && !g.awayPitcher && (
-                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>(TBD)</span>
-              )}
-              {g.locked && <Lock size={11} color="var(--text-3)" />}
-            </button>
-          )
-        })}
-      </div>}
+      {!embedded && (
+        <div className={styles.gamePicker}>
+          <button
+            type="button"
+            className={styles.railArrow}
+            onClick={() => scrollRail(-1)}
+            disabled={railEdges.start}
+            aria-label="Show earlier games"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div
+            ref={railRef}
+            className={`${controls.scrollRail} ${styles.gameRail}`}
+            aria-label="Choose a game"
+            role="toolbar"
+            tabIndex={0}
+            onScroll={syncRailEdges}
+            onKeyDown={handleRailKeyDown}
+          >
+            {games.map(g => {
+              const isActive = g.gameKey === effectiveGameKey
+              return (
+                <button
+                  key={g.gameKey}
+                  ref={node => {
+                    if (node) gameButtonRefs.current.set(g.gameKey, node)
+                    else gameButtonRefs.current.delete(g.gameKey)
+                  }}
+                  type="button"
+                  onClick={() => setActiveGameKey(g.gameKey)}
+                  aria-pressed={isActive}
+                  className={`${controls.gameButton} ${isActive ? controls.gameButtonActive : ''}`}
+                  style={{ opacity: g.locked ? 0.6 : 1 }}
+                >
+                  <TeamLogo logo={getTeamLogoUrl(g.awayAbbr)} name={g.awayAbbr} size={18} />
+                  <span className={styles.atSign}>@</span>
+                  <TeamLogo logo={getTeamLogoUrl(g.homeAbbr)} name={g.homeAbbr} size={18} />
+                  <span className={styles.matchupLabel}>{g.awayAbbr} @ {g.homeAbbr}</span>
+                  {!g.homePitcher && !g.awayPitcher && <span className={styles.tbd}>(TBD)</span>}
+                  {g.locked && <Lock size={11} color="var(--text-3)" />}
+                </button>
+              )
+            })}
+          </div>
+          <button
+            type="button"
+            className={styles.railArrow}
+            onClick={() => scrollRail(1)}
+            disabled={railEdges.end}
+            aria-label="Show later games"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
 
       {activeGame && (
         activeGame.locked
