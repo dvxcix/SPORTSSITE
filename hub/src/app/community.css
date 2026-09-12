@@ -69,3 +69,11 @@
 .ss-nested-reply-composer{display:flex;flex:1;min-width:0;align-items:center;gap:4px}
 @media(max-width:560px){.ss-nested-reply-composer{flex-wrap:wrap}.ss-nested-reply-composer>.ss-input{flex-basis:calc(100% - 32px)}}
 .ss-emoji-search{position:sticky;z-index:2;top:-10px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;margin:-10px -10px 9px;padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-3);background:rgba(12,15,17,.97);backdrop-filter:blur(16px)}.ss-emoji-search input{min-width:0;border:0;outline:0;color:var(--text-1);background:transparent;font-size:11px}.ss-emoji-search button{display:grid;width:24px;height:24px;place-items:center;border:0;border-radius:7px;color:var(--text-3);background:var(--surface-3)}.ss-emoji-empty{padding:22px 8px;color:var(--text-4);font-size:10px;text-align:center}
+
+/* Composer utilities live above the timeline, never inside its clipping or
+   content-visibility boundary. FloatingSurface owns placement. */
+.ss-floating-surface.ss-gif-panel{position:fixed;right:auto;bottom:auto;display:grid;width:auto;gap:10px;padding:13px}
+.ss-floating-surface.ss-gif-panel header strong{font-size:12px}
+.ss-floating-surface.ss-gif-panel header button{width:30px;height:30px;border-radius:9px}
+.ss-floating-surface.ss-gif-panel .ss-gif-upload{min-height:46px;border-radius:12px;background:linear-gradient(145deg,rgba(163,230,53,.09),rgba(163,230,53,.035))}
+@media(max-width:620px){.ss-floating-surface.ss-gif-panel{right:8px;bottom:calc(var(--mobile-dock-clearance,76px) + env(safe-area-inset-bottom) + 8px);left:8px;width:auto}}

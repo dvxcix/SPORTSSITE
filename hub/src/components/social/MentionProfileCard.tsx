@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { UserBadges } from './UserBadges'
 import { MemberAvatar } from './MemberAvatar'
+import { FloatingSurface } from '@/components/ui/FloatingSurface'
 
 export type MentionProfile = {
   id: string
@@ -28,50 +28,35 @@ export function MentionProfileCard({ profile }: { profile: MentionProfile }) {
     </div>
     {profile.bio ? <p>{profile.bio}</p> : null}
     <div className="ss-mention-profile-stats"><span><strong>{profile.follower_count ?? 0}</strong> followers</span><span><strong>{profile.pick_record?.wins ?? 0}-{profile.pick_record?.losses ?? 0}</strong> record</span></div>
-    <div className="ss-mention-profile-open">View profile</div>
+    <Link className="ss-mention-profile-open" href={`/profile/${profile.username}`}>View profile</Link>
   </div>
 }
 
-export function MentionHoverLink({ profile }: { profile: MentionProfile }) {
+function ProfilePreviewTarget({ profile, children, className }: { profile: MentionProfile; children: ReactNode; className: string }) {
   const triggerRef = useRef<HTMLSpanElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [visible, setVisible] = useState(false)
-  const [position, setPosition] = useState({ left: 0, top: 0 })
+  const clearTimer = useCallback(() => { if (timerRef.current) clearTimeout(timerRef.current); timerRef.current = null }, [])
+  const show = useCallback(() => { if (window.matchMedia('(hover: none)').matches) return; clearTimer(); timerRef.current = setTimeout(() => setVisible(true), 110) }, [clearTimer])
+  const keepOpen = useCallback(() => { clearTimer(); setVisible(true) }, [clearTimer])
+  const hide = useCallback(() => { clearTimer(); timerRef.current = setTimeout(() => setVisible(false), 180) }, [clearTimer])
+  const close = useCallback(() => { clearTimer(); setVisible(false) }, [clearTimer])
+  useEffect(() => () => clearTimer(), [clearTimer])
 
-  function show() {
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const width = 292
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
-    const top = rect.bottom + 200 > window.innerHeight ? Math.max(8, rect.top - 190) : rect.bottom + 10
-    setPosition({ left, top })
-    setVisible(true)
-  }
-
-  return <span ref={triggerRef} className="ss-mention-tooltip-trigger" onMouseEnter={show} onMouseLeave={() => setVisible(false)} onFocus={show} onBlur={() => setVisible(false)}>
-    <Link href={`/profile/${profile.username}`} onClick={event => event.stopPropagation()} className="ss-mention-link">@{profile.username}</Link>
-    {visible ? createPortal(<div className="ss-mention-profile-popover" style={position}><MentionProfileCard profile={profile} /></div>, document.body) : null}
+  return <span ref={triggerRef} className={className} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
+    {children}
+    <FloatingSurface open={visible} anchorRef={triggerRef} onClose={close} className="ss-mention-profile-popover" width={320} ariaLabel={`Profile preview for ${profile.display_name || profile.username}`} onPointerEnter={keepOpen} onPointerLeave={hide}>
+      <MentionProfileCard profile={profile} />
+    </FloatingSurface>
   </span>
 }
 
-export function ProfileHoverTarget({ profile, children, className = '' }: { profile: MentionProfile; children: React.ReactNode; className?: string }) {
-  const triggerRef = useRef<HTMLSpanElement>(null)
-  const [visible, setVisible] = useState(false)
-  const [position, setPosition] = useState({ left: 0, top: 0 })
+export function MentionHoverLink({ profile }: { profile: MentionProfile }) {
+  return <ProfilePreviewTarget profile={profile} className="ss-mention-tooltip-trigger">
+    <Link href={`/profile/${profile.username}`} onClick={event => event.stopPropagation()} className="ss-mention-link">@{profile.username}</Link>
+  </ProfilePreviewTarget>
+}
 
-  function show() {
-    if (window.matchMedia('(hover: none)').matches) return
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const width = 292
-    setPosition({
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
-      top: rect.bottom + 200 > window.innerHeight ? Math.max(8, rect.top - 190) : rect.bottom + 10,
-    })
-    setVisible(true)
-  }
-
-  return <span ref={triggerRef} className={`ss-profile-hover-target ${className}`} onMouseEnter={show} onMouseLeave={() => setVisible(false)} onFocus={show} onBlur={() => setVisible(false)}>
-    {children}
-    {visible ? createPortal(<div className="ss-mention-profile-popover" style={position}><MentionProfileCard profile={profile} /></div>, document.body) : null}
-  </span>
+export function ProfileHoverTarget({ profile, children, className = '' }: { profile: MentionProfile; children: ReactNode; className?: string }) {
+  return <ProfilePreviewTarget profile={profile} className={`ss-profile-hover-target ${className}`}>{children}</ProfilePreviewTarget>
 }

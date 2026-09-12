@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ImagePlus, Link2, Loader2, X } from 'lucide-react'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { FloatingSurface } from '@/components/ui/FloatingSurface'
 
 const RECENTS_KEY = 'slipsurge:recent-gifs'
 
@@ -30,15 +31,6 @@ export function GifPicker({ onSelect, uploadKind = 'posts' }: { onSelect: (url: 
     const timer = window.setTimeout(() => setRecents(stored), 0)
     return () => window.clearTimeout(timer)
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    function dismiss(event: MouseEvent) { if (!rootRef.current?.contains(event.target as Node)) setOpen(false) }
-    function keyboard(event: KeyboardEvent) { if (event.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', dismiss)
-    document.addEventListener('keydown', keyboard)
-    return () => { document.removeEventListener('mousedown', dismiss); document.removeEventListener('keydown', keyboard) }
-  }, [open])
 
   function choose(value: string) {
     const next = [value, ...recents.filter(item => item !== value)].slice(0, 8)
@@ -67,13 +59,13 @@ export function GifPicker({ onSelect, uploadKind = 'posts' }: { onSelect: (url: 
 
   return <div ref={rootRef} className="ss-gif-picker">
     <button type="button" className="ss-gif-trigger" onClick={() => setOpen(value => !value)} aria-label="Add GIF" aria-expanded={open}>GIF</button>
-    {open && <div className="ss-gif-panel" role="dialog" aria-label="Add a GIF">
+    <FloatingSurface open={open} anchorRef={rootRef} onClose={() => setOpen(false)} className="ss-gif-panel" width={320} mobileSheet ariaLabel="Add a GIF">
       <header><strong>Add GIF</strong><button type="button" onClick={() => setOpen(false)} aria-label="Close GIF picker"><X size={14}/></button></header>
       <button type="button" className="ss-gif-upload" onClick={() => inputRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 size={15} className="animate-spin"/> : <ImagePlus size={15}/>}<span>{uploading ? 'Uploading…' : 'Upload GIF'}</span></button>
       <input ref={inputRef} type="file" accept="image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = '' }}/>
       <div className="ss-gif-url"><Link2 size={13}/><input value={url} onChange={event => { setUrl(event.target.value); if (error) setError('') }} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addUrl() } }} placeholder="Paste GIF link" aria-label="GIF link"/><button type="button" onClick={addUrl}>Add</button></div>
       {error && <p role="alert">{error}</p>}
       {recents.length > 0 && <section><span>Recent</span><div>{recents.map(item => <button type="button" key={item} onClick={() => choose(item)}><SafeImage src={item} alt="Recent GIF"/></button>)}</div></section>}
-    </div>}
+    </FloatingSurface>
   </div>
 }

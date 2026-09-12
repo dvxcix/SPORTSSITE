@@ -1028,8 +1028,9 @@ img { max-width: 100%; }
 .ss-mention-link:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 16%, transparent); }
 .ss-mention-link:hover::after { opacity: 1; animation: ss-mention-sheen .85s ease; }
 @keyframes ss-mention-sheen { to { transform: translateX(70%); } }
-.ss-mention-profile-card { width: 260px; color: var(--text-2); }
-.ss-mention-profile-popover { position: fixed; z-index: 999; width: 292px; padding: 14px; border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border-2)); border-radius: 15px; background: color-mix(in srgb, var(--surface) 95%, transparent); box-shadow: 0 24px 70px rgba(0,0,0,.58), 0 0 30px color-mix(in srgb, var(--accent) 7%, transparent), inset 0 1px rgba(255,255,255,.05); backdrop-filter: blur(22px) saturate(145%); pointer-events: none; animation: ss-mention-card-in 140ms ease-out both; }
+.ss-floating-surface { position: fixed; z-index: var(--layer-modal, 1000); max-width: calc(100vw - 20px); overflow: hidden; border: 1px solid color-mix(in srgb,var(--accent) 22%,var(--border-2)); border-radius: 18px; background: color-mix(in srgb,var(--surface) 96%,transparent); box-shadow: 0 28px 90px rgba(0,0,0,.68),0 0 38px color-mix(in srgb,var(--accent) 8%,transparent),inset 0 1px rgba(255,255,255,.055); backdrop-filter: blur(26px) saturate(150%); isolation: isolate; }
+.ss-mention-profile-card { width: 100%; color: var(--text-2); }
+.ss-mention-profile-popover { padding: 15px; animation: ss-mention-card-in 140ms ease-out both; }
 @keyframes ss-mention-card-in { from { opacity: 0; transform: translateY(4px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .ss-mention-profile-top { display: flex; align-items: center; gap: 9px; }
 .ss-mention-profile-avatar { width: 44px; height: 44px; }
@@ -1039,7 +1040,8 @@ img { max-width: 100%; }
 .ss-mention-profile-card > p { display: -webkit-box; margin: 10px 0 0; overflow: hidden; color: var(--text-2); font-size: 11px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .ss-mention-profile-stats { display: flex; gap: 14px; margin-top: 10px; color: var(--text-3); font-size: 9px; }
 .ss-mention-profile-stats strong { color: var(--text-1); font-size: 10px; }
-.ss-mention-profile-open { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--accent); font: 850 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.ss-mention-profile-open { display:flex;min-height:32px;align-items:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);color:var(--accent);font:850 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase; }
+@media(max-width:620px){.ss-floating-surface.is-mobile-sheet{right:8px!important;bottom:calc(var(--mobile-dock-clearance,76px) + env(safe-area-inset-bottom) + 8px)!important;left:8px!important;top:auto!important;width:auto!important;max-width:none;border-radius:20px}.ss-mention-profile-popover{display:none}}
 @media (max-width: 620px) { .ss-mention-menu { position: fixed; right: 10px; bottom: 10px; left: 10px; top: auto; width: auto; max-height: min(70vh, 520px); overflow-y: auto; } .ss-mention-menu-foot { display: none; } }
 .ss-feed-list { position: relative; display: grid; gap: 16px; }
 .ss-feed-post {
@@ -1233,6 +1235,7 @@ img { max-width: 100%; }
 .ss-composer-tool:hover { color: var(--accent) !important; background: var(--accent-dim) !important; transform: translateY(-1px); }
 .ss-composer-visibility-menu { right: 0; bottom: calc(100% + 7px); width: 166px; padding: 5px; }
 .ss-composer-visibility-menu button { border-radius: 9px !important; }
+.ss-floating-surface.ss-composer-sport-menu,.ss-floating-surface.ss-composer-visibility-menu{position:fixed;right:auto;bottom:auto}
 .ss-composer-post-button { min-width: 72px; min-height: 34px; padding: 0 16px; border: 0; border-radius: 999px; color: var(--accent-fg); background: var(--accent); box-shadow: 0 7px 20px color-mix(in srgb,var(--accent) 15%,transparent); font-size: 12px; font-weight: 900; cursor: pointer; transition: transform var(--duration-fast),filter var(--duration-fast),opacity var(--duration-fast); }
 .ss-composer-post-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
 .ss-composer-post-button:disabled { opacity: .35; cursor: default; box-shadow: none; }

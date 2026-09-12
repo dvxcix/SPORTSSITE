@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
@@ -16,6 +16,7 @@ import { MentionInput } from './MentionInput'
 import { MemberAvatar } from './MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
 import Link from 'next/link'
+import { FloatingSurface } from '@/components/ui/FloatingSurface'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
@@ -56,27 +57,6 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
     setShowPollForm(mode === 'poll')
     if (mode !== 'pick') { setLegs([]); setWager('') }
   }
-
-  useEffect(() => {
-    if (!sportOpen && !visibilityOpen) return
-    function dismissMenus(event: MouseEvent) {
-      const target = event.target as Node
-      if (!sportMenuRef.current?.contains(target)) setSportOpen(false)
-      if (!visibilityMenuRef.current?.contains(target)) setVisibilityOpen(false)
-    }
-    function dismissWithKeyboard(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setSportOpen(false)
-        setVisibilityOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', dismissMenus)
-    document.addEventListener('keydown', dismissWithKeyboard)
-    return () => {
-      document.removeEventListener('mousedown', dismissMenus)
-      document.removeEventListener('keydown', dismissWithKeyboard)
-    }
-  }, [sportOpen, visibilityOpen])
 
   async function uploadImage(file: File) {
     if (!user) return
@@ -257,8 +237,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
                 {sportLogoUrl(sport) ? <SafeImage src={sportLogoUrl(sport)} alt="" /> : null}
                 <span>{sport}</span><ChevronDown size={12} />
               </button>
-              {sportOpen ? (
-                <div className="ss-composer-sport-menu" role="menu" aria-label="Choose a sport">
+              <FloatingSurface open={sportOpen} anchorRef={sportMenuRef} onClose={() => setSportOpen(false)} className="ss-composer-sport-menu" width={240} mobileSheet role="menu" ariaLabel="Choose a sport">
                   {SPORTS.map(option => {
                     const logo = sportLogoUrl(option)
                     return <button key={option} type="button" role="menuitemradio" aria-checked={sport === option} onClick={() => { setSport(option); setSportOpen(false) }}>
@@ -266,8 +245,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
                       <span>{option}</span>{sport === option ? <span className="ss-composer-sport-check">✓</span> : null}
                     </button>
                   })}
-                </div>
-              ) : null}
+              </FloatingSurface>
             </div>
           )}
 
@@ -406,8 +384,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
                   <span className="hidden sm:inline">{visibility === 'public' ? 'Public' : 'Followers'}</span>
                   <ChevronDown size={11} />
                 </button>
-                {visibilityOpen && (
-                  <div className="ss-composer-visibility-menu">
+                <FloatingSurface open={visibilityOpen} anchorRef={visibilityMenuRef} onClose={() => setVisibilityOpen(false)} className="ss-composer-visibility-menu" width={180} role="menu" ariaLabel="Choose post audience">
                     {([
                       { key: 'public' as const, icon: <Globe size={12} />, label: 'Public', desc: 'Anyone can see this' },
                       { key: 'followers' as const, icon: <Users size={12} />, label: 'Followers', desc: 'Only your followers' },
@@ -415,6 +392,8 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
                       <button
                         key={opt.key}
                         type="button"
+                        role="menuitemradio"
+                        aria-checked={visibility === opt.key}
                         onClick={() => { setVisibility(opt.key); setVisibilityOpen(false) }}
                         data-active={visibility === opt.key}
                       >
@@ -422,8 +401,7 @@ export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
                         <span>{opt.label}</span>
                       </button>
                     ))}
-                  </div>
-                )}
+                </FloatingSurface>
               </div>
               {content.length > 400 && (
                 <span className="ss-composer-count" data-low={remaining < 50}>{remaining}</span>

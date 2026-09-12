@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Search, Smile, X } from 'lucide-react'
 import { EMOJI_CATEGORIES, useCustomEmojis, groupCustomEmojisByCategory } from '@/lib/emoji'
 import { SafeImage } from '@/components/ui/SafeImage'
 import styles from './EmojiPicker.module.css'
+import { FloatingSurface } from '@/components/ui/FloatingSurface'
 
-const PANEL_WIDTH = 280
-const VIEWPORT_MARGIN = 8
 const RECENTS_KEY = 'slipsurge:recent-emojis'
 
 // Click inserts the raw unicode character for a standard emoji, or the
@@ -24,7 +23,6 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
   const customEmojis = useCustomEmojis()
   const customGroups = groupCustomEmojisByCategory(customEmojis)
   const ref = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
   // Panel used to always open upward-left of the trigger button
   // (bottom:110%, left:0) with no regard for the button's actual screen
   // position — fine for a desktop composer with room to spare, but a
@@ -34,7 +32,6 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
   // the right edge, landing it wherever, overlapping unrelated chrome.
   // Measured after render (real panel height varies with emoji group
   // count) and clamped to stay fully on-screen.
-  const [pos, setPos] = useState<{ left: number; vertical: 'up' | 'down' } | null>(null)
   const needle = query.trim().toLowerCase()
   const visibleCustomGroups = useMemo(() => customGroups.map(group => ({ ...group, emoji: group.emoji.filter(item => !needle || item.code.includes(needle) || group.label.toLowerCase().includes(needle)) })).filter(group => group.emoji.length), [customGroups, needle])
   const visibleStandardGroups = useMemo(() => EMOJI_CATEGORIES.map(group => ({ ...group, emoji: group.emoji.filter(item => !needle || item.code.includes(needle) || item.char.includes(needle) || group.label.toLowerCase().includes(needle)) })).filter(group => group.emoji.length), [needle])
@@ -65,36 +62,6 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
     setOpen(false)
   }
 
-  useLayoutEffect(() => {
-    if (!open || !ref.current) { setPos(null); return }
-    const btnRect = ref.current.getBoundingClientRect()
-    const panelHeight = panelRef.current?.offsetHeight ?? 320
-
-    let left = 0
-    const absLeft = btnRect.left + left
-    if (absLeft + PANEL_WIDTH > window.innerWidth - VIEWPORT_MARGIN) {
-      left -= absLeft + PANEL_WIDTH - (window.innerWidth - VIEWPORT_MARGIN)
-    }
-    if (btnRect.left + left < VIEWPORT_MARGIN) {
-      left = VIEWPORT_MARGIN - btnRect.left
-    }
-
-    const vertical: 'up' | 'down' = btnRect.top - panelHeight - VIEWPORT_MARGIN < 0 ? 'down' : 'up'
-
-    setPos({ left, vertical })
-  }, [open, customGroups.length])
-
-  useEffect(() => {
-    if (!open) return
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    function onKeyDown(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', onClickOutside)
-    document.addEventListener('keydown', onKeyDown)
-    return () => { document.removeEventListener('mousedown', onClickOutside); document.removeEventListener('keydown', onKeyDown) }
-  }, [open])
-
   return (
     <div ref={ref} className={styles.root}>
       <button
@@ -107,11 +74,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
         <Smile size={18} />
       </button>
 
-      {open && (
-        <div
-          ref={panelRef}
-          className={`${styles.panel} ${pos?.vertical === 'down' ? styles.down : styles.up}`}
-          style={{ left: pos?.left ?? 0, visibility: pos ? 'visible' : 'hidden' }}>
+      <FloatingSurface open={open} anchorRef={ref} onClose={() => setOpen(false)} className={styles.panel} width={300} mobileSheet ariaLabel="Choose an emoji">
           <div className="ss-emoji-search"><Search size={13}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search emoji" aria-label="Search emoji"/>{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear emoji search"><X size={12}/></button>}</div>
           {!needle && recentEmoji.length > 0 && (
             <div className={styles.group}>
@@ -162,8 +125,7 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
             </div>
           ))}
           {!visibleCustomGroups.length && !visibleStandardGroups.length && <p className="ss-emoji-empty">No matching emoji</p>}
-        </div>
-      )}
+      </FloatingSurface>
     </div>
   )
 }
