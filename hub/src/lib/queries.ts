@@ -80,7 +80,7 @@ export async function getChannelMessages(channelId: string, limit = 50): Promise
   const supabase = await createClient()
   const { data } = await supabase
     .from('messages')
-    .select(`*, sender:users(id,username,display_name,avatar_url,is_verified,account_type)`)
+    .select(`*, sender:users(id,username,display_name,avatar_url,is_verified,account_type), reply_to:messages!messages_reply_to_id_fkey(id,content,sender_id,sender:users!messages_sender_id_fkey(id,username,display_name,avatar_url))`)
     .eq('channel_id', channelId)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true })

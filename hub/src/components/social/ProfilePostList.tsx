@@ -68,16 +68,16 @@ export function ProfilePostList({ userId, tab, initialPosts, initialCursor, init
   }, [loadMore])
 
   return (
-    <div className="space-y-3">
+    <div className="ss-profile-post-list">
       {posts.map((post, i) => (
         <PostCardClient key={keyFor(post)} post={post} index={i} />
       ))}
       <div ref={sentinelRef} className="h-4" />
       {loading && (
-        <div className="space-y-3 rounded-2xl border border-white/[.06] bg-white/[.02] p-4" aria-label="Loading more posts"><div className="flex items-center gap-3"><SkeletonBlock className="h-9 w-9 rounded-full" /><div className="flex-1 space-y-2"><SkeletonBlock className="w-32" /><SkeletonBlock className="w-20" /></div></div><SkeletonBlock className="w-full" /><SkeletonBlock className="w-3/4" /></div>
+        <div className="ss-profile-post-loading" aria-label="Loading more posts"><div className="flex items-center gap-3"><SkeletonBlock className="h-9 w-9 rounded-full" /><div className="flex-1 space-y-2"><SkeletonBlock className="w-32" /><SkeletonBlock className="w-20" /></div></div><SkeletonBlock className="w-full" /><SkeletonBlock className="w-3/4" /></div>
       )}
       {!hasMore && posts.length > 0 && (
-        <p className="text-center text-zinc-600 text-sm py-6">End of posts</p>
+        <p className="ss-feed-end">You&apos;re all caught up</p>
       )}
     </div>
   )

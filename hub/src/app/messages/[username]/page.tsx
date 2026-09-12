@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DMRoom } from '@/components/chat/DMRoom'
+import { DMRoom, type DMMessage } from '@/components/chat/DMRoom'
 import { isBlockedEitherWay } from '@/lib/blocks'
 
 export const dynamic = 'force-dynamic'
@@ -32,7 +32,7 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
 
   const { data: history } = await supabase
     .from('messages')
-    .select('id, content, created_at, sender_id, sender:users!messages_sender_id_fkey(username, display_name, avatar_url)')
+    .select('id, content, created_at, sender_id, reply_to_id, media_urls, sender:users!messages_sender_id_fkey(username, display_name, avatar_url), reply_to:messages!messages_reply_to_id_fkey(id, content, sender_id)')
     .or(
       `and(sender_id.eq.${user.id},dm_recipient_id.eq.${partner.id}),and(sender_id.eq.${partner.id},dm_recipient_id.eq.${user.id})`
     )
@@ -40,5 +40,5 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     .order('created_at', { ascending: true })
     .limit(100)
 
-  return <DMRoom partner={partner} currentUserId={user.id} initialMessages={history ?? []} />
+  return <DMRoom partner={partner} currentUserId={user.id} initialMessages={(history ?? []) as unknown as DMMessage[]} />
 }

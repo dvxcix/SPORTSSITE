@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, Send, TrendingUp } from 'lucide-react'
+import { ArrowDown, Image as ImageIcon, Reply, Send, TrendingUp, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/lib/supabase/types'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
@@ -11,6 +11,8 @@ import { sendDesktopNotification } from '@/lib/desktopNotifications'
 import { MentionInput } from '@/components/social/MentionInput'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
 import { notifyMentions } from '@/lib/mentions'
+import { uploadMedia } from '@/lib/uploadMedia'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 interface ChatRoomProps {
   channelId: string
@@ -25,11 +27,15 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const [imageUrl, setImageUrl] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [atBottom, setAtBottom] = useState(true)
   const [unseenCount, setUnseenCount] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
   const supabase = useMemo(() => createClient(), [])
 
@@ -94,21 +100,41 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
 
   async function sendMessage(event: React.FormEvent) {
     event.preventDefault()
-    if (!input.trim() || !currentUserId || sending) return
+    if ((!input.trim() && !imageUrl) || !currentUserId || sending || uploadingImage) return
     const content = input.trim()
     setSendError('')
     setSending(true)
     const { data, error } = await supabase.from('messages').insert({
-      channel_id: channelId, sender_id: currentUserId, content, message_type: 'text',
+      channel_id: channelId, sender_id: currentUserId, content,
+      reply_to_id: replyingTo?.id ?? null,
+      media_urls: imageUrl ? [imageUrl] : [],
+      message_type: imageUrl ? 'media' : 'text',
     }).select('id').single()
     if (!error && data) {
       setInput('')
+      setImageUrl('')
+      setReplyingTo(null)
       await notifyMentions(supabase, currentUserId, content, `/channels/${channelSlug}`, data.id, 'a channel message')
       requestAnimationFrame(() => inputRef.current?.focus())
     } else {
       setSendError('Message not sent. Try again.')
     }
     setSending(false)
+  }
+
+  async function uploadImage(file: File) {
+    if (!currentUserId) return
+    setUploadingImage(true)
+    setSendError('')
+    try {
+      const result = await uploadMedia(file, 'messages')
+      if ('error' in result) setSendError(result.error)
+      else setImageUrl(result.publicUrl)
+    } catch {
+      setSendError('Image upload failed. Try again.')
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   return <div className="ss-chat-room">
@@ -119,7 +145,8 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
         const startsGroup = !previous || previous.sender_id !== message.sender_id || new Date(message.created_at).getTime() - new Date(previous.created_at).getTime() > 300000
         const name = message.sender?.display_name || message.sender?.username || 'Member'
         const stamp = new Date(message.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-        return <article key={message.id} className={`ss-chat-message ${startsGroup ? 'starts-group' : ''} ${message.sender_id === currentUserId ? 'is-own' : ''}`}>
+        const replyTarget = message.reply_to ?? messages.find(item => item.id === message.reply_to_id)
+        return <article id={`message-${message.id}`} key={message.id} className={`ss-chat-message ${startsGroup ? 'starts-group' : ''} ${message.sender_id === currentUserId ? 'is-own' : ''}`}>
           {startsGroup ? (
             message.sender?.username
               ? <Link href={`/profile/${message.sender.username}`} className="ss-chat-avatar"><MemberAvatar src={message.sender.avatar_url} name={name} size={38} /></Link>
@@ -127,7 +154,10 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
           ) : <time>{stamp}</time>}
           <div className="ss-chat-message-body">
             {startsGroup && <header>{message.sender?.username ? <Link href={`/profile/${message.sender.username}`}>{name}</Link> : <strong>{name}</strong>}{message.sender?.is_verified && <span className="ss-chat-verified">✓</span>}<time>{stamp}</time></header>}
+            {replyTarget && <button type="button" className="ss-chat-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={11}/><span>{replyTarget.sender?.display_name || replyTarget.sender?.username || 'Member'}</span><p>{replyTarget.content}</p></button>}
             {message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p><LinkifiedText text={message.content || ''} /></p>}
+            {message.media_urls?.[0] && <SafeImage src={message.media_urls[0]} alt="" className="ss-chat-media"/>}
+            <button type="button" className="ss-chat-inline-action" onClick={() => { setReplyingTo(message); inputRef.current?.focus() }} aria-label={`Reply to ${name}`}><Reply size={12}/> Reply</button>
           </div>
         </article>
       })}
@@ -135,12 +165,16 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
     </div>
     {!atBottom && <button type="button" className="ss-chat-new" onClick={jumpToLatest}><ArrowDown size={14}/>{unseenCount ? `${unseenCount} new` : 'Latest'}</button>}
     <div className="ss-chat-composer-wrap">
+      {replyingTo && <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p>{replyingTo.content}</p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div>}
+      {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
       {!currentUserId ? <p className="ss-chat-signin"><Link href="/auth/login">Sign in</Link> to join the conversation</p> : <form onSubmit={sendMessage} className="ss-chat-composer">
         <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {
           if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() }
         }} placeholder={`Message #${channelName}`} maxLength={1000} rows={1}/>
+        <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
+        <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
         <EmojiPicker onSelect={insertAtCursor}/>
-        <button type="submit" disabled={!input.trim() || sending} aria-label="Send message"><Send size={16}/></button>
+        <button type="submit" disabled={(!input.trim() && !imageUrl) || sending || uploadingImage} aria-label="Send message"><Send size={16}/></button>
       </form>}
       {sendError && <button type="button" className="ss-chat-send-error" onClick={() => inputRef.current?.form?.requestSubmit()}>{sendError}</button>}
     </div>

@@ -3,17 +3,30 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowDown, ArrowLeft, LockKeyhole, Send, Sparkles } from 'lucide-react'
+import { ArrowDown, ArrowLeft, Image as ImageIcon, LockKeyhole, Reply, Send, Sparkles, X } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { uploadMedia } from '@/lib/uploadMedia'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; is_verified?: boolean }
   currentUserId: string
-  initialMessages: any[]
+  initialMessages: DMMessage[]
+}
+
+export type DMMessage = {
+  id: string
+  content: string
+  created_at: string
+  sender_id: string
+  reply_to_id?: string | null
+  sender?: { username?: string; display_name?: string; avatar_url?: string } | null
+  reply_to?: Pick<DMMessage, 'id' | 'content' | 'sender_id'> | null
+  media_urls?: string[] | null
 }
 
 export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps) {
@@ -21,11 +34,15 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [replyingTo, setReplyingTo] = useState<DMMessage | null>(null)
+  const [imageUrl, setImageUrl] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [atBottom, setAtBottom] = useState(true)
   const [unseenCount, setUnseenCount] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textInputRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
   const supabase = useMemo(() => createClient(), [])
 
@@ -57,9 +74,10 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
         event: 'INSERT', schema: 'public', table: 'messages',
         filter: `dm_recipient_id=eq.${currentUserId}`,
       }, async (payload) => {
-        if (payload.new.sender_id !== partner.id) return
-        const { data } = await supabase.from('users').select('username, display_name, avatar_url').eq('id', payload.new.sender_id).single()
-        setMessages(current => current.some(message => message.id === payload.new.id) ? current : [...current, { ...payload.new, sender: data }])
+        const incoming = payload.new as DMMessage
+        if (incoming.sender_id !== partner.id) return
+        const { data } = await supabase.from('users').select('username, display_name, avatar_url').eq('id', incoming.sender_id).single()
+        setMessages(current => current.some(message => message.id === incoming.id) ? current : [...current, { ...incoming, sender: data }])
         if (!atBottomRef.current) setUnseenCount(count => count + 1)
       })
       .subscribe()
@@ -83,20 +101,22 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   }
 
   async function send() {
-    if (!text.trim() || sending) return
+    if ((!text.trim() && !imageUrl) || sending || uploadingImage) return
     setSending(true)
     setError('')
     const content = text.trim()
     try {
       const { data, error: err } = await supabase.from('messages')
-        .insert({ sender_id: currentUserId, dm_recipient_id: partner.id, content, message_type: 'text' })
-        .select('id, content, created_at, sender_id')
+        .insert({ sender_id: currentUserId, dm_recipient_id: partner.id, content, message_type: imageUrl ? 'media' : 'text', reply_to_id: replyingTo?.id ?? null, media_urls: imageUrl ? [imageUrl] : [] })
+        .select('id, content, created_at, sender_id, reply_to_id, media_urls')
         .single()
       if (err || !data) {
         setError(err?.code === '42501' ? "Couldn't send that message — try again in a moment." : 'Message failed to send — please try again.')
         return
       }
       setText('')
+      setImageUrl('')
+      setReplyingTo(null)
       setMessages(current => current.some(message => message.id === data.id)
         ? current
         : [...current, { ...data, sender: null }])
@@ -112,6 +132,20 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
       setError('Message failed to send — please try again.')
     } finally {
       setSending(false)
+    }
+  }
+
+  async function uploadImage(file: File) {
+    setUploadingImage(true)
+    setError('')
+    try {
+      const result = await uploadMedia(file, 'messages')
+      if ('error' in result) setError(result.error)
+      else setImageUrl(result.publicUrl)
+    } catch {
+      setError('Image upload failed. Try again.')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -145,14 +179,17 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
         <div className="ss-dm-thread-start"><Sparkles size={13} /><span>Your conversation with @{partner.username}</span></div>
         {messages.map(m => {
           const isMe = m.sender_id === currentUserId
+          const replyTarget = m.reply_to ?? messages.find(message => message.id === m.reply_to_id)
           return (
-            <div key={m.id} className={`ss-dm-message ${isMe ? 'is-mine' : ''}`}>
+            <div id={`message-${m.id}`} key={m.id} className={`ss-dm-message ${isMe ? 'is-mine' : ''}`}>
               {!isMe && (
                 <MemberAvatar src={partner.avatar_url} name={partner.display_name || partner.username} size={28} />
               )}
               <div className="ss-dm-bubble-wrap">
+                {replyTarget && <button type="button" className="ss-dm-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={10}/><span>{replyTarget.sender_id === currentUserId ? 'You' : partner.display_name || partner.username}</span><p>{replyTarget.content}</p></button>}
                 <div className="ss-dm-bubble"><LinkifiedText text={m.content || ''} /></div>
-                <time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>
+                {m.media_urls?.[0] && <SafeImage src={m.media_urls[0]} alt="" className="ss-dm-media"/>}
+                <div className="ss-dm-message-meta"><time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time><button type="button" onClick={() => { setReplyingTo(m); textInputRef.current?.focus() }} aria-label="Reply to message"><Reply size={11}/> Reply</button></div>
               </div>
             </div>
           )
@@ -164,6 +201,8 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
 
       {/* Input */}
       <div className="ss-dm-composer">
+        {replyingTo && <div className="ss-dm-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : partner.display_name || partner.username}</span><p>{replyingTo.content}</p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div>}
+        {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
         <div className="ss-dm-composer-row">
           <textarea
             ref={textInputRef}
@@ -176,8 +215,10 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
             maxLength={1000}
             aria-label={`Message ${partner.display_name || partner.username}`}
           />
+          <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
+          <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
           <EmojiPicker onSelect={insertAtCursor} />
-          <button type="button" onClick={send} disabled={!text.trim() || sending}
+          <button type="button" onClick={send} disabled={(!text.trim() && !imageUrl) || sending || uploadingImage}
             className="ss-dm-send" aria-label="Send message">
             <Send size={16} />
           </button>

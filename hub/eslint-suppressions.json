@@ -552,11 +552,6 @@
       "count": 1
     }
   },
-  "src/components/chat/DMRoom.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/components/chat/NewDMForm.tsx": {
     "react/no-unescaped-entities": {
       "count": 2

@@ -97,7 +97,7 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   return { posts, nextCursor, hasMore }
 }
 
-export type ProfileTab = 'all' | 'picks' | 'reposts'
+export type ProfileTab = 'all' | 'picks' | 'reposts' | 'media'
 
 // Profile pages had the identical no-pagination gap as the feed — getUserPosts
 // fetched two flat .limit(20) queries (authored + this user's own reposts),
@@ -114,6 +114,19 @@ export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
   pageSize?: number
 }): Promise<FeedPageResult> {
   const { userId, tab, cursor, pageSize = 20 } = opts
+
+  if (tab === 'media') {
+    let mediaQuery = supabase.from('posts').select(POST_WITH_AUTHOR)
+      .eq('author_id', userId)
+      .not('media_urls', 'eq', '{}')
+      .order('created_at', { ascending: false })
+      .limit(pageSize)
+    if (cursor) mediaQuery = mediaQuery.lt('created_at', cursor)
+    const { data } = await mediaQuery
+    const posts = (data ?? []).filter((post: { media_urls?: unknown }) => Array.isArray(post.media_urls) && post.media_urls.length > 0)
+    const hasMore = (data?.length ?? 0) === pageSize
+    return { posts, nextCursor: hasMore ? posts[posts.length - 1]?.created_at ?? null : null, hasMore }
+  }
 
   if (tab === 'reposts') {
     let repostQuery = supabase.from('reposts')

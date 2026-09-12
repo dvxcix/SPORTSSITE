@@ -22,7 +22,7 @@ export default async function ChannelPage({ params }: Props) {
   if (!channel) notFound()
 
   const [messages, channels, { data: { user } }] = await Promise.all([
-    getChannelMessages(channel.id, 50),
+    getChannelMessages(channel.id, 80),
     getChannels(),
     supabase.auth.getUser(),
   ])

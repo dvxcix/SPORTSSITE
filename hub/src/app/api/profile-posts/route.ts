@@ -4,7 +4,7 @@ import { attachUserReactions } from '@/lib/queries'
 import { isBlockedEitherWay } from '@/lib/blocks'
 import { fetchProfilePostsPage, type ProfileTab } from '@/lib/feedQuery'
 
-const VALID_TABS: ProfileTab[] = ['all', 'picks', 'reposts']
+const VALID_TABS: ProfileTab[] = ['all', 'picks', 'reposts', 'media']
 
 // Backs a profile's infinite scroll — same relationship to the page's own
 // initial SSR fetch as /api/feed has to feed/page.tsx: shares

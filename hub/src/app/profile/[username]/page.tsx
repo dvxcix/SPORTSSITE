@@ -58,6 +58,7 @@ const TABS = [
   { key: 'all', label: 'All' },
   { key: 'picks', label: 'Picks' },
   { key: 'reposts', label: 'Reposts' },
+  { key: 'media', label: 'Media' },
 ] as const
 
 export default async function ProfilePage({ params, searchParams }: Props) {
@@ -342,7 +343,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center">
                 <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><MessageSquareText size={24} /></span>
                 <p className="font-bold text-zinc-300">
-                  {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : 'No posts yet'}
+                  {tab === 'picks' ? 'No picks posted yet' : tab === 'reposts' ? 'Nothing reposted yet' : tab === 'media' ? 'No media posted yet' : 'No posts yet'}
                 </p>
                 {isOwnProfile && tab === 'all' && (
                   <p className="text-zinc-600 text-sm mt-1">Share your first pick on the <a href="/feed" className="text-green-400 hover:underline">feed</a></p>

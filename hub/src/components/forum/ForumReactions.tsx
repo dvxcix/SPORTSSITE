@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { ArrowBigDown, ArrowBigUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 
 const QUICK_REACTIONS = ['🔥', '👍', '💡', '👀'] as const
+const UPVOTE = '⬆️'
+const DOWNVOTE = '⬇️'
 
 export type ForumReaction = {
   emoji: string
@@ -43,18 +46,33 @@ export function ForumReactions({
     const previous = reactions
     setPending(emoji)
     setError('')
-    setReactions(current => mine
-      ? current.filter(reaction => !(reaction.emoji === emoji && reaction.user_id === userId))
-      : [...current, { emoji, user_id: userId }])
+    const isVote = emoji === UPVOTE || emoji === DOWNVOTE
+    const opposite = emoji === UPVOTE ? DOWNVOTE : UPVOTE
+    const hadOpposite = isVote && reactions.some(reaction => reaction.emoji === opposite && reaction.user_id === userId)
+    setReactions(current => {
+      const withoutCurrent = current.filter(reaction => !(reaction.user_id === userId && (reaction.emoji === emoji || (isVote && reaction.emoji === opposite))))
+      return mine ? withoutCurrent : [...withoutCurrent, { emoji, user_id: userId }]
+    })
 
-    const { error: requestError } = mine
-      ? await supabase.from('reactions').delete().match({ user_id: userId, target_id: targetId, target_type: targetType, emoji })
-      : await supabase.from('reactions').insert({ user_id: userId, target_id: targetId, target_type: targetType, emoji })
+    let requestError = null
+    if (isVote) {
+      const { error: removeError } = await supabase.from('reactions').delete().match({ user_id: userId, target_id: targetId, target_type: targetType, emoji: opposite })
+      requestError = removeError
+    }
+    if (!requestError) {
+      const result = mine
+        ? await supabase.from('reactions').delete().match({ user_id: userId, target_id: targetId, target_type: targetType, emoji })
+        : await supabase.from('reactions').insert({ user_id: userId, target_id: targetId, target_type: targetType, emoji })
+      requestError = result.error
+    }
 
     if (requestError) {
       setReactions(previous)
+      if (hadOpposite) {
+        await supabase.from('reactions').insert({ user_id: userId, target_id: targetId, target_type: targetType, emoji: opposite })
+      }
       setError('Could not update reaction.')
-    } else if (!mine) {
+    } else if (!mine && emoji !== DOWNVOTE) {
       await notify(supabase, {
         userId: ownerId,
         actorId: userId,
@@ -72,6 +90,11 @@ export function ForumReactions({
   return (
     <div className="ss-forum-reactions">
       <div>
+        <div className="ss-forum-vote" aria-label="Discussion score">
+          <button type="button" disabled={!userId || pending !== null} className={reactions.some(reaction => reaction.emoji === UPVOTE && reaction.user_id === userId) ? 'is-active' : ''} onClick={() => toggle(UPVOTE)} aria-label="Upvote"><ArrowBigUp size={16}/></button>
+          <strong>{(counts[UPVOTE] ?? 0) - (counts[DOWNVOTE] ?? 0)}</strong>
+          <button type="button" disabled={!userId || pending !== null} className={reactions.some(reaction => reaction.emoji === DOWNVOTE && reaction.user_id === userId) ? 'is-active is-down' : ''} onClick={() => toggle(DOWNVOTE)} aria-label="Downvote"><ArrowBigDown size={16}/></button>
+        </div>
         {QUICK_REACTIONS.map(emoji => {
           const count = counts[emoji] ?? 0
           const mine = reactions.some(reaction => reaction.emoji === emoji && reaction.user_id === userId)
