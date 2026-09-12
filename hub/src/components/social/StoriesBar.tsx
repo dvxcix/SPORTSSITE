@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StoriesViewer } from './StoriesViewer'
 import { MemberAvatar } from './MemberAvatar'
@@ -37,33 +37,30 @@ export function StoriesBar() {
 
   return (
     <>
-      <div className="ss-stories-bar mb-4 overflow-x-auto">
-        <div className="flex gap-3 pb-1" style={{ minWidth: 'max-content' }}>
-          {/* Add story */}
+      <section className="ss-stories-bar" aria-label="Community stories">
+        <div className="ss-stories-heading"><span><Sparkles size={12}/> Stories</span><small>{stories.length ? `${stories.length} live` : 'Share the moment'}</small></div>
+        <div className="ss-stories-rail">
           {userId && (
-            <Link href="/stories/create" className="flex flex-col items-center gap-1.5 shrink-0">
-              <div className="w-16 h-16 rounded-full border-2 border-dashed border-zinc-700 flex items-center justify-center bg-zinc-900 hover:border-green-500 transition-colors">
-                <Plus size={20} className="text-zinc-500" />
+            <Link href="/stories/create" className="ss-story-item is-create">
+              <div className="ss-story-ring">
+                <Plus size={20} />
               </div>
-              <span className="text-[10px] text-zinc-500 font-medium">Your Story</span>
+              <span>Your story</span>
             </Link>
           )}
 
-          {/* Story bubbles */}
           {stories.map((s: any, i: number) => (
-            <button key={s.id} onClick={() => openViewer(i)} className="flex flex-col items-center gap-1.5 shrink-0">
-              <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-br from-green-400 to-blue-500">
-                <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+            <button type="button" key={s.id} onClick={() => openViewer(i)} className="ss-story-item" aria-label={`View ${s.author?.display_name || s.author?.username || 'member'}'s story`}>
+              <div className="ss-story-ring">
+                <div>
                   <MemberAvatar src={s.author?.avatar_url} name={s.author?.display_name || s.author?.username || 'Member'} size={58} />
                 </div>
               </div>
-              <span className="text-[10px] text-zinc-400 font-medium max-w-[64px] truncate text-center">
-                {s.author?.display_name || s.author?.username}
-              </span>
+              <span>{s.author?.display_name || s.author?.username}</span>
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
       {viewerOpen && stories.length > 0 && (
         <StoriesViewer

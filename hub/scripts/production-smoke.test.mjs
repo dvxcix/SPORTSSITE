@@ -872,6 +872,18 @@ test('social workspaces expose durable message replies, discussion votes, and pr
   assert.ok(profilePage.includes("{ key: 'media', label: 'Media' }"))
 })
 
+test('stories provide a polished keyboard, touch, and pauseable viewing flow', async () => {
+  const bar = await read('src/components/social/StoriesBar.tsx')
+  const viewer = await read('src/components/social/StoriesViewer.tsx')
+  const css = await read('src/app/community.css')
+  assert.ok(bar.includes('ss-stories-rail'))
+  assert.ok(viewer.includes("e.key === ' '"))
+  assert.ok(viewer.includes('onTouchStart='))
+  assert.ok(viewer.includes("document.body.style.overflow = 'hidden'"))
+  assert.ok(viewer.includes("href={`/profile/${story.author.username}`}"))
+  assert.ok(css.includes('.ss-story-stage'))
+})
+
 test('public publishing and follow flows recover without leaking backend errors', async () => {
   const follow = await read('src/components/pages/PageFollowButton.tsx')
   const page = await read('src/components/pages/PageSettingsForm.tsx')
