@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { AdminDeleteRowAction } from '@/components/admin/AdminDeleteRowAction'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +36,7 @@ export default async function AdminGroupsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-sm overflow-hidden shrink-0">
-                        {g.avatar_url ? <img src={g.avatar_url} alt="" className="w-full h-full object-cover" /> : (g.emoji || g.name?.[0] || '?')}
+                        {g.avatar_url ? <SafeImage src={g.avatar_url} alt="" className="w-full h-full object-cover" /> : (g.emoji || g.name?.[0] || '?')}
                       </div>
                       <p className="font-medium text-white">{g.name}</p>
                     </div>

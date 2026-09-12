@@ -10,7 +10,7 @@ import { getEffectiveTier } from '@/lib/requireTier'
 import { getFeaturedGameKey } from '@/lib/featuredGame'
 import { hasTierAccess } from '@slipsurge/core/tiers'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
-import { canonAbbr, canonGameKey } from '@slipsurge/core/teamAbbr'
+import { canonGameKey } from '@slipsurge/core/teamAbbr'
 import { getFirstPitchAt } from '@/lib/mlbFirstPitch'
 import { fetchHrFeed } from '@/lib/hrFeed'
 import { fetchBoxscoreOutcomes } from '@/lib/mlbBoxscoreOutcomes'
@@ -27,7 +27,6 @@ import type { PitchlogStatWindow, MatrixTiebreaker, FieldBundle, MmByWindow } fr
 import { computeMmByWindowForGame, buildPitcherMap, type MmPlayerInput } from '@/lib/dugoutPaperScore'
 import { computePrecisionHrScores } from '@/lib/precisionHrModel'
 import {
-  computeOddsRawPrice, computeDugoutSpecsValue, computePitchlogStatValue, computeSavantStatValue, computePicksValue,
   groupTiedCandidates, filterTieGroups, resolveTiebreakers, MULTI_BOOK_MARKET, resolveFieldValue, runPipeline,
 } from '@slipsurge/core/matrixEngine'
 import type { BatterStats } from '@slipsurge/core/batterStatsEngine'

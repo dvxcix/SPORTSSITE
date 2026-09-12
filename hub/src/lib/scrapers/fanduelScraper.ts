@@ -60,10 +60,6 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
   // The archive is intentionally market-agnostic. Visit every event tab,
   // including Plate Appearance, Player Combos, and Pitcher Props, so a new
   // ratio can be built later without changing and rerunning the scraper.
-  function wantTab(_label: string) {
-    return true
-  }
-
   function getCollapsedSections() {
     return QSA('[role="button"][aria-expanded="false"]').filter(el => {
       const lab = el.getAttribute('aria-label')
@@ -170,7 +166,7 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
 
   const allScrapes: any[] = []
   const allTabs = getAllTabDivs()
-  const wanted = allTabs.filter(t => wantTab(t.label))
+  const wanted = allTabs
 
   const activeEl = QSA('[aria-label]').find(e => {
     const lab = e.getAttribute('aria-label') || ''
@@ -180,7 +176,7 @@ export async function runFanduelScrape(options: { maxDurationMs?: number } | voi
     ? (activeEl.getAttribute('aria-label')!.match(/Tab \d+ of \d+:\s*(.+)/) || [])[1]?.trim()
     : null
 
-  if (activeLabel && wantTab(activeLabel)) {
+  if (activeLabel) {
     allScrapes.push(await scrapeCurrentTab(activeLabel))
   }
 

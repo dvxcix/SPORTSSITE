@@ -141,39 +141,8 @@ function buildPitcherMap(rows: any[]) {
   return map
 }
 
-// ─── date strip — same offset-anchored-at-UTC-noon pattern as Weather Lab's,
-// duplicated rather than imported since neither page exports it yet. ────────
-function offsetDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T12:00:00Z')
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().split('T')[0]
-}
 function localToday(): string {
   return new Date().toLocaleDateString('en-CA')
-}
-function DateStrip({ date, onChange }: { date: string; onChange: (d: string) => void }) {
-  const today = localToday()
-  const days = [-2, -1, 0, 1, 2].map(offset => {
-    const d = offsetDate(date, offset)
-    const dt = new Date(d + 'T12:00:00Z')
-    return {
-      date: d, isSelected: d === date, isToday: d === today,
-      dayName: dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
-      dayNum: dt.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' }),
-    }
-  })
-  return (
-    <div style={{ display: 'flex', alignItems: 'stretch', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
-      <button onClick={() => onChange(offsetDate(date, -1))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, flexShrink: 0, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-3)', fontSize: 18, fontWeight: 700, borderRight: '1px solid var(--border)' }}>‹</button>
-      {days.map(({ date: d, isSelected, isToday, dayName, dayNum }) => (
-        <button key={d} onClick={() => onChange(d)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', gap: 3, border: 'none', cursor: 'pointer', background: isSelected ? 'var(--accent)' : 'transparent', borderRight: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: isSelected ? 'var(--accent-fg)' : isToday ? 'var(--accent)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{dayName}</span>
-          <span style={{ fontSize: 12, fontWeight: isSelected || isToday ? 900 : 600, color: isSelected ? 'var(--accent-fg)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>{dayNum}</span>
-        </button>
-      ))}
-      <button onClick={() => onChange(offsetDate(date, 1))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, flexShrink: 0, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-3)', fontSize: 18, fontWeight: 700 }}>›</button>
-    </div>
-  )
 }
 
 // ─── page ────────────────────────────────────────────────────────────────
@@ -337,7 +306,10 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
     return () => { cancelled = true }
   }, [liveN, selected, date])
 
-  const activeRows = liveData ? { R: liveData.pitcherRows.R, L: liveData.pitcherRows.L } : { R: [] as any[], L: [] as any[] }
+  const activeRows = useMemo(
+    () => liveData ? { R: liveData.pitcherRows.R, L: liveData.pitcherRows.L } : { R: [] as any[], L: [] as any[] },
+    [liveData],
+  )
 
   const allRows = [...activeRows.R, ...activeRows.L]
   const winLabel = liveData ? `Last ${liveData.window.games} starts (${liveData.window.dateFrom} – ${liveData.window.dateTo})` : ''
@@ -556,7 +528,6 @@ export function PitcherReportClient({ date: controlledDate, gameKey, embedded = 
                             <BatterVsPitchTable
                               pitchType={pitchType}
                               batters={batters}
-                              date={date}
                               pitcherId={selected.pitcher.id}
                               pitcherHand={selected.pitcher.hand}
                               splitMap={splitMap}

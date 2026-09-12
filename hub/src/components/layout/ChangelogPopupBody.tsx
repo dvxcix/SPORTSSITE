@@ -1,4 +1,5 @@
 'use client'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // The actual visual content of the "what's new" popup — pulled out into its
 // own component so the admin manager's preview renders this EXACT markup,
@@ -30,7 +31,7 @@ export function ChangelogPopupBody({ title, description, how_to_use, screenshot_
       {screenshot_urls.length > 0 && (
         <div style={{ display: 'flex', overflowX: 'auto', gap: 8, padding: '12px 16px 0' }}>
           {screenshot_urls.map(url => (
-            <img key={url} src={url} alt="" style={{ maxHeight: 220, borderRadius: 8, border: '1px solid var(--border)', flexShrink: 0 }} />
+            <SafeImage key={url} src={url} alt="" style={{ maxHeight: 220, borderRadius: 8, border: '1px solid var(--border)', flexShrink: 0 }} />
           ))}
         </div>
       )}

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- ImageResponse/Satori requires native image elements. */
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
@@ -50,7 +51,7 @@ function BookIcon({ book, origin, size }: { book: string; origin: string; size: 
       </div>
     )
   }
-  return <img src={origin + info.favicon} width={size} height={size} style={{ borderRadius: 3, objectFit: 'contain' }} />
+  return <img src={origin + info.favicon} alt="" width={size} height={size} style={{ borderRadius: 3, objectFit: 'contain' }} />
 }
 function fmtOdds(odds: number) {
   return odds > 0 ? `+${odds}` : String(odds)
@@ -65,7 +66,7 @@ function isUnsupportedImageFormat(src: string): boolean {
 
 function Avatar({ src, name, size, bg }: { src?: string | null; name?: string | null; size: number; bg?: string }) {
   if (src && !isUnsupportedImageFormat(src)) {
-    return <img src={src} width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `1.5px solid ${C.border}` }} />
+    return <img src={src} alt="" width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `1.5px solid ${C.border}` }} />
   }
   return (
     <div style={{
@@ -113,7 +114,7 @@ function PlayerCard({ item, origin }: { item: any; origin: string }) {
             display: 'flex', position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%',
             background: C.surface, border: `2px solid ${C.bg}`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
           }}>
-            <img src={teamLogo} width={13} height={13} style={{ objectFit: 'contain' }} />
+            <img src={teamLogo} alt="" width={13} height={13} style={{ objectFit: 'contain' }} />
           </div>
         )}
       </div>
@@ -191,7 +192,7 @@ export async function GET(req: Request) {
           display: 'flex', alignItems: 'center', height: STRIP_H, padding: '0 28px',
           background: `linear-gradient(100deg, ${C.accent} 0%, #9EEB2E 100%)`,
         }}>
-          <img src={origin + '/icon-512.png'} width={46} height={46} style={{ borderRadius: 12, flexShrink: 0 }} />
+          <img src={origin + '/icon-512.png'} alt="" width={46} height={46} style={{ borderRadius: 12, flexShrink: 0 }} />
           <span style={{ fontSize: 17, fontWeight: 900, color: C.accentFg, letterSpacing: -0.2, marginLeft: 12 }}>
             Researched on SlipSurge
           </span>

@@ -367,8 +367,8 @@ function SplitExplorer({ config, splitWindow }: { config: CategoryConfig; splitW
   const [sort, setSort] = useState<SortState>({ col: 'weight', dir: 'desc' })
 
   const rows = windowSel === 'recency' ? splitWindow.recency : splitWindow.season
-  const metricKeys = config.cols.map(c => c.key)
-  const aggregated = useMemo(() => aggregateByDims(rows, groupBy, config.weightKey, metricKeys), [rows, groupBy])
+  const metricKeys = useMemo(() => config.cols.map(c => c.key), [config.cols])
+  const aggregated = useMemo(() => aggregateByDims(rows, groupBy, config.weightKey, metricKeys), [rows, groupBy, config.weightKey, metricKeys])
 
   if (!splitWindow.season.length && !splitWindow.recency.length) return null
 
@@ -588,7 +588,7 @@ export function PlayerPageClient({ mlbId }: { mlbId: string }) {
   if (error) return <PageState kind="error" title="Player data unavailable" message={error} />
   if (!data) return <PageState kind="loading" title="Loading player profile" message="Preparing current and historical performance." />
 
-  const { player, seasonStats, careerStats, statcastSeason, pitchArsenal, form, splits, swingTake, battingStance, homeRuns, isBatter, isPitcher } = data
+  const { player, seasonStats, statcastSeason, pitchArsenal, form, splits, swingTake, battingStance, homeRuns, isBatter, isPitcher } = data
 
   const evb = statcastSeason.hitting.exit_velocity_barrels
   const xs = statcastSeason.hitting.expected_stats

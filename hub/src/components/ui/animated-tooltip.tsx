@@ -8,6 +8,7 @@ import {
   useMotionValue,
   useSpring,
 } from "motion/react";
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const AnimatedTooltip = ({
   items,
@@ -46,7 +47,7 @@ export const AnimatedTooltip = ({
 
   return (
     <>
-      {items.map((item, idx) => (
+      {items.map((item) => (
         <div
           className="group relative -mr-4"
           key={item.name}
@@ -84,7 +85,7 @@ export const AnimatedTooltip = ({
               </motion.div>
             )}
           </AnimatePresence>
-          <img
+          <SafeImage
             onMouseMove={handleMouseMove}
             height={100}
             width={100}

@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { TierGate } from '@/components/layout/TierGate'
 import { mlbHeadshot, mlbTeamLogo } from '@slipsurge/core/mlb-api'
 import styles from '@/components/product/EntityPage.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const revalidate = 1800
 
@@ -63,7 +64,7 @@ export default async function MlbTeamPage({ params }: { params: Promise<{ id: st
       <div className={styles.page} style={{ '--entity-color': '#9cff39' } as CSSProperties}>
         <header className={styles.hero}>
           <div className={styles.avatar}>
-            <img src={mlbTeamLogo(data.team.id)} alt={`${data.team.name} logo`} />
+            <SafeImage src={mlbTeamLogo(data.team.id)} alt={`${data.team.name} logo`} />
           </div>
           <div className={styles.identity}>
             <p className={styles.eyebrow}>MLB team hub</p>
@@ -88,7 +89,7 @@ export default async function MlbTeamPage({ params }: { params: Promise<{ id: st
               {players.map(player => (
                 <Link key={player.person.id} href={`/players/${player.person.id}`} className={styles.row}>
                   <div className={styles.rowAvatar}>
-                    <img src={mlbHeadshot(player.person.id)} alt="" loading="lazy" />
+                    <SafeImage src={mlbHeadshot(player.person.id)} alt="" loading="lazy" />
                   </div>
                   <div className={styles.rowMain}>
                     <div className={styles.rowName}>{player.person.fullName}</div>

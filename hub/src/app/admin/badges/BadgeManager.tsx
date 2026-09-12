@@ -7,6 +7,7 @@ import { invalidateBadgeCache } from '@/lib/badges'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { Trash2, Plus, UserPlus, X, ChevronDown, ChevronRight, Users, Pencil, Sparkles } from 'lucide-react'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type BadgeRow = { id: string; name: string; icon_url: string; description: string; card_image_url: string | null }
 type BadgeMember = { id: string; username: string; display_name: string | null; avatar_url: string | null }
@@ -169,7 +170,7 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
             return (
               <div key={b.id} className="ss-badge-admin-card">
                 <div className="ss-badge-admin-summary">
-                  <span className="ss-badge-admin-icon"><img src={b.icon_url} alt={b.name} /></span>
+                  <span className="ss-badge-admin-icon"><SafeImage src={b.icon_url} alt={b.name} /></span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate flex items-center gap-1.5">
                       {b.name}
@@ -258,7 +259,7 @@ function BadgeEditPanel({ badge, onSave, onCancel }: {
         </label>
         {hasCard && (
           <div className="flex items-center gap-3 pl-6">
-            {cardPreview && <img src={cardPreview} alt="" className="w-16 h-auto rounded border border-zinc-800" />}
+            {cardPreview && <SafeImage src={cardPreview} alt="" className="w-16 h-auto rounded border border-zinc-800" />}
             <div>
               <label className="block text-xs font-bold text-zinc-400 mb-1.5">
                 {badge.card_image_url ? 'Replace card image' : 'Upload card image'}
@@ -331,7 +332,7 @@ function BadgeMembersPanel({ badge, members, onAward, onRevoke, onAwardAll }: {
           {results.map(u => (
             <div key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-800/60">
               <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white">
-                {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
+                {u.avatar_url ? <SafeImage src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
               </div>
               <span className="text-sm text-white flex-1 truncate">{u.display_name || u.username} <span className="text-zinc-500">@{u.username}</span></span>
               <button onClick={() => onAward(badge.id, u)} disabled={memberIds.has(u.id)}
@@ -352,7 +353,7 @@ function BadgeMembersPanel({ badge, members, onAward, onRevoke, onAwardAll }: {
             {members.map(m => m.user && (
               <div key={m.user.id} className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-zinc-800/60">
                 <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 overflow-hidden flex items-center justify-center text-[9px] font-bold text-white">
-                  {m.user.avatar_url ? <img src={m.user.avatar_url} alt="" className="w-full h-full object-cover" /> : (m.user.display_name || m.user.username)[0].toUpperCase()}
+                  {m.user.avatar_url ? <SafeImage src={m.user.avatar_url} alt="" className="w-full h-full object-cover" /> : (m.user.display_name || m.user.username)[0].toUpperCase()}
                 </div>
                 <span className="text-xs text-zinc-300 flex-1 truncate">@{m.user.username}</span>
                 <button onClick={() => onRevoke(badge.id, m.user!.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label="Revoke">

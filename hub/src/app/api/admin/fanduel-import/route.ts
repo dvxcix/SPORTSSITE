@@ -292,7 +292,7 @@ export async function POST(req: Request) {
           }
         }
         let count = 0
-        for (const [nn, v] of partnersByPlayer.entries()) {
+        for (const v of partnersByPlayer.values()) {
           const p = getPlayer(v.player_name)
           if (!p) continue
           const min = Math.min(...v.entries.map(e => e.price))

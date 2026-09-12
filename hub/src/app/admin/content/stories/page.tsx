@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { AdminDeleteRowAction } from '@/components/admin/AdminDeleteRowAction'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +40,7 @@ export default async function AdminStoriesPage() {
                       {s.media_url ? (
                         <div className="flex items-center gap-2">
                           {s.media_type === 'image' ? (
-                            <img src={s.media_url} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                            <SafeImage src={s.media_url} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
                           ) : (
                             <span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded shrink-0">{s.media_type}</span>
                           )}

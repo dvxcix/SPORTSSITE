@@ -10,7 +10,6 @@ const everyMinute = 4
 const everyTwoMinutes = 7
 const everyFiveMinutes = 12
 const everyFifteenMinutes = 35
-const everyThirtyMinutes = 70
 const daily = 1_560
 
 export const TRACKED_PIPELINES: PipelineDefinition[] = [

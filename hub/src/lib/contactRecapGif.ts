@@ -226,7 +226,6 @@ function frameSvg(event: DailyContactEvent, rawProgress: number, assets: FrameAs
   const batterTitleSize = batterLabel.length > 25 ? 27 : batterLabel.length > 21 ? 30 : 34
   const pitchReceipt = event.pitchType ? ` / ${event.pitchType}${event.pitchSpeed != null ? ` ${event.pitchSpeed.toFixed(1)} mph` : ''}` : ''
   const matchupDetails = compactText(`${event.batterTeam} / ${event.half} ${event.inning ?? '-'} / off ${event.pitcherName}${pitchReceipt}`, 70)
-  const matchupLabel = compactText(`${event.batterTeam}  ·  ${event.half} ${event.inning ?? '-'}  ·  off ${event.pitcherName}`, 58)
   const tailMarkup = Array.from({ length: 6 }, (_, index) => {
     const point = flightPoint(event, Math.max(0, progress - ((index + 1) * .018)))
     const opacity = Math.max(.03, .34 - index * .05)

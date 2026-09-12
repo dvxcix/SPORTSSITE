@@ -9,6 +9,7 @@ import { ParkFieldSvg } from '@/components/sports/ParkFieldSvg'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { DateButtonNavigator } from '@/components/product/DateButtonNavigator'
 import { PageState } from '@/components/layout/PageState'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // For the logo halo — a plain white glow read as flat/ugly against several
 // teams' colors, so the halo uses that team's own secondary color instead.
@@ -190,10 +191,6 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
 
   const withHrs = data?.batters.filter(b => b.career > 0) ?? []
   const withoutHrs = data?.batters.filter(b => b.career === 0) ?? []
-  // Dugout's date strip/data fetch keys off the ET calendar date, same as
-  // everywhere else in the app that bridges a UTC game timestamp to it.
-  const dugoutDate = new Date(game.gameDate).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-
   return (
     <div
       onClick={onClose}
@@ -207,14 +204,14 @@ function ParkHrModal({ game, onClose }: { game: WeatherGame; onClose: () => void
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {getTeamLogoUrl(game.awayAbbr) && (
-                <img src={getTeamLogoUrl(game.awayAbbr)} alt={game.awayAbbr} style={{
+                <SafeImage src={getTeamLogoUrl(game.awayAbbr)} alt={`${game.awayAbbr} logo`} style={{
                   width: 26, height: 26, objectFit: 'contain',
                   filter: isDarkTeamLogo(game.awayAbbr) ? LOGO_WHITE_FILTER : undefined,
                 }} />
               )}
               <span style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 4px' }}>@</span>
               {getTeamLogoUrl(game.homeAbbr) && (
-                <img src={getTeamLogoUrl(game.homeAbbr)} alt={game.homeAbbr} style={{
+                <SafeImage src={getTeamLogoUrl(game.homeAbbr)} alt={`${game.homeAbbr} logo`} style={{
                   width: 26, height: 26, objectFit: 'contain',
                   filter: isDarkTeamLogo(game.homeAbbr) ? LOGO_WHITE_FILTER : undefined,
                 }} />
@@ -348,11 +345,11 @@ function GameCard({ game }: { game: WeatherGame }) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {getTeamLogoUrl(game.awayAbbr) && <img src={getTeamLogoUrl(game.awayAbbr)} alt={game.awayAbbr} style={{ width: 16, height: 16, objectFit: 'contain' }} />}
+            {getTeamLogoUrl(game.awayAbbr) && <SafeImage src={getTeamLogoUrl(game.awayAbbr)} alt={`${game.awayAbbr} logo`} style={{ width: 16, height: 16, objectFit: 'contain' }} />}
             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{game.awayTeam}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {logoUrl && <img src={logoUrl} alt={game.homeAbbr} style={{ width: 16, height: 16, objectFit: 'contain' }} />}
+            {logoUrl && <SafeImage src={logoUrl} alt={`${game.homeAbbr} logo`} style={{ width: 16, height: 16, objectFit: 'contain' }} />}
             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{game.homeTeam}</span>
           </div>
         </div>
@@ -447,7 +444,7 @@ function GameCard({ game }: { game: WeatherGame }) {
           <div style={isSheltered ? { position: 'absolute', inset: 0, filter: 'grayscale(1) brightness(0.55)' } : { position: 'absolute', inset: 0 }}>
             <ParkShape primary={teamPrimary} secondary={teamSecondary} teamAbbr={game.homeAbbr} />
             {logoUrl && (
-              <img src={logoUrl} alt="" style={{
+              <SafeImage src={logoUrl} alt="" style={{
                 // Was centered on the shape's overall middle, which sat right
                 // on top of the sand diamond/bases. Every park uses the same
                 // standard mound/plate coordinates regardless of outline
@@ -498,14 +495,6 @@ function GameCard({ game }: { game: WeatherGame }) {
   )
 }
 
-// Plain-string date math anchored at UTC noon so adding/subtracting days
-// never gets tripped up by DST transitions shifting the wall-clock date.
-function offsetDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T12:00:00Z')
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().split('T')[0]
-}
-
 // "Today" per the VISITOR'S own device clock/timezone — no server guess, no
 // hardcoded zone. This used to be computed server-side pinned to America/
 // New_York, and worse, the page had gone fully static (no dynamic APIs left
@@ -514,62 +503,6 @@ function offsetDate(dateStr: string, days: number): string {
 // it here means it's always the real local date, and it's live per request.
 function localToday(): string {
   return new Date().toLocaleDateString('en-CA')
-}
-
-function DateStrip({ date, onChange }: { date: string; onChange: (d: string) => void }) {
-  const today = localToday()
-  const days = [-3, -2, -1, 0, 1, 2, 3].map(offset => {
-    const d = offsetDate(date, offset)
-    const dt = new Date(d + 'T12:00:00Z')
-    return {
-      date: d,
-      isSelected: d === date,
-      isToday: d === today,
-      dayName: dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
-      // Day number only — "Jul 12" overflows a 7-across strip at 375px.
-      dayNum: dt.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' }),
-    }
-  })
-  const prevDate = offsetDate(date, -1)
-  const nextDate = offsetDate(date, 1)
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'stretch',
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 14, overflow: 'hidden', marginBottom: 20,
-    }}>
-      <button onClick={() => onChange(prevDate)} style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 36, flexShrink: 0, border: 'none', cursor: 'pointer',
-        background: 'transparent', color: 'var(--text-3)', fontSize: 18, fontWeight: 700,
-        borderRight: '1px solid var(--border)',
-      }}>‹</button>
-      {days.map(({ date: d, isSelected, isToday, dayName, dayNum }) => (
-        <button key={d} onClick={() => onChange(d)} style={{
-          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: '10px 4px', gap: 3, border: 'none', cursor: 'pointer',
-          background: isSelected ? 'var(--accent)' : 'transparent',
-          borderRight: '1px solid var(--border)',
-        }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: isSelected ? 'var(--accent-fg)' : isToday ? 'var(--accent)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {dayName}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: isSelected || isToday ? 900 : 600, color: isSelected ? 'var(--accent-fg)' : 'var(--text-1)', whiteSpace: 'nowrap' }}>
-            {dayNum}
-          </span>
-          {isToday && !isSelected && (
-            <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          )}
-        </button>
-      ))}
-      <button onClick={() => onChange(nextDate)} style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 36, flexShrink: 0, border: 'none', cursor: 'pointer',
-        background: 'transparent', color: 'var(--text-3)', fontSize: 18, fontWeight: 700,
-      }}>›</button>
-    </div>
-  )
 }
 
 export function WeatherLabClient() {

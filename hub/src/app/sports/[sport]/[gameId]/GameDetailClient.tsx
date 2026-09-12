@@ -2,27 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, TrendingUp, BarChart2, List } from 'lucide-react'
+import { ArrowLeft, TrendingUp } from 'lucide-react'
 import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@slipsurge/core/espn-api'
 import { getGameStatus } from '@slipsurge/core/espn-api'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
 import styles from '@/components/product/GameDetail.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type Reactions = Record<string, Record<string, { count: number; mine: boolean }>>
 type TeamInfo = { id: string; logo: string; color: string; altColor: string; abbr: string; name: string }
 
 const EMOJIS = ['🔥', '💯', '🤯', '😤', '😱', '👏', '💀', '🎯']
-
-function timeAgo(date: string) {
-  const diff = Date.now() - new Date(date).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
-}
 
 /** Build a teamId → TeamInfo map from summary competitors */
 function buildTeamMap(summary: ESPNSummary | null, game: ESPNGame | null): Record<string, TeamInfo> {
@@ -127,7 +118,7 @@ function Scoreboard({ summary, game, gameStatus, isLive }: {
         {/* Away team */}
         <div style={{ textAlign: 'center' }}>
           {away?.team?.logo && (
-            <img
+            <SafeImage
               src={away.team.logo}
               alt=""
               style={{ width: 68, height: 68, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
@@ -158,7 +149,7 @@ function Scoreboard({ summary, game, gameStatus, isLive }: {
         {/* Home team */}
         <div style={{ textAlign: 'center' }}>
           {home?.team?.logo && (
-            <img
+            <SafeImage
               src={home.team.logo}
               alt=""
               style={{ width: 68, height: 68, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
@@ -235,7 +226,7 @@ function WinProbBar({ summary, teamMap }: { summary: ESPNSummary | null; teamMap
 }
 
 // ─── Stat Leaders ─────────────────────────────────────────────────
-function Leaders({ summary, teamMap }: { summary: ESPNSummary | null; teamMap: Record<string, TeamInfo> }) {
+function Leaders({ summary }: { summary: ESPNSummary | null }) {
   const leaders = summary?.leaders
   if (!leaders || leaders.length === 0) return null
 
@@ -278,9 +269,8 @@ function Leaders({ summary, teamMap }: { summary: ESPNSummary | null; teamMap: R
 }
 
 // ─── Play row ─────────────────────────────────────────────────────
-function PlayRow({ play, gameId, teamMap, athleteMap, reactions, isLoggedIn, onReact }: {
+function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact }: {
   play: ESPNPlay
-  gameId: string
   teamMap: Record<string, TeamInfo>
   athleteMap: Record<string, { headshot?: string; teamLogo?: string; name: string }>
   reactions: Record<string, { count: number; mine: boolean }>
@@ -306,14 +296,10 @@ function PlayRow({ play, gameId, teamMap, athleteMap, reactions, isLoggedIn, onR
   // Team logos
   const playTeam = play.team?.id ? teamMap[play.team.id] : undefined
   const allTeams = Object.values(teamMap)
-  const opposingTeam = allTeams.find(t => t.id !== play.team?.id)
 
   const primaryTeamLogo = primaryAthlete?.displayName
     ? (athleteMap[primaryAthlete.displayName]?.teamLogo ?? playTeam?.logo)
     : playTeam?.logo
-  const secondaryTeamLogo = secondaryAthlete?.displayName
-    ? (athleteMap[secondaryAthlete.displayName]?.teamLogo ?? opposingTeam?.logo)
-    : opposingTeam?.logo
 
   // Format stat line: "2/5, 1 SO" or "1.0 ip, 1 k, 23 p"
   function fmtStats(stats: { name: string; displayValue: string }[]): string {
@@ -340,8 +326,8 @@ function PlayRow({ play, gameId, teamMap, athleteMap, reactions, isLoggedIn, onR
           {/* Score bubbles */}
           {allTeams.length >= 2 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {allTeams.map((t, i) => t.logo && (
-                <img key={t.id} src={t.logo} alt={t.abbr} style={{ width: 14, height: 14, objectFit: 'contain' }} />
+              {allTeams.map((t) => t.logo && (
+                <SafeImage key={t.id} src={t.logo} alt={t.abbr} style={{ width: 14, height: 14, objectFit: 'contain' }} />
               ))}
             </div>
           )}
@@ -378,7 +364,7 @@ function PlayRow({ play, gameId, teamMap, athleteMap, reactions, isLoggedIn, onR
           />
         ) : playTeam?.logo ? (
           <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src={playTeam.logo} alt="" style={{ width: '75%', height: '75%', objectFit: 'contain' }} />
+            <SafeImage src={playTeam.logo} alt="" style={{ width: '75%', height: '75%', objectFit: 'contain' }} />
           </div>
         ) : (
           <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0 }} />
@@ -407,7 +393,7 @@ function PlayRow({ play, gameId, teamMap, athleteMap, reactions, isLoggedIn, onR
           {secondaryAthlete && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {secondaryHeadshot && (
-                <img src={secondaryHeadshot} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                <SafeImage src={secondaryHeadshot} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               )}
               <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
                 <span style={{ fontWeight: 600 }}>{secondaryAthlete.shortName ?? secondaryAthlete.displayName}</span>
@@ -481,9 +467,8 @@ function PlayRow({ play, gameId, teamMap, athleteMap, reactions, isLoggedIn, onR
 }
 
 // ─── Play-by-play tab ─────────────────────────────────────────────
-function PlayByPlay({ plays, gameId, teamMap, athleteMap, reactions, isLoggedIn, onReact }: {
+function PlayByPlay({ plays, teamMap, athleteMap, reactions, isLoggedIn, onReact }: {
   plays: ESPNPlay[]
-  gameId: string
   teamMap: Record<string, TeamInfo>
   athleteMap: Record<string, { headshot?: string; teamLogo?: string; name: string }>
   reactions: Reactions
@@ -523,7 +508,6 @@ function PlayByPlay({ plays, gameId, teamMap, athleteMap, reactions, isLoggedIn,
           <PlayRow
             key={play.id}
             play={play}
-            gameId={gameId}
             teamMap={teamMap}
             athleteMap={athleteMap}
             reactions={reactions[play.id] ?? {}}
@@ -537,7 +521,7 @@ function PlayByPlay({ plays, gameId, teamMap, athleteMap, reactions, isLoggedIn,
 }
 
 // ─── Box Score tab ────────────────────────────────────────────────
-function BoxScore({ summary, teamMap }: { summary: ESPNSummary | null; teamMap: Record<string, TeamInfo> }) {
+function BoxScore({ summary }: { summary: ESPNSummary | null }) {
   const [teamIdx, setTeamIdx] = useState(0)
   const teams = summary?.boxscore?.teams
   const players = summary?.boxscore?.players
@@ -658,11 +642,10 @@ function BoxScore({ summary, teamMap }: { summary: ESPNSummary | null; teamMap: 
 }
 
 // ─── Community Picks tab ──────────────────────────────────────────
-function CommunityPicksTab({ picks, sport, gameId, teamMap }: {
+function CommunityPicksTab({ picks, sport, gameId }: {
   picks: any[]
   sport: SportKey
   gameId: string
-  teamMap: Record<string, TeamInfo>
 }) {
   if (picks.length === 0) {
     return (
@@ -747,7 +730,7 @@ type Tab = 'summary' | 'plays' | 'boxscore' | 'picks'
 
 export function GameDetailClient({
   sport, gameId, sportLabel,
-  game, summary, gameStatus: serverGameStatus, teams,
+  game, summary, gameStatus: serverGameStatus,
   communityPicks, initialReactions, isLoggedIn,
 }: {
   sport: SportKey
@@ -838,7 +821,7 @@ export function GameDetailClient({
       {/* Leaders below scoreboard */}
       {(gameStatus.state === 'in' || gameStatus.state === 'post') && (
         <div style={{ marginTop: 8 }}>
-          <Leaders summary={summary} teamMap={teamMap} />
+          <Leaders summary={summary} />
         </div>
       )}
 
@@ -878,7 +861,6 @@ export function GameDetailClient({
         {tab === 'plays' && (
           <PlayByPlay
             plays={plays}
-            gameId={gameId}
             teamMap={teamMap}
             athleteMap={athleteMap}
             reactions={reactions}
@@ -886,13 +868,12 @@ export function GameDetailClient({
             onReact={handleReact}
           />
         )}
-        {tab === 'boxscore' && <BoxScore summary={summary} teamMap={teamMap} />}
+        {tab === 'boxscore' && <BoxScore summary={summary} />}
         {tab === 'picks' && (
           <CommunityPicksTab
             picks={communityPicks}
             sport={sport}
             gameId={gameId}
-            teamMap={teamMap}
           />
         )}
       </div>

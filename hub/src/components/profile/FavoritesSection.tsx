@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 interface FavoritePlayer { mlb_id: number; name: string; team: string }
 
@@ -22,7 +23,7 @@ export function FavoritesSection({ teams, players }: { teams: string[]; players:
               const logo = getTeamLogoUrl(abbr)
               return (
                 <span key={abbr} className="group flex items-center gap-2 rounded-xl border border-white/[.08] bg-black/30 py-2 pl-2 pr-3 shadow-[inset_0_1px_rgba(255,255,255,.035)] transition duration-200 hover:-translate-y-px hover:border-lime-400/25 hover:bg-lime-400/[.045]">
-                  {logo && <img src={logo} alt={abbr} className="w-7 h-7 object-contain" />}
+                  {logo && <SafeImage src={logo} alt={`${abbr} logo`} className="w-7 h-7 object-contain" />}
                   <span className="text-xs font-bold text-white">{abbr}</span>
                 </span>
               )

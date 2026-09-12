@@ -7,6 +7,7 @@ import { invalidateCustomEmojiCache } from '@/lib/emoji'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { Trash2, Plus, Pencil } from 'lucide-react'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type Category = { id: string; name: string; sort_order: number }
 type CustomEmojiRow = { id: string; code: string; image_url: string; category_id: string | null; category: { name: string } | null; created_at: string }
@@ -208,7 +209,7 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
                     />
                   ) : (
                     <div key={e.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
-                      <img src={e.image_url} alt={e.code} className="w-8 h-8 object-contain rounded shrink-0" />
+                      <SafeImage src={e.image_url} alt={e.code} className="w-8 h-8 object-contain rounded shrink-0" />
                       <span className="text-sm text-zinc-300 font-mono truncate flex-1">:{e.code}:</span>
                       <button onClick={() => setEditingId(e.id)} className="text-zinc-500 hover:text-white shrink-0" aria-label="Edit">
                         <Pencil size={13} />
@@ -257,7 +258,7 @@ function EmojiEditRow({ emoji, categories, onSave, onCancel }: {
   return (
     <div className="col-span-2 sm:col-span-3 bg-zinc-900 border border-green-500/40 rounded-xl p-3 space-y-2">
       <div className="flex gap-3 items-end flex-wrap">
-        <img src={preview} alt="" className="w-9 h-9 object-contain rounded shrink-0" />
+        <SafeImage src={preview} alt="" className="w-9 h-9 object-contain rounded shrink-0" />
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Code</label>
           <div className="flex items-center gap-1">

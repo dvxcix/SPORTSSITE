@@ -11,19 +11,12 @@ import { createClient } from '@/lib/supabase/client'
 import { mlbHeadshot, mlbTeamLogo, pitchColor, pitchLabel, pitchOutcomeColor, pitchOutcomeLabel } from '@slipsurge/core/mlb-api'
 import type { MLBGameFeed, MLBPlay, MLBBoxPlayer } from '@slipsurge/core/mlb-api'
 import styles from '@/components/product/GameDetail.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function fmt(n: number | undefined, dec = 0): string {
   if (n === undefined || n === null) return '-'
   return n.toFixed(dec)
-}
-
-function timeAgo(iso: string): string {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000
-  if (diff < 60) return `${Math.floor(diff)}s`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  return `${Math.floor(diff / 86400)}d`
 }
 
 // ─── Props ───────────────────────────────────────────────────────
@@ -38,13 +31,13 @@ interface Props {
 // ─── Sub-components ──────────────────────────────────────────────
 
 function TeamLogo({ id, name, size = 36 }: { id: number; name: string; size?: number }) {
-  const [err, setErr] = useState(false)
-  if (err || !id) return (
+  const fallback = (
     <div style={{ width: size, height: size, borderRadius: size * 0.22, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 800, color: 'var(--text-3)', flexShrink: 0 }}>
       {name?.[0]}
     </div>
   )
-  return <img src={mlbTeamLogo(id)} alt={name} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
+  if (!id) return fallback
+  return <SafeImage src={mlbTeamLogo(id)} alt={name} fallback={fallback} style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
 }
 
 // Scoreboard at top
@@ -248,7 +241,6 @@ function CurrentAtBat({ feed }: { feed: MLBGameFeed }) {
             runnerFirst={currentPlay.matchup.postOnFirst}
             runnerSecond={currentPlay.matchup.postOnSecond}
             runnerThird={currentPlay.matchup.postOnThird}
-            offenseTeamAbbr={feed.gameData.teams[currentPlay.about.isTopInning ? 'away' : 'home'].abbreviation}
             size={56}
           />
           <StrikeZonePlot pitches={pitches} batSide={currentPlay.matchup.batSide?.code as 'L' | 'R'} width={100} height={130} />
@@ -351,7 +343,6 @@ function PlayRow({
   const awayTeamId = feed.gameData.teams.away.id
   const homeTeamId = feed.gameData.teams.home.id
   const batterTeamId = play.about.isTopInning ? awayTeamId : homeTeamId
-  const pitcherTeamId = play.about.isTopInning ? homeTeamId : awayTeamId
 
   // pitches for this play
   const pitches = play.playEvents.filter(e => e.type === 'pitch')
@@ -468,11 +459,10 @@ function PlayRow({
 
           {/* Pitcher mini-row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img
+            <SafeImage
               src={mlbHeadshot(pitcher.id)}
               alt={pitcher.fullName}
               style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: 'var(--surface-2)' }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
             <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
               <strong style={{ color: 'var(--text-2)' }}>{pitcher.fullName.split(' ').pop()}</strong>
@@ -574,7 +564,6 @@ function PlayRow({
               <BaseDiamond
                 first={!!play.matchup.postOnFirst} second={!!play.matchup.postOnSecond} third={!!play.matchup.postOnThird}
                 runnerFirst={play.matchup.postOnFirst} runnerSecond={play.matchup.postOnSecond} runnerThird={play.matchup.postOnThird}
-                offenseTeamAbbr={feed.gameData.teams[side].abbreviation}
                 size={90}
               />
             </div>
@@ -707,7 +696,6 @@ function BoxScore({ feed }: { feed: MLBGameFeed }) {
   const BAT_COLS = ['AB', 'R', 'H', 'RBI', 'BB', 'SO', 'AVG']
   const BAT_KEYS: (keyof NonNullable<MLBBoxPlayer['stats']['batting']>)[] = ['atBats', 'runs', 'hits', 'rbi', 'baseOnBalls', 'strikeOuts', 'avg']
   const PITCH_COLS = ['IP', 'H', 'R', 'ER', 'BB', 'K', 'PC-ST']
-  const PITCH_KEYS: (keyof NonNullable<MLBBoxPlayer['stats']['pitching']>)[] = ['inningsPitched', 'hits', 'runs', 'earnedRuns', 'baseOnBalls', 'strikeOuts', 'pitchesThrown']
 
   return (
     <div>

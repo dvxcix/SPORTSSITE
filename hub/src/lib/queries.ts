@@ -144,7 +144,7 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
     .slice(0, 20)
 }
 
-export async function getLeaderboard(sport = 'MLB', limit = 50) {
+export async function getLeaderboard(limit = 50) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('users')

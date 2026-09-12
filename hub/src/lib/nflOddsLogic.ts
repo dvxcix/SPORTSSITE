@@ -123,7 +123,7 @@ export function nflOddsPayloadHash(board: SidelineOddsBoard) {
   const stable = JSON.stringify({
     gameLines: [...board.gameLines]
       .sort((a, b) => a.vendor.localeCompare(b.vendor))
-      .map(({ updatedAt: _updatedAt, ...line }) => line),
+      .map(entry => Object.fromEntries(Object.entries(entry).filter(([key]) => key !== 'updatedAt'))),
     players: [...board.players].sort((a, b) => a.id - b.id).map(player => ({
       id: player.id,
       name: player.name,
@@ -133,7 +133,7 @@ export function nflOddsPayloadHash(board: SidelineOddsBoard) {
         ...market,
         offers: [...market.offers]
           .sort((a, b) => a.vendor.localeCompare(b.vendor))
-          .map(({ updatedAt: _updatedAt, ...offer }) => offer),
+          .map(offer => Object.fromEntries(Object.entries(offer).filter(([key]) => key !== 'updatedAt'))),
       })),
     })),
   })

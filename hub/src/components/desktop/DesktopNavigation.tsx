@@ -12,6 +12,7 @@ import {
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string; ultimateOnly?: boolean }
 
@@ -74,7 +75,7 @@ export function DesktopNavigation() {
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
       <div className="ss-desktop-app-rail">
         <Link className="ss-desktop-rail-logo" href="/feed" prefetch={false} aria-label="SlipSurge home">
-          <img src="/logo.png" alt="" />
+          <SafeImage src="/logo.png" alt="" />
         </Link>
         <nav aria-label="Desktop workspaces">
           {rail.map(item => {

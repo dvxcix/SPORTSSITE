@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { AdminForumActions } from '@/components/admin/AdminForumActions'
-import { MessageSquare, Plus } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 

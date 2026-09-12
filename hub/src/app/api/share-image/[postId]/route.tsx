@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- ImageResponse/Satori requires native image elements. */
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { sportLogoUrl } from '@/lib/sportLogos'
@@ -57,7 +58,7 @@ function BookMark({ book, origin }: { book?: string | null; origin: string }) {
       {book.slice(0, 2).toUpperCase()}
     </div>
   )
-  return <img src={origin + info.favicon} width={18} height={18} style={{ borderRadius: 3, objectFit: 'contain' }} />
+  return <img src={origin + info.favicon} alt="" width={18} height={18} style={{ borderRadius: 3, objectFit: 'contain' }} />
 }
 
 // Team logo (falling back to the bare abbreviation only for teams with no
@@ -68,7 +69,7 @@ function TeamLine({ team, detail, fontSize, color }: { team?: string | null; det
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
       {logo
-        ? <img src={logo} width={fontSize} height={fontSize} style={{ objectFit: 'contain' }} />
+        ? <img src={logo} alt="" width={fontSize} height={fontSize} style={{ objectFit: 'contain' }} />
         : team && <span style={{ fontSize, color }}>{team}</span>}
       <span style={{ fontSize, color }}>· {detail}</span>
     </div>
@@ -87,7 +88,7 @@ function isUnsupportedImageFormat(src: string): boolean {
 }
 
 function Avatar({ src, name, size }: { src?: string | null; name?: string | null; size: number }) {
-  if (src && !isUnsupportedImageFormat(src)) return <img src={src} width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  if (src && !isUnsupportedImageFormat(src)) return <img src={src} alt="" width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   return (
     <div style={{
       display: 'flex', width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -150,7 +151,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, background: C.surface, padding: PAD, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', height: HEADER_H }}>
             <span style={{ fontSize: 15, fontWeight: 800, color: C.gold, letterSpacing: 2 }}>PICK</span>
-            {sportLogo && <img src={sportLogo} width={18} height={18} style={{ marginLeft: 10, objectFit: 'contain' }} />}
+            {sportLogo && <img src={sportLogo} alt="" width={18} height={18} style={{ marginLeft: 10, objectFit: 'contain' }} />}
             <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 800, color: resultColor }}>{resultLabel}</span>
           </div>
 
@@ -217,7 +218,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
           display: 'flex', alignItems: 'center', height: STRIP_H, padding: '0 28px',
           background: `linear-gradient(100deg, ${C.accent} 0%, #9EEB2E 100%)`,
         }}>
-          <img src={origin + '/icon-512.png'} width={64} height={64} style={{ borderRadius: 14, flexShrink: 0 }} />
+          <img src={origin + '/icon-512.png'} alt="" width={64} height={64} style={{ borderRadius: 14, flexShrink: 0 }} />
           <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 14 }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: C.accentFg, letterSpacing: 2, opacity: 0.75 }}>BUILT ON</span>
             <span style={{ fontSize: 30, fontWeight: 900, color: C.accentFg, letterSpacing: -0.5, lineHeight: 1 }}>SLIPSURGE</span>

@@ -1,6 +1,7 @@
 'use client'
 
 import { CometCard } from '@/components/ui/comet-card'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export interface AchievementCard {
   id: string
@@ -27,10 +28,10 @@ export function AchievementsSection({ achievements }: { achievements: Achievemen
           <CometCard key={achievement.id} className="ss-achievement-comet">
             <article className={`ss-achievement-card${achievement.card_image_url ? ' has-art' : ''}`}>
               {achievement.card_image_url && (
-                <img src={achievement.card_image_url} alt="" className="ss-achievement-card-art" />
+                <SafeImage src={achievement.card_image_url} alt="" className="ss-achievement-card-art" />
               )}
               <div className="ss-achievement-card-content">
-                <span className="ss-achievement-icon"><img src={achievement.icon_url} alt="" /></span>
+                <span className="ss-achievement-icon"><SafeImage src={achievement.icon_url} alt="" /></span>
                 <div>
                   <h3>{achievement.name}</h3>
                   <p>{achievement.description}</p>

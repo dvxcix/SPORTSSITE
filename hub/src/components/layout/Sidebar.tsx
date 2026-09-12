@@ -14,6 +14,7 @@ import {
 import { fetchFeatureFlagsClient } from '@/lib/featureFlags'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { MovingBorderGlow } from './MovingBorderGlow'
+import { SafeImage } from '@/components/ui/SafeImage'
 import { useAuth } from '@/context/AuthContext'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
@@ -252,7 +253,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 padding: isCollapsed ? '10px 0 4px' : '10px 10px 4px',
               }}>
                 {item.logo
-                  ? <img src={item.logo} alt="" title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
+                  ? <SafeImage src={item.logo} alt="" title={isCollapsed ? item.section : undefined} style={{ width: 14, height: 14, objectFit: 'contain', flexShrink: 0 }} />
                   : <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)', flexShrink: 0 }} />}
                 {!isCollapsed && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.08em' }}>{item.section}</span>}
               </div>

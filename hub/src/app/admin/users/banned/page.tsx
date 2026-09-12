@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserActions } from '@/components/admin/AdminUserActions'
 import { Ban } from 'lucide-react'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,7 +53,7 @@ export default async function AdminBannedUsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-black text-white overflow-hidden shrink-0">
-                          {p?.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p?.display_name || p?.username || u.email || '?')[0].toUpperCase()}
+                          {p?.avatar_url ? <SafeImage src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p?.display_name || p?.username || u.email || '?')[0].toUpperCase()}
                         </div>
                         <div>
                           <p className="font-medium text-white">{p?.display_name || p?.username || '(no profile)'}</p>

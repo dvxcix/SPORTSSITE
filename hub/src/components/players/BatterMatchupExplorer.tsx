@@ -6,7 +6,7 @@ import { heat, SortableTH, SortState, toggleSortState, cmpNullsLast } from '@/co
 import { cardStyle, sectionTitleStyle, windowTag, ToggleBtn, DimChip, StatGrid } from './PlayerPageClient'
 import { PlayerPicker, type PickerOption } from './PlayerPicker'
 import { ZoneScoreCard } from './ZoneScoreCard'
-import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, MIN_PITCHES_FOR_HEAT, r3, d1, p1, i0 } from '@slipsurge/core/batterStatsEngine'
+import { type BatterPitchRow, computeBatterStats, BATTER_STAT_COLS as TABLE_COLS, MIN_PITCHES_FOR_HEAT, d1, p1, i0 } from '@slipsurge/core/batterStatsEngine'
 
 export type { BatterPitchRow }
 const computeStats = computeBatterStats

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Check, ExternalLink, SlidersHorizontal, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { PlayerLink, HandBadge } from '@/components/players/PlayerPageClient'
@@ -209,7 +209,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
   const [fhrPctFilter, setFhrPctFilter] = useState<PctFilter>('all')
   const [saPctFilter, setSaPctFilter] = useState<PctFilter>('all')
   const [deltaFilters, setDeltaFilters] = useState<Record<string, DeltaFilter>>({})
-  const getDeltaFilter = (key: string): DeltaFilter => deltaFilters[key] ?? 'all'
+  const getDeltaFilter = useCallback((key: string): DeltaFilter => deltaFilters[key] ?? 'all', [deltaFilters])
   const setDeltaFilter = (key: string, v: DeltaFilter) => setDeltaFilters(prev => ({ ...prev, [key]: v }))
   const [pwrFilter, setPwrFilter] = useState<'all' | 'pwr'>('all')
   const filtersActive = fhrPctFilter !== 'all' || saPctFilter !== 'all' || pwrFilter !== 'all' || Object.values(deltaFilters).some(v => v && v !== 'all')
@@ -307,7 +307,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
     return m
   }, [data?.communityPicks])
 
-  const picksFor = (nameNorm: string, gameKey: string): Record<string, number | null> => {
+  const picksFor = useCallback((nameNorm: string, gameKey: string): Record<string, number | null> => {
     const entry = resolveNameEntry(communityPicksMap, nameNorm)
     const out: Record<string, number | null> = {}
     for (const [mktKey, prop] of Object.entries(MARKET_TO_COMMUNITY_PROP)) {
@@ -316,7 +316,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
       out[mktKey] = row?.picks ?? null
     }
     return out
-  }
+  }, [communityPicksMap])
 
   const flatBatters: FlatBatter[] = useMemo(() => {
     if (!data?.games) return []
@@ -374,7 +374,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
       addSide(g.awayLineup, g.homePitcher, g.homeAbbr, g.gameKey, gamePk, date)
     }
     return out
-  }, [data, fhrAvgMap, saAvgMap, communityPicksMap, date, gameKey])
+  }, [data, fhrAvgMap, saAvgMap, date, gameKey, picksFor])
 
   const maxAbsByMarket = useMemo(() => {
     const m: Record<string, number> = {}
@@ -405,7 +405,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
     matchesPct(b.sa_pct, saPctFilter) &&
     (pwrFilter === 'all' || b.is_pwr) &&
     MARKETS.every(m => matchesDelta(b.deltas[m.key]?.delta ?? null, getDeltaFilter(m.key)))
-  ), [flatBatters, fhrPctFilter, saPctFilter, pwrFilter, deltaFilters])
+  ), [flatBatters, fhrPctFilter, saPctFilter, pwrFilter, getDeltaFilter])
 
   const sorted = useMemo(() => {
     if (!sort) return filtered

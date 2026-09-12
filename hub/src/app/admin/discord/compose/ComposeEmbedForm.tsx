@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 font-mono'
 const labelClass = 'block text-xs font-bold text-zinc-400 mb-1.5'
@@ -184,7 +185,7 @@ export function ComposeEmbedForm() {
               <div className="p-3 min-w-0 flex-1">
                 {authorName && (
                   <div className="flex items-center gap-2 mb-1.5">
-                    {authorIconUrl && <img src={authorIconUrl} alt="" className="w-6 h-6 rounded-full object-cover" />}
+                    {authorIconUrl && <SafeImage src={authorIconUrl} alt="" className="w-6 h-6 rounded-full object-cover" />}
                     <span className="text-[#f2f3f5] text-sm font-semibold">{authorName}</span>
                   </div>
                 )}
@@ -197,12 +198,12 @@ export function ComposeEmbedForm() {
                     )}
                     {description && <p className="text-[#dbdee1] text-sm whitespace-pre-wrap break-words mt-1">{description}</p>}
                   </div>
-                  {thumbnailUrl && <img src={thumbnailUrl} alt="" className="w-20 h-20 rounded object-cover shrink-0" />}
+                  {thumbnailUrl && <SafeImage src={thumbnailUrl} alt="" className="w-20 h-20 rounded object-cover shrink-0" />}
                 </div>
-                {imageUrl && <img src={imageUrl} alt="" className="w-full rounded mt-2 object-cover" />}
+                {imageUrl && <SafeImage src={imageUrl} alt="" className="w-full rounded mt-2 object-cover" />}
                 {footerText && (
                   <div className="flex items-center gap-2 mt-2">
-                    {footerIconUrl && <img src={footerIconUrl} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                    {footerIconUrl && <SafeImage src={footerIconUrl} alt="" className="w-5 h-5 rounded-full object-cover" />}
                     <span className="text-[#949ba4] text-xs">{footerText}</span>
                   </div>
                 )}

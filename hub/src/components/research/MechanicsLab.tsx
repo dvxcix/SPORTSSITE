@@ -6,6 +6,7 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamColor, getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import type { GameMechanicsResult, MechanicsPlayer, MechanicsWindow } from '@/lib/hrMechanics'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
+import { SafeImage } from '@/components/ui/SafeImage'
 import styles from './MechanicsLab.module.css'
 
 const WINDOWS: MechanicsWindow[] = [1, 3, 5, 10]
@@ -18,8 +19,8 @@ function PlayerIdentity({ player, compact = false }: { player: MechanicsPlayer; 
   return (
     <div className={styles.playerIdentity}>
       <div className={styles.headshot} style={{ '--team': getTeamColor(player.team) } as CSSProperties}>
-        <img src={mlbHeadshot(player.playerId)} alt="" />
-        <span><img src={getTeamLogoUrl(player.team)} alt={`${player.team} logo`} /></span>
+        <SafeImage src={mlbHeadshot(player.playerId)} alt="" />
+        <span><SafeImage src={getTeamLogoUrl(player.team)} alt={`${player.team} logo`} /></span>
       </div>
       <div><strong>{player.playerName}</strong><small>{player.team} · #{player.battingOrder} · {player.position}{!compact && ` · ${player.bats}HB`}</small></div>
     </div>
@@ -130,9 +131,9 @@ export function MechanicsLab({ date, gamePk, awayTeam, homeTeam }: { date: strin
 
       <section className={styles.boardAndInspector}>
         <div className={styles.lineupBoard}>
-          <header><span><img src={getTeamLogoUrl(awayTeam)} alt="" />{awayTeam}</span><small>AWAY LINEUP</small></header>
+          <header><span><SafeImage src={getTeamLogoUrl(awayTeam)} alt="" />{awayTeam}</span><small>AWAY LINEUP</small></header>
           {away.map(player => <PlayerRow key={player.playerId} player={player} active={player.playerId === selected.playerId} onClick={() => setSelectedId(player.playerId)} />)}
-          <header><span><img src={getTeamLogoUrl(homeTeam)} alt="" />{homeTeam}</span><small>HOME LINEUP</small></header>
+          <header><span><SafeImage src={getTeamLogoUrl(homeTeam)} alt="" />{homeTeam}</span><small>HOME LINEUP</small></header>
           {home.map(player => <PlayerRow key={player.playerId} player={player} active={player.playerId === selected.playerId} onClick={() => setSelectedId(player.playerId)} />)}
         </div>
 

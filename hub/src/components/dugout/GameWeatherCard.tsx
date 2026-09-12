@@ -6,6 +6,7 @@ import { WMO_LABELS, compassFromTo, hrWindColor, hrWeatherScore, windFieldLabel 
 import { ParkShape, WindCanvas, WIND_CANVAS_SIZE, hexToRgba, type WeatherGame } from '@/components/weather/WeatherLabClient'
 import { Tooltip } from '@/components/ui/tooltip-card'
 import { BattedBallSprayChart, type SprayPitchRow } from '@/components/players/BattedBallSprayChart'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // Same park-shape/wind-canvas rendering Weather Lab already ships, reused
 // here rather than rebuilt — one game's card out of that page's own
@@ -151,7 +152,7 @@ export function GameWeatherCard({
         <div style={isSheltered ? { position: 'absolute', inset: 0, filter: 'grayscale(1) brightness(0.55)' } : { position: 'absolute', inset: 0 }}>
           <ParkShape primary={teamPrimary} secondary={teamSecondary} teamAbbr={game.homeAbbr} />
           {logoUrl && (
-            <img src={logoUrl} alt="" style={{
+            <SafeImage src={logoUrl} alt="" style={{
               position: 'absolute', top: '34%', left: '50%', transform: 'translate(-50%,-50%)',
               width: '18%', opacity: 0.95, pointerEvents: 'none',
               filter: `drop-shadow(0 0 2.5px ${hexToRgba(teamSecondary, 0.75)}) drop-shadow(0 0 2.5px ${hexToRgba(teamSecondary, 0.75)})`,

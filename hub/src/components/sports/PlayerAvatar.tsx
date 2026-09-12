@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { getTeamColor } from '@slipsurge/core/mlbTeamColors'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 interface PlayerAvatarProps {
   /** Player headshot URL */
@@ -87,7 +88,7 @@ export function PlayerAvatar({
         }}
       >
         {showHeadshot ? (
-          <img
+          <SafeImage
             src={headshot!}
             alt={name}
             onError={() => setHeadshotFailed(true)}
@@ -117,7 +118,7 @@ export function PlayerAvatar({
             overflow: 'hidden',
           }}
         >
-          <img
+          <SafeImage
             src={teamLogo!}
             alt=""
             onError={() => setLogoFailed(true)}
@@ -162,7 +163,7 @@ export function TeamLogo({
       }}
     >
       {logo && !failed ? (
-        <img
+        <SafeImage
           src={logo}
           alt={name}
           onError={() => setFailed(true)}

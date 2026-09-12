@@ -4,6 +4,7 @@ import { DugoutClient } from '@/components/dugout/DugoutClient'
 import { TierGate } from '@/components/layout/TierGate'
 import { PageState } from '@/components/layout/PageState'
 import styles from './dugout-page.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const revalidate = 0
 
@@ -33,7 +34,7 @@ export default async function DugoutPage({ searchParams }: { searchParams: Promi
     <TierGate requiredTier="free" label="The Dugout">
       <div className={styles.page}>
         <header className={`fade-in ${styles.hero}`}>
-          <img src="/logo.png" alt="" className={styles.heroMark} />
+          <SafeImage src="/logo.png" alt="" className={styles.heroMark} />
           <div className={styles.heroCopy}>
             <h1 className={styles.heroTitle}>The Dugout <span className={styles.tier}>ULTIMATE</span></h1>
             <p className={styles.heroSubtitle}>Proprietary Game Matrix &middot; Built for game-by-game breakdown</p>

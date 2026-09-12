@@ -10,6 +10,7 @@ import { ChangelogPopupBody } from '@/components/layout/ChangelogPopupBody'
 import { X } from 'lucide-react'
 import type { ChangelogAudience, ChangelogEntry } from '@/lib/changelog'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const EMPTY_DRAFT = { id: null as string | null, title: '', description: '', how_to_use: '', screenshot_urls: [] as string[], audience_tier: 'all' as ChangelogAudience, is_active: false }
 type Draft = typeof EMPTY_DRAFT
@@ -152,7 +153,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
             <div className="flex flex-wrap gap-2 mb-2">
               {draft.screenshot_urls.map(url => (
                 <div key={url} className="relative">
-                  <img src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-zinc-700" />
+                  <SafeImage src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-zinc-700" />
                   <button onClick={() => removeScreenshot(url)} className="absolute -top-1.5 -right-1.5 bg-zinc-900 border border-zinc-700 rounded-full p-0.5 text-zinc-400 hover:text-white">
                     <X size={10} />
                   </button>

@@ -5,6 +5,7 @@ import { ChevronRight, Shield } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TierGate } from '@/components/layout/TierGate'
 import styles from '@/components/product/EntityPage.module.css'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const revalidate = 0
 
@@ -52,7 +53,7 @@ export default async function NflTeamPage({ params }: { params: Promise<{ abbr: 
       <div className={styles.page} style={{ '--entity-color': team.team_color ?? '#9cff39' } as React.CSSProperties}>
         <header className={styles.hero}>
           <div className={styles.avatar}>
-            {team.team_logo_espn ? <img src={team.team_logo_espn} alt="" /> : <Shield size={38} />}
+            {team.team_logo_espn ? <SafeImage src={team.team_logo_espn} alt={`${team.team_name} logo`} /> : <Shield size={38} />}
           </div>
           <div className={styles.identity}>
             <p className={styles.eyebrow}>NFL team hub</p>
@@ -75,7 +76,7 @@ export default async function NflTeamPage({ params }: { params: Promise<{ abbr: 
               {players.map(player => (
                 <Link key={player.gsis_id} href={`/nfl/players/${player.gsis_id}`} className={styles.row}>
                   <div className={styles.rowAvatar}>
-                    {player.headshot ? <img src={player.headshot} alt="" /> : <span>{player.position || 'NFL'}</span>}
+                    {player.headshot ? <SafeImage src={player.headshot} alt="" /> : <span>{player.position || 'NFL'}</span>}
                   </div>
                   <div className={styles.rowMain}>
                     <div className={styles.rowName}>{player.display_name}</div>

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type GameOption = {
   gameKey: string
@@ -20,7 +21,7 @@ function TeamLogoImg({ abbr, size = 18 }: { abbr: string; size?: number }) {
       {abbr.slice(0, 2)}
     </span>
   )
-  return <img src={url} alt={abbr} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
+  return <SafeImage src={url} alt={`${abbr} logo`} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
 }
 
 function GamePicker({ games, loading, error, value, onChange }: {

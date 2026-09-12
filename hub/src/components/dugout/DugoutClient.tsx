@@ -10,7 +10,7 @@ import { useAuth } from '@/context/AuthContext'
 import { PROP_META } from '@/lib/watchlist'
 import { PlayerAvatar as SharedPlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { getTeamLogoUrl, getTeamColor, getTeamSecondaryColor } from '@slipsurge/core/mlbTeamColors'
-import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { StatTile } from '@/components/pitcher-report/MatchupTables'
 import { canonicalProviderArchiveKey, normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { canonGameKey } from '@slipsurge/core/teamAbbr'
@@ -19,7 +19,7 @@ import { MatchupPitchBreakdown, type DugoutSpraySelection } from '@/components/d
 import { GameWeatherCard, GameWeatherSummary } from '@/components/dugout/GameWeatherCard'
 import { RecentFormSplits } from '@/components/dugout/RecentFormSplits'
 import { AffinityMatchupScore } from '@/components/dugout/AffinityMatchupScore'
-import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks, type PitcherSplitRow } from '@/lib/dugoutPaperScore'
+import { buildPitcherMap, pickPitcherRow, computeMatchupEdgeScore, computePaperScores, computeMmRanks } from '@/lib/dugoutPaperScore'
 import { computeDugoutMomentum, type DugoutMomentumResult, type DugoutMomentumWindow, type DugoutPaperWindowInput } from '@/lib/dugoutMomentum'
 import { computeHitFloorReads, computeHitPitchProfile, type HitFloorStatus } from '@/lib/hitFloorModel'
 import { createClient } from '@/lib/supabase/client'
@@ -32,6 +32,7 @@ import { SlipSurgeScoreLabel } from '@/components/ui/SlipSurgeScoreLabel'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { applyDugoutColumnPrefs, type DugoutColumnPrefs } from '@/lib/dugoutColumnPrefs'
 import { applyDugoutViewPreset, buildDugoutMarketTimeline, type DugoutHistorySnapshot, type DugoutTimelinePoint, type DugoutViewPreset } from '@/lib/dugoutPresentation'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 type DugoutMechanicsWindows = Partial<Record<'l1' | 'l3' | 'l5' | 'l10', {
   index: number
@@ -845,7 +846,7 @@ function TeamLogo({ abbr, size = 20 }: { abbr: string; size?: number }) {
   const [err, setErr] = useState(false)
   const id = TEAM_IDS[abbr]
   if (!id || err) return <span style={{ fontSize: size * 0.55, fontWeight: 700, color: 'var(--text-3)', fontFamily: 'monospace' }}>{abbr}</span>
-  return <img src={`https://www.mlbstatic.com/team-logos/${id}.svg`} alt={abbr} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />
+  return <SafeImage src={`https://www.mlbstatic.com/team-logos/${id}.svg`} alt={`${abbr} logo`} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />
 }
 
 function PlayerAvatar({ mlbId, size = 24, teamAbbr, name }: { mlbId: number | null; size?: number; teamAbbr?: string | null; name?: string }) {
@@ -896,7 +897,6 @@ const STD: React.CSSProperties = {
   whiteSpace: 'nowrap',
   borderBottom: '1px solid rgba(255,255,255,0.04)',
 }
-const SNULL: React.CSSProperties = { ...STD, color: 'var(--text-3)' }
 const SDIV_H: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, background: 'var(--bg)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', top: 'var(--dugout-header-top, 0px)', zIndex: 6 }
 const SDIV_D: React.CSSProperties = { width: 5, minWidth: 5, padding: 0, borderRight: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.04)' }
 
@@ -1084,7 +1084,9 @@ function TH({
   // instead of just truncating overlong label text. Moved onto the label
   // span alone so the cell itself sizes to fit both lines (row genuinely
   // grows taller, which is the whole point) while long labels still ellipsis.
-  const { overflow: _thOverflow, textOverflow: _thTextOverflow, whiteSpace: _thWhiteSpace, ...sthRest } = STH
+  const sthRest = Object.fromEntries(
+    Object.entries(STH).filter(([key]) => !['overflow', 'textOverflow', 'whiteSpace'].includes(key)),
+  ) as React.CSSProperties
   return (
     <th
       data-col-key={dataColKey}
@@ -3333,7 +3335,7 @@ export function getDugoutHeaderCells(
     <>
       <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
       {H(
-        <img
+        <SafeImage
           src="/logo.png"
           alt="SlipSurge Score"
           style={{ display: 'inline-block', width: 14, height: 14, objectFit: 'contain', verticalAlign: 'middle' }}
@@ -3645,7 +3647,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     return () => clearTimeout(t)
     // Only on mount for this game/highlight combo — don't re-scroll every
     // time the row's own data refreshes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightKey])
 
   const toggleSort = (col: string) => {
@@ -3712,7 +3713,7 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
       })
       .catch(() => { /* The precomputed payload remains authoritative if fallback is unavailable. */ })
     return () => controller.abort()
-  }, [date, game.gamePk, lineupMechanicsKey])
+  }, [date, game.gamePk, game.awayLineup, game.homeLineup, lineupMechanicsKey])
 
   const { homeRows, awayRows, pool } = useMemo(() => {
     const ap = game.awayPitcher
@@ -3806,10 +3807,6 @@ function GameTable({ game, splitMap, pitcherMap, fhrAvgMap, saAvgMap, communityP
     setTimelineIndex(bounded)
     setMarketSnapshot(bounded === 0 ? 'open' : 'now')
   }
-  const topIndexRow = pool.reduce<BatterRow | null>((best, row) => {
-    if (row.mechanics_index == null) return best
-    return !best || best.mechanics_index == null || row.mechanics_index > best.mechanics_index ? row : best
-  }, null)
   const confirmedLineups = Number(!!game.homeLineupConfirmed) + Number(!!game.awayLineupConfirmed)
   const matchupStatus = game.status === 'Live' ? 'Live' : game.status === 'Final' ? 'Final' : 'Pregame'
   const scheduledTime = game.gameDate
@@ -4617,11 +4614,11 @@ export function DailyRecapTable({ data, date }: { data: any; date: string }) {
 
   const splitMap   = useMemo(() => buildSplitMap(data?.statSplits ?? []), [data?.statSplits])
   const pitcherMap = useMemo(() => buildPitcherMap(data?.pitcherSplits ?? []), [data?.pitcherSplits])
-  const fhrAvgMap  = useMemo(() => buildFhrAvgMap(data), [data?.fhrAvg])
-  const saAvgMap   = useMemo(() => buildSaAvgMap(data), [data?.saAvg])
-  const openingMap = useMemo(() => buildOpeningMap(data), [data?.openingSaRbi])
-  const hrMap      = useMemo(() => buildHrMap(data), [data?.hrFeed])
-  const nearMap    = useMemo(() => buildNearMap(data), [data?.nearHr])
+  const fhrAvgMap  = useMemo(() => buildFhrAvgMap(data), [data])
+  const saAvgMap   = useMemo(() => buildSaAvgMap(data), [data])
+  const openingMap = useMemo(() => buildOpeningMap(data), [data])
+  const hrMap      = useMemo(() => buildHrMap(data), [data])
+  const nearMap    = useMemo(() => buildNearMap(data), [data])
 
   // Same per-game buildBatterRow + Paper/MM pool as GameTable's own useMemo
   // (both lineups pooled together, exactly like the live board), just run
@@ -5088,16 +5085,16 @@ export function DugoutClient({ date }: { date: string }) {
   // bookmaker) with the season-average AMERICAN ODDS PRICE in `avg_price` —
   // not a percentage, and not keyed "fhr_pct"/"pct". Bucket by bookmaker
   // (fanduel -> fd, williamhill_us -> cz) exactly like mlb-party's own map.
-  const fhrAvgMap = useMemo(() => buildFhrAvgMap(data), [data?.fhrAvg])
-  const saAvgMap = useMemo(() => buildSaAvgMap(data), [data?.saAvg])
+  const fhrAvgMap = useMemo(() => buildFhrAvgMap(data), [data])
+  const saAvgMap = useMemo(() => buildSaAvgMap(data), [data])
   const communityPicksMap = useMemo(() => {
     const activeGameKey = (data?.games ?? []).find((g: any) => g.gameKey === activeGame)?.gameKey
       ?? (data?.games ?? [])[0]?.gameKey ?? null
     return buildCommunityPicksMap(data, activeGameKey)
-  }, [data?.communityPicks, data?.games, activeGame])
-  const openingMap = useMemo(() => buildOpeningMap(data), [data?.openingSaRbi])
-  const hrMap = useMemo(() => buildHrMap(data), [data?.hrFeed])
-  const nearMap = useMemo(() => buildNearMap(data), [data?.nearHr])
+  }, [data, activeGame])
+  const openingMap = useMemo(() => buildOpeningMap(data), [data])
+  const hrMap = useMemo(() => buildHrMap(data), [data])
+  const nearMap = useMemo(() => buildNearMap(data), [data])
 
   if (loading) return (
     <div aria-live="polite" aria-busy="true" style={{ display: 'grid', gap: 10, minHeight: 280 }}>

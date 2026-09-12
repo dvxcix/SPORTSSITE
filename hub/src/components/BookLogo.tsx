@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // Vendor key → display info. Logos are served from our own /public/sportsbooks
 // (copied from mlb-party's asset set) — remote sportsbook favicons are
@@ -52,7 +53,7 @@ export function BookLogo({ vendor, size = 16 }: { vendor: string; size?: number 
 
   if (!err) {
     return (
-      <img
+      <SafeImage
         src={book.favicon}
         alt={`${vendor} logo`}
         onError={() => setErr(true)}

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { Activity } from 'lucide-react'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,7 @@ export default async function AdminOnlineUsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-black text-white overflow-hidden shrink-0">
-                          {p?.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p?.display_name || p?.username || u.email || '?')[0].toUpperCase()}
+                          {p?.avatar_url ? <SafeImage src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p?.display_name || p?.username || u.email || '?')[0].toUpperCase()}
                           {isRecent && <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-400 border border-zinc-900" />}
                         </div>
                         <p className="font-medium text-white">{p?.display_name || p?.username || u.email || '(no profile)'}</p>

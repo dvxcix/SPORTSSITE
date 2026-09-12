@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { mlbTeamLogo, mlbGameLabel, mlbGameIsLive, mlbGameIsFinal } from '@slipsurge/core/mlb-api'
 import type { MLBGame } from '@slipsurge/core/mlb-api'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 function Logo({ id, name, size = 32 }: { id: number; name: string; size?: number }) {
   const [err, setErr] = useState(false)
@@ -17,9 +18,9 @@ function Logo({ id, name, size = 32 }: { id: number; name: string; size?: number
     </div>
   )
   return (
-    <img
+    <SafeImage
       src={mlbTeamLogo(id)}
-      alt={name}
+      alt={`${name} logo`}
       onError={() => setErr(true)}
       style={{ width: dim, height: dim, objectFit: 'contain', flexShrink: 0 }}
     />

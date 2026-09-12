@@ -11,8 +11,6 @@ interface Props {
   runnerFirst?: Runner
   runnerSecond?: Runner
   runnerThird?: Runner
-  /** Team abbreviation of the team currently batting (all runners belong to it) */
-  offenseTeamAbbr?: string | null
   size?: number
 }
 
@@ -36,7 +34,6 @@ function RunnerAvatar({ runner, x, y, s }: { runner: Runner; x: number; y: numbe
 export function BaseDiamond({
   first = false, second = false, third = false,
   runnerFirst, runnerSecond, runnerThird,
-  offenseTeamAbbr,
   size = 40,
 }: Props) {
   const s = size

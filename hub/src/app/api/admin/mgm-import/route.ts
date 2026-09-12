@@ -115,7 +115,10 @@ export async function POST(req: Request) {
       .eq('game_key', gameKey ?? `${awayTeam}@${homeTeam}`)
       .limit(1)
     if (!existing || existing.length === 0) {
-      const openingRows = rows.map(({ updated_at, ...r }) => ({ ...r, captured_at: new Date().toISOString() }))
+      const openingRows = rows.map(r => ({
+        ...Object.fromEntries(Object.entries(r).filter(([key]) => key !== 'updated_at')),
+        captured_at: new Date().toISOString(),
+      }))
       const { error: openErr } = await admin
         .from('mgm_gap_odds_opening')
         .upsert(openingRows, { onConflict: 'game_date,game_key,name_norm' })

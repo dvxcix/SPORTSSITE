@@ -6,8 +6,9 @@ import { mlbHeadshot, pitchColor, pitchLabel } from '@slipsurge/core/mlb-api'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { Tooltip } from '@/components/ui/tooltip-card'
-import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { WatchlistStarButton } from '@/components/shared/WatchlistStarButton'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // Pulled out of PitcherReportClient.tsx so Dugout's per-batter drilldown can
 // render the exact same matchup tables — headers, heat-mapping, sort, the
@@ -111,7 +112,7 @@ export function TeamLogoImg({ abbr, size = 20 }: { abbr: string; size?: number }
   const [err, setErr] = useState(false)
   const url = getTeamLogoUrl(abbr)
   if (!url || err) return <span style={{ fontSize: size * 0.5, fontWeight: 800, color: 'var(--text-3)' }}>{abbr}</span>
-  return <img src={url} alt={abbr} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />
+  return <SafeImage src={url} alt={`${abbr} logo`} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />
 }
 
 export function pickPitcherRow(pitcherMap: Record<string, Record<string, { season?: any; recent?: any }>>, pitcherId: string | number | null | undefined, batterHand: string | null | undefined) {
@@ -363,11 +364,10 @@ export function PitchMixTable({ title, rows, hand, pinned, onTogglePin }: {
 // pre-aggregated table or a live-computed map, and `batters` can be the
 // whole opposing lineup (Pitcher Report) or a single player (Dugout,
 // scoped to just the batter whose row is expanded).
-export function BatterVsPitchTable({ batters, getRow, date, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap, communityPicksMap, gameInfo }: {
+export function BatterVsPitchTable({ batters, getRow, pitcherId, pitcherHand, splitMap, timingMap, pitcherMap, communityPicksMap, gameInfo }: {
   pitchType: string
   batters: LineupPlayer[]
   getRow: (batter: LineupPlayer) => any | null
-  date: string
   pitcherId: number
   pitcherHand: string
   splitMap: { byId: any; byName: any }

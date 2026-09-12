@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { getGameStatus, getTeams } from '@slipsurge/core/espn-api'
 import type { ESPNGame, SportKey } from '@slipsurge/core/espn-api'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
   const [hovered, setHovered] = useState(false)
@@ -39,7 +40,7 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
           {[away, home].map((team, i) => team && (
             <div key={i} className="ss-score-card-team" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {team.team.logo && (
-                <img src={team.team.logo} alt="" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
+                <SafeImage src={team.team.logo} alt="" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -95,7 +96,7 @@ export function GameCardCompact({ game, sport }: { game: ESPNGame; sport: SportK
         <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</p>
         {[away, home].map((t, i) => t && (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: i === 0 ? 4 : 0 }}>
-            {t.team.logo && <img src={t.team.logo} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />}
+            {t.team.logo && <SafeImage src={t.team.logo} alt="" style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />}
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {t.team.abbreviation}
             </span>

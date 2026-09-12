@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Spotlight } from '@/components/ui/spotlight'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
@@ -419,7 +419,7 @@ function LeagueBatterTable({
     }
     hadLiveRef.current = !!livePitcher
   }, [!!livePitcher]) // eslint-disable-line react-hooks/exhaustive-deps
-  const buildRow = (p: Roster) => {
+  const buildRow = useCallback((p: Roster) => {
     const row = buildBatterRow(p, effectiveHand, statSplits, timingSplits)
     const edge = selectedPitcher
       ? computeMatchupEdge(p.mlb_id, selectedPitcher.mlb_id, effectiveHand, batterPitchRecent, pitcherPitchRecent)
@@ -432,14 +432,14 @@ function LeagueBatterTable({
     const status = live?.playerStatus[p.mlb_id] ?? null
     const statusRank = isCurrentBatter ? 4 : isOnDeck ? 3 : status === 'in' ? 2 : status === 'not_played' ? 1 : status === 'done' ? 0 : -1
     return { ...row, edge, flagCount, status, isCurrentBatter, isOnDeck, statusRank }
-  }
+  }, [batterPitchRecent, containmentFlags, dataFlags, effectiveHand, flags, live, pitcherPitchRecent, selectedPitcher, statSplits, timingSplits])
   const rows = useMemo(
     () => sortRows(batterRoster.map(buildRow), sort),
-    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, sort, flags, dataFlags, containmentFlags, live]
+    [batterRoster, buildRow, sort]
   )
   const pool = useMemo(
     () => batterRoster.map(buildRow),
-    [batterRoster, effectiveHand, statSplits, timingSplits, batterPitchRecent, pitcherPitchRecent, selectedPitcher, flags, dataFlags, containmentFlags, live]
+    [batterRoster, buildRow]
   )
   const g = (f: string) => pool.map((r: any) => r[f])
   const pAbbr = selectedPitcher?.teamId != null ? ID_TO_ABBR[selectedPitcher.teamId] : undefined
@@ -709,7 +709,7 @@ function BookMarketsPanel({
       ) : sectionNames.map(section => (
         <div key={section} style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           <button
-            onClick={() => setOpenSections(s => { const n = new Set(s); n.has(section) ? n.delete(section) : n.add(section); return n })}
+            onClick={() => setOpenSections(s => { const n = new Set(s); if (n.has(section)) n.delete(section); else n.add(section); return n })}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--surface)', border: 'none', cursor: 'pointer' }}
           >
             <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>{section}</span>
@@ -720,7 +720,7 @@ function BookMarketsPanel({
               {grouped[section].map(m => (
                 <div key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <button
-                    onClick={() => setOpenMarkets(s => { const n = new Set(s); n.has(m.id) ? n.delete(m.id) : n.add(m.id); return n })}
+                    onClick={() => setOpenMarkets(s => { const n = new Set(s); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); return n })}
                     style={{ width: '100%', display: 'flex', justifyContent: 'space-between', padding: '10px 16px', background: 'transparent', border: 'none', cursor: 'pointer' }}
                   >
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -883,7 +883,7 @@ export function AllStarClient() {
   // real odds, both sides, ranked tightest gap first.
   const hrRaceRows = computeHrRaceBoard(allMarkets, reserveMlbIds)
 
-  const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleExpand = (id: number) => setExpanded(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   // No explicit timeZone — renders in the viewer's own browser/OS timezone
   // instead of a hardcoded Eastern label.
