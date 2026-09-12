@@ -169,7 +169,14 @@ export default function RegisterPage() {
         ) : (
         <>
         {/* Progress */}
-        <div className={auth.progress} aria-label={`Registration step ${step === 'account' ? 1 : 2} of 2`}>
+        <div
+          className={auth.progress}
+          role="progressbar"
+          aria-label={`Registration step ${step === 'account' ? 1 : 2} of 2`}
+          aria-valuemin={1}
+          aria-valuemax={2}
+          aria-valuenow={step === 'account' ? 1 : 2}
+        >
           {(['account', 'profile'] as const).map((s, i) => (
             <div key={s} className={i === 0 || step === 'profile' ? auth.progressActive : ''} />
           ))}

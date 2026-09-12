@@ -144,7 +144,7 @@ export function LandingPage() {
       {/* Nav */}
       <header className={styles.nav}>
         <Link href="/" className={styles.brand} aria-label="SlipSurge home">
-          <Image src="/logo.png" alt="SlipSurge" width={32} height={32} priority className={styles.brandLogo} />
+          <Image src="/logo.png" alt="" aria-hidden="true" width={32} height={32} priority className={styles.brandLogo} />
           <span className={styles.brandWordmark}>Slip<span>Surge</span></span>
         </Link>
         <nav className={styles.primaryNav} aria-label="Product navigation">
@@ -184,7 +184,7 @@ export function LandingPage() {
             <Link href="/auth/register" className={styles.heroPrimary}>Create free account <ArrowRight size={16} /></Link>
             <Link href="/pricing" className={styles.heroSecondary}>Compare memberships</Link>
           </div>
-          <div className={styles.heroProof} aria-label="Platform highlights">
+          <div className={styles.heroProof} role="group" aria-label="Platform highlights">
             <span><CheckCircle2 size={14} /> Free account</span>
             <span><CheckCircle2 size={14} /> Automatic grading</span>
             <span><ShieldCheck size={14} /> Whop-powered memberships</span>
@@ -249,7 +249,7 @@ export function LandingPage() {
                     <div className={styles.cardIcon}>{t.icon}</div>
                     <TierPill tier={t.tier} />
                   </div>
-                  <h4 className={styles.cardTitle}>{t.title}</h4>
+                  <h3 className={styles.cardTitle}>{t.title}</h3>
                   <p className={styles.cardCopy}>{t.description}</p>
                 </div>
               </Link>
@@ -277,7 +277,7 @@ export function LandingPage() {
               <Link href={f.link} className={styles.cardLink}>
                 <div className={`${styles.featureCard} ss-card`}>
                   <div className={styles.cardIcon}>{f.icon}</div>
-                  <h4 className={styles.cardTitle}>{f.title}</h4>
+                  <h3 className={styles.cardTitle}>{f.title}</h3>
                   <p className={styles.cardCopy}>{f.description}</p>
                 </div>
               </Link>
@@ -323,7 +323,7 @@ export function LandingPage() {
           {PRICING_TEASER.map(p => (
             <div key={p.tier} className={`${styles.priceCard} ${p.popular ? styles.priceCardPopular : ''} ss-card`}>
               {p.popular && <div className={styles.popularBadge}><Badge variant="popular">Most Popular</Badge></div>}
-              <h4>{p.label}</h4>
+              <h3>{p.label}</h3>
               <div className={styles.priceValue}>
                 <span>{p.price}</span>
                 <small>{p.period}</small>

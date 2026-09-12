@@ -764,6 +764,17 @@ test('browser verification enforces shared accessibility fundamentals', async ()
   assert.ok(smoke.includes("visible(image) && !image.hasAttribute('alt')"))
 })
 
+test('shared loading, feedback, and registration states expose valid semantics', async () => {
+  const loading = await read('src/components/layout/DataRouteState.tsx')
+  const feedback = await read('src/components/ui/FeedbackProvider.tsx')
+  const register = await read('src/app/auth/register/page.tsx')
+  assert.ok(loading.includes('role="status" aria-live="polite" aria-busy="true"'))
+  assert.ok(loading.includes('<h1 className="sr-only">Loading {label}</h1>'))
+  assert.ok(feedback.includes('role="region" aria-live="polite" aria-label="Notifications"'))
+  assert.ok(register.includes('role="progressbar"'))
+  assert.ok(register.includes('aria-valuenow={step === \'account\' ? 1 : 2}'))
+})
+
 test('account recovery associates its visible label with the email field', async () => {
   const recovery = await read('src/app/auth/forgot-password/page.tsx')
   assert.ok(recovery.includes('htmlFor="recovery-email"'))

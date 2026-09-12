@@ -21,7 +21,8 @@ export function DataRouteError({ error, reset, label = 'page' }: { error: Error 
 
 export function DataRouteLoading({ label = 'data' }: { label?: string }) {
   return (
-    <div className="ss-route-loading" aria-busy="true" aria-label={`Loading ${label}`}>
+    <div className="ss-route-loading" role="status" aria-live="polite" aria-busy="true" aria-label={`Loading ${label}`}>
+      <h1 className="sr-only">Loading {label}</h1>
       <div className="ss-route-loading-hero">
         <span className="ss-route-loading-icon" />
         <div><span /><span /></div>
@@ -30,7 +31,7 @@ export function DataRouteLoading({ label = 'data' }: { label?: string }) {
       <div className="ss-route-loading-grid">
         {[0, 1, 2].map(item => <section key={item}><span /><span /><span /><span /></section>)}
       </div>
-      <p role="status">Loading {label}…</p>
+      <p>Loading {label}…</p>
     </div>
   )
 }

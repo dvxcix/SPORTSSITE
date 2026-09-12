@@ -285,14 +285,15 @@
 .footer { margin-top: auto; border-top: 1px solid var(--border); padding: 22px 24px; background: color-mix(in srgb, var(--surface) 72%, transparent); }
 .footerInner { display: flex; width: min(100%, 1100px); margin: 0 auto; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .footerInner > span, .footerLinks a { color: var(--text-3); font-size: 12px; }
-.footerLinks { display: flex; gap: 18px; flex-wrap: wrap; }
-.footerLinks a { text-decoration: none; transition: color var(--motion-fast); }
+.footerLinks { display: flex; gap: 6px 12px; flex-wrap: wrap; }
+.footerLinks a { display: inline-flex; min-height: 36px; align-items: center; padding-inline: 3px; text-decoration: none; transition: color var(--motion-fast); }
 .footerLinks a:hover { color: var(--text-1); }
 
 .stepsSection { width: min(100%, 948px); margin-top: 10px; margin-bottom: 28px; }
 
 .inlineLink {
   display: inline-flex;
+  min-height: 36px;
   align-items: center;
   gap: 6px;
   color: var(--accent);

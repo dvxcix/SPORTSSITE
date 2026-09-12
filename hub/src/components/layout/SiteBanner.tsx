@@ -94,8 +94,8 @@ export function SiteBanner() {
           onClick={dismiss}
           aria-label="Dismiss banner"
           style={{
-            position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-            width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)',
+            width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: 'none', background: 'transparent', color: 'inherit', opacity: 0.65,
             cursor: 'pointer', borderRadius: 6,
           }}

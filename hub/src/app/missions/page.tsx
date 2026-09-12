@@ -54,7 +54,7 @@ export default async function MissionsPage() {
             <div className={styles.levelCopy}>
               <span>Mastery progress</span>
               <strong>{mastery.points.toLocaleString()} points</strong>
-              <div className={styles.progress} aria-label={Math.round(levelProgress) + '% to level ' + (mastery.level + 1)}><i style={{ width: levelProgress + '%' }}/></div>
+              <div className={styles.progress} role="progressbar" aria-label={Math.round(levelProgress) + '% to level ' + (mastery.level + 1)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(levelProgress)}><i style={{ width: levelProgress + '%' }}/></div>
               <small>{Math.max(0, levelCeiling - mastery.points).toLocaleString()} to Level {mastery.level + 1}</small>
             </div>
           </section>
@@ -68,7 +68,7 @@ export default async function MissionsPage() {
                 return <article key={mission.key} data-complete={complete}>
                   <div className={styles.missionTop}><span>{mission.period}</span><b>+{mission.points}</b></div>
                   <strong>{mission.title}</strong>
-                  <div className={styles.progress}><i style={{ width: progress + '%' }}/></div>
+                  <div className={styles.progress} role="progressbar" aria-label={mission.title + ' progress'} aria-valuemin={0} aria-valuemax={mission.target} aria-valuenow={Math.min(mission.current, mission.target)}><i style={{ width: progress + '%' }}/></div>
                   <small>{complete ? <><Check size={12}/> Complete</> : mission.current + ' / ' + mission.target}</small>
                 </article>
               })}

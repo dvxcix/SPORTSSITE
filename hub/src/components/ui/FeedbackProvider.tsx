@@ -146,7 +146,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         </Dialog.Root>
       ) : null}
       {currentPrompt ? <FeedbackPrompt key={currentPrompt.id} request={currentPrompt} close={closePrompt} /> : null}
-      <div className={styles.toastRegion} aria-live="polite" aria-label="Notifications">
+      <div className={styles.toastRegion} role="region" aria-live="polite" aria-label="Notifications">
         {notices.map((notice) => (
           <FeedbackToast key={notice.id} notice={notice} dismiss={dismissNotice} />
         ))}
