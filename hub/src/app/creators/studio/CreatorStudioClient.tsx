@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BadgeDollarSign, BarChart3, BellRing, Building2, Check, Copy, ExternalLink, Eye, Layers3, Loader2, LockKeyhole, MessageSquareText, Pause, Play, Plus, Radio, Rocket, ShieldCheck, Users } from 'lucide-react'
 import styles from './CreatorStudio.module.css'
 import { isTrustedSlipSurgeUrl, isTrustedWhopUrl } from '@/lib/whopUrl'
+import { ScheduledPostPlanner, type ScheduledPost } from './ScheduledPostPlanner'
 
 type Product = { id: string; title: string; description: string | null; price: number; product_type: string; status: string; purchase_url: string | null; created_at: string }
 type CreatorProfile = { username: string; whop_connected_company_id: string | null }
@@ -19,7 +20,7 @@ const BENEFITS = [
   ['community', MessageSquareText, 'Private groups and channels'],
 ] as const
 
-export function CreatorStudioClient({ profile, products, groups, stats, events, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; events: Event[]; isTestAccount?: boolean }) {
+export function CreatorStudioClient({ profile, products, groups, stats, events, scheduledPosts, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; events: Event[]; scheduledPosts: ScheduledPost[]; isTestAccount?: boolean }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -112,6 +113,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
 
     <section className={styles.workspace}>
       <div className={styles.primaryColumn}>
+        <ScheduledPostPlanner posts={scheduledPosts}/>
         <article className={styles.panel}>
           <header><div><span>MEMBERSHIP BUILDER</span><h2>Package your member experience</h2><p>Create recurring access or a one-time drop. Select what members receive, then publish through Whop.</p></div><Layers3 size={21} /></header>
           <div className={styles.builder}>

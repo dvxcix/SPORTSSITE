@@ -37,6 +37,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/publish-scheduled-posts",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/archive-stale-watchlist",
       "schedule": "0 8 * * *"
     },

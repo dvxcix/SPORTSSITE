@@ -1057,6 +1057,28 @@ test('group conversations are private, bounded, realtime, and integrated with th
   assert.ok(inbox.includes('<GroupConversationInbox'))
 })
 
+test('creator drafts and scheduled posts publish through a bounded observable job', async () => {
+  const migration = await read('supabase/migrations/20260912172139_creator_scheduled_posts.sql')
+  const api = await read('src/app/api/creator/scheduled-posts/route.ts')
+  const cron = await read('src/app/api/cron/publish-scheduled-posts/route.ts')
+  const studio = await read('src/app/creators/studio/ScheduledPostPlanner.tsx')
+  const studioPage = await read('src/app/creators/studio/page.tsx')
+  const vercel = await read('vercel.json')
+  assert.ok(migration.includes('alter table public.creator_scheduled_posts enable row level security'))
+  assert.ok(migration.includes("status in ('draft', 'scheduled', 'failed')"))
+  assert.ok(!migration.includes('grant select on public.creator_scheduled_posts to anon'))
+  assert.ok(api.includes('hasApprovedCreatorAccess'))
+  assert.ok(api.includes("consumeServerRateLimit(gate.user.id, 'creator_schedule_post'"))
+  assert.ok(cron.includes("withPipelineHealth('publish-scheduled-posts'"))
+  assert.ok(cron.includes(".eq('id', item.id).eq('status', 'scheduled')"))
+  assert.ok(cron.includes(".limit(50)"))
+  assert.ok(cron.includes("status: 'published', published_post_id: post.id"))
+  assert.ok(studio.includes('type="datetime-local"'))
+  assert.ok(studio.includes("action: 'cancel' | 'schedule'"))
+  assert.ok(studioPage.includes(".from('creator_scheduled_posts')"))
+  assert.ok(vercel.includes('/api/cron/publish-scheduled-posts'))
+})
+
 test('product experience audit tracks every completed route dimension', async () => {
   const audit = await read('src/lib/productExperienceAudit.ts')
   assert.ok(audit.includes("accessibility: 'complete'"))

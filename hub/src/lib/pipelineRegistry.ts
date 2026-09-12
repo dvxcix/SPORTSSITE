@@ -61,6 +61,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'replay-operational-retries', label: 'External delivery replay', schedule: 'Every 5 minutes', staleAfterMinutes: everyFiveMinutes, area: 'Maintenance' },
   { name: 'process-contact-recap-exports', label: 'Contact recap exports', schedule: 'Every minute', staleAfterMinutes: 5, area: 'Maintenance' },
   { name: 'process-contact-alerts', label: 'Instant contact alerts', schedule: 'Every minute + feed wake-up', staleAfterMinutes: 5, area: 'Maintenance' },
+  { name: 'publish-scheduled-posts', label: 'Creator scheduled publishing', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Maintenance' },
   { name: 'prune-notifications', label: 'Notification and telemetry retention', schedule: 'Daily', staleAfterMinutes: daily, area: 'Maintenance' },
   { name: 'archive-stale-watchlist', label: 'Watchlist archive', schedule: 'Daily', staleAfterMinutes: daily, area: 'Maintenance' },
 ]
