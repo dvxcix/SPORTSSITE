@@ -7,7 +7,7 @@ import {
   Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
   FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
   Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft, Crosshair,
-  ChevronRight, ShoppingBag, Hash, LayoutGrid, CalendarDays, BookOpen, type LucideIcon,
+  ChevronRight, ShoppingBag, Hash, LayoutGrid, CalendarDays, BookOpen, Layers3, type LucideIcon,
 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
@@ -26,6 +26,7 @@ const rail: NavItem[] = [
 const intelligence: NavItem[] = [
   { href: '/sports', label: 'Live Scores', icon: Activity, badge: 'LIVE' },
   { href: '/dugout', label: 'The Dugout', icon: FlaskConical },
+  { href: '/workspace', label: 'Research Workspace', icon: Layers3 },
   { href: '/batter-cost', label: 'Batter Cost', icon: Coins },
   { href: '/odds-terminal', label: 'Odds Terminal', icon: ChartSpline, badge: 'ULT' },
   { href: '/marketplace', label: 'Matrix Marketplace', icon: ShoppingBag, badge: 'ULT', ultimateOnly: true },

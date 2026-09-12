@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, ChevronRight, Compass, FlaskConical, Hash, LayoutDashboard, MessageCircle, Search, Settings, ShieldCheck, Table2, UserRound, Users, X } from 'lucide-react'
+import { BarChart3, ChevronRight, Compass, FlaskConical, Hash, Layers3, LayoutDashboard, MessageCircle, Search, Settings, ShieldCheck, Table2, UserRound, Users, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import styles from './GlobalCommandPalette.module.css'
 
@@ -15,6 +15,7 @@ const destinations: CommandItem[] = [
   { id: 'messages', label: 'Messages', detail: 'Direct and group conversations', href: '/messages', icon: MessageCircle, keywords: 'dm inbox' },
   { id: 'dugout', label: 'The Dugout', detail: 'MLB markets and game intelligence', href: '/dugout', icon: FlaskConical, keywords: 'baseball mlb odds' },
   { id: 'sideline', label: 'The Sideline', detail: 'NFL markets and matchup intelligence', href: '/the-sideline', icon: BarChart3, keywords: 'football nfl odds' },
+  { id: 'workspace', label: 'Research Workspace', detail: 'Compare saved markets, Matrices, and notes', href: '/workspace', icon: Layers3, keywords: 'watchlist notebook compare saved' },
   { id: 'slate', label: 'Slate Breakdown', detail: 'Pitch mix and matchup analysis', href: '/slate-breakdown', icon: Table2, keywords: 'statcast pitchers batters' },
   { id: 'settings', label: 'Settings', detail: 'Account, profile, privacy, and notifications', href: '/settings', icon: Settings, keywords: 'account membership profile' },
 ]

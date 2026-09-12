@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { GameDetailClient } from './GameDetailClient'
 import { MLBGameClient } from './MLBGameClient'
 import type { GameRoomMessage } from '@/components/community/GameRoom'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const revalidate = 15
 
@@ -24,7 +25,14 @@ const SPORT_LABEL: Record<string, string> = { nfl: 'NFL', nba: 'NBA', mlb: 'MLB'
 // Matching is now exact game_pk only — a pick belongs to this game's tab
 // if and only if its own game_pk (straight) or one of its legs' game_pk
 // (parlay) equals this exact game.
-async function fetchCommunityPicksForGame(supabase: any, gameId: string) {
+type GamePickPost = {
+  game_pk?: string | number | null
+  pick_data?: { legs?: Array<{ game_pk?: string | number | null }> } | null
+  reaction_count?: number | null
+  [key: string]: unknown
+}
+
+async function fetchCommunityPicksForGame(supabase: SupabaseClient, gameId: string) {
   const { data } = await supabase
     .from('posts')
     .select('*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)')
@@ -32,18 +40,18 @@ async function fetchCommunityPicksForGame(supabase: any, gameId: string) {
     .order('created_at', { ascending: false })
     .limit(300)
 
-  const matches = (data ?? []).filter((p: any) => {
+  const matches = ((data ?? []) as GamePickPost[]).filter(p => {
     if (String(p.game_pk) === String(gameId)) return true
     const legs = p.pick_data?.legs
-    if (Array.isArray(legs)) return legs.some((leg: any) => leg.game_pk != null && String(leg.game_pk) === String(gameId))
+    if (Array.isArray(legs)) return legs.some(leg => leg.game_pk != null && String(leg.game_pk) === String(gameId))
     return false
   })
 
-  matches.sort((a: any, b: any) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0))
+  matches.sort((a, b) => (b.reaction_count ?? 0) - (a.reaction_count ?? 0))
   return matches.slice(0, 20)
 }
 
-async function fetchGameRoomMessages(supabase: any, sport: string, gameId: string): Promise<GameRoomMessage[]> {
+async function fetchGameRoomMessages(supabase: SupabaseClient, sport: string, gameId: string): Promise<GameRoomMessage[]> {
   const { data } = await supabase.from('game_room_messages')
     .select('id,sport,game_id,user_id,content,created_at,sender:users!game_room_messages_user_id_fkey(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,is_verified)')
     .eq('sport', sport).eq('game_id', gameId).order('created_at', { ascending: true }).limit(160)

@@ -65,7 +65,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'MLB research', priority: 'P0', defaults: partial,
-    routes: ['/dugout', '/batter-cost', '/slate-breakdown', '/pitcher-report', '/weather-lab', '/spray-charts', '/synergy', '/the-public', '/odds-terminal', '/daily-recap', '/scores', '/sports', '/sports/[sport]/[gameId]', '/research', '/allstar2026'],
+    routes: ['/dugout', '/workspace', '/batter-cost', '/slate-breakdown', '/pitcher-report', '/weather-lab', '/spray-charts', '/synergy', '/the-public', '/odds-terminal', '/daily-recap', '/scores', '/sports', '/sports/[sport]/[gameId]', '/research', '/allstar2026'],
   },
   {
     family: 'NFL research', priority: 'P1', defaults: partial,
@@ -164,6 +164,7 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/nfl/teams/[abbr]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/leaderboard': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/dugout': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
+  '/workspace': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
   '/batter-cost': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/slate-breakdown': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/pitcher-report': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
