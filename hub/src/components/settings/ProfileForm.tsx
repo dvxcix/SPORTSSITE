@@ -13,8 +13,14 @@ import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import { PROVIDER_BY_PLATFORM_KEY, extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
+
+function isSafeHttpUrl(value: string) {
+  if (!value.trim()) return true
+  try { return ['http:', 'https:'].includes(new URL(value.trim()).protocol) } catch { return false }
+}
 
 // Matches BookLogo's own hardcoded BOOKS keys (not exported from there) —
 // these are the only books this app can reliably show a real logo for
@@ -87,7 +93,7 @@ export function ProfileForm({ profile }: { profile: any }) {
     const params = new URLSearchParams(window.location.search)
     const linkError = params.get('link_error') || params.get('whop_link_error')
     const whopLinked = params.get('whop_linked')
-    if (linkError) setConnectedError(linkError)
+    if (linkError) setConnectedError('Could not connect that account. Try again.')
     if (linkError || whopLinked) {
       params.delete('link_error'); params.delete('whop_link_error'); params.delete('whop_linked')
       const qs = params.toString()
@@ -99,7 +105,7 @@ export function ProfileForm({ profile }: { profile: any }) {
     let cancelled = false
     supabase.auth.getUserIdentities().then(async ({ data, error: err }) => {
       if (cancelled) return
-      if (err) { setConnectedError(err.message); return }
+      if (err) { setConnectedError('Could not check connected accounts.'); return }
       if (!data) return
       // Only discord/x come from Supabase's own identities — start from
       // whatever's already stored (e.g. 'whop', synced separately by the
@@ -119,7 +125,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       const body = await response.json().catch(() => ({}))
       if (response.ok && body.identities) setVerified(body.identities)
       else setConnectedError(body.error || 'Verified, but your public profile may not reflect it yet. Refresh to retry.')
-    }).catch((e: any) => { if (!cancelled) setConnectedError(e?.message || 'Could not check connected accounts.') })
+    }).catch(() => { if (!cancelled) setConnectedError('Could not check connected accounts.') })
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -131,7 +137,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       // supabase.auth.linkIdentity(), which only knows providers Supabase
       // itself supports.
       setLinkingProvider('whop')
-      window.location.href = `/auth/whop/login?mode=link&next=${encodeURIComponent('/settings/profile')}`
+      router.push(`/auth/whop/login?mode=link&next=${encodeURIComponent('/settings/profile')}`)
       return
     }
     setLinkingProvider(provider)
@@ -145,9 +151,9 @@ export function ProfileForm({ profile }: { profile: any }) {
       // ever redirecting (most commonly: Manual linking isn't enabled in
       // Supabase's Auth settings, or this identity is already linked to a
       // different SlipSurge account).
-      if (err) { setConnectedError(err.message); setLinkingProvider(null) }
-    } catch (e: any) {
-      setConnectedError(e?.message || 'Could not start linking — please try again.')
+      if (err) { setConnectedError('Could not start linking. Try again.'); setLinkingProvider(null) }
+    } catch {
+      setConnectedError('Could not start linking. Try again.')
       setLinkingProvider(null)
     }
   }
@@ -161,10 +167,9 @@ export function ProfileForm({ profile }: { profile: any }) {
       // as linkIdentity above).
       try {
         const res = await fetch('/api/whop/unlink', { method: 'POST' })
-        const body = await res.json().catch(() => ({}))
-        if (!res.ok) { setConnectedError(body?.error || 'Unlink failed — please try again.'); return }
-      } catch (e: any) {
-        setConnectedError(e?.message || 'Unlink failed — please try again.')
+        if (!res.ok) { setConnectedError('Unlink failed. Try again.'); return }
+      } catch {
+        setConnectedError('Unlink failed. Try again.')
         return
       }
       const next = { ...verified }
@@ -177,8 +182,8 @@ export function ProfileForm({ profile }: { profile: any }) {
     try {
       const res = await supabase.auth.getUserIdentities()
       identity = res.data?.identities.find(i => i.provider === provider)
-    } catch (e: any) {
-      setConnectedError(e?.message || 'Could not load connected accounts.')
+    } catch {
+      setConnectedError('Could not load connected accounts.')
       return
     }
     if (!identity) { setConnectedError(`No linked ${provider === 'x' ? 'X' : 'Discord'} account found to unlink.`); return }
@@ -187,7 +192,7 @@ export function ProfileForm({ profile }: { profile: any }) {
     } catch (e: any) {
       err = e
     }
-    if (err) { setConnectedError(err.message || 'Unlink failed — please try again.'); return }
+    if (err) { setConnectedError('Unlink failed. Try again.'); return }
     const response = await fetch('/api/account/verified-identities', { method: 'POST' })
     const body = await response.json().catch(() => ({}))
     if (response.ok && body.identities) setVerified(body.identities)
@@ -272,11 +277,13 @@ export function ProfileForm({ profile }: { profile: any }) {
     setForm(f => ({ ...f, favorite_players: f.favorite_players.filter(x => x.mlb_id !== mlbId) }))
   }
 
-  async function save() {
+  async function save(event: React.FormEvent) {
+    event.preventDefault()
     setSaving(true); setError('')
     try {
       const username = form.username.trim().toLowerCase().replace(/\s/g, '')
-      if (!username) { setError('Username cannot be empty'); return }
+      if (username.length < 2 || username.length > 30 || !/^[a-z0-9._]+$/.test(username)) { setError('Use 2–30 letters, numbers, periods, or underscores for your username.'); return }
+      if (!isSafeHttpUrl(form.website) || !isSafeHttpUrl(form.avatar_url) || !isSafeHttpUrl(form.banner_url)) { setError('Website and image links must begin with https://'); return }
 
       const { error: err } = await supabase.from('users').update({
         display_name: form.display_name.trim() || null,
@@ -292,11 +299,11 @@ export function ProfileForm({ profile }: { profile: any }) {
         social_links: form.social_links,
         sportsbooks: form.sportsbooks,
       }).eq('id', profile.id)
-      if (err) { setError(err.message); return }
+      if (err) { setError('Your profile could not be saved. Try again.'); return }
       setSaved(true); setTimeout(() => setSaved(false), 2000)
       router.refresh()
-    } catch (e: any) {
-      setError(e?.message || 'Something went wrong saving your profile — please try again.')
+    } catch {
+      setError('Your profile could not be saved. Try again.')
     } finally {
       setSaving(false)
     }
@@ -307,7 +314,7 @@ export function ProfileForm({ profile }: { profile: any }) {
   const completion = Math.round((completionItems.filter(Boolean).length / completionItems.length) * 100)
 
   return (
-    <div className="space-y-6">
+    <form className="space-y-6" onSubmit={save}>
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <section className="rounded-2xl border border-lime-400/20 bg-lime-400/[.055] p-4">
@@ -322,12 +329,12 @@ export function ProfileForm({ profile }: { profile: any }) {
         <input ref={bannerInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'banner'); e.target.value = '' }} />
         <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploading === 'banner'} className="ss-profile-editor-banner" aria-label="Change profile banner">
-          {form.banner_url ? <img src={form.banner_url} alt="" /> : <span>ADD A PROFILE BANNER</span>}
+          {form.banner_url ? <SafeImage src={form.banner_url} alt="" /> : <span>ADD A PROFILE BANNER</span>}
           <span className="ss-profile-editor-upload">{uploading === 'banner' ? <Loader2 size={17} className="animate-spin" /> : <Upload size={17} />} Change banner</span>
         </button>
         <div className="ss-profile-editor-identity">
           <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading === 'avatar'} className="ss-profile-editor-avatar" aria-label="Change profile picture">
-            {form.avatar_url ? <img src={form.avatar_url} alt="" /> : (form.display_name || form.username || '?')[0]?.toUpperCase()}
+            {form.avatar_url ? <SafeImage src={form.avatar_url} alt="" /> : (form.display_name || form.username || '?')[0]?.toUpperCase()}
             <span>{uploading === 'avatar' ? <Loader2 size={19} className="animate-spin" /> : <Upload size={19} />}</span>
           </button>
           <div>
@@ -336,33 +343,33 @@ export function ProfileForm({ profile }: { profile: any }) {
             <p>{form.bio || 'Your bio and identity will preview here as you edit.'}</p>
           </div>
         </div>
-        <details className="ss-profile-editor-links"><summary>Use image URLs instead</summary><div><input value={form.avatar_url} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="Avatar URL" className={inputClass} /><input value={form.banner_url} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="Banner URL" className={inputClass} /></div></details>
+        <details className="ss-profile-editor-links"><summary>Use image URLs instead</summary><div><input type="url" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="Avatar URL" className={inputClass} /><input type="url" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="Banner URL" className={inputClass} /></div></details>
       </section>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Display Name</label>
-          <input value={form.display_name} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Your name" className={inputClass} />
+          <input value={form.display_name} maxLength={60} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Your name" className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Username</label>
-          <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} placeholder="username" className={inputClass} />
+          <input value={form.username} maxLength={30} autoCapitalize="none" spellCheck={false} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} placeholder="username" className={inputClass} />
         </div>
       </div>
 
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-1.5">Bio</label>
-        <textarea value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Tell people who you are…" className={inputClass + ' resize-none'} />
+        <textarea value={form.bio} maxLength={280} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Tell people who you are…" className={inputClass + ' resize-none'} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Location</label>
-          <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className={inputClass} />
+          <input value={form.location} maxLength={80} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Website</label>
-          <input value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <input type="url" value={form.website} maxLength={500} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
       </div>
 
@@ -372,10 +379,10 @@ export function ProfileForm({ profile }: { profile: any }) {
           {SPORTS.map(s => {
             const logo = sportLogoUrl(s)
             return (
-              <button key={s} type="button" onClick={() => toggleSport(s)}
+              <button key={s} type="button" aria-pressed={form.favorite_sports.includes(s)} onClick={() => toggleSport(s)}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_sports.includes(s) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
                 {form.favorite_sports.includes(s) && <Check size={10} />}
-                {logo && <img src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
+                {logo && <SafeImage src={logo} alt="" className="w-3.5 h-3.5 object-contain" />}
                 {s}
               </button>
             )
@@ -387,9 +394,9 @@ export function ProfileForm({ profile }: { profile: any }) {
         <label className="block text-xs font-bold text-zinc-400 mb-2">Favorite Teams</label>
         <div className="flex flex-wrap gap-2">
           {MLB_TEAMS.map(t => (
-            <button key={t.abbr} type="button" onClick={() => toggleTeam(t.abbr)}
+            <button key={t.abbr} type="button" aria-pressed={form.favorite_teams.includes(t.abbr)} onClick={() => toggleTeam(t.abbr)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.favorite_teams.includes(t.abbr) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
-              <img src={getTeamLogoUrl(t.abbr)} alt="" className="w-4 h-4 object-contain" />
+              <SafeImage src={getTeamLogoUrl(t.abbr)} alt="" className="w-4 h-4 object-contain" />
               {t.shortName}
             </button>
           ))}
@@ -436,7 +443,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         <label className="block text-xs font-bold text-zinc-400 mb-2">Sportsbooks You Use</label>
         <div className="flex flex-wrap gap-2">
           {SPORTSBOOKS.map(b => (
-            <button key={b.key} type="button" onClick={() => toggleSportsbook(b.key)}
+            <button key={b.key} type="button" aria-pressed={form.sportsbooks.includes(b.key)} onClick={() => toggleSportsbook(b.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.sportsbooks.includes(b.key) ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-600'}`}>
               <BookLogo vendor={b.key} size={14} />
               {b.label}
@@ -460,7 +467,7 @@ export function ProfileForm({ profile }: { profile: any }) {
                 // since it's pulled from the actual connected account, not typed.
                 return (
                   <div key={p.id} className="flex items-center gap-2.5">
-                    <img src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
+                    <SafeImage src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
                     <a href={identity.profileUrl} target="_blank" rel="noopener noreferrer"
                       className="flex-1 flex items-center gap-1.5 text-sm font-bold text-white hover:underline">
                       {identity.handle}
@@ -475,11 +482,12 @@ export function ProfileForm({ profile }: { profile: any }) {
               }
               return (
                 <div key={p.id} className="flex items-center gap-2.5">
-                  <img src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
+                  <SafeImage src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
                   <input
                     value={form.social_links[p.key] ?? ''}
                     onChange={e => setSocialLink(p.key, e.target.value)}
                     placeholder={`Your ${p.name} handle/username…`}
+                    maxLength={100}
                     className={inputClass}
                   />
                   {provider && (
@@ -495,10 +503,10 @@ export function ProfileForm({ profile }: { profile: any }) {
         </div>
       )}
 
-      <button onClick={save} disabled={saving || !!uploading}
+      <button type="submit" disabled={saving || !!uploading}
         className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all ${saved ? 'bg-green-600 text-white' : 'bg-green-500 hover:bg-green-400 text-black'} disabled:opacity-60`}>
-        {saved ? <><Check size={16} /> Saved!</> : saving ? 'Saving…' : 'Save Profile'}
+        {saved ? <><Check size={16} /> Saved!</> : saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Save Profile'}
       </button>
-    </div>
+    </form>
   )
 }
