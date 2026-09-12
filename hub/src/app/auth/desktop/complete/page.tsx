@@ -25,12 +25,12 @@ function DesktopAuthCompleteInner() {
     localStorage.removeItem('slipsurge_desktop_oauth_state')
     createClient().auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' }).then(({ error }) => {
       if (error) {
-        setError(error.message)
+        setError('Desktop sign-in could not be completed. Return to the app and try again.')
         return
       }
       router.replace(next)
       router.refresh()
-    })
+    }).catch(() => setError('Desktop sign-in could not be completed. Return to the app and try again.'))
   }, [router, searchParams])
 
   return <AuthStatus error={error}>Finishing desktop sign-in…</AuthStatus>

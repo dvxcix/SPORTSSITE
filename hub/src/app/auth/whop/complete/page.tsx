@@ -25,10 +25,10 @@ function WhopCompleteInner() {
 
     const supabase = createClient()
     supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' }).then(({ error }) => {
-      if (error) { setError(error.message); return }
+      if (error) { setError('Sign-in could not be completed. Please try again.'); return }
       router.push(next)
       router.refresh()
-    })
+    }).catch(() => setError('Sign-in could not be completed. Please try again.'))
   }, [searchParams, router, tokenHash])
 
   return <AuthStatus error={requestError || error}>Signing you in…</AuthStatus>

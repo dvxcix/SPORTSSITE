@@ -4,8 +4,14 @@ import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Save, Send } from 'lucide-react'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 const CATEGORIES = ['Analysis', 'Picks', 'News', 'Opinion', 'Preview', 'Recap', 'Fantasy', 'Betting Strategy']
+
+function isSafeImageUrl(value: string) {
+  if (!value.trim()) return true
+  try { return ['http:', 'https:'].includes(new URL(value.trim()).protocol) } catch { return false }
+}
 
 export function BlogEditor({ userId, initial, blogId }: { userId: string; initial?: any; blogId?: string }) {
   const router = useRouter()
@@ -27,55 +33,51 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
 
   async function save(s: 'draft' | 'published') {
     if (!form.title.trim()) { setError('Title is required'); return }
+    if (!isSafeImageUrl(form.cover_image)) { setError('Cover image links must begin with https://'); return }
     setSubmitting(true)
-
-    if (blogId) {
-      // Editing — keep the existing slug so links to this post don't break.
-      const { error: err } = await supabase.from('blogs').update({
-        title: form.title.trim(),
+    setError('')
+    try {
+      if (blogId) {
+        const { error: err } = await supabase.from('blogs').update({
+          title: form.title.trim(), excerpt: form.excerpt.trim() || form.content.slice(0, 200) || null,
+          content: form.content.trim(), category: form.category || null,
+          cover_image: form.cover_image.trim() || null, sport: form.sport || null, status: s,
+        }).eq('id', blogId)
+        if (err) { setError('The article could not be saved. Try again.'); return }
+        router.push(s === 'published' ? `/blog/${initial?.slug}` : '/blog/my')
+        return
+      }
+      const { data, error: err } = await supabase.from('blogs').insert({
+        author_id: userId, title: form.title.trim(), slug: slug(form.title.trim()),
         excerpt: form.excerpt.trim() || form.content.slice(0, 200) || null,
-        content: form.content.trim(),
-        category: form.category || null,
-        cover_image: form.cover_image.trim() || null,
-        sport: form.sport || null,
-        status: s,
-      }).eq('id', blogId)
-      if (err) { setError(err.message); setSubmitting(false); return }
-      router.push(s === 'published' ? `/blog/${initial?.slug}` : '/blog/my')
-      return
+        content: form.content.trim(), category: form.category || null,
+        cover_image: form.cover_image.trim() || null, sport: form.sport || null,
+        status: s, view_count: 0,
+      }).select('slug').single()
+      if (err || !data?.slug) { setError('The article could not be saved. Try again.'); return }
+      router.push(s === 'published' ? `/blog/${data.slug}` : '/blog/my')
+    } catch {
+      setError('The article could not be saved. Try again.')
+    } finally {
+      setSubmitting(false)
     }
-
-    const { data, error: err } = await supabase.from('blogs').insert({
-      author_id: userId,
-      title: form.title.trim(),
-      slug: slug(form.title.trim()),
-      excerpt: form.excerpt.trim() || form.content.slice(0, 200) || null,
-      content: form.content.trim(),
-      category: form.category || null,
-      cover_image: form.cover_image.trim() || null,
-      sport: form.sport || null,
-      status: s,
-      view_count: 0,
-    }).select('slug').single()
-    if (err) { setError(err.message); setSubmitting(false); return }
-    router.push(s === 'published' ? `/blog/${data?.slug}` : '/blog/my')
   }
 
   return (
     <div className="space-y-4">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+      <input value={form.title} maxLength={140} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
         placeholder="Article title…"
         className="w-full bg-transparent text-2xl font-black text-white placeholder:text-zinc-700 outline-none border-b border-zinc-800 pb-3" />
 
-      <input value={form.cover_image} onChange={e => setForm(f => ({ ...f, cover_image: e.target.value }))}
+      <input type="url" value={form.cover_image} maxLength={500} onChange={e => setForm(f => ({ ...f, cover_image: e.target.value }))}
         placeholder="Cover image URL (optional)"
         className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
 
       {form.cover_image && (
         <div className="h-40 rounded-xl overflow-hidden">
-          <img src={form.cover_image} alt="" className="w-full h-full object-cover" />
+          <SafeImage src={form.cover_image} alt="" className="w-full h-full object-cover" fallback={<div className="grid h-full place-items-center bg-zinc-900 text-xs text-zinc-500">Image unavailable</div>} />
         </div>
       )}
 
@@ -96,7 +98,7 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
         </div>
       </div>
 
-      <input value={form.excerpt} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))}
+      <input value={form.excerpt} maxLength={280} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))}
         placeholder="Short excerpt / subtitle (optional)"
         className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
 
@@ -105,15 +107,16 @@ export function BlogEditor({ userId, initial, blogId }: { userId: string; initia
         onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
         placeholder="Write your article here… (Markdown supported)"
         rows={20}
+        maxLength={50000}
         className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 outline-none focus:border-green-500/50 resize-y font-mono leading-relaxed"
       />
 
       <div className="flex gap-3">
-        <button onClick={() => save('draft')} disabled={submitting}
+        <button type="button" onClick={() => save('draft')} disabled={submitting}
           className="flex-1 flex items-center justify-center gap-2 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 font-bold py-2.5 rounded-xl transition-colors disabled:opacity-40">
           <Save size={14} /> Save Draft
         </button>
-        <button onClick={() => save('published')} disabled={submitting}
+        <button type="button" onClick={() => save('published')} disabled={submitting}
           className="flex-1 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-2.5 rounded-xl transition-colors">
           <Send size={14} /> {blogId ? 'Save & Publish' : 'Publish'}
         </button>

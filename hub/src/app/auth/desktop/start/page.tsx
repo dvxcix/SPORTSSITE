@@ -37,8 +37,8 @@ function DesktopAuthStartInner() {
       provider,
       options: { redirectTo: callback.toString() },
     }).then(({ error }) => {
-      if (error) setError(error.message)
-    })
+      if (error) setError('Desktop sign-in could not be started. Return to the app and try again.')
+    }).catch(() => setError('Desktop sign-in could not be started. Return to the app and try again.'))
   }, [provider, requestError, searchParams, state])
 
   return <DesktopAuthStatus error={requestError || error} />

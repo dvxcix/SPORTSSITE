@@ -37,38 +37,46 @@ export function PageSettingsForm({ page }: { page: any }) {
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  async function save() {
+  async function save(event?: React.FormEvent) {
+    event?.preventDefault()
     if (!form.name.trim()) { setError('Page name is required'); return }
     if (!isSafeImageUrl(form.avatar_url) || !isSafeImageUrl(form.banner_url)) { setError('Image links must begin with https://'); return }
     setSaving(true); setError('')
-    const { error: err } = await supabase.from('pages').update({
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      category: form.category || null,
-      sport: form.sport || null,
-      emoji: form.emoji,
-      avatar_url: form.avatar_url.trim() || null,
-      banner_url: form.banner_url.trim() || null,
-      is_published: form.is_published,
-    }).eq('id', page.id)
-    if (err) { setError('The page could not be saved. Try again.'); setSaving(false); return }
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
-    setSaving(false)
-    router.refresh()
+    try {
+      const { error: err } = await supabase.from('pages').update({
+        name: form.name.trim(), description: form.description.trim() || null,
+        category: form.category || null, sport: form.sport || null, emoji: form.emoji,
+        avatar_url: form.avatar_url.trim() || null, banner_url: form.banner_url.trim() || null,
+        is_published: form.is_published,
+      }).eq('id', page.id)
+      if (err) { setError('The page could not be saved. Try again.'); return }
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+      router.refresh()
+    } catch {
+      setError('The page could not be saved. Try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function deletePage() {
     setDeleting(true); setError('')
-    const { error: err } = await supabase.from('pages').delete().eq('id', page.id)
-    if (err) { setError('The page could not be deleted. Try again.'); setDeleting(false); return }
-    router.push('/pages')
+    try {
+      const { error: err } = await supabase.from('pages').delete().eq('id', page.id)
+      if (err) { setError('The page could not be deleted. Try again.'); return }
+      router.push('/pages')
+    } catch {
+      setError('The page could not be deleted. Try again.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 transition-all"
 
   return (
-    <div className="ss-flow-form">
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+    <form className="ss-flow-form" onSubmit={save}>
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <div className="ss-flow-card">
         <div>
@@ -129,7 +137,7 @@ export function PageSettingsForm({ page }: { page: any }) {
         </div>
       </div>
 
-      <button onClick={save} disabled={saving || !form.name.trim()} className="ss-flow-submit">
+      <button type="submit" disabled={saving || !form.name.trim()} className="ss-flow-submit">
         {saved ? <><Check size={14} /> Saved</> : saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Save size={16} /> Save changes</>}
       </button>
 
@@ -138,17 +146,17 @@ export function PageSettingsForm({ page }: { page: any }) {
         <p className="text-xs text-zinc-500 mb-3">Permanently delete this page and all its posts. This cannot be undone.</p>
         {confirmingDelete ? (
           <div className="flex items-center gap-2">
-            <button onClick={deletePage} disabled={deleting} className="bg-red-500 hover:bg-red-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
+            <button type="button" onClick={deletePage} disabled={deleting} className="bg-red-500 hover:bg-red-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
               {deleting ? 'Deleting…' : 'Yes, delete this page'}
             </button>
-            <button onClick={() => setConfirmingDelete(false)} className="text-zinc-400 hover:text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">Cancel</button>
+            <button type="button" onClick={() => setConfirmingDelete(false)} className="text-zinc-400 hover:text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">Cancel</button>
           </div>
         ) : (
-          <button onClick={() => setConfirmingDelete(true)} className="border border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
+          <button type="button" onClick={() => setConfirmingDelete(true)} className="border border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold px-4 py-2 rounded-xl text-sm transition-colors">
             <Trash2 size={14} /> Delete page
           </button>
         )}
       </div>
-    </div>
+    </form>
   )
 }

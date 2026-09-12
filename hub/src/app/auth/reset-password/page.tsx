@@ -76,14 +76,22 @@ export default function ResetPasswordPage() {
     return () => { sub.subscription.unsubscribe(); clearTimeout(timeout) }
   }, [supabase])
 
-  async function reset() {
+  async function reset(event?: React.FormEvent) {
+    event?.preventDefault()
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
     if (password !== confirm) { setError('Passwords do not match'); return }
     setLoading(true)
-    const { error: err } = await supabase.auth.updateUser({ password })
-    if (err) { setError(err.message); setLoading(false); return }
-    setDone(true)
-    setTimeout(() => router.push('/feed'), 2000)
+    setError('')
+    try {
+      const { error: err } = await supabase.auth.updateUser({ password })
+      if (err) { setError('We could not update your password. Request a new reset link and try again.'); return }
+      setDone(true)
+      setTimeout(() => router.push('/feed'), 2000)
+    } catch {
+      setError('We could not update your password. Request a new reset link and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -109,23 +117,23 @@ export default function ResetPasswordPage() {
             <p>Taking you back to your feed…</p>
           </div>
         ) : (
-          <div className="ss-auth-card">
+          <form className="ss-auth-card" onSubmit={reset}>
             {error && <div role="alert" className="ss-auth-alert">{error}</div>}
             <div>
               <label>New password</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters"
-                autoComplete="new-password" className="ss-input" />
+                autoComplete="new-password" maxLength={128} className="ss-input" />
             </div>
             <div>
               <label>Confirm password</label>
               <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password"
-                autoComplete="new-password" className="ss-input" />
+                autoComplete="new-password" maxLength={128} className="ss-input" />
             </div>
-            <button onClick={reset} disabled={loading || !password || !confirm}
+            <button type="submit" disabled={loading || !password || !confirm}
               className="ss-auth-submit">
               {loading ? 'Updating…' : 'Set new password'}
             </button>
-          </div>
+          </form>
         )}
     </AuthShell>
   )

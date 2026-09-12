@@ -16,12 +16,18 @@ export default function ForgotPasswordPage() {
   async function send() {
     if (!email.trim()) return
     setLoading(true)
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
-    if (err) { setError(err.message); setLoading(false); return }
-    setSent(true)
-    setLoading(false)
+    setError('')
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      if (err) { setError('We could not send the reset link. Try again.'); return }
+      setSent(true)
+    } catch {
+      setError('We could not send the reset link. Try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,34 +40,24 @@ export default function ForgotPasswordPage() {
             <Link href="/auth/login" className="ss-auth-link mt-4 inline-block">Back to sign in</Link>
           </div>
         ) : (
-          <div className="ss-auth-card">
+          <form className="ss-auth-card" onSubmit={event => { event.preventDefault(); void send() }}>
             {error && <div role="alert" className="ss-auth-alert">{error}</div>}
             <div>
               <label>Email address</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && send()}
                 placeholder="you@example.com"
                 autoComplete="email"
+                maxLength={254}
                 className="ss-input" />
             </div>
-            <button onClick={send} disabled={loading || !email.trim()}
+            <button type="submit" disabled={loading || !email.trim()}
               className="ss-auth-submit">
               {loading ? 'Sending…' : 'Send reset link'}
             </button>
             <Link href="/auth/login" className="ss-auth-muted-link text-center">
               Back to sign in
             </Link>
-            {/* Not conditional on whether this email actually has a password —
-                doing that lookup here would let this form be used to probe
-                which emails have accounts. Shown unconditionally instead, so
-                it costs nothing for password accounts and saves a support
-                ticket for the (common) case of someone who signed up with
-                Discord/X and has no password to reset in the first place. */}
-            <p className="ss-auth-note">
-              Signed up with Discord or X? There&apos;s no password to reset — just{' '}
-              <Link href="/auth/login" className="text-zinc-300 underline">sign in that same way</Link>.
-            </p>
-          </div>
+          </form>
         )}
     </AuthShell>
   )
