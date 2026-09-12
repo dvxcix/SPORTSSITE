@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowDown, ArrowLeft, Forward, Image as ImageIcon, LockKeyhole, Pencil, Reply, Send, Sparkles, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, Forward, Image as ImageIcon, LockKeyhole, Pencil, Pin, Reply, Search, Send, Sparkles, Trash2, X } from 'lucide-react'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
 import { notify } from '@/lib/notify'
 import { BlockUserButton } from '@/components/social/BlockUserButton'
@@ -14,11 +14,13 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { GifPicker } from '@/components/social/GifPicker'
 import { MessageReactionBar } from '@/components/chat/MessageReactionBar'
 import { useMessageInteractionState } from '@/components/chat/useMessageInteractionState'
+import { DMConversationTools, type DMToolMode } from '@/components/chat/DMConversationTools'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: 'none' | 'solid' | 'surge' | 'pulse' | 'orbit'; avatar_ring_color?: string; is_verified?: boolean }
   currentUserId: string
   initialMessages: DMMessage[]
+  initialPinnedMessageIds?: string[]
 }
 
 export type DMMessage = {
@@ -35,7 +37,7 @@ export type DMMessage = {
   forwarded_from_id?: string | null
 }
 
-export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps) {
+export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedMessageIds = [] }: DMRoomProps) {
   const [messages, setMessages] = useState(initialMessages)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -46,6 +48,8 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [atBottom, setAtBottom] = useState(true)
   const [unseenCount, setUnseenCount] = useState(0)
+  const [toolMode, setToolMode] = useState<DMToolMode | null>(null)
+  const [pinnedMessageIds, setPinnedMessageIds] = useState(() => new Set(initialPinnedMessageIds))
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textInputRef = useRef<HTMLTextAreaElement>(null)
@@ -126,6 +130,34 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
     atBottomRef.current = true
     setAtBottom(true)
     setUnseenCount(0)
+  }
+
+  function jumpToMessage(messageId: string) {
+    setToolMode(null)
+    requestAnimationFrame(() => document.getElementById(`message-${messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+  }
+
+  async function togglePin(messageId: string) {
+    const wasPinned = pinnedMessageIds.has(messageId)
+    setPinnedMessageIds(current => {
+      const next = new Set(current)
+      if (wasPinned) next.delete(messageId)
+      else next.add(messageId)
+      return next
+    })
+    const request = wasPinned
+      ? supabase.from('message_pins').delete().eq('user_id', currentUserId).eq('message_id', messageId)
+      : supabase.from('message_pins').insert({ user_id: currentUserId, message_id: messageId })
+    const { error: pinError } = await request
+    if (pinError) {
+      setPinnedMessageIds(current => {
+        const next = new Set(current)
+        if (wasPinned) next.add(messageId)
+        else next.delete(messageId)
+        return next
+      })
+      setError(wasPinned ? 'Message not unpinned. Try again.' : 'Message not pinned. Try again.')
+    }
   }
 
   async function send() {
@@ -228,6 +260,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           </div>
         </Link>
         <span className="ss-dm-private"><LockKeyhole size={11} /> Private</span>
+        <button type="button" className="ss-dm-header-action" onClick={() => setToolMode(current => current ? null : 'search')} aria-label="Conversation tools" aria-expanded={Boolean(toolMode)}><Search size={15} /></button>
         <BlockUserButton
           currentUserId={currentUserId}
           targetUserId={partner.id}
@@ -254,7 +287,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
                 {m.forwarded_from_id ? <span className="ss-dm-forwarded"><Forward size={10}/> Forwarded</span> : null}<div className={`ss-dm-bubble ${m.is_deleted ? 'is-deleted' : ''}`}>{m.is_deleted ? 'Message deleted' : <><LinkifiedText text={m.content || ''} />{m.edited_at ? <small className="ss-chat-edited">edited</small> : null}</>}</div>
                 {!m.is_deleted && m.media_urls?.[0] && <SafeImage src={m.media_urls[0]} alt="" className="ss-dm-media"/>}
                 <MessageReactionBar reactions={reactions[m.id]} disabled={m.is_deleted} onToggle={emoji => void toggleReaction(m.id, emoji)}/>
-                <div className="ss-dm-message-meta"><time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>{isMe && partnerLastReadAt && new Date(partnerLastReadAt) >= new Date(m.created_at) ? <span className="ss-dm-seen">Seen</span> : null}{!m.is_deleted ? <><button type="button" onClick={() => { setEditingMessage(null); setReplyingTo(m); textInputRef.current?.focus() }} aria-label="Reply to message"><Reply size={11}/> Reply</button><Link href={`/messages/new?forward=${m.id}`} aria-label="Forward message"><Forward size={10}/> Forward</Link>{isMe ? <><button type="button" onClick={() => beginEdit(m)} aria-label="Edit message"><Pencil size={10}/> Edit</button><button type="button" className="is-danger" onClick={() => void deleteMessage(m)} aria-label="Delete message"><Trash2 size={10}/> Delete</button></> : null}</> : null}</div>
+                <div className="ss-dm-message-meta"><time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>{isMe && partnerLastReadAt && new Date(partnerLastReadAt) >= new Date(m.created_at) ? <span className="ss-dm-seen">Seen</span> : null}{!m.is_deleted ? <><button type="button" onClick={() => { setEditingMessage(null); setReplyingTo(m); textInputRef.current?.focus() }} aria-label="Reply to message"><Reply size={11}/> Reply</button><button type="button" onClick={() => void togglePin(m.id)} aria-pressed={pinnedMessageIds.has(m.id)} aria-label={pinnedMessageIds.has(m.id) ? 'Unpin message' : 'Pin message'}><Pin size={10}/> {pinnedMessageIds.has(m.id) ? 'Pinned' : 'Pin'}</button><Link href={`/messages/new?forward=${m.id}`} aria-label="Forward message"><Forward size={10}/> Forward</Link>{isMe ? <><button type="button" onClick={() => beginEdit(m)} aria-label="Edit message"><Pencil size={10}/> Edit</button><button type="button" className="is-danger" onClick={() => void deleteMessage(m)} aria-label="Delete message"><Trash2 size={10}/> Delete</button></> : null}</> : null}</div>
               </div>
             </div>
           )
@@ -291,6 +324,7 @@ export function DMRoom({ partner, currentUserId, initialMessages }: DMRoomProps)
           </button>
         </div>
       </div>
+      {toolMode && <DMConversationTools mode={toolMode} messages={messages} pinnedMessageIds={pinnedMessageIds} onModeChange={setToolMode} onClose={() => setToolMode(null)} onJump={jumpToMessage} />}
     </div>
   )
 }

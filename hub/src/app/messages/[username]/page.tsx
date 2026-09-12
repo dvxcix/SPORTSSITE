@@ -40,5 +40,10 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     .order('created_at', { ascending: true })
     .limit(100)
 
-  return <DMRoom partner={partner} currentUserId={user.id} initialMessages={(history ?? []) as unknown as DMMessage[]} />
+  const historyIds = (history ?? []).map(message => message.id)
+  const { data: pins } = historyIds.length
+    ? await supabase.from('message_pins').select('message_id').eq('user_id', user.id).in('message_id', historyIds)
+    : { data: [] }
+
+  return <DMRoom partner={partner} currentUserId={user.id} initialMessages={(history ?? []) as unknown as DMMessage[]} initialPinnedMessageIds={(pins ?? []).map(pin => pin.message_id)} />
 }
