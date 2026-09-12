@@ -158,6 +158,8 @@ test('desktop notifications include realtime and reconnect catch-up', async () =
 
 test('activity and account menus preserve explicit unread state and complete navigation', async () => {
   const topbar = await read('src/components/layout/TopBar.tsx')
+  const desktopNavigation = await read('src/components/desktop/DesktopNavigation.tsx')
+  const authContext = await read('src/context/AuthContext.tsx')
   const activityPage = await read('src/app/notifications/page.tsx')
   const activityList = await read('src/components/social/NotificationsList.tsx')
   const css = await read('src/app/globals.css')
@@ -168,6 +170,12 @@ test('activity and account menus preserve explicit unread state and complete nav
   for (const destination of ['/bookmarks', '/settings/membership', '/settings/notifications']) {
     assert.ok(topbar.includes(destination), `account shell omits ${destination}`)
   }
+  assert.ok(!topbar.includes("|| 'Me'"), 'missing profiles must not masquerade as the current member')
+  assert.ok(topbar.includes("'Checking access…'"), 'profile hydration needs an explicit pending-access state')
+  assert.ok(desktopNavigation.includes('`${profileTier.charAt(0).toUpperCase()}${profileTier.slice(1)} workspace`'))
+  assert.ok(!desktopNavigation.includes("profile?.tier || 'free'"), 'desktop identity must render effective access, not raw billing tier')
+  assert.ok(authContext.includes('await fetchProfile(session.user.id)'), 'initial auth loading must include profile hydration')
+  assert.ok(authContext.includes('supabase.auth.refreshSession()'), 'an expired account request must get one bounded session refresh')
   assert.ok(!activityPage.includes(".update({ read: true })"), 'opening the activity page must not silently mark every item read')
   assert.ok(activityList.includes('markAllRead'))
   assert.ok(activityList.includes('ss-activity-toolbar'))

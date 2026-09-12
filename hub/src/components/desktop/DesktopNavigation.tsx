@@ -62,7 +62,7 @@ function isActive(pathname: string, href: string) {
 
 export function DesktopNavigation() {
   const pathname = usePathname()
-  const { profile } = useAuth()
+  const { profile, loading } = useAuth()
   const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
   const contextCollapsed = collapsed && !channelsWorkspace
@@ -70,9 +70,17 @@ export function DesktopNavigation() {
     ? 'Community'
     : 'Intelligence'
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
-  const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
+  const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
+  const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
   const items = (currentSection === 'Community' ? community : intelligence).filter(item => !item.ultimateOnly || hasUltimate)
-  const displayName = profile?.display_name || profile?.username || 'SlipSurge member'
+  const displayName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
+  const accessLabel = !profile
+    ? (loading ? 'Checking access…' : 'Refresh account')
+    : profile.account_type === 'admin'
+      ? 'Admin workspace'
+      : fullAccess
+        ? 'Full-access workspace'
+        : `${profileTier.charAt(0).toUpperCase()}${profileTier.slice(1)} workspace`
 
   return (
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
@@ -128,7 +136,7 @@ export function DesktopNavigation() {
             <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'} prefetch={false} className="ss-desktop-avatar">
               <MemberAvatar src={profile?.avatar_url} name={displayName} size={36} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
             </Link>
-            <div><strong>{displayName}</strong><span>{profile?.tier || 'free'} workspace</span></div>
+            <div><strong>{displayName}</strong><span>{accessLabel}</span></div>
             <Link href="/settings" prefetch={false} aria-label="Account settings"><Settings2 size={14} /></Link>
           </div>
         </div>

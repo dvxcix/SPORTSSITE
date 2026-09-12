@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import type { User } from '@/lib/supabase/types'
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const profileRequest = useRef<{ userId: string; promise: Promise<void> } | null>(null)
   const [supabase] = useState(() => createClient())
 
-  function repairPushRegistration(userId: string) {
+  const repairPushRegistration = useCallback((userId: string) => {
     if (pushSyncedForUser.current === userId || isSlipSurgeDesktop()) return
     pushSyncedForUser.current = userId
     void syncBrowserPushSubscription().catch(error => {
@@ -39,15 +39,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('[push] automatic device repair failed', error)
       pushSyncedForUser.current = null
     })
-  }
+  }, [])
 
-  async function fetchProfile(userId: string, force = false) {
+  const fetchProfile = useCallback(async (userId: string, force = false) => {
     if (!force && profileLoadedForUser.current === userId) return
     if (!force && profileRequest.current?.userId === userId) return profileRequest.current.promise
     const promise = (async () => {
-      const response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
+      let response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
+      if (response.status === 401) {
+        const { data } = await supabase.auth.refreshSession()
+        if (data.session?.user.id === userId) {
+          setSession(data.session)
+          setUser(data.session.user)
+          response = await fetch('/api/account/me', { cache: 'no-store', credentials: 'same-origin' })
+        }
+      }
       if (!response.ok) {
-        setProfile(null)
+        console.error('[auth] account profile request failed', { status: response.status })
         return
       }
       const { profile } = await response.json()
@@ -60,18 +68,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
     profileRequest.current = { userId, promise }
     return promise
-  }
+  }, [supabase])
 
   async function refreshProfile() {
     if (user) await fetchProfile(user.id, true)
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        await fetchProfile(session.user.id)
         repairPushRegistration(session.user.id)
       }
       setLoading(false)
@@ -81,19 +89,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        setLoading(true)
+        void fetchProfile(session.user.id).finally(() => setLoading(false))
         repairPushRegistration(session.user.id)
       } else {
         setProfile(null)
         profileLoadedForUser.current = null
         profileRequest.current = null
         pushSyncedForUser.current = null
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [fetchProfile, repairPushRegistration, supabase.auth])
 
   async function signOut() {
     await supabase.auth.signOut()

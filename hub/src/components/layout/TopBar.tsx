@@ -120,7 +120,7 @@ function TopbarNotificationEntry({
 }
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { user, profile } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [discordSyncing, setDiscordSyncing] = useState(false)
@@ -230,7 +230,20 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const rawTier = (profile?.tier as Tier) ?? 'free'
   const currentTier = effectiveTier(rawTier, profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null | undefined)
   const fullAccess = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active)
-  const tierLabel = fullAccess ? (profile?.account_type === 'admin' ? 'Admin' : 'Beta — Full Access') : TIER_LABEL[currentTier]
+  const accountName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
+  const tierLabel = !profile
+    ? (loading ? 'Checking access…' : 'Refresh account')
+    : fullAccess
+      ? (profile.account_type === 'admin' ? 'Admin' : 'Beta — Full Access')
+      : TIER_LABEL[currentTier]
+  const profileHref = profile?.username ? `/profile/${profile.username}` : '/settings'
+  const avatarTone = profile?.account_type === 'admin' || currentTier === 'ultimate'
+    ? 'ultimate'
+    : currentTier === 'advanced'
+      ? 'advanced'
+      : profile?.account_type === 'creator'
+        ? 'creator'
+        : 'default'
 
   function goTo(href: string) {
     setQuickOpen(false)
@@ -604,9 +617,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 130ms',
               }}>
-                <MemberAvatar className="ss-topbar-profile-avatar" src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={26} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
+                <MemberAvatar className="ss-topbar-profile-avatar" src={profile?.avatar_url} name={accountName} size={26} tone={avatarTone} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                 <span className="ss-topbar-profile-copy hidden sm:flex">
-                  <strong>{profile?.display_name || profile?.username || 'Me'}</strong>
+                  <strong>{accountName}</strong>
                   <small>{tierLabel}</small>
                 </span>
                 <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
@@ -615,16 +628,16 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               {menuOpen && (
                 <div className="ss-dropdown ss-topbar-profile-menu" role="menu" aria-label="Account menu">
                   <div className="ss-topbar-account-card">
-                    <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={46} tone={profile?.tier === 'ultimate' ? 'ultimate' : profile?.tier === 'advanced' ? 'advanced' : profile?.account_type === 'creator' ? 'creator' : 'default'} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
+                    <MemberAvatar src={profile?.avatar_url} name={accountName} size={46} tone={avatarTone} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                     <div className="ss-topbar-account-copy">
-                      <strong>{profile?.display_name || profile?.username || 'Member'}</strong>
-                      <span>@{profile?.username}</span>
+                      <strong>{accountName}</strong>
+                      <span>{profile?.username ? `@${profile.username}` : 'Signed-in account'}</span>
                       <Link href="/settings/membership" onClick={() => setMenuOpen(false)}><Badge variant="save">{tierLabel}</Badge></Link>
                     </div>
-                    <Link href={`/profile/${profile?.username}`} className="ss-topbar-account-open" onClick={() => setMenuOpen(false)} aria-label="View your profile"><ChevronRight size={16} /></Link>
+                    <Link href={profileHref} className="ss-topbar-account-open" onClick={() => setMenuOpen(false)} aria-label="View your profile"><ChevronRight size={16} /></Link>
                   </div>
                   <p className="ss-topbar-menu-label">Account</p>
-                  <Link href={`/profile/${profile?.username}`} className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
+                  <Link href={profileHref} className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
                     <User size={15} /><span>Profile</span><ChevronRight size={13} />
                   </Link>
                   <Link href="/bookmarks" className="ss-dropdown-item" onClick={() => setMenuOpen(false)}>
