@@ -15,6 +15,7 @@ import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { GroupWorkspaceTabs } from '@/components/groups/GroupWorkspaceTabs'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,7 +101,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       <CommunityNav />
       <div className="mt-4 overflow-hidden rounded-3xl border border-white/8 bg-[#0d100f]">
       <div className="h-36 bg-gradient-to-r from-zinc-800 to-zinc-700 relative overflow-hidden">
-        {group.banner_url && <Image src={group.banner_url} alt="" fill sizes="(max-width: 768px) 100vw, 896px" className="object-cover" />}
+        <SafeImage src={group.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
         {group.sport && (
           <div className="absolute top-3 right-3">
             {sportLogoUrl(group.sport) ? (
@@ -117,7 +118,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       <div className="px-4 pb-4">
         <div className="relative z-10 flex items-end justify-between -mt-8 mb-4">
           <div className="relative w-16 h-16 overflow-hidden rounded-xl bg-zinc-800 border-4 border-zinc-950 flex items-center justify-center text-2xl shadow-lg">
-            {group.avatar_url ? <Image src={group.avatar_url} alt="" fill sizes="64px" className="object-cover rounded-lg" /> : (group.emoji || '👥')}
+            <SafeImage src={group.avatar_url} alt="" className="h-full w-full rounded-lg object-cover" fallback={group.emoji || '👥'} />
           </div>
           <div className="flex gap-2">
             {isOwner && (
@@ -127,10 +128,10 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
               </Link>
             )}
             {user && isMember && !isOwner && (
-              <GroupJoinButton userId={user.id} groupId={group.id} channelId={group.channel_id} initialMember={true} />
+              <GroupJoinButton groupId={group.id} initialMember={true} />
             )}
             {user && !isMember && group.is_public && (
-              <GroupJoinButton userId={user.id} groupId={group.id} channelId={group.channel_id} initialMember={false} />
+              <GroupJoinButton groupId={group.id} initialMember={false} />
             )}
             {user && isMember && (
               <GroupInviteModal groupId={group.id} groupSlug={slug} groupName={group.name} currentUserId={user.id} />
@@ -164,9 +165,6 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           <div className="mt-4">
             <GroupInviteResponse
               inviteId={pendingInvite.id}
-              groupId={group.id}
-              channelId={group.channel_id}
-              userId={user.id}
               invitedByUsername={pendingInvite.invited_by_username}
             />
           </div>
