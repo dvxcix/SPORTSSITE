@@ -8,6 +8,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 import type { Metadata } from 'next'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <ProductPageShell narrow>
+      <CommunityNav />
       <Link href="/events" className="ss-flow-back"><ChevronLeft size={14} /> Events</Link>
       <article className="overflow-hidden rounded-[24px] border border-white/[.08] bg-gradient-to-br from-white/[.04] to-white/[.015] shadow-2xl">
         {event.cover_image && <div className="relative h-52 overflow-hidden sm:h-72"><SafeImage src={event.cover_image} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#0c0f0d] via-transparent to-transparent" /></div>}

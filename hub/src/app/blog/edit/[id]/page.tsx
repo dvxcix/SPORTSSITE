@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { BlogEditor } from '@/components/blog/BlogEditor'
 import Link from 'next/link'
 import { ChevronLeft, FilePenLine } from 'lucide-react'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="ss-flow-page !max-w-3xl">
+      <CommunityNav />
       <Link href="/blog/my" className="ss-flow-back"><ChevronLeft size={14} /> My articles</Link>
       <header className="ss-flow-heading"><span><FilePenLine size={22} /></span><div><p>Editorial studio</p><h1>Edit article</h1></div></header>
       <BlogEditor userId={user.id} blogId={blog.id} initial={blog} />

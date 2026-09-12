@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowRight, BookOpen, Clock, Eye, FilePenLine, Plus } from 'lucide-react'
 import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,7 @@ export default async function MyBlogsPage() {
   const { data: blogs } = await supabase.from('blogs').select('id, title, slug, status, view_count, like_count, created_at, excerpt, cover_image, category').eq('author_id', user.id).order('created_at', { ascending: false })
 
   return <ProductPageShell narrow>
+    <CommunityNav />
     <ProductHero icon={<FilePenLine size={22} />} eyebrow="Editorial studio" title="My articles" description="Draft, publish, and manage your long-form work." actions={<><ProductAction href="/blog"><BookOpen size={14} /> Read</ProductAction><ProductAction href="/blog/create"><Plus size={14} /> New article</ProductAction></>} />
     <ProductSectionHeader title="Library" meta={`${blogs?.length ?? 0} articles`} />
     {!blogs?.length ? <ProductPanel padded className="text-center"><FilePenLine className="mx-auto text-zinc-600" size={28} /><p className="mt-3 font-black text-white">Your library is empty</p><Link href="/blog/create" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black text-black"><Plus size={14} /> Start writing</Link></ProductPanel> : <div className="grid gap-3">{blogs.map((article) => <Link key={article.id} href={article.status === 'published' ? `/blog/${article.slug}` : `/blog/edit/${article.id}`} className="group grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border border-white/[.08] bg-white/[.025] p-3 transition hover:border-lime-400/25 hover:bg-white/[.04]">

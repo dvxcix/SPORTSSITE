@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Sparkles, Loader2, ArrowRight } from 'lucide-react'
+import { Sparkles, Loader2, ArrowRight, RotateCcw, Save } from 'lucide-react'
 
 const SUGGESTIONS = [
   'Best MLB picks for the week ahead',
@@ -62,31 +62,31 @@ export function AIBlogWriter({ userId }: { userId: string }) {
       category: 'AI Generated',
       status: 'draft',
       view_count: 0,
-    }).select('slug').single()
-    if (error || !data?.slug) {
+    }).select('id').single()
+    if (error || !data?.id) {
       setSaveError('Could not save this draft — please try again.')
       setSaving(false)
       return
     }
-    router.push(`/blog/create?from=${data.slug}`)
+    router.push(`/blog/edit/${data.id}`)
   }
 
   return (
-    <div className="space-y-4">
+    <div className="overflow-hidden rounded-[24px] border border-white/[.08] bg-gradient-to-br from-white/[.045] to-white/[.015] shadow-[0_24px_80px_rgba(0,0,0,.25)]">
       {!draft ? (
-        <>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+        <div className="space-y-5 p-4 sm:p-6">
+          <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-zinc-400 mb-1.5">What should the article be about?</label>
               <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3}
                 placeholder="e.g. 'Best value bets in the MLB this week' or 'How I built a 60% win rate on spread bets'"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50 resize-none" />
+                className="ss-flow-input min-h-28 resize-none" />
             </div>
-            <div className="flex gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex-1">
                 <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>
                 <select value={sport} onChange={e => setSport(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none">
+                  className="ss-flow-input">
                   <option value="">Any</option>
                   {['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA'].map(s => <option key={s}>{s}</option>)}
                 </select>
@@ -94,7 +94,7 @@ export function AIBlogWriter({ userId }: { userId: string }) {
               <div className="flex-1">
                 <label className="block text-xs font-bold text-zinc-400 mb-1.5">Tone</label>
                 <select value={tone} onChange={e => setTone(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none">
+                  className="ss-flow-input">
                   <option value="analytical">Analytical</option>
                   <option value="casual">Casual</option>
                   <option value="hype">Hype / Exciting</option>
@@ -106,10 +106,10 @@ export function AIBlogWriter({ userId }: { userId: string }) {
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-xs font-bold text-zinc-500">Try these:</p>
+            <p className="text-[10px] font-black uppercase tracking-[.14em] text-zinc-500">Starting points</p>
             {SUGGESTIONS.map(s => (
               <button key={s} onClick={() => setPrompt(s)}
-                className="flex items-center gap-2 w-full text-left text-xs text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 px-3 py-2 rounded-lg transition-all">
+                className="flex w-full items-center gap-2 rounded-xl border border-white/[.07] bg-black/20 px-3 py-2.5 text-left text-xs text-zinc-400 transition hover:border-lime-400/20 hover:bg-white/[.04] hover:text-white">
                 <ArrowRight size={10} /> {s}
               </button>
             ))}
@@ -117,36 +117,35 @@ export function AIBlogWriter({ userId }: { userId: string }) {
 
           {generationError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{generationError}</div>}
           <button onClick={generate} disabled={generating || !prompt.trim()}
-            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-black py-3 rounded-xl transition-colors">
+            className="ss-settings-primary !min-h-11 w-full justify-center disabled:opacity-40">
             {generating ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate Article</>}
           </button>
-        </>
+        </div>
       ) : (
-        <div className="space-y-4">
-          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-            <p className="text-xs font-bold text-green-400 mb-1">Draft ready! Review and edit before publishing.</p>
+        <div className="space-y-4 p-4 sm:p-6">
+          <div className="rounded-xl border border-lime-400/20 bg-lime-400/[.07] p-4">
+            <p className="text-xs font-bold text-lime-300">Draft ready. Review every detail before publishing.</p>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+          <div className="space-y-3">
             <input value={draft.title} onChange={e => setDraft(d => d ? { ...d, title: e.target.value } : d)}
-              className="w-full bg-transparent text-xl font-black text-white outline-none border-b border-zinc-800 pb-3" />
+              className="w-full border-0 border-b border-white/[.08] bg-transparent pb-3 text-2xl font-black tracking-[-.03em] text-white outline-none focus:border-lime-400/40" />
             <input value={draft.excerpt} onChange={e => setDraft(d => d ? { ...d, excerpt: e.target.value } : d)}
               placeholder="Excerpt…"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+              className="ss-flow-input" />
             <textarea value={draft.content} onChange={e => setDraft(d => d ? { ...d, content: e.target.value } : d)}
               rows={16}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-200 outline-none resize-y font-mono" />
+              className="ss-flow-input min-h-[360px] resize-y font-mono leading-7" />
           </div>
           {saveError && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{saveError}</div>
           )}
           <div className="flex gap-3">
-            <button onClick={() => setDraft(null)}
-              className="flex-1 border border-zinc-700 text-zinc-400 hover:text-white font-bold py-2.5 rounded-xl transition-colors">
-              Start over
+            <button onClick={() => setDraft(null)} className="ss-settings-secondary flex-1 justify-center">
+              <RotateCcw size={13}/> Start over
             </button>
             <button onClick={saveDraft} disabled={saving}
-              className="flex-1 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black py-2.5 rounded-xl transition-colors">
-              {saving ? 'Saving…' : 'Save & Edit Draft'}
+              className="ss-settings-primary flex-1 justify-center disabled:opacity-40">
+              <Save size={13}/>{saving ? 'Saving…' : 'Save and edit'}
             </button>
           </div>
         </div>

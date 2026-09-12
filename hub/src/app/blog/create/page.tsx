@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { BlogEditor } from '@/components/blog/BlogEditor'
 import Link from 'next/link'
 import { ChevronLeft, FilePenLine } from 'lucide-react'
+import { CommunityNav } from '@/components/community/CommunityNav'
 
 export default async function CreateBlogPage() {
   const supabase = await createClient()
@@ -10,6 +11,7 @@ export default async function CreateBlogPage() {
   if (!user) redirect('/auth/login?next=/blog/create')
   return (
     <div className="ss-flow-page !max-w-3xl">
+      <CommunityNav />
       <Link href="/blog" className="ss-flow-back"><ChevronLeft size={14} /> Articles</Link>
       <header className="ss-flow-heading"><span><FilePenLine size={22} /></span><div><p>Editorial studio</p><h1>Write an article</h1></div></header>
       <BlogEditor userId={user.id} />
