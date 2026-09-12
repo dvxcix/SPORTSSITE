@@ -47,7 +47,7 @@ export function ForumReplyActions({ replyId, authorId, currentUserId, threadId, 
       {ownsReply ? <><button type="button" onClick={() => setMode('edit')}><Pencil size={12}/> Edit</button><button type="button" className="is-danger" onClick={() => void removeReply()}><Trash2 size={12}/> Delete</button></> : null}
     </div> : null}
     {mode === 'reply' && currentUserId ? <ThreadReplyForm userId={currentUserId} threadId={threadId} threadAuthorId={threadAuthorId} parentReplyId={replyId} parentAuthorId={authorId} compact onCancel={() => setMode('idle')} /> : null}
-    {mode === 'edit' ? <div className="ss-forum-inline-editor"><textarea value={draft} onChange={event => setDraft(event.target.value)} maxLength={5000}/><div><button type="button" onClick={() => setMode('idle')}><X size={12}/> Cancel</button><button type="button" disabled={busy || !draft.trim()} onClick={() => void saveEdit()}>{busy ? 'Saving…' : 'Save'}</button></div></div> : null}
+    {mode === 'edit' ? <div className="ss-forum-inline-editor"><textarea aria-label="Edit reply" value={draft} onChange={event => setDraft(event.target.value)} maxLength={5000}/><div><button type="button" onClick={() => setMode('idle')}><X size={12}/> Cancel</button><button type="button" disabled={busy || !draft.trim()} onClick={() => void saveEdit()}>{busy ? 'Saving…' : 'Save'}</button></div></div> : null}
     {error ? <p role="alert" className="ss-forum-action-error">{error}</p> : null}
   </div>
 }

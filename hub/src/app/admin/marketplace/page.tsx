@@ -97,7 +97,7 @@ export default async function AdminMarketplacePage() {
                       <form action={moderateMatrixListing}>
                         <input type="hidden" name="id" value={listing.id} />
                         <input type="hidden" name="status" value={listing.status === 'removed' ? 'published' : 'removed'} />
-                        <button className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black transition-colors ${listing.status === 'removed' ? 'bg-lime-400/10 text-lime-400 hover:bg-lime-400/20' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}>
+                        <button type="submit" className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black transition-colors ${listing.status === 'removed' ? 'bg-lime-400/10 text-lime-400 hover:bg-lime-400/20' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}>
                           {listing.status === 'removed' ? 'Restore' : 'Remove'}
                         </button>
                       </form>

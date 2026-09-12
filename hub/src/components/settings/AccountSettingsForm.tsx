@@ -65,7 +65,7 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
       </div>
       <form className="ss-settings-card" onSubmit={updateEmail}>
         <h2 className="mb-3 font-black text-white">Email address</h2>
-        <input type="email" value={email} required maxLength={254} autoComplete="email" onChange={e => setEmail(e.target.value)} className={inputClass + ' mb-3'} />
+        <input type="email" aria-label="Email address" value={email} required maxLength={254} autoComplete="email" onChange={e => setEmail(e.target.value)} className={inputClass + ' mb-3'} />
         <button type="submit" disabled={saving !== null || !email.trim()} className="ss-settings-primary">
           {saved === 'email' ? <><Check size={13} /> Saved</> : saving === 'email' ? <><Loader2 size={13} className="animate-spin" /> Updating…</> : 'Update email'}
         </button>
@@ -76,8 +76,8 @@ export function AccountSettingsForm({ profile }: { profile: any }) {
       <form className="ss-settings-card" onSubmit={updatePassword}>
         <h2 className="mb-3 font-black text-white">Change password</h2>
         <div className="space-y-3">
-          <input type="password" value={newPassword} minLength={8} maxLength={128} autoComplete="new-password" onChange={e => setNewPassword(e.target.value)} placeholder="New password" className={inputClass} />
-          <input type="password" value={confirmPassword} minLength={8} maxLength={128} autoComplete="new-password" onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={inputClass} />
+          <input type="password" aria-label="New password" value={newPassword} minLength={8} maxLength={128} autoComplete="new-password" onChange={e => setNewPassword(e.target.value)} placeholder="New password" className={inputClass} />
+          <input type="password" aria-label="Confirm new password" value={confirmPassword} minLength={8} maxLength={128} autoComplete="new-password" onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={inputClass} />
         </div>
         <button type="submit" disabled={saving !== null || !newPassword} className="ss-settings-primary mt-3">
           {saved === 'password' ? <><Check size={13} /> Updated</> : saving === 'password' ? <><Loader2 size={13} className="animate-spin" /> Updating…</> : 'Change password'}

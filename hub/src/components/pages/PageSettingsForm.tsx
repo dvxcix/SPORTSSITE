@@ -81,11 +81,11 @@ export function PageSettingsForm({ page }: { page: any }) {
       <div className="ss-flow-card">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Page Name *</label>
-          <input value={form.name} maxLength={60} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
+          <input aria-label="Page name" value={form.name} maxLength={60} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
-          <textarea value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={inputClass + ' resize-none'} />
+          <textarea aria-label="Page description" value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={inputClass + ' resize-none'} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
@@ -122,11 +122,11 @@ export function PageSettingsForm({ page }: { page: any }) {
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Avatar Image URL</label>
-          <input type="url" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <input type="url" aria-label="Page avatar image URL" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Banner Image URL</label>
-          <input type="url" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <input type="url" aria-label="Page banner image URL" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div className="flex items-center justify-between">
           <div>

@@ -38,11 +38,11 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 'min(420px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+    <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="post-bet-title" style={{ width: 'min(420px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={16} /></button>
+          <span id="post-bet-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>{isParlay ? `${legs.length}-Leg Parlay` : 'Post Pick'}</span>
+          <button type="button" onClick={onClose} aria-label="Close post pick dialog" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={16} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
@@ -64,10 +64,11 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
           <span style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 900, color: 'var(--accent)', fontFamily: 'monospace' }}>{combined != null ? formatOdds(combined) : '—'}</span>
         </div>
 
-        <label style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700 }}>Wager (optional)</label>
+        <label htmlFor="post-bet-wager" style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700 }}>Wager (optional)</label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 10 }}>
           <span style={{ fontSize: 14, color: 'var(--text-3)' }}>$</span>
           <input
+            id="post-bet-wager"
             type="number" min="0" step="1" value={wager}
             onChange={e => setWager(e.target.value)}
             placeholder="0.00"
@@ -82,9 +83,10 @@ export function PostBetModal({ legs, onClose, onPosted }: { legs: WatchlistItem[
           </div>
         )}
 
-        {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
+        {error && <p role="alert" style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
         <button
+          type="button"
           onClick={submit}
           disabled={posting || combined == null}
           style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', fontWeight: 800, fontSize: 13, cursor: posting ? 'default' : 'pointer', opacity: posting || combined == null ? 0.7 : 1 }}

@@ -61,16 +61,16 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
   return (
     <div className="space-y-4">
       <div className="ss-settings-actions">
-        <button onClick={() => setAll('', true)} className="ss-settings-secondary">
+        <button type="button" onClick={() => setAll('', true)} className="ss-settings-secondary">
           Enable all push
         </button>
-        <button onClick={() => setAll('', false)} className="ss-settings-secondary">
+        <button type="button" onClick={() => setAll('', false)} className="ss-settings-secondary">
           Disable all push
         </button>
-        <button onClick={() => setAll('_email', true)} className="ss-settings-secondary">
+        <button type="button" onClick={() => setAll('_email', true)} className="ss-settings-secondary">
           Enable all email
         </button>
-        <button onClick={() => setAll('_email', false)} className="ss-settings-secondary">
+        <button type="button" onClick={() => setAll('_email', false)} className="ss-settings-secondary">
           Disable all email
         </button>
       </div>
@@ -92,7 +92,7 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
         ))}
       </div>
       {error && <p role="alert" className="ss-settings-feedback">{error}</p>}
-      <button onClick={save} className="ss-settings-primary">
+      <button type="button" onClick={save} className="ss-settings-primary">
         {saved ? <><Check size={13} /> Saved</> : 'Save preferences'}
       </button>
     </div>

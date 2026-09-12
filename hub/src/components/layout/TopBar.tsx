@@ -400,7 +400,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           regardless of specificity), so the button would never actually
           hide on desktop. */}
       {onMenuClick && (
-        <button onClick={onMenuClick} className="flex md:hidden items-center justify-center" style={{
+        <button type="button" onClick={onMenuClick} className="flex md:hidden items-center justify-center" style={{
           width: 42, height: 42, borderRadius: 11, flexShrink: 0,
           background: 'transparent', border: '1px solid var(--border)',
           color: 'var(--text-2)', cursor: 'pointer',
@@ -446,7 +446,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             ) : (
               <>
                 {quickResults.teams.map(t => (
-                  <button key={`t-${t.abbr}`} onClick={() => goTo(t.gamePk ? `/sports/mlb/${t.gamePk}` : '/sports')}
+                  <button type="button" key={`t-${t.abbr}`} onClick={() => goTo(t.gamePk ? `/sports/mlb/${t.gamePk}` : '/sports')}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <TeamLogo logo={mlbTeamLogo(t.id)} name={t.abbr} size={26} />
@@ -455,7 +455,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </button>
                 ))}
                 {quickResults.players.map(p => (
-                  <button key={`p-${p.mlbId}`} onClick={() => goTo(`/players/${p.mlbId}`)}
+                  <button type="button" key={`p-${p.mlbId}`} onClick={() => goTo(`/players/${p.mlbId}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <PlayerAvatar headshot={mlbHeadshot(p.mlbId)} teamLogo={p.teamId ? mlbTeamLogo(p.teamId) : null} name={p.name} size={26} />
@@ -466,7 +466,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </button>
                 ))}
                 {quickResults.nflTeams.map(t => (
-                  <button key={`nt-${t.team_abbr}`} onClick={() => goTo(`/nfl/teams/${t.team_abbr}`)}
+                  <button type="button" key={`nt-${t.team_abbr}`} onClick={() => goTo(`/nfl/teams/${t.team_abbr}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <SafeImage src={t.team_logo_espn} alt={t.team_abbr} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} fallback={<div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />} />
@@ -475,7 +475,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </button>
                 ))}
                 {quickResults.nflPlayers.map(p => (
-                  <button key={`np-${p.gsis_id}`} onClick={() => goTo(`/nfl/players/${p.gsis_id}`)}
+                  <button type="button" key={`np-${p.gsis_id}`} onClick={() => goTo(`/nfl/players/${p.gsis_id}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <SafeImage src={p.headshot} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} fallback={<div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', flexShrink: 0 }} />} />
@@ -490,7 +490,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </button>
                 ))}
                 {quickResults.users.map(u => (
-                  <button key={`u-${u.id}`} onClick={() => goTo(`/profile/${u.username}`)}
+                  <button type="button" key={`u-${u.id}`} onClick={() => goTo(`/profile/${u.username}`)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={26} />
@@ -499,14 +499,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </button>
                 ))}
                 {quickResults.posts.map(p => (
-                  <button key={`post-${p.id}`} onClick={() => goTo(`/posts/${p.id}`)}
+                  <button type="button" key={`post-${p.id}`} onClick={() => goTo(`/posts/${p.id}`)}
                     style={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
                     className="notif-dropdown-item">
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>@{p.author?.username}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.content}</span>
                   </button>
                 ))}
-                <button onClick={() => goTo(`/search?q=${encodeURIComponent(search.trim())}`)} style={{
+                <button type="button" onClick={() => goTo(`/search?q=${encodeURIComponent(search.trim())}`)} style={{
                   display: 'block', width: '100%', textAlign: 'center', padding: '10px', fontSize: 12, fontWeight: 700,
                   color: 'var(--accent)', background: 'transparent', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer',
                 }}>
@@ -524,7 +524,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           <>
             {/* Notifications */}
             <div ref={notifRef} className="ss-topbar-control-wrap">
-              <button onClick={openNotifications} className="ss-topbar-icon-button" aria-label="Notifications" aria-expanded={notifOpen} style={{
+              <button type="button" onClick={openNotifications} className="ss-topbar-icon-button" aria-label="Notifications" aria-expanded={notifOpen} style={{
                 position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 36, height: 36, borderRadius: 8,
                 background: 'transparent', border: '1px solid var(--border)',
@@ -598,7 +598,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
             {/* Avatar + menu */}
             <div ref={menuRef} className="ss-topbar-control-wrap">
-              <button onClick={() => { setMenuOpen(v => !v); setNotifOpen(false) }} className="ss-topbar-profile-trigger" aria-label="Open account menu" aria-expanded={menuOpen} style={{
+              <button type="button" onClick={() => { setMenuOpen(v => !v); setNotifOpen(false) }} className="ss-topbar-profile-trigger" aria-label="Open account menu" aria-expanded={menuOpen} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '5px 8px 5px 5px', borderRadius: 8,
                 background: 'transparent', border: '1px solid var(--border)',

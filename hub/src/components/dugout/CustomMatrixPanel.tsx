@@ -352,7 +352,7 @@ export function RatioMovementFields({ operator, value, onPatch }: {
   }
   return (
     <>
-      <select className="ss-input" value={mode} onChange={e => applyMode(e.target.value as RatioMovementMode)} style={{ fontSize: 11, padding: '5px 6px', width: 156 }}>
+      <select aria-label="Displayed ratio movement" className="ss-input" value={mode} onChange={e => applyMode(e.target.value as RatioMovementMode)} style={{ fontSize: 11, padding: '5px 6px', width: 156 }}>
         <option value="down_at_least">Moved down by at least</option>
         <option value="down_exactly">Moved down exactly</option>
         <option value="up_at_least">Moved up by at least</option>
@@ -361,6 +361,7 @@ export function RatioMovementFields({ operator, value, onPatch }: {
       </select>
       {mode !== 'flat' && (
         <input
+          aria-label="Displayed ratio movement amount"
           className="ss-input" type="number" min={0} step={0.01} placeholder="0.01"
           value={value == null ? '' : amount}
           onChange={e => setAmount(e.target.value === '' ? null : Number(e.target.value))}
@@ -415,6 +416,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
       <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>FROM</span>
       <select
+        aria-label="Market movement base window"
         className="ss-input" value={base}
         onChange={e => {
           const nextBase = e.target.value as MmWindowKey
@@ -426,6 +428,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
       </select>
 
       <select
+        aria-label="Market movement direction"
         className="ss-input" value={direction ?? 'decreased'}
         onChange={e => onPatch({ mm_direction: e.target.value as MmTrendDirection })}
         style={{ fontSize: 11, padding: '5px 6px', width: 160 }}
@@ -436,6 +439,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
       {needsAmount && (
         <>
           <select
+            aria-label="Market movement amount mode"
             className="ss-input" value={amountMode ?? 'at_least'}
             onChange={e => onPatch({ mm_amount_mode: e.target.value as 'at_least' | 'exactly' })}
             title="Whether the amount below is a minimum (2 or more) or an exact match (exactly 2)"
@@ -445,6 +449,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
             <option value="exactly">Exactly</option>
           </select>
           <input
+            aria-label="Market movement amount"
             className="ss-input" type="number" min={0} placeholder="any amount"
             title={amountMode === 'exactly' ? 'Exact rank move required — leave blank for any move at all in this direction' : 'Minimum move required — leave blank for any move at all in this direction'}
             value={amount ?? ''}
@@ -460,6 +465,9 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
           const on = compare.includes(w.key)
           return (
             <button
+              type="button"
+              aria-label={`${on ? 'Remove' : 'Add'} ${w.label} comparison window`}
+              aria-pressed={on}
               key={w.key}
               onClick={() => onPatch({ mm_compare_windows: on ? compare.filter(k => k !== w.key) : [...compare, w.key] })}
               style={{
@@ -477,6 +485,7 @@ export function MmTrendFields({ baseWindow, compareWindows, direction, amount, m
 
       {compare.length > 1 && (
         <select
+          aria-label="Market movement window match mode"
           className="ss-input" value={matchMode ?? 'any'}
           onChange={e => onPatch({ mm_match_mode: e.target.value as 'any' | 'all' })}
           title="Whether the trend needs to hold in ANY of the checked windows, or ALL of them"
@@ -508,6 +517,7 @@ export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
       <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>MOVEMENT FROM</span>
       <select
+        aria-label="Movement base window"
         className="ss-input" value={base}
         onChange={e => {
           const nextBase = e.target.value as MmWindowKey
@@ -523,6 +533,9 @@ export function MmMoveWindowPicker({ baseWindow, compareWindows, onPatch }: {
           const on = compare.includes(w.key)
           return (
             <button
+              type="button"
+              aria-label={`${on ? 'Remove' : 'Add'} ${w.label} movement window`}
+              aria-pressed={on}
               key={w.key}
               onClick={() => onPatch({ mm_compare_windows: on ? compare.filter(k => k !== w.key) : [...compare, w.key] })}
               style={{
@@ -612,6 +625,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
       </div>
 
       <select
+        aria-label="Matrix condition category"
         className="ss-input" value={factor.category}
         onChange={e => {
           const category = e.target.value as MatrixFactor['category']
@@ -628,6 +642,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
       </select>
 
       <select
+        aria-label="Matrix condition field"
         className="ss-input" value={factor.field_key}
         onChange={e => {
           const field_key = e.target.value
@@ -662,6 +677,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
 
       {isBoolean ? (
         <select
+          aria-label="Boolean condition value"
           className="ss-input" value={factor.value === 0 ? '0' : '1'}
           onChange={e => onChange({ ...factor, operator: 'eq', value: Number(e.target.value) })}
           style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
@@ -677,6 +693,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
       ) : (
         <>
           <select
+            aria-label="Matrix condition operator"
             className="ss-input" value={factor.operator}
             onChange={e => {
               const operator = e.target.value as MatrixFactor['operator']
@@ -738,6 +755,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           {factor.operator === 'tied' ? (
             <>
               <select
+                aria-label="Tie scope"
                 className="ss-input" value={factor.tie_scope ?? 'team'}
                 onChange={e => onChange({ ...factor, tie_scope: e.target.value as MatrixFactor['tie_scope'] })}
                 style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
@@ -746,6 +764,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
                 <option value="game">Either team</option>
               </select>
               <select
+                aria-label="Tied group direction"
                 className="ss-input" value={factor.tie_direction ?? 'all'}
                 onChange={e => onChange({ ...factor, tie_direction: e.target.value === 'all' ? null : e.target.value as MatrixFactor['tie_direction'] })}
                 title="When more than one pair/group ties at different values, which one to keep"
@@ -758,6 +777,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             </>
           ) : !hidesValue && (
             <input
+              aria-label="Matrix condition value"
               className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
               value={factor.value ?? ''}
               onChange={e => onChange({ ...factor, value: e.target.value === '' ? null : Number(e.target.value) })}
@@ -769,6 +789,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
 
       {needsRecency && (
         <select
+          aria-label="Matrix stat window"
           className="ss-input" value={factor.recency ?? 'season'}
           onChange={e => {
             const recency = e.target.value as MatrixFactor['recency']
@@ -812,7 +833,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
         </select>
       )}
 
-      <button onClick={onRemove} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
+      <button type="button" onClick={onRemove} aria-label="Remove matrix condition" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
         <X size={14} />
       </button>
 
@@ -828,6 +849,9 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             const on = selected.includes(b.key)
             return (
               <button
+                type="button"
+                aria-label={`${on ? 'Remove' : 'Add'} ${b.label} sportsbook`}
+                aria-pressed={on}
                 key={b.key} title={b.label}
                 onClick={() => {
                   const next = on ? selected.filter(k => k !== b.key) : [...selected, b.key]
@@ -845,6 +869,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             )
           })}
           <select
+            aria-label="Sportsbook match requirement"
             className="ss-input" value={factor.books_min_count == null ? 'all' : 'atLeast'}
             onChange={e => onChange({ ...factor, books_min_count: e.target.value === 'atLeast' ? (factor.books?.length ?? 1) : null })}
             style={{ fontSize: 10, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
@@ -854,6 +879,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
           </select>
           {factor.books_min_count != null && (
             <input
+              aria-label="Minimum matching sportsbooks"
               className="ss-input" type="number" min={1} max={(factor.books?.length ?? 1) || 1}
               value={factor.books_min_count}
               onChange={e => onChange({ ...factor, books_min_count: Math.max(1, Number(e.target.value) || 1) })}
@@ -882,6 +908,7 @@ function FactorRow({ factor, onChange, onRemove, dragControls }: { factor: Matri
             />
           ))}
           <button
+            type="button"
             onClick={() => onChange({ ...factor, tiebreakers: [...factor.tiebreakers, newTiebreaker()] })}
             style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '2px 0', alignSelf: 'flex-start' }}
           >
@@ -920,6 +947,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
       <select
+        aria-label="Tiebreaker category"
         className="ss-input" value={tb.category}
         onChange={e => {
           const category = e.target.value as MatrixTiebreaker['category']
@@ -935,6 +963,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
       </select>
 
       <select
+        aria-label="Tiebreaker field"
         className="ss-input" value={tb.field_key}
         onChange={e => {
           const field_key = e.target.value
@@ -957,6 +986,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
 
       {needsRecency && (
         <select
+          aria-label="Tiebreaker stat window"
           className="ss-input" value={tb.recency ?? 'season'}
           onChange={e => onChange({ ...tb, recency: e.target.value as MatrixTiebreaker['recency'] })}
           title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
@@ -976,6 +1006,9 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
             const on = (tb.book ?? 'fanduel') === b.key
             return (
               <button
+                type="button"
+                aria-label={`Use ${b.label} sportsbook for tiebreaker`}
+                aria-pressed={on}
                 key={b.key} title={b.label} onClick={() => onChange({ ...tb, book: b.key })}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22,
@@ -992,6 +1025,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
       )}
 
       <select
+        aria-label="Tiebreaker direction"
         className="ss-input" value={tb.direction}
         onChange={e => onChange({ ...tb, direction: e.target.value as MatrixTiebreaker['direction'] })}
         style={{ fontSize: 10, padding: '4px 5px', width: 120 }}
@@ -1016,6 +1050,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
       )}
 
       <input
+        aria-label="Tiebreaker tolerance"
         type="number" min={0} step={0.01} className="ss-input"
         placeholder="± tolerance"
         title="Also keep anyone within this amount of the best value (e.g. 0.02) — leave blank for an exact match only"
@@ -1024,7 +1059,7 @@ function TiebreakerRow({ tb, onChange, onRemove }: { tb: MatrixTiebreaker; onCha
         style={{ fontSize: 10, padding: '4px 5px', width: 80 }}
       />
 
-      <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+      <button type="button" onClick={onRemove} aria-label="Remove tie-breaker" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
         <X size={12} />
       </button>
     </div>
@@ -1162,6 +1197,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           <div style={{ display: 'flex', gap: 6, marginBottom: 14, padding: 3, background: 'var(--surface-2)', borderRadius: 9 }}>
             {(['classic', 'pipeline'] as const).map(t => (
               <button
+                type="button"
                 key={t} onClick={() => setMatrixType(t)}
                 style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, padding: '7px 8px',
@@ -1183,12 +1219,16 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input
+            aria-label="Matrix name"
             className="ss-input" placeholder="Matrix name" value={name} onChange={e => setName(e.target.value)}
             style={{ flex: 1, fontSize: 13, padding: '8px 10px' }}
           />
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             {SWATCHES.map(c => (
               <button
+                type="button"
+                aria-label={`Use matrix color ${c}`}
+                aria-pressed={color === c}
                 key={c} onClick={() => setColor(c)}
                 style={{
                   width: 20, height: 20, borderRadius: '50%', background: c, cursor: 'pointer',
@@ -1203,7 +1243,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 12, color: 'var(--text-2)' }}>
               Compare players on
-              <select className="ss-input" value={pipelineScope} onChange={e => setPipelineScope(e.target.value as 'team' | 'game')} style={{ fontSize: 12, padding: '5px 6px' }}>
+              <select aria-label="Pipeline comparison scope" className="ss-input" value={pipelineScope} onChange={e => setPipelineScope(e.target.value as 'team' | 'game')} style={{ fontSize: 12, padding: '5px 6px' }}>
                 <option value="team">the same team</option>
                 <option value="game">either team</option>
               </select>
@@ -1221,12 +1261,13 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 12, color: 'var(--text-2)' }}>
               Highlight when a batter meets
-              <select className="ss-input" value={matchMode} onChange={e => setMatchMode(e.target.value as 'all' | 'any')} style={{ fontSize: 12, padding: '5px 6px' }}>
+              <select aria-label="Matrix match mode" className="ss-input" value={matchMode} onChange={e => setMatchMode(e.target.value as 'all' | 'any')} style={{ fontSize: 12, padding: '5px 6px' }}>
                 <option value="all">every Element</option>
                 <option value="any">at least</option>
               </select>
               {matchMode === 'any' && (
                 <input
+                  aria-label="Minimum matching elements"
                   className="ss-input" type="number" min={1} max={factors.length || 1} value={matchAnyCount}
                   onChange={e => setMatchAnyCount(Math.max(1, Number(e.target.value) || 1))}
                   style={{ fontSize: 12, padding: '5px 6px', width: 50 }}
@@ -1238,6 +1279,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)' }}>Elements ({factors.length})</span>
               <button
+                type="button"
                 onClick={() => setFactors([...factors, newFactor()])}
                 style={{
                   marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
@@ -1266,8 +1308,8 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: MatrixDef | null
         {error && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onClose} className="ss-btn-ghost" style={{ flex: 1, padding: '9px 0', fontSize: 12 }}>Cancel</button>
-          <button onClick={save} disabled={saving} className="ss-btn-accent" style={{ flex: 1, padding: '9px 0', fontSize: 12, opacity: saving ? 0.6 : 1 }}>
+          <button type="button" onClick={onClose} className="ss-btn-ghost" style={{ flex: 1, padding: '9px 0', fontSize: 12 }}>Cancel</button>
+          <button type="button" onClick={save} disabled={saving} className="ss-btn-accent" style={{ flex: 1, padding: '9px 0', fontSize: 12, opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Saving…' : 'Save Matrix'}
           </button>
         </div>
@@ -1320,7 +1362,7 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
         )}
         <span style={{ flex: 1, minWidth: 4 }} />
         <button
-          onClick={toggle} disabled={toggling} title={matrix.enabled ? 'On — showing on the board. Click to turn off.' : 'Off — saved but not shown. Click to turn on.'}
+          type="button" onClick={toggle} disabled={toggling} aria-pressed={matrix.enabled} aria-label={`${matrix.enabled ? 'Disable' : 'Enable'} ${matrix.name}`} title={matrix.enabled ? 'On — showing on the board. Click to turn off.' : 'Off — saved but not shown. Click to turn on.'}
           style={{
             position: 'relative', width: 30, height: 17, borderRadius: 9, flexShrink: 0, cursor: toggling ? 'default' : 'pointer',
             border: 'none', padding: 0, background: matrix.enabled ? 'var(--accent)' : 'var(--surface-3, var(--border))',
@@ -1332,8 +1374,8 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
             background: '#fff', transition: 'left 0.15s',
           }} />
         </button>
-        <button onClick={onEdit} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Pencil size={13} /></button>
-        <button onClick={del} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Trash2 size={13} /></button>
+        <button type="button" onClick={onEdit} aria-label={`Edit ${matrix.name}`} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Pencil size={13} /></button>
+        <button type="button" onClick={del} aria-label={`Delete ${matrix.name}`} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><Trash2 size={13} /></button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
         {matrix.matrix_type === 'pipeline'
@@ -1346,10 +1388,10 @@ function MatrixCard({ matrix, onEdit, onDeleted, onToggled, onShare }: { matrix:
         <span style={{ fontSize: 10, fontFamily: "'SF Mono',monospace", color: 'var(--text-2)', background: 'var(--surface-2)', padding: '3px 7px', borderRadius: 5, letterSpacing: '0.03em' }}>
           {matrix.element_code}
         </span>
-        <button onClick={copyCode} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button type="button" onClick={copyCode} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
           {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? 'Copied' : 'Copy'}
         </button>
-        <button onClick={onShare} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px' }}>
+        <button type="button" onClick={onShare} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px' }}>
           <Share2 size={11} /> Share
         </button>
       </div>
@@ -1427,6 +1469,8 @@ export function MatrixButton() {
     <>
       <style>{`.matrix-fab { position: fixed; right: 20px; bottom: calc(136px + env(safe-area-inset-bottom, 0px)); z-index: 50; } @media (max-width: 767px), (max-width: 1024px) and (any-pointer: coarse) { .matrix-fab { bottom: calc(204px + env(safe-area-inset-bottom, 0px)); } }`}</style>
       <button
+        type="button"
+        aria-label="Open custom matrices"
         ref={fab.ref} className="matrix-fab" title="Drag to move" onClick={() => setOpen(true)} {...fab.handlers}
         style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 999,
@@ -1461,6 +1505,7 @@ export function MatrixButton() {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
               <button
+                type="button"
                 onClick={() => setEditing(null)}
                 disabled={matrices.length >= 10}
                 style={{
@@ -1494,21 +1539,22 @@ export function MatrixButton() {
               )}
 
               <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-                <button onClick={() => router.push('/marketplace')} className="ss-btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11, padding: '8px 12px', marginBottom: 12, color: 'var(--accent)' }}>
+                <button type="button" onClick={() => router.push('/marketplace')} className="ss-btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11, padding: '8px 12px', marginBottom: 12, color: 'var(--accent)' }}>
                   <ShoppingBag size={13} /> Browse Matrix Marketplace
                 </button>
                 <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 6 }}>Import a shared Element Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input
+                    aria-label="Shared Element Code"
                     className="ss-input" placeholder="EL-XXXX-XXXX" value={importCode}
                     onChange={e => setImportCode(e.target.value.toUpperCase())}
                     style={{ flex: 1, fontSize: 11, padding: '7px 8px', fontFamily: "'SF Mono',monospace" }}
                   />
-                  <button onClick={doImport} disabled={importing || matrices.length >= 10} className="ss-btn-ghost" style={{ fontSize: 11, padding: '7px 12px' }}>
+                  <button type="button" onClick={doImport} disabled={importing || matrices.length >= 10} className="ss-btn-ghost" style={{ fontSize: 11, padding: '7px 12px' }}>
                     {importing ? '…' : 'Import'}
                   </button>
                 </div>
-                {importError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>{importError}</div>}
+                {importError && <div role="alert" style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>{importError}</div>}
               </div>
             </div>
       </ModalSurface>

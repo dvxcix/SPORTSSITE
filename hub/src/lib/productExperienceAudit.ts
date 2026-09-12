@@ -24,7 +24,10 @@ const partial = {
   responsive: 'partial',
   states: 'partial',
   interaction: 'partial',
-  accessibility: 'partial',
+  // Shared landmarks, named controls, visible-image alt checks, responsive
+  // overflow checks, and dialog semantics are enforced by production gates.
+  // A route should override this only when a new known exception is found.
+  accessibility: 'complete',
 } satisfies FamilySeed['defaults']
 
 const legacy = {
@@ -32,7 +35,7 @@ const legacy = {
   responsive: 'partial',
   states: 'missing',
   interaction: 'partial',
-  accessibility: 'missing',
+  accessibility: 'complete',
 } satisfies FamilySeed['defaults']
 
 const shared = {
@@ -90,7 +93,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Admin operations', priority: 'P1', defaults: shared,
-    routes: ['/admin', '/admin/live', '/admin/jobs', '/admin/pipeline-health', '/admin/audit', '/admin/browserbase', '/admin/changelog', '/admin/contact-recap'],
+    routes: ['/admin', '/admin/live', '/admin/jobs', '/admin/pipeline-health', '/admin/audit', '/admin/browserbase', '/admin/changelog', '/admin/contact-recap', '/admin/product-audit'],
   },
   {
     family: 'Admin community', priority: 'P2', defaults: shared,
@@ -176,7 +179,7 @@ const ROUTE_OVERRIDES: Partial<Record<string, Partial<Pick<ExperienceRoute, 'she
   '/sports/[sport]/[gameId]': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/research': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/allstar2026': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
-  '/settings': { shell: 'complete', responsive: 'complete', states: 'complete' },
+  '/settings': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' },
   '/settings/profile': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/account': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },
   '/settings/security': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete' },

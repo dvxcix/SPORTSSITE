@@ -50,18 +50,18 @@ export function CreatePageForm({ userId }: { userId: string }) {
 
   return (
     <form className="ss-flow-form" onSubmit={create}>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
       <div className="ss-flow-card">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Page Name *</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          <input aria-label="Page name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="e.g. Yankees Daily, MLB Picks Central…"
             maxLength={60}
             className="ss-flow-input" />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
-          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3}
+          <textarea aria-label="Page description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3}
             placeholder="What is this page about?"
             maxLength={280}
             className="ss-flow-input resize-none" />

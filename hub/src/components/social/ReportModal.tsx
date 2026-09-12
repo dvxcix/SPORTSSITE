@@ -48,8 +48,8 @@ export function ReportModal({ targetType, targetId, onClose }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+    <div role="presentation" className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm">
         {done ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
@@ -59,8 +59,8 @@ export function ReportModal({ targetType, targetId, onClose }: {
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-black text-white flex items-center gap-2"><Flag size={16} className="text-red-400" /> Report</h2>
-              <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors"><X size={18} /></button>
+              <h2 id="report-dialog-title" className="font-black text-white flex items-center gap-2"><Flag size={16} className="text-red-400" /> Report</h2>
+              <button type="button" onClick={onClose} aria-label="Close report dialog" className="text-zinc-500 hover:text-white transition-colors"><X size={18} /></button>
             </div>
             <div className="space-y-2 mb-4">
               {REASONS.map(r => (
@@ -70,10 +70,10 @@ export function ReportModal({ targetType, targetId, onClose }: {
                 </label>
               ))}
             </div>
-            <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Additional details (optional)" rows={2}
+            <textarea aria-label="Additional report details" value={details} onChange={e => setDetails(e.target.value)} placeholder="Additional details (optional)" rows={2}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none mb-4 resize-none" />
-            {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
-            <button onClick={submit} disabled={submitting || !reason}
+            {error && <p role="alert" className="text-xs text-red-400 mb-3">{error}</p>}
+            <button type="button" onClick={submit} disabled={submitting || !reason}
               className="w-full bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white font-black py-2.5 rounded-xl transition-colors">
               {submitting ? 'Submitting…' : 'Submit Report'}
             </button>

@@ -154,7 +154,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
               {draft.screenshot_urls.map(url => (
                 <div key={url} className="relative">
                   <SafeImage src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-zinc-700" />
-                  <button onClick={() => removeScreenshot(url)} className="absolute -top-1.5 -right-1.5 bg-zinc-900 border border-zinc-700 rounded-full p-0.5 text-zinc-400 hover:text-white">
+                  <button type="button" onClick={() => removeScreenshot(url)} aria-label="Remove screenshot" className="absolute -top-1.5 -right-1.5 bg-zinc-900 border border-zinc-700 rounded-full p-0.5 text-zinc-400 hover:text-white">
                     <X size={10} />
                   </button>
                 </div>

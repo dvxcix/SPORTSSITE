@@ -57,11 +57,11 @@ export function NewThreadForm({ userId, categories, defaultCategory }: {
 
   return (
     <form className="ss-flow-form" onSubmit={submit}>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
       <section className="ss-flow-card">
-        <div><label>Category</label><select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="ss-flow-input">{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-        <div><label>Title <span>*</span></label><input value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="Start with a clear title" className="ss-flow-input" /></div>
-        <div><label>Post</label><MentionInput ref={textareaRef} value={content} maxLength={5000} onValueChange={setContent} currentUserId={userId} placeholder="Share your take…" rows={9} className="ss-flow-input resize-y" /></div>
+        <div><label>Category</label><select aria-label="Discussion category" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="ss-flow-input">{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+        <div><label>Title <span>*</span></label><input aria-label="Discussion title" value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="Start with a clear title" className="ss-flow-input" /></div>
+        <div><label>Post</label><MentionInput ref={textareaRef} aria-label="Discussion post" value={content} maxLength={5000} onValueChange={setContent} currentUserId={userId} placeholder="Share your take…" rows={9} className="ss-flow-input resize-y" /></div>
         <div className="ss-flow-tools"><div className="ss-flow-media-tools"><EmojiPicker onSelect={insertAtCursor} /><GifPicker onSelect={url => insertAtCursor(` ${url} `)} /></div><span>{content.length.toLocaleString()} / 5,000</span></div>
       </section>
       <button type="submit" disabled={submitting || !title.trim()}

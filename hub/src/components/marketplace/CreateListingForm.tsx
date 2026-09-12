@@ -42,31 +42,31 @@ export function CreateListingForm({ userId }: { userId: string }) {
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Title *</label>
-          <input value={form.title} maxLength={120} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What are you selling?" className={inputClass} />
+          <input aria-label="Listing title" value={form.title} maxLength={120} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What are you selling?" className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
-          <textarea value={form.description} maxLength={2000} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Details about your listing…" className={inputClass + ' resize-none'} />
+          <textarea aria-label="Listing description" value={form.description} maxLength={2000} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Details about your listing…" className={inputClass + ' resize-none'} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Price (USD) *</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
-            <input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00"
+            <input type="number" aria-label="Listing price in US dollars" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00"
               className={inputClass + ' pl-8'} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">Category</label>
-            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={inputClass}>
+            <select aria-label="Listing category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={inputClass}>
               <option value="">Select…</option>
               {CATS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">Condition</label>
-            <select value={form.condition} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))} className={inputClass}>
+            <select aria-label="Listing condition" value={form.condition} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))} className={inputClass}>
               {CONDS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>

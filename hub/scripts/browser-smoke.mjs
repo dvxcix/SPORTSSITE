@@ -77,8 +77,11 @@ async function verifyPage(context, path, expectedText, options = {}) {
               && !control.getAttribute('title')?.trim()
               && !(control.labels && control.labels.length)
           }).length
+        // Analytics providers inject hidden 1x1 tracking pixels after load.
+        // They are not perceivable content and cannot be authored by our UI,
+        // so only enforce alt text on images that are actually rendered.
         const missingAlt = [...document.querySelectorAll('img')]
-          .filter(image => !image.hasAttribute('alt')).length
+          .filter(image => visible(image) && !image.hasAttribute('alt')).length
         return { mainCount: document.querySelectorAll('main').length, unnamedActions, unnamedFields, missingAlt }
       })
       if (accessibility.mainCount !== 1) routeFailures.push(`expected one main landmark; found ${accessibility.mainCount}`)

@@ -181,13 +181,14 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           {KIND_LABEL[step.kind].toUpperCase()}
         </span>
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{KIND_DESC[step.kind]}</span>
-        <button onClick={onRemove} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+        <button type="button" onClick={onRemove} aria-label={`Remove ${KIND_LABEL[step.kind]} step ${index + 1}`} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
           <X size={14} />
         </button>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingLeft: 22 }}>
         <select
+          aria-label="Pipeline category"
           className="ss-input" value={step.category}
           onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
           style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
@@ -196,6 +197,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
         </select>
 
         <select
+          aria-label="Pipeline field"
           className="ss-input" value={step.field_key}
           onChange={e => {
             const field_key = e.target.value
@@ -229,6 +231,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
 
         {step.kind === 'filter' && (isBoolean ? (
           <select
+            aria-label="Boolean condition value"
             className="ss-input" value={step.value === 0 ? '0' : '1'}
             onChange={e => onChange({ ...step, operator: 'eq', value: Number(e.target.value) })}
             style={{ fontSize: 11, padding: '5px 6px', width: 100 }}
@@ -244,6 +247,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
         ) : (
           <>
             <select
+              aria-label="Pipeline operator"
               className="ss-input" value={step.operator ?? 'gte'}
               onChange={e => {
                 const operator = e.target.value as MatrixPipelineStep['operator']
@@ -306,6 +310,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             )}
             {!hidesValue && (
               <input
+                aria-label="Pipeline condition value"
                 className="ss-input" type="number" placeholder={isBooksField ? 'books missing' : 'value'}
                 value={step.value ?? ''}
                 onChange={e => onChange({ ...step, value: e.target.value === '' ? null : Number(e.target.value) })}
@@ -317,6 +322,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
 
         {needsRecency && (
           <select
+            aria-label="Pipeline stat window"
             className="ss-input" value={step.recency ?? 'season'}
             onChange={e => {
               const recency = e.target.value as MatrixFactor['recency']
@@ -352,6 +358,9 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
               const on = (step.book ?? 'fanduel') === b.key
               return (
                 <button
+                  type="button"
+                  aria-label={`Use ${b.label} sportsbook`}
+                  aria-pressed={on}
                   key={b.key} title={b.label} onClick={() => onChange({ ...step, book: b.key })}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
@@ -369,6 +378,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
 
         {step.kind === 'rank' && (
           <select
+            aria-label="Pipeline rank direction"
             className="ss-input" value={step.direction ?? 'highest'}
             onChange={e => onChange({ ...step, direction: e.target.value as 'highest' | 'lowest' | 'closest_zero' | 'farthest_zero' })}
             style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
@@ -395,6 +405,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
 
         {step.kind === 'group' && (
           <select
+            aria-label="Tied group direction"
             className="ss-input" value={step.direction ?? 'all'}
             onChange={e => onChange({ ...step, direction: e.target.value === 'all' ? null : e.target.value as 'highest' | 'lowest' })}
             title="When more than one pair/group ties at different values, which one to keep"
@@ -408,6 +419,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
 
         {step.kind === 'rank' && (
           <input
+            aria-label="Pipeline rank tolerance"
             type="number" min={0} step={0.01} className="ss-input"
             placeholder="± tolerance"
             title="Also keep anyone within this amount of the best value (e.g. 0.02) — leave blank for an exact match only"
@@ -426,6 +438,9 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             const on = selected.includes(b.key)
             return (
               <button
+                type="button"
+                aria-label={`${on ? 'Remove' : 'Add'} ${b.label} sportsbook`}
+                aria-pressed={on}
                 key={b.key} title={b.label}
                 onClick={() => {
                   const next = on ? selected.filter(k => k !== b.key) : [...selected, b.key]
@@ -443,6 +458,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
             )
           })}
           <select
+            aria-label="Sportsbook match requirement"
             className="ss-input" value={step.books_min_count == null ? 'all' : 'atLeast'}
             onChange={e => onChange({ ...step, books_min_count: e.target.value === 'atLeast' ? (step.books?.length ?? 1) : null })}
             style={{ fontSize: 10, padding: '4px 5px', width: 140, marginLeft: 'auto' }}
@@ -452,6 +468,7 @@ function PipelineStepCard({ step, index, hasAnchor, dragControls, onChange, onRe
           </select>
           {step.books_min_count != null && (
             <input
+              aria-label="Minimum matching sportsbooks"
               className="ss-input" type="number" min={1} max={(step.books?.length ?? 1) || 1}
               value={step.books_min_count}
               onChange={e => onChange({ ...step, books_min_count: Math.max(1, Number(e.target.value) || 1) })}
@@ -500,7 +517,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
           UNLESS
         </span>
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{KIND_DESC.unless}</span>
-        <button onClick={onRemove} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+        <button type="button" onClick={onRemove} aria-label={`Remove unless step ${index + 1}`} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
           <X size={14} />
         </button>
       </div>
@@ -508,6 +525,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
         <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>SEARCH FOR THE EXCEPTION ON</span>
         <select
+          aria-label="Exception search scope"
           className="ss-input" value={step.condition_scope ?? 'team'}
           onChange={e => onChange({ ...step, condition_scope: e.target.value as 'team' | 'game' })}
           style={{ fontSize: 11, padding: '5px 6px', width: 130 }}
@@ -517,6 +535,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
         </select>
         <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em', marginLeft: 8 }}>WHEN FOUND</span>
         <select
+          aria-label="Exception result behavior"
           className="ss-input" value={step.unless_mode ?? 'replace'}
           onChange={e => onChange({ ...step, unless_mode: e.target.value as MatrixPipelineStep['unless_mode'] })}
           title="What happens to the normal pool once the exception condition below is found"
@@ -541,6 +560,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingLeft: 22 }}>
           <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.03em' }}>TIED VALUE FROM</span>
           <select
+            aria-label="Exception anchor category"
             className="ss-input" value={step.category}
             onChange={e => changeCategory(e.target.value as MatrixFactor['category'])}
             style={{ fontSize: 11, padding: '5px 6px', width: 110 }}
@@ -548,6 +568,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
             {ALL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
           </select>
           <select
+            aria-label="Exception anchor field"
             className="ss-input" value={step.field_key}
             onChange={e => {
               const field_key = e.target.value
@@ -568,6 +589,7 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
           )}
           {needsRecency && (
             <select
+              aria-label="Exception anchor stat window"
               className="ss-input" value={step.recency ?? 'season'}
               onChange={e => onChange({ ...step, recency: e.target.value as MatrixFactor['recency'] })}
               title="Every window here (even Season) only counts games against whichever pitcher hand this player's real opponent throws on the day being evaluated — not every game he's played, full stop"
@@ -584,6 +606,9 @@ function UnlessStepCard({ step, index, dragControls, onChange, onRemove }: {
                 const on = (step.book ?? 'fanduel') === b.key
                 return (
                   <button
+                    type="button"
+                    aria-label={`Use ${b.label} sportsbook for exception anchor`}
+                    aria-pressed={on}
                     key={b.key} title={b.label} onClick={() => onChange({ ...step, book: b.key })}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24,
@@ -680,6 +705,9 @@ function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPip
   return (
     <div style={{ position: 'relative' }}>
       <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
         ref={btnRef}
         onClick={() => (open ? setOpen(false) : openMenu())}
         disabled={disabled}
@@ -701,6 +729,7 @@ function AddStepMenu({ onAdd, disabled, allowUnless }: { onAdd: (kind: MatrixPip
           }}>
             {kinds.map(kind => (
               <button
+                type="button"
                 key={kind}
                 onClick={() => { onAdd(kind); setOpen(false) }}
                 style={{

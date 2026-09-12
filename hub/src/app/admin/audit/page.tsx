@@ -54,7 +54,7 @@ export default async function AdminAuditPage({
           Action
           <select name="action" defaultValue={action ?? ''} className="ss-input mt-1 h-10 text-sm normal-case tracking-normal"><option value="">All actions</option>{actions.map(value => <option key={value} value={value}>{value}</option>)}</select>
         </label>
-        <button className="ss-button-primary h-10 px-5 text-sm">Apply</button>
+        <button type="submit" className="ss-button-primary h-10 px-5 text-sm">Apply</button>
         {(q || action) ? <Link href="/admin/audit" className="grid h-10 place-items-center px-3 text-xs font-bold text-[var(--text-3)] hover:text-[var(--text-1)]">Clear</Link> : null}
       </form>
 

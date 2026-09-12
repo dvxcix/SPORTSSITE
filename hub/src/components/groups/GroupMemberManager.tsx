@@ -42,7 +42,7 @@ export function GroupMemberManager({ groupId, initialMembers }: { groupId: strin
 
   return <section className={styles.panel}>
     <header><div><span><ShieldCheck size={14}/> ACCESS</span><h2>Members and roles</h2></div><b>{members.length}</b></header>
-    <div className={styles.search}><Search size={15}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a member" /></div>
+    <div className={styles.search}><Search size={15}/><input aria-label="Find a group member" value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a member" /></div>
     <div className={styles.list}>
       {filtered.map(member => <article key={member.user_id}>
         <MemberAvatar src={member.user?.avatar_url} name={member.user?.display_name || member.user?.username || 'Member'} size={38}/>
@@ -56,6 +56,6 @@ export function GroupMemberManager({ groupId, initialMembers }: { groupId: strin
       </article>)}
       {!filtered.length && <p className={styles.empty}>No members match that search.</p>}
     </div>
-    {message && <p className={styles.error}>{message}</p>}
+    {message && <p role="alert" className={styles.error}>{message}</p>}
   </section>
 }

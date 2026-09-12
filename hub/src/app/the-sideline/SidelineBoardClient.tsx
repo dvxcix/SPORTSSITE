@@ -974,7 +974,7 @@ function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: {
             .map(propType => findMarket(marketPlayer, propType))
             .filter(Boolean) as NflPlayerMarket[]
           return <article key={player.id}>
-            <header><div><PlayerAvatar player={player} team={team} /><span><b>{player.name}</b><small>{player.team} · {player.position}</small></span></div><button type="button" onClick={() => onRemove(player.id)}><X size={14} /></button></header>
+            <header><div><PlayerAvatar player={player} team={team} /><span><b>{player.name}</b><small>{player.team} · {player.position}</small></span></div><button type="button" onClick={() => onRemove(player.id)} aria-label={`Remove ${player.name} from comparison`}><X size={14} /></button></header>
             <div className={styles.compareScore}>
               <span><small><Image src="/brand-bolt.png" alt="" width={9} height={13} /> SLIPSURGE SCORE</small><b className={scoreTone(player.index)}>{player.hasTracking ? player.index : '-'}</b></span>
               <span><small><span className={styles.comparePublicPicks}>$</span> FTD PICKS</small><b>{publicPickCount(marketPlayer, 'first_td')?.toLocaleString() ?? '-'}</b></span>

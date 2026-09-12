@@ -179,15 +179,15 @@ export function BadgeManager({ userId, initialBadges, initialAssignments }: {
                     <p className="text-xs text-zinc-500 truncate">{b.description}</p>
                   </div>
                   <span className="text-xs text-zinc-500 shrink-0">{members.length} member{members.length === 1 ? '' : 's'}</span>
-                  <button onClick={() => { setEditing(isEditing ? null : b.id); setExpanded(null) }}
+                  <button type="button" onClick={() => { setEditing(isEditing ? null : b.id); setExpanded(null) }}
                     className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
                     <Pencil size={12} /> Edit
                   </button>
-                  <button onClick={() => { setExpanded(isOpen ? null : b.id); setEditing(null) }}
+                  <button type="button" onClick={() => { setExpanded(isOpen ? null : b.id); setEditing(null) }} aria-expanded={isOpen}
                     className="text-xs font-bold border border-zinc-700 text-zinc-300 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0">
                     {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Members
                   </button>
-                  <button onClick={() => deleteBadge(b.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label="Delete badge">
+                  <button type="button" onClick={() => deleteBadge(b.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label={`Delete ${b.name} badge`}>
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -356,7 +356,7 @@ function BadgeMembersPanel({ badge, members, onAward, onRevoke, onAwardAll }: {
                   {m.user.avatar_url ? <SafeImage src={m.user.avatar_url} alt="" className="w-full h-full object-cover" /> : (m.user.display_name || m.user.username)[0].toUpperCase()}
                 </div>
                 <span className="text-xs text-zinc-300 flex-1 truncate">@{m.user.username}</span>
-                <button onClick={() => onRevoke(badge.id, m.user!.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label="Revoke">
+                <button type="button" onClick={() => onRevoke(badge.id, m.user!.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label={`Revoke ${badge.name} from ${m.user!.display_name || m.user!.username}`}>
                   <X size={13} />
                 </button>
               </div>

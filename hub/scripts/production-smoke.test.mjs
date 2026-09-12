@@ -761,6 +761,7 @@ test('browser verification enforces shared accessibility fundamentals', async ()
   assert.ok(smoke.includes('visible actions lack an accessible name'))
   assert.ok(smoke.includes('visible fields lack an accessible label'))
   assert.ok(smoke.includes('images lack alt attributes'))
+  assert.ok(smoke.includes("visible(image) && !image.hasAttribute('alt')"))
 })
 
 test('account recovery associates its visible label with the email field', async () => {
@@ -910,6 +911,97 @@ test('profile and account editors validate identity fields without exposing prov
   assert.ok(account.includes('finally {'))
   assert.ok(account.includes('autoComplete="new-password"'))
   assert.ok(!account.includes('setError(err.message)'))
+})
+
+test('settings hub exposes every account workflow with an accessible shared shell', async () => {
+  const page = await read('src/app/settings/page.tsx')
+  const shell = await read('src/components/settings/SettingsShell.tsx')
+  const audit = await read('src/lib/productExperienceAudit.ts')
+  for (const href of ['/settings/profile', '/settings/account', '/settings/security', '/settings/notifications', '/settings/privacy', '/settings/blocked', '/settings/membership', '/creators/apply', '/faq', '/support']) {
+    assert.ok(page.includes(`href: '${href}'`), `settings hub omits ${href}`)
+  }
+  assert.ok(shell.includes('aria-label="Settings sections"'))
+  assert.ok(shell.includes("aria-current={current ? 'page' : undefined}"))
+  assert.ok(shell.includes('aria-labelledby="settings-page-title"'))
+  assert.ok(page.includes('aria-labelledby={`settings-${section.title.toLowerCase()}-heading`}'))
+  assert.ok(audit.includes("'/settings': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' }"))
+})
+
+test('product experience audit tracks every completed route dimension', async () => {
+  const audit = await read('src/lib/productExperienceAudit.ts')
+  assert.ok(audit.includes("accessibility: 'complete'"))
+  assert.ok(audit.includes("'/admin/product-audit'"))
+  assert.ok(!audit.includes("accessibility: 'missing'"))
+  assert.ok(!audit.includes("accessibility: 'partial'"))
+})
+
+test('settings editors expose programmatic field names and announced failures', async () => {
+  const profile = await read('src/components/settings/ProfileForm.tsx')
+  const account = await read('src/components/settings/AccountSettingsForm.tsx')
+  const deletion = await read('src/components/settings/AccountDeletionControl.tsx')
+  const notifications = await read('src/components/settings/NotificationSettingsForm.tsx')
+  for (const label of ['Display name', 'Username', 'Bio', 'Location', 'Website', 'Search favorite MLB players']) {
+    assert.ok(profile.includes(`aria-label="${label}"`), `profile editor omits ${label} field name`)
+  }
+  for (const label of ['Email address', 'New password', 'Confirm new password']) {
+    assert.ok(account.includes(`aria-label="${label}"`), `account editor omits ${label} field name`)
+  }
+  assert.ok(profile.includes('role="alert"'))
+  assert.ok(deletion.includes('aria-label="Reason for leaving"'))
+  assert.ok(deletion.includes('role="alert"'))
+  assert.ok(notifications.includes('<button type="button" onClick={save}'))
+})
+
+test('icon-only product controls retain explicit accessible names and button semantics', async () => {
+  const files = [
+    'src/components/dugout/PostBetModal.tsx',
+    'src/components/dugout/PipelineBuilder.tsx',
+    'src/components/dugout/CustomMatrixPanel.tsx',
+    'src/components/settings/ProfileForm.tsx',
+    'src/components/social/ReportModal.tsx',
+    'src/app/the-sideline/SidelineBoardClient.tsx',
+    'src/components/admin/AdminForumActions.tsx',
+    'src/components/admin/AdminPageActions.tsx',
+    'src/app/admin/emojis/EmojiUploadForm.tsx',
+    'src/app/admin/changelog/ChangelogManager.tsx',
+  ]
+  const contents = await Promise.all(files.map(read))
+  for (const [index, source] of contents.entries()) {
+    assert.ok(source.includes('aria-label='), `${files[index]} has no named icon controls`)
+  }
+  assert.ok(contents[0].includes('role="dialog"'))
+  assert.ok(contents[0].includes('aria-modal="true"'))
+  assert.ok(contents[4].includes('role="dialog"'))
+  assert.ok(contents[4].includes('aria-modal="true"'))
+})
+
+test('member creation flows expose named fields and announced errors', async () => {
+  const files = [
+    'src/components/events/CreateEventForm.tsx',
+    'src/components/forum/NewThreadForm.tsx',
+    'src/components/groups/CreateGroupForm.tsx',
+    'src/components/groups/GroupSettingsForm.tsx',
+    'src/components/groups/GroupMemberManager.tsx',
+    'src/components/pages/CreatePageForm.tsx',
+    'src/components/pages/PageSettingsForm.tsx',
+    'src/components/marketplace/CreateListingForm.tsx',
+  ]
+  const sources = await Promise.all(files.map(read))
+  for (const [index, source] of sources.entries()) {
+    assert.ok(source.includes('aria-label='), `${files[index]} has no named fields`)
+  }
+  for (const index of [0, 1, 2, 3, 5, 6, 7]) {
+    assert.ok(sources[index].includes('role="alert"'), `${files[index]} does not announce submission failures`)
+  }
+})
+
+test('NFL Matrix builder names every compact condition control', async () => {
+  const matrix = await read('src/components/sideline/NflMatrixButton.tsx')
+  for (const label of ['Pipeline step type', 'Condition category', 'Sportsbook market', 'Sportsbook', 'Market value', 'Public pick market', 'Condition field', 'Stat window', 'Rank direction', 'Rank scope', 'Condition join', 'Condition operator', 'Condition value', 'NFL Element Code']) {
+    assert.ok(matrix.includes(`aria-label="${label}"`), `NFL Matrix builder omits ${label}`)
+  }
+  assert.ok(matrix.includes('aria-pressed={matrix.enabled}'))
+  assert.ok(matrix.includes('<p role="alert"'))
 })
 
 test('feed publishing and interactions recover visibly from failed writes', async () => {

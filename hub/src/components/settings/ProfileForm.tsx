@@ -320,7 +320,7 @@ export function ProfileForm({ profile }: { profile: any }) {
 
   return (
     <form className="space-y-6" onSubmit={save}>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <section className="rounded-2xl border border-lime-400/20 bg-lime-400/[.055] p-4">
         <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-black text-white"><Sparkles size={16} className="text-lime-300" /> Profile strength</div><strong className="text-sm text-lime-300">{completion}%</strong></div>
@@ -348,7 +348,7 @@ export function ProfileForm({ profile }: { profile: any }) {
             <p>{form.bio || 'Your bio and identity will preview here as you edit.'}</p>
           </div>
         </div>
-        <details className="ss-profile-editor-links"><summary>Use image URLs instead</summary><div><input type="url" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="Avatar URL" className={inputClass} /><input type="url" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="Banner URL" className={inputClass} /></div></details>
+        <details className="ss-profile-editor-links"><summary>Use image URLs instead</summary><div><input type="url" aria-label="Avatar image URL" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="Avatar URL" className={inputClass} /><input type="url" aria-label="Banner image URL" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="Banner URL" className={inputClass} /></div></details>
       </section>
 
       <section className="ss-profile-ring-editor">
@@ -386,27 +386,27 @@ export function ProfileForm({ profile }: { profile: any }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Display Name</label>
-          <input value={form.display_name} maxLength={60} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Your name" className={inputClass} />
+          <input aria-label="Display name" value={form.display_name} maxLength={60} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Your name" className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Username</label>
-          <input value={form.username} maxLength={30} autoCapitalize="none" spellCheck={false} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} placeholder="username" className={inputClass} />
+          <input aria-label="Username" value={form.username} maxLength={30} autoCapitalize="none" spellCheck={false} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} placeholder="username" className={inputClass} />
         </div>
       </div>
 
       <div>
         <label className="block text-xs font-bold text-zinc-400 mb-1.5">Bio</label>
-        <textarea value={form.bio} maxLength={280} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Tell people who you are…" className={inputClass + ' resize-none'} />
+        <textarea aria-label="Bio" value={form.bio} maxLength={280} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Tell people who you are…" className={inputClass + ' resize-none'} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Location</label>
-          <input value={form.location} maxLength={80} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className={inputClass} />
+          <input aria-label="Location" value={form.location} maxLength={80} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="City, State" className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Website</label>
-          <input type="url" value={form.website} maxLength={500} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <input type="url" aria-label="Website" value={form.website} maxLength={500} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
       </div>
 
@@ -448,14 +448,14 @@ export function ProfileForm({ profile }: { profile: any }) {
               <div key={p.mlb_id} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full pl-1.5 pr-2 py-1">
                 <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={24} />
                 <span className="text-xs font-bold text-white">{p.name}</span>
-                <button type="button" onClick={() => removeFavoritePlayer(p.mlb_id)} className="text-zinc-500 hover:text-red-400"><X size={12} /></button>
+                <button type="button" onClick={() => removeFavoritePlayer(p.mlb_id)} aria-label={`Remove ${p.name} from favorite players`} className="text-zinc-500 hover:text-red-400"><X size={12} /></button>
               </div>
             ))}
           </div>
         )}
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input value={playerQuery} onChange={e => setPlayerQuery(e.target.value)} placeholder="Search MLB players…"
+          <input aria-label="Search favorite MLB players" value={playerQuery} onChange={e => setPlayerQuery(e.target.value)} placeholder="Search MLB players…"
             className={inputClass} style={{ paddingLeft: 32 }} />
           {(playerSearching || playerResults.length > 0) && playerQuery.trim().length >= 2 && (
             <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden shadow-xl">
@@ -493,7 +493,7 @@ export function ProfileForm({ profile }: { profile: any }) {
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-2">Connected Accounts</label>
           {connectedError && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-xs text-red-400 mb-2">{connectedError}</div>
+            <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-xs text-red-400 mb-2">{connectedError}</div>
           )}
           <div className="space-y-2">
             {platforms.map(p => {
@@ -521,6 +521,7 @@ export function ProfileForm({ profile }: { profile: any }) {
                 <div key={p.id} className="flex items-center gap-2.5">
                   <SafeImage src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
                   <input
+                    aria-label={`${p.name} handle or username`}
                     value={form.social_links[p.key] ?? ''}
                     onChange={e => setSocialLink(p.key, e.target.value)}
                     placeholder={`Your ${p.name} handle/username…`}

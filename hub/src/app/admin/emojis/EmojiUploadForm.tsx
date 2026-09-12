@@ -137,7 +137,7 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
             <div key={c.id} className="flex items-center gap-1.5 bg-zinc-800 rounded-full pl-3 pr-1 py-1">
               <span className="text-xs font-bold text-white">{c.name}</span>
               <span className="text-[10px] text-zinc-500">{emojis.filter(e => e.category_id === c.id).length}</span>
-              <button onClick={() => removeCategory(c.id)} className="text-zinc-500 hover:text-red-400 p-1">
+              <button type="button" onClick={() => removeCategory(c.id)} aria-label={`Delete ${c.name} emoji category`} className="text-zinc-500 hover:text-red-400 p-1">
                 <Trash2 size={11} />
               </button>
             </div>
@@ -145,11 +145,11 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
           {categories.length === 0 && <p className="text-xs text-zinc-600">No categories yet — add one below.</p>}
         </div>
         <div className="flex gap-2">
-          <input value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
+          <input aria-label="New emoji category name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCategory()}
             placeholder="New category name (e.g. MLB, NBA)…"
             className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
-          <button onClick={addCategory} disabled={addingCategory || !newCategoryName.trim()}
+          <button type="button" onClick={addCategory} disabled={addingCategory || !newCategoryName.trim()}
             className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white text-xs font-bold px-3 rounded-lg transition-colors">
             <Plus size={13} /> Add
           </button>
@@ -163,7 +163,7 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">Code</label>
             <div className="flex items-center gap-1">
               <span className="text-zinc-500 text-sm">:</span>
-              <input value={code} onChange={e => setCode(e.target.value.toLowerCase())}
+              <input aria-label="Emoji shortcode" value={code} onChange={e => setCode(e.target.value.toLowerCase())}
                 placeholder="ath"
                 className="w-28 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50" />
               <span className="text-zinc-500 text-sm">:</span>
@@ -179,10 +179,10 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
           </div>
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">Image</label>
-            <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)}
+            <input aria-label="Emoji image" type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)}
               className="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
           </div>
-          <button onClick={upload} disabled={uploading || !code.trim() || !file}
+          <button type="button" onClick={upload} disabled={uploading || !code.trim() || !file}
             className="bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-black px-4 py-2 rounded-xl text-sm transition-colors">
             {uploading ? 'Uploading…' : 'Add Emoji'}
           </button>
@@ -211,10 +211,10 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
                     <div key={e.id} className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
                       <SafeImage src={e.image_url} alt={e.code} className="w-8 h-8 object-contain rounded shrink-0" />
                       <span className="text-sm text-zinc-300 font-mono truncate flex-1">:{e.code}:</span>
-                      <button onClick={() => setEditingId(e.id)} className="text-zinc-500 hover:text-white shrink-0" aria-label="Edit">
+                      <button type="button" onClick={() => setEditingId(e.id)} className="text-zinc-500 hover:text-white shrink-0" aria-label={`Edit ${e.code} emoji`}>
                         <Pencil size={13} />
                       </button>
-                      <button onClick={() => remove(e.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label="Delete">
+                      <button type="button" onClick={() => remove(e.id)} className="text-zinc-500 hover:text-red-400 shrink-0" aria-label={`Delete ${e.code} emoji`}>
                         <Trash2 size={14} />
                       </button>
                     </div>

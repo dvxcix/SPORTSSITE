@@ -55,8 +55,8 @@ export default async function SettingsPage() {
       <DesktopSettingsPanel />
       <div className={styles.grid}>
         {sections.map(section => (
-          <section key={section.title} className={styles.section}>
-            <header className={styles.sectionHead}><h2>{section.title}</h2><span aria-hidden="true" /></header>
+          <section key={section.title} className={styles.section} aria-labelledby={`settings-${section.title.toLowerCase()}-heading`}>
+            <header className={styles.sectionHead}><h2 id={`settings-${section.title.toLowerCase()}-heading`}>{section.title}</h2><span aria-hidden="true" /></header>
             <div className={styles.items}>
               {section.items.map((item) => {
                 const Icon = item.icon
@@ -65,7 +65,7 @@ export default async function SettingsPage() {
                     className={styles.item}>
                     <span className={styles.icon}><Icon size={17} /></span>
                     <span className={styles.copy}><strong>{item.label}</strong><small>{item.desc}</small></span>
-                    <ChevronRight size={15} className={styles.arrow} />
+                    <ChevronRight size={15} className={styles.arrow} aria-hidden="true" />
                   </Link>
                 )
               })}

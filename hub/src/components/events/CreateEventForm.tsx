@@ -56,29 +56,29 @@ export function CreateEventForm({ userId }: { userId: string }) {
 
   return (
     <form className="ss-flow-form" onSubmit={create}>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
       <div className="ss-flow-card">
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Event Title *</label>
-          <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Yankees Watch Party, NFL Draft Night…" maxLength={100} className={inputClass} />
+          <input aria-label="Event title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Yankees Watch Party, NFL Draft Night…" maxLength={100} className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Description</label>
-          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} maxLength={1000} className={inputClass + ' resize-none'} placeholder="What's happening?" />
+          <textarea aria-label="Event description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} maxLength={1000} className={inputClass + ' resize-none'} placeholder="What's happening?" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">Start Date & Time *</label>
-            <input type="datetime-local" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className={inputClass} />
+            <input type="datetime-local" aria-label="Event start date and time" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className={inputClass} />
           </div>
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-1.5">End Date & Time</label>
-            <input type="datetime-local" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} className={inputClass} />
+            <input type="datetime-local" aria-label="Event end date and time" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} className={inputClass} />
           </div>
         </div>
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Location</label>
-          <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Address or venue name" className={inputClass} />
+          <input aria-label="Event location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Address or venue name" className={inputClass} />
         </div>
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[.07] bg-black/20 p-3.5">
           <div><p className="text-sm font-bold text-white">Online event</p><p className="mt-0.5 text-xs text-zinc-500">Show a join link on the event page</p></div>
@@ -86,7 +86,7 @@ export function CreateEventForm({ userId }: { userId: string }) {
         </div>
         {form.is_online && <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Event Link *</label>
-          <input type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" maxLength={500} className={inputClass} />
+          <input type="url" aria-label="Event link" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" maxLength={500} className={inputClass} />
         </div>}
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Sport</label>

@@ -63,16 +63,16 @@ export function GroupSettingsForm({ group }: { group: any }) {
 
   return (
     <form className="ss-flow-form" onSubmit={save}>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <section className="ss-flow-card">
         <div>
           <label>Group name <span>*</span></label>
-          <input value={form.name} maxLength={60} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
+          <input aria-label="Group name" value={form.name} maxLength={60} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
         </div>
         <div>
           <label>Description</label>
-          <textarea value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={inputClass + ' resize-none'} />
+          <textarea aria-label="Group description" value={form.description} maxLength={280} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={inputClass + ' resize-none'} />
         </div>
         <div>
           <label>Sport</label>
@@ -95,11 +95,11 @@ export function GroupSettingsForm({ group }: { group: any }) {
         </div>
         <div>
           <label>Avatar image URL</label>
-          <input type="url" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <input type="url" aria-label="Group avatar image URL" value={form.avatar_url} maxLength={500} onChange={e => setForm(f => ({ ...f, avatar_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div>
           <label>Banner image URL</label>
-          <input type="url" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
+          <input type="url" aria-label="Group banner image URL" value={form.banner_url} maxLength={500} onChange={e => setForm(f => ({ ...f, banner_url: e.target.value }))} placeholder="https://…" className={inputClass} />
         </div>
         <div className="flex items-center justify-between">
           <div>

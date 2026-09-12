@@ -58,18 +58,18 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
 
   return (
     <form className="ss-flow-form" onSubmit={create}>
-      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
+      {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">{error}</div>}
 
       <section className="ss-flow-card">
         <div>
           <label>Group name <span>*</span></label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          <input aria-label="Group name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="e.g. Yankees Nation, Parlay Kings…"
             maxLength={60} className="ss-flow-input" />
         </div>
         <div>
           <label>Description</label>
-          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+          <textarea aria-label="Group description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
             placeholder="What is this group about?"
             rows={4} maxLength={280} className="ss-flow-input resize-none" />
         </div>
@@ -107,7 +107,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
         </div>
         {products.length > 0 && <div>
           <label>Member access</label>
-          <select value={creatorProductId} onChange={event => setCreatorProductId(event.target.value)} className="ss-flow-input">
+          <select aria-label="Group member access" value={creatorProductId} onChange={event => setCreatorProductId(event.target.value)} className="ss-flow-input">
             <option value="">Free group</option>
             {products.map(product => <option key={product.id} value={product.id}>{product.title} · {product.currency.toUpperCase()} {Number(product.price).toFixed(2)}</option>)}
           </select>
