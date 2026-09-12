@@ -125,14 +125,14 @@ try {
     colorScheme: 'dark',
   })
   await runInBatches([
-    ['/auth/login', 'Sign in'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
+    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
     ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
     ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'], ['/responsible-gambling', 'Responsible'],
     ['/privacy', 'Privacy'], ['/terms', 'Terms'],
   ], 4, ([path, expected]) => verifyPage(desktop, path, expected, { checkOverflow: true }))
   await runInBatches([
-    '/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings/security',
-    '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline',
+    '/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership',
+    '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline',
     '/the-public', '/daily-recap', '/research', '/weather-lab',
   ], 4, path => verifyProtectedPage(desktop, path))
   await desktop.close()
@@ -145,12 +145,12 @@ try {
     colorScheme: 'dark',
   })
   await runInBatches([
-    ['/auth/login', 'Sign in'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
+    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
     ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
     ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'],
   ], 4, ([path, expected]) => verifyPage(mobile, path, expected, { label: 'mobile', checkOverflow: true }))
   await runInBatches([
-    '/feed', '/messages', '/notifications', '/bookmarks', '/channels', '/groups', '/forum', '/pages',
+    '/feed', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages',
     '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public',
   ], 4, path => verifyProtectedPage(mobile, path, { label: 'mobile' }))
   await mobile.close()
@@ -163,10 +163,10 @@ try {
     colorScheme: 'dark',
   })
   await runInBatches([
-    ['/auth/login', 'Sign in'], ['/pricing', 'Ultimate'], ['/creators', 'Find the people behind the edge'],
+    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators', 'Find the people behind the edge'],
   ], 3, ([path, expected]) => verifyPage(fold, path, expected, { label: 'fold', checkOverflow: true }))
   await runInBatches([
-    '/feed', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout',
+    '/feed', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout',
     '/the-sideline', '/the-public',
   ], 3, path => verifyProtectedPage(fold, path, { label: 'fold' }))
   await fold.close()

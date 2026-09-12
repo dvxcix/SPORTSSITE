@@ -4,6 +4,8 @@ import { PayoutSetupClient } from './PayoutSetupClient'
 import { hasApprovedCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { LockKeyhole } from 'lucide-react'
+import styles from './CreatorPayouts.module.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,10 +23,7 @@ export default async function CreatorPayoutsPage() {
 
   if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)' }}>
-        Payouts are available once your creator application is approved. See{' '}
-        <Link href="/creators/apply" style={{ color: 'var(--accent)' }}>Apply to become a creator</Link>.
-      </div>
+      <div className={styles.page}><section className={styles.locked}><span className={styles.lockedIcon}><LockKeyhole size={21}/></span><h1>Creator approval required</h1><p>Payout tools unlock after your creator application is approved.</p><Link href="/creators/apply">Apply to become a creator</Link></section></div>
     )
   }
 

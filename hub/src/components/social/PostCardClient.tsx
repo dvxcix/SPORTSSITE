@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2, Heart, BadgeCheck } from 'lucide-react'
+import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, Pencil, Trash2, Heart, BadgeCheck, EyeOff, VolumeX } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -141,6 +141,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [showMenu, setShowMenu] = useState(false)
   const postMenuRef = useRef<HTMLDivElement>(null)
   const [showReport, setShowReport] = useState(false)
+  const [suppressed, setSuppressed] = useState(false)
   const [pollVoted, setPollVoted] = useState<number | null>(initialPost.user_poll_vote ?? null)
   const [pollCounts, setPollCounts] = useState<number[]>(
     (initialPost.poll_data?.options ?? []).map((o: any) => o.votes ?? 0)
@@ -185,6 +186,17 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // the app doesn't otherwise enforce anywhere — delete has no such limit,
   // same as every mainstream social app (X included).
   const canEditPost = isOwnPost && renderedAt - new Date(initialPost.created_at).getTime() < 10 * 60 * 1000
+
+  async function suppressFromFeed(targetType: 'post' | 'author', targetId: string) {
+    if (!user) return
+    setShowMenu(false)
+    setSuppressed(true)
+    const { error } = await supabase.from('feed_suppressions').insert({ user_id: user.id, target_type: targetType, target_id: targetId })
+    if (error && error.code !== '23505') {
+      setSuppressed(false)
+      showNotice({ title: 'Could not update your feed', message: 'Try again in a moment.', tone: 'error' })
+    }
+  }
 
   // Fans out from the single shared channel PostLiveProvider owns (mounted
   // once in the root layout) instead of opening a connection per rendered
@@ -571,6 +583,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
 
   if (isDeleted) return null
 
+  if (suppressed) return null
+
   return (
     <>
       <motion.article
@@ -676,6 +690,13 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         </button>
                       )}
                       {!isOwnPost && user && post.author.id && (
+                        <>
+                        <button type="button" onClick={() => void suppressFromFeed('post', post.id)} className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <EyeOff size={12} /> Not interested
+                        </button>
+                        <button type="button" onClick={() => void suppressFromFeed('author', post.author.id!)} className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <VolumeX size={12} /> Mute @{post.author.username}
+                        </button>
                         <BlockUserButton
                           currentUserId={user.id}
                           targetUserId={post.author.id}
@@ -683,6 +704,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                           initialBlocked={false}
                           onDone={() => setShowMenu(false)}
                         />
+                        </>
                       )}
                       <button type="button" onClick={() => { navigator.clipboard.writeText(window.location.origin + '/posts/' + post.id); setShowMenu(false) }}
                         className="ss-dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -813,7 +835,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         </span>
                       </div>
                     </div>
-                  ) : post.pick_data.mlb_id ? (
+                  ) : (post.pick_data.mlb_id || post.pick_data.player_id) ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <PlayerAvatar
                         headshot={post.pick_data.headshot_url}

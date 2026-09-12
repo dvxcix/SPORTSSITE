@@ -85,7 +85,7 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
 
   const setupCount = [true, !!profile.whop_connected_company_id, products.length > 0, groups.length > 0].filter(Boolean).length
 
-  return <main className={styles.page}>
+  return <div className={styles.page}>
     <section className={styles.hero}>
       <div><span className={styles.kicker}><Radio size={13} /> CREATOR OPERATING CENTER</span><h1>Creator Studio</h1><p>Run memberships, member access, communities, and commerce from one workspace.</p></div>
       <div className={styles.heroActions}><Link href={`/creators/${profile.username}`}><Eye size={15} /> View storefront</Link><button onClick={copyStorefront}><Copy size={15} /> Copy link</button></div>
@@ -135,5 +135,5 @@ export function CreatorStudioClient({ profile, products, groups, stats, events, 
         <article className={styles.panel}><header><div><span>RECENT ACTIVITY</span><h2>Commerce events</h2></div><BadgeDollarSign size={21} /></header><div className={styles.events}>{events.length ? events.slice(0,5).map(event => <div key={event.id}><span><b>{event.event_type.replaceAll('_', ' ')}</b><small>{new Date(event.created_at).toLocaleDateString()}</small></span><strong>{event.amount ? `$${Number(event.amount).toFixed(2)}` : event.status || 'Recorded'}</strong></div>) : <p>No commerce activity yet.</p>}</div></article>
       </aside>
     </section>
-  </main>
+  </div>
 }

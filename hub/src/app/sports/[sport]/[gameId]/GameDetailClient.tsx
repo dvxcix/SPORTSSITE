@@ -819,7 +819,7 @@ export function GameDetailClient({
   ]
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       {/* Back */}
       <Link href="/sports" className={styles.back}>
         <ArrowLeft size={14} /> {sportLabel} Scores
@@ -902,6 +902,6 @@ export function GameDetailClient({
           <span className={styles.liveDot} /> Live · refreshes every 30s
         </p>
       )}
-    </main>
+    </div>
   )
 }

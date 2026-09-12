@@ -36,7 +36,7 @@ export default async function SidelinePage({ searchParams }: {
   const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode
   const { games, date, days } = await getSidelineGames(requestedDate, requestedGame)
   if (!games.length) {
-    return <main style={{ minHeight: '100vh', padding: 32, color: '#f5f8fb', background: '#060a0f' }}><h1>The Sideline</h1><p>No NFL games are scheduled for {date}.</p><Link href="/the-sideline">Return to the current NFL slate</Link></main>
+    return <div style={{ minHeight: '100vh', padding: 32, color: '#f5f8fb', background: '#060a0f' }}><h1>The Sideline</h1><p>No NFL games are scheduled for {date}.</p><Link href="/the-sideline">Return to the current NFL slate</Link></div>
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { SafeImage } from '@/components/ui/SafeImage'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
@@ -117,7 +118,7 @@ export default function CreatorApplyPage() {
   const isCreator = hasCreatorAccess(profile?.account_type)
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className={styles.heroCopy}>
@@ -304,7 +305,7 @@ export default function CreatorApplyPage() {
                   {SPORTS.map((sport) => {
                     const selected = sports.includes(sport)
                     const logo = sportLogoUrl(sport)
-                    return <button className={selected ? styles.sportSelected : styles.sport} aria-pressed={selected} key={sport} type="button" onClick={() => toggleSport(sport)}>{logo && <img src={logo} alt="" width={18} height={18} /> /* eslint-disable-line @next/next/no-img-element */}<span>{sport}</span>{selected && <Check size={14} />}</button>
+                    return <button className={selected ? styles.sportSelected : styles.sport} aria-pressed={selected} key={sport} type="button" onClick={() => toggleSport(sport)}>{logo && <SafeImage src={logo} alt="" width={18} height={18} />}<span>{sport}</span>{selected && <Check size={14} />}</button>
                   })}
                 </div>
               </fieldset>
@@ -326,6 +327,6 @@ export default function CreatorApplyPage() {
           )}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

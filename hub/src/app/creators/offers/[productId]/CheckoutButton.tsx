@@ -21,5 +21,5 @@ export function CheckoutButton({ productId }: { productId: string }) {
       setLoading(false)
     }
   }
-  return <>{error ? <div role="alert" style={{ color: 'var(--red)', fontSize: 10, lineHeight: 1.4 }}>{error}</div> : null}<button type="button" onClick={checkout} disabled={loading}>{loading ? <><Loader2 className="animate-spin" size={16} /> Opening checkout</> : <>Continue to checkout <ArrowRight size={16} /></>}</button></>
+  return <>{error ? <div role="alert" className="ss-checkout-error">{error}</div> : null}<button type="button" onClick={checkout} disabled={loading} aria-busy={loading}>{loading ? <><Loader2 className="animate-spin" size={16} /> Opening checkout</> : <>Continue to checkout <ArrowRight size={16} /></>}</button></>
 }

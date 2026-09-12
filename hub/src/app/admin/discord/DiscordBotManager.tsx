@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Switch as Toggle } from '@/components/ui/Switch'
 import type { DiscordConfig } from '@/lib/supabase/types'
+import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 const ALERT_TYPES: { key: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate' | 'pipeline_health'; label: string; live: boolean }[] = [
   { key: 'lineup_confirmed', label: 'Lineup Confirmed / Changed', live: true },
@@ -79,6 +80,7 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
   const [testingAlert, setTestingAlert] = useState<'hr' | 'near_hr' | null>(null)
   const [testResult, setTestResult] = useState('')
   const router = useRouter()
+  const { confirm } = useFeedback()
 
   async function loadAlertHealth() {
     setLoadingAlertHealth(true)
@@ -111,7 +113,11 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
 
   async function sendAlertTest(kind: 'hr' | 'near_hr') {
     const label = kind === 'hr' ? 'home-run' : 'near-home-run'
-    if (!window.confirm(`Send one clearly labeled ${label} test to its configured Discord channel?`)) return
+    if (!await confirm({
+      title: `Send ${label} test?`,
+      message: 'One clearly labeled test alert will be sent to the configured Discord channel.',
+      confirmLabel: 'Send test',
+    })) return
     setTestingAlert(kind)
     setTestResult('')
     try {

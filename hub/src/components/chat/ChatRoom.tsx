@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, Image as ImageIcon, Reply, Send, TrendingUp, X } from 'lucide-react'
+import { ArrowDown, Image as ImageIcon, Pencil, Reply, Send, Trash2, TrendingUp, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/lib/supabase/types'
 import { EmojiPicker } from '@/components/social/EmojiPicker'
@@ -14,6 +14,8 @@ import { notifyMentions } from '@/lib/mentions'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { GifPicker } from '@/components/social/GifPicker'
+import { MessageReactionBar } from '@/components/chat/MessageReactionBar'
+import { useMessageInteractionState } from '@/components/chat/useMessageInteractionState'
 
 interface ChatRoomProps {
   channelId: string
@@ -21,14 +23,16 @@ interface ChatRoomProps {
   channelName: string
   initialMessages: Message[]
   currentUserId?: string
+  canModerate?: boolean
 }
 
-export function ChatRoom({ channelId, channelSlug, channelName, initialMessages, currentUserId }: ChatRoomProps) {
+export function ChatRoom({ channelId, channelSlug, channelName, initialMessages, currentUserId, canModerate = false }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null)
   const [imageUrl, setImageUrl] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [atBottom, setAtBottom] = useState(true)
@@ -39,6 +43,14 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   const imageInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
   const supabase = useMemo(() => createClient(), [])
+  const messageIds = useMemo(() => messages.map(message => message.id), [messages])
+  const { reactions, typingUsers, notifyTyping, toggleReaction, markRead } = useMessageInteractionState({
+    contextKey: `channel:${channelId}`,
+    contextType: 'channel',
+    currentUserId,
+    channelId,
+    messageIds,
+  })
 
   function insertAtCursor(insertion: string) {
     const element = inputRef.current
@@ -71,6 +83,18 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
           void sendDesktopNotification(`# ${channelName} · ${senderName}`, newMessage.content || 'Shared a pick')
         }
       })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}`,
+      }, payload => {
+        const updated = payload.new as Message
+        setMessages(previous => previous.map(message => message.id === updated.id ? { ...message, ...updated } : message))
+      })
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}`,
+      }, payload => {
+        const removed = payload.old as Pick<Message, 'id'>
+        setMessages(previous => previous.filter(message => message.id !== removed.id))
+      })
       .subscribe()
     return () => { void supabase.removeChannel(realtimeChannel) }
   }, [channelId, channelName, currentUserId, supabase])
@@ -78,6 +102,10 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   useEffect(() => {
     if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [atBottom, messages])
+
+  useEffect(() => {
+    if (atBottom) void markRead(messages.at(-1)?.id)
+  }, [atBottom, markRead, messages])
 
   useEffect(() => {
     requestAnimationFrame(() => bottomRef.current?.scrollIntoView())
@@ -105,6 +133,22 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
     const content = input.trim()
     setSendError('')
     setSending(true)
+    if (editingMessage) {
+      const previousContent = editingMessage.content
+      const editedAt = new Date().toISOString()
+      setMessages(previous => previous.map(message => message.id === editingMessage.id ? { ...message, content, edited_at: editedAt } : message))
+      const { error } = await supabase.from('messages').update({ content, edited_at: editedAt }).eq('id', editingMessage.id).eq('sender_id', currentUserId)
+      if (error) {
+        setMessages(previous => previous.map(message => message.id === editingMessage.id ? { ...message, content: previousContent, edited_at: editingMessage.edited_at } : message))
+        setSendError('Edit not saved. Try again.')
+      } else {
+        setInput('')
+        setEditingMessage(null)
+        requestAnimationFrame(() => inputRef.current?.focus())
+      }
+      setSending(false)
+      return
+    }
     const { data, error } = await supabase.from('messages').insert({
       channel_id: channelId, sender_id: currentUserId, content,
       reply_to_id: replyingTo?.id ?? null,
@@ -121,6 +165,30 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
       setSendError('Message not sent. Try again.')
     }
     setSending(false)
+  }
+
+  function beginEdit(message: Message) {
+    setReplyingTo(null)
+    setImageUrl('')
+    setEditingMessage(message)
+    setInput(message.content || '')
+    requestAnimationFrame(() => {
+      inputRef.current?.focus()
+      inputRef.current?.setSelectionRange(message.content?.length ?? 0, message.content?.length ?? 0)
+    })
+  }
+
+  async function deleteMessage(message: Message) {
+    if (!currentUserId || (message.sender_id !== currentUserId && !canModerate)) return
+    const previous = messages
+    setMessages(current => current.map(item => item.id === message.id ? { ...item, content: '', media_urls: [], is_deleted: true } : item))
+    const { error } = message.sender_id === currentUserId
+      ? await supabase.from('messages').update({ content: '', media_urls: [], is_deleted: true, edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', currentUserId)
+      : await supabase.rpc('moderate_channel_message', { p_message_id: message.id })
+    if (error) {
+      setMessages(previous)
+      setSendError('Message not deleted. Try again.')
+    }
   }
 
   async function uploadImage(file: File) {
@@ -156,22 +224,28 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
           <div className="ss-chat-message-body">
             {startsGroup && <header>{message.sender?.username ? <Link href={`/profile/${message.sender.username}`}>{name}</Link> : <strong>{name}</strong>}{message.sender?.is_verified && <span className="ss-chat-verified">✓</span>}<time>{stamp}</time></header>}
             {replyTarget && <button type="button" className="ss-chat-reply-context" onClick={() => document.getElementById(`message-${replyTarget.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><Reply size={11}/><span>{replyTarget.sender?.display_name || replyTarget.sender?.username || 'Member'}</span><p>{replyTarget.content}</p></button>}
-            {message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p><LinkifiedText text={message.content || ''} /></p>}
-            {message.media_urls?.[0] && <SafeImage src={message.media_urls[0]} alt="" className="ss-chat-media"/>}
-            <button type="button" className="ss-chat-inline-action" onClick={() => { setReplyingTo(message); inputRef.current?.focus() }} aria-label={`Reply to ${name}`}><Reply size={12}/> Reply</button>
+            {message.is_deleted ? <p className="ss-chat-deleted">Message deleted</p> : message.pick_data ? <div className="ss-chat-pick"><div><TrendingUp size={10}/> PICK</div><strong>{message.pick_data.team}</strong><span>{message.pick_data.line} · {message.pick_data.odds}</span></div> : <p><LinkifiedText text={message.content || ''} />{message.edited_at ? <small className="ss-chat-edited">edited</small> : null}</p>}
+            {!message.is_deleted && message.media_urls?.[0] && <SafeImage src={message.media_urls[0]} alt="" className="ss-chat-media"/>}
+            <MessageReactionBar reactions={reactions[message.id]} disabled={!currentUserId || message.is_deleted} onToggle={emoji => void toggleReaction(message.id, emoji)}/>
+            {!message.is_deleted ? <div className="ss-chat-message-actions">
+              <button type="button" className="ss-chat-inline-action" onClick={() => { setEditingMessage(null); setReplyingTo(message); inputRef.current?.focus() }} aria-label={`Reply to ${name}`}><Reply size={12}/> Reply</button>
+              {message.sender_id === currentUserId ? <button type="button" className="ss-chat-inline-action" onClick={() => beginEdit(message)} aria-label="Edit message"><Pencil size={11}/> Edit</button> : null}
+              {(message.sender_id === currentUserId || canModerate) ? <button type="button" className="ss-chat-inline-action is-danger" onClick={() => void deleteMessage(message)} aria-label={message.sender_id === currentUserId ? 'Delete message' : 'Remove message'}><Trash2 size={11}/> {message.sender_id === currentUserId ? 'Delete' : 'Remove'}</button> : null}
+            </div> : null}
           </div>
         </article>
       })}
       <div ref={bottomRef}/>
     </div>
+    {typingUsers.length > 0 && <div className="ss-chat-typing" role="status"><i/><i/><i/><span>{typingUsers.length > 1 ? `${typingUsers.length} members are typing` : 'Someone is typing'}</span></div>}
     {!atBottom && <button type="button" className="ss-chat-new" onClick={jumpToLatest}><ArrowDown size={14}/>{unseenCount ? `${unseenCount} new` : 'Latest'}</button>}
     <div className="ss-chat-composer-wrap">
-      {replyingTo && <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p>{replyingTo.content}</p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div>}
+      {editingMessage ? <div className="ss-chat-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setInput('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p>{replyingTo.content}</p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
       {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
       {!currentUserId ? <p className="ss-chat-signin"><Link href="/auth/login">Sign in</Link> to join the conversation</p> : <form onSubmit={sendMessage} className="ss-chat-composer">
-        <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {
+        <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); notifyTyping(); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {
           if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() }
-        }} placeholder={`Message #${channelName}`} maxLength={1000} rows={1}/>
+        }} placeholder={editingMessage ? 'Edit message' : `Message #${channelName}`} maxLength={1000} rows={1}/>
         <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
         <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
         <EmojiPicker onSelect={insertAtCursor}/>

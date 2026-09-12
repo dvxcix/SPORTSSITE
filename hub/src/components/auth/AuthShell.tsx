@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { LoaderCircle } from 'lucide-react'
+import { AuthBrand, AuthExperience, authExperienceStyles as styles } from '@/components/auth/AuthExperience'
 
 export function AuthShell({
   eyebrow,
@@ -17,21 +17,20 @@ export function AuthShell({
   compact?: boolean
 }) {
   return (
-    <main className="ss-auth-shell">
-      <div className="ss-auth-orb" aria-hidden="true" />
-      <section className={`ss-auth-panel${compact ? ' is-compact' : ''}`}>
-        <Link href="/" className="ss-auth-brand" aria-label="SlipSurge home">
-          <Image src="/logo.png" alt="" width={38} height={38} priority />
-          <strong>Slip<span>Surge</span></strong>
-        </Link>
+    <AuthExperience panelWidth={compact ? 'compact' : 'wide'} aside={<>
+      <AuthBrand />
+      <h2 className={styles.asideTitle}>One account.<br/><span>Every edge.</span></h2>
+      <p className={styles.asideCopy}>Return to your live boards, communities, saved research, and picks without losing your place.</p>
+    </>}>
+      <div className={`ss-auth-panel-content${compact ? ' is-compact' : ''}`}>
         <header className="ss-auth-heading">
           {eyebrow && <p>{eyebrow}</p>}
           <h1>{title}</h1>
           {description && <span>{description}</span>}
         </header>
         {children}
-      </section>
-    </main>
+      </div>
+    </AuthExperience>
   )
 }
 

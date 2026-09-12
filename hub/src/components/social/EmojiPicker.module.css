@@ -1,0 +1,22 @@
+.root { position: relative; display: inline-block; }
+.trigger { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 0; border-radius: 9px; color: var(--text-3); background: transparent; cursor: pointer; transition: color var(--motion-fast), background var(--motion-fast), transform var(--motion-fast); }
+.trigger:hover, .trigger[aria-expanded='true'] { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface-3)); transform: translateY(-1px); }
+.panel { position: absolute; z-index: var(--layer-popover, 50); width: 280px; max-height: min(380px, calc(100dvh - 24px)); overflow: hidden auto; padding: 10px; border: 1px solid var(--border-2); border-radius: 16px; background: color-mix(in srgb, var(--surface) 96%, transparent); box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 1px rgba(255,255,255,.035); backdrop-filter: blur(22px) saturate(135%); scrollbar-width: thin; }
+.up { bottom: 110%; }
+.down { top: 110%; }
+.group { margin-bottom: 11px; }
+.group:last-child { margin-bottom: 0; }
+.groupLabel { position: sticky; top: -10px; z-index: 1; margin: 0 -2px 5px; padding: 7px 2px 4px; color: var(--text-3); background: color-mix(in srgb, var(--surface) 94%, transparent); font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(10px); }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.emoji { display: flex; width: 33px; height: 33px; align-items: center; justify-content: center; border: 0; border-radius: 9px; color: var(--text-1); background: transparent; cursor: pointer; font-size: 18px; transition: background var(--motion-fast), transform var(--motion-fast); }
+.emoji:hover, .emoji:focus-visible { outline: 0; background: color-mix(in srgb, var(--accent) 9%, var(--surface-3)); transform: scale(1.13); }
+.customImage { width: 21px; height: 21px; object-fit: contain; }
+
+@media (max-width: 420px) {
+  .panel { width: min(280px, calc(100vw - 16px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger, .emoji { transition: none; }
+  .trigger:hover, .emoji:hover { transform: none; }
+}

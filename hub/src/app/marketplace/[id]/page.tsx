@@ -37,7 +37,7 @@ export default async function MarketplaceListingPage({ params }: { params: Promi
   const [{ data: author }, { data: follow }, { data: badgeRows }] = await Promise.all([
     admin
       .from('users')
-      .select('id, username, display_name, avatar_url, is_verified, follower_count')
+      .select('id, username, display_name, avatar_url, is_verified, follower_count, avatar_ring_style, avatar_ring_color')
       .eq('id', listingRow.author_id)
       .maybeSingle(),
     admin

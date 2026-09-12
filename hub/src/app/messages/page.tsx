@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { MessageCircle, Plus, ShieldCheck, Zap } from 'lucide-react'
+import { MessageCircle, Plus, ShieldCheck } from 'lucide-react'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,38 +13,47 @@ export default async function MessagesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/messages')
 
-  const [blockedIdList, unreadResult] = await Promise.all([
+  const [blockedIdList, readPositionsResult, threadsResult, preferencesResult, followsResult] = await Promise.all([
     getBlockedEitherWayIds(supabase, user.id),
-    supabase.from('notifications').select('actor_id').eq('user_id', user.id).eq('type', 'message').eq('read', false),
+    supabase.from('message_read_positions').select('partner_id,last_read_at').eq('user_id', user.id).eq('context_type', 'dm'),
+    supabase
+      .from('messages')
+      .select(`
+        id, content, created_at, sender_id, dm_recipient_id,
+        sender:users!messages_sender_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color),
+        recipient:users!messages_dm_recipient_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)
+      `)
+      .or(`sender_id.eq.${user.id},dm_recipient_id.eq.${user.id}`)
+      .not('dm_recipient_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(250),
+    supabase.from('dm_conversation_preferences').select('partner_id,status,muted').eq('user_id', user.id),
+    supabase.from('follows').select('following_id').eq('follower_id', user.id),
   ])
   const blockedIds = new Set(blockedIdList)
+  const readAtByPartner = new Map((readPositionsResult.data ?? []).map(row => [row.partner_id, new Date(row.last_read_at).getTime()]))
   const unreadByPartner = new Map<string, number>()
-  for (const notification of unreadResult.data ?? []) {
-    if (notification.actor_id) unreadByPartner.set(notification.actor_id, (unreadByPartner.get(notification.actor_id) ?? 0) + 1)
+  for (const message of threadsResult.data ?? []) {
+    if (message.dm_recipient_id !== user.id || message.sender_id === user.id) continue
+    const readAt = readAtByPartner.get(message.sender_id) ?? 0
+    if (new Date(message.created_at).getTime() > readAt) {
+      unreadByPartner.set(message.sender_id, (unreadByPartner.get(message.sender_id) ?? 0) + 1)
+    }
   }
-
-  // Get DM threads (distinct conversations)
-  const { data: threads } = await supabase
-    .from('messages')
-    .select(`
-      id, content, created_at,
-      sender:users!messages_sender_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color),
-      recipient:users!messages_dm_recipient_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)
-    `)
-    .or(`sender_id.eq.${user.id},dm_recipient_id.eq.${user.id}`)
-    .not('dm_recipient_id', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(50)
 
   // Deduplicate by conversation partner
   const seen = new Set<string>()
   const convos: any[] = []
-  for (const m of threads ?? []) {
+  const preferenceByPartner = new Map((preferencesResult.data ?? []).map(row => [row.partner_id, row]))
+  const followingIds = new Set((followsResult.data ?? []).map(row => row.following_id))
+  const outgoingPartnerIds = new Set((threadsResult.data ?? []).filter(message => message.sender_id === user.id).map(message => message.dm_recipient_id))
+  for (const m of threadsResult.data ?? []) {
     const partner = (m.sender as any)?.id === user.id ? m.recipient : m.sender
     const pid = (partner as any)?.id
     if (pid && !seen.has(pid) && !blockedIds.has(pid)) {
       seen.add(pid)
-      convos.push({ ...m, partner })
+      const preference = preferenceByPartner.get(pid)
+      if (preference?.status !== 'declined') convos.push({ ...m, partner, preference })
     }
   }
 
@@ -55,7 +64,11 @@ export default async function MessagesPage() {
       content: conversation.content ?? '',
       createdAt: conversation.created_at,
       unreadCount: unreadByPartner.get(partner.id) ?? 0,
-      lastIsMine: conversation.sender?.id === user.id,
+      lastIsMine: conversation.sender_id === user.id,
+      isRequest: conversation.preference?.status !== 'accepted'
+        && conversation.sender_id !== user.id
+        && !followingIds.has(partner.id)
+        && !outgoingPartnerIds.has(partner.id),
       partner: {
         id: partner.id,
         username: partner.username,
@@ -68,32 +81,15 @@ export default async function MessagesPage() {
   })
 
   return (
-    <div className="ss-messages-page">
+    <ProductPageShell narrow className="ss-messages-page">
       <CommunityNav />
-      <section className="ss-messages-hero">
-        <div className="ss-messages-hero-copy">
-          <div className="ss-messages-hero-icon">
-            <MessageCircle size={21} />
-          </div>
-          <div>
-            <span className="ss-eyebrow"><Zap size={10} /> Member network</span>
-            <h1>Messages</h1>
-            <p>Private conversations with the people you follow across SlipSurge.</p>
-          </div>
-        </div>
-        <Link href="/messages/new"
-          className="ss-messages-new-button">
-          <Plus size={15} /> New message
-        </Link>
-      </section>
+      <ProductHero icon={<MessageCircle size={21}/>} eyebrow="Member network" title="Messages" description="Private conversations with people across SlipSurge." actions={<ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction>}/>
 
-      <section className="ss-messages-inbox-shell">
-        <div className="ss-messages-section-heading">
-          <div><strong>Inbox</strong><span>{conversations.length} conversation{conversations.length === 1 ? '' : 's'}</span></div>
-          <span><ShieldCheck size={12} /> Private</span>
-        </div>
-        <MessageInbox conversations={conversations} />
-      </section>
-    </div>
+      <ProductSectionHeader title="Inbox" meta={`${conversations.length} conversation${conversations.length === 1 ? '' : 's'}`}/>
+      <ProductPanel className="ss-messages-inbox-shell">
+        <div className="ss-messages-section-heading"><span><ShieldCheck size={12} /> Private</span></div>
+        <MessageInbox conversations={conversations} currentUserId={user.id} />
+      </ProductPanel>
+    </ProductPageShell>
   )
 }

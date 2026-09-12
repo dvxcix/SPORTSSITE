@@ -14,11 +14,11 @@ export default async function NewThreadPage({ searchParams }: { searchParams: Pr
   const { category } = await searchParams
 
   return (
-    <main className="ss-flow-page">
+    <div className="ss-flow-page">
       <CommunityNav />
       <Link href="/forum" className="ss-flow-back"><ArrowLeft size={15} /> Forum</Link>
       <header className="ss-flow-heading"><span><MessageSquarePlus size={19} /></span><div><p>Start a conversation</p><h1>New thread</h1></div></header>
       <NewThreadForm userId={user.id} categories={categories ?? []} defaultCategory={category} />
-    </main>
+    </div>
   )
 }

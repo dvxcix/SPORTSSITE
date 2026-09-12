@@ -1,0 +1,49 @@
+.page { width: min(100%, 980px); margin: 0 auto; padding: 20px clamp(12px, 3vw, 28px) 56px; }
+.community { position: relative; overflow: hidden; margin-top: 16px; border: 1px solid var(--border); border-radius: 25px; background: radial-gradient(circle at 82% 0, color-mix(in srgb, var(--accent) 4%, transparent), transparent 30rem), var(--surface); box-shadow: var(--shadow-card); }
+.banner { position: relative; height: clamp(126px, 20vw, 190px); overflow: hidden; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface-3)), var(--surface-2)); }
+.banner:after { position: absolute; inset: 0; content: ''; background: linear-gradient(180deg, transparent 25%, rgba(6,8,10,.74)); pointer-events: none; }
+.bannerImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sportBadge { position: absolute; z-index: 2; top: 13px; right: 13px; }
+.sportBadge > span { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.13); border-radius: 999px; color: #fff; background: rgba(5,8,10,.58); font-size: 10px; font-weight: 850; backdrop-filter: blur(14px); }
+.sportBadge img { object-fit: contain; }
+.identity { position: relative; padding: 0 clamp(16px, 3vw, 26px) 22px; }
+.identityRow { position: relative; z-index: 3; display: flex; margin-top: -38px; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.avatar { display: grid; width: 76px; height: 76px; overflow: hidden; flex: 0 0 76px; place-items: center; border: 5px solid var(--surface); border-radius: 22px; background: var(--surface-3); box-shadow: 0 14px 34px rgba(0,0,0,.32); font-size: 28px; }
+.avatarImage { width: 100%; height: 100%; object-fit: cover; }
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.secondaryAction, .primaryAction { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 6px; padding: 0 13px; border-radius: 11px; font-size: 11px; font-weight: 850; text-decoration: none; transition: transform var(--motion-fast), border-color var(--motion-fast), background var(--motion-fast); }
+.secondaryAction { border: 1px solid var(--border-2); color: var(--text-2); background: color-mix(in srgb, var(--surface-2) 88%, transparent); }
+.primaryAction { border: 1px solid color-mix(in srgb, var(--accent) 65%, white); color: var(--accent-fg); background: var(--accent); }
+.secondaryAction:hover, .primaryAction:hover { transform: translateY(-1px); }
+.secondaryAction:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); color: var(--text-1); }
+.title { display: flex; margin-top: 16px; align-items: center; gap: 8px; color: var(--text-1); font-size: clamp(20px, 3vw, 27px); font-weight: 930; letter-spacing: -.035em; }
+.title svg { color: var(--text-3); }
+.description { max-width: 720px; margin-top: 5px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.memberMeta { display: flex; margin-top: 10px; align-items: center; gap: 5px; color: var(--text-3); font-size: 10px; font-weight: 750; }
+.memberStack { display: flex; margin-top: 13px; align-items: center; }
+.memberStack > a { position: relative; margin-left: -5px; border: 2px solid var(--surface); border-radius: 50%; }
+.memberStack > a:first-child { margin-left: 0; }
+.memberStack > span { margin-left: 8px; color: var(--text-3); font-size: 10px; }
+.roleMark { position: absolute; right: -3px; bottom: -3px; display: grid; width: 13px; height: 13px; place-items: center; border: 2px solid var(--surface); border-radius: 50%; color: #071008; background: var(--accent); font-size: 6px; font-weight: 950; line-height: 1; }
+.inviteResponse { margin-top: 16px; }
+.divider { height: 1px; background: var(--border); }
+.posts { display: grid; gap: 12px; padding: 16px; }
+.emptyPosts, .locked { display: grid; min-height: 280px; padding: 34px 16px; place-content: center; justify-items: center; text-align: center; }
+.emptyPosts > p { margin-bottom: 10px; font-size: 30px; }
+.emptyPosts strong, .locked p { color: var(--text-2); font-size: 13px; }
+.emptyPosts span, .locked span { margin-top: 4px; color: var(--text-3); font-size: 10px; }
+.locked > svg { margin-bottom: 12px; color: var(--text-3); }
+.chatViewport { display: flex; min-height: 440px; height: min(620px, 70dvh); flex-direction: column; overflow: hidden; }
+
+@media (max-width: 600px) {
+  .page { padding: 10px 7px 30px; }
+  .community { margin-top: 10px; border-radius: 19px; }
+  .banner { height: 124px; }
+  .identity { padding-inline: 13px; }
+  .identityRow { margin-top: -30px; align-items: flex-end; }
+  .avatar { width: 64px; height: 64px; flex-basis: 64px; border-radius: 18px; }
+  .actions { gap: 6px; }
+  .secondaryAction, .primaryAction { min-height: 34px; padding-inline: 10px; }
+  .posts { padding: 9px; }
+  .chatViewport { min-height: 390px; height: calc(100dvh - 250px); }
+}

@@ -28,7 +28,7 @@ export default async function AdminDeletionRequestsPage() {
     .order('requested_at', { ascending: false }).limit(250)
   const requests = (data ?? []) as unknown as DeletionRequest[]
 
-  return <main className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+  return <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
     <header><div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-red-300"><Trash2 size={14} /> Privacy operations</div><h1 className="text-2xl font-black text-white">Deletion requests</h1><p className="mt-1 text-sm text-zinc-400">Review billing, creator payouts, retained records, and active memberships before any permanent deletion.</p></header>
     {error ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">Deletion requests could not be loaded.</div> : null}
     <section className="space-y-3">
@@ -40,5 +40,5 @@ export default async function AdminDeletionRequestsPage() {
         {row.user?.creator_commerce_status && row.user.creator_commerce_status !== 'not_started' ? <p className="mt-2 text-xs font-bold text-amber-300">Creator commerce status: {row.user.creator_commerce_status}</p> : null}
       </article>)}
     </section>
-  </main>
+  </div>
 }

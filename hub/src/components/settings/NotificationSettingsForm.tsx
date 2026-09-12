@@ -60,7 +60,7 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="ss-settings-actions">
         <button onClick={() => setAll('', true)} className="ss-settings-secondary">
           Enable all push
         </button>
@@ -75,32 +75,23 @@ export function NotificationSettingsForm({ settings }: { settings: Record<string
         </button>
       </div>
 
-      <div className="ss-settings-card !p-0 divide-y divide-white/[.07] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5">
-          <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Notification</span>
-          <div className="flex items-center gap-6">
-            <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider w-9 text-center">Push</span>
-            <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider w-9 text-center">Email</span>
-          </div>
-        </div>
+      <div className="ss-settings-list">
+        <div className="ss-settings-table-head"><span>Notification</span><span>Push</span><span>Email</span></div>
         {SETTINGS.map(s => (
-          <div key={s.key} className="flex items-center justify-between px-4 py-3 gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-white">{s.label}</p>
-              <p className="text-xs text-zinc-500">{s.desc}</p>
-            </div>
-            <div className="flex items-center gap-6 shrink-0">
-              <div className="w-9 flex justify-center">
+          <div key={s.key} className="ss-settings-row">
+            <div className="ss-settings-row-copy"><strong>{s.label}</strong><small>{s.desc}</small></div>
+            <div className="flex shrink-0 items-center gap-[22px]">
+              <div className="flex w-10 justify-center">
                 <Switch size="sm" checked={values[s.key]} onChange={checked => setValues(v => ({ ...v, [s.key]: checked }))} ariaLabel={`${s.label} push notifications`} />
               </div>
-              <div className="w-9 flex justify-center">
+              <div className="flex w-10 justify-center">
                 <Switch size="sm" checked={values[`${s.key}_email`]} onChange={checked => setValues(v => ({ ...v, [`${s.key}_email`]: checked }))} ariaLabel={`${s.label} email notifications`} />
               </div>
             </div>
           </div>
         ))}
       </div>
-      {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+      {error && <p role="alert" className="ss-settings-feedback">{error}</p>}
       <button onClick={save} className="ss-settings-primary">
         {saved ? <><Check size={13} /> Saved</> : 'Save preferences'}
       </button>

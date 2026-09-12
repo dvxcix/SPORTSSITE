@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import test from 'node:test'
 
 const root = process.cwd()
 const read = file => readFile(path.join(root, file), 'utf8')
+const sourceFiles = async directory => {
+  const entries = await readdir(path.join(root, directory), { withFileTypes: true })
+  const nested = await Promise.all(entries.map(entry => {
+    const relative = path.join(directory, entry.name)
+    return entry.isDirectory() ? sourceFiles(relative) : [relative]
+  }))
+  return nested.flat().filter(file => /\.(?:tsx|jsx)$/.test(file))
+}
 
 test('desktop updater configuration is production-safe', async () => {
   const config = JSON.parse(await read('desktop/src-tauri/tauri.conf.json'))
@@ -428,7 +436,7 @@ test('discussion replies and reactions feed the shared activity center', async (
   const replyForm = await read('src/components/forum/ThreadReplyForm.tsx')
   const reactions = await read('src/components/forum/ForumReactions.tsx')
   const notify = await read('src/lib/notify.ts')
-  assert.ok(replyForm.includes("message: 'replied to your discussion'"))
+  assert.ok(replyForm.includes("'replied to your comment' : 'replied to your discussion'"))
   assert.ok(replyForm.includes("notifyMentions(supabase"))
   assert.ok(reactions.includes('reacted ${emoji} to your discussion'))
   assert.ok(reactions.includes("data: { emoji }"))
@@ -872,6 +880,57 @@ test('social workspaces expose durable message replies, discussion votes, and pr
   assert.ok(profilePage.includes("{ key: 'media', label: 'Media' }"))
 })
 
+test('community moderators can remove channel messages through an audited server boundary', async () => {
+  const chat = await read('src/components/chat/ChatRoom.tsx')
+  const group = await read('src/app/groups/[slug]/page.tsx')
+  const migration = await read('supabase/migrations/20260912203000_role_aware_channel_moderation.sql')
+  assert.ok(chat.includes("supabase.rpc('moderate_channel_message'"))
+  assert.ok(chat.includes('canModerate'))
+  assert.ok(group.includes("memberRole === 'moderator'"))
+  assert.ok(migration.includes("v_role not in ('owner', 'admin', 'moderator')"))
+  assert.ok(migration.includes('insert into public.admin_audit_logs'))
+  assert.ok(migration.includes('revoke all on function public.moderate_channel_message'))
+})
+
+test('social security-definer helpers and read cursors are hardened for production', async () => {
+  const migration = await read('supabase/migrations/20260912210000_social_security_and_read_indexes.sql')
+  assert.ok(migration.includes('apply_sport_leg_result_to_post(uuid, text, text, text) from public, anon, authenticated'))
+  assert.ok(migration.includes('sync_message_reaction_count() from public, anon, authenticated'))
+  assert.ok(migration.includes('message_read_positions_pkey primary key (id)'))
+  assert.ok(migration.includes('message_read_positions_channel_idx'))
+  assert.ok(migration.includes('message_read_positions_partner_idx'))
+})
+
+test('direct messages separate and persist unfamiliar conversation requests', async () => {
+  const page = await read('src/app/messages/page.tsx')
+  const inbox = await read('src/components/social/MessageInbox.tsx')
+  const room = await read('src/components/chat/DMRoom.tsx')
+  const migration = await read('supabase/migrations/20260912213000_dm_conversation_preferences.sql')
+  assert.ok(page.includes("from('dm_conversation_preferences')"))
+  assert.ok(page.includes('isRequest:'))
+  assert.ok(inbox.includes("section === 'requests'"))
+  assert.ok(inbox.includes("setRequestStatus(conversation, 'accepted')"))
+  assert.ok(room.includes("status: 'accepted'"))
+  assert.ok(migration.includes('primary key (user_id, partner_id)'))
+  assert.ok(migration.includes('Members update own DM preferences'))
+})
+
+test('feed hide and mute controls persist into subsequent paginated loads', async () => {
+  const card = await read('src/components/social/PostCardClient.tsx')
+  const feed = await read('src/lib/feedQuery.ts')
+  const migration = await read('supabase/migrations/20260912220000_feed_suppressions.sql')
+  assert.ok(card.includes("suppressFromFeed('post'"))
+  assert.ok(card.includes("suppressFromFeed('author'"))
+  assert.ok(feed.includes("from('feed_suppressions')"))
+  assert.ok(feed.includes('hiddenPostIds.has(post.id)'))
+  assert.ok(feed.includes('mutedAuthorIds.has(post.author_id)'))
+  assert.ok(migration.includes("target_type in ('post', 'author')"))
+  const safety = await read('src/app/settings/blocked/page.tsx')
+  const muted = await read('src/components/settings/MutedUsersList.tsx')
+  assert.ok(safety.includes('<MutedUsersList'))
+  assert.ok(muted.includes("target_type:'author'"))
+})
+
 test('stories provide a polished keyboard, touch, and pauseable viewing flow', async () => {
   const bar = await read('src/components/social/StoriesBar.tsx')
   const viewer = await read('src/components/social/StoriesViewer.tsx')
@@ -938,6 +997,17 @@ test('Dugout research cards can publish directly into the social feed', async ()
   assert.ok(shareModal.includes('router.push(`/posts/${data.id}`)'))
 })
 
+test('page owners publish native posts and picks into their page context', async () => {
+  const composer = await read('src/components/social/FeedComposer.tsx')
+  const page = await read('src/app/pages/[slug]/page.tsx')
+  const pickRoute = await read('src/app/api/posts/pick/route.ts')
+  assert.ok(composer.includes('pageId?: string'))
+  assert.ok(composer.includes('page_id: pageId ?? null'))
+  assert.ok(page.includes('<FeedComposer pageId={page.id}'))
+  assert.ok(pickRoute.includes("eq('owner_id', user.id)"))
+  assert.ok(pickRoute.includes('page_id: pageId'))
+})
+
 test('public publishing and follow flows recover without leaking backend errors', async () => {
   const follow = await read('src/components/pages/PageFollowButton.tsx')
   const page = await read('src/components/pages/PageSettingsForm.tsx')
@@ -984,4 +1054,114 @@ test('authentication and onboarding recover without exposing provider failures',
   assert.ok(onboarding.includes("setError('We could not save your profile."))
   assert.ok(onboarding.includes('aria-pressed={sports.includes(sport)}'))
   assert.ok(onboarding.includes('role="alert"'))
+})
+
+test('saved posts hydrate consistently across feed and profile refreshes', async () => {
+  const querySource = await read('src/lib/queries.ts')
+  const profileSource = await read('src/app/profile/[username]/page.tsx')
+  assert.match(querySource, /from\('bookmarks'\)\.select\('post_id'\)/)
+  assert.match(querySource, /user_bookmarked: bookmarked\.has\(p\.id\)/)
+  assert.doesNotMatch(profileSource, /user_bookmarked:\s*false/)
+})
+
+test('forum discussions support durable nested replies and owner-controlled edits', async () => {
+  const migration = await read('supabase/migrations/20260912224500_threaded_forum_replies.sql')
+  const replyForm = await read('src/components/forum/ThreadReplyForm.tsx')
+  const actions = await read('src/components/forum/ForumReplyActions.tsx')
+  assert.match(migration, /parent_reply_id uuid references public\.forum_replies\(id\)/)
+  assert.match(migration, /using \(\(select auth\.uid\(\)\) = author_id\)/)
+  assert.match(replyForm, /parent_reply_id: parentReplyId \?\? null/)
+  assert.match(actions, /is_deleted: true/)
+})
+
+test('direct-message forwarding preserves context behind a server permission boundary', async () => {
+  const migration = await read('supabase/migrations/20260912231500_secure_message_forwarding.sql')
+  const picker = await read('src/components/chat/NewDMForm.tsx')
+  const room = await read('src/components/chat/DMRoom.tsx')
+  assert.match(migration, /source_message\.dm_recipient_id <> actor_id/)
+  assert.match(migration, /from public\.blocks/)
+  assert.match(migration, /grant execute on function public\.forward_direct_message/)
+  assert.match(picker, /rpc\('forward_direct_message'/)
+  assert.match(room, /Forwarded/)
+})
+
+test('direct-message privacy is enforced by discovery and database writes', async () => {
+  const migration = await read('supabase/migrations/20260912234500_enforce_dm_privacy.sql')
+  const newMessagePage = await read('src/app/messages/new/page.tsx')
+  assert.match(migration, /recipient\.allow_dms = true/)
+  assert.match(migration, /create policy "Can send accessible message"/)
+  assert.match(newMessagePage, /\.eq\('allow_dms', true\)/)
+})
+
+test('creator commerce shares identity, responsive payout states, and entitlement-aware access', async () => {
+  const storefront = await read('src/app/creators/[username]/page.tsx')
+  const payouts = await read('src/app/creators/payouts/PayoutSetupClient.tsx')
+  const offer = await read('src/app/creators/offers/[productId]/page.tsx')
+  const checkout = await read('src/app/creators/offers/[productId]/CheckoutButton.tsx')
+  assert.match(storefront, /<MemberAvatar/)
+  assert.match(payouts, /CreatorPayouts\.module\.css/)
+  assert.doesNotMatch(payouts, /style=\{\{/)
+  assert.match(offer, /creator_entitlements/)
+  assert.match(offer, /ACCESS ACTIVE/)
+  assert.match(checkout, /aria-busy=\{loading\}/)
+})
+
+test('global discovery prevents stale search races and preserves removable recent searches', async () => {
+  const search = await read('src/components/search/SearchClient.tsx')
+  assert.match(search, /searchRunRef\.current/)
+  assert.match(search, /runId !== searchRunRef\.current/)
+  assert.match(search, /slipsurge:recent-searches/)
+  assert.match(search, /Remove \$\{item\} from recent searches/)
+  assert.match(search, /aria-busy=\{loading\}/)
+})
+
+test('application routes expose one top-level main landmark without nested page mains', async () => {
+  const files = [...await sourceFiles('src/app'), ...await sourceFiles('src/components')]
+  const withMain = []
+  for (const file of files) if ((await read(file)).includes('<main')) withMain.push(file.replaceAll('\\', '/'))
+  assert.deepEqual(withMain.sort(), [
+    'src/app/global-error.tsx',
+    'src/components/admin/AdminShell.tsx',
+    'src/components/layout/RootLayoutShell.tsx',
+  ])
+})
+
+test('watchlist research sharing preserves sport context and accessible modal behavior', async () => {
+  const share = await read('src/components/dugout/ShareWatchlistModal.tsx')
+  const watchlist = await read('src/components/dugout/WatchlistPanel.tsx')
+  assert.match(share, /<ModalSurface/)
+  assert.match(share, /sport === 'NFL' \? 'Sideline research card'/)
+  assert.match(share, /sport,\s*\n\s*media_urls/)
+  assert.match(watchlist, /sport=\{pendingItems\.length/)
+})
+
+test('activity center supports scoped read state and safe internal deep links', async () => {
+  const notifications = await read('src/components/social/NotificationsList.tsx')
+  assert.match(notifications, /Mark section read/)
+  assert.match(notifications, /!link\.startsWith\('\/\/'\)/)
+  assert.match(notifications, /const href = notificationHref\(latest\.link\)/)
+})
+
+test('matrix marketplace preserves universal creator identity themes', async () => {
+  const route = await read('src/app/api/matrix-marketplace/route.ts')
+  const listing = await read('src/components/marketplace/MatrixMarketplaceClient.tsx')
+  const detail = await read('src/components/marketplace/MatrixMarketplaceDetailClient.tsx')
+  assert.match(route, /avatar_ring_style, avatar_ring_color/)
+  assert.match(listing, /ringStyle=\{listing\.author\?\.avatar_ring_style\}/)
+  assert.match(detail, /ringColor=\{listing\.author\?\.avatar_ring_color\}/)
+})
+
+test('publishing and social previews use resilient media and accessible share surfaces', async () => {
+  const library = await read('src/app/blog/my/page.tsx')
+  const article = await read('src/app/blog/[slug]/page.tsx')
+  const story = await read('src/components/social/CreateStoryForm.tsx')
+  const share = await read('src/components/social/ShareImageModal.tsx')
+  const badges = await read('src/components/social/UserBadges.tsx')
+  assert.match(library, /<SafeImage/)
+  assert.match(article, /avatar_ring_style, avatar_ring_color/)
+  assert.match(article, /<SafeImage/)
+  assert.match(story, /<SafeImage src=\{preview\}/)
+  assert.match(share, /<ModalSurface/)
+  assert.match(share, /labelledBy="share-pick-title"/)
+  assert.match(badges, /ss-user-badge-fallback/)
 })

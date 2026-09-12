@@ -100,12 +100,15 @@ export interface Post {
     // search composer or the Dugout watchlist) — absent on older freeform
     // picks, which fall back to the plain team/line/odds/book display.
     mlb_id?: number | null
+    player_id?: string | null
     player_name?: string
     headshot_url?: string | null
     game_pk?: string | null
     game_date?: string | null
     prop_key?: string
     prop_label?: string
+    numeric_line?: number | null
+    market_side?: 'milestone' | 'over' | 'under'
     wager_amount?: number | null
     potential_payout?: number | null
     // Parlay posts (post_type === 'parlay') store their legs here instead
@@ -114,10 +117,14 @@ export interface Post {
       player_name: string
       team: string | null
       mlb_id: number | null
+      player_id?: string | null
+      sport?: string
       headshot_url?: string | null
       prop_key: string
       prop_label: string
       line: string
+      numeric_line?: number | null
+      market_side?: 'milestone' | 'over' | 'under'
       odds: number | null
       result: 'win' | 'loss' | 'push' | 'pending'
     }[]
@@ -194,6 +201,7 @@ export interface Message {
   reply_to?: Message
   message_type: 'text' | 'pick' | 'gif' | 'media'
   pick_data?: Post['pick_data']
+  reaction_count?: number
   is_deleted: boolean
   created_at: string
   edited_at?: string

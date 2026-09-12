@@ -17,6 +17,7 @@ import { NetworkStatus } from './NetworkStatus'
 import { UtilityDock } from './UtilityDock'
 import { MobileDock } from './MobileDock'
 import { MfaGate } from '@/components/security/MfaGate'
+import { GlobalCommandPalette } from './GlobalCommandPalette'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // Keep context stable across streamed route changes, including transitions
@@ -72,6 +73,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <MfaGate />
+      <GlobalCommandPalette />
       <a className="ss-skip-link" href="#main-content">Skip to content</a>
       <NetworkStatus />
       <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>

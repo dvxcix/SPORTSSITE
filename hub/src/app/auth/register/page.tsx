@@ -4,16 +4,11 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
-import { Spotlight } from '@/components/ui/spotlight'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import Image from 'next/image'
 import { SafeImage } from '@/components/ui/SafeImage'
-
-// Client-only — Meteors' random delays/durations differ between server and
-// client render, which React flags as a hydration mismatch otherwise.
-const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
+import { AuthAlert, AuthBrand, AuthDivider, AuthExperience, AuthField, AuthHeading, AuthSubmit, ProviderButton, authExperienceStyles as auth } from '@/components/auth/AuthExperience'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
 
@@ -137,173 +132,96 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', background: 'var(--bg)' }}>
-      {/* Left panel */}
-      <div style={{
-        flex: 1, flexDirection: 'column', justifyContent: 'center',
-        padding: '60px', background: 'var(--surface)', borderRight: '1px solid var(--border)',
-        position: 'relative', overflow: 'hidden',
-      }} className="hidden lg:flex">
-        <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,255,77,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <Spotlight className="left-0 top-0" fill="#B4FF4D" />
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-          <Meteors number={14} className="opacity-70" />
-        </div>
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
-            <Image src="/logo.png" alt="SlipSurge" width={44} height={44} />
-            <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></div>
-          </div>
-          <h2 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: 16 }}>
-            Get in early.<br />Build your record.
-          </h2>
-          <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 360 }}>
-            Get in before the crowd. Share picks, build a following, and win together.
-          </p>
-          <div style={{ display: 'flex', gap: 24, marginTop: 48 }}>
+    <AuthExperience panelWidth="compact" spotlight aside={
+      <>
+        <AuthBrand />
+        <h2 className={auth.asideTitle}>Get in early.<br /><span>Build your record.</span></h2>
+        <p className={auth.asideCopy}>Get in before the crowd. Share picks, build a following, and win together.</p>
+        <div className={auth.stats}>
             {[['Real', 'Graded track records'], ['Live', 'Odds & line moves'], ['$0', 'Free to join']].map(([val, lbl], i) => (
-              <motion.div key={lbl} custom={i} initial="hidden" animate="show" variants={statVariants}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.03em' }}>{val}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{lbl}</div>
+              <motion.div key={lbl} custom={i} initial="hidden" animate="show" variants={statVariants} className={auth.stat}>
+                <strong>{val}</strong>
+                <span>{lbl}</span>
               </motion.div>
             ))}
-          </div>
         </div>
-      </div>
-
-      {/* Right panel */}
-      <div style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px' }} className="lg:w-[460px]">
-        {/* Mobile logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }} className="lg:hidden">
-          <Image src="/logo.png" alt="SlipSurge" width={32} height={32} />
-          <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
-        </div>
+      </>
+    }>
 
         {registrationOpen === false ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🚧</div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Registration is closed</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 340, margin: '0 auto' }}>
+          <div className={auth.statusState}>
+            <div className={auth.statusIcon}>🚧</div>
+            <h1>Registration is closed</h1>
+            <p>
               New accounts aren&apos;t open right now. Check back soon, or sign in if you already have one.
             </p>
-            <Link href="/auth/login" style={{
-              display: 'inline-block', marginTop: 24,
-              background: 'var(--accent)', color: 'var(--accent-fg)',
-              fontWeight: 800, padding: '10px 24px', borderRadius: 99, fontSize: 13, textDecoration: 'none',
-            }}>
-              Back to sign in
-            </Link>
+            <Link href="/auth/login">Back to sign in</Link>
           </div>
         ) : confirmationSent ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>📬</div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', marginBottom: 8 }}>Check your email</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 340, margin: '0 auto' }}>
-              We sent a confirmation link to <strong style={{ color: 'var(--text-1)' }}>{email}</strong>. Click it to activate your account, then sign in.
+          <div className={auth.statusState}>
+            <div className={auth.statusIcon}>📬</div>
+            <h1>Check your email</h1>
+            <p>
+              We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then sign in.
             </p>
-            <Link href="/auth/login" style={{
-              display: 'inline-block', marginTop: 24,
-              background: 'var(--accent)', color: 'var(--accent-fg)',
-              fontWeight: 800, padding: '10px 24px', borderRadius: 99, fontSize: 13, textDecoration: 'none',
-            }}>
-              Back to sign in
-            </Link>
+            <Link href="/auth/login">Back to sign in</Link>
           </div>
         ) : (
         <>
         {/* Progress */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 32 }}>
+        <div className={auth.progress} aria-label={`Registration step ${step === 'account' ? 1 : 2} of 2`}>
           {(['account', 'profile'] as const).map((s, i) => (
-            <div key={s} style={{ flex: 1, height: 3, borderRadius: 99, background: i === 0 || step === 'profile' ? 'var(--accent)' : 'var(--border-2)', transition: 'background 300ms' }} />
+            <div key={s} className={i === 0 || step === 'profile' ? auth.progressActive : ''} />
           ))}
         </div>
 
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', marginBottom: 6 }}>
-          {step === 'account' ? 'Create account' : 'Set up your profile'}
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28 }}>
-          {step === 'account' ? 'Join the #1 sports social hub' : 'Tell us about yourself'}
-        </p>
+        <AuthHeading title={step === 'account' ? 'Create account' : 'Set up your profile'} description={step === 'account' ? 'Join the sports social hub' : 'Choose how you appear across SlipSurge'} />
 
         {step === 'account' && (
           <>
-            <button type="button" onClick={handleWhop} style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '11px 20px', borderRadius: 10,
-              background: 'linear-gradient(135deg, #FF6243, #E5432A)', border: '1px solid rgba(255,255,255,0.12)',
-              fontSize: 14, fontWeight: 700, color: '#fff',
-              cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
-              boxShadow: '0 4px 14px rgba(229,67,42,0.35)',
-            }}>
+            <ProviderButton provider="whop" onClick={handleWhop}>
               <Image src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
               Continue with Whop
-            </button>
-            <button type="button" onClick={handleDiscord} style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '11px 20px', borderRadius: 10,
-              background: '#5865F2', border: '1px solid rgba(255,255,255,0.12)',
-              fontSize: 14, fontWeight: 700, color: '#fff',
-              cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
-            }}>
+            </ProviderButton>
+            <ProviderButton provider="discord" onClick={handleDiscord}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 0 0-5.48 0 12.6 12.6 0 0 0-.62-1.26.08.08 0 0 0-.08-.04c-1.7.29-3.36.8-4.89 1.52a.07.07 0 0 0-.03.03C.53 8.7-.32 12.9.1 17.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1 0-.13c.13-.09.25-.19.37-.28a.07.07 0 0 1 .08-.01c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08.01c.12.1.24.19.37.29a.08.08 0 0 1 0 .13c-.6.35-1.22.65-1.87.9a.08.08 0 0 0-.04.11c.36.7.78 1.37 1.23 2a.08.08 0 0 0 .08.03 19.8 19.8 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-4.83-.83-9-3.5-12.66a.06.06 0 0 0-.03-.03ZM8.02 14.5c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42Z"/></svg>
               Continue with Discord
-            </button>
-            <button type="button" onClick={handleX} style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '11px 20px', borderRadius: 10,
-              background: '#000', border: '1px solid rgba(255,255,255,0.15)',
-              fontSize: 14, fontWeight: 700, color: '#fff',
-              cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
-            }}>
+            </ProviderButton>
+            <ProviderButton provider="x" onClick={handleX}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.24 2H21.5l-7.3 8.34L22.8 22h-6.75l-5.28-6.9L4.7 22H1.44l7.8-8.92L1 2h6.92l4.78 6.32L18.24 2Zm-1.18 18h1.8L7.02 3.9H5.08l12 16.1Z"/></svg>
               Continue with X
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>or</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            </div>
+            </ProviderButton>
+            <AuthDivider />
           </>
         )}
 
-        <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <form onSubmit={handleRegister} className={auth.form}>
           {step === 'account' ? (
             <>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>EMAIL</label>
+              <AuthField label="Email">
                 <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required maxLength={254} autoComplete="email" className="ss-input" />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>PASSWORD</label>
+              </AuthField>
+              <AuthField label="Password">
                 <input type="password" placeholder="Min 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} maxLength={128} autoComplete="new-password" className="ss-input" />
-              </div>
+              </AuthField>
             </>
           ) : (
             <>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>USERNAME</label>
+              <AuthField label="Username">
                 <input type="text" placeholder="capper_king" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} required minLength={2} maxLength={30} autoCapitalize="none" spellCheck={false} autoComplete="username" className="ss-input" />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>DISPLAY NAME</label>
+              </AuthField>
+              <AuthField label="Display name">
                 <input type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60} autoComplete="name" className="ss-input" />
-              </div>
+              </AuthField>
 
-              <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 10, letterSpacing: '0.02em' }}>SPORTS YOU FOLLOW</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className={auth.sportFieldset}>
+                <p>Sports you follow</p>
+                <div>
                   {SPORTS.map(s => {
                     const logo = sportLogoUrl(s)
                     return (
-                      <button key={s} type="button" aria-pressed={sports.includes(s)} onClick={() => toggleSport(s)} style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
-                        border: `1px solid ${sports.includes(s) ? 'var(--accent)' : 'var(--border-2)'}`,
-                        background: sports.includes(s) ? 'var(--accent-dim)' : 'transparent',
-                        color: sports.includes(s) ? 'var(--accent)' : 'var(--text-3)',
-                        cursor: 'pointer', transition: 'all 130ms',
-                      }}>
-                        {logo && <SafeImage src={logo} alt={s} style={{ width: 14, height: 14, objectFit: 'contain' }} />}
+                      <button key={s} type="button" aria-pressed={sports.includes(s)} onClick={() => toggleSport(s)}>
+                        {logo && <SafeImage src={logo} alt="" className={auth.sportLogo} />}
                         {s}
                       </button>
                     )
@@ -311,36 +229,23 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-3)' }}>
+              <p className={auth.contextNote}>
                 Want to sell picks or build a paid community? Create your account first, then apply through the Creator program.
               </p>
             </>
           )}
 
-          {error && (
-            <div role="alert" style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
-              {error}
-            </div>
-          )}
+          {error && <AuthAlert>{error}</AuthAlert>}
 
-          <button type="submit" disabled={loading} style={{
-            width: '100%', padding: '12px 20px', borderRadius: 10, marginTop: 4,
-            background: loading ? 'var(--surface-3)' : 'var(--accent)',
-            color: loading ? 'var(--text-3)' : 'var(--accent-fg)',
-            fontSize: 14, fontWeight: 800, border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 150ms',
-          }}>
-            {step === 'account' ? 'Continue →' : loading ? 'Creating account…' : 'Create account'}
-          </button>
+          <AuthSubmit disabled={loading}>{step === 'account' ? 'Continue →' : loading ? 'Creating account…' : 'Create account'}</AuthSubmit>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-3)', marginTop: 20 }}>
+        <p className={auth.switchPrompt}>
           Already have an account?{' '}
-          <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
+          <Link href="/auth/login">Sign in</Link>
         </p>
         </>
         )}
-      </div>
-    </div>
+    </AuthExperience>
   )
 }

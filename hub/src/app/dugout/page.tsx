@@ -31,7 +31,7 @@ export default async function DugoutPage({ searchParams }: { searchParams: Promi
 
   return (
     <TierGate requiredTier="free" label="The Dugout">
-      <main className={styles.page}>
+      <div className={styles.page}>
         <header className={`fade-in ${styles.hero}`}>
           <img src="/logo.png" alt="" className={styles.heroMark} />
           <div className={styles.heroCopy}>
@@ -58,7 +58,7 @@ export default async function DugoutPage({ searchParams }: { searchParams: Promi
         <Suspense fallback={<PageState compact kind="loading" title="Loading The Dugout" message="Preparing the games, players, and market data." />}>
           <DugoutClient date={date} />
         </Suspense>
-      </main>
+      </div>
     </TierGate>
   )
 }

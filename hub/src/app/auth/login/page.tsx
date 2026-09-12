@@ -4,18 +4,10 @@ import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { motion } from 'motion/react'
-import { BackgroundBeams } from '@/components/ui/background-beams'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import Image from 'next/image'
-
-// Meteors picks random delays/durations at render time — fine for a purely
-// decorative background, but that randomness differs between the server
-// render and the client render and React flags it as a hydration mismatch.
-// Client-only (no SSR) sidesteps that entirely rather than trying to seed
-// matching randomness on both sides.
-const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
+import { AuthAlert, AuthBrand, AuthDivider, AuthExperience, AuthField, AuthHeading, AuthSubmit, ProviderButton, authExperienceStyles as auth } from '@/components/auth/AuthExperience'
 
 const featureVariants = {
   hidden: { opacity: 0, x: -8 },
@@ -107,190 +99,84 @@ function LoginForm() {
   }
 
   return (
-    <div style={{
-      minHeight: '100dvh', display: 'flex',
-      background: 'var(--bg)',
-    }}>
-      {/* Left panel — brand */}
-      <div style={{
-        flex: 1, flexDirection: 'column', justifyContent: 'center',
-        padding: '60px', background: 'var(--surface)',
-        borderRight: '1px solid var(--border)',
-        position: 'relative', overflow: 'hidden',
-      }} className="hidden lg:flex">
-        {/* Background glow + animated beams/meteors */}
-        <div style={{
-          position: 'absolute', top: '30%', left: '20%',
-          width: 400, height: 400, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(180,255,77,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
-        <BackgroundBeams className="opacity-40" />
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-          <Meteors number={14} className="opacity-70" />
-        </div>
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
-            <Image src="/logo.png" alt="SlipSurge" width={44} height={44} />
-            <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
-              Slip<span style={{ color: 'var(--accent)' }}>Surge</span>
-            </div>
-          </div>
-          <h2 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: 16 }}>
+    <AuthExperience aside={
+      <>
+        <AuthBrand />
+        <h2 className={auth.asideTitle}>
             The social hub for{' '}
-            <span style={{ color: 'var(--accent)', textShadow: '0 0 28px rgba(180,255,77,.13)' }}>
+            <span>
               sports & picks.
             </span>
-          </h2>
-          <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 360 }}>
-            Drop picks, follow cappers, watch live scores, join channels — all in one place.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 40 }}>
-            {['🏆 Follow top cappers & track their records', '📊 Share picks with odds & get graded', '⚡ Live scores, channels & community feeds', '💰 Subscribe to premium creators'].map((f, i) => (
-              <motion.div key={f} custom={i} initial="hidden" animate="show" variants={featureVariants}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
-                {f}
-              </motion.div>
-            ))}
-          </div>
+        </h2>
+        <p className={auth.asideCopy}>Drop picks, follow cappers, watch live scores, join channels — all in one place.</p>
+        <div className={auth.asideList}>
+          {['Follow top cappers and track public records', 'Share picks with odds and automatic grading', 'Live scores, channels, and community feeds', 'Subscribe to premium creators'].map((feature, index) => (
+            <motion.div key={feature} custom={index} initial="hidden" animate="show" variants={featureVariants}>{feature}</motion.div>
+          ))}
         </div>
-      </div>
+      </>
+    }>
+        <AuthHeading title="Welcome back" description="Sign in to your account to continue" />
 
-      {/* Right panel — form */}
-      <div style={{
-        width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '40px clamp(24px, 5vw, 54px)',
-        background: 'linear-gradient(180deg, rgba(255,255,255,.016), transparent)',
-      }} className="mx-auto lg:mx-0 lg:w-[500px]">
-        {/* Mobile logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }} className="lg:hidden">
-          <Image src="/logo.png" alt="SlipSurge" width={32} height={32} />
-          <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-1)' }}>Slip<span style={{ color: 'var(--accent)' }}>Surge</span></span>
-        </div>
-
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em', marginBottom: 6 }}>Welcome back</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 32 }}>Sign in to your account to continue</p>
-
-        {/* Whop — branded orange, matches Whop's own accent color */}
-        <button onClick={handleWhop} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          padding: '11px 20px', borderRadius: 10,
-          background: 'linear-gradient(135deg, #FF6243, #E5432A)', border: '1px solid rgba(255,255,255,0.12)',
-          fontSize: 14, fontWeight: 700, color: '#fff',
-          cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
-          boxShadow: '0 4px 14px rgba(229,67,42,0.35)',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #FF7355, #EF4E33)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #FF6243, #E5432A)')}>
+        <ProviderButton provider="whop" onClick={handleWhop}>
           <Image src="https://whop.com/apple-icon.png" alt="" width={18} height={18} style={{ borderRadius: 4 }} />
           Continue with Whop
-        </button>
-
-        {/* Discord — brand blurple */}
-        <button onClick={handleDiscord} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          padding: '11px 20px', borderRadius: 10,
-          background: '#5865F2', border: '1px solid rgba(255,255,255,0.12)',
-          fontSize: 14, fontWeight: 700, color: '#fff',
-          cursor: 'pointer', transition: 'all 150ms', marginBottom: 10,
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#6570F5')}
-        onMouseLeave={e => (e.currentTarget.style.background = '#5865F2')}>
+        </ProviderButton>
+        <ProviderButton provider="discord" onClick={handleDiscord}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 0 0-5.48 0 12.6 12.6 0 0 0-.62-1.26.08.08 0 0 0-.08-.04c-1.7.29-3.36.8-4.89 1.52a.07.07 0 0 0-.03.03C.53 8.7-.32 12.9.1 17.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1 0-.13c.13-.09.25-.19.37-.28a.07.07 0 0 1 .08-.01c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08.01c.12.1.24.19.37.29a.08.08 0 0 1 0 .13c-.6.35-1.22.65-1.87.9a.08.08 0 0 0-.04.11c.36.7.78 1.37 1.23 2a.08.08 0 0 0 .08.03 19.8 19.8 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-4.83-.83-9-3.5-12.66a.06.06 0 0 0-.03-.03ZM8.02 14.5c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42Z"/></svg>
           Continue with Discord
-        </button>
-
-        {/* X — matches its own black/white brand treatment regardless of app theme */}
-        <button onClick={handleX} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          padding: '11px 20px', borderRadius: 10,
-          background: '#000', border: '1px solid rgba(255,255,255,0.15)',
-          fontSize: 14, fontWeight: 700, color: '#fff',
-          cursor: 'pointer', transition: 'all 150ms', marginBottom: 20,
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#1a1a1a')}
-        onMouseLeave={e => (e.currentTarget.style.background = '#000')}>
+        </ProviderButton>
+        <ProviderButton provider="x" onClick={handleX}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.24 2H21.5l-7.3 8.34L22.8 22h-6.75l-5.28-6.9L4.7 22H1.44l7.8-8.92L1 2h6.92l4.78 6.32L18.24 2Zm-1.18 18h1.8L7.02 3.9H5.08l12 16.1Z"/></svg>
           Continue with X
-        </button>
+        </ProviderButton>
 
         {(hashErrorDescription || (oauthError && OAUTH_ERROR_MESSAGES[oauthError])) && (
-          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)', marginBottom: 20 }}>
+          <div className={auth.oauthAlert}><AuthAlert>
             {hashErrorDescription?.toLowerCase().includes('email')
               ? "Your X account isn't associated with an email address. Please log in to X and add an email to your account before using it to sign in or sign up on SlipSurge."
               : hashErrorDescription || OAUTH_ERROR_MESSAGES[oauthError!]}
-          </div>
+          </AuthAlert></div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>or</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-        </div>
+        <AuthDivider />
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>EMAIL</label>
+        <form onSubmit={handleLogin} className={auth.form}>
+          <AuthField label="Email">
             <input
               type="email" placeholder="you@example.com" value={email}
               onChange={e => setEmail(e.target.value)} required maxLength={254} autoComplete="email"
               className="ss-input"
             />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6, letterSpacing: '0.02em' }}>PASSWORD</label>
+          </AuthField>
+          <AuthField label="Password">
             <input
               type="password" placeholder="••••••••" value={password}
               onChange={e => setPassword(e.target.value)} required maxLength={128} autoComplete="current-password"
               className="ss-input"
             />
-          </div>
+          </AuthField>
 
-          {error && (
-            <div role="alert" style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
-              {error}
-            </div>
-          )}
+          {error && <AuthAlert>{error}</AuthAlert>}
 
-          <button type="submit" disabled={loading} style={{
-            width: '100%', padding: '12px 20px', borderRadius: 10, marginTop: 4,
-            background: loading ? 'var(--surface-3)' : 'var(--accent)',
-            color: loading ? 'var(--text-3)' : 'var(--accent-fg)',
-            fontSize: 14, fontWeight: 800, border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 150ms',
-          }}
-          onMouseEnter={e => { if (!loading) (e.currentTarget.style.background = '#C8FF6A') }}
-          onMouseLeave={e => { if (!loading) (e.currentTarget.style.background = 'var(--accent)') }}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
+          <AuthSubmit disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</AuthSubmit>
         </form>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-          <Link href="/auth/forgot-password" style={{ fontSize: 13, color: 'var(--text-3)', textDecoration: 'none' }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-2)')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-3)')}>
-            Forgot password?
-          </Link>
-          <Link href="/auth/register" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
-            Create account →
-          </Link>
+        <div className={auth.authLinks}>
+          <Link href="/auth/forgot-password">Forgot password?</Link>
+          <Link href="/auth/register">Create account →</Link>
         </div>
 
-        <p style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 40, lineHeight: 1.5 }}>
-          By signing in you agree to our <Link href="/terms" style={{ color: 'var(--text-3)' }}>Terms</Link> and <Link href="/privacy" style={{ color: 'var(--text-3)' }}>Privacy Policy</Link>.
+        <p className={auth.legal}>
+          By signing in you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.
         </p>
-      </div>
-    </div>
+    </AuthExperience>
   )
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Loading…</div>
-      </div>
-    }>
+    <Suspense fallback={<div className="ss-route-loading"><span>Loading…</span></div>}>
       <LoginForm />
     </Suspense>
   )

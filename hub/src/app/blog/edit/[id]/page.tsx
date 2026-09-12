@@ -17,10 +17,10 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
   if (blog.author_id !== user.id) redirect(`/blog/${blog.slug}`)
 
   return (
-    <main className="ss-flow-page !max-w-3xl">
+    <div className="ss-flow-page !max-w-3xl">
       <Link href="/blog/my" className="ss-flow-back"><ChevronLeft size={14} /> My articles</Link>
       <header className="ss-flow-heading"><span><FilePenLine size={22} /></span><div><p>Editorial studio</p><h1>Edit article</h1></div></header>
       <BlogEditor userId={user.id} blogId={blog.id} initial={blog} />
-    </main>
+    </div>
   )
 }

@@ -19,7 +19,7 @@ export default async function CreatorsPage() {
     .order('follower_count', { ascending: false })
     .limit(48)
   const creators = (data ?? []) as unknown as CreatorDirectoryItem[]
-  return <main className={styles.page}>
+  return <div className={styles.page}>
     <section className={styles.hero} style={{ gridTemplateColumns: '1fr' }}>
       <div className={styles.heroGlow} />
       <div>
@@ -38,5 +38,5 @@ export default async function CreatorsPage() {
     </section>
 
     <CreatorDirectory creators={creators} />
-  </main>
+  </div>
 }

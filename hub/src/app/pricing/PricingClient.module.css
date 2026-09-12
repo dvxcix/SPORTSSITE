@@ -10,6 +10,11 @@
   position: relative;
   overflow: hidden;
 }
+.statusBanner { position:relative; z-index:2; padding:10px 16px; border-bottom:1px solid; font-size:12px; font-weight:700; text-align:center; }
+.statusSuccess { border-color:rgba(74,222,128,.25); color:#4ade80; background:rgba(74,222,128,.1); }
+.statusError { border-color:rgba(248,113,113,.25); color:#f87171; background:rgba(248,113,113,.1); }
+.heroGlow { position:absolute; top:5%; left:50%; width:700px; height:700px; transform:translateX(-50%); border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--accent) 9%,transparent),transparent 70%); pointer-events:none; }
+.heroMeteors { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
 
 .heroContent {
   position: relative;
@@ -19,6 +24,10 @@
   padding: clamp(48px, 8vw, 78px) 20px 12px;
   text-align: center;
 }
+.heroTitle { margin-bottom:12px; color:var(--text-1); font-size:clamp(30px,5vw,46px); font-weight:930; letter-spacing:-.04em; line-height:1.08; text-wrap:balance; }
+.heroTitle span { color:var(--accent); }
+.heroCopy { max-width:540px; margin:0 auto; color:var(--text-2); font-size:14px; line-height:1.65; text-wrap:balance; }
+.main { position:relative; z-index:1; width:min(100%,1160px); margin:0 auto; padding:20px 20px 64px; }
 
 .eyebrow {
   width: fit-content;
@@ -91,6 +100,9 @@
 
 .intervalWrap { display: flex; justify-content: center; margin-bottom: 30px; }
 .intervalControl { display: flex; align-items: center; gap: 12px; padding: 8px 18px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-1); }
+.intervalControl > span { display:flex; align-items:center; gap:6px; color:var(--text-3); font-size:12px; font-weight:750; transition:color var(--motion-fast); }
+.intervalControl > .intervalActive { color:var(--text-1); }
+.accessBanner { margin-bottom:24px; padding:11px 16px; border:1px solid color-mix(in srgb,var(--accent) 55%,transparent); border-radius:12px; color:var(--accent); background:var(--accent-dim); font-size:12px; font-weight:750; text-align:center; }
 
 .cards {
   display: grid;
@@ -100,6 +112,26 @@
 }
 
 .cardAnchor { height: 100%; scroll-margin-top: 100px; }
+.card { display:flex; height:100%; flex-direction:column; padding:22px 20px; border:1px solid var(--border); border-radius:17px; background:var(--surface-1); }
+.cardPremium { border-color:color-mix(in srgb,var(--accent) 70%,transparent); background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 10%,transparent),var(--surface-1) 55%); }
+.cardCurrent { border-color:var(--accent); }
+.cardHeader { display:flex; align-items:center; justify-content:space-between; gap:7px; margin-bottom:2px; flex-wrap:wrap; }
+.cardName { display:flex; align-items:center; gap:8px; }
+.cardName h2 { color:var(--text-1); font-size:16px; font-weight:900; }
+.price { display:flex; align-items:baseline; gap:4px; margin:10px 0 2px; }
+.price span { color:var(--text-1); font-size:32px; font-weight:930; letter-spacing:-.035em; }
+.price small { color:var(--text-3); font-size:12px; font-weight:650; }
+.billingDetail { display:flex; min-height:18px; align-items:center; gap:6px; margin-bottom:8px; color:var(--text-3); font-size:10.5px; }
+.billingSpacer { height:26px; }
+.tagline { min-height:50px; margin-bottom:16px; color:var(--text-3); font-size:11.5px; line-height:1.5; }
+.trialBadge { margin:-6px 0 14px; }
+.coverageNote { padding:9px 0; color:var(--text-3); font-size:11px; text-align:center; }
+.featureList { display:flex; flex-direction:column; gap:9px; margin:18px 0 8px; padding:0; list-style:none; }
+.featureList li { display:flex; align-items:flex-start; gap:8px; color:var(--text-2); font-size:12px; line-height:1.4; }
+.featureList svg { flex:0 0 auto; margin-top:1px; color:var(--accent); }
+.featureList .featureUnavailable { color:var(--text-3); opacity:.55; }
+.featureList .featureUnavailable svg { color:var(--text-3); }
+.renewal { display:flex; justify-content:space-between; gap:10px; margin-top:auto; padding-top:14px; border-top:1px solid var(--border); color:var(--text-3); font-size:10px; }
 
 @media (max-width: 1050px) {
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -107,8 +139,8 @@
 
 @media (max-width: 680px) {
   .heroContent { padding: 42px 16px 8px; }
-  .heroContent h1 { font-size: 34px !important; }
-  .heroContent p { font-size: 14px !important; }
+  .heroTitle { font-size: 34px; }
+  .heroCopy { font-size: 13px; }
   .planGuide {
     width: 100%;
     margin: 18px auto 24px;

@@ -171,7 +171,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
 
   return (
     <TierGate requiredTier="basic" label="Player Pages">
-    <main className={styles.page} style={{ '--entity-color': team?.team_color ?? '#9cff39' } as React.CSSProperties}>
+    <div className={styles.page} style={{ '--entity-color': team?.team_color ?? '#9cff39' } as React.CSSProperties}>
       <div
         className={styles.hero}
       >
@@ -419,7 +419,7 @@ export default async function NflPlayerPage({ params }: { params: Promise<{ id: 
           </table></div>
         </section>
       )}
-    </main>
+    </div>
     </TierGate>
   )
 }

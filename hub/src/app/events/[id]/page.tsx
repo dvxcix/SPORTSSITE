@@ -7,6 +7,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 import type { Metadata } from 'next'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,9 +38,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     <ProductPageShell narrow>
       <Link href="/events" className="ss-flow-back"><ChevronLeft size={14} /> Events</Link>
       <article className="overflow-hidden rounded-[24px] border border-white/[.08] bg-gradient-to-br from-white/[.04] to-white/[.015] shadow-2xl">
-        {event.cover_image && <div className="relative h-52 overflow-hidden sm:h-72"><img src={event.cover_image} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#0c0f0d] via-transparent to-transparent" /></div>}
+        {event.cover_image && <div className="relative h-52 overflow-hidden sm:h-72"><SafeImage src={event.cover_image} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#0c0f0d] via-transparent to-transparent" /></div>}
         <div className="p-5 sm:p-7">
-          <div className="flex flex-wrap items-center gap-2">{logo && <span className="grid h-9 w-9 place-items-center rounded-xl border border-white/[.08] bg-white/[.05]"><img src={logo} alt="" className="h-5 w-5 object-contain" /></span>}{event.is_online && <span className="inline-flex items-center gap-1 rounded-full bg-sky-400/10 px-2.5 py-1 text-[10px] font-black uppercase text-sky-300"><Radio size={11} /> Online</span>}</div>
+          <div className="flex flex-wrap items-center gap-2">{logo && <span className="grid h-9 w-9 place-items-center rounded-xl border border-white/[.08] bg-white/[.05]"><SafeImage src={logo} alt="" className="h-5 w-5 object-contain" /></span>}{event.is_online && <span className="inline-flex items-center gap-1 rounded-full bg-sky-400/10 px-2.5 py-1 text-[10px] font-black uppercase text-sky-300"><Radio size={11} /> Online</span>}</div>
           <h1 className="mt-4 text-3xl font-black tracking-[-.04em] text-white sm:text-4xl">{event.title}</h1>
           <Link href={`/profile/${event.host?.username}`} className="mt-4 inline-flex items-center gap-2.5 text-xs font-bold text-zinc-400 hover:text-white"><MemberAvatar src={event.host?.avatar_url} name={event.host?.display_name || event.host?.username || 'Host'} size={30} /><span>Hosted by @{event.host?.username}</span></Link>
 

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { X, Download, Link2, MessageSquare, Share, Check } from 'lucide-react'
+import { ModalSurface } from '@/components/ui/ModalSurface'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // A real in-app share sheet instead of handing off to the OS's native
 // picker (which, on Windows/desktop, is a system dialog we have zero
@@ -80,17 +82,17 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
   }
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    <ModalSurface
+      open
+      onClose={onClose}
+      labelledBy="share-pick-title"
+      describedBy="share-pick-description"
+      backdropStyle={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 'var(--layer-modal)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(8px)' }}
+      panelStyle={{ width: 'min(420px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 18, outline: 'none' }}
     >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: 'min(420px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 18 }}
-      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>Share Pick</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+          <div><h2 id="share-pick-title" style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>Share pick</h2><p id="share-pick-description" className="sr-only">Download or share this pick card.</p></div>
+          <button type="button" data-modal-autofocus aria-label="Close share menu" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
         </div>
 
         <div style={{
@@ -105,7 +107,7 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
           {imgErrored ? (
             <div style={{ padding: 30, textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>Couldn't generate a preview for this pick.</div>
           ) : (
-            <img
+            <SafeImage
               src={imgUrl}
               alt="Pick share preview"
               onLoad={() => setImgLoaded(true)}
@@ -129,8 +131,7 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
           <ShareOptionBtn label="More" onClick={nativeShare} busy={busy === 'native'}
             icon={<Share size={18} />} bg="var(--surface-2)" fg="var(--text-1)" />
         </div>
-      </div>
-    </div>
+    </ModalSurface>
   )
 }
 

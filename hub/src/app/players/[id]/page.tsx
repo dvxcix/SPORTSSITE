@@ -19,11 +19,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const { id } = await params
   return (
     <TierGate requiredTier="basic" label="Player Pages">
-      <main className={entityStyles.page}>
+      <div className={entityStyles.page}>
         <Suspense fallback={<PageState kind="loading" title="Loading player profile" message="Preparing season, Statcast, pitch, and matchup data." />}>
           <PlayerPageClient mlbId={id} />
         </Suspense>
-      </main>
+      </div>
     </TierGate>
   )
 }

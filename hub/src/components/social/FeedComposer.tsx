@@ -22,9 +22,10 @@ const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 interface FeedComposerProps {
   onPost?: () => void
   groupId?: string
+  pageId?: string
 }
 
-export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
+export function FeedComposer({ onPost, groupId, pageId }: FeedComposerProps) {
   const { user, profile } = useAuth()
   const [content, setContent] = useState('')
   const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>('take')
@@ -130,7 +131,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
     const hasWager = !isNaN(wagerNum) && wagerNum > 0
 
     // Picks/parlays go through a server route instead of a direct client
-    // insert — it re-validates every leg's game against MLB's live status
+    // insert — it re-validates every leg against its league's live status
     // before allowing the post to exist at all. A client-side-only check
     // here would just be UX, not enforcement (trivially bypassed from
     // devtools), and "real graded records" doesn't mean anything if a pick
@@ -142,15 +143,17 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
         body: JSON.stringify({
           content: content.trim(),
           legs,
+          sport: legs[0]?.sport,
           wager: hasWager ? wagerNum : null,
           imageUrl: imageUrl || null,
           visibility,
           groupId: groupId ?? null,
+          pageId: pageId ?? null,
         }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setError('Failed to post. Try again.')
+        setError(data?.error ?? 'Failed to post. Try again.')
         setPosting(false)
         return
       }
@@ -182,6 +185,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
       media_urls: imageUrl ? [imageUrl] : [],
       visibility,
       group_id: groupId ?? null,
+      page_id: pageId ?? null,
     }).select('id').single()
 
     if (err) {
@@ -242,8 +246,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             }}
           />
 
-          {/* Sport selector — hidden while adding a structured pick, since
-              that flow only pulls real data for MLB right now. */}
+          {/* The structured pick flow owns its sport selector while open. */}
           {!showPickForm && (
             <div className="ss-composer-sport-wrap" ref={sportMenuRef}>
               <button type="button" className="ss-composer-sport-trigger" aria-expanded={sportOpen} onClick={() => setSportOpen(value => !value)}>
@@ -264,9 +267,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
             </div>
           )}
 
-          {/* Pick form — real player/market search, MLB-only for now since
-              that's the sport we have live Dugout data for. Supports adding
-              multiple legs from the same book to build a parlay. */}
+          {/* Structured pick form with same-sport and same-book parlay legs. */}
           {showPickForm && (
             <>
               <PickComposer
@@ -276,21 +277,21 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 onClose={() => { setShowPickForm(false); setLegs([]); setWager('') }}
               />
               {legs.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                  <label style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700 }}>Wager (optional)</label>
-                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>$</span>
+                <div className="ss-composer-wager">
+                  <label>Wager <span>optional</span></label>
+                  <i>$</i>
                   <input
                     type="number" min="0" step="1" value={wager}
                     onChange={e => setWager(e.target.value)}
                     placeholder="0.00"
-                    style={{ width: 90, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 6, padding: '5px 8px', color: 'var(--text-1)', fontSize: 12, outline: 'none' }}
+                    className="ss-composer-wager-input"
                   />
                   {(() => {
                     const wagerNum = parseFloat(wager)
                     if (isNaN(wagerNum) || wagerNum <= 0) return null
                     const combined = legs.length > 1 ? combineOdds(legs.map(l => l.odds ?? 0)) : (legs[0].odds ?? 0)
                     const { profit } = calcPayout(wagerNum, combined)
-                    return <span style={{ fontSize: 11, color: 'var(--text-3)' }}>To win <strong style={{ color: 'var(--green)' }}>{fmtUsd(profit)}</strong></span>
+                    return <span className="ss-composer-payout">To win <strong>{fmtUsd(profit)}</strong></span>
                   })()}
                 </div>
               )}
@@ -299,21 +300,21 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
           {/* Poll form */}
           {showPollForm && (
-            <div style={{ marginTop: 12, padding: '12px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid rgba(168,85,247,0.2)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--purple)' }}>📊 Poll</span>
-                <button type="button" onClick={() => setShowPollForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
+            <div className="ss-composer-poll">
+              <div className="ss-composer-poll-head">
+                <span><BarChart2 size={13}/> Poll</span>
+                <button type="button" onClick={() => setShowPollForm(false)} aria-label="Close poll">
                   <X size={14} />
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="ss-composer-poll-options">
                 {pollOptions.map((opt, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 6 }}>
+                  <div key={i} className="ss-composer-poll-option">
                     <input value={opt} onChange={e => setPollOptions(opts => opts.map((o, j) => j === i ? e.target.value : o))}
-                      placeholder={`Option ${i + 1}`} className="ss-input" style={{ flex: 1, fontSize: 13 }} />
+                      placeholder={`Option ${i + 1}`} className="ss-input" />
                     {pollOptions.length > 2 && (
                       <button type="button" onClick={() => setPollOptions(opts => opts.filter((_, j) => j !== i))}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0 4px' }}>
+                        className="ss-composer-poll-remove" aria-label={`Remove option ${i + 1}`}>
                         <X size={14} />
                       </button>
                     )}
@@ -321,20 +322,14 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                 ))}
                 {pollOptions.length < 4 && (
                   <button type="button" onClick={() => setPollOptions(opts => [...opts, ''])}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, padding: '2px 0' }}>
+                    className="ss-composer-poll-add">
                     <Plus size={12} /> Add option
                   </button>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Duration:</span>
+                <div className="ss-composer-poll-duration">
+                  <span>Duration</span>
                   {['1', '6', '24', '48', '72'].map(h => (
-                    <button key={h} type="button" aria-pressed={pollDuration === h} onClick={() => setPollDuration(h)} style={{
-                      padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                      border: `1px solid ${pollDuration === h ? 'var(--purple)' : 'var(--border-2)'}`,
-                      background: pollDuration === h ? 'rgba(168,85,247,0.1)' : 'transparent',
-                      color: pollDuration === h ? 'var(--purple)' : 'var(--text-3)',
-                      cursor: 'pointer',
-                    }}>
+                    <button key={h} type="button" aria-pressed={pollDuration === h} onClick={() => setPollDuration(h)}>
                       {h}h
                     </button>
                   ))}
@@ -345,22 +340,18 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
 
           {/* Image preview */}
           {(imageUrl || uploadingImage) && (
-            <div style={{ position: 'relative', marginTop: 10, width: 'fit-content' }}>
+            <div className="ss-composer-media-preview">
               {uploadingImage ? (
-                <div style={{ width: 160, height: 120, borderRadius: 10, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--text-3)' }}>
+                <div className="ss-composer-media-loading">
                   Uploading…
                 </div>
               ) : (
                 <>
-                  <SafeImage src={imageUrl} alt="" style={{ maxWidth: 260, maxHeight: 220, borderRadius: 10, border: '1px solid var(--border)', display: 'block', objectFit: 'cover' }} />
+                  <SafeImage src={imageUrl} alt="" className="ss-composer-media-image" />
                   <button
                     type="button"
                     onClick={() => setImageUrl('')}
-                    style={{
-                      position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                    }}
+                    className="ss-composer-media-remove"
                     aria-label="Remove image"
                   >
                     <X size={12} />
@@ -371,7 +362,7 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
           )}
 
           {error && (
-            <p role="alert" style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{error}</p>
+            <p role="alert" className="ss-composer-error">{error}</p>
           )}
 
           {/* Action bar — button labels ("Pick"/"Poll"/"Photo") hide below
@@ -418,21 +409,17 @@ export function FeedComposer({ onPost, groupId }: FeedComposerProps) {
                         key={opt.key}
                         type="button"
                         onClick={() => { setVisibility(opt.key); setVisibilityOpen(false) }}
-                        style={{
-                          width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                          background: visibility === opt.key ? 'var(--surface-3)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                          color: visibility === opt.key ? 'var(--accent)' : 'var(--text-1)',
-                        }}
+                        data-active={visibility === opt.key}
                       >
                         {opt.icon}
-                        <span style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</span>
+                        <span>{opt.label}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
               {content.length > 400 && (
-                <span style={{ fontSize: 11, color: remaining < 50 ? 'var(--red)' : 'var(--text-3)' }}>{remaining}</span>
+                <span className="ss-composer-count" data-low={remaining < 50}>{remaining}</span>
               )}
               {(() => {
                 const pickIncomplete = showPickForm && legs.length === 0

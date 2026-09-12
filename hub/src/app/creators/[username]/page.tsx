@@ -3,24 +3,24 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, BadgeCheck, BarChart3, BellRing, Check, LockKeyhole, MessageSquareText, ShieldCheck, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import styles from './CreatorStorefront.module.css'
-import { SafeImage } from '@/components/ui/SafeImage'
+import { MemberAvatar } from '@/components/social/MemberAvatar'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CreatorStorefront({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
   const supabase = await createClient()
-  const { data: creator } = await supabase.from('users').select('id,username,display_name,avatar_url,banner_url,bio,follower_count').eq('username', username).eq('account_type', 'creator').single()
+  const { data: creator } = await supabase.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,banner_url,bio,follower_count').eq('username', username).eq('account_type', 'creator').single()
   if (!creator) notFound()
   const [{ data: products }, { data: groups }] = await Promise.all([
     supabase.from('creator_products').select('id,title,description,price,currency,product_type,billing_period_days').eq('creator_id', creator.id).eq('status', 'active').order('price'),
     supabase.from('groups').select('id,name,slug,emoji,description,access_type,creator_product_id').eq('owner_id', creator.id).order('created_at'),
   ])
 
-  return <main className={styles.page}>
+  return <div className={styles.page}>
     <Link href="/creators" className={styles.back}><ArrowLeft size={15} /> Creator marketplace</Link>
     <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,rgba(7,10,8,.96),rgba(7,10,8,.68)),url(${creator.banner_url})` } : undefined}>
-      <div className={styles.identity}><div className={styles.avatar}><SafeImage src={creator.avatar_url} alt="" fallback={(creator.display_name || creator.username)[0].toUpperCase()} /></div><div><span className={styles.verified}><BadgeCheck size={15} /> VERIFIED SLIPSURGE CREATOR</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
+      <div className={styles.identity}><MemberAvatar src={creator.avatar_url} name={creator.display_name || creator.username} size={76} tone="creator" ringStyle={creator.avatar_ring_style} ringColor={creator.avatar_ring_color}/><div><span className={styles.verified}><BadgeCheck size={15} /> VERIFIED SLIPSURGE CREATOR</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
       <p className={styles.bio}>{creator.bio || 'Premium sports content, research, and member community on SlipSurge.'}</p>
       <div className={styles.heroFeatures}><span><BarChart3 size={15} /> Research</span><span><BellRing size={15} /> Member alerts</span><span><MessageSquareText size={15} /> Private channels</span></div>
     </section>
@@ -42,5 +42,5 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
         <section className={styles.about}><Users size={19} /><h3>One membership home</h3><p>Content, research, alerts, group access, and creator conversations stay connected to your SlipSurge identity.</p></section>
       </aside>
     </section>
-  </main>
+  </div>
 }

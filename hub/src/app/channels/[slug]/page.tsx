@@ -58,6 +58,7 @@ export default async function ChannelPage({ params }: Props) {
         channelName={channel.name}
         initialMessages={messages}
         currentUserId={user?.id}
+        canModerate={channel.owner_id === user?.id}
       />
       </section>
     </div>

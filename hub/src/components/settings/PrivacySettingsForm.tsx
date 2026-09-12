@@ -34,18 +34,15 @@ export function PrivacySettingsForm({ settings }: { settings: { is_private: bool
 
   return (
     <div className="space-y-4">
-      <div className="ss-settings-card !p-0 divide-y divide-white/[.07] overflow-hidden">
+      <div className="ss-settings-list">
         {toggleItems.map(s => (
-          <div key={s.label} className="flex min-h-[72px] items-center justify-between gap-4 px-5 py-4">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-white">{s.label}</p>
-              <p className="mt-1 text-xs leading-5 text-zinc-500">{s.desc}</p>
-            </div>
+          <div key={s.label} className="ss-settings-row">
+            <div className="ss-settings-row-copy"><strong>{s.label}</strong><small>{s.desc}</small></div>
             <Switch checked={s.value} onChange={s.set} ariaLabel={s.label} />
           </div>
         ))}
       </div>
-      {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+      {error && <p role="alert" className="ss-settings-feedback">{error}</p>}
       <button type="button" onClick={save} className="ss-settings-primary">
         {saved ? <><Check size={13} /> Saved</> : 'Save privacy settings'}
       </button>

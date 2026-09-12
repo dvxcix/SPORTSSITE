@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import { Search, Smile, X } from 'lucide-react'
 import { EMOJI_CATEGORIES, useCustomEmojis, groupCustomEmojisByCategory } from '@/lib/emoji'
 import { SafeImage } from '@/components/ui/SafeImage'
+import styles from './EmojiPicker.module.css'
 
 const PANEL_WIDTH = 280
 const VIEWPORT_MARGIN = 8
@@ -95,15 +96,12 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
   }, [open])
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} className={styles.root}>
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 32, height: 32, borderRadius: 8, border: 'none', background: 'transparent',
-          color: 'var(--text-3)', cursor: 'pointer',
-        }}
+        className={styles.trigger}
+        aria-expanded={open}
         aria-label="Insert emoji"
       >
         <Smile size={18} />
@@ -112,63 +110,50 @@ export function EmojiPicker({ onSelect }: { onSelect: (insertText: string) => vo
       {open && (
         <div
           ref={panelRef}
-          style={{
-            position: 'absolute', zIndex: 50,
-            ...(pos?.vertical === 'down' ? { top: '110%' } : { bottom: '110%' }),
-            left: pos?.left ?? 0,
-            // Invisible until measured/clamped so it never flashes at the
-            // unclamped default position for a frame.
-            visibility: pos ? 'visible' : 'hidden',
-            width: PANEL_WIDTH, maxHeight: 320, overflowY: 'auto',
-            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.35)', padding: 10,
-          }}>
+          className={`${styles.panel} ${pos?.vertical === 'down' ? styles.down : styles.up}`}
+          style={{ left: pos?.left ?? 0, visibility: pos ? 'visible' : 'hidden' }}>
           <div className="ss-emoji-search"><Search size={13}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search emoji" aria-label="Search emoji"/>{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear emoji search"><X size={12}/></button>}</div>
           {!needle && recentEmoji.length > 0 && (
-            <div style={{ marginBottom: 10 }}>
-              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Recent</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                {recentEmoji.map(item => <button key={item.key} type="button" title={item.text} onClick={() => choose(item.key, item.text)} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer' }}>{item.imageUrl ? <SafeImage src={item.imageUrl} alt={item.code} style={{ width: 20, height: 20, objectFit: 'contain' }} /> : item.text}</button>)}
+            <div className={styles.group}>
+              <p className={styles.groupLabel}>Recent</p>
+              <div className={styles.grid}>
+                {recentEmoji.map(item => <button key={item.key} type="button" title={item.text} onClick={() => choose(item.key, item.text)} className={styles.emoji}>{item.imageUrl ? <SafeImage src={item.imageUrl} alt={item.code} className={styles.customImage} /> : item.text}</button>)}
               </div>
             </div>
           )}
           {visibleCustomGroups.map(group => (
-            <div key={group.label} style={{ marginBottom: 10 }}>
-              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+            <div key={group.label} className={styles.group}>
+              <p className={styles.groupLabel}>
                 {group.label}
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              <div className={styles.grid}>
                 {group.emoji.map(e => (
                   <button
                     key={e.code}
                     type="button"
                     title={`:${e.code}:`}
                     onClick={() => choose(`custom:${e.code}`, `:${e.code}:`)}
-                    style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer' }}
-                    onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--surface-3)')}
-                    onMouseLeave={ev => (ev.currentTarget.style.background = 'transparent')}
+                    className={styles.emoji}
                   >
-                    <SafeImage src={e.image_url} alt={e.code} style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                    <SafeImage src={e.image_url} alt={e.code} className={styles.customImage} />
                   </button>
                 ))}
               </div>
             </div>
           ))}
           {visibleStandardGroups.map(cat => (
-            <div key={cat.label} style={{ marginBottom: 10 }}>
-              <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+            <div key={cat.label} className={styles.group}>
+              <p className={styles.groupLabel}>
                 {cat.label}
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              <div className={styles.grid}>
                 {cat.emoji.map(e => (
                   <button
                     key={e.code}
                     type="button"
                     title={`:${e.code}:`}
                     onClick={() => choose(`standard:${e.code}`, e.char)}
-                    style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer' }}
-                    onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--surface-3)')}
-                    onMouseLeave={ev => (ev.currentTarget.style.background = 'transparent')}
+                    className={styles.emoji}
                   >
                     {e.char}
                   </button>

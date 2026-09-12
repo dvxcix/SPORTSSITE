@@ -1,11 +1,32 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Post } from '@/lib/supabase/types'
 
 export const POST_WITH_AUTHOR = `*, author:users!posts_author_id_fkey(id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, bio, follower_count, is_verified, account_type, pick_record, tier, beta_access_active)`
 
 export type FeedFilter = 'latest' | 'top' | 'picks' | 'following'
 
+type FeedReposter = NonNullable<Post['reposted_by']> & { id?: string }
+export type FeedPost = Omit<Post, 'reposted_by'> & {
+  reposted_by?: FeedReposter | null
+}
+
+type RepostRow = {
+  created_at: string
+  reposted_by: FeedReposter | null
+  post: FeedPost | FeedPost[] | null
+}
+
+const asFeedPosts = (rows: unknown[] | null | undefined): FeedPost[] =>
+  (rows ?? []) as FeedPost[]
+
+const asRepostRows = (rows: unknown[] | null | undefined): RepostRow[] =>
+  (rows ?? []) as RepostRow[]
+
+const repostRowPost = (row: RepostRow): FeedPost | null =>
+  Array.isArray(row.post) ? row.post[0] ?? null : row.post
+
 export interface FeedPageResult {
-  posts: any[]
+  posts: FeedPost[]
   // Opaque to the caller — a keyset timestamp for latest/picks/following, a
   // stringified offset for top (which sorts by reaction_count, not time, so
   // a timestamp cursor doesn't apply). Null means there's nothing more.
@@ -27,12 +48,24 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
 }): Promise<FeedPageResult> {
   const { filter, userId, blockedIds, cursor, pageSize = 20 } = opts
   const blockedSet = new Set(blockedIds)
+  const hiddenPostIds = new Set<string>()
+  const mutedAuthorIds = new Set<string>()
+  if (userId) {
+    const { data: suppressions } = await supabase.from('feed_suppressions').select('target_type,target_id').eq('user_id', userId)
+    for (const suppression of suppressions ?? []) {
+      if (suppression.target_type === 'post') hiddenPostIds.add(suppression.target_id)
+      if (suppression.target_type === 'author') mutedAuthorIds.add(suppression.target_id)
+    }
+  }
+  const isSuppressed = (post: FeedPost) => hiddenPostIds.has(post.id)
+    || mutedAuthorIds.has(post.author_id)
+    || mutedAuthorIds.has(post.reposted_by?.id ?? '')
 
   let followedIds: string[] | null = null
   if (filter === 'following') {
     if (!userId) return { posts: [], nextCursor: null, hasMore: false }
     const { data } = await supabase.from('follows').select('following_id').eq('follower_id', userId)
-    followedIds = (data ?? []).map((f: any) => f.following_id)
+    followedIds = ((data ?? []) as { following_id: string }[]).map(f => f.following_id)
     if (followedIds.length === 0) return { posts: [], nextCursor: null, hasMore: false }
   }
 
@@ -45,7 +78,7 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
     const { data } = await supabase.from('posts').select(POST_WITH_AUTHOR)
       .order('reaction_count', { ascending: false })
       .range(offset, offset + pageSize - 1)
-    const posts = (data ?? []).filter((p: any) => !blockedSet.has(p.author_id))
+    const posts = asFeedPosts(data).filter(p => !blockedSet.has(p.author_id) && !isSuppressed(p))
     const gotFullPage = (data?.length ?? 0) === pageSize
     return { posts, nextCursor: gotFullPage ? String(offset + pageSize) : null, hasMore: gotFullPage }
   }
@@ -64,14 +97,16 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
 
   const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
 
-  let reposted = ((repostRows ?? []) as any[])
-    .filter(r => r.post)
-    .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
+  let reposted = asRepostRows(repostRows)
+    .map(row => ({ row, post: repostRowPost(row) }))
+    .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
+    .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
   if (filter === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
 
-  const merged = [...(rawPosts ?? []), ...reposted]
-    .filter((p: any) => !blockedSet.has(p.author_id) && !blockedSet.has(p.reposted_by?.id))
-    .sort((a: any, b: any) =>
+  const typedRawPosts = asFeedPosts(rawPosts)
+  const merged = [...typedRawPosts, ...reposted]
+    .filter(p => !blockedSet.has(p.author_id) && !blockedSet.has(p.reposted_by?.id ?? '') && !isSuppressed(p))
+    .sort((a, b) =>
       new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
 
   const posts = merged.slice(0, pageSize)
@@ -85,8 +120,9 @@ export async function fetchFeedPage(supabase: SupabaseClient, opts: {
   // exhausted and shouldn't gate `hasMore`.
   const postsExhausted = (rawPosts?.length ?? 0) < pageSize
   const repostsExhausted = (repostRows?.length ?? 0) < pageSize
-  const postsBoundary = !postsExhausted ? (rawPosts as any[])[rawPosts!.length - 1].created_at : null
-  const repostsBoundary = !repostsExhausted ? (repostRows as any[])[repostRows!.length - 1].created_at : null
+  const postsBoundary = !postsExhausted ? typedRawPosts[typedRawPosts.length - 1]?.created_at ?? null : null
+  const typedRepostRows = asRepostRows(repostRows)
+  const repostsBoundary = !repostsExhausted ? typedRepostRows[typedRepostRows.length - 1]?.created_at ?? null : null
   const hasMore = !postsExhausted || !repostsExhausted
   // Older (smaller) of the two boundaries — advancing the cursor to the
   // more conservative point means neither source's un-fetched tail gets
@@ -123,7 +159,7 @@ export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
       .limit(pageSize)
     if (cursor) mediaQuery = mediaQuery.lt('created_at', cursor)
     const { data } = await mediaQuery
-    const posts = (data ?? []).filter((post: { media_urls?: unknown }) => Array.isArray(post.media_urls) && post.media_urls.length > 0)
+    const posts = asFeedPosts(data).filter(post => Array.isArray(post.media_urls) && post.media_urls.length > 0)
     const hasMore = (data?.length ?? 0) === pageSize
     return { posts, nextCursor: hasMore ? posts[posts.length - 1]?.created_at ?? null : null, hasMore }
   }
@@ -136,7 +172,10 @@ export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
       .limit(pageSize)
     if (cursor) repostQuery = repostQuery.lt('created_at', cursor)
     const { data } = await repostQuery
-    const posts = ((data ?? []) as any[]).filter(r => r.post).map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
+    const posts = asRepostRows(data)
+      .map(row => ({ row, post: repostRowPost(row) }))
+      .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
+      .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
     const hasMore = (data?.length ?? 0) === pageSize
     const last = posts[posts.length - 1]
     return { posts, nextCursor: hasMore ? (last?.repost_created_at ?? null) : null, hasMore }
@@ -155,21 +194,24 @@ export async function fetchProfilePostsPage(supabase: SupabaseClient, opts: {
 
   const [{ data: rawPosts }, { data: repostRows }] = await Promise.all([postQuery, repostQuery])
 
-  let reposted = ((repostRows ?? []) as any[])
-    .filter(r => r.post)
-    .map(r => ({ ...r.post, reposted_by: r.reposted_by, repost_created_at: r.created_at }))
+  let reposted = asRepostRows(repostRows)
+    .map(row => ({ row, post: repostRowPost(row) }))
+    .filter((entry): entry is { row: RepostRow; post: FeedPost } => Boolean(entry.post))
+    .map(({ row, post }) => ({ ...post, reposted_by: row.reposted_by, repost_created_at: row.created_at }))
   if (tab === 'picks') reposted = reposted.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
 
-  const merged = [...(rawPosts ?? []), ...reposted]
-    .sort((a: any, b: any) =>
+  const typedRawPosts = asFeedPosts(rawPosts)
+  const merged = [...typedRawPosts, ...reposted]
+    .sort((a, b) =>
       new Date(b.repost_created_at ?? b.created_at).getTime() - new Date(a.repost_created_at ?? a.created_at).getTime())
 
   const posts = merged.slice(0, pageSize)
 
   const postsExhausted = (rawPosts?.length ?? 0) < pageSize
   const repostsExhausted = (repostRows?.length ?? 0) < pageSize
-  const postsBoundary = !postsExhausted ? (rawPosts as any[])[rawPosts!.length - 1].created_at : null
-  const repostsBoundary = !repostsExhausted ? (repostRows as any[])[repostRows!.length - 1].created_at : null
+  const postsBoundary = !postsExhausted ? typedRawPosts[typedRawPosts.length - 1]?.created_at ?? null : null
+  const typedRepostRows = asRepostRows(repostRows)
+  const repostsBoundary = !repostsExhausted ? typedRepostRows[typedRepostRows.length - 1]?.created_at ?? null : null
   const hasMore = !postsExhausted || !repostsExhausted
   const nextCursor = !hasMore ? null : [postsBoundary, repostsBoundary].filter(Boolean)
     .sort((a, b) => new Date(a as string).getTime() - new Date(b as string).getTime())[0] ?? null

@@ -92,7 +92,7 @@ export function MatrixMarketplaceDetailClient({
   }
 
   return (
-    <main className={`${styles.page} ${styles.detailPage}`}>
+    <div className={`${styles.page} ${styles.detailPage}`}>
       <Link href="/marketplace" className={styles.backLink}>
         <ArrowLeft size={15} /> Matrix Marketplace
       </Link>
@@ -192,7 +192,14 @@ export function MatrixMarketplaceDetailClient({
                 href={`/profile/${listing.author?.username}`}
                 className={styles.detailAvatar}
               >
-                <MemberAvatar src={listing.author?.avatar_url} name={authorName} size={43} />
+                <MemberAvatar
+                  src={listing.author?.avatar_url}
+                  name={authorName}
+                  size={43}
+                  tone="creator"
+                  ringStyle={listing.author?.avatar_ring_style}
+                  ringColor={listing.author?.avatar_ring_color}
+                />
               </Link>
               <div>
                 <span>
@@ -279,6 +286,6 @@ export function MatrixMarketplaceDetailClient({
           </section>
         </aside>
       </div>
-    </main>
+    </div>
   );
 }

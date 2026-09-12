@@ -9,6 +9,7 @@ import { BadgeCheck, Calendar, ChevronLeft, Settings2, Users } from 'lucide-reac
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductPageShell } from '@/components/product/ProductPage'
 import type { Metadata } from 'next'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,12 +43,12 @@ export default async function PageDetailPage({ params }: { params: Promise<{ slu
       <Link href="/pages" className="ss-flow-back"><ChevronLeft size={14} /> Pages</Link>
       <section className="overflow-hidden rounded-[24px] border border-white/[.08] bg-[#0d100f] shadow-2xl">
         <div className="relative h-40 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,.18),transparent_42%),linear-gradient(135deg,#182016,#0b0d10)] sm:h-52">
-          {page.banner_url && <img src={page.banner_url} alt="" className="h-full w-full object-cover" />}
+          {page.banner_url && <SafeImage src={page.banner_url} alt="" className="h-full w-full object-cover" />}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0d100f] via-transparent to-transparent" />
         </div>
         <div className="px-4 pb-5 sm:px-6 sm:pb-6">
           <div className="relative z-10 -mt-11 flex items-end justify-between gap-3">
-            <div className="grid h-[88px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-[24px] border-4 border-[#0d100f] bg-zinc-800 text-4xl shadow-xl">{page.avatar_url ? <img src={page.avatar_url} alt="" className="h-full w-full object-cover" /> : page.emoji ?? '⭐'}</div>
+            <div className="grid h-[88px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-[24px] border-4 border-[#0d100f] bg-zinc-800 text-4xl shadow-xl"><SafeImage src={page.avatar_url} alt="" className="h-full w-full object-cover" fallback={page.emoji ?? '⭐'} /></div>
             <div className="flex gap-2 pb-1">
               {isOwner && <Link href={`/pages/${slug}/settings`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 text-xs font-black text-white hover:bg-white/[.08]"><Settings2 size={14} /> Manage</Link>}
               {user && !isOwner && <PageFollowButton userId={user.id} pageId={page.id} initialFollowing={Boolean(follow)} />}
@@ -62,7 +63,7 @@ export default async function PageDetailPage({ params }: { params: Promise<{ slu
       </section>
 
       <section className="mt-4 grid gap-3">
-        {isOwner && <FeedComposer />}
+        {isOwner && <FeedComposer pageId={page.id} />}
         {!posts.length ? <div className="rounded-2xl border border-white/[.08] bg-white/[.025] py-16 text-center"><p className="font-black text-zinc-300">No posts yet</p></div> : posts.map((post: any) => <PostCardClient key={post.id} post={post} />)}
       </section>
     </ProductPageShell>

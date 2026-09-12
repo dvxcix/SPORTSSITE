@@ -8,7 +8,7 @@ const items = [
   { href: '/settings/security', label: 'Security', icon: KeyRound },
   { href: '/settings/notifications', label: 'Notifications', icon: Bell },
   { href: '/settings/privacy', label: 'Privacy', icon: LockKeyhole },
-  { href: '/settings/blocked', label: 'Blocked', icon: UserX },
+  { href: '/settings/blocked', label: 'Muted & blocked', icon: UserX },
   { href: '/settings/membership', label: 'Membership', icon: CreditCard },
   { href: '/creators/studio', label: 'Creator Studio', icon: Sparkles },
 ]
@@ -16,7 +16,7 @@ const items = [
 export function SettingsShell({ active, eyebrow = 'MEMBER CONTROL CENTER', title, description, children }: {
   active: string; eyebrow?: string; title: string; description: string; children: React.ReactNode
 }) {
-  return <main className="ss-settings-shell">
+  return <div className="ss-settings-shell">
     <header className="ss-settings-hero"><div className="ss-settings-hero-glow" /><div className="relative"><p className="ss-settings-eyebrow">{eyebrow}</p><h1>{title}</h1><p>{description}</p></div></header>
     <div className="ss-settings-layout">
       <nav className="ss-settings-nav" aria-label="Settings sections">
@@ -24,5 +24,5 @@ export function SettingsShell({ active, eyebrow = 'MEMBER CONTROL CENTER', title
       </nav>
       <section className="ss-settings-content">{children}</section>
     </div>
-  </main>
+  </div>
 }

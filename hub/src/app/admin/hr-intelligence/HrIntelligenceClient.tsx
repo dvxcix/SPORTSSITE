@@ -203,7 +203,7 @@ export function HrIntelligenceClient() {
     }
   }
 
-  return <main className={styles.page}>
+  return <div className={styles.page}>
     <section className={styles.hero}>
       <div className={styles.heroIcon}><Crosshair size={25} /></div>
       <div><span>ADMIN | TWO-LANE DECISION TERMINAL</span><h1>HR Intelligence</h1><p>Reduce every complete 18-player board to one credible anchor and one structural dislocation, then grade that exact pair after the game.</p></div>
@@ -239,5 +239,5 @@ export function HrIntelligenceClient() {
       </section> : null}
       {selectedGame ? <GameAnalysis key={selectedGame.gamePk} game={selectedGame} /> : null}
     </> : null}
-  </main>
+  </div>
 }

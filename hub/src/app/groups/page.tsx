@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { hasCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
-import { ArrowRight, Compass, LockKeyhole, MessageSquareText, Plus, Settings2, Sparkles, Users } from 'lucide-react'
+import { ArrowRight, LockKeyhole, MessageSquareText, Plus, Settings2, Sparkles, Users } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 
 type GroupCardData = { id: string; slug: string; name: string; description?: string | null; avatar_url?: string | null; emoji?: string | null; access_type?: string | null; member_count?: number | null }
 
@@ -22,30 +23,20 @@ export default async function GroupsPage() {
   const discover = (visibleGroups ?? []).filter(group => group.owner_id !== user?.id && group.is_public)
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+    <ProductPageShell>
       <CommunityNav />
-      <section className="relative overflow-hidden rounded-3xl border border-lime-400/20 bg-[radial-gradient(circle_at_top_left,rgba(163,255,68,.16),transparent_38%),#0c0f0d] p-6 sm:p-9">
-        <div className="relative z-10 max-w-2xl">
-          <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[.18em] text-lime-300"><Sparkles size={14}/> Community</p>
-          <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">Groups built around the edge.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400 sm:text-base">Find your people, follow their plays, and stay close to every conversation.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            {creator && <Link href="/groups/create" className="inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-sm font-black text-black hover:bg-lime-300"><Plus size={16}/> Create a group</Link>}
-            {creator && <Link href="/creators/studio" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white hover:bg-white/10"><Settings2 size={16}/> Creator Studio</Link>}
-          </div>
-        </div>
-      </section>
+      <ProductHero icon={<Sparkles size={21}/>} eyebrow="Community" title="Groups" description="Join communities built around games, markets, and creators." actions={creator ? <><ProductAction href="/groups/create"><Plus size={15}/> New group</ProductAction><ProductAction href="/creators/studio"><Settings2 size={15}/> Studio</ProductAction></> : undefined}/>
 
       {creator && <section className="mt-8">
-        <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-lime-300">Creator workspace</p><h2 className="mt-1 text-xl font-black text-white">Your communities</h2></div><span className="text-xs text-zinc-500">{owned.length} total</span></div>
-        {owned.length ? <div className="grid gap-3 md:grid-cols-2">{owned.map(group => <GroupCard key={group.id} group={group} owner />)}</div> : <div className="grid gap-5 rounded-2xl border border-dashed border-lime-400/25 bg-lime-400/[.04] p-6 md:grid-cols-[1fr_auto] md:items-center"><div><h3 className="font-black text-white">Launch your first community</h3></div><Link href="/groups/create" className="inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-sm font-black text-black">Create community <ArrowRight size={15}/></Link></div>}
+        <ProductSectionHeader title="Your communities" meta={`${owned.length} total`}/>
+        {owned.length ? <div className="grid gap-3 md:grid-cols-2">{owned.map(group => <GroupCard key={group.id} group={group} owner />)}</div> : <ProductPanel padded className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center"><div><h3 className="font-black text-white">Launch your first community</h3></div><Link href="/groups/create" className="inline-flex items-center gap-2 text-sm font-black text-lime-300">Create community <ArrowRight size={15}/></Link></ProductPanel>}
       </section>}
 
       <section className="mt-10">
-        <div className="mb-4"><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500"><Compass size={14}/> Discover</p><h2 className="mt-1 text-xl font-black text-white">Public groups</h2></div>
+        <ProductSectionHeader title="Public groups" meta="Discover"/>
         {discover.length ? <div className="grid gap-3 md:grid-cols-2">{discover.map(group => <GroupCard key={group.id} group={group} />)}</div> : <div className="rounded-2xl border border-white/8 bg-white/[.025] p-10 text-center"><Users className="mx-auto text-zinc-600"/><p className="mt-3 font-bold text-zinc-300">No public groups yet</p><p className="mt-1 text-sm text-zinc-600">Creator communities will appear here as they launch.</p></div>}
       </section>
-    </main>
+    </ProductPageShell>
   )
 }
 

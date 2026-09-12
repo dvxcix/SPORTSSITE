@@ -65,7 +65,7 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams }:
   const totalPicks = filteredPicks.reduce((sum, row) => sum + row.picks, 0)
   const pageSize = 24
   const theme = (team: string) => ({ '--team-color': teams.find(item => item.abbr === team)?.color ?? '#203d50' }) as CSSProperties
-  return <main className={styles.root}>
+  return <div className={styles.root}>
     <header><Link href={boardHref}>← The Sideline</Link><p>{title}</p><h1>{mode === 'public' ? 'The Public · NFL' : 'NFL sportsbook comparison'}</h1>
       <small>Captured: {stamp(mode === 'public' ? board.picksCapturedAt : board.capturedAt)}</small>
     </header>
@@ -95,5 +95,5 @@ export function SidelineResearchClient({ board, boardHref, title, mode, teams }:
       </article>)}
     </div>}
     <footer className={styles.controls}><button disabled={page === 0} onClick={() => setPage(value => value - 1)}>Previous</button><span>Page {page + 1} of {Math.max(1, Math.ceil(count / pageSize))}</span><button disabled={(page + 1) * pageSize >= count} onClick={() => setPage(value => value + 1)}>Next</button></footer>
-  </main>
+  </div>
 }

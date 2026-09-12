@@ -16,6 +16,7 @@ import { CommunityNav } from '@/components/community/CommunityNav'
 import { GroupWorkspaceTabs } from '@/components/groups/GroupWorkspaceTabs'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
+import styles from './GroupPage.module.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,6 +44,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
   let isMember = false
   let isOwner = false
+  let memberRole: 'owner' | 'admin' | 'moderator' | 'analyst' | 'member' | 'subscriber' | null = null
   if (user) {
     const { data: member } = await supabase
       .from('group_members')
@@ -52,6 +54,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       .maybeSingle()
     isMember = !!member
     isOwner = member?.role === 'owner'
+    memberRole = member?.role as typeof memberRole
   }
 
   // A private group has no self-serve join — check for a pending invite
@@ -86,7 +89,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
     return attachUserReactions(rawPosts ?? [], user?.id)
   }
   const [{ data: members }, posts, chatMessages, { data: groupChannel }] = await Promise.all([
-    supabase.from('group_members').select('user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).limit(8),
+    supabase.from('group_members').select('role,user:users(id, username, display_name, avatar_url, is_verified)').eq('group_id', group.id).order('role').limit(8),
     postsPromise(),
     canViewContent && group.channel_id ? getChannelMessages(group.channel_id, 50) : Promise.resolve([]),
     group.channel_id
@@ -95,35 +98,39 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   ])
 
   const canPost = isMember
+  const memberPreviews = (members ?? []).flatMap(member => {
+    const profile = Array.isArray(member.user) ? member.user[0] : member.user
+    return profile ? [{ role: member.role, user: profile }] : []
+  })
 
   return (
-    <div className="ss-group-page max-w-4xl mx-auto px-3 py-4 sm:px-6 sm:py-8">
+    <div className={styles.page}>
       <CommunityNav />
-      <div className="mt-4 overflow-hidden rounded-3xl border border-white/8 bg-[#0d100f]">
-      <div className="h-36 bg-gradient-to-r from-zinc-800 to-zinc-700 relative overflow-hidden">
-        <SafeImage src={group.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className={styles.community}>
+      <div className={styles.banner}>
+        <SafeImage src={group.banner_url} alt="" className={styles.bannerImage} />
         {group.sport && (
-          <div className="absolute top-3 right-3">
+          <div className={styles.sportBadge}>
             {sportLogoUrl(group.sport) ? (
-              <span className="bg-blue-400/20 backdrop-blur p-1.5 rounded-full border border-blue-400/30 flex items-center">
-                <Image src={sportLogoUrl(group.sport)!} alt={group.sport} width={20} height={20} className="object-contain" />
+              <span>
+                <Image src={sportLogoUrl(group.sport)!} alt={group.sport} width={20} height={20} />
               </span>
             ) : (
-              <span className="text-xs font-bold text-blue-400 bg-blue-400/20 backdrop-blur px-2 py-1 rounded-full border border-blue-400/30">{group.sport}</span>
+              <span>{group.sport}</span>
             )}
           </div>
         )}
       </div>
 
-      <div className="px-4 pb-4">
-        <div className="relative z-10 flex items-end justify-between -mt-8 mb-4">
-          <div className="relative w-16 h-16 overflow-hidden rounded-xl bg-zinc-800 border-4 border-zinc-950 flex items-center justify-center text-2xl shadow-lg">
-            <SafeImage src={group.avatar_url} alt="" className="h-full w-full rounded-lg object-cover" fallback={group.emoji || '👥'} />
+      <div className={styles.identity}>
+        <div className={styles.identityRow}>
+          <div className={styles.avatar}>
+            <SafeImage src={group.avatar_url} alt="" className={styles.avatarImage} fallback={group.emoji || '👥'} />
           </div>
-          <div className="flex gap-2">
+          <div className={styles.actions}>
             {isOwner && (
               <Link href={`/groups/${slug}/settings`}
-                className="flex items-center gap-1.5 border border-zinc-700 text-zinc-300 text-xs font-bold px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors">
+                className={styles.secondaryAction}>
                 <Settings size={13} /> Manage
               </Link>
             )}
@@ -136,33 +143,34 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
             {user && isMember && (
               <GroupInviteModal groupId={group.id} groupSlug={slug} groupName={group.name} currentUserId={user.id} />
             )}
-            {!user && <Link href="/auth/login" className="bg-green-500 hover:bg-green-400 text-black text-xs font-black px-4 py-2 rounded-lg transition-colors">Sign in</Link>}
+            {!user && <Link href="/auth/login" className={styles.primaryAction}>Sign in</Link>}
           </div>
         </div>
 
-        <h1 className="text-xl font-black text-white flex items-center gap-2">
+        <h1 className={styles.title}>
           {group.name}
-          {!group.is_public ? <Lock size={14} className="text-zinc-500" /> : <Globe size={14} className="text-zinc-600" />}
+          {!group.is_public ? <Lock size={14} /> : <Globe size={14} />}
         </h1>
-        {group.description && <p className="text-sm text-zinc-400 mt-1">{group.description}</p>}
-        <p className="text-xs text-zinc-600 mt-2 flex items-center gap-1">
+        {group.description && <p className={styles.description}>{group.description}</p>}
+        <p className={styles.memberMeta}>
           <Users size={11} /> {group.member_count ?? 0} members
         </p>
 
         {/* Member previews */}
-        {(members?.length ?? 0) > 0 && (
-          <div className="flex items-center gap-1 mt-3">
-            {(members ?? []).slice(0, 6).map((m: any) => m.user && (
-              <Link key={m.user.id} href={`/profile/${m.user.username}`} className="-ml-1 first:ml-0" aria-label={m.user.display_name || m.user.username}>
+        {memberPreviews.length > 0 && (
+          <div className={styles.memberStack}>
+            {memberPreviews.slice(0, 6).map(m => (
+              <Link key={m.user.id} href={`/profile/${m.user.username}`} aria-label={`${m.user.display_name || m.user.username}, ${m.role}`} data-role={m.role}>
                 <MemberAvatar src={m.user.avatar_url} name={m.user.display_name || m.user.username} size={28} />
+                {['owner', 'admin', 'moderator'].includes(m.role) && <span className={styles.roleMark}>{m.role === 'owner' ? 'O' : m.role === 'admin' ? 'A' : 'M'}</span>}
               </Link>
             ))}
-            {(group.member_count ?? 0) > 6 && <span className="text-xs text-zinc-500 ml-2">+{(group.member_count ?? 0) - 6} more</span>}
+            {(group.member_count ?? 0) > 6 && <span>+{(group.member_count ?? 0) - 6} more</span>}
           </div>
         )}
 
         {pendingInvite && user && (
-          <div className="mt-4">
+          <div className={styles.inviteResponse}>
             <GroupInviteResponse
               inviteId={pendingInvite.id}
               invitedByUsername={pendingInvite.invited_by_username}
@@ -171,25 +179,25 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
         )}
       </div>
 
-      <div className="border-t border-zinc-800" />
+      <div className={styles.divider} />
 
       {!canViewContent ? (
-        <div className="text-center py-20 px-4">
-          <Lock size={28} className="mx-auto text-zinc-600 mb-3" />
-          <p className="text-zinc-400 font-medium">This is a private group</p>
-          <p className="text-xs text-zinc-600 mt-1">Only members can see posts and chat here. Ask a member to invite you.</p>
+        <div className={styles.locked}>
+          <Lock size={28} />
+          <p>This is a private group</p>
+          <span>Only members can see posts and chat here. Ask a member to invite you.</span>
         </div>
       ) : (
         <GroupWorkspaceTabs
           postCount={posts.length}
-          posts={<div className="px-4 py-4 space-y-3">
+          posts={<div className={styles.posts}>
             {canPost && user && <FeedComposer groupId={group.id} />}
             {(posts?.length ?? 0) === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-3xl mb-3">💬</p>
-                <p className="text-zinc-400">No posts yet in this group</p>
+              <div className={styles.emptyPosts}>
+                <p>💬</p>
+                <strong>No posts yet in this group</strong>
                 {!isMember && group.is_public && (
-                  <p className="text-xs text-zinc-600 mt-1">Join to post</p>
+                  <span>Join to post</span>
                 )}
               </div>
             ) : (
@@ -198,13 +206,14 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           </div>}
           chat={group.channel_id && isMember ? (
             <div className="ss-group-chat-shell">
-              <div className="h-[min(620px,70dvh)] min-h-[440px] flex flex-col overflow-hidden">
+              <div className={styles.chatViewport}>
                 <ChatRoom
                   channelId={group.channel_id}
                   channelSlug={groupChannel?.slug || `group-${slug}`}
                   channelName={group.name}
                   initialMessages={chatMessages}
                   currentUserId={user?.id}
+                  canModerate={memberRole === 'owner' || memberRole === 'admin' || memberRole === 'moderator'}
                 />
               </div>
             </div>

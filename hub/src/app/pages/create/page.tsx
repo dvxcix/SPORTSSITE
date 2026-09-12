@@ -10,11 +10,11 @@ export default async function CreatePagePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?next=/pages/create')
   return (
-    <main className="ss-flow-page">
+    <div className="ss-flow-page">
       <CommunityNav />
       <Link href="/pages" className="ss-flow-back"><ChevronLeft size={14} /> Pages</Link>
       <header className="ss-flow-heading"><span><Star size={22} /></span><div><p>Public profile</p><h1>Create page</h1></div></header>
       <CreatePageForm userId={user.id} />
-    </main>
+    </div>
   )
 }

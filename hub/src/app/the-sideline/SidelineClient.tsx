@@ -583,7 +583,7 @@ export function SidelineClient({ games, selectedId, lens, boardHref = '/the-side
   const selectGame = (game: SidelineGame) => startTransition(() => router.replace(`/the-sideline?mode=film&date=${game.gameday}&game=${encodeURIComponent(game.id)}`, { scroll: false }))
 
   return (
-    <main className={`${styles.page} ${isPending ? styles.loading : ''}`}>
+    <div className={`${styles.page} ${isPending ? styles.loading : ''}`}>
       <header className={styles.header}><div className={styles.brandMark}><span>50</span></div><div><div className={styles.eyebrow}>NFL MATCHUP INTELLIGENCE</div><h1>The Sideline <span>PRIVATE</span></h1><p>Projected volume, route geometry, opponent allowances and historical play evidence.</p></div><div className={styles.headerActions}><a className={styles.boardLink} href={boardHref}><ChartNoAxesCombined size={14} /> Market board</a><div className={styles.privateBadge}><Radio size={13} /> Film + routes</div></div></header>
       <div className={styles.gameRail} aria-label="Choose an NFL game">{games.slice(0, 16).map(game => <button key={game.id} type="button" aria-label={`${game.away.name} at ${game.home.name}`} className={game.id === selected.id ? styles.gameActive : styles.gameButton} onClick={() => selectGame(game)}><div className={styles.railLogos}><TeamLogo team={game.away} compact /><b>VS</b><TeamLogo team={game.home} compact /></div><span>{game.away.abbr} @ {game.home.abbr}</span><small>{new Date(`${game.gameday}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · W{game.week}</small></button>)}</div>
       <section className={styles.matchupBar}><div className={styles.teamBlock}><TeamLogo team={selected.away} /><div><small>AWAY</small><strong>{selected.away.name}</strong><span>{selected.away.abbr}</span></div></div><div className={styles.gameMeta}><span>{selected.gameType} · WEEK {selected.week}</span><strong>{selected.gametime ?? 'TBD'}</strong><small>{date} · {selected.stadium ?? 'Stadium TBD'}</small></div><div className={`${styles.teamBlock} ${styles.teamBlockHome}`}><div><small>HOME</small><strong>{selected.home.name}</strong><span>{selected.home.abbr}</span></div><TeamLogo team={selected.home} /></div></section>
@@ -591,6 +591,6 @@ export function SidelineClient({ games, selectedId, lens, boardHref = '/the-side
       <nav className={styles.viewNav} aria-label="Sideline views">{views.map(item => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? styles.viewActive : ''} onClick={() => setView(item.id)}><Icon size={17} />{item.label}</button> })}</nav>
       <div className={styles.blueprintBanner}><div><small>THIS MATCHUP</small><strong>{lens.headline}</strong><span>{lens.headlineDetail}</span></div><b>{lens.players[0]?.index ?? '—'}<small><SlipSurgeScoreLabel prefix="Top" compact /></small></b><ChevronRight size={20} /></div>
       {view === 'props' && <PropCommand key={selected.id} lens={lens} />}{view === 'routes' && <RouteAtlasField key={selected.id} lens={lens} />}{view === 'film' && <FilmRoom key={selected.id} lens={lens} />}{view === 'team-dna' && <TeamDnaView lens={lens} />}{view === 'red-zone' && <RedZoneView lens={lens} />}
-    </main>
+    </div>
   )
 }

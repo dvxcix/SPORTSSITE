@@ -44,10 +44,7 @@ export function DesktopCommandBar() {
     function onKeyDown(event: KeyboardEvent) {
       if (!(event.ctrlKey || event.metaKey)) return
 
-      if (event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        window.dispatchEvent(new CustomEvent('slipsurge:focus-search'))
-      } else if (event.key.toLowerCase() === 'r') {
+      if (event.key.toLowerCase() === 'r') {
         event.preventDefault()
         window.location.reload()
       } else if (event.key === '[') {
@@ -96,7 +93,7 @@ export function DesktopCommandBar() {
       <button
         type="button"
         className="ss-desktop-search-command"
-        onClick={() => window.dispatchEvent(new CustomEvent('slipsurge:focus-search'))}
+        onClick={() => window.dispatchEvent(new CustomEvent('slipsurge:open-command'))}
         title="Search SlipSurge (Ctrl+K)"
       >
         <Search size={13} />

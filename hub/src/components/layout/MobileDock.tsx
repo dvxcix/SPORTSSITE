@@ -9,7 +9,7 @@ const items = [
   { href: '/feed', label: 'Home', icon: Home },
   { href: '/dugout', label: 'Research', icon: FlaskConical },
   { href: '/odds-terminal', label: 'Terminal', icon: ChartSpline },
-  { href: '/channels', label: 'Community', icon: MessagesSquare, sections: ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks'] },
+  { href: '/community', label: 'Community', icon: MessagesSquare, sections: ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks'] },
 ]
 
 function isActive(pathname: string, href: string) {

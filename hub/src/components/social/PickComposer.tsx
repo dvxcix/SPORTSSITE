@@ -1,13 +1,47 @@
 'use client'
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { X } from 'lucide-react'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
+import { Check, ChevronDown, Plus, Search, X } from 'lucide-react'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { PROP_META } from '@/lib/watchlist'
+import styles from './PickComposer.module.css'
+
+type Sport = 'MLB' | 'NFL'
+type Offer = { vendor: string; side: 'milestone' | 'over' | 'under'; odds: number }
+type Market = { key: string; prop_type: string; label: string; line: number | null; offers: Offer[] }
+type Player = {
+  player_id: string | null
+  mlb_id: number | null
+  name: string
+  team: string
+  position: string
+  headshot_url: string | null
+  markets: Market[]
+}
+type Game = {
+  gameKey: string
+  gamePk: string
+  gameDate: string
+  gameTime?: string | null
+  homeAbbr: string
+  awayAbbr: string
+  homeTeam: string
+  awayTeam: string
+  homeLogo?: string | null
+  awayLogo?: string | null
+  status: string
+  players: Player[]
+}
+type RawMlbPlayer = { mlb_id?: number; name: string; team: string; position: string; props?: Record<string, Record<string, unknown>> }
+type RawMlbGame = Omit<Game, 'gamePk' | 'gameDate' | 'players'> & { gamePk: string | number; homeLineup?: RawMlbPlayer[]; awayLineup?: RawMlbPlayer[] }
 
 export type ComposedPick = {
+  sport: Sport
+  player_id: string | null
   mlb_id: number | null
   player_name: string
   team: string | null
@@ -17,138 +51,55 @@ export type ComposedPick = {
   prop_key: string
   prop_label: string
   line: string
+  numeric_line: number | null
+  market_side: 'milestone' | 'over' | 'under'
   book: string | null
   odds: number | null
 }
 
-type Game = { gameKey: string; gamePk: string; homeAbbr: string; awayAbbr: string; homeTeam: string; awayTeam: string; status: string }
-type Player = { mlb_id: number; name: string; name_norm: string; team: string; position: string; props: any }
-
-function TeamLogoImg({ abbr, size = 18 }: { abbr: string; size?: number }) {
-  const [err, setErr] = useState(false)
-  const url = getTeamLogoUrl(abbr)
-  if (!url || err) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size, borderRadius: '50%', background: 'var(--surface-3)', fontSize: size * 0.4, fontWeight: 800, color: 'var(--text-3)' }}>
-      {abbr.slice(0, 2)}
-    </span>
-  )
-  return <img src={url} alt={abbr} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
+function TeamLogo({ src, abbr }: { src?: string | null; abbr: string }) {
+  return src ? <Image src={src} alt="" width={24} height={24} unoptimized className={styles.teamLogo} /> : <span className={styles.teamFallback}>{abbr}</span>
 }
 
-function GamePicker({ games, loading, value, onChange }: {
-  games: Game[]; loading: boolean; value: string; onChange: (gameKey: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const selected = games.find(g => g.gameKey === value) ?? null
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [])
-
-  const disabled = loading || games.length === 0
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => !disabled && setOpen(v => !v)}
-        disabled={disabled}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8,
-          padding: '8px 10px', color: 'var(--text-1)', fontSize: 13, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1,
-        }}
-      >
-        {selected ? (
-          <>
-            <TeamLogoImg abbr={selected.awayAbbr} />
-            <span style={{ color: 'var(--text-3)', fontSize: 11 }}>@</span>
-            <TeamLogoImg abbr={selected.homeAbbr} />
-            <span style={{ marginLeft: 2 }}>{selected.awayAbbr} @ {selected.homeAbbr}</span>
-          </>
-        ) : (
-          <span style={{ color: 'var(--text-3)' }}>{loading ? 'Loading games…' : games.length === 0 ? 'No games today' : 'Select a game…'}</span>
-        )}
-        <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 11 }}>▾</span>
-      </button>
-      {open && !disabled && (
-        <div style={{ position: 'absolute', zIndex: 10, marginTop: 4, width: '100%', maxHeight: 260, overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-          {games.map(g => {
-            const started = g.status !== 'Preview'
-            return (
-              <button
-                key={g.gameKey}
-                type="button"
-                disabled={started}
-                onClick={() => { if (!started) { onChange(g.gameKey); setOpen(false) } }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'none', border: 'none',
-                  cursor: started ? 'not-allowed' : 'pointer', textAlign: 'left', color: started ? 'var(--text-3)' : 'var(--text-1)', fontSize: 13,
-                  opacity: started ? 0.5 : 1,
-                }}
-                onMouseEnter={e => { if (!started) e.currentTarget.style.background = 'var(--surface-2)' }}
-                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-              >
-                <TeamLogoImg abbr={g.awayAbbr} />
-                <span style={{ color: 'var(--text-3)', fontSize: 11 }}>@</span>
-                <TeamLogoImg abbr={g.homeAbbr} />
-                <span>{g.awayAbbr} @ {g.homeAbbr}</span>
-                {started && <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>Started</span>}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
+function normalizeMlbGames(payload: RawMlbGame[], date: string): Game[] {
+  return payload.map(game => ({
+    gameKey: game.gameKey,
+    gamePk: String(game.gamePk),
+    gameDate: date,
+    homeAbbr: game.homeAbbr,
+    awayAbbr: game.awayAbbr,
+    homeTeam: game.homeTeam,
+    awayTeam: game.awayTeam,
+    homeLogo: getTeamLogoUrl(game.homeAbbr),
+    awayLogo: getTeamLogoUrl(game.awayAbbr),
+    status: game.status || 'Preview',
+    players: [...(game.homeLineup ?? []), ...(game.awayLineup ?? [])]
+      .filter(player => player.mlb_id)
+      .map((player): Player => ({
+        player_id: null,
+        mlb_id: player.mlb_id!,
+        name: player.name,
+        team: player.team,
+        position: player.position,
+        headshot_url: mlbHeadshot(player.mlb_id!),
+        markets: Object.entries(PROP_META).flatMap(([key, meta]) => {
+          const prices = player.props?.[key]
+          if (!prices) return []
+          const offers = Object.entries(prices).flatMap(([vendor, odds]) =>
+            typeof odds === 'number' ? [{ vendor, side: 'milestone' as const, odds }] : [])
+          return offers.length ? [{ key, prop_type: meta.pickType, label: meta.label, line: null, offers }] : []
+        }),
+      })),
+  }))
 }
 
-function BookPicker({ books, value, onChange }: { books: string[]; value: string; onChange: (b: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+function selectionKey(market: Market) {
+  return `${market.key}::${market.line ?? ''}`
+}
 
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [])
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, padding: '8px 10px', color: 'var(--text-1)', fontSize: 12, cursor: 'pointer' }}
-      >
-        {value ? <><BookLogo vendor={value} size={16} /><span>{value}</span></> : <span style={{ color: 'var(--text-3)' }}>Book…</span>}
-        <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 11 }}>▾</span>
-      </button>
-      {open && (
-        <div style={{ position: 'absolute', zIndex: 10, marginTop: 4, width: '100%', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-          {books.map(b => (
-            <button
-              key={b}
-              type="button"
-              onClick={() => { onChange(b); setOpen(false) }}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: b === value ? 'var(--surface-2)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text-1)', fontSize: 12 }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-              onMouseLeave={e => (e.currentTarget.style.background = b === value ? 'var(--surface-2)' : 'none')}
-            >
-              <BookLogo vendor={b} size={16} />
-              <span>{b}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+function labelFor(market: Market, side: Offer['side']) {
+  if (side === 'milestone' || market.line == null) return market.label
+  return `${side === 'over' ? 'Over' : 'Under'} ${market.line} ${market.label}`
 }
 
 export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
@@ -157,256 +108,206 @@ export function PickComposer({ legs, onAddLeg, onRemoveLeg, onClose }: {
   onRemoveLeg: (index: number) => void
   onClose: () => void
 }) {
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const [gameDate] = useState(today)
+  const easternToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const lockedSport = legs[0]?.sport ?? null
+  const lockedBook = legs[0]?.book ?? null
+  const [selectedSport, setSelectedSport] = useState<Sport>('MLB')
+  const sport = lockedSport ?? selectedSport
+  const [gameDate, setGameDate] = useState(easternToday)
   const [games, setGames] = useState<Game[]>([])
-  const [gamesLoading, setGamesLoading] = useState(true)
-  const [selectedGameKey, setSelectedGameKey] = useState('')
-  const [players, setPlayers] = useState<Player[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [gameKey, setGameKey] = useState('')
   const [playerQuery, setPlayerQuery] = useState('')
-  const [playerDropdownOpen, setPlayerDropdownOpen] = useState(false)
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
-  const [marketKey, setMarketKey] = useState('')
+  const [playerOpen, setPlayerOpen] = useState(false)
+  const [playerId, setPlayerId] = useState('')
+  const [marketId, setMarketId] = useState('')
+  const [side, setSide] = useState<Offer['side']>('milestone')
   const [book, setBook] = useState('')
-  const playerBoxRef = useRef<HTMLDivElement>(null)
+  const playerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    // Not /api/dugout/data — that route is requireTier('ultimate') for the
-    // Dugout/Batter Cost/The Public analytics payload it also returns, but
-    // posting a pick has never been tier-gated anywhere else (FeedComposer
-    // renders this unconditionally, POST /api/posts/pick has no tier check).
-    // An Advanced-tier member hit a silent 403 here that looked identical to
-    // "no real games today" — see /api/composer/games's own header comment.
-    fetch(`/api/composer/games?date=${gameDate}`)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(d => {
-        if (cancelled) return
-        // status is MLB's abstractGameState (Preview/Live/Final) — only
-        // Preview games can still take a pick. This is UX only (grey out
-        // + block selection); the real enforcement happens server-side in
-        // POST /api/posts/pick, which re-checks live against MLB itself
-        // rather than trusting whatever was true when this list loaded.
-        const gs: Game[] = (d.games ?? []).map((g: any) => ({
-          gameKey: g.gameKey, gamePk: String(g.gamePk),
-          homeAbbr: g.homeAbbr, awayAbbr: g.awayAbbr,
-          homeTeam: g.homeTeam, awayTeam: g.awayTeam,
-          status: g.status || 'Preview',
-        }))
-        setGames(gs)
-        // Stash full game payload for player lookups without a second fetch.
-        ;(window as any).__pickComposerGames = d.games ?? []
+    const endpoint = sport === 'NFL' ? '/api/composer/nfl-games' : `/api/composer/games?date=${easternToday}`
+    fetch(endpoint)
+      .then(async response => {
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Games are unavailable.')
+        return response.json()
       })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setGamesLoading(false) })
+      .then(payload => {
+        if (cancelled) return
+        const date = payload.date ?? easternToday
+        setGameDate(date)
+        setGames(sport === 'MLB' ? normalizeMlbGames((payload.games ?? []) as RawMlbGame[], date) : (payload.games ?? []))
+      })
+      .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Games are unavailable.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [gameDate])
+  }, [sport, easternToday])
 
   useEffect(() => {
-    if (!selectedGameKey) { setPlayers([]); return }
-    const raw = ((window as any).__pickComposerGames ?? []).find((g: any) => g.gameKey === selectedGameKey)
-    if (!raw) { setPlayers([]); return }
-    const all = [...(raw.homeLineup ?? []), ...(raw.awayLineup ?? [])]
-      .filter((p: any) => p.mlb_id)
-      .map((p: any) => ({ mlb_id: p.mlb_id, name: p.name, name_norm: p.name_norm, team: p.team, position: p.position, props: p.props }))
-    setPlayers(all)
-    setSelectedPlayer(null)
-    setMarketKey('')
-    setBook('')
-  }, [selectedGameKey])
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (playerBoxRef.current && !playerBoxRef.current.contains(e.target as Node)) setPlayerDropdownOpen(false)
+    const close = (event: MouseEvent) => {
+      if (playerRef.current && !playerRef.current.contains(event.target as Node)) setPlayerOpen(false)
     }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
   }, [])
 
+  const game = games.find(item => item.gameKey === gameKey) ?? null
+  const players = useMemo(() => game?.players ?? [], [game])
+  const player = players.find(item => (item.player_id ?? `mlb:${item.mlb_id}`) === playerId) ?? null
   const filteredPlayers = useMemo(() => {
-    const q = playerQuery.trim().toLowerCase()
-    if (!q) return players
-    return players.filter(p => p.name.toLowerCase().includes(q))
-  }, [players, playerQuery])
+    const query = playerQuery.trim().toLowerCase()
+    return query ? players.filter(item => `${item.name} ${item.team} ${item.position}`.toLowerCase().includes(query)) : players
+  }, [playerQuery, players])
+  const market = player?.markets.find(item => selectionKey(item) === marketId) ?? null
+  const sides = market ? Array.from(new Set(market.offers.map(offer => offer.side))) : []
+  const offers = market?.offers.filter(offer => offer.side === side && (!lockedBook || offer.vendor === lockedBook)) ?? []
+  const selectedOffer = offers.find(offer => offer.vendor === book) ?? null
 
-  // Only markets we actually have a real price for, from ANY book — no
-  // manual odds entry, so an unpriced market can't be posted at all.
-  const pricedMarkets = useMemo(() => {
-    if (!selectedPlayer?.props) return []
-    return Object.entries(PROP_META).filter(([key]) => {
-      const vendors = selectedPlayer.props[key]
-      return vendors && Object.values(vendors).some(v => v != null)
-    })
-  }, [selectedPlayer])
+  function chooseSport(next: Sport) {
+    if (lockedSport || next === sport) return
+    setSelectedSport(next)
+    setLoading(true)
+    setError('')
+    setGames([])
+    chooseGame('')
+  }
 
-  // Books that actually have a price for the selected market — narrowed to
-  // whichever book the parlay's already locked to, if there's an existing leg.
-  const lockedBook = legs[0]?.book ?? null
-  const availableBooks = useMemo(() => {
-    if (!selectedPlayer || !marketKey) return []
-    const vendors = selectedPlayer.props?.[marketKey] ?? {}
-    const all = Object.entries(vendors).filter(([, v]) => v != null).map(([k]) => k)
-    return lockedBook ? all.filter(b => b === lockedBook) : all
-  }, [selectedPlayer, marketKey, lockedBook])
-
-  // Auto-select the first available book whenever the market changes.
-  useEffect(() => {
-    setBook(availableBooks[0] ?? '')
-  }, [marketKey]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const selectedGame = games.find(g => g.gameKey === selectedGameKey) ?? null
-  const marketMeta = marketKey ? PROP_META[marketKey] : null
-  const odds: number | null = selectedPlayer && marketKey && book
-    ? (selectedPlayer.props?.[marketKey]?.[book] ?? null)
-    : null
-
-  const canAddLeg = !!(selectedPlayer && marketMeta && book && odds != null)
-
-  function addLeg() {
-    if (!canAddLeg || !selectedPlayer || !marketMeta) return
-    onAddLeg({
-      mlb_id: selectedPlayer.mlb_id,
-      player_name: selectedPlayer.name,
-      team: selectedPlayer.team,
-      headshot_url: mlbHeadshot(selectedPlayer.mlb_id),
-      game_pk: selectedGame?.gamePk ?? null,
-      game_date: gameDate,
-      prop_key: marketKey,
-      prop_label: marketMeta.label,
-      line: marketMeta.label,
-      book,
-      odds: odds!,
-    })
-    setSelectedPlayer(null)
+  function chooseGame(next: string) {
+    setGameKey(next)
+    setPlayerId('')
     setPlayerQuery('')
-    setMarketKey('')
+    setMarketId('')
     setBook('')
   }
 
-  const inputClass = "w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] outline-none focus:border-[var(--accent)]"
+  function choosePlayer(next: Player) {
+    setPlayerId(next.player_id ?? `mlb:${next.mlb_id}`)
+    setPlayerQuery('')
+    setPlayerOpen(false)
+    setMarketId('')
+    setBook('')
+  }
+
+  function chooseMarket(nextId: string) {
+    setMarketId(nextId)
+    const nextMarket = player?.markets.find(item => selectionKey(item) === nextId)
+    const nextSides = nextMarket ? Array.from(new Set(nextMarket.offers.map(offer => offer.side))) : []
+    const nextSide = nextSides.includes('over') ? 'over' : nextSides[0] ?? 'milestone'
+    setSide(nextSide)
+    setBook(nextMarket?.offers.find(offer => offer.side === nextSide && (!lockedBook || offer.vendor === lockedBook))?.vendor ?? '')
+  }
+
+  function chooseSide(next: Offer['side']) {
+    setSide(next)
+    setBook(market?.offers.find(offer => offer.side === next && (!lockedBook || offer.vendor === lockedBook))?.vendor ?? '')
+  }
+
+  function addLeg() {
+    if (!game || !player || !market || !selectedOffer) return
+    onAddLeg({
+      sport,
+      player_id: player.player_id,
+      mlb_id: player.mlb_id,
+      player_name: player.name,
+      team: player.team,
+      headshot_url: player.headshot_url,
+      game_pk: game.gamePk,
+      game_date: game.gameDate,
+      prop_key: market.prop_type,
+      prop_label: market.label,
+      line: labelFor(market, side),
+      numeric_line: market.line,
+      market_side: side,
+      book: selectedOffer.vendor,
+      odds: selectedOffer.odds,
+    })
+    setPlayerId('')
+    setPlayerQuery('')
+    setMarketId('')
+    setBook('')
+  }
 
   return (
-    <div style={{ marginTop: 12, padding: 12, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid rgba(255,184,77,0.2)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--gold)' }}>📊 {legs.length > 1 ? `${legs.length}-Leg Parlay` : 'Add Pick'} — {gameDate}</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2 }}>
-          <X size={14} />
-        </button>
-      </div>
-
-      {legs.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-          {legs.map((leg, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border-2)' }}>
-              <BookLogo vendor={leg.book ?? ''} size={14} />
-              <div style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
-                <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>{leg.player_name}</span>
-                <span style={{ color: 'var(--text-3)' }}> — {leg.prop_label}</span>
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-1)', fontFamily: 'monospace' }}>{leg.odds != null ? (leg.odds > 0 ? `+${leg.odds}` : leg.odds) : '—'}</span>
-              <button onClick={() => onRemoveLeg(i)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 0 }}>
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>
-            Add another leg from <strong style={{ color: 'var(--text-2)' }}>{lockedBook}</strong> to build a parlay, or post as-is.
-          </p>
+    <section className={styles.composer} aria-label="Add a structured pick">
+      <header className={styles.header}>
+        <div>
+          <span className={styles.eyebrow}>{legs.length > 1 ? `${legs.length}-LEG PARLAY` : 'STRUCTURED PICK'}</span>
+          <strong>Build from live market data</strong>
         </div>
-      )}
+        <button type="button" onClick={onClose} className={styles.iconButton} aria-label="Close pick builder"><X size={16} /></button>
+      </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <GamePicker games={games} loading={gamesLoading} value={selectedGameKey} onChange={setSelectedGameKey} />
-
-        {/* Player search */}
-        {selectedGameKey && (
-          <div ref={playerBoxRef} style={{ position: 'relative' }}>
-            {selectedPlayer ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border-2)' }}>
-                <PlayerAvatar
-                  headshot={mlbHeadshot(selectedPlayer.mlb_id)}
-                  teamLogo={getTeamLogoUrl(selectedPlayer.team)}
-                  teamAbbr={selectedPlayer.team}
-                  name={selectedPlayer.name}
-                  size={28}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{selectedPlayer.name}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{selectedPlayer.team} · {selectedPlayer.position}</div>
-                </div>
-                <button onClick={() => { setSelectedPlayer(null); setPlayerQuery('') }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
-                  <X size={13} />
-                </button>
-              </div>
-            ) : (
-              <>
-                <input
-                  value={playerQuery}
-                  onChange={e => { setPlayerQuery(e.target.value); setPlayerDropdownOpen(true) }}
-                  onFocus={() => setPlayerDropdownOpen(true)}
-                  placeholder="Search a player in this game…"
-                  className={inputClass}
-                />
-                {playerDropdownOpen && filteredPlayers.length > 0 && (
-                  <div style={{ position: 'absolute', zIndex: 10, marginTop: 4, width: '100%', maxHeight: 220, overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-                    {filteredPlayers.map(p => (
-                      <button
-                        key={p.mlb_id}
-                        onClick={() => { setSelectedPlayer(p); setPlayerDropdownOpen(false) }}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                      >
-                        <PlayerAvatar headshot={mlbHeadshot(p.mlb_id)} teamLogo={getTeamLogoUrl(p.team)} teamAbbr={p.team} name={p.name} size={24} />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>{p.name}</div>
-                          <div style={{ fontSize: 9, color: 'var(--text-3)' }}>{p.team} · {p.position}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Market + book — no odds field. Odds are whatever the books are
-            actually pricing (auto/BDL, or our manual FD/MGM importers); you
-            can't type a number in here. */}
-        {selectedPlayer && (
-          pricedMarkets.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-3)', padding: '4px 2px' }}>No priced markets for {selectedPlayer.name} yet.</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 8 }}>
-              <select value={marketKey} onChange={e => setMarketKey(e.target.value)} className={inputClass} style={{ fontSize: 12 }}>
-                <option value="">Market…</option>
-                {pricedMarkets.map(([key, meta]) => (
-                  <option key={key} value={key}>{meta.label}</option>
-                ))}
-              </select>
-              {marketKey && (availableBooks.length > 0
-                ? <BookPicker books={availableBooks} value={book} onChange={setBook} />
-                : <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, alignSelf: 'center' }}>Not priced on {lockedBook}</p>)}
-            </div>
-          )
-        )}
-
-        {selectedPlayer && marketKey && book && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-3)', paddingTop: 2 }}>
-            <BookLogo vendor={book} size={14} />
-            <span>{selectedPlayer.name} — {marketMeta?.label} · <strong style={{ color: 'var(--text-1)' }}>{odds != null ? (odds > 0 ? `+${odds}` : odds) : '—'}</strong></span>
-            <button
-              type="button"
-              onClick={addLeg}
-              disabled={!canAddLeg}
-              style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', cursor: canAddLeg ? 'pointer' : 'not-allowed', opacity: canAddLeg ? 1 : 0.5 }}
-            >
-              + Add Leg
-            </button>
-          </div>
-        )}
+      <div className={styles.sportTabs} aria-label="Sport">
+        {(['MLB', 'NFL'] as const).map(item => (
+          <button key={item} type="button" data-active={sport === item} disabled={!!lockedSport && lockedSport !== item} onClick={() => chooseSport(item)}>
+            {item === 'MLB' ? '⚾' : '🏈'} {item}
+          </button>
+        ))}
       </div>
-    </div>
+
+      {legs.length > 0 && <div className={styles.legs}>
+        {legs.map((leg, index) => <article className={styles.leg} key={`${leg.player_name}:${leg.prop_key}:${index}`}>
+          <span className={styles.legIndex}>{index + 1}</span>
+          <BookLogo vendor={leg.book ?? ''} size={17} />
+          <div><strong>{leg.player_name}</strong><small>{leg.line}</small></div>
+          <b>{leg.odds != null && leg.odds > 0 ? `+${leg.odds}` : leg.odds}</b>
+          <button type="button" onClick={() => onRemoveLeg(index)} aria-label={`Remove ${leg.player_name}`}><X size={13} /></button>
+        </article>)}
+      </div>}
+
+      <div className={styles.steps}>
+        <label className={styles.field}>
+          <span>Game <small>{gameDate}</small></span>
+          <div className={styles.selectWrap}>
+            <select value={gameKey} onChange={event => chooseGame(event.target.value)} disabled={loading || !games.length}>
+              <option value="">{loading ? 'Loading schedule…' : games.length ? 'Choose a matchup' : 'No available games'}</option>
+              {games.map(item => <option key={item.gameKey} value={item.gameKey} disabled={item.status !== 'Preview'}>
+                {item.awayAbbr} @ {item.homeAbbr}{item.gameTime ? ` · ${item.gameTime}` : ''}{item.status !== 'Preview' ? ' · Started' : ''}
+              </option>)}
+            </select>
+            <ChevronDown size={15} />
+          </div>
+        </label>
+
+        {game && <div className={styles.matchupCard}>
+          <TeamLogo src={game.awayLogo} abbr={game.awayAbbr} /><strong>{game.awayAbbr}</strong><span>@</span>
+          <TeamLogo src={game.homeLogo} abbr={game.homeAbbr} /><strong>{game.homeAbbr}</strong>
+        </div>}
+
+        {game && <div className={styles.field} ref={playerRef}>
+          <span>Player</span>
+          {player ? <div className={styles.selectedPlayer}>
+            <PlayerAvatar headshot={player.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(player.team) : undefined} teamAbbr={player.team} name={player.name} size={34} />
+            <div><strong>{player.name}</strong><small>{player.team} · {player.position}</small></div>
+            <Check size={15} />
+            <button type="button" onClick={() => setPlayerId('')} aria-label="Change player"><X size={14} /></button>
+          </div> : <div className={styles.playerSearch}>
+            <Search size={16} />
+            <input value={playerQuery} onChange={event => { setPlayerQuery(event.target.value); setPlayerOpen(true) }} onFocus={() => setPlayerOpen(true)} placeholder="Search this matchup" />
+            {playerOpen && <div className={styles.playerMenu}>
+              {filteredPlayers.length ? filteredPlayers.map(item => <button type="button" key={item.player_id ?? item.mlb_id} onClick={() => choosePlayer(item)}>
+                <PlayerAvatar headshot={item.headshot_url} teamLogo={sport === 'MLB' ? getTeamLogoUrl(item.team) : undefined} teamAbbr={item.team} name={item.name} size={30} />
+                <span><strong>{item.name}</strong><small>{item.team} · {item.position}</small></span>
+              </button>) : <p>No matching players</p>}
+            </div>}
+          </div>}
+        </div>}
+
+        {player && <div className={styles.marketGrid}>
+          <label className={styles.field}><span>Market</span><div className={styles.selectWrap}><select value={marketId} onChange={event => chooseMarket(event.target.value)}><option value="">Choose a market</option>{player.markets.map(item => <option key={selectionKey(item)} value={selectionKey(item)}>{item.label}{item.line == null ? '' : ` · ${item.line}`}</option>)}</select><ChevronDown size={15} /></div></label>
+          {market && sides.length > 1 && <label className={styles.field}><span>Side</span><div className={styles.selectWrap}><select value={side} onChange={event => chooseSide(event.target.value as Offer['side'])}>{sides.map(item => <option value={item} key={item}>{item === 'over' ? 'Over' : item === 'under' ? 'Under' : 'To happen'}</option>)}</select><ChevronDown size={15} /></div></label>}
+          {market && <label className={styles.field}><span>Sportsbook</span><div className={styles.selectWrap}><select value={book} onChange={event => setBook(event.target.value)} disabled={!offers.length}><option value="">{offers.length ? 'Choose a book' : `Not available${lockedBook ? ` on ${lockedBook}` : ''}`}</option>{offers.map(offer => <option key={offer.vendor} value={offer.vendor}>{offer.vendor} · {offer.odds > 0 ? '+' : ''}{offer.odds}</option>)}</select><ChevronDown size={15} /></div></label>}
+        </div>}
+      </div>
+
+      {error && <p className={styles.error}>{error}</p>}
+      {market && selectedOffer && <footer className={styles.summary}>
+        <div><BookLogo vendor={selectedOffer.vendor} size={20} /><span><strong>{player?.name}</strong><small>{labelFor(market, side)}</small></span></div>
+        <b>{selectedOffer.odds > 0 ? '+' : ''}{selectedOffer.odds}</b>
+        <button type="button" onClick={addLeg}><Plus size={15} /> Add leg</button>
+      </footer>}
+    </section>
   )
 }

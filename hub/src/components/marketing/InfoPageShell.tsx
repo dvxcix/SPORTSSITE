@@ -10,10 +10,10 @@ export function InfoPageShell({ title, subtitle, children }: { title: string; su
         <Link href="/" className={styles.brand}><Image src="/logo.png" alt="" width={28} height={28}/><span>Slip<span>Surge</span></span></Link>
         <Link href="/" className={styles.back}><ArrowLeft size={14} /> Home</Link>
       </header>
-      <main className={styles.main}>
+      <div className={styles.main}>
         <header className={styles.hero}><span className={styles.eyebrow}>SlipSurge</span><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</header>
         <div className={styles.content}>{children}</div>
-      </main>
+      </div>
     </div>
   )
 }
@@ -25,6 +25,15 @@ export function Section({ id, title, children }: { id?: string; title: string; c
       <div className={styles.sectionBody}>{children}</div>
     </section>
   )
+}
+
+export function InfoCallout({ icon, title, description, href }: { icon: React.ReactNode; title: string; description: string; href?: string }) {
+  const heading = href ? <a href={href}>{title}</a> : <strong>{title}</strong>
+  return <div className={styles.callout}><span className={styles.calloutIcon}>{icon}</span><div>{heading}<p>{description}</p></div></div>
+}
+
+export function InfoInlineLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return <Link href={href} className={styles.inlineLink}>{children}</Link>
 }
 
 // Anchor-link jump list for a long policy page — sections it links to must

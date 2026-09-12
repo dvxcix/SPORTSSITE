@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { User, Bell, Shield, CreditCard, Eye, ChevronRight, Zap, HelpCircle, KeyRound, MessageCircleQuestion, UserX } from 'lucide-react'
 import { DesktopSettingsPanel } from '@/components/desktop/DesktopSettingsPanel'
 import { SettingsShell } from '@/components/settings/SettingsShell'
+import styles from './SettingsOverview.module.css'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -52,24 +53,19 @@ export default async function SettingsPage() {
 
   return <SettingsShell active="/settings" title="Make SlipSurge yours" description="Your identity, membership, alerts, privacy, and account controls in one place.">
       <DesktopSettingsPanel />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className={styles.grid}>
         {sections.map(section => (
-          <section key={section.title} className="ss-settings-card !p-2">
-            <h2 className="px-3 pb-2 pt-3 text-[10px] font-black text-lime-300 uppercase tracking-[.18em]">{section.title}</h2>
-            <div className="divide-y divide-white/[.06]">
+          <section key={section.title} className={styles.section}>
+            <header className={styles.sectionHead}><h2>{section.title}</h2><span aria-hidden="true" /></header>
+            <div className={styles.items}>
               {section.items.map((item) => {
                 const Icon = item.icon
                 return (
                   <Link key={item.href} href={item.href}
-                    className="flex items-center gap-4 rounded-xl px-3 py-3.5 hover:bg-white/[.045] transition-colors group">
-                    <div className="p-2.5 rounded-xl border border-white/[.07] bg-black/30 group-hover:border-lime-400/25 transition-colors">
-                      <Icon size={16} className="text-lime-300" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm text-white">{item.label}</p>
-                      <p className="text-xs text-zinc-500">{item.desc}</p>
-                    </div>
-                    <ChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                    className={styles.item}>
+                    <span className={styles.icon}><Icon size={17} /></span>
+                    <span className={styles.copy}><strong>{item.label}</strong><small>{item.desc}</small></span>
+                    <ChevronRight size={15} className={styles.arrow} />
                   </Link>
                 )
               })}

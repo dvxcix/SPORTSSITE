@@ -111,34 +111,21 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
   return (
     <div className={styles.page}>
       {checkoutStatus === 'success' && (
-        <div style={{
-          position: 'relative', zIndex: 2, textAlign: 'center', fontSize: 13, fontWeight: 600,
-          color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderBottom: '1px solid rgba(74,222,128,0.25)',
-          padding: '10px 16px',
-        }}>
+        <div className={`${styles.statusBanner} ${styles.statusSuccess}`}>
           Payment received. Your plan updates automatically within a few seconds. If it doesn&apos;t show yet, refresh the page.
         </div>
       )}
       {checkoutStatus === 'error' && (
-        <div style={{
-          position: 'relative', zIndex: 2, textAlign: 'center', fontSize: 13, fontWeight: 600,
-          color: '#f87171', background: 'rgba(248,113,113,0.1)', borderBottom: '1px solid rgba(248,113,113,0.25)',
-          padding: '10px 16px',
-        }}>
+        <div className={`${styles.statusBanner} ${styles.statusError}`}>
           Checkout didn&apos;t complete. No charge was made. Try again whenever you&apos;re ready.
         </div>
       )}
       {/* Hero — same treatment as the main LandingPage: Spotlight + BackgroundBeams + Meteors */}
       <div className={styles.hero}>
-        <div style={{
-          position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)',
-          width: 700, height: 700, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(180,255,77,0.09) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
+        <div className={styles.heroGlow} aria-hidden="true" />
         <Spotlight className="left-0 top-0" fill="#B4FF4D" />
         <BackgroundBeams className="opacity-30" />
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div className={styles.heroMeteors} aria-hidden="true">
           <Meteors number={16} className="opacity-50" />
         </div>
 
@@ -147,17 +134,17 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           className={styles.heroContent}
         >
           <div className={styles.eyebrow}>SlipSurge memberships</div>
-          <h1 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, color: 'var(--text-1)', marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-            Start free. Upgrade when you need <span style={{ color: 'var(--accent)' }}>more signal.</span>
+          <h1 className={styles.heroTitle}>
+            Start free. Upgrade when you need <span>more signal.</span>
           </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
+          <p className={styles.heroCopy}>
             Free tools to get started. Upgrade for live analytics, line movement, and the deepest breakdown on the slate.
             Monthly Advanced includes a 7-day trial. Monthly Ultimate includes a 3-day trial.
           </p>
         </motion.div>
       </div>
 
-      <div style={{ position: 'relative', maxWidth: 1160, margin: '0 auto', padding: '20px 20px 64px', zIndex: 1 }}>
+      <div className={styles.main}>
         <nav className={styles.planGuide} aria-label="Choose a membership by goal">
           {PLAN_GUIDE.map(item => (
             <a key={item.href} href={item.href}>
@@ -171,9 +158,9 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
 
         <div className={styles.intervalWrap}>
           <div className={styles.intervalControl}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: interval === 'monthly' ? 'var(--text-1)' : 'var(--text-3)' }}>Monthly</span>
+            <span className={interval === 'monthly' ? styles.intervalActive : undefined}>Monthly</span>
             <Switch checked={interval === 'annual'} onChange={v => setInterval(v ? 'annual' : 'monthly')} ariaLabel="Use annual billing" />
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: interval === 'annual' ? 'var(--text-1)' : 'var(--text-3)' }}>
+            <span className={interval === 'annual' ? styles.intervalActive : undefined}>
               Annual
               <Badge variant="save">Save up to 21%</Badge>
             </span>
@@ -181,11 +168,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
         </div>
 
         {fullAccess && (
-          <div style={{
-            textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--accent)',
-            background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 10,
-            padding: '10px 16px', marginBottom: 24,
-          }}>
+          <div className={styles.accessBanner}>
             {fullAccessReason === 'admin' ? 'Admin account — full access to every tier.' : 'Beta access — full access to every tier while the beta program is active.'}
           </div>
         )}
@@ -232,45 +215,39 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
             return (
               <div key={t.tier} id={`plan-${t.tier}`} className={styles.cardAnchor}>
               <CometCard className="w-full h-full">
-                <div style={{
-                  background: t.highlight === 'premium'
-                    ? 'linear-gradient(160deg, rgba(180,255,77,0.10), var(--surface-1) 55%)'
-                    : 'var(--surface-1)',
-                  border: `1px solid ${t.highlight === 'premium' || (isCurrent && !fullAccess) ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: 16, padding: '22px 20px', display: 'flex', flexDirection: 'column', height: '100%',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2, flexWrap: 'wrap', gap: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-1)' }}>{t.label}</h2>
+                <div className={`${styles.card} ${t.highlight === 'premium' ? styles.cardPremium : ''} ${isCurrent && !fullAccess ? styles.cardCurrent : ''}`}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardName}>
+                      <h2>{t.label}</h2>
                       {t.highlight === 'premium' && <Badge variant="popular">Most Popular</Badge>}
                     </div>
                     {isCurrent && !fullAccess && <Badge variant="upcoming">Current</Badge>}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, margin: '10px 0 2px' }}>
-                    <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-1)' }}>
+                  <div className={styles.price}>
+                    <span>
                       ${displayPrice === 0 ? '0' : displayPrice!.toFixed(2)}
                     </span>
-                    <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/mo</span>
+                    <small>/mo</small>
                   </div>
                   {hasAnnual ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>billed ${t.annualPrice!.toFixed(2)}/yr</span>
+                    <div className={styles.billingDetail}>
+                      <span>billed ${t.annualPrice!.toFixed(2)}/yr</span>
                       {savePct && <Badge variant="save">Save {savePct}%</Badge>}
                     </div>
                   ) : interval === 'annual' && t.tier !== 'free' && !t.annualPrice ? (
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>No annual plan. Billed monthly.</p>
+                    <p className={styles.billingDetail}>No annual plan. Billed monthly.</p>
                   ) : (
-                    <div style={{ marginBottom: 8 }} />
+                    <div className={styles.billingSpacer} />
                   )}
 
-                  <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.4 }}>{t.tagline}</p>
+                  <p className={styles.tagline}>{t.tagline}</p>
 
                   {/* Monthly-only (confirmed against the actual Whop plan
                       config) — switching to Annual drops this, since that
                       plan has no trial behind it. */}
                   {interval === 'monthly' && t.trialDaysMonthly && (
-                    <div style={{ marginBottom: 14, marginTop: -6 }}>
+                    <div className={styles.trialBadge}>
                       <Badge variant="save">{t.trialDaysMonthly}-day free trial</Badge>
                     </div>
                   )}
@@ -292,7 +269,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                       may not even be the claim/grant (e.g. an admin who also
                       happens to hold one). */}
                   {!fullAccess && coverageNote && (
-                    <p style={{ fontSize: 11.5, color: 'var(--text-3)', textAlign: 'center', padding: '9px 0' }}>
+                    <p className={styles.coverageNote}>
                       {coverageNote}
                     </p>
                   )}
@@ -325,23 +302,20 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                     </a>
                   )}
 
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '18px 0 8px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  <ul className={styles.featureList}>
                     {t.tier === 'free' && FREE_ROWS.map(f => (
-                      <li key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--text-2)' }}>
-                        <Check size={14} color="var(--accent)" style={{ marginTop: 1, flexShrink: 0 }} />
+                      <li key={f}>
+                        <Check size={14} />
                         <span>{f}</span>
                       </li>
                     ))}
                     {FEATURE_ROWS.map(row => {
                       const included = TIER_RANK[t.tier] >= TIER_RANK[row.minTier]
                       return (
-                        <li key={row.label} style={{
-                          display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5,
-                          color: included ? 'var(--text-2)' : 'var(--text-3)', opacity: included ? 1 : 0.6,
-                        }}>
+                        <li key={row.label} className={included ? '' : styles.featureUnavailable}>
                           {included
-                            ? <Check size={14} color="var(--accent)" style={{ marginTop: 1, flexShrink: 0 }} />
-                            : <X size={14} color="var(--text-3)" style={{ marginTop: 1, flexShrink: 0 }} />}
+                            ? <Check size={14} />
+                            : <X size={14} />}
                           <span>{row.label}</span>
                         </li>
                       )
@@ -349,10 +323,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
                   </ul>
 
                   {t.tier !== 'free' && (
-                    <div style={{
-                      marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--border)',
-                      display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)',
-                    }}>
+                    <div className={styles.renewal}>
                       <span>Renews {hasAnnual ? 'annually' : 'monthly'}</span>
                       <span>Cancel anytime</span>
                     </div>

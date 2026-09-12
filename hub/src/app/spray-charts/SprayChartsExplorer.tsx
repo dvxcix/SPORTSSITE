@@ -250,7 +250,7 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
     image.src = objectUrl
   }
 
-  return <main className={styles.page}>
+  return <div className={styles.page}>
     <header className={styles.hero}>
       <div className={styles.heroIcon}><Crosshair size={26}/></div>
       <div><p>ULTIMATE · STATCAST VISUAL LAB</p><h1>Spray Charts</h1><span>Replay every captured batted ball on the park where it happened.</span></div>
@@ -344,5 +344,5 @@ export function SprayChartsExplorer({ initialDate, initialGamePk = 0, initialPla
 
       <ContactFlightStage events={flightEvents} title={!allPlayers && playerIds.length === 1 ? `${players.find(player => player.id === playerIds[0])?.name ?? 'Player'} Flight Replay` : 'Game Contact Flight'} eyebrow="Selected game and filters" tone="all" />
     </> : null}
-  </main>
+  </div>
 }

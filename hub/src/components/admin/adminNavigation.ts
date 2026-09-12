@@ -7,6 +7,7 @@ import {
   Bot,
   Calendar,
   Cloud,
+  ClipboardCheck,
   Crosshair,
   CreditCard,
   Dna,
@@ -54,6 +55,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: '/admin/pipeline-health', label: 'Pipeline health', description: 'Data, billing, and notification jobs', icon: Activity, keywords: ['cron', 'jobs', 'telemetry'] },
       { href: '/admin/browserbase', label: 'Browser automation', description: 'Proxy cost, sessions, and scraper attribution', icon: Cloud, keywords: ['browserbase', 'proxy', 'usage', 'cost', 'scrapers'] },
       { href: '/admin/audit', label: 'Audit log', description: 'Administrative activity history', icon: ScrollText, keywords: ['security', 'history'] },
+      { href: '/admin/product-audit', label: 'Product audit', description: 'Route and experience migration tracker', icon: ClipboardCheck, keywords: ['ui', 'ux', 'routes', 'responsive', 'quality'] },
     ],
   },
   {

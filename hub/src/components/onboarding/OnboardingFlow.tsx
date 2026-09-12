@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import dynamic from 'next/dynamic'
@@ -12,13 +12,14 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { SuggestedUsers, type SuggestedUser } from '@/components/social/SuggestedUsers'
 import { trackProductEvent } from '@/lib/productAnalytics'
 import { Switch } from '@/components/ui/Switch'
+import { NflTeamLogo } from '@/components/shared/NflTeamLogo'
 
 // dynamic(..., { ssr: false }) isn't allowed inside the server-rendered
 // onboarding page itself (Next 16), so the Meteors background lives here
 // instead — this component is already 'use client'.
 const Meteors = dynamic(() => import('@/components/ui/meteors').then(m => m.Meteors), { ssr: false })
 
-const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Privacy', 'Follow', 'Done']
+const STEPS = ['Welcome', 'Profile', 'Photo', 'Teams', 'Privacy', 'Alerts', 'Follow', 'Done']
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA']
 
 const slide = {
@@ -27,11 +28,12 @@ const slide = {
   exit: { opacity: 0, x: -16 },
 }
 
-export function OnboardingFlow({ userId, initialProfile, accountType, suggestedUsers }: {
+export function OnboardingFlow({ userId, initialProfile, accountType, suggestedUsers, nflTeams }: {
   userId: string
   initialProfile: any
   accountType: 'user' | 'creator'
   suggestedUsers: SuggestedUser[]
+  nflTeams: Array<{ team_abbr: string; team_name: string; team_logo_espn: string | null }>
 }) {
   const supabase = useMemo(() => createClient(), [])
   const [step, setStep] = useState(0)
@@ -45,10 +47,49 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   // nothing pointed them at Settings unless they went looking on their own.
   const [isPrivate, setIsPrivate] = useState(initialProfile?.is_private ?? false)
   const [hideWinRate, setHideWinRate] = useState(initialProfile?.hide_win_rate ?? false)
+  const [alerts, setAlerts] = useState<Record<string, boolean>>({
+    lineup_confirmed: initialProfile?.notification_settings?.lineup_confirmed ?? true,
+    new_pick: initialProfile?.notification_settings?.new_pick ?? true,
+    pick_result: initialProfile?.notification_settings?.pick_result ?? true,
+    dm: initialProfile?.notification_settings?.dm ?? true,
+  })
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const draftReady = useRef(false)
+  const draftKey = `slipsurge:onboarding:${userId}`
+
+  useEffect(() => {
+    let active = true
+    try {
+      const saved = localStorage.getItem(draftKey)
+      if (saved) {
+        const draft = JSON.parse(saved) as { step?: number; displayName?: string; bio?: string; avatarUrl?: string; teams?: string[]; sports?: string[]; isPrivate?: boolean; hideWinRate?: boolean; alerts?: Record<string, boolean> }
+        queueMicrotask(() => {
+          if (!active) return
+          if (Number.isInteger(draft.step)) setStep(Math.max(0, Math.min(STEPS.length - 1, draft.step!)))
+          if (typeof draft.displayName === 'string') setDisplayName(draft.displayName)
+          if (typeof draft.bio === 'string') setBio(draft.bio)
+          if (typeof draft.avatarUrl === 'string') setAvatarUrl(draft.avatarUrl)
+          if (Array.isArray(draft.teams)) setTeams(draft.teams.filter(value => typeof value === 'string'))
+          if (Array.isArray(draft.sports)) setSports(draft.sports.filter(value => typeof value === 'string'))
+          if (typeof draft.isPrivate === 'boolean') setIsPrivate(draft.isPrivate)
+          if (typeof draft.hideWinRate === 'boolean') setHideWinRate(draft.hideWinRate)
+          if (draft.alerts && typeof draft.alerts === 'object') setAlerts(current => ({ ...current, ...draft.alerts }))
+          draftReady.current = true
+        })
+        return () => { active = false }
+      }
+    } catch { localStorage.removeItem(draftKey) }
+    draftReady.current = true
+    return () => { active = false }
+  }, [draftKey])
+
+  useEffect(() => {
+    if (!draftReady.current) return
+    try { localStorage.setItem(draftKey, JSON.stringify({ step, displayName, bio, avatarUrl, teams, sports, isPrivate, hideWinRate, alerts })) } catch { /* storage may be unavailable */ }
+  }, [alerts, avatarUrl, bio, displayName, draftKey, hideWinRate, isPrivate, sports, step, teams])
 
   function toggleTeam(abbr: string) {
     setTeams(prev => prev.includes(abbr) ? prev.filter(x => x !== abbr) : [...prev, abbr])
@@ -83,9 +124,11 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
         favorite_sports: sports,
         is_private: isPrivate,
         hide_win_rate: hideWinRate,
+        notification_settings: { ...(initialProfile?.notification_settings ?? {}), ...alerts },
         onboarding_completed_at: new Date().toISOString(),
       }).eq('id', userId).select('id').single()
       if (updateError) throw updateError
+      localStorage.removeItem(draftKey)
       fetch('/api/onboarding/notify-welcome', { method: 'POST', keepalive: true }).catch(() => {})
       trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length, favorite_sport_count: sports.length })
       window.location.replace('/feed')
@@ -99,7 +142,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 
   return (
     <>
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      <div className="ss-onboarding-meteors" aria-hidden="true">
         <Meteors number={12} className="opacity-60" />
       </div>
       <div className="ss-onboarding-card">
@@ -112,19 +155,14 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
         </div>
         <div className="ss-onboarding-progress-track" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1} aria-label={`Onboarding: ${STEPS[step]}`}>
         {STEPS.map((s, i) => (
-          <div key={s} className="ss-onboarding-progress-step" style={{ flex: i < STEPS.length - 1 ? 1 : undefined }}>
+          <div key={s} className="ss-onboarding-progress-step" data-state={i < step ? 'complete' : i === step ? 'current' : 'upcoming'}>
             <div
               className="ss-onboarding-progress-dot"
-              style={{
-                background: i < step ? 'var(--accent)' : i === step ? 'var(--surface-3)' : 'var(--surface-2)',
-                color: i < step ? 'var(--accent-fg)' : i === step ? 'var(--text-1)' : 'var(--text-3)',
-                boxShadow: i === step ? '0 0 0 2px var(--accent)' : 'none',
-              }}
             >
               {i < step ? <Check size={12} /> : i + 1}
             </div>
             {i < STEPS.length - 1 && (
-              <div className="ss-onboarding-progress-line" style={{ background: i < step ? 'var(--accent)' : 'var(--border)' }} />
+              <div className="ss-onboarding-progress-line" />
             )}
           </div>
         ))}
@@ -132,7 +170,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
       </div>
 
       {error && (
-        <div role="alert" style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'var(--red-dim)', border: '1px solid rgba(255,77,106,0.2)', fontSize: 13, color: 'var(--red)' }}>
+        <div role="alert" className="ss-onboarding-alert">
           {error}
         </div>
       )}
@@ -141,76 +179,69 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
         <motion.div className="ss-onboarding-stage" key={step} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
 
           {step === 0 && (
-            <div className="text-center space-y-6">
+            <div className="ss-onboarding-screen is-centered">
               <div>
-                <p className="text-5xl mb-4">⚡</p>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
-                  Welcome to <span style={{ color: 'var(--accent)' }}>SlipSurge</span>
+                <p className="ss-onboarding-emoji">⚡</p>
+                <h1>
+                  Welcome to <span>SlipSurge</span>
                 </h1>
-                <p style={{ color: 'var(--text-2)', marginTop: 12, fontSize: 14, lineHeight: 1.6 }}>
+                <p className="ss-onboarding-lead">
                   {accountType === 'creator'
                     ? "You're set up as a Capper. Build your record in the open, share picks, and grow a following."
                     : 'The social hub for sports & picks. Follow real graded records, share your own, and never miss a line move.'}
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="ss-onboarding-benefits">
                 {[
                   { emoji: '🏆', label: 'Follow top cappers' },
                   { emoji: '🎯', label: 'Share your picks' },
                   { emoji: '💰', label: 'Track your wins' },
                 ].map(f => (
-                  <div key={f.label} className="ss-card" style={{ padding: 12, textAlign: 'center' }}>
-                    <p style={{ fontSize: 22, marginBottom: 4 }}>{f.emoji}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>{f.label}</p>
+                  <div key={f.label} className="ss-onboarding-benefit">
+                    <p>{f.emoji}</p>
+                    <span>{f.label}</span>
                   </div>
                 ))}
               </div>
-              <button onClick={() => setStep(1)} className="ss-btn ss-btn-accent w-full justify-center" style={{ padding: '13px 20px', fontSize: 14 }}>
+              <button onClick={() => setStep(1)} className="ss-onboarding-primary">
                 Get Started <ChevronRight size={16} />
               </button>
             </div>
           )}
 
           {step === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Your Profile</h2>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>How should others know you?</p>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Display Name</label>
+            <div className="ss-onboarding-screen">
+              <StepHeading title="Your Profile" copy="How should others know you?" />
+              <div className="ss-onboarding-fields">
+                <label>
+                  <span>Display Name</span>
                   <input value={displayName} maxLength={60} autoComplete="name" onChange={e => setDisplayName(e.target.value)} placeholder="Your name or handle" className="ss-input" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>Bio</label>
-                  <textarea value={bio} maxLength={280} onChange={e => setBio(e.target.value)} placeholder="Tell people who you are — your record, strategy, teams you follow…" rows={3} className="ss-input" style={{ resize: 'none' }} />
-                </div>
+                </label>
+                <label>
+                  <span>Bio</span>
+                  <textarea value={bio} maxLength={280} onChange={e => setBio(e.target.value)} placeholder="Tell people who you are — your record, strategy, teams you follow…" rows={3} className="ss-input" />
+                </label>
               </div>
               <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} />
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Add a Photo</h2>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Profiles with a real picture get way more follows.</p>
-              </div>
-              <div className="flex flex-col items-center gap-4 py-4">
+            <div className="ss-onboarding-screen">
+              <StepHeading title="Add a Photo" copy="Help people recognize you across the feed, messages, and communities." />
+              <div className="ss-onboarding-photo">
                 <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.target.value = '' }} />
                 <button
                   type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading}
-                  className="relative rounded-full overflow-hidden flex items-center justify-center group"
-                  style={{ width: 112, height: 112, background: 'var(--surface-2)', border: '2px solid var(--border-2)', fontSize: 36, fontWeight: 900, color: 'var(--text-3)' }}
+                  className="ss-onboarding-avatar group"
                 >
                   {avatarUrl ? <Image src={avatarUrl} alt="" fill sizes="112px" className="object-cover" /> : initials}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                  <div className="ss-onboarding-avatar-overlay">
                     {uploading ? <Loader2 size={22} className="animate-spin" color="#fff" /> : <Upload size={22} color="#fff" />}
                   </div>
                 </button>
-                <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading} style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploading} className="ss-onboarding-upload">
                   {uploading ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload a photo'}
                 </button>
               </div>
@@ -219,16 +250,13 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Your Sports</h2>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Choose what you follow. You can refine this anytime.</p>
-              </div>
+            <div className="ss-onboarding-screen">
+              <StepHeading title="Your Sports" copy="Choose what you follow. You can refine this anytime." />
               <div className="ss-onboarding-sports">
                 {SPORTS.map(sport => <button key={sport} type="button" aria-pressed={sports.includes(sport)} className={sports.includes(sport) ? 'is-selected' : ''} onClick={() => toggleSport(sport)}>{sports.includes(sport) && <Check size={12}/>} {sport}</button>)}
               </div>
               {(sports.length === 0 || sports.includes('MLB')) && <div>
-                <p className="mb-2 text-xs font-black uppercase tracking-widest text-zinc-500">Favorite MLB teams</p>
+                <p className="ss-onboarding-kicker">Favorite MLB teams</p>
                 <div className="ss-onboarding-teams">
                   {MLB_TEAMS.map(t => (
                     <button key={t.abbr} type="button" aria-pressed={teams.includes(t.abbr)} onClick={() => toggleTeam(t.abbr)} className={teams.includes(t.abbr) ? 'is-selected' : ''}>
@@ -238,25 +266,33 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
                   ))}
                 </div>
               </div>}
+              {sports.includes('NFL') && nflTeams.length > 0 && <div>
+                <p className="ss-onboarding-kicker">Favorite NFL teams</p>
+                <div className="ss-onboarding-teams">
+                  {nflTeams.map(team => (
+                    <button key={team.team_abbr} type="button" aria-pressed={teams.includes(team.team_abbr)} onClick={() => toggleTeam(team.team_abbr)} className={teams.includes(team.team_abbr) ? 'is-selected' : ''}>
+                      <NflTeamLogo abbr={team.team_abbr} logoUrl={team.team_logo_espn} size={18}/>
+                      {team.team_name}
+                    </button>
+                  ))}
+                </div>
+              </div>}
               <StepNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={sports.length || teams.length ? 'Next' : 'Skip for now'} />
             </div>
           )}
 
           {step === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Your Privacy</h2>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>You're in control of what others can see. Change these anytime in Settings.</p>
-              </div>
-              <div className="ss-card" style={{ padding: 0 }}>
+            <div className="ss-onboarding-screen">
+              <StepHeading title="Your Privacy" copy="You’re in control of what others can see. Change these anytime in Settings." />
+              <div className="ss-onboarding-preferences">
                 {[
                   { label: 'Private Account', desc: 'Only your followers can see your posts, picks, and pick record — you\'re also removed from the public leaderboard. Your profile, username, and bio stay visible', value: isPrivate, set: setIsPrivate },
                   { label: 'Hide Win Rate', desc: 'Hide your pick record and win rate from your public profile', value: hideWinRate, set: setHideWinRate },
                 ].map(s => (
-                  <div key={s.label} className="flex items-center justify-between" style={{ padding: '14px 16px', borderBottom: s.label === 'Private Account' ? '1px solid var(--border)' : 'none' }}>
-                    <div style={{ paddingRight: 12 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{s.label}</p>
-                      <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, lineHeight: 1.4 }}>{s.desc}</p>
+                  <div key={s.label}>
+                    <div>
+                      <strong>{s.label}</strong>
+                      <p>{s.desc}</p>
                     </div>
                     <Switch checked={s.value} onChange={s.set} ariaLabel={s.label} />
                   </div>
@@ -267,36 +303,48 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
           )}
 
           {step === 5 && (
-            <div className="space-y-6">
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>Who to Follow</h2>
-                <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>Follow a few to get your feed going — you can always find more later.</p>
+            <div className="ss-onboarding-screen">
+              <StepHeading title="Choose Your Alerts" copy="Keep the signals you care about. You can fine-tune delivery in Settings." />
+              <div className="ss-onboarding-preferences">
+                {[
+                  { key: 'lineup_confirmed', label: 'Lineup changes', desc: 'Confirmed and changed MLB lineups' },
+                  { key: 'new_pick', label: 'Following activity', desc: 'New picks from people you follow' },
+                  { key: 'pick_result', label: 'Pick results', desc: 'When a tracked pick is graded' },
+                  { key: 'dm', label: 'Direct messages', desc: 'New private messages' },
+                ].map(item => <div key={item.key}><div><strong>{item.label}</strong><p>{item.desc}</p></div><Switch checked={alerts[item.key]} onChange={checked => setAlerts(current => ({ ...current, [item.key]: checked }))} ariaLabel={item.label}/></div>)}
               </div>
-              {suggestedUsers.length > 0 ? (
-                <div className="ss-card" style={{ padding: 16 }}>
-                  <SuggestedUsers users={suggestedUsers} currentUserId={userId} />
-                </div>
-              ) : (
-                <div className="ss-card" style={{ padding: 16, textAlign: 'center', fontSize: 13, color: 'var(--text-3)' }}>
-                  No suggestions yet — you'll find people to follow all over the app.
-                </div>
-              )}
               <StepNav onBack={() => setStep(4)} onNext={() => setStep(6)} />
             </div>
           )}
 
           {step === 6 && (
-            <div className="text-center space-y-6">
+            <div className="ss-onboarding-screen">
+              <StepHeading title="Who to Follow" copy="Follow a few to get your feed going — you can always find more later." />
+              {suggestedUsers.length > 0 ? (
+                <div className="ss-onboarding-suggestions">
+                  <SuggestedUsers users={suggestedUsers} currentUserId={userId} />
+                </div>
+              ) : (
+                <div className="ss-onboarding-empty">
+                  No suggestions yet — you'll find people to follow all over the app.
+                </div>
+              )}
+              <StepNav onBack={() => setStep(5)} onNext={() => setStep(7)} />
+            </div>
+          )}
+
+          {step === 7 && (
+            <div className="ss-onboarding-screen is-centered">
               <div>
-                <p className="text-5xl mb-4">🎉</p>
-                <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-1)' }}>You're all set!</h2>
-                <p style={{ color: 'var(--text-2)', marginTop: 8, fontSize: 14 }}>
+                <p className="ss-onboarding-emoji">🎉</p>
+                <h2>You&apos;re all set!</h2>
+                <p className="ss-onboarding-lead">
                   {accountType === 'creator'
                     ? 'Your profile is ready — drop your first pick and start building your record.'
                     : "Your feed is ready. Let's see what's happening."}
                 </p>
               </div>
-              <button type="button" onClick={finish} disabled={saving} className="ss-btn ss-btn-accent w-full justify-center" style={{ padding: '13px 20px', fontSize: 14, opacity: saving ? 0.6 : 1 }}>
+              <button type="button" onClick={finish} disabled={saving} className="ss-onboarding-primary">
                 {saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Go to My Feed →'}
               </button>
             </div>
@@ -311,11 +359,15 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
 
 function StepNav({ onBack, onNext, nextLabel = 'Next' }: { onBack: () => void; onNext: () => void; nextLabel?: string }) {
   return (
-    <div className="flex gap-3">
-      <button type="button" onClick={onBack} className="ss-btn ss-btn-ghost flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>Back</button>
-      <button type="button" onClick={onNext} className="ss-btn ss-btn-accent flex-1 justify-center" style={{ padding: '12px 20px', fontSize: 14 }}>
+    <div className="ss-onboarding-nav">
+      <button type="button" onClick={onBack}>Back</button>
+      <button type="button" onClick={onNext}>
         {nextLabel} <ChevronRight size={16} />
       </button>
     </div>
   )
+}
+
+function StepHeading({ title, copy }: { title: string; copy: string }) {
+  return <header className="ss-onboarding-heading"><h2>{title}</h2><p>{copy}</p></header>
 }

@@ -22,11 +22,6 @@ function WatchlistRow({ item, wl, selectMode, selected, onToggleSelect, onPostSi
 }) {
   const [removing, setRemoving] = useState(false)
 
-  const bestBook = Object.entries(item.odds_by_book || {}).length > 0
-    ? Object.entries(item.odds_by_book).reduce((best, [book, odds]) =>
-        best == null || Math.abs(odds) < Math.abs(best[1]) ? [book, odds] as [string, number] : best, null as [string, number] | null)
-    : null
-
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
@@ -131,7 +126,8 @@ export function WatchlistButton() {
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -328,7 +324,12 @@ export function WatchlistButton() {
         />
       )}
 
-      {sharing && <ShareWatchlistModal onClose={() => setSharing(false)} />}
+      {sharing && <ShareWatchlistModal
+        onClose={() => setSharing(false)}
+        sport={pendingItems.length && pendingItems.every(item => item.sport.toLowerCase() === pendingItems[0].sport.toLowerCase())
+          ? pendingItems[0].sport.toUpperCase() === 'NFL' ? 'NFL' : 'MLB'
+          : null}
+      />}
     </>
   )
 }

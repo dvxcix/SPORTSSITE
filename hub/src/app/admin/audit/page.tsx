@@ -35,7 +35,7 @@ export default async function AdminAuditPage({
   const actions = Array.from(new Set(rows.map(row => row.action))).sort()
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[var(--accent)]"><ShieldCheck size={14} /> Security</div>
@@ -69,6 +69,6 @@ export default async function AdminAuditPage({
           </article>
         ))}
       </section>
-    </main>
+    </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useUserBadges, type Badge } from '@/lib/badges'
 import { Tooltip } from '@/components/ui/tooltip-card'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 // Renders inline next to a display name wherever one shows up (post
 // author, comment author, profile header, leaderboard row, search
@@ -25,7 +26,7 @@ export function UserBadges({ userId, size = 14, maxVisible = 4, badges: supplied
       {visible.map(b => (
         <Tooltip key={b.id} content={<BadgeTooltip badge={b} />}>
           <span className="ss-user-badge-shell" style={{ width: size + 6, height: size + 6 }}>
-            <img className="ss-user-badge-icon" src={b.icon_url} alt={b.name} style={{ width: size, height: size }} />
+            <SafeImage className="ss-user-badge-icon" src={b.icon_url} alt={b.name} style={{ width: size, height: size }} fallback={<span aria-hidden="true" className="ss-user-badge-fallback">◆</span>} />
           </span>
         </Tooltip>
       ))}
@@ -41,7 +42,7 @@ export function UserBadges({ userId, size = 14, maxVisible = 4, badges: supplied
 function BadgeTooltip({ badge, compact = false }: { badge: Badge; compact?: boolean }) {
   return (
     <div className={`ss-badge-tooltip${compact ? ' is-compact' : ''}`}>
-      <span className="ss-badge-tooltip-art"><img src={badge.icon_url} alt="" /></span>
+      <span className="ss-badge-tooltip-art"><SafeImage src={badge.icon_url} alt="" fallback={<span aria-hidden="true">◆</span>} /></span>
       <span><strong>{badge.name}</strong><small>{badge.description}</small></span>
     </div>
   )

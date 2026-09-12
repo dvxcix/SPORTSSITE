@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { ProductPageShell, ProductPanel } from '@/components/product/ProductPage'
 import { ForumReactions, type ForumReaction } from '@/components/forum/ForumReactions'
 import { LinkifiedText } from '@/components/social/LinkifiedText'
+import { ForumReplyActions } from '@/components/forum/ForumReplyActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,8 +78,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       {/* Replies */}
       {(replies?.length ?? 0) > 0 && (
         <div className="space-y-3 mb-4">
-          {(replies ?? []).map((r: any, i: number) => (
-            <article key={r.id} className="ss-forum-post">
+          {(replies ?? []).map((r: any, i: number) => {
+            const depth = r.parent_reply_id ? 1 : 0
+            return <article key={r.id} className={`ss-forum-post ${depth ? 'is-nested' : ''}`}>
               <div className="flex items-center gap-3 mb-3">
                 <Link href={`/profile/${r.author?.username}`}><MemberAvatar src={r.author?.avatar_url} name={r.author?.display_name || r.author?.username || 'Member'} size={34} /></Link>
                 <div>
@@ -89,10 +91,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                   <p className="text-xs text-zinc-500">#{i + 1} · {new Date(r.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
-              <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap"><LinkifiedText text={r.content || ''} /></p>
+              {r.is_deleted ? <p className="ss-chat-deleted">Reply deleted</p> : <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap"><LinkifiedText text={r.content || ''} />{r.edited_at ? <small className="ss-chat-edited">edited</small> : null}</p>}
               <ForumReactions targetId={r.id} targetType="forum_reply" userId={user?.id} ownerId={r.author_id} initialReactions={reactionsByTarget.get(r.id) ?? []} returnPath={returnPath} />
+              {!r.is_deleted ? <ForumReplyActions replyId={r.id} authorId={r.author_id} currentUserId={user?.id} threadId={thread.id} threadAuthorId={thread.author_id} content={r.content || ''} /> : null}
             </article>
-          ))}
+          })}
         </div>
       )}
 

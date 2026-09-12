@@ -11,11 +11,11 @@ export default async function CreateStoryPage() {
   if (!user) redirect('/auth/login?next=/stories/create')
   return (
     <TierGate requiredTier="basic" label="Stories">
-      <main className="ss-flow-page !max-w-md">
+      <div className="ss-flow-page !max-w-md">
         <Link href="/feed" className="ss-flow-back"><ChevronLeft size={14} /> Feed</Link>
         <header className="ss-flow-heading"><span><Sparkles size={22} /></span><div><p>24 hours</p><h1>Add to story</h1></div></header>
         <CreateStoryForm userId={user.id} />
-      </main>
+      </div>
     </TierGate>
   )
 }

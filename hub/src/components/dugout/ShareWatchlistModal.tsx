@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { X, Download, Copy, Check, Share, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
+import { ModalSurface } from '@/components/ui/ModalSurface'
+import { SafeImage } from '@/components/ui/SafeImage'
+import styles from './ShareWatchlistModal.module.css'
 
 // Sibling to ShareImageModal.tsx (posts), adapted for a feature with no
 // public URL to unfurl: a Watchlist is a private, live snapshot of the
@@ -13,7 +16,7 @@ import { uploadMedia } from '@/lib/uploadMedia'
 // Download + native file-share (which attaches the PNG bytes directly, no
 // URL needed — covers sharing to X/Instagram/Messages from a phone just
 // fine) plus a desktop-friendly "Copy Image" cover the same ground instead.
-export function ShareWatchlistModal({ onClose }: { onClose: () => void }) {
+export function ShareWatchlistModal({ onClose, sport }: { onClose: () => void; sport: 'MLB' | 'NFL' | null }) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -85,9 +88,9 @@ export function ShareWatchlistModal({ onClose }: { onClose: () => void }) {
       const upload = await uploadMedia(new File([blob], 'dugout-research.png', { type: 'image/png' }), 'posts')
       if ('error' in upload) throw new Error(upload.error)
       const { data, error: insertError } = await supabase.from('posts').insert({
-        content: 'Dugout research card',
+        content: sport === 'NFL' ? 'Sideline research card' : sport === 'MLB' ? 'Dugout research card' : 'SlipSurge research card',
         post_type: 'analysis',
-        sport: 'MLB',
+        sport,
         media_urls: [upload.publicUrl],
         visibility: 'public',
       }).select('id').single()
@@ -103,80 +106,52 @@ export function ShareWatchlistModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    <ModalSurface
+      open
+      onClose={onClose}
+      labelledBy="watchlist-share-title"
+      describedBy="watchlist-share-description"
+      backdropClassName={styles.backdrop}
+      panelClassName={styles.panel}
     >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: 'min(480px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 18 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-1)' }}>Share Watchlist</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+      <div className={styles.header}>
+        <div>
+          <span className={styles.eyebrow}>{sport ?? 'CROSS-SPORT'} RESEARCH</span>
+          <h2 id="watchlist-share-title">Share watchlist</h2>
+          <p id="watchlist-share-description">Publish or export the current saved-board snapshot.</p>
         </div>
-
-        {/* Scrolls internally once the image is taller than this box — the
-            downloaded/shared PNG is always the complete image regardless of
-            how much of it is visible here at once. */}
-        <div style={{
-          position: 'relative', width: '100%', maxHeight: '55vh', overflowY: 'auto', borderRadius: 12,
-          border: '1px solid var(--border)', background: 'var(--surface)', marginBottom: 16,
-        }}>
-          {!imgLoaded && !imgErrored && (
-            <div style={{ padding: 40, textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>
-              Generating image…
-            </div>
-          )}
-          {imgErrored ? (
-            <div style={{ padding: 30, textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>Couldn't generate your watchlist image.</div>
-          ) : (
-            <img
-              src={imgUrl}
-              alt="Watchlist share preview"
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgErrored(true)}
-              style={{ width: '100%', display: imgLoaded ? 'block' : 'none' }}
-            />
-          )}
-        </div>
-
-        {error && <p role="alert" style={{ color: 'var(--red)', fontSize: 12, margin: '0 0 10px', textAlign: 'center' }}>{error}</p>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(88px, 1fr))', gap: 10 }}>
-          <ShareOptionBtn label="Post to Feed" onClick={postToFeed} busy={busy === 'feed'}
-            icon={<Send size={18} />} bg="color-mix(in srgb, var(--green) 18%, var(--surface-2))" fg="var(--green)" />
-          <ShareOptionBtn label="Download" onClick={download} busy={busy === 'download'}
-            icon={<Download size={18} />} bg="var(--surface-2)" fg="var(--text-1)" />
-          <ShareOptionBtn label="Copy Image" onClick={copyImage} busy={busy === 'copy'}
-            icon={copied ? <Check size={18} /> : <Copy size={18} />} bg="var(--surface-2)" fg={copied ? 'var(--green)' : 'var(--text-1)'} />
-          <ShareOptionBtn label="More" onClick={nativeShare} busy={busy === 'native'}
-            icon={<Share size={18} />} bg="var(--surface-2)" fg="var(--text-1)" />
-        </div>
+        <button type="button" data-modal-autofocus onClick={onClose} className={styles.close} aria-label="Close share watchlist"><X size={18} /></button>
       </div>
-    </div>
+
+      <div className={styles.preview} aria-busy={!imgLoaded && !imgErrored}>
+        {!imgLoaded && !imgErrored && <div className={styles.previewState} role="status">Generating preview…</div>}
+        {imgErrored ? <div className={styles.previewState}>Couldn&apos;t generate your watchlist image.</div> : <SafeImage src={imgUrl} alt="Watchlist share preview" loading="eager" onLoad={() => setImgLoaded(true)} onError={() => setImgErrored(true)} className={imgLoaded ? styles.previewImage : styles.previewImageHidden} />}
+      </div>
+
+      {error && <p role="alert" className={styles.error}>{error}</p>}
+      <div className={styles.actions}>
+        <ShareOptionBtn label="Post to feed" onClick={postToFeed} busy={busy === 'feed'} icon={<Send size={18} />} tone="primary" />
+        <ShareOptionBtn label="Download" onClick={download} busy={busy === 'download'} icon={<Download size={18} />} />
+        <ShareOptionBtn label={copied ? 'Copied' : 'Copy image'} onClick={copyImage} busy={busy === 'copy'} icon={copied ? <Check size={18} /> : <Copy size={18} />} tone={copied ? 'success' : 'default'} />
+        <ShareOptionBtn label="More" onClick={nativeShare} busy={busy === 'native'} icon={<Share size={18} />} />
+      </div>
+    </ModalSurface>
   )
 }
 
-function ShareOptionBtn({ icon, label, onClick, bg, fg, busy }: {
-  icon: React.ReactNode; label: string; onClick: () => void; bg: string; fg: string; busy?: boolean
+function ShareOptionBtn({ icon, label, onClick, busy, tone = 'default' }: {
+  icon: React.ReactNode; label: string; onClick: () => void; busy?: boolean; tone?: 'default' | 'primary' | 'success'
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       disabled={busy}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        background: 'none', border: 'none', cursor: busy ? 'default' : 'pointer', padding: 4,
-        opacity: busy ? 0.6 : 1,
-      }}
+      aria-busy={busy}
+      className={styles.action}
+      data-tone={tone}
     >
-      <span style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 44, height: 44, borderRadius: '50%', background: bg, color: fg, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>{label}</span>
+      <span>{icon}</span>
+      <b>{busy ? 'Working…' : label}</b>
     </button>
   )
 }

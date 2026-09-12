@@ -18,7 +18,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string; 
 const rail: NavItem[] = [
   { href: '/feed', label: 'Home', icon: Home },
   { href: '/dugout', label: 'Research', icon: FlaskConical },
-  { href: '/channels', label: 'Surge Live', icon: MessagesSquare, badge: 'LIVE' },
+  { href: '/community', label: 'Community', icon: MessagesSquare, badge: 'LIVE' },
   { href: '/picks', label: 'Picks', icon: TrendingUp },
 ]
 
@@ -49,7 +49,7 @@ const community: NavItem[] = [
   { href: '/bookmarks', label: 'Saved', icon: Bookmark },
 ]
 
-const communitySections = ['/feed', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']
+const communitySections = ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events']
 const communityRailSections = communitySections.filter(section => section !== '/feed')
 
 function isActive(pathname: string, href: string) {

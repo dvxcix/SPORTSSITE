@@ -84,7 +84,7 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
   const selectedDateLabel = checkDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 
   return (
-    <main className="ss-scores-page">
+    <div className="ss-scores-page">
       <section className="ss-scores-hero">
         <div className="ss-scores-hero-copy">
           <span className="ss-scores-kicker"><Radio size={13} /> Score center</span>
@@ -152,7 +152,7 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
           <nav><Link href={`/sports?date=${prevDate}`}><ChevronLeft size={15} /> Yesterday</Link><Link href={`/sports?date=${nextDate}`}>Tomorrow <ChevronRight size={15} /></Link></nav>
         </section>
       )}
-    </main>
+    </div>
   )
 }
 

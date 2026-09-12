@@ -6,13 +6,25 @@ import { combineOdds, calcPayout } from '@slipsurge/core/parlayCalc'
 import { PROP_META } from '@/lib/watchlist'
 import { notifyMentions } from '@/lib/mentions'
 import { notifyFollowers } from '@/lib/notify'
+import { getSidelineGames, getSidelineOddsBundle } from '@/app/the-sideline/data'
+import { nflKickoffAt } from '@/app/the-sideline/kickoff'
+import type { NflMarketOffer } from '@/lib/nflOddsTypes'
 
 export const revalidate = 0
 
 type Leg = {
+  sport?: 'MLB' | 'NFL'
+  player_id?: string | null
   mlb_id: number | null; player_name: string; team: string | null; headshot_url: string | null
   game_pk: string | null; game_date: string | null
-  prop_key: string; prop_label: string; line: string; book: string | null; odds: number | null
+  prop_key: string; prop_label: string; line: string; numeric_line?: number | null
+  market_side?: 'milestone' | 'over' | 'under'; book: string | null; odds: number | null
+}
+
+function currentOfferOdds(offer: NflMarketOffer, side: Leg['market_side']) {
+  if (side === 'under') return offer.current?.under ?? null
+  if (side === 'over') return offer.current?.over ?? null
+  return offer.current?.odds ?? null
 }
 
 // Every other pick-creation path (FeedComposer) used to insert straight from
@@ -37,12 +49,20 @@ export async function POST(req: Request) {
   const imageUrl: string | null = typeof body?.imageUrl === 'string' && body.imageUrl ? body.imageUrl : null
   const visibility: string = body?.visibility === 'followers' ? 'followers' : 'public'
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
+  const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
+  const sport: 'MLB' | 'NFL' = body?.sport === 'NFL' ? 'NFL' : 'MLB'
+
+  if (pageId) {
+    const { data: ownedPage } = await supabase.from('pages').select('id').eq('id', pageId).eq('owner_id', user.id).maybeSingle()
+    if (!ownedPage) return NextResponse.json({ error: 'You cannot publish to this page.' }, { status: 403 })
+  }
 
   if (!legs.length) return NextResponse.json({ error: 'No pick legs provided' }, { status: 400 })
   for (const l of legs) {
-    if (!l.game_pk || !l.mlb_id || !l.prop_key || l.odds == null) {
+    if (!l.game_pk || !l.prop_key || l.odds == null || (sport === 'MLB' ? !l.mlb_id : !l.player_id)) {
       return NextResponse.json({ error: 'Malformed pick leg' }, { status: 400 })
     }
+    if (l.sport && l.sport !== sport) return NextResponse.json({ error: 'A parlay cannot mix sports.' }, { status: 400 })
   }
 
   // A leg's stored game_date is only ever a hint, not authoritative — pre-fix
@@ -63,28 +83,54 @@ export async function POST(req: Request) {
   const candidateDatesFor = (gameDate: string | null) =>
     gameDate ? [gameDate, shiftDate(gameDate, -1), shiftDate(gameDate, 1)] : []
 
-  const dates = Array.from(new Set(legs.flatMap(l => candidateDatesFor(l.game_date))))
-  const gamesByDate = new Map(await Promise.all(dates.map(async d => [d, await getTodaysMatchups(d)] as const)))
+  if (sport === 'MLB') {
+    const dates = Array.from(new Set(legs.flatMap(l => candidateDatesFor(l.game_date))))
+    const gamesByDate = new Map(await Promise.all(dates.map(async d => [d, await getTodaysMatchups(d)] as const)))
 
-  for (const l of legs) {
-    const candidateDates = candidateDatesFor(l.game_date)
-    let game: TodayGame | undefined
-    let gamesSearched = 0
-    for (const d of candidateDates) {
-      const games = gamesByDate.get(d) ?? []
-      gamesSearched += games.length
-      game = games.find(g => String(g.gamePk) === String(l.game_pk))
-      if (game) break
-    }
+    for (const l of legs) {
+      const candidateDates = candidateDatesFor(l.game_date)
+      let game: TodayGame | undefined
+      let gamesSearched = 0
+      for (const d of candidateDates) {
+        const games = gamesByDate.get(d) ?? []
+        gamesSearched += games.length
+        game = games.find(g => String(g.gamePk) === String(l.game_pk))
+        if (game) break
+      }
     // A game that's vanished from the schedule entirely (postponed and
     // pulled, or a bad game_pk) is treated the same as "already started" —
     // fail closed, not open, when we can't positively confirm it's pregame.
-    if (!game || !isPregame(game.status)) {
-      console.error('[posts/pick] blocked as already-started', {
-        player: l.player_name, game_pk: l.game_pk, game_date: l.game_date,
-        candidateDates, gamesSearched, foundGame: !!game, gameStatus: game?.status ?? null,
-      })
-      return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
+      if (!game || !isPregame(game.status)) {
+        console.error('[posts/pick] blocked as already-started', {
+          sport, player: l.player_name, game_pk: l.game_pk, game_date: l.game_date,
+          candidateDates, gamesSearched, foundGame: !!game, gameStatus: game?.status ?? null,
+        })
+        return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
+      }
+    }
+  } else {
+    const bundles = new Map<string, Awaited<ReturnType<typeof getSidelineOddsBundle>>>()
+    for (const l of legs) {
+      const resolved = await getSidelineGames(l.game_date ?? undefined, l.game_pk ?? undefined)
+      const game = resolved.games.find(candidate => candidate.id === l.game_pk)
+      const kickoff = game ? nflKickoffAt(game) : null
+      if (!game || !kickoff || kickoff.getTime() <= Date.now()) {
+        return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
+      }
+      let bundle = bundles.get(game.id)
+      if (!bundle) {
+        bundle = await getSidelineOddsBundle(game)
+        bundles.set(game.id, bundle)
+      }
+      const player = bundle.odds.players.find(candidate =>
+        candidate.gsisId === l.player_id || `bdl:${candidate.id}` === l.player_id)
+      const market = player?.markets.find(candidate =>
+        candidate.propType === l.prop_key && (l.numeric_line == null || candidate.line === l.numeric_line))
+      const vendor = (l.book ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      const offer = market?.offers.find(candidate => candidate.vendor.toLowerCase().replace(/[^a-z0-9]/g, '') === vendor)
+      if (!player || !market || !offer || currentOfferOdds(offer, l.market_side ?? 'milestone') !== l.odds) {
+        return NextResponse.json({ error: `${l.player_name}'s selected price changed. Refresh the market and try again.` }, { status: 409 })
+      }
     }
   }
 
@@ -93,20 +139,21 @@ export async function POST(req: Request) {
   const payout = combined != null && wager != null ? calcPayout(wager, combined).payout : null
 
   const legsSummary = legs.map(l => ({
-    player_name: l.player_name, team: l.team, mlb_id: l.mlb_id, headshot_url: l.headshot_url,
+    sport, player_id: l.player_id ?? null, player_name: l.player_name, team: l.team, mlb_id: l.mlb_id, headshot_url: l.headshot_url,
     game_pk: l.game_pk, game_date: l.game_date,
-    prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, odds: l.odds, result: 'pending',
+    prop_key: l.prop_key, prop_label: l.prop_label, line: l.line, numeric_line: l.numeric_line ?? null,
+    market_side: l.market_side ?? 'milestone', odds: l.odds, result: 'pending',
   }))
 
   const pickData = isParlay
     ? { legs: legsSummary, book: legs[0].book, combined_odds: combined, wager_amount: wager, potential_payout: payout, result: 'pending' }
-    : { ...legsSummary[0], book: legs[0].book, wager_amount: wager, potential_payout: payout, sport: 'MLB' }
+    : { ...legsSummary[0], book: legs[0].book, wager_amount: wager, potential_payout: payout, sport }
 
   const { data: post, error: postErr } = await supabase.from('posts').insert({
     author_id: user.id,
     content: content.trim(),
     post_type: isParlay ? 'parlay' : 'pick',
-    sport: 'MLB',
+    sport,
     game_pk: isParlay ? null : legs[0].game_pk,
     book: legs[0].book,
     combined_odds: combined,
@@ -116,6 +163,7 @@ export async function POST(req: Request) {
     media_urls: imageUrl ? [imageUrl] : [],
     visibility,
     group_id: groupId,
+    page_id: pageId,
   }).select('id').single()
 
   if (postErr || !post) return NextResponse.json({ error: 'Failed to post. Please try again.' }, { status: 500 })
@@ -123,11 +171,14 @@ export async function POST(req: Request) {
   const { error: picksErr } = await supabase.from('picks').insert(legs.map(l => ({
     user_id: user.id,
     post_id: post.id,
-    sport: 'MLB',
+    sport,
     game_pk: l.game_pk,
     game_date: l.game_date,
     mlb_id: l.mlb_id,
-    pick_type: PROP_META[l.prop_key]?.pickType ?? l.prop_key,
+    player_id: l.player_id ?? null,
+    pick_type: sport === 'MLB' ? (PROP_META[l.prop_key]?.pickType ?? l.prop_key) : l.prop_key,
+    market_side: l.market_side ?? 'milestone',
+    numeric_line: l.numeric_line ?? null,
     team: l.team,
     player_name: l.player_name,
     line: l.line,

@@ -3,12 +3,13 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2, CheckCheck } from 'lucide-react'
+import { Bell, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, TrendingUp, ClipboardCheck, X, Trash2, CheckCheck, type LucideIcon } from 'lucide-react'
 import { useCustomEmojis } from '@/lib/emoji'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
+import styles from './NotificationsList.module.css'
 
-export const NOTIF_ICONS: Record<string, any> = {
+export const NOTIF_ICONS: Record<string, LucideIcon> = {
   reaction: Heart,
   comment: MessageCircle,
   follow: UserPlus,
@@ -37,6 +38,10 @@ function timeAgo(dateStr: string, nowMs: number) {
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h`
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function notificationHref(link: string | null) {
+  return link?.startsWith('/') && !link.startsWith('//') ? link : null
 }
 
 export function NotificationsList({ userId, initialNotifications }: { userId: string; initialNotifications: NotifRow[] }) {
@@ -142,7 +147,10 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
       ) : <div className="ss-activity-groups">
         {Object.entries(groupedGroups).map(([label, entries]) => (
           <div key={label}>
-            <p className="ss-activity-date">{label}</p>
+            <div className="ss-activity-date-row">
+              <p className="ss-activity-date">{label}</p>
+              {entries.flat().some(notification => !notification.read) && <button type="button" onClick={() => markRead(entries.flat().map(notification => notification.id))}>Mark section read</button>}
+            </div>
             <div className="ss-activity-rows">
               {entries.map(entry => Array.isArray(entry)
                 ? <GroupedFollowRow key={entry[0].id} items={entry} nowMs={renderedAt} onRead={() => markRead(entry.map(n => n.id))} onDelete={() => deleteMany(entry.map(n => n.id))} />
@@ -188,27 +196,28 @@ function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: n
   const customEmojis = useCustomEmojis()
   const Icon = NOTIF_ICONS[n.type] ?? Bell
   const actorName = n.actor?.display_name || n.actor?.username
+  const href = notificationHref(n.link)
 
   // Reaction notifications carry which emoji was used (data.emoji) and
   // pick-result ones carry the leg's team logo (data.team_logo) — shown in
   // the same corner-badge slot the generic type icon used to always
   // occupy, falling back to that icon when there's nothing richer to show
   // (e.g. notifications created before this was added).
-  let badge: React.ReactNode = <Icon size={10} style={{ color: 'var(--accent)' }} />
+  let badge: React.ReactNode = <Icon size={10} className={styles.badgeIcon} />
   if (n.type === 'reaction' && n.data?.emoji) {
     const custom = n.data.emoji.match(/^:([a-z0-9_]+):$/)
     const customEmoji = custom ? customEmojis.find(e => e.code === custom[1]) : null
     badge = customEmoji
-      ? <SafeImage src={customEmoji.image_url} alt={n.data.emoji} style={{ width: 11, height: 11, objectFit: 'contain' }} fallback={<span style={{ fontSize: 10 }}>{n.data.emoji}</span>} />
-      : <span style={{ fontSize: 10, lineHeight: 1 }}>{n.data.emoji}</span>
+      ? <SafeImage src={customEmoji.image_url} alt={n.data.emoji} className={styles.badgeImage} fallback={<span className={styles.badgeText}>{n.data.emoji}</span>} />
+      : <span className={styles.badgeText}>{n.data.emoji}</span>
   } else if (n.type === 'pick_result' && n.data?.team_logo) {
-    badge = <SafeImage src={n.data.team_logo} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} fallback={<Icon size={10} style={{ color: 'var(--accent)' }} />} />
+    badge = <SafeImage src={n.data.team_logo} alt="" className={styles.teamBadgeImage} fallback={<Icon size={10} className={styles.badgeIcon} />} />
   }
 
   const inner = (
     <>
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
+      <div className={styles.avatarWrap}>
+        <div className={styles.avatar}>
           {(n.actor?.avatar_url || n.data?.avatar_url) && (
             // A player headshot is a portrait photo meant to fill the circle
             // (cover). A team logo (lineup_confirmed) is a flat mark on a
@@ -218,30 +227,22 @@ function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: n
             <SafeImage
               src={n.actor?.avatar_url || n.data?.avatar_url}
               alt=""
-              style={{
-                width: '100%', height: '100%', boxSizing: 'border-box',
-                objectFit: n.type === 'lineup_confirmed' ? 'contain' : 'cover',
-                padding: n.type === 'lineup_confirmed' ? 6 : 0,
-              }}
+              className={n.type === 'lineup_confirmed' ? styles.teamAvatar : styles.avatarImage}
             />
           )}
         </div>
-        <div style={{
-          position: 'absolute', bottom: -3, right: -3, width: 18, height: 18, borderRadius: '50%',
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <div className={styles.typeBadge}>
           {badge}
         </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13.5, color: 'var(--text-1)', lineHeight: 1.45 }}>
-          {actorName && <span style={{ fontWeight: 800 }}>{actorName} </span>}
+      <div className={styles.copy}>
+        <p>
+          {actorName && <strong>{actorName} </strong>}
           {n.message || n.body || 'interacted with you'}
         </p>
-        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(n.created_at, nowMs)}</p>
+        <time>{timeAgo(n.created_at, nowMs)}</time>
       </div>
-      {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', marginTop: 6, flexShrink: 0 }} />}
+      {!n.read && <div className={styles.unreadDot} />}
     </>
   )
 
@@ -249,17 +250,13 @@ function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: n
     <div
       className="ss-activity-row"
       data-unread={n.read ? 'false' : 'true'}
-      style={{
-        position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
-        borderRadius: 'var(--radius)', border: n.read ? '1px solid transparent' : '1px solid var(--border)',
-        background: n.read ? 'transparent' : 'var(--surface-2)', transition: 'background 130ms',
-      }}>
-      {n.link ? (
-        <Link href={n.link} onClick={onRead} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
+      >
+      {href ? (
+        <Link href={href} onClick={onRead} className={styles.rowContent}>
           {inner}
         </Link>
       ) : (
-        <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>{inner}</div>
+        <div className={styles.rowContent}>{inner}</div>
       )}
       {(
         <button
@@ -267,13 +264,7 @@ function NotificationRow({ n, nowMs, onRead, onDelete }: { n: NotifRow; nowMs: n
           className="ss-activity-dismiss"
           onClick={onDelete}
           aria-label="Dismiss notification"
-          style={{
-            position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: '50%',
-            background: 'var(--surface-3)', border: 'none', color: 'var(--text-3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--red)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}>
+          >
           <X size={13} />
         </button>
       )}
@@ -292,31 +283,28 @@ function GroupedFollowRow({ items, nowMs, onRead, onDelete }: { items: NotifRow[
   const othersCount = items.length - 1
   const anyUnread = items.some(n => !n.read)
   const Icon = NOTIF_ICONS.follow ?? Bell
+  const href = notificationHref(latest.link)
 
   const inner = (
     <>
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--surface-3)', overflow: 'hidden' }}>
+      <div className={styles.avatarWrap}>
+        <div className={styles.avatar}>
           {(latest.actor?.avatar_url || latest.data?.avatar_url) && (
-            <SafeImage src={latest.actor?.avatar_url || latest.data?.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <SafeImage src={latest.actor?.avatar_url || latest.data?.avatar_url} alt="" className={styles.avatarImage} />
           )}
         </div>
-        <div style={{
-          position: 'absolute', bottom: -3, right: -3, width: 18, height: 18, borderRadius: '50%',
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon size={10} style={{ color: 'var(--accent)' }} />
+        <div className={styles.typeBadge}>
+          <Icon size={10} className={styles.badgeIcon} />
         </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13.5, color: 'var(--text-1)', lineHeight: 1.45 }}>
-          {actorName && <span style={{ fontWeight: 800 }}>{actorName} </span>}
+      <div className={styles.copy}>
+        <p>
+          {actorName && <strong>{actorName} </strong>}
           and {othersCount} other{othersCount === 1 ? '' : 's'} followed you
         </p>
-        <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{timeAgo(latest.created_at, nowMs)}</p>
+        <time>{timeAgo(latest.created_at, nowMs)}</time>
       </div>
-      {anyUnread && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', marginTop: 6, flexShrink: 0 }} />}
+      {anyUnread && <div className={styles.unreadDot} />}
     </>
   )
 
@@ -324,17 +312,13 @@ function GroupedFollowRow({ items, nowMs, onRead, onDelete }: { items: NotifRow[
     <div
       className="ss-activity-row"
       data-unread={anyUnread ? 'true' : 'false'}
-      style={{
-        position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 40px 12px 12px',
-        borderRadius: 'var(--radius)', border: anyUnread ? '1px solid var(--border)' : '1px solid transparent',
-        background: anyUnread ? 'var(--surface-2)' : 'transparent', transition: 'background 130ms',
-      }}>
-      {latest.link ? (
-        <Link href={latest.link} onClick={onRead} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}>
+      >
+      {href ? (
+        <Link href={href} onClick={onRead} className={styles.rowContent}>
           {inner}
         </Link>
       ) : (
-        <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>{inner}</div>
+        <div className={styles.rowContent}>{inner}</div>
       )}
       {(
         <button
@@ -342,13 +326,7 @@ function GroupedFollowRow({ items, nowMs, onRead, onDelete }: { items: NotifRow[
           className="ss-activity-dismiss"
           onClick={onDelete}
           aria-label="Dismiss notifications"
-          style={{
-            position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: '50%',
-            background: 'var(--surface-3)', border: 'none', color: 'var(--text-3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--red)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}>
+          >
           <X size={13} />
         </button>
       )}

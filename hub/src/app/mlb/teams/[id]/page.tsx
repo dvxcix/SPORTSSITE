@@ -60,7 +60,7 @@ export default async function MlbTeamPage({ params }: { params: Promise<{ id: st
 
   return (
     <TierGate requiredTier="basic" label="MLB Team Hub">
-      <main className={styles.page} style={{ '--entity-color': '#9cff39' } as CSSProperties}>
+      <div className={styles.page} style={{ '--entity-color': '#9cff39' } as CSSProperties}>
         <header className={styles.hero}>
           <div className={styles.avatar}>
             <img src={mlbTeamLogo(data.team.id)} alt={`${data.team.name} logo`} />
@@ -104,7 +104,7 @@ export default async function MlbTeamPage({ params }: { params: Promise<{ id: st
             </div>
           ))}
         </section>
-      </main>
+      </div>
     </TierGate>
   )
 }

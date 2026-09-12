@@ -32,7 +32,7 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
 
   const { data: history } = await supabase
     .from('messages')
-    .select('id, content, created_at, sender_id, reply_to_id, media_urls, sender:users!messages_sender_id_fkey(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), reply_to:messages!messages_reply_to_id_fkey(id, content, sender_id)')
+    .select('id, content, created_at, edited_at, is_deleted, sender_id, reply_to_id, forwarded_from_id, media_urls, reaction_count, sender:users!messages_sender_id_fkey(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), reply_to:messages!messages_reply_to_id_fkey(id, content, sender_id)')
     .or(
       `and(sender_id.eq.${user.id},dm_recipient_id.eq.${partner.id}),and(sender_id.eq.${partner.id},dm_recipient_id.eq.${user.id})`
     )

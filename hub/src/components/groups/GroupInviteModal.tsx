@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { UserPlus, X } from 'lucide-react'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { Modal } from '@/components/ui/Modal'
 
 type FoundUser = { id: string; username: string; display_name: string | null; avatar_url: string | null }
 
@@ -19,15 +20,6 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
   const [invitingId, setInvitingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const supabase = useMemo(() => createClient(), [])
-
-  useEffect(() => {
-    if (!open) return
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [open])
 
   const search = useCallback(async () => {
     if (!q.trim()) { setResults([]); return }
@@ -99,18 +91,18 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 border border-zinc-700 text-zinc-300 text-xs font-bold px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors">
+        className="ss-community-invite-trigger">
         <UserPlus size={13} /> Invite
       </button>
 
       {open && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="group-invite-title" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 id="group-invite-title" className="text-sm font-black text-white">Invite to {groupName}</h3>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close invite dialog" className="text-zinc-500 hover:text-white"><X size={16} /></button>
+        <Modal onClose={() => setOpen(false)} label={`Invite to ${groupName}`} maxWidth={410}>
+          <div className="ss-community-invite">
+            <div className="ss-community-invite-head">
+              <div><span>Community invite</span><h3 id="group-invite-title">Invite to {groupName}</h3></div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close invite dialog"><X size={16} /></button>
             </div>
-            <div className="flex gap-2 mb-3">
+            <div className="ss-community-invite-search">
               <input
                 value={q}
                 onChange={e => setQ(e.target.value)}
@@ -118,34 +110,34 @@ export function GroupInviteModal({ groupId, groupSlug, groupName, currentUserId 
                 placeholder="Search by username…"
                 aria-label="Search members to invite"
                 maxLength={40}
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-green-500/50"
+                className="ss-input"
               />
               <button type="button" onClick={() => void search()} disabled={searching}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-3 rounded-lg transition-colors disabled:opacity-40">
+                >
                 Search
               </button>
             </div>
-            {error && <p className="text-xs text-red-400 mb-2" role="alert">{error}</p>}
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {error && <p className="ss-community-invite-error" role="alert">{error}</p>}
+            <div className="ss-community-invite-results">
               {results.map(u => (
-                <div key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-zinc-800/60">
+                <div key={u.id} className="ss-community-invite-row">
                   <MemberAvatar src={u.avatar_url} name={u.display_name || u.username} size={32} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{u.display_name || u.username}</p>
-                    <p className="text-xs text-zinc-500 truncate">@{u.username}</p>
+                  <div>
+                    <p>{u.display_name || u.username}</p>
+                    <span>@{u.username}</span>
                   </div>
                   <button type="button" onClick={() => invite(u)} disabled={invited.has(u.id) || invitingId === u.id}
-                    className="text-xs font-bold bg-green-500 hover:bg-green-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-black px-2.5 py-1 rounded-lg transition-colors shrink-0">
+                    >
                     {invited.has(u.id) ? 'Invited' : invitingId === u.id ? 'Sending…' : 'Invite'}
                   </button>
                 </div>
               ))}
               {q && !searching && results.length === 0 && (
-                <p className="text-xs text-zinc-600 text-center py-3">No users found</p>
+                <p className="ss-community-invite-empty">No users found</p>
               )}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   )

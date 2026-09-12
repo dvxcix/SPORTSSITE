@@ -18,11 +18,11 @@ export default async function PageSettingsPage({ params }: { params: Promise<{ s
   if (page.owner_id !== user.id) redirect(`/pages/${slug}`)
 
   return (
-    <main className="ss-flow-page">
+    <div className="ss-flow-page">
       <CommunityNav />
       <Link href={`/pages/${slug}`} className="ss-flow-back"><ChevronLeft size={14} /> {page.name}</Link>
       <header className="ss-flow-heading"><span><Settings2 size={22} /></span><div><p>Page controls</p><h1>Page settings</h1></div></header>
       <PageSettingsForm page={page} />
-    </main>
+    </div>
   )
 }

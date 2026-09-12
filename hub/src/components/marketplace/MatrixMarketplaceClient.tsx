@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { FollowButton } from "@/components/social/FollowButton";
 import { UserBadges } from "@/components/social/UserBadges";
-import { MemberAvatar } from "@/components/social/MemberAvatar";
+import { MemberAvatar, type MemberRingStyle } from "@/components/social/MemberAvatar";
 import type { Badge } from "@/lib/badges";
 import styles from "./MatrixMarketplace.module.css";
 import { useFeedback } from "@/components/ui/FeedbackProvider";
@@ -49,6 +49,8 @@ export type Author = {
   avatar_url: string | null;
   is_verified: boolean;
   follower_count: number;
+  avatar_ring_style?: MemberRingStyle | null;
+  avatar_ring_color?: string | null;
 };
 export type Listing = {
   id: string;
@@ -238,7 +240,7 @@ export function MatrixMarketplaceClient({
   }
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.heroGlow} />
         <div className={styles.heroIcon}>
@@ -370,6 +372,9 @@ export function MatrixMarketplaceClient({
                     src={listing.author?.avatar_url}
                     name={listing.author?.display_name || listing.author?.username || "Member"}
                     size={37}
+                    tone="creator"
+                    ringStyle={listing.author?.avatar_ring_style}
+                    ringColor={listing.author?.avatar_ring_color}
                   />
                 </Link>
                 <div className={styles.authorCopy}>
@@ -511,7 +516,7 @@ export function MatrixMarketplaceClient({
           {toast}
         </div>
       )}
-    </main>
+    </div>
   );
 }
 

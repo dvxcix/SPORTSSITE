@@ -950,7 +950,7 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
   const home = feed.gameData.teams.home
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       {/* Breadcrumb */}
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link href="/sports" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Sports</Link>
@@ -1051,6 +1051,6 @@ export function MLBGameClient({ gamePk, feed: initialFeed, communityPicks, initi
       )}
       {tab === 'Box Score' && <BoxScore feed={feed} />}
       {tab === 'Picks' && <CommunityPicks picks={communityPicks} />}
-    </main>
+    </div>
   )
 }

@@ -107,7 +107,7 @@ export function ResearchHubClient({ initialDate, initialGameKey }: {
   }, [date, syncUrl])
 
   return (
-    <main className={styles.shell}>
+    <div className={styles.shell}>
       <header className={styles.hero}>
         <div className={styles.heroMark}><FlaskConical size={25} /><i /></div>
         <div className={styles.heroCopy}>
@@ -171,6 +171,6 @@ export function ResearchHubClient({ initialDate, initialGameKey }: {
           </section>
         </div>
       )}
-    </main>
+    </div>
   )
 }

@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   const authorIds = [...new Set((listings ?? []).map(row => row.author_id))]
   const [{ data: authors }, { data: follows }, { data: badgeRows }] = authorIds.length
     ? await Promise.all([
-        admin.from('users').select('id, username, display_name, avatar_url, is_verified, follower_count').in('id', authorIds),
+        admin.from('users').select('id, username, display_name, avatar_url, is_verified, follower_count, avatar_ring_style, avatar_ring_color').in('id', authorIds),
         admin.from('follows').select('following_id').eq('follower_id', gate.userId!).in('following_id', authorIds),
         admin.from('user_badges').select('user_id, badge:badges(id, name, description, icon_url, card_image_url)').in('user_id', authorIds),
       ])

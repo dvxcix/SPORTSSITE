@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import styles from './ProductPage.module.css'
 
 export function ProductPageShell({ children, narrow = false, className = '' }: { children: ReactNode; narrow?: boolean; className?: string }) {
-  return <main className={`${styles.shell} ${narrow ? styles.shellNarrow : ''} ${className}`}>{children}</main>
+  return <div className={`${styles.shell} ${narrow ? styles.shellNarrow : ''} ${className}`}>{children}</div>
 }
 
 export function ProductHero({ icon, eyebrow, title, description, status, actions }: {

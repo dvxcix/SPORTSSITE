@@ -15,10 +15,11 @@ import { ProfileActions } from '@/components/profile/ProfileActions'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { BookLogo } from '@/components/BookLogo'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight, MessageSquareText, LockKeyhole, UserRoundX } from 'lucide-react'
+import { MapPin, Link as LinkIcon, AtSign, Calendar, BadgeCheck, Store, Users, Sparkles, ArrowRight, MessageCircle, MessageCircleReply, MessageSquareText, LockKeyhole, UserRoundX, UsersRound } from 'lucide-react'
 import { PROVIDER_BY_PLATFORM_KEY } from '@/lib/verifiedIdentity'
 import { hasCreatorAccess } from '@/lib/creator'
 import type { Metadata } from 'next'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 interface Props { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }
 
@@ -58,14 +59,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const TABS = [
   { key: 'all', label: 'All' },
   { key: 'picks', label: 'Picks' },
+  { key: 'replies', label: 'Replies' },
   { key: 'reposts', label: 'Reposts' },
   { key: 'media', label: 'Media' },
+  { key: 'communities', label: 'Communities' },
 ] as const
+
+type ProfileViewTab = typeof TABS[number]['key']
+type ProfileReply = { id: string; content: string; created_at: string; post_id: string; post: { content?: string | null; author?: { username?: string | null; display_name?: string | null } | null } | null }
+type ProfileCommunity = { role: string; group: { id: string; name: string; slug: string; description?: string | null; avatar_url?: string | null; emoji?: string | null; member_count?: number | null; is_public?: boolean | null } | null }
 
 export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params
   const { tab: tabParam } = await searchParams
-  const tab: ProfileTab = TABS.some(t => t.key === tabParam) ? (tabParam as ProfileTab) : 'all'
+  const tab: ProfileViewTab = TABS.some(t => t.key === tabParam) ? (tabParam as ProfileViewTab) : 'all'
+  const postTab: ProfileTab = tab === 'replies' || tab === 'communities' ? 'all' : tab
   const [profile, supabase] = await Promise.all([getUserProfile(username), createClient()])
   if (!profile) notFound()
 
@@ -88,8 +96,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     )
   }
 
-  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }, { data: creatorApproval }, { data: creatorGroups }, { data: creatorProducts }] = await Promise.all([
-    fetchProfilePostsPage(supabase, { userId: profile.id, tab, pageSize: 20 }),
+  const [{ posts: rawPosts, nextCursor, hasMore }, { count: postsCount }, { count: repostsCount }, { data: achievementRows }, { data: socialPlatforms }, { data: creatorApproval }, { data: creatorGroups }, { data: creatorProducts }, { data: profileReplies }, { data: profileCommunities }] = await Promise.all([
+    fetchProfilePostsPage(supabase, { userId: profile.id, tab: postTab, pageSize: 20 }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', profile.id),
     supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
     supabase.from('user_badges')
@@ -99,9 +107,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     supabase.from('creator_applications').select('id').eq('user_id', profile.id).eq('status', 'approved').maybeSingle(),
     supabase.from('groups').select('id,name,slug,emoji,member_count,access_type').eq('owner_id', profile.id).eq('is_public', true).order('created_at', { ascending: false }).limit(6),
     supabase.from('creator_products').select('id,title,description,price,product_type,status').eq('creator_id', profile.id).eq('status', 'active').order('created_at', { ascending: false }).limit(6),
+    supabase.from('comments').select('id,content,created_at,post_id,parent_id,post:posts(id,content,author:users!posts_author_id_fkey(username,display_name,avatar_url))').eq('author_id', profile.id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('group_members').select('role,joined_at,group:groups(id,name,slug,description,avatar_url,emoji,member_count,is_public)').eq('user_id', profile.id).order('joined_at', { ascending: false }).limit(24),
   ])
   const isCreatorProfile = hasCreatorAccess(profile.account_type, Boolean(creatorApproval))
   const achievements = (achievementRows ?? []).map((r: any) => r.badge).filter(Boolean)
+  const replies = (profileReplies ?? []) as unknown as ProfileReply[]
+  const communities = ((profileCommunities ?? []) as unknown as ProfileCommunity[])
+    .filter(entry => entry.group && (entry.group.is_public || isOwnProfile))
 
   // Only the platforms this profile actually connected — a real OAuth-linked
   // identity (verified_identities) takes priority over a manually-typed
@@ -161,17 +174,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   // consistent per tab instead of paginating an unfiltered set and filtering
   // after the fact.
   const postsWithReactions = await attachUserReactions(rawPosts, authUser?.id)
-  const mappedPosts = postsWithReactions.map((p: any) => ({
-    ...p,
-    user_bookmarked: false,
-  }))
+  const mappedPosts = postsWithReactions
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
+    <div className="mx-auto w-full max-w-5xl px-3 pb-28 pt-3 sm:px-5 sm:pt-5">
       <div className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[linear-gradient(145deg,rgba(15,18,22,.98),rgba(8,10,13,.98))] shadow-[inset_0_1px_rgba(255,255,255,.04),0_30px_100px_rgba(0,0,0,.42)]">
       {/* Banner */}
       <div className="h-44 sm:h-60 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 relative overflow-hidden">
-        {profile.banner_url && <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />}
+        {profile.banner_url && <SafeImage src={profile.banner_url} alt="" className="h-full w-full object-cover" />}
         {!profile.banner_url && (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(163,230,53,.22),transparent_42%),linear-gradient(135deg,#172015,#090b0e_65%)]" />
         )}
@@ -192,6 +202,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             </a>
           ) : authUser ? (
             <div className="flex items-center gap-2">
+              <Link href={`/messages/${profile.username}`} aria-label={`Message ${profile.display_name || profile.username}`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/[.1] bg-black/35 px-3 text-xs font-black text-zinc-300 transition hover:-translate-y-px hover:border-lime-400/30 hover:text-white"><MessageCircle size={14}/> Message</Link>
               <FollowButton
                 currentUserId={authUser.id}
                 targetUserId={profile.id}
@@ -256,7 +267,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               {connectedAccounts.map((a: any) => {
                 const content = (
                   <span className="flex items-center gap-1.5 rounded-full border border-white/[.09] bg-white/[.035] py-1 pl-1.5 pr-2.5 text-xs font-bold text-zinc-300 shadow-[inset_0_1px_rgba(255,255,255,.035)]">
-                    <img src={a.icon_url} alt={a.name} className="w-4 h-4 object-contain" />
+                    <SafeImage src={a.icon_url} alt={a.name} className="h-4 w-4 object-contain" />
                     {a.handle}
                     {a.isVerified && <BadgeCheck size={13} className="text-green-500" />}
                   </span>
@@ -318,12 +329,12 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       {canViewContent ? (
         <>
           {/* Tabs */}
-          <nav aria-label="Profile content" className="mx-3 mt-4 flex gap-1 rounded-2xl border border-white/[.075] bg-black/25 p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)] sm:mx-6">
+          <nav aria-label="Profile content" className="mx-3 mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/[.075] bg-black/25 p-1.5 shadow-[inset_0_1px_rgba(255,255,255,.035)] [scrollbar-width:none] sm:mx-6">
             {TABS.map(t => (
               <Link
                 key={t.key}
                 href={t.key === 'all' ? `/profile/${username}` : `/profile/${username}?tab=${t.key}`}
-                className={`relative flex-1 rounded-xl px-3 py-2.5 text-center text-xs font-black transition duration-200 sm:text-sm ${
+                className={`relative min-w-[78px] flex-1 rounded-xl px-3 py-2.5 text-center text-xs font-black transition duration-200 sm:text-sm ${
                   tab === t.key ? 'bg-white/[.085] text-white shadow-[inset_0_1px_rgba(255,255,255,.06),0_7px_20px_rgba(0,0,0,.22)]' : 'text-zinc-500 hover:bg-white/[.035] hover:text-zinc-300'
                 }`}
               >
@@ -333,9 +344,29 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             ))}
           </nav>
 
-          {/* Posts */}
+          {/* Profile activity */}
           <div className="px-3 py-4 sm:px-6 sm:py-6">
-            {mappedPosts.length === 0 ? (
+            {tab === 'replies' ? (
+              <div className="space-y-2">
+                {replies.length ? replies.map(reply => (
+                  <Link key={reply.id} href={`/posts/${reply.post_id}`} className="group block rounded-2xl border border-white/[.075] bg-white/[.018] p-4 transition hover:border-lime-400/25 hover:bg-white/[.035]">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500"><MessageCircleReply size={13} className="text-lime-300"/><span>Replied to {reply.post?.author?.display_name || `@${reply.post?.author?.username || 'a post'}`}</span><time className="ml-auto">{new Date(reply.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</time></div>
+                    <p className="mt-2 text-sm leading-6 text-zinc-200">{reply.content}</p>
+                    {reply.post?.content ? <p className="mt-3 line-clamp-2 border-l-2 border-white/[.09] pl-3 text-xs leading-5 text-zinc-500">{reply.post.content}</p> : null}
+                  </Link>
+                )) : <ProfileEmpty icon={<MessageCircleReply size={24}/>} title="No replies yet" />}
+              </div>
+            ) : tab === 'communities' ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {communities.length ? communities.map(entry => (
+                  <Link key={entry.group?.id} href={`/groups/${entry.group?.slug}`} className="flex min-h-24 items-center gap-3 rounded-2xl border border-white/[.075] bg-white/[.018] p-4 transition hover:-translate-y-px hover:border-lime-400/25 hover:bg-white/[.035]">
+                    <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/[.08] bg-black/30 text-xl"><SafeImage src={entry.group?.avatar_url} alt="" className="h-full w-full object-cover" fallback={entry.group?.emoji || '⚡'}/></span>
+                    <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-white">{entry.group?.name}</strong><small className="mt-1 block line-clamp-1 text-[11px] text-zinc-500">{entry.group?.description || `${entry.group?.member_count ?? 0} members`}</small><em className="mt-2 block text-[9px] font-black uppercase not-italic tracking-wider text-lime-300">{entry.role}</em></span>
+                    <ArrowRight size={14} className="text-zinc-600"/>
+                  </Link>
+                )) : <div className="sm:col-span-2"><ProfileEmpty icon={<UsersRound size={24}/>} title="No public communities yet" /></div>}
+              </div>
+            ) : mappedPosts.length === 0 ? (
               <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center">
                 <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400"><MessageSquareText size={24} /></span>
                 <p className="font-bold text-zinc-300">
@@ -348,7 +379,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             ) : (
               <ProfilePostList
                 userId={profile.id}
-                tab={tab}
+                tab={postTab}
                 initialPosts={mappedPosts}
                 initialCursor={nextCursor}
                 initialHasMore={hasMore}
@@ -364,6 +395,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         </div>
       )}
       </div>
-    </main>
+    </div>
   )
+}
+
+function ProfileEmpty({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return <div className="mx-auto my-5 max-w-lg rounded-[22px] border border-dashed border-white/[.1] bg-white/[.018] px-5 py-14 text-center"><span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-white/[.08] bg-white/[.035] text-zinc-400">{icon}</span><p className="font-bold text-zinc-300">{title}</p></div>
 }

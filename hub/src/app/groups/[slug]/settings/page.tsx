@@ -4,6 +4,7 @@ import { GroupSettingsForm } from '@/components/groups/GroupSettingsForm'
 import Link from 'next/link'
 import { ArrowLeft, Settings2 } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
+import { GroupMemberManager, type GroupMemberManagerMember, type GroupRole } from '@/components/groups/GroupMemberManager'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,12 +25,22 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
     .maybeSingle()
   if (member?.role !== 'owner') redirect(`/groups/${slug}`)
 
+  const { data: members } = await supabase.from('group_members')
+    .select('user_id,role,user:users(username,display_name,avatar_url,is_verified)')
+    .eq('group_id', group.id).order('created_at')
+  const memberRows: GroupMemberManagerMember[] = (members ?? []).map(row => ({
+    user_id: row.user_id,
+    role: row.role as GroupRole,
+    user: Array.isArray(row.user) ? row.user[0] ?? null : row.user,
+  }))
+
   return (
-    <main className="ss-flow-page">
+    <div className="ss-flow-page">
       <CommunityNav />
       <Link href={`/groups/${slug}`} className="ss-flow-back"><ArrowLeft size={15} /> {group.name}</Link>
       <header className="ss-flow-heading"><span><Settings2 size={19} /></span><div><p>Community controls</p><h1>Group settings</h1></div></header>
       <GroupSettingsForm group={group} />
-    </main>
+      <GroupMemberManager groupId={group.id} initialMembers={memberRows} />
+    </div>
   )
 }

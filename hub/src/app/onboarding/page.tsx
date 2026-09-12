@@ -10,9 +10,9 @@ export default async function OnboardingPage() {
   if (!user) redirect('/auth/login')
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: suggested }] = await Promise.all([
+  const [{ data: profile }, { data: suggested }, { data: nflTeams }] = await Promise.all([
     admin.from('users')
-      .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, onboarding_completed_at, is_private, hide_win_rate')
+      .select('username, display_name, bio, avatar_url, favorite_teams, account_type, favorite_sports, onboarding_completed_at, is_private, hide_win_rate, notification_settings')
       .eq('id', user.id)
       .single(),
     supabase.from('users')
@@ -20,6 +20,7 @@ export default async function OnboardingPage() {
       .neq('id', user.id)
       .order('follower_count', { ascending: false })
       .limit(6),
+    admin.from('nfl_teams').select('team_abbr,team_name,team_logo_espn').order('team_name'),
   ])
 
   // The proxy gate sends anyone with onboarding_completed_at still null
@@ -29,17 +30,18 @@ export default async function OnboardingPage() {
   if (profile?.onboarding_completed_at) redirect('/feed')
 
   return (
-    <main className="ss-onboarding-page">
-      <div style={{ position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,255,77,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+    <div className="ss-onboarding-page">
+      <div className="ss-onboarding-glow" aria-hidden="true" />
       <Spotlight className="left-0 top-0" fill="#B4FF4D" />
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <div className="ss-onboarding-content">
         <OnboardingFlow
           userId={user.id}
           initialProfile={profile}
           accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
           suggestedUsers={suggested ?? []}
+          nflTeams={nflTeams ?? []}
         />
       </div>
-    </main>
+    </div>
   )
 }

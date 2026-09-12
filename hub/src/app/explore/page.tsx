@@ -14,6 +14,7 @@ import { UserBadges } from '@/components/social/UserBadges'
 import { FollowButton } from '@/components/social/FollowButton'
 import { TierGate } from '@/components/layout/TierGate'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export const revalidate = 60
 
@@ -131,7 +132,7 @@ export default async function ExplorePage() {
 
   return (
     <TierGate requiredTier="basic" label="Explore">
-      <main className="ss-explore-page">
+      <div className="ss-explore-page">
         <header className="ss-explore-hero">
           <div className="ss-explore-hero-copy">
             <p className="ss-explore-eyebrow"><Radar size={13} /> DISCOVERY DESK</p>
@@ -150,7 +151,7 @@ export default async function ExplorePage() {
         <nav className="ss-explore-sports" aria-label="Browse by sport">
           {sports.map(sport => (
             <Link key={sport} href={`/hashtag/${sport.toLowerCase()}`} className="ss-explore-sport">
-              {sportLogoUrl(sport) ? <img src={sportLogoUrl(sport)!} alt="" /> : <Hash size={18} />}
+              {sportLogoUrl(sport) ? <SafeImage src={sportLogoUrl(sport)!} alt="" /> : <Hash size={18} />}
               <span>{sport}</span>
               <ArrowRight size={13} />
             </Link>
@@ -215,7 +216,7 @@ export default async function ExplorePage() {
             <p className="ss-explore-rail-note">{finalGames ? `${finalGames} game${finalGames === 1 ? '' : 's'} final today.` : 'Live activity updates throughout the slate.'}</p>
           </aside>
         </div>
-      </main>
+      </div>
     </TierGate>
   )
 }
@@ -238,15 +239,15 @@ function GameDiscoveryCard({ game }: { game: any }) {
   return (
     <Link href="/dugout" className={`ss-explore-game ${live ? 'is-live' : ''}`}>
       <div className="ss-explore-game-state">{live ? <><span className="ss-live-dot" /> LIVE</> : final ? 'FINAL' : time}</div>
-      <div className="ss-explore-team"><img src={mlbLogo(away?.team?.id) || ''} alt="" /><span>{away?.team?.name || 'Away'}</span>{(live || final) && <b>{away?.score ?? 0}</b>}</div>
-      <div className="ss-explore-team"><img src={mlbLogo(home?.team?.id) || ''} alt="" /><span>{home?.team?.name || 'Home'}</span>{(live || final) && <b>{home?.score ?? 0}</b>}</div>
+      <div className="ss-explore-team"><SafeImage src={mlbLogo(away?.team?.id)} alt="" /><span>{away?.team?.name || 'Away'}</span>{(live || final) && <b>{away?.score ?? 0}</b>}</div>
+      <div className="ss-explore-team"><SafeImage src={mlbLogo(home?.team?.id)} alt="" /><span>{home?.team?.name || 'Home'}</span>{(live || final) && <b>{home?.score ?? 0}</b>}</div>
       <div className="ss-explore-game-foot"><span>{game.venue?.name || 'MLB'}</span><ArrowRight size={13} /></div>
     </Link>
   )
 }
 
 function EventBoard({ className, icon, title, href, items, empty }: { className: string; icon: React.ReactNode; title: string; href: string; items: { id: string; playerId: number; name: string; meta: string; value: string }[]; empty: string }) {
-  return <section className={`ss-explore-events ${className}`}><div className="ss-explore-events-head"><span>{icon}{title}</span><Link href={href}>Open <ArrowRight size={12} /></Link></div><div className="ss-explore-event-list">{items.length ? items.map(item => <Link href={`/players/${item.playerId}`} key={item.id} className="ss-explore-event"><img src={`https://img.mlbstatic.com/mlb-photos/image/upload/w_80,q_auto:best/v1/people/${item.playerId}/headshot/67/current`} alt="" /><div><strong>{item.name}</strong><span>{item.meta}</span></div><b>{item.value}</b></Link>) : <p className="ss-explore-event-empty">{empty}</p>}</div></section>
+  return <section className={`ss-explore-events ${className}`}><div className="ss-explore-events-head"><span>{icon}{title}</span><Link href={href}>Open <ArrowRight size={12} /></Link></div><div className="ss-explore-event-list">{items.length ? items.map(item => <Link href={`/players/${item.playerId}`} key={item.id} className="ss-explore-event"><SafeImage src={`https://img.mlbstatic.com/mlb-photos/image/upload/w_80,q_auto:best/v1/people/${item.playerId}/headshot/67/current`} alt="" /><div><strong>{item.name}</strong><span>{item.meta}</span></div><b>{item.value}</b></Link>) : <p className="ss-explore-event-empty">{empty}</p>}</div></section>
 }
 
 function ToolCard() {
@@ -255,7 +256,7 @@ function ToolCard() {
 
 function Directory({ title, icon, href, rows }: { title: string; icon: React.ReactNode; href: string; rows: { id: string; href: string; name: string; detail: string; image: string | null; fallback: string }[] }) {
   if (!rows.length) return null
-  return <section className="ss-explore-directory"><div className="ss-explore-directory-head"><span>{icon}{title}</span><Link href={href}>See all</Link></div>{rows.map(row => <Link href={row.href} key={row.id} className="ss-explore-directory-row"><div>{row.image ? <img src={row.image} alt="" /> : row.fallback}</div><span><strong>{row.name}</strong><small>{row.detail}</small></span><ArrowRight size={12} /></Link>)}</section>
+  return <section className="ss-explore-directory"><div className="ss-explore-directory-head"><span>{icon}{title}</span><Link href={href}>See all</Link></div>{rows.map(row => <Link href={row.href} key={row.id} className="ss-explore-directory-row"><div><SafeImage src={row.image} alt="" fallback={row.fallback} /></div><span><strong>{row.name}</strong><small>{row.detail}</small></span><ArrowRight size={12} /></Link>)}</section>
 }
 
 function EmptyCard({ title, detail }: { title: string; detail: string }) {

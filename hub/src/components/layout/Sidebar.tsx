@@ -61,7 +61,7 @@ const nav: NavItem[] = [
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
   null,
   { section: 'Connect' },
-  { href: '/channels',    icon: Users,         label: 'Community' },
+  { href: '/community',   icon: Users,         label: 'Community' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
   { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },

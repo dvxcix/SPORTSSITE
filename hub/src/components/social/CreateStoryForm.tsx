@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
 import { Upload, Type } from 'lucide-react'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 export function CreateStoryForm({ userId }: { userId: string }) {
   const router = useRouter()
@@ -86,7 +87,7 @@ export function CreateStoryForm({ userId }: { userId: string }) {
       <div className="aspect-[9/16] max-h-64 rounded-2xl overflow-hidden flex items-center justify-center relative"
         style={{ background: preview ? '#000' : bg }}>
         {preview
-          ? <img src={preview} alt="" className="w-full h-full object-cover" />
+          ? <SafeImage src={preview} alt="Story preview" className="w-full h-full object-cover" />
           : <p className="text-white text-center text-xl font-bold px-4 break-words">{text || 'Your story preview'}</p>
         }
       </div>
