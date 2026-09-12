@@ -25,6 +25,7 @@ import {
   MoveUp,
   Plus,
   RotateCcw,
+  Share2,
   Sparkles,
   Star,
   X,
@@ -1037,13 +1038,14 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, timeline }: {
+export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, timeline, initialCapture }: {
   games: SidelineGame[]
   selectedId: string
   lens: SidelineLens
   odds: SidelineOddsBoard | PackedOdds
   gameState: SidelineGameState | null
   timeline: string[]
+  initialCapture?: string | null
 }) {
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
@@ -1051,7 +1053,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const [view, setView] = useState<BoardView>('core')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const initialOdds = useMemo(()=>unpackSidelineBoard(odds),[odds])
-  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, timeline)
+  const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, timeline, initialCapture)
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -1068,6 +1070,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [highlightsReady, setHighlightsReady] = useState(false)
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
+  const [momentCopied, setMomentCopied] = useState(false)
   const board = marketStory.board
   const currentBoard = marketStory.current
   const sourceBoards = useMemo(() => currentBoard === board ? [board] : [currentBoard, board], [currentBoard, board])
@@ -1337,6 +1340,19 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const capturedLabel = frameTime ? new Date(frameTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : 'Awaiting markets'
   const statusCopy = gameStatusCopy(selected, marketStory.gameState)
   const periodScores = periodScoreCopy(marketStory.gameState)
+  const shareMarketMoment = async () => {
+    const url = new URL(window.location.href)
+    if (frameTime) url.searchParams.set('at', new Date(frameTime).toISOString())
+    else url.searchParams.delete('at')
+    try {
+      if (navigator.share) await navigator.share({ title: selected.away.abbr + ' @ ' + selected.home.abbr + ' Market Story', url: url.toString() })
+      else {
+        await navigator.clipboard.writeText(url.toString())
+        setMomentCopied(true)
+        window.setTimeout(() => setMomentCopied(false), 1600)
+      }
+    } catch { /* Native share dismissal leaves the board unchanged. */ }
+  }
 
   return (
     <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
@@ -1363,6 +1379,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         <article><small>MATCHUP + DATA</small><strong>{lens.headline}</strong><span>{lens.coverage.label} · {lens.headlineDetail}</span></article>
         <article><small>FANDUEL GAME LINE</small><strong>{selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}</strong><span>{board.gameLines.length} sportsbooks captured</span></article>
         <article className={styles.marketStory}>
+          <button type="button" className={styles.marketMoment} onClick={() => void shareMarketMoment()} aria-label="Share this Market Story capture"><Share2 size={12}/>{momentCopied ? 'Copied' : 'Share moment'}</button>
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
           {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
           <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />

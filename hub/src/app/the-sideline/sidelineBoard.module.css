@@ -295,7 +295,7 @@
 .marketStory {
   grid-column: 1 / -1;
   display: grid !important;
-  grid-template-columns: 190px minmax(220px, 1fr) auto;
+  grid-template-columns: 190px minmax(220px, 1fr) auto auto;
   align-items: center;
   gap: 15px;
   min-height: 70px !important;
@@ -304,10 +304,12 @@
   background: linear-gradient(90deg, rgba(53, 215, 255, 0.055), rgba(167, 255, 63, 0.025)) !important;
 }
 
-.marketStory div { display: flex; flex-direction: column; }
-.marketStory input { width: 100%; accent-color: var(--lime); cursor: pointer; }
+.marketStory div { display: flex; flex-direction: column; order:1; }
+.marketStory input { width: 100%; accent-color: var(--lime); cursor: pointer; order:2; }
 .marketStory input:disabled { cursor: not-allowed; opacity: 0.45; }
-.marketStory > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.marketStory > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; order:3; }
+.marketMoment { display:inline-flex; width:max-content; min-height:27px; padding:0 8px; align-items:center; gap:5px; order:4; border:1px solid color-mix(in srgb,var(--lime) 28%,var(--border)); border-radius:8px; color:var(--lime); background:color-mix(in srgb,var(--lime) 6%,var(--surface-2)); font-size:8px; font-weight:850; }
+.marketMoment:hover { border-color:color-mix(in srgb,var(--lime) 52%,var(--border)); background:color-mix(in srgb,var(--lime) 10%,var(--surface-2)); }
 .captureLoading::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 7px; border-radius: 50%; background: var(--lime); animation: capturePulse 800ms ease-in-out infinite alternate; }
 @keyframes capturePulse { to { opacity: .25; } }
 

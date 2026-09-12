@@ -1545,3 +1545,15 @@ test('group conversations support durable reactions and owner-managed membership
   assert.match(room, /rpc\(\s*"manage_group_conversation_member"/)
   assert.match(room, /Reaction not updated\. Try again\./)
 })
+
+test('Sideline Market Moments preserve an exact validated capture deep link', async () => {
+  const page = await read('src/app/the-sideline/page.tsx')
+  const board = await read('src/app/the-sideline/SidelineBoardClient.tsx')
+  const hook = await read('src/app/the-sideline/useSidelineMarket.ts')
+  assert.match(page, /Number\.isFinite\(Date\.parse\(requestedCaptureValue\)\)/)
+  assert.match(page, /initialCapture=\{requestedCapture\}/)
+  assert.match(hook, /useState<string \| null>\(initialCapture \?\? null\)/)
+  assert.match(board, /url\.searchParams\.set\('at', new Date\(frameTime\)\.toISOString\(\)\)/)
+  assert.match(board, /aria-label="Share this Market Story capture"/)
+  assert.match(board, /navigator\.share/)
+})

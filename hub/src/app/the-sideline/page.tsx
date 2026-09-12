@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 }
 
 export default async function SidelinePage({ searchParams }: {
-  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[] }>
+  searchParams: Promise<{ game?: string | string[]; date?: string | string[]; mode?: string | string[]; sample?: string | string[]; at?: string | string[] }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,6 +36,8 @@ export default async function SidelinePage({ searchParams }: {
   const requestedGame = Array.isArray(params.game) ? params.game[0] : params.game
   const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date
   const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode
+  const requestedCaptureValue = Array.isArray(params.at) ? params.at[0] : params.at
+  const requestedCapture = requestedCaptureValue && Number.isFinite(Date.parse(requestedCaptureValue)) ? new Date(requestedCaptureValue).toISOString() : null
   const { games, date, days } = await getSidelineGames(requestedDate, requestedGame)
   if (!games.length) {
     return <ProductPageShell narrow><ProductHero icon={<CalendarOff size={23} />} eyebrow="NFL schedule" title="The Sideline" description="Game-day research boards are organized around scheduled NFL slates." status={date} /><PageState kind="empty" title="No games on this date" message={`There are no NFL games scheduled for ${date}.`} actionLabel="Return to the current NFL slate" actionHref="/the-sideline" /></ProductPageShell>
@@ -75,5 +77,5 @@ export default async function SidelinePage({ searchParams }: {
   }))
   const lens = await getCachedSidelineBoardLens(selected, roster, sample)
   if (mode === 'research') return <>{navigation}<SidelineMatchupLab key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} timeline={[]} /></>
+  return <>{navigation}<SidelineBoardClient key={selected.id + sample} games={games} selectedId={selected.id} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} timeline={[]} initialCapture={requestedCapture} /></>
 }

@@ -11,11 +11,12 @@ export function useSidelineMarket(
   initialOdds: SidelineOddsBoard,
   initialGameState: SidelineGameState | null,
   initialTimeline: string[],
+  initialCapture?: string | null,
 ) {
   const [current, setCurrent] = useState(initialOdds)
   const [gameState, setGameState] = useState(initialGameState)
   const [times, setTimes] = useState<string[]>(initialTimeline)
-  const [selectedAt, setSelectedAt] = useState<string | null>(null)
+  const [selectedAt, setSelectedAt] = useState<string | null>(initialCapture ?? null)
   const [frame, setFrame] = useState<SidelineOddsFrame | null>(null)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
