@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { X, Download, Copy, Check, Share } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { X, Download, Copy, Check, Share, Send } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { uploadMedia } from '@/lib/uploadMedia'
 
 // Sibling to ShareImageModal.tsx (posts), adapted for a feature with no
 // public URL to unfurl: a Watchlist is a private, live snapshot of the
@@ -11,10 +14,13 @@ import { X, Download, Copy, Check, Share } from 'lucide-react'
 // URL needed — covers sharing to X/Instagram/Messages from a phone just
 // fine) plus a desktop-friendly "Copy Image" cover the same ground instead.
 export function ShareWatchlistModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgErrored, setImgErrored] = useState(false)
   const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState('')
 
   const imgUrl = '/api/share-image/watchlist'
 
@@ -71,6 +77,31 @@ export function ShareWatchlistModal({ onClose }: { onClose: () => void }) {
     }
   }
 
+  async function postToFeed() {
+    setBusy('feed')
+    setError('')
+    try {
+      const blob = await fetchBlob()
+      const upload = await uploadMedia(new File([blob], 'dugout-research.png', { type: 'image/png' }), 'posts')
+      if ('error' in upload) throw new Error(upload.error)
+      const { data, error: insertError } = await supabase.from('posts').insert({
+        content: 'Dugout research card',
+        post_type: 'analysis',
+        sport: 'MLB',
+        media_urls: [upload.publicUrl],
+        visibility: 'public',
+      }).select('id').single()
+      if (insertError || !data?.id) throw insertError ?? new Error('Post could not be created')
+      onClose()
+      router.push(`/posts/${data.id}`)
+      router.refresh()
+    } catch {
+      setError('Could not post this card. Try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <div
       onClick={onClose}
@@ -110,7 +141,10 @@ export function ShareWatchlistModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        {error && <p role="alert" style={{ color: 'var(--red)', fontSize: 12, margin: '0 0 10px', textAlign: 'center' }}>{error}</p>}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(88px, 1fr))', gap: 10 }}>
+          <ShareOptionBtn label="Post to Feed" onClick={postToFeed} busy={busy === 'feed'}
+            icon={<Send size={18} />} bg="color-mix(in srgb, var(--green) 18%, var(--surface-2))" fg="var(--green)" />
           <ShareOptionBtn label="Download" onClick={download} busy={busy === 'download'}
             icon={<Download size={18} />} bg="var(--surface-2)" fg="var(--text-1)" />
           <ShareOptionBtn label="Copy Image" onClick={copyImage} busy={busy === 'copy'}

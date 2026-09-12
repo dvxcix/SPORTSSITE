@@ -930,6 +930,14 @@ test('social identity and publishing support custom rings and native post modes'
   assert.ok(migration.includes("check (avatar_ring_style in ('none', 'solid', 'surge', 'pulse', 'orbit'))"))
 })
 
+test('Dugout research cards can publish directly into the social feed', async () => {
+  const shareModal = await read('src/components/dugout/ShareWatchlistModal.tsx')
+  assert.ok(shareModal.includes('postToFeed'))
+  assert.ok(shareModal.includes("post_type: 'analysis'"))
+  assert.ok(shareModal.includes('uploadMedia('))
+  assert.ok(shareModal.includes('router.push(`/posts/${data.id}`)'))
+})
+
 test('public publishing and follow flows recover without leaking backend errors', async () => {
   const follow = await read('src/components/pages/PageFollowButton.tsx')
   const page = await read('src/components/pages/PageSettingsForm.tsx')
