@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { FloatingSurface } from '@/components/ui/FloatingSurface'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 
@@ -133,7 +134,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const menuRef = useRef<HTMLDivElement>(null)
-  const notifRef = useRef<HTMLDivElement>(null)
+  const notifTriggerRef = useRef<HTMLButtonElement>(null)
   // Read via the ref in both the notification-bell fetch and the quick-
   // search results below so neither needs to refetch or add this to a
   // dependency array — same pattern as SearchClient.tsx's own copy.
@@ -336,7 +337,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setQuickOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
@@ -513,8 +513,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         {user ? (
           <>
             {/* Notifications */}
-            <div ref={notifRef} className="ss-topbar-control-wrap">
-              <button type="button" onClick={openNotifications} className="ss-topbar-icon-button" aria-label="Notifications" aria-expanded={notifOpen} style={{
+            <div className="ss-topbar-control-wrap">
+              <button ref={notifTriggerRef} type="button" onClick={openNotifications} className="ss-topbar-icon-button" aria-label="Notifications" aria-haspopup="dialog" aria-controls="topbar-notification-center" aria-expanded={notifOpen} style={{
                 position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 36, height: 36, borderRadius: 8,
                 background: 'transparent', border: '1px solid var(--border)',
@@ -534,8 +534,18 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 )}
               </button>
 
-              {notifOpen && (
-                <div className="ss-dropdown ss-topbar-notifications" role="dialog" aria-label="Notifications">
+              <FloatingSurface
+                open={notifOpen}
+                anchorRef={notifTriggerRef}
+                onClose={() => setNotifOpen(false)}
+                className="ss-dropdown ss-topbar-notifications"
+                width={390}
+                align="end"
+                mobileSheet
+                role="dialog"
+                ariaLabel="Notifications"
+              >
+                <div id="topbar-notification-center" className="ss-topbar-notification-shell">
                   <div className="ss-topbar-notification-heading">
                     <div>
                       <span className="ss-topbar-panel-icon"><Bell size={15} /></span>
@@ -583,7 +593,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <Link href="/notifications" onClick={() => setNotifOpen(false)}>See all activity <ChevronRight size={14} /></Link>
                   </div>
                 </div>
-              )}
+              </FloatingSurface>
             </div>
 
             {/* Avatar + menu */}

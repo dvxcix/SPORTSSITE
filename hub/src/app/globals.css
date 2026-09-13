@@ -733,7 +733,8 @@ img { max-width: 100%; }
 @keyframes ss-topbar-popover-in { from { opacity: 0; transform: translateY(-5px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .ss-topbar-panel-heading, .ss-topbar-notification-heading { position: sticky; top: 0; z-index: 3; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface-2) 94%, transparent); backdrop-filter: blur(16px); }
 .ss-topbar-panel-heading { display: flex; align-items: center; gap: 7px; padding: 10px 14px; color: var(--text-2); font-size: 11px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
-.ss-topbar-notifications { position: absolute; top: calc(100% + 8px); right: 0; display: flex; width: min(390px, calc(100vw - 20px)); max-height: min(640px, calc(100dvh - var(--topbar-h) - var(--banner-h, 0px) - 24px)); flex-direction: column; overflow: hidden; }
+.ss-topbar-notifications { display: flex; width: min(390px, calc(100vw - 20px)); max-height: min(640px, calc(100dvh - var(--topbar-h) - var(--banner-h, 0px) - 24px)); flex-direction: column; overflow: hidden; }
+.ss-topbar-notification-shell { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: hidden; }
 .ss-topbar-notification-heading { display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 11px 12px 10px 14px; }
 .ss-topbar-notification-heading > div:first-child { display: flex; align-items: center; gap: 10px; }
 .ss-topbar-panel-icon { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid color-mix(in srgb,var(--accent) 24%,var(--border)); border-radius: 11px; color: var(--accent); background: color-mix(in srgb,var(--accent) 9%,var(--surface-3)); box-shadow: inset 0 1px rgba(255,255,255,.05),0 0 22px color-mix(in srgb,var(--accent) 7%,transparent); }
@@ -750,7 +751,7 @@ img { max-width: 100%; }
 .ss-topbar-notification-tabs button:hover { color: var(--text-1); background: var(--surface-3); }
 .ss-topbar-notification-tabs button[data-active='true'] { border-color: color-mix(in srgb,var(--accent) 28%,var(--border)); color: var(--accent); background: color-mix(in srgb,var(--accent) 9%,var(--surface-3)); }
 .ss-topbar-notification-tabs button span { min-width: 17px; padding: 2px 5px; border-radius: 99px; color: var(--accent-fg); background: var(--accent); font-size: 8px; line-height: 1; }
-.ss-topbar-notification-feed { min-height: 154px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb,var(--text-3) 25%,transparent) transparent; }
+.ss-topbar-notification-feed { min-height: 154px; flex: 1; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb,var(--text-3) 25%,transparent) transparent; }
 .ss-topbar-notification-row { position: relative; border-bottom: 1px solid color-mix(in srgb,var(--border) 76%,transparent); background: transparent; transition: background var(--duration-fast); }
 .ss-topbar-notification-row:hover { background: color-mix(in srgb,var(--surface-3) 78%,transparent); }
 .ss-topbar-notification-row[data-unread='true'] { background: linear-gradient(90deg,color-mix(in srgb,var(--accent) 8%,transparent),transparent 76%); }
@@ -1548,8 +1549,8 @@ img { max-width: 100%; }
   .ss-topbar-profile-trigger { padding: 5px !important; justify-content: center; }
   .ss-topbar-profile-trigger > svg { display: none; }
   .ss-topbar-profile-menu .ss-dropdown-item { min-height: 44px; }
-  .ss-topbar-search-results, .ss-topbar-notifications, .ss-topbar-profile-menu { position: fixed !important; left: 10px !important; right: 10px !important; top: calc(var(--banner-h, 0px) + var(--topbar-h) + 8px) !important; width: auto !important; min-width: 0 !important; max-height: min(68dvh, 560px) !important; border-radius: 18px !important; }
-  .ss-topbar-notifications { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); max-height: none !important; }
+  .ss-topbar-search-results, .ss-topbar-profile-menu { position: fixed !important; left: 10px !important; right: 10px !important; top: calc(var(--banner-h, 0px) + var(--topbar-h) + 8px) !important; width: auto !important; min-width: 0 !important; max-height: min(68dvh, 560px) !important; border-radius: 18px !important; }
+  .ss-topbar-notifications { max-height: min(72dvh, 620px) !important; border-radius: 20px !important; }
   .ss-topbar-notification-feed { flex: 1; }
   .ss-topbar-mobile-close { display: grid !important; }
   .ss-topbar-profile-menu { overflow-y: auto; overscroll-behavior: contain; }
