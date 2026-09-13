@@ -17,6 +17,7 @@ const destinationDetails: Record<string, string> = {
   '/the-sideline': 'NFL markets and matchup intelligence',
   '/workspace': 'Watchlists, Matrices, comparisons, and notes',
   '/settings': 'Account, profile, privacy, and membership',
+  '/settings/connections': 'Connect or disconnect Whop, Discord, and X',
 }
 
 const destinations: CommandItem[] = (() => {

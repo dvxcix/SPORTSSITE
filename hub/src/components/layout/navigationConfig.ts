@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity, Award, Bell, Bookmark, BookOpen, ChartSpline, CloudSun, Coins,
+  Activity, AtSign, Award, Bell, Bookmark, BookOpen, ChartSpline, CloudSun, Coins,
   Compass, Crosshair, Flame, FlaskConical, Hash, History, Home, Layers3,
   LayoutGrid, Link2, MessageCircle, MessagesSquare, Search, Settings2,
   ShoppingBag, Table2, TrendingUp, Trophy, Users, Zap,
@@ -71,6 +71,7 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
   account: [
     { href: '/notifications', label: 'Notifications', icon: Bell },
     { href: '/bookmarks', label: 'Saved', icon: Bookmark },
+    { href: '/settings/connections', label: 'Connected Accounts', icon: AtSign },
     { href: '/settings', label: 'Settings', icon: Settings2 },
   ],
   commerce: [

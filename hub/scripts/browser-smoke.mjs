@@ -264,7 +264,7 @@ try {
         captureName: `desktop-${path}`,
       }),
   )
-  await runInBatches(['/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public', '/daily-recap', '/research', '/weather-lab'], 4, (path) => verifyProtectedPage(desktop, path))
+  await runInBatches(['/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/connections', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public', '/daily-recap', '/research', '/weather-lab'], 4, (path) => verifyProtectedPage(desktop, path))
   await desktop.close()
 
   const mobile = await browser.newContext({
@@ -297,7 +297,7 @@ try {
         captureName: `mobile-${path}`,
       }),
   )
-  await runInBatches(['/feed', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public'], 4, (path) => verifyProtectedPage(mobile, path, { label: 'mobile' }))
+  await runInBatches(['/feed', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/connections', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public'], 4, (path) => verifyProtectedPage(mobile, path, { label: 'mobile' }))
   await mobile.close()
 
   const fold = await browser.newContext({
@@ -318,7 +318,7 @@ try {
     3,
     ([path, expected]) => verifyPage(fold, path, expected, { label: 'fold', checkOverflow: true }),
   )
-  await runInBatches(['/feed', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public'], 3, (path) => verifyProtectedPage(fold, path, { label: 'fold' }))
+  await runInBatches(['/feed', '/settings', '/settings/profile', '/settings/connections', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public'], 3, (path) => verifyProtectedPage(fold, path, { label: 'fold' }))
   await fold.close()
 
   const tablet = await browser.newContext({
@@ -374,7 +374,7 @@ try {
   await narrow.close()
 
   if (authenticatedStorage) {
-    const authenticatedRoutes = ['/feed', '/profile/parlayparty', '/notifications', '/messages', '/community', '/groups', '/channels', '/settings/profile', '/dugout', '/slate-breakdown', '/the-public', '/the-sideline', '/research']
+    const authenticatedRoutes = ['/feed', '/profile/parlayparty', '/notifications', '/messages', '/community', '/groups', '/channels', '/settings/profile', '/settings/connections', '/dugout', '/slate-breakdown', '/the-public', '/the-sideline', '/research']
     const deviceMatrix = [
       {
         label: 'auth-desktop',

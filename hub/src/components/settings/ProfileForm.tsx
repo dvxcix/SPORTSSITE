@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, Upload, X, Search, BadgeCheck, Link2, Unlink, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { AtSign, Check, ChevronRight, Loader2, Upload, X, Search, Sparkles } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
 import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
@@ -12,7 +13,6 @@ import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { mlbTeamAbbrById } from '@slipsurge/core/mlbTeams'
 import { sportLogoUrl } from '@/lib/sportLogos'
-import { PROVIDER_BY_PLATFORM_KEY, extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 
@@ -72,135 +72,6 @@ export function ProfileForm({ profile }: { profile: any }) {
     supabase.from('social_platforms').select('*').order('sort_order').order('name')
       .then(({ data }) => setPlatforms((data ?? []) as SocialPlatform[]))
   }, [supabase])
-
-  // Real, verified handles from Supabase's own linked OAuth identities —
-  // separate from the free-text social_links a user can type in unverified.
-  // Synced on mount (and right after linkIdentity() redirects back here)
-  // since getUserIdentities() only reflects what's true *right now*, not
-  // what was last saved to the users row.
-  const [verified, setVerified] = useState<Record<string, VerifiedIdentity>>(profile?.verified_identities ?? {})
-  const [linkingProvider, setLinkingProvider] = useState<'discord' | 'x' | 'whop' | null>(null)
-  // Separate from the top-of-form `error` — that one renders far above this
-  // section, so a failed link/unlink click looked like it "did nothing"
-  // when really the error was just scrolled out of view (or, before this,
-  // silently swallowed entirely since getUserIdentities()/unlinkIdentity()
-  // had no error handling at all).
-  const [connectedError, setConnectedError] = useState('')
-  // /auth/callback redirects a failed linkIdentity() attempt back here with
-  // ?link_error=..., and the hand-rolled Whop link flow (handleWhopLink in
-  // /auth/whop/callback) redirects back with ?whop_linked=1 / ?whop_link_error=...
-  // (plain URLSearchParams, not next/navigation's useSearchParams — that
-  // needs a Suspense boundary this page doesn't have, and this only needs to
-  // run once on mount anyway).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const linkError = params.get('link_error') || params.get('whop_link_error')
-    const whopLinked = params.get('whop_linked')
-    if (linkError) setConnectedError('Could not connect that account. Try again.')
-    if (linkError || whopLinked) {
-      params.delete('link_error'); params.delete('whop_link_error'); params.delete('whop_linked')
-      const qs = params.toString()
-      window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    supabase.auth.getUserIdentities().then(async ({ data, error: err }) => {
-      if (cancelled) return
-      if (err) { setConnectedError('Could not check connected accounts.'); return }
-      if (!data) return
-      // Only discord/x come from Supabase's own identities — start from
-      // whatever's already stored (e.g. 'whop', synced separately by the
-      // hand-rolled Whop link flow, not through getUserIdentities() at all)
-      // and only ever touch the discord/x keys, or a stale read here would
-      // silently wipe the whop entry out of verified_identities.
-      const next: Record<string, VerifiedIdentity> = { ...(profile?.verified_identities ?? {}) }
-      delete next.discord
-      delete next.x
-      for (const identity of data.identities) {
-        if (identity.provider !== 'discord' && identity.provider !== 'x') continue
-        const extracted = extractIdentityHandle(identity.provider, identity.identity_data ?? {})
-        if (extracted) next[identity.provider] = extracted
-      }
-      setVerified(next)
-      const response = await fetch('/api/account/verified-identities', { method: 'POST' })
-      const body = await response.json().catch(() => ({}))
-      if (response.ok && body.identities) setVerified(body.identities)
-      else setConnectedError(body.error || 'Verified, but your public profile may not reflect it yet. Refresh to retry.')
-    }).catch(() => { if (!cancelled) setConnectedError('Could not check connected accounts.') })
-    return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function linkIdentity(provider: 'discord' | 'x' | 'whop') {
-    setConnectedError('')
-    if (provider === 'whop') {
-      // Whop isn't a Supabase-native provider (see whop.ts) — this is a
-      // full-page redirect into the hand-rolled OAuth flow, not
-      // supabase.auth.linkIdentity(), which only knows providers Supabase
-      // itself supports.
-      setLinkingProvider('whop')
-      router.push(`/auth/whop/login?mode=link&next=${encodeURIComponent('/settings/profile')}`)
-      return
-    }
-    setLinkingProvider(provider)
-    try {
-      const { error: err } = await supabase.auth.linkIdentity({
-        provider,
-        options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent('/settings/profile')}` },
-      })
-      // A successful call navigates away to the provider's OAuth screen —
-      // reaching this line at all means it didn't, i.e. it failed before
-      // ever redirecting (most commonly: Manual linking isn't enabled in
-      // Supabase's Auth settings, or this identity is already linked to a
-      // different SlipSurge account).
-      if (err) { setConnectedError('Could not start linking. Try again.'); setLinkingProvider(null) }
-    } catch {
-      setConnectedError('Could not start linking. Try again.')
-      setLinkingProvider(null)
-    }
-  }
-
-  async function unlinkIdentity(provider: 'discord' | 'x' | 'whop') {
-    setConnectedError('')
-    if (provider === 'whop') {
-      // No Supabase identity to unlink — /api/whop/unlink clears
-      // whop_user_id/discord_advanced_claimed/verified_identities.whop and
-      // re-syncs the tier badge server-side (same hand-rolled-flow reason
-      // as linkIdentity above).
-      try {
-        const res = await fetch('/api/whop/unlink', { method: 'POST' })
-        if (!res.ok) { setConnectedError('Unlink failed. Try again.'); return }
-      } catch {
-        setConnectedError('Unlink failed. Try again.')
-        return
-      }
-      const next = { ...verified }
-      delete next.whop
-      setVerified(next)
-      router.refresh()
-      return
-    }
-    let identity, err
-    try {
-      const res = await supabase.auth.getUserIdentities()
-      identity = res.data?.identities.find(i => i.provider === provider)
-    } catch {
-      setConnectedError('Could not load connected accounts.')
-      return
-    }
-    if (!identity) { setConnectedError(`No linked ${provider === 'x' ? 'X' : 'Discord'} account found to unlink.`); return }
-    try {
-      ;({ error: err } = await supabase.auth.unlinkIdentity(identity))
-    } catch (e: any) {
-      err = e
-    }
-    if (err) { setConnectedError('Unlink failed. Try again.'); return }
-    const response = await fetch('/api/account/verified-identities', { method: 'POST' })
-    const body = await response.json().catch(() => ({}))
-    if (response.ok && body.identities) setVerified(body.identities)
-    else setConnectedError(body.error || 'Unlinked, but your public profile may still show it. Refresh to retry.')
-  }
 
   const [playerQuery, setPlayerQuery] = useState('')
   const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([])
@@ -489,34 +360,17 @@ export function ProfileForm({ profile }: { profile: any }) {
         </div>
       </div>
 
+      <Link href="/settings/connections" className="ss-profile-connections-link">
+        <span><AtSign size={18} /></span>
+        <div><strong>Connected accounts</strong><small>Connect or manage Whop, Discord, and X</small></div>
+        <ChevronRight size={16} />
+      </Link>
+
       {platforms.length > 0 && (
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-2">Connected Accounts</label>
-          {connectedError && (
-            <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-xs text-red-400 mb-2">{connectedError}</div>
-          )}
+          <label className="block text-xs font-bold text-zinc-400 mb-2">Public social links</label>
           <div className="space-y-2">
             {platforms.map(p => {
-              const provider = PROVIDER_BY_PLATFORM_KEY[p.key]
-              const identity = provider ? verified[provider] : undefined
-              if (provider && identity) {
-                // Real, OAuth-verified link — shown as-is (not editable text),
-                // since it's pulled from the actual connected account, not typed.
-                return (
-                  <div key={p.id} className="flex items-center gap-2.5">
-                    <SafeImage src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
-                    <a href={identity.profileUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex-1 flex items-center gap-1.5 text-sm font-bold text-white hover:underline">
-                      {identity.handle}
-                      <BadgeCheck size={14} className="text-green-500 shrink-0" />
-                    </a>
-                    <button type="button" onClick={() => unlinkIdentity(provider)}
-                      className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-red-400 px-2 py-1.5">
-                      <Unlink size={12} /> Unlink
-                    </button>
-                  </div>
-                )
-              }
               return (
                 <div key={p.id} className="flex items-center gap-2.5">
                   <SafeImage src={p.icon_url} alt={p.name} className="w-6 h-6 object-contain shrink-0" />
@@ -528,12 +382,6 @@ export function ProfileForm({ profile }: { profile: any }) {
                     maxLength={100}
                     className={inputClass}
                   />
-                  {provider && (
-                    <button type="button" onClick={() => linkIdentity(provider)} disabled={linkingProvider === provider}
-                      className="flex items-center gap-1 text-xs font-bold text-green-400 hover:text-green-300 px-2 py-1.5 whitespace-nowrap disabled:opacity-50">
-                      <Link2 size={12} /> {linkingProvider === provider ? 'Linking…' : 'Verify'}
-                    </button>
-                  )}
                 </div>
               )
             })}

@@ -100,7 +100,7 @@ export function OnboardingFlow({
   const [playerQuery, setPlayerQuery] = useState("");
   const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
   const [playerSearching, setPlayerSearching] = useState(false);
-  const [destination, setDestination] = useState<"feed" | "pricing">("feed");
+  const [destination, setDestination] = useState<"feed" | "pricing" | "connections">("feed");
   const [teams, setTeams] = useState<string[]>(
     initialProfile?.favorite_teams ?? [],
   );
@@ -157,7 +157,7 @@ export function OnboardingFlow({
           avatarUrl?: string;
           bannerUrl?: string;
           favoritePlayers?: FavoritePlayer[];
-          destination?: "feed" | "pricing";
+          destination?: "feed" | "pricing" | "connections";
           teams?: string[];
           sports?: string[];
           contentMix?: string[];
@@ -179,7 +179,7 @@ export function OnboardingFlow({
             setBannerUrl(draft.bannerUrl);
           if (Array.isArray(draft.favoritePlayers))
             setFavoritePlayers(draft.favoritePlayers.slice(0, 8));
-          if (draft.destination === "feed" || draft.destination === "pricing")
+          if (draft.destination === "feed" || draft.destination === "pricing" || draft.destination === "connections")
             setDestination(draft.destination);
           if (Array.isArray(draft.teams))
             setTeams(draft.teams.filter((value) => typeof value === "string"));
@@ -391,6 +391,7 @@ export function OnboardingFlow({
         favorite_sport_count: sports.length,
       });
       if (destination === "pricing") { window.location.replace("/pricing"); return; }
+      if (destination === "connections") { window.location.replace("/settings/connections"); return; }
       window.location.replace("/feed");
     } catch {
       setSaving(false);
@@ -921,6 +922,9 @@ export function OnboardingFlow({
                   <button type="button" aria-pressed={destination === "pricing"} className={destination === "pricing" ? "is-selected" : ""} onClick={() => setDestination("pricing")}>
                     <b>Compare membership</b><small>See plans before entering the app.</small>
                   </button>
+                  <button type="button" aria-pressed={destination === "connections"} className={destination === "connections" ? "is-selected" : ""} onClick={() => setDestination("connections")}>
+                    <b>Connect my accounts</b><small>Link Whop, Discord, or X.</small>
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -935,7 +939,9 @@ export function OnboardingFlow({
                   ) : (
                     destination === "pricing"
                       ? "Finish & Compare Plans →"
-                      : "Finish & Open My Feed →"
+                      : destination === "connections"
+                        ? "Finish & Connect Accounts →"
+                        : "Finish & Open My Feed →"
                   )}
                 </button>
               </div>

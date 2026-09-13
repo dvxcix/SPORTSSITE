@@ -10,6 +10,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
   { q: 'Why can I only parlay legs from the same sportsbook?', a: 'Real books only pay out combined odds within their own platform — you can\'t parlay a leg priced on FanDuel with one priced on BetMGM. SlipSurge enforces the same rule so the combined odds shown are actually correct.' },
   { q: 'What\'s free vs. what requires a paid tier?', a: 'Creating an account, browsing the feed, and managing your own profile are always free. The community (posting, DMs, groups), player research, live scores, and our analytics tools (Weather Lab, Pitcher Report, Slate Breakdown, The Dugout) are unlocked across our Basic, Advanced, and Ultimate tiers — see the Pricing page for the full breakdown.' },
   { q: 'How do creator subscriptions work?', a: 'Approved creators can publish paid memberships and one-time offers through Whop. SlipSurge collects the displayed platform fee, while creator balances, verification, and withdrawals are managed securely through Whop.' },
+  { q: 'How do I connect Whop, Discord, or X after signing up?', a: <>Open <Link href="/settings/connections" style={{ color: 'var(--accent)' }}>Connected accounts</Link> in Settings. You can add or remove any supported account there, even if you originally signed up with email or a different provider.</> },
   { q: 'How do I delete my account?', a: <>Open <Link href="/settings/account" style={{ color: 'var(--accent)' }}>Account settings</Link> and use the account deletion option. You can contact support if you cannot sign in.</> },
 ]
 

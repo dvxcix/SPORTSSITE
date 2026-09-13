@@ -14,7 +14,7 @@ export default async function AccountSettingsPage() {
   const { data: profile } = await admin.from('users').select(PRIVATE_ACCOUNT_COLUMNS).eq('id', user.id).single()
   const accountProfile = (profile ?? {}) as unknown as Record<string, unknown>
 
-  return <SettingsShell active="/settings/account" title="Account and security" description="Manage your sign-in details, connected identity, and account-level controls.">
+  return <SettingsShell active="/settings/account" title="Account and security" description="Manage your email, password, account data, and account-level controls.">
     <AccountSettingsForm profile={{ ...accountProfile, email: user.email ?? '' }} />
   </SettingsShell>
 }

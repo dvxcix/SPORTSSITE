@@ -945,7 +945,7 @@ test('settings hub exposes every account workflow with an accessible shared shel
   const page = await read('src/app/settings/page.tsx')
   const shell = await read('src/components/settings/SettingsShell.tsx')
   const audit = await read('src/lib/productExperienceAudit.ts')
-  for (const href of ['/settings/profile', '/settings/interests', '/settings/account', '/settings/security', '/settings/notifications', '/settings/privacy', '/settings/blocked', '/settings/membership', '/creators/apply', '/faq', '/support']) {
+  for (const href of ['/settings/profile', '/settings/interests', '/settings/connections', '/settings/account', '/settings/security', '/settings/notifications', '/settings/privacy', '/settings/blocked', '/settings/membership', '/creators/apply', '/faq', '/support']) {
     assert.ok(page.includes(`href: '${href}'`), `settings hub omits ${href}`)
   }
   assert.ok(shell.includes('aria-label="Settings sections"'))
@@ -953,6 +953,29 @@ test('settings hub exposes every account workflow with an accessible shared shel
   assert.ok(shell.includes('aria-labelledby="settings-page-title"'))
   assert.ok(page.includes('aria-labelledby={`settings-${section.title.toLowerCase()}-heading`}'))
   assert.ok(audit.includes("'/settings': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' }"))
+  assert.ok(audit.includes("'/settings/connections': { shell: 'complete', responsive: 'complete', states: 'complete', interaction: 'complete', accessibility: 'complete' }"))
+})
+
+test('connected accounts are discoverable, provider-backed, and safe to disconnect', async () => {
+  const page = await read('src/app/settings/connections/page.tsx')
+  const panel = await read('src/components/settings/ConnectedAccountsPanel.tsx')
+  const profile = await read('src/components/settings/ProfileForm.tsx')
+  const topBar = await read('src/components/layout/TopBar.tsx')
+  const navigation = await read('src/components/layout/navigationConfig.ts')
+  const commands = await read('src/components/layout/GlobalCommandPalette.tsx')
+  const onboarding = await read('src/components/onboarding/OnboardingFlow.tsx')
+  const faq = await read('src/app/faq/page.tsx')
+  assert.match(page, /redirect\('\/auth\/login\?next=\/settings\/connections'\)/)
+  assert.match(page, /select\('verified_identities, whop_user_id'\)/)
+  assert.match(panel, /supabase\.auth\.linkIdentity/)
+  assert.match(panel, /supabase\.auth\.unlinkIdentity/)
+  assert.match(panel, /identities\.length \?\? 0\) <= 1/)
+  assert.match(panel, /\/auth\/whop\/login\?mode=link/)
+  assert.match(panel, /\/api\/whop\/unlink/)
+  assert.match(panel, /\/api\/account\/verified-identities/)
+  for (const source of [profile, topBar, navigation, commands, onboarding, faq]) {
+    assert.match(source, /\/settings\/connections/)
+  }
 })
 
 test('member interests persist across onboarding and remain privately editable', async () => {

@@ -13,7 +13,7 @@ export default async function ProfileSettingsPage() {
   const admin = createAdminClient()
   const { data: profile } = await admin.from('users').select(PRIVATE_ACCOUNT_COLUMNS).eq('id', user.id).single()
 
-  return <SettingsShell active="/settings/profile" title="Your public profile" description="Shape how the SlipSurge community sees you, from your identity and bio to teams, players, links, and connected accounts.">
+  return <SettingsShell active="/settings/profile" title="Your public profile" description="Shape how the SlipSurge community sees you, from your identity and bio to teams, players, and public links.">
     <div className="ss-settings-card"><ProfileForm profile={profile} /></div>
   </SettingsShell>
 }
