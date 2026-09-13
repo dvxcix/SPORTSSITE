@@ -20,6 +20,7 @@ import { MfaGate } from '@/components/security/MfaGate'
 import { GlobalCommandPalette } from './GlobalCommandPalette'
 import { ContextHandoff } from './ContextHandoff'
 import { ProductTelemetry } from './ProductTelemetry'
+import { getProductArea } from './navigationConfig'
 
 export function RootLayoutShell({ children }: { children: React.ReactNode }) {
   // Keep context stable across streamed route changes, including transitions
@@ -32,6 +33,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   const isAdmin = path.startsWith('/admin')
   const isAuthPage = path.startsWith('/auth/')
   const isLandingPage = path === '/'
+  const productArea = getProductArea(path)
   // Sidebar is a fixed-width column on desktop but an off-canvas drawer
   // below the md breakpoint — this is the shared toggle both the topbar's
   // hamburger button and the sidebar's own backdrop/close button drive.
@@ -80,7 +82,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
       <NetworkStatus />
       <ProductTelemetry />
       <Suspense fallback={null}><ContextHandoff /></Suspense>
-      <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`}>
+      <div className={`flex min-h-dvh ss-site-shell ${isDesktop ? 'ss-desktop-shell' : ''}`} data-product-area={productArea}>
         {isDesktop
           ? <DesktopNavigation />
           : <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />}

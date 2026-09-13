@@ -791,18 +791,22 @@ test('account recovery associates its visible label with the email field', async
 
 test('mobile navigation keeps the community workspace active across every social route', async () => {
   const dock = await read('src/components/layout/MobileDock.tsx')
+  const navigation = await read('src/components/layout/navigationConfig.ts')
   for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
-    assert.ok(dock.includes(`'${route}'`), `mobile community state omits ${route}`)
+    assert.ok(navigation.includes(`'${route}'`), `shared mobile navigation state omits ${route}`)
   }
-  assert.ok(dock.includes('item.sections?.some'))
+  assert.ok(dock.includes('primaryNavigation.map'))
+  assert.ok(dock.includes('routeMatches(pathname, item)'))
 })
 
 test('desktop navigation classifies every social route as community', async () => {
-  const navigation = await read('src/components/desktop/DesktopNavigation.tsx')
+  const desktop = await read('src/components/desktop/DesktopNavigation.tsx')
+  const navigation = await read('src/components/layout/navigationConfig.ts')
   for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
-    assert.ok(navigation.includes(`'${route}'`), `desktop community navigation omits ${route}`)
+    assert.ok(navigation.includes(`'${route}'`), `shared desktop navigation omits ${route}`)
   }
-  assert.ok(navigation.includes('communitySections.some'))
+  assert.ok(desktop.includes('getContextNavigation(pathname)'))
+  assert.ok(desktop.includes('routeMatches(pathname, item)'))
 })
 
 test('live chat supports rich mentions without dropping send failures', async () => {
@@ -1030,6 +1034,7 @@ test('private research workspaces compose watchlists, matrices, comparisons, and
   const workspace = await read('src/components/research/ResearchWorkspaceClient.tsx')
   const command = await read('src/components/layout/GlobalCommandPalette.tsx')
   const desktop = await read('src/components/desktop/DesktopNavigation.tsx')
+  const navigation = await read('src/components/layout/navigationConfig.ts')
   const sidebar = await read('src/components/layout/Sidebar.tsx')
   const migration = await read('supabase/migrations/20260912165944_research_workspaces.sql')
   assert.ok(page.includes("redirect('/auth/login?next=/workspace')"))
@@ -1041,7 +1046,8 @@ test('private research workspaces compose watchlists, matrices, comparisons, and
   assert.ok(workspace.includes(".from('research_notes').insert"))
   assert.ok(workspace.includes('aria-pressed={selected}'))
   assert.ok(command.includes("href: '/workspace'"))
-  assert.ok(desktop.includes("href: '/workspace'"))
+  assert.ok(desktop.includes('getContextNavigation(pathname)'))
+  assert.ok(navigation.includes("href: '/workspace'"))
   assert.ok(sidebar.includes("href: '/workspace'"))
   assert.ok(migration.includes('alter table public.research_workspaces enable row level security'))
   assert.ok(migration.includes('alter table public.research_notes enable row level security'))
@@ -1616,6 +1622,7 @@ test('Activity Replay is private, durable, bounded, and universally reachable', 
   const migration = await read('supabase/migrations/20260912180609_member_activity_replay.sql')
   const page = await read('src/app/activity/page.tsx')
   const desktop = await read('src/components/desktop/DesktopNavigation.tsx')
+  const navigation = await read('src/components/layout/navigationConfig.ts')
   const mobile = await read('src/components/layout/Sidebar.tsx')
   const commands = await read('src/components/layout/GlobalCommandPalette.tsx')
   assert.match(migration, /alter table public\.member_activity_events enable row level security/)
@@ -1627,7 +1634,8 @@ test('Activity Replay is private, durable, bounded, and universally reachable', 
   assert.match(page, /redirect\('\/auth\/login\?next=\/activity'\)/)
   assert.match(page, /\.eq\('user_id', user\.id\)/)
   assert.match(page, /\.limit\(150\)/)
-  assert.match(desktop, /href: '\/activity'/)
+  assert.match(desktop, /getContextNavigation\(pathname\)/)
+  assert.match(navigation, /href: '\/activity'/)
   assert.match(mobile, /href: '\/activity'/)
   assert.match(commands, /id: 'activity'/)
 })

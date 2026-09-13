@@ -3,62 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import {
-  Activity, Bell, Bookmark, CloudSun, Coins, Compass, Crown, Flame,
-  FlaskConical, Home, Link2, MessageCircle, MessagesSquare, Search,
-  Settings2, Table2, TrendingUp, Users, Zap, ChartSpline, ChevronLeft, Crosshair,
-  ChevronRight, ShoppingBag, Hash, LayoutGrid, CalendarDays, BookOpen, Layers3, Award, History, type LucideIcon,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, Settings2 } from 'lucide-react'
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { SafeImage } from '@/components/ui/SafeImage'
-
-type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string; ultimateOnly?: boolean }
-
-const rail: NavItem[] = [
-  { href: '/feed', label: 'Home', icon: Home },
-  { href: '/dugout', label: 'Research', icon: FlaskConical },
-  { href: '/community', label: 'Community', icon: MessagesSquare, badge: 'LIVE' },
-  { href: '/picks', label: 'Picks', icon: TrendingUp },
-]
-
-const intelligence: NavItem[] = [
-  { href: '/sports', label: 'Live Scores', icon: Activity, badge: 'LIVE' },
-  { href: '/dugout', label: 'The Dugout', icon: FlaskConical },
-  { href: '/workspace', label: 'Research Workspace', icon: Layers3 },
-  { href: '/batter-cost', label: 'Batter Cost', icon: Coins },
-  { href: '/odds-terminal', label: 'Odds Terminal', icon: ChartSpline, badge: 'ULT' },
-  { href: '/marketplace', label: 'Matrix Marketplace', icon: ShoppingBag, badge: 'ULT', ultimateOnly: true },
-  { href: '/slate-breakdown', label: 'Slate Breakdown', icon: Table2 },
-  { href: '/pitcher-report', label: 'Pitcher Report', icon: Compass },
-  { href: '/weather-lab', label: 'Weather Lab', icon: CloudSun },
-  { href: '/synergy', label: 'Synergy', icon: Link2 },
-  { href: '/daily-recap', label: 'Daily Recap', icon: Flame },
-  { href: '/spray-charts', label: 'Spray Charts', icon: Crosshair, badge: 'ULT', ultimateOnly: true },
-]
-
-const community: NavItem[] = [
-  { href: '/feed', label: 'Community Feed', icon: Home },
-  { href: '/channels', label: 'Live Channels', icon: Zap, badge: 'DESKTOP' },
-  { href: '/messages', label: 'Direct Messages', icon: MessageCircle },
-  { href: '/groups', label: 'Groups', icon: Users },
-  { href: '/forum', label: 'Discussions', icon: Hash },
-  { href: '/pages', label: 'Pages', icon: LayoutGrid },
-  { href: '/events', label: 'Events', icon: CalendarDays },
-  { href: '/blog', label: 'Articles', icon: BookOpen },
-  { href: '/notifications', label: 'Notifications', icon: Bell },
-  { href: '/bookmarks', label: 'Saved', icon: Bookmark },
-  { href: '/missions', label: 'Missions', icon: Award },
-  { href: '/activity', label: 'Activity Replay', icon: History },
-]
-
-const communitySections = ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events']
-const communityRailSections = communitySections.filter(section => section !== '/feed')
-
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`)
-}
+import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeMatches } from '@/components/layout/navigationConfig'
 
 export function DesktopNavigation() {
   const pathname = usePathname()
@@ -66,13 +16,11 @@ export function DesktopNavigation() {
   const { collapsed, toggle } = useSidebarCollapsed()
   const channelsWorkspace = pathname.startsWith('/channels')
   const contextCollapsed = collapsed && !channelsWorkspace
-  const currentSection = communitySections.some(section => isActive(pathname, section))
-    ? 'Community'
-    : 'Intelligence'
+  const context = getContextNavigation(pathname)
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
   const fullAccess = !!profile && hasFullAccessOverride(profile.account_type, profile.beta_access_active)
   const hasUltimate = !!profile && (fullAccess || hasTierAccess(profileTier, 'ultimate'))
-  const items = (currentSection === 'Community' ? community : intelligence).filter(item => !item.ultimateOnly || hasUltimate)
+  const items = context.items.filter(item => !item.ultimateOnly || hasUltimate)
   const displayName = profile?.display_name || profile?.username || (loading ? 'Loading account…' : 'Account unavailable')
   const accessLabel = !profile
     ? (loading ? 'Checking access…' : 'Refresh account')
@@ -89,11 +37,9 @@ export function DesktopNavigation() {
           <SafeImage src="/logo.png" alt="" />
         </Link>
         <nav aria-label="Desktop workspaces">
-          {rail.map(item => {
+          {primaryNavigation.map(item => {
             const Icon = item.icon
-            const active = item.href === '/channels'
-              ? communityRailSections.some(section => isActive(pathname, section))
-              : isActive(pathname, item.href)
+            const active = routeMatches(pathname, item)
             return (
               <Link key={item.href} href={item.href} prefetch={false} data-active={active} title={item.label} aria-label={item.label}>
                 <Icon size={19} />
@@ -103,26 +49,27 @@ export function DesktopNavigation() {
           })}
         </nav>
         <div className="ss-desktop-rail-bottom">
-          <Link href="/search" prefetch={false} title="Search" aria-label="Search"><Search size={18} /></Link>
-          <Link href="/notifications" prefetch={false} title="Notifications" aria-label="Notifications"><Bell size={18} /></Link>
-          <Link href="/settings" prefetch={false} title="Settings" aria-label="Settings"><Settings2 size={18} /></Link>
+          {accountQuickNavigation.map(item => {
+            const Icon = item.icon
+            return <Link key={item.href} href={item.href} prefetch={false} title={item.label} aria-label={item.label} data-active={routeMatches(pathname, item)}><Icon size={18} /></Link>
+          })}
         </div>
       </div>
 
       {!channelsWorkspace && (
         <div className="ss-desktop-context-nav">
           <header>
-            <div><span>SLIPSURGE DESKTOP</span><strong>{currentSection}</strong></div>
+            <div><span>{context.meta.eyebrow}</span><strong>{context.meta.label}</strong></div>
             <Link href="/pricing" prefetch={false} title="Upgrade"><Crown size={15} /></Link>
           </header>
           <button className="ss-desktop-context-toggle" type="button" onClick={toggle} aria-label={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={contextCollapsed ? 'Expand navigation' : 'Collapse navigation'}>
             {contextCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>Collapse</span></>}
           </button>
           <div className="ss-desktop-context-label">WORKSPACE</div>
-          <nav aria-label={`${currentSection} navigation`}>
+          <nav aria-label={`${context.meta.label} navigation`}>
             {items.map(item => {
               const Icon = item.icon
-              const active = isActive(pathname, item.href)
+              const active = routeMatches(pathname, item)
               return (
                 <Link key={item.href} href={item.href} prefetch={false} data-active={active}>
                   <Icon size={15} />

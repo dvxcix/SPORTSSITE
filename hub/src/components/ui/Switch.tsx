@@ -53,7 +53,7 @@ export function Switch({ checked, onChange, label, disabled, ariaLabel, size = '
       onClick={() => !disabled && onChange(!checked)}
       className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
+        display: 'inline-flex', minHeight: 44, alignItems: 'center', gap: 8,
         background: 'none', border: 'none', padding: 0, flexShrink: 0,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,

@@ -3,31 +3,16 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import {
-  ArrowLeft,
-  ArrowRight,
-  DatabaseZap,
-  ChartSpline,
-  FlaskConical,
-  Home,
-  RefreshCw,
-  Search,
-  Table2,
-  Wifi,
-  WifiOff,
-} from 'lucide-react'
-
-const workspaces = [
-  { href: '/dugout', label: 'Dugout', icon: FlaskConical },
-  { href: '/batter-cost', label: 'Batter Cost', icon: DatabaseZap },
-  { href: '/odds-terminal', label: 'Terminal', icon: ChartSpline },
-  { href: '/slate-breakdown', label: 'Slate', icon: Table2 },
-]
+import { ArrowLeft, Search, Wifi, WifiOff } from 'lucide-react'
+import { getContextNavigation, routeMatches } from './navigationConfig'
 
 export function DesktopCommandBar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [online, setOnline] = useState(() => navigator.onLine)
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
+  const context = getContextNavigation(pathname)
+  const ContextIcon = context.meta.icon
+  const shortcuts = context.items.filter(item => !item.ultimateOnly).slice(0, 5)
 
   useEffect(() => {
     const markOnline = () => setOnline(true)
@@ -40,51 +25,27 @@ export function DesktopCommandBar() {
     }
   }, [])
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey)) return
-
-      if (event.key.toLowerCase() === 'r') {
-        event.preventDefault()
-        window.location.reload()
-      } else if (event.key === '[') {
-        event.preventDefault()
-        router.back()
-      } else if (event.key === ']') {
-        event.preventDefault()
-        router.forward()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [router])
-
   return (
     <div className="ss-desktop-commandbar" role="toolbar" aria-label="Desktop navigation">
       <div className="ss-desktop-history">
-        <button type="button" onClick={() => router.back()} aria-label="Go back" title="Back (Ctrl+[)">
+        <button type="button" onClick={() => router.back()} aria-label="Go back" title="Back">
           <ArrowLeft size={14} />
         </button>
-        <button type="button" onClick={() => router.forward()} aria-label="Go forward" title="Forward (Ctrl+])">
-          <ArrowRight size={14} />
-        </button>
-        <button type="button" onClick={() => window.location.reload()} aria-label="Reload" title="Reload (Ctrl+R)">
-          <RefreshCw size={13} />
-        </button>
-        <Link href="/feed" aria-label="Open feed" title="Feed">
-          <Home size={13} />
-        </Link>
+      </div>
+
+      <div className="ss-desktop-context-identity" aria-label={`${context.meta.label} workspace`}>
+        <span><ContextIcon size={14} /></span>
+        <div><small>{context.meta.eyebrow}</small><strong>{context.meta.label}</strong></div>
       </div>
 
       <div className="ss-desktop-workspaces" aria-label="Workspaces">
-        {workspaces.map(item => {
+        {shortcuts.map(item => {
           const Icon = item.icon
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+          const active = routeMatches(pathname, item)
           return (
-            <Link key={item.href} href={item.href} data-active={active}>
+            <Link key={item.href} href={item.href} prefetch={false} data-active={active}>
               <Icon size={13} />
-              <span>{item.label}</span>
+              <span>{item.shortLabel ?? item.label}</span>
             </Link>
           )
         })}
@@ -97,7 +58,7 @@ export function DesktopCommandBar() {
         title="Search SlipSurge (Ctrl+K)"
       >
         <Search size={13} />
-        <span>Search</span>
+        <span>Search SlipSurge</span>
         <kbd>Ctrl K</kbd>
       </button>
 
