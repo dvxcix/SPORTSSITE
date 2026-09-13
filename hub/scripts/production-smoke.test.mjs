@@ -1115,10 +1115,15 @@ test('creator drafts and scheduled posts publish through a bounded observable jo
 
 test('product experience audit tracks every completed route dimension', async () => {
   const audit = await read('src/lib/productExperienceAudit.ts')
+  const roadmap = await read('src/lib/productRoadmap.ts')
+  const roadmapUi = await read('src/app/admin/product-audit/RoadmapProgress.tsx')
   assert.ok(audit.includes("accessibility: 'complete'"))
   assert.ok(audit.includes("'/admin/product-audit'"))
   assert.ok(!audit.includes("accessibility: 'missing'"))
   assert.ok(!audit.includes("accessibility: 'partial'"))
+  assert.ok(roadmap.includes("id: 'account', label: 'Account Journey', status: 'complete'"))
+  assert.ok(roadmap.includes("id: 'quality', label: 'Quality & Release', status: 'active'"))
+  assert.ok(roadmapUi.includes('PRODUCT_ROADMAP_PHASES.map'))
 })
 
 test('settings editors expose programmatic field names and announced failures', async () => {

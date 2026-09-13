@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { DataGrid, type DataGridColumn } from '@/components/ui/DataGrid'
 import { PRODUCT_EXPERIENCE_ROUTES, AUDIT_DIMENSIONS, routeCompletion, type AuditState, type ExperienceRoute } from '@/lib/productExperienceAudit'
 import { cn } from '@/lib/utils'
+import { RoadmapProgress } from './RoadmapProgress'
 
 const STATE_META: Record<AuditState, { label: string; icon: typeof Check; className: string }> = {
   complete: { label: 'Shared', icon: Check, className: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300' },
@@ -66,6 +67,8 @@ export function ProductAuditClient({ telemetry }: { telemetry: TelemetrySummary 
         <Summary label="Shared shell" value={PRODUCT_EXPERIENCE_ROUTES.filter(route => route.shell === 'complete').length} tone="success" />
         <Summary label="Missing state systems" value={PRODUCT_EXPERIENCE_ROUTES.filter(route => route.states === 'missing').length} tone="warning" />
       </section>
+
+      <RoadmapProgress />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6" aria-label="Recent product measurement sample">
         <Summary label="Measured events" value={telemetry.events} />
