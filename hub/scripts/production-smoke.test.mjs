@@ -1045,7 +1045,7 @@ test('private research workspaces compose watchlists, matrices, comparisons, and
   assert.ok(workspace.includes(".from('research_workspaces').insert"))
   assert.ok(workspace.includes(".from('research_notes').insert"))
   assert.ok(workspace.includes('aria-pressed={selected}'))
-  assert.ok(command.includes("href: '/workspace'"))
+  assert.ok(command.includes('Object.entries(areaNavigation)'))
   assert.ok(desktop.includes('getContextNavigation(pathname)'))
   assert.ok(navigation.includes("href: '/workspace'"))
   assert.ok(sidebar.includes("href: '/workspace'"))
@@ -1637,7 +1637,8 @@ test('Activity Replay is private, durable, bounded, and universally reachable', 
   assert.match(desktop, /getContextNavigation\(pathname\)/)
   assert.match(navigation, /href: '\/activity'/)
   assert.match(mobile, /href: '\/activity'/)
-  assert.match(commands, /id: 'activity'/)
+  assert.match(commands, /Object\.entries\(areaNavigation\)/)
+  assert.match(commands, /seen\.has\(item\.href\)/)
 })
 
 test('Dugout Market Moments restore and share an exact validated capture', async () => {

@@ -2,25 +2,40 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Award, BarChart3, ChevronRight, Compass, FlaskConical, Hash, History, Layers3, LayoutDashboard, MessageCircle, Search, Settings, ShieldCheck, Table2, UserRound, Users, X } from 'lucide-react'
+import { ChevronRight, Search, ShieldCheck, UserRound, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+import { areaNavigation, productAreaMeta, type ProductArea } from './navigationConfig'
 import styles from './GlobalCommandPalette.module.css'
 
 type CommandItem = { id: string; label: string; detail: string; href: string; icon: typeof Search; keywords?: string }
-const destinations: CommandItem[] = [
-  { id: 'feed', label: 'Feed', detail: 'Posts, picks, and live conversations', href: '/feed', icon: LayoutDashboard, keywords: 'home timeline social' },
-  { id: 'explore', label: 'Explore', detail: 'People, games, creators, and communities', href: '/explore', icon: Compass, keywords: 'discover search trending' },
-  { id: 'community', label: 'Community', detail: 'Groups, channels, and discussions', href: '/community', icon: Users, keywords: 'discord rooms forums groups' },
-  { id: 'channels', label: 'Live rooms', detail: 'Game-day channels and realtime chat', href: '/channels', icon: Hash, keywords: 'chat live messages' },
-  { id: 'messages', label: 'Messages', detail: 'Direct and group conversations', href: '/messages', icon: MessageCircle, keywords: 'dm inbox' },
-  { id: 'dugout', label: 'The Dugout', detail: 'MLB markets and game intelligence', href: '/dugout', icon: FlaskConical, keywords: 'baseball mlb odds' },
-  { id: 'sideline', label: 'The Sideline', detail: 'NFL markets and matchup intelligence', href: '/the-sideline', icon: BarChart3, keywords: 'football nfl odds' },
-  { id: 'workspace', label: 'Research Workspace', detail: 'Compare saved markets, Matrices, and notes', href: '/workspace', icon: Layers3, keywords: 'watchlist notebook compare saved' },
-  { id: 'missions', label: 'Missions', detail: 'Progress, milestones, and achievements', href: '/missions', icon: Award, keywords: 'level streak mastery rewards' },
-  { id: 'activity', label: 'Activity Replay', detail: 'Your posts, picks, conversations, and research history', href: '/activity', icon: History, keywords: 'history recent actions replay' },
-  { id: 'slate', label: 'Slate Breakdown', detail: 'Pitch mix and matchup analysis', href: '/slate-breakdown', icon: Table2, keywords: 'statcast pitchers batters' },
-  { id: 'settings', label: 'Settings', detail: 'Account, profile, privacy, and notifications', href: '/settings', icon: Settings, keywords: 'account membership profile' },
-]
+const destinationDetails: Record<string, string> = {
+  '/feed': 'Posts, picks, and live conversations',
+  '/explore': 'People, games, creators, and communities',
+  '/community': 'Groups, channels, forums, and live rooms',
+  '/messages': 'Direct and group conversations',
+  '/dugout': 'MLB markets and game intelligence',
+  '/the-sideline': 'NFL markets and matchup intelligence',
+  '/workspace': 'Watchlists, Matrices, comparisons, and notes',
+  '/settings': 'Account, profile, privacy, and membership',
+}
+
+const destinations: CommandItem[] = (() => {
+  const seen = new Set<string>()
+  return (Object.entries(areaNavigation) as Array<[ProductArea, typeof areaNavigation[ProductArea]]>).flatMap(([area, items]) =>
+    items.flatMap(item => {
+      if (item.ultimateOnly || seen.has(item.href)) return []
+      seen.add(item.href)
+      return [{
+        id: `${area}-${item.href}`,
+        label: item.label,
+        detail: destinationDetails[item.href] ?? `${productAreaMeta[area].label} · ${productAreaMeta[area].eyebrow}`,
+        href: item.href,
+        icon: item.icon,
+        keywords: `${area} ${item.shortLabel ?? ''} ${productAreaMeta[area].eyebrow}`,
+      }]
+    }),
+  )
+})()
 type SportsResults = { players?: Array<{ mlbId: number; name: string; position?: string | null; teamName?: string | null }>; teams?: Array<{ id: number; name: string; abbr: string }> }
 type NflResults = { players?: Array<{ gsis_id: string; display_name: string; position?: string | null; latest_team?: string | null }>; teams?: Array<{ team_abbr: string; team_name: string }> }
 
