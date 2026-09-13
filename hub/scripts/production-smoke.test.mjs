@@ -959,6 +959,7 @@ test('settings hub exposes every account workflow with an accessible shared shel
 test('connected accounts are discoverable, provider-backed, and safe to disconnect', async () => {
   const page = await read('src/app/settings/connections/page.tsx')
   const panel = await read('src/components/settings/ConnectedAccountsPanel.tsx')
+  const globalStyles = await read('src/app/globals.css')
   const profile = await read('src/components/settings/ProfileForm.tsx')
   const topBar = await read('src/components/layout/TopBar.tsx')
   const navigation = await read('src/components/layout/navigationConfig.ts')
@@ -973,6 +974,12 @@ test('connected accounts are discoverable, provider-backed, and safe to disconne
   assert.match(panel, /\/auth\/whop\/login\?mode=link/)
   assert.match(panel, /\/api\/whop\/unlink/)
   assert.match(panel, /\/api\/account\/verified-identities/)
+  assert.match(panel, /\/brands\/whop-logo\.svg/)
+  assert.match(panel, /data-provider=\{provider\.id\}/)
+  assert.match(panel, /ss-connection-connect/)
+  assert.match(globalStyles, /\.ss-connection-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/)
+  assert.match(globalStyles, /\.ss-connection-card\[data-provider="x"\] \.ss-connection-connect/)
+  assert.match(globalStyles, /@media\(max-width:980px\)\{\.ss-connection-grid\{grid-template-columns:1fr\}/)
   for (const source of [profile, topBar, navigation, commands, onboarding, faq]) {
     assert.match(source, /\/settings\/connections/)
   }

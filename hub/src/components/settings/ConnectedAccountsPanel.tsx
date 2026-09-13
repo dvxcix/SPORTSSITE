@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Check, ExternalLink, Loader2, Link2, ShieldCheck, Unlink, X } from 'lucide-react'
+import { AtSign, BadgeCheck, Check, ExternalLink, Loader2, Link2, ShieldCheck, Sparkles, Unlink, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 
@@ -14,21 +14,26 @@ const providers: Array<{
   name: string
   description: string
   accent: string
+  deep: string
+  connectLabel: string
 }> = [
-  { id: 'whop', name: 'Whop', description: 'Membership and purchase access', accent: '#ff6243' },
-  { id: 'discord', name: 'Discord', description: 'Community access and roles', accent: '#5865f2' },
-  { id: 'x', name: 'X', description: 'Verified social identity', accent: '#f4f4f5' },
+  { id: 'whop', name: 'Whop', description: 'Bring your membership and purchase access into SlipSurge.', accent: '#fa4616', deep: '#a82408', connectLabel: 'Connect Whop' },
+  { id: 'discord', name: 'Discord', description: 'Connect your community identity, access, and member roles.', accent: '#5865f2', deep: '#353fc4', connectLabel: 'Connect Discord' },
+  { id: 'x', name: 'X', description: 'Add your verified X identity to your SlipSurge profile.', accent: '#f5f5f5', deep: '#050505', connectLabel: 'Connect X' },
 ]
 
 function ProviderMark({ provider }: { provider: Provider }) {
   if (provider === 'whop') {
-    return <Image src="/brands/whop-logo.svg" alt="" width={25} height={25} />
+    return <Image src="/brands/whop-logo.svg" alt="Whop" width={114} height={25} className="ss-connection-whop-logo" />
   }
-  if (provider === 'x') return <span className="ss-connection-letter" aria-hidden="true">X</span>
+  if (provider === 'x') return <span className="ss-connection-x-logo" aria-label="X">𝕏</span>
   return (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
+    <span className="ss-connection-discord-logo">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" aria-hidden="true">
       <path d="M20.3 4.4a19.7 19.7 0 0 0-4.9-1.5l-.1.1c-.2.4-.4.8-.6 1.2a18.4 18.4 0 0 0-5.5 0c-.2-.4-.4-.9-.6-1.2a.1.1 0 0 0-.1-.1 19.8 19.8 0 0 0-4.9 1.5C.5 9-.3 13.6.1 18.1l.1.1a19.8 19.8 0 0 0 6 3l.1-.1c.5-.6.9-1.3 1.2-2a13.3 13.3 0 0 1-1.9-.9v-.1l.4-.3h.1c3.9 1.8 8.2 1.8 12.1 0h.1l.4.3v.1c-.6.3-1.2.6-1.9.9.4.7.8 1.4 1.2 2h.1a19.8 19.8 0 0 0 6-3l.1-.1c.5-5.2-.8-9.7-3.6-13.7ZM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z" />
-    </svg>
+      </svg>
+      <strong>Discord</strong>
+    </span>
   )
 }
 
@@ -160,10 +165,13 @@ export function ConnectedAccountsPanel({
       <section className="ss-connection-summary">
         <span className="ss-connection-summary-icon"><ShieldCheck size={22} /></span>
         <div>
-          <p>Account connections</p>
-          <h2>{connectionCount} of {providers.length} connected</h2>
+          <p>Your connected world</p>
+          <h2>One SlipSurge account. Your memberships and social identity.</h2>
+          <span>{connectionCount ? `${connectionCount} service${connectionCount === 1 ? '' : 's'} ready` : 'Choose a service to get started'}</span>
         </div>
-        <span className="ss-connection-summary-count">{connectionCount}/{providers.length}</span>
+        <div className="ss-connection-summary-brands" aria-label={`${connectionCount} of ${providers.length} services connected`}>
+          {providers.map(provider => <span key={provider.id} data-provider={provider.id} data-connected={isConnected(provider.id)}><ProviderMark provider={provider.id} /></span>)}
+        </div>
       </section>
 
       {message && (
@@ -174,32 +182,39 @@ export function ConnectedAccountsPanel({
         </div>
       )}
 
-      <section className="ss-connection-list" aria-label="Available account connections">
+      <section className="ss-connection-grid" aria-label="Available account connections">
         {providers.map(provider => {
           const connected = isConnected(provider.id)
           const identity = verified[provider.id]
           const isBusy = busy === provider.id
           const isConfirming = confirming === provider.id
           return (
-            <article className="ss-connection-card" key={provider.id} style={{ '--provider-accent': provider.accent } as React.CSSProperties}>
-              <span className="ss-connection-provider-mark"><ProviderMark provider={provider.id} /></span>
+            <article className={`ss-connection-card ${connected ? 'is-connected' : ''}`} data-provider={provider.id} key={provider.id} style={{ '--provider-accent': provider.accent, '--provider-deep': provider.deep } as React.CSSProperties}>
+              <div className="ss-connection-brand-stage">
+                <span className="ss-connection-provider-mark"><ProviderMark provider={provider.id} /></span>
+                <span className={`ss-connection-state ${connected ? 'is-connected' : ''}`}>
+                  {connected ? <><BadgeCheck size={13} /> Connected</> : <><span /> Available</>}
+                </span>
+              </div>
               <div className="ss-connection-copy">
-                <div className="ss-connection-title">
-                  <h3>{provider.name}</h3>
-                  <span className={connected ? 'is-connected' : ''}>{connected ? <><BadgeCheck size={13} /> Connected</> : 'Not connected'}</span>
-                </div>
+                <span className="ss-connection-kicker">CONNECTED SERVICE</span>
+                <h3>{provider.name}</h3>
                 <p>{provider.description}</p>
-                {connected && (
-                  identity?.profileUrl
-                    ? <a href={identity.profileUrl} target="_blank" rel="noopener noreferrer">{identity.handle}<ExternalLink size={12} /></a>
-                    : <small>Connected to your SlipSurge account</small>
-                )}
+                <div className={`ss-connection-identity ${connected ? 'is-connected' : ''}`}>
+                  <span>{connected ? <AtSign size={15} /> : <Sparkles size={15} />}</span>
+                  <div>
+                    <small>{connected ? 'Connected as' : 'Connection status'}</small>
+                    {connected && identity?.profileUrl
+                      ? <a href={identity.profileUrl} target="_blank" rel="noopener noreferrer">{identity.handle}<ExternalLink size={12} /></a>
+                      : <strong>{connected ? 'Linked to SlipSurge' : 'Ready to connect'}</strong>}
+                  </div>
+                </div>
               </div>
               <div className="ss-connection-actions">
                 {!connected ? (
-                  <button type="button" className="ss-settings-primary" onClick={() => connect(provider.id)} disabled={busy !== null}>
+                  <button type="button" className="ss-connection-connect" onClick={() => connect(provider.id)} disabled={busy !== null}>
                     {isBusy ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-                    {isBusy ? 'Connecting…' : 'Connect'}
+                    {isBusy ? 'Opening…' : provider.connectLabel}
                   </button>
                 ) : isConfirming ? (
                   <div className="ss-connection-confirm">
