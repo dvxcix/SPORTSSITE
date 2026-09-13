@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useRef, useState } from 'react'
 import { uploadMedia } from '@/lib/uploadMedia'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronRight, Loader2, Upload } from 'lucide-react'
 import { MLB_TEAMS } from '@slipsurge/core/mlbTeams'
@@ -43,7 +43,7 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
   suggestedUsers: SuggestedUser[]
   nflTeams: Array<{ team_abbr: string; team_name: string; team_logo_espn: string | null }>
 }) {
-  const supabase = useMemo(() => createClient(), [])
+  const router = useRouter()
   const [step, setStep] = useState(0)
   const [displayName, setDisplayName] = useState(initialProfile?.display_name ?? '')
   const [bio, setBio] = useState(initialProfile?.bio ?? '')
@@ -132,23 +132,19 @@ export function OnboardingFlow({ userId, initialProfile, accountType, suggestedU
     setError('')
     setSaving(true)
     try {
-      const { error: updateError } = await supabase.from('users').update({
-        display_name: displayName.trim() || undefined,
-        bio: bio.trim() || undefined,
-        avatar_url: avatarUrl.trim() || undefined,
-        favorite_teams: teams,
-        favorite_sports: sports,
-        interest_settings: {
-          content_mix: contentMix,
-          market_focus: marketFocus,
-          discovery_mode: initialProfile?.interest_settings?.discovery_mode ?? 'balanced',
-        },
-        is_private: isPrivate,
-        hide_win_rate: hideWinRate,
-        notification_settings: { ...(initialProfile?.notification_settings ?? {}), ...alerts },
-        onboarding_completed_at: new Date().toISOString(),
-      }).eq('id', userId).select('id').single()
-      if (updateError) throw updateError
+      const response = await fetch('/api/account/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName, bio, avatarUrl, teams, sports, contentMix, marketFocus, isPrivate, hideWinRate, alerts }),
+      })
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({})) as { error?: string; code?: string }
+        if (response.status === 401 || result.code === 'SESSION_EXPIRED') {
+          router.replace('/auth/login?next=/onboarding')
+          return
+        }
+        throw new Error(result.code || 'ONBOARDING_SAVE_FAILED')
+      }
       localStorage.removeItem(draftKey)
       fetch('/api/onboarding/notify-welcome', { method: 'POST', keepalive: true }).catch(() => {})
       trackProductEvent('onboarding_completed', { account_type: accountType, favorite_team_count: teams.length, favorite_sport_count: sports.length })
