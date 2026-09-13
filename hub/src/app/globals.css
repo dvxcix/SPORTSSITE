@@ -2129,3 +2129,7 @@ html:not([data-platform='desktop']) .ss-desktop-live-layout { display: block; he
   .ss-topbar-guest-actions > a:first-child { padding-inline: 9px !important; }
   .ss-topbar-guest-actions > a:last-child { display: none !important; }
 }
+/* Authenticated interaction targets must remain usable on touch and foldable layouts. */
+.ss-activity-dismiss{top:6px;right:6px;width:32px;height:32px}
+.ss-post-more{width:34px;height:34px}
+.ss-profile-ring-colors>button{width:34px;height:34px}

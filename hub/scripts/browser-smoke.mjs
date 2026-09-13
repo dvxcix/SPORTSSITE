@@ -2,18 +2,20 @@ import { chromium } from 'playwright-core'
 import { access, mkdir } from 'node:fs/promises'
 
 const productionTarget = process.argv.includes('--production')
-const baseUrl = (
-  process.env.SMOKE_BASE_URL
-  || (productionTarget ? 'https://www.slipsurge.com' : 'http://127.0.0.1:3000')
-).replace(/\/$/, '')
+const baseUrl = (process.env.SMOKE_BASE_URL || (productionTarget ? 'https://www.slipsurge.com' : 'http://127.0.0.1:3000')).replace(/\/$/, '')
 const edgePath = process.env.EDGE_PATH || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 const isLocalTarget = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(baseUrl)
 
-const browser = await chromium.launch({ executablePath: edgePath, headless: true })
+const browser = await chromium.launch({
+  executablePath: edgePath,
+  headless: true,
+})
 const failures = []
 const captureDir = process.env.RESPONSIVE_CAPTURE_DIR || ''
 const defaultAuthenticatedStorage = '.auth/smoke-state.json'
-const hasDefaultAuthenticatedStorage = await access(defaultAuthenticatedStorage).then(() => true).catch(() => false)
+const hasDefaultAuthenticatedStorage = await access(defaultAuthenticatedStorage)
+  .then(() => true)
+  .catch(() => false)
 const authenticatedStorage = process.env.SMOKE_AUTH_STORAGE || (hasDefaultAuthenticatedStorage ? defaultAuthenticatedStorage : '')
 if (captureDir) await mkdir(captureDir, { recursive: true })
 
@@ -26,7 +28,7 @@ async function verifyPage(context, path, expectedText, options = {}) {
   const routeFailures = []
   const label = options.label ? `${options.label} ${path}` : path
 
-  page.on('pageerror', error => routeFailures.push(`browser error: ${error.message}`))
+  page.on('pageerror', (error) => routeFailures.push(`browser error: ${error.message}`))
 
   try {
     const response = await page.goto(`${baseUrl}${path}`, {
@@ -46,16 +48,12 @@ async function verifyPage(context, path, expectedText, options = {}) {
         })
       } catch {
         const body = await page.locator('body').innerText()
-        routeFailures.push(
-          `expected visible text "${expectedText}"; final URL ${page.url()}; body "${excerpt(body)}"`,
-        )
+        routeFailures.push(`expected visible text "${expectedText}"; final URL ${page.url()}; body "${excerpt(body)}"`)
       }
     }
 
     const body = (await page.locator('body').innerText()).trim()
-    const hasOverlay = await page
-      .locator('[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay')
-      .count()
+    const hasOverlay = await page.locator('[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay').count()
 
     if (status >= 500 || status === 0) routeFailures.push(`HTTP ${status}`)
     if (body.length < 40) routeFailures.push('rendered body is unexpectedly empty')
@@ -63,38 +61,40 @@ async function verifyPage(context, path, expectedText, options = {}) {
 
     if (options.checkAccessibility !== false) {
       const accessibility = await page.evaluate(() => {
-        const visible = element => {
+        const visible = (element) => {
           const style = getComputedStyle(element)
           const rect = element.getBoundingClientRect()
           return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
         }
-        const hasName = element => Boolean(
-          element.getAttribute('aria-label')?.trim()
-          || element.getAttribute('aria-labelledby')?.trim()
-          || element.getAttribute('title')?.trim()
-          || element.textContent?.trim()
-          || element.querySelector('img[alt]:not([alt=""])'),
-        )
+        const hasName = (element) => Boolean(element.getAttribute('aria-label')?.trim() || element.getAttribute('aria-labelledby')?.trim() || element.getAttribute('title')?.trim() || element.textContent?.trim() || element.querySelector('[aria-label]:not([aria-label=""]),img[alt]:not([alt=""])'))
         const unnamedActions = [...document.querySelectorAll('button,a[href]')]
-          .filter(element => visible(element) && !hasName(element)).length
+          .filter((element) => visible(element) && !hasName(element))
+          .slice(0, 8)
+          .map((element) => ({
+            tag: element.tagName.toLowerCase(),
+            className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
+            href: element.getAttribute('href'),
+            html: element.innerHTML.slice(0, 120),
+          }))
         const unnamedFields = [...document.querySelectorAll('input:not([type="hidden"]),select,textarea')]
-          .filter(element => visible(element))
-          .filter(element => {
+          .filter((element) => visible(element))
+          .filter((element) => {
             const control = element
-            return !control.getAttribute('aria-label')?.trim()
-              && !control.getAttribute('aria-labelledby')?.trim()
-              && !control.getAttribute('title')?.trim()
-              && !(control.labels && control.labels.length)
+            return !control.getAttribute('aria-label')?.trim() && !control.getAttribute('aria-labelledby')?.trim() && !control.getAttribute('title')?.trim() && !(control.labels && control.labels.length)
           }).length
         // Analytics providers inject hidden 1x1 tracking pixels after load.
         // They are not perceivable content and cannot be authored by our UI,
         // so only enforce alt text on images that are actually rendered.
-        const missingAlt = [...document.querySelectorAll('img')]
-          .filter(image => visible(image) && !image.hasAttribute('alt')).length
-        return { mainCount: document.querySelectorAll('main').length, unnamedActions, unnamedFields, missingAlt }
+        const missingAlt = [...document.querySelectorAll('img')].filter((image) => visible(image) && !image.hasAttribute('alt')).length
+        return {
+          mainCount: document.querySelectorAll('main').length,
+          unnamedActions,
+          unnamedFields,
+          missingAlt,
+        }
       })
       if (accessibility.mainCount !== 1) routeFailures.push(`expected one main landmark; found ${accessibility.mainCount}`)
-      if (accessibility.unnamedActions) routeFailures.push(`${accessibility.unnamedActions} visible actions lack an accessible name`)
+      if (accessibility.unnamedActions.length) routeFailures.push(`${accessibility.unnamedActions.length} visible actions lack an accessible name; ${JSON.stringify(accessibility.unnamedActions)}`)
       if (accessibility.unnamedFields) routeFailures.push(`${accessibility.unnamedFields} visible fields lack an accessible label`)
       if (accessibility.missingAlt) routeFailures.push(`${accessibility.missingAlt} images lack alt attributes`)
     }
@@ -102,19 +102,27 @@ async function verifyPage(context, path, expectedText, options = {}) {
     if (options.checkOverflow) {
       const overflow = await page.evaluate(() => {
         const viewport = document.documentElement.clientWidth
-        const offenders = [...document.querySelectorAll('body *')].map(element => {
-          const rect = element.getBoundingClientRect()
-          const style = getComputedStyle(element)
-          return { element, rect, style }
-        }).filter(({ rect, style }) => style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && (rect.right > viewport + 2 || rect.left < -2)).slice(0, 5).map(({ element, rect }) => ({
-          tag: element.tagName.toLowerCase(),
-          id: element.id,
-          className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
-          left: Math.round(rect.left),
-          right: Math.round(rect.right),
-          width: Math.round(rect.width),
-        }))
-        return { viewport, content: document.documentElement.scrollWidth, offenders }
+        const offenders = [...document.querySelectorAll('body *')]
+          .map((element) => {
+            const rect = element.getBoundingClientRect()
+            const style = getComputedStyle(element)
+            return { element, rect, style }
+          })
+          .filter(({ rect, style }) => style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && (rect.right > viewport + 2 || rect.left < -2))
+          .slice(0, 5)
+          .map(({ element, rect }) => ({
+            tag: element.tagName.toLowerCase(),
+            id: element.id,
+            className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            width: Math.round(rect.width),
+          }))
+        return {
+          viewport,
+          content: document.documentElement.scrollWidth,
+          offenders,
+        }
       })
       if (overflow.content > overflow.viewport + 2) {
         routeFailures.push(`horizontal overflow ${overflow.content}px > ${overflow.viewport}px viewport; ${JSON.stringify(overflow.offenders)}`)
@@ -137,32 +145,41 @@ async function verifyPage(context, path, expectedText, options = {}) {
     }
 
     if (options.checkTouchTargets) {
-      const undersized = await page.evaluate(() => [...document.querySelectorAll('button,a[href]')].filter(element => {
-        const style = getComputedStyle(element)
-        const rect = element.getBoundingClientRect()
-        if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false
-        const accessibleText = element.textContent?.trim() || element.querySelector('img[alt]:not([alt=""])')?.getAttribute('alt') || ''
-        const iconOnly = !accessibleText && Boolean(element.getAttribute('aria-label') || element.getAttribute('title'))
-        return iconOnly && (rect.width < 32 || rect.height < 32)
-      }).slice(0, 5).map(element => {
-        const rect = element.getBoundingClientRect()
-        return {
-          label: element.getAttribute('aria-label') || element.getAttribute('title'),
-          className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
-        }
-      }))
+      const undersized = await page.evaluate(() =>
+        [...document.querySelectorAll('button,a[href]')]
+          .filter((element) => {
+            const style = getComputedStyle(element)
+            const rect = element.getBoundingClientRect()
+            if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false
+            const accessibleText = element.textContent?.trim() || element.querySelector('img[alt]:not([alt=""])')?.getAttribute('alt') || ''
+            const iconOnly = !accessibleText && Boolean(element.getAttribute('aria-label') || element.getAttribute('title'))
+            return iconOnly && (rect.width < 32 || rect.height < 32)
+          })
+          .slice(0, 5)
+          .map((element) => {
+            const rect = element.getBoundingClientRect()
+            return {
+              label: element.getAttribute('aria-label') || element.getAttribute('title'),
+              className: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
+              width: Math.round(rect.width),
+              height: Math.round(rect.height),
+            }
+          }),
+      )
       if (undersized.length) routeFailures.push(`${undersized.length} icon actions are smaller than 32px; ${JSON.stringify(undersized)}`)
     }
 
     if (captureDir && options.captureName) {
       const safePath = options.captureName.replace(/[^a-z0-9_-]+/gi, '-')
-      await page.screenshot({ path: `${captureDir}/${safePath}.png`, fullPage: true, animations: 'disabled' })
+      await page.screenshot({
+        path: `${captureDir}/${safePath}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      })
     }
 
     if (routeFailures.length) {
-      failures.push(...routeFailures.map(message => `${label}: ${message}`))
+      failures.push(...routeFailures.map((message) => `${label}: ${message}`))
       console.error(`FAIL ${label} (${status})`)
     } else {
       console.log(`PASS ${label} (${status})`)
@@ -223,17 +240,31 @@ try {
     viewport: { width: 1440, height: 1000 },
     colorScheme: 'dark',
   })
-  await runInBatches([
-    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
-    ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
-    ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'], ['/responsible-gambling', 'Responsible'],
-    ['/privacy', 'Privacy'], ['/terms', 'Terms'],
-  ], 4, ([path, expected]) => verifyPage(desktop, path, expected, { checkOverflow: true, checkPerformance: true, captureName: `desktop-${path}` }))
-  await runInBatches([
-    '/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership',
-    '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline',
-    '/the-public', '/daily-recap', '/research', '/weather-lab',
-  ], 4, path => verifyProtectedPage(desktop, path))
+  await runInBatches(
+    [
+      ['/auth/login', 'Sign in'],
+      ['/auth/register', 'Create'],
+      ['/auth/forgot-password', 'Reset'],
+      ['/pricing', 'Ultimate'],
+      ['/creators/apply', 'Give your audience more'],
+      ['/creators', 'Find the people behind the edge'],
+      ['/blog', 'Blog'],
+      ['/about', 'SlipSurge'],
+      ['/faq', 'Is SlipSurge a sportsbook?'],
+      ['/support', 'Support'],
+      ['/responsible-gambling', 'Responsible'],
+      ['/privacy', 'Privacy'],
+      ['/terms', 'Terms'],
+    ],
+    4,
+    ([path, expected]) =>
+      verifyPage(desktop, path, expected, {
+        checkOverflow: true,
+        checkPerformance: true,
+        captureName: `desktop-${path}`,
+      }),
+  )
+  await runInBatches(['/feed', '/explore', '/leaderboard', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public', '/daily-recap', '/research', '/weather-lab'], 4, (path) => verifyProtectedPage(desktop, path))
   await desktop.close()
 
   const mobile = await browser.newContext({
@@ -243,15 +274,30 @@ try {
     hasTouch: true,
     colorScheme: 'dark',
   })
-  await runInBatches([
-    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators/apply', 'Give your audience more'],
-    ['/creators', 'Find the people behind the edge'], ['/blog', 'Blog'], ['/about', 'SlipSurge'],
-    ['/faq', 'Is SlipSurge a sportsbook?'], ['/support', 'Support'],
-  ], 4, ([path, expected]) => verifyPage(mobile, path, expected, { label: 'mobile', checkOverflow: true, checkPerformance: true, checkTouchTargets: true, captureName: `mobile-${path}` }))
-  await runInBatches([
-    '/feed', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages',
-    '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public',
-  ], 4, path => verifyProtectedPage(mobile, path, { label: 'mobile' }))
+  await runInBatches(
+    [
+      ['/auth/login', 'Sign in'],
+      ['/auth/register', 'Create'],
+      ['/auth/forgot-password', 'Reset'],
+      ['/pricing', 'Ultimate'],
+      ['/creators/apply', 'Give your audience more'],
+      ['/creators', 'Find the people behind the edge'],
+      ['/blog', 'Blog'],
+      ['/about', 'SlipSurge'],
+      ['/faq', 'Is SlipSurge a sportsbook?'],
+      ['/support', 'Support'],
+    ],
+    4,
+    ([path, expected]) =>
+      verifyPage(mobile, path, expected, {
+        label: 'mobile',
+        checkOverflow: true,
+        checkPerformance: true,
+        checkTouchTargets: true,
+        captureName: `mobile-${path}`,
+      }),
+  )
+  await runInBatches(['/feed', '/messages', '/notifications', '/bookmarks', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public'], 4, (path) => verifyProtectedPage(mobile, path, { label: 'mobile' }))
   await mobile.close()
 
   const fold = await browser.newContext({
@@ -261,13 +307,18 @@ try {
     hasTouch: true,
     colorScheme: 'dark',
   })
-  await runInBatches([
-    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/auth/forgot-password', 'Reset'], ['/pricing', 'Ultimate'], ['/creators', 'Find the people behind the edge'],
-  ], 3, ([path, expected]) => verifyPage(fold, path, expected, { label: 'fold', checkOverflow: true }))
-  await runInBatches([
-    '/feed', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout',
-    '/the-sideline', '/the-public',
-  ], 3, path => verifyProtectedPage(fold, path, { label: 'fold' }))
+  await runInBatches(
+    [
+      ['/auth/login', 'Sign in'],
+      ['/auth/register', 'Create'],
+      ['/auth/forgot-password', 'Reset'],
+      ['/pricing', 'Ultimate'],
+      ['/creators', 'Find the people behind the edge'],
+    ],
+    3,
+    ([path, expected]) => verifyPage(fold, path, expected, { label: 'fold', checkOverflow: true }),
+  )
+  await runInBatches(['/feed', '/settings', '/settings/profile', '/settings/account', '/settings/security', '/settings/privacy', '/settings/notifications', '/settings/blocked', '/settings/membership', '/community', '/channels', '/groups', '/forum', '/pages', '/events', '/marketplace', '/dugout', '/the-sideline', '/the-public'], 3, (path) => verifyProtectedPage(fold, path, { label: 'fold' }))
   await fold.close()
 
   const tablet = await browser.newContext({
@@ -277,9 +328,24 @@ try {
     hasTouch: true,
     colorScheme: 'dark',
   })
-  await runInBatches([
-    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/pricing', 'Ultimate'], ['/creators', 'Find the people behind the edge'], ['/support', 'Support'],
-  ], 3, ([path, expected]) => verifyPage(tablet, path, expected, { label: 'tablet', checkOverflow: true, checkPerformance: true, checkTouchTargets: true, captureName: `tablet-${path}` }))
+  await runInBatches(
+    [
+      ['/auth/login', 'Sign in'],
+      ['/auth/register', 'Create'],
+      ['/pricing', 'Ultimate'],
+      ['/creators', 'Find the people behind the edge'],
+      ['/support', 'Support'],
+    ],
+    3,
+    ([path, expected]) =>
+      verifyPage(tablet, path, expected, {
+        label: 'tablet',
+        checkOverflow: true,
+        checkPerformance: true,
+        checkTouchTargets: true,
+        captureName: `tablet-${path}`,
+      }),
+  )
   await tablet.close()
 
   const narrow = await browser.newContext({
@@ -289,33 +355,79 @@ try {
     hasTouch: true,
     colorScheme: 'dark',
   })
-  await runInBatches([
-    ['/auth/login', 'Sign in'], ['/auth/register', 'Create'], ['/pricing', 'Ultimate'], ['/support', 'Support'],
-  ], 2, ([path, expected]) => verifyPage(narrow, path, expected, { label: 'narrow', checkOverflow: true, checkTouchTargets: true, captureName: `narrow-${path}` }))
+  await runInBatches(
+    [
+      ['/auth/login', 'Sign in'],
+      ['/auth/register', 'Create'],
+      ['/pricing', 'Ultimate'],
+      ['/support', 'Support'],
+    ],
+    2,
+    ([path, expected]) =>
+      verifyPage(narrow, path, expected, {
+        label: 'narrow',
+        checkOverflow: true,
+        checkTouchTargets: true,
+        captureName: `narrow-${path}`,
+      }),
+  )
   await narrow.close()
 
   if (authenticatedStorage) {
-    const authenticatedRoutes = [
-      '/feed', '/profile/parlayparty', '/notifications', '/messages', '/community', '/groups', '/channels',
-      '/settings/profile', '/dugout', '/slate-breakdown', '/the-public', '/the-sideline', '/research',
-    ]
+    const authenticatedRoutes = ['/feed', '/profile/parlayparty', '/notifications', '/messages', '/community', '/groups', '/channels', '/settings/profile', '/dugout', '/slate-breakdown', '/the-public', '/the-sideline', '/research']
     const deviceMatrix = [
-      { label: 'auth-desktop', viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
-      { label: 'auth-tablet', viewport: { width: 768, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
-      { label: 'auth-mobile', viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
-      { label: 'auth-fold', viewport: { width: 884, height: 1104 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
-      { label: 'auth-narrow', viewport: { width: 320, height: 700 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+      {
+        label: 'auth-desktop',
+        viewport: { width: 1440, height: 1000 },
+        deviceScaleFactor: 1,
+        isMobile: false,
+        hasTouch: false,
+      },
+      {
+        label: 'auth-tablet',
+        viewport: { width: 768, height: 1024 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+      },
+      {
+        label: 'auth-mobile',
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
+      },
+      {
+        label: 'auth-fold',
+        viewport: { width: 884, height: 1104 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+      },
+      {
+        label: 'auth-narrow',
+        viewport: { width: 320, height: 700 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+      },
     ]
     for (const device of deviceMatrix) {
-      const context = await browser.newContext({ ...device, storageState: authenticatedStorage, colorScheme: 'dark' })
-      await runInBatches(authenticatedRoutes, 3, path => verifyPage(context, path, null, {
-        label: device.label,
-        requireAuthenticated: true,
-        checkOverflow: true,
-        checkPerformance: true,
-        checkTouchTargets: device.hasTouch,
-        captureName: `${device.label}-${path}`,
-      }))
+      const context = await browser.newContext({
+        ...device,
+        storageState: authenticatedStorage,
+        colorScheme: 'dark',
+      })
+      await runInBatches(authenticatedRoutes, 3, (path) =>
+        verifyPage(context, path, null, {
+          label: device.label,
+          requireAuthenticated: true,
+          checkOverflow: true,
+          checkPerformance: true,
+          checkTouchTargets: device.hasTouch,
+          captureName: `${device.label}-${path}`,
+        }),
+      )
       await context.close()
     }
   } else {

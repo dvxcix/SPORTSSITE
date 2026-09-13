@@ -1106,3 +1106,6 @@
   .compactBoard .marketStory div { flex-direction: row; justify-content: space-between; gap: 4px; }
   .compactBoard .storyGrid > article { min-height: 64px; padding: 8px 12px; }
 }
+/* Compact density changes presentation, never the interactive hit area. */
+.compactBoard .playerCell > button:not(.playerName){width:32px;height:32px;min-width:32px;min-height:32px}
+.marketSave,.marketSaved{width:32px;height:32px;right:-12px;bottom:-13px}

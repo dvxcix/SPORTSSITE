@@ -46,7 +46,7 @@ export function MemberAvatar({
   } as CSSProperties
 
   return (
-    <span className={`ss-member-avatar is-${tone} ring-${ringStyle || 'surge'} ${className}`} style={style} aria-hidden="true">
+    <span className={`ss-member-avatar is-${tone} ring-${ringStyle || 'surge'} ${className}`} style={style} role="img" aria-label={`${name} avatar`}>
       <span className="ss-member-avatar-media">
         <SafeImage src={src} alt="" width={size} height={size} fallback={<span>{initials}</span>} />
       </span>

@@ -137,6 +137,8 @@ test('shared member avatars cannot expand top-bar or social layouts', async () =
   assert.ok(avatar.includes('maxWidth: size'))
   assert.ok(avatar.includes('maxHeight: size'))
   assert.ok(avatar.includes('width={size} height={size}'))
+  assert.ok(avatar.includes('role="img"'))
+  assert.ok(avatar.includes('aria-label={`${name} avatar`}'))
   assert.ok(topbar.includes('className="ss-topbar-profile-avatar"'))
   assert.ok(css.includes('.ss-topbar-profile-trigger > .ss-topbar-profile-avatar'))
 })
@@ -772,7 +774,7 @@ test('browser verification enforces shared accessibility fundamentals', async ()
   assert.ok(smoke.includes('visible actions lack an accessible name'))
   assert.ok(smoke.includes('visible fields lack an accessible label'))
   assert.ok(smoke.includes('images lack alt attributes'))
-  assert.ok(smoke.includes("visible(image) && !image.hasAttribute('alt')"))
+  assert.match(smoke, /visible\(image\) && !image\.hasAttribute\(["']alt["']\)/)
 })
 
 test('shared loading, feedback, and registration states expose valid semantics', async () => {
