@@ -2,6 +2,7 @@
 
 export interface ESPNGame {
   id: string
+  appHref?: string
   uid: string
   date: string
   name: string

@@ -1685,6 +1685,23 @@ test('Sideline uses the Dugout product hierarchy and a real NFL MM rank discrepa
   assert.doesNotMatch(board, /className=\{styles\.brandHeader\}|MATCHUP \+ DATA|Admin preview · private/)
 })
 
+test('NFL uses a complete early-season reference and Live Scores has a stored-slate fallback', async () => {
+  const page = await read('src/app/the-sideline/page.tsx')
+  const sample = await read('src/lib/nflSample.ts')
+  const navigation = await read('src/app/the-sideline/SidelineNavigation.tsx')
+  const scores = await read('src/app/sports/page.tsx')
+  const fallback = await read('src/lib/nflScoreboard.ts')
+  const card = await read('src/components/sports/GameCard.tsx')
+  assert.match(page, /defaultNflSample\(selected\)/)
+  assert.doesNotMatch(page, /seasonStarted/)
+  assert.match(sample, /game\.week > 3 \? 'regular' : 'previous'/)
+  assert.match(navigation, /\{selected\.season - 1\} regular/)
+  assert.match(scores, /getStoredNflScoreboard\(date\)/)
+  assert.match(scores, /key === 'nfl' \? getStoredNflScoreboard\(date\) : getScoreboard\(key, date\)/)
+  assert.match(fallback, /an upstream denial must never remove an NFL slate/)
+  assert.match(card, /game\.appHref \?\?/)
+})
+
 test('spoiler controls persist across every social post type and require explicit reveal', async () => {
   const migration = await read('supabase/migrations/20260912175337_post_spoiler_controls.sql')
   const composer = await read('src/components/social/FeedComposer.tsx')

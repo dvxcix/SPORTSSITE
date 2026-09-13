@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { nflSampleReference, parseNflSample } from '../src/lib/nflSample.ts'
+import { defaultNflSample, nflSampleReference, parseNflSample } from '../src/lib/nflSample.ts'
 import { nflPrimaryMarket } from '../src/lib/nflPrimaryMarket.ts'
 import { americanImpliedProbability, hiddenProbabilityPoints, nflPriceChange } from '../src/lib/nflMarketMath.ts'
 import type { NflOddsPlayer } from '../src/lib/nflOddsTypes.ts'
@@ -18,6 +18,10 @@ test('season selections never mix preseason and regular-season references', () =
   assert.deepEqual(nflSampleReference(2026, 'preseason'), {season:2026,phase:'PRE',bdlPhase:1,label:'2026 preseason'})
   assert.deepEqual(nflSampleReference(2026, 'regular'), {season:2026,phase:'REG',bdlPhase:2,label:'2026 regular season'})
   assert.equal(parseNflSample('invalid'), 'previous')
+  assert.equal(defaultNflSample({gameType:'PRE',week:3}),'preseason')
+  assert.equal(defaultNflSample({gameType:'REG',week:1}),'previous')
+  assert.equal(defaultNflSample({gameType:'REG',week:3}),'previous')
+  assert.equal(defaultNflSample({gameType:'REG',week:4}),'regular')
 })
 test('primary anytime TD ignores earlier multi-TD alternates and respects the sportsbook', () => {
   const player: NflOddsPlayer = {id:1,name:'Runner',team:'NE',position:'RB',markets:[]}

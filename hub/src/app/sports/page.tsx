@@ -7,6 +7,7 @@ import { LocalDateRedirect } from '@/components/LocalDateRedirect'
 import { CalendarDays, ChevronLeft, ChevronRight, Radio, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
+import { getStoredNflScoreboard } from '@/lib/nflScoreboard'
 
 export const revalidate = 30
 
@@ -62,7 +63,7 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
   const activeNonMLB = NON_MLB_SPORTS.filter(({ key }) => isSeasonActive(key, checkDate))
   const [mlbGames, ...espnResults] = await Promise.all([
     mlbActive ? getMLBSchedule(date) : Promise.resolve([]),
-    ...activeNonMLB.map(({ key }) => getScoreboard(key, date)),
+    ...activeNonMLB.map(({ key }) => key === 'nfl' ? getStoredNflScoreboard(date) : getScoreboard(key, date)),
   ])
 
   const stripDates = [-3, -2, -1, 0, 1, 2, 3].map(offset => {

@@ -46,7 +46,7 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
         </label>
         <label className={styles.selectControl}>
           <span>Stat sample</span>
-          <span><select aria-label="NFL stat sample" value={sample} disabled={pending} onChange={event => change(href(mode, selected.id, selected.gameday, event.target.value))}><option value="previous">{selected.season - 1} season</option><option value="preseason">{selected.season} preseason</option><option value="regular">{selected.season} season</option></select><ChevronDown size={14} /></span>
+          <span><select aria-label="NFL stat sample" value={sample} disabled={pending} onChange={event => change(href(mode, selected.id, selected.gameday, event.target.value))}><option value="previous">{selected.season - 1} regular</option><option value="preseason">{selected.season} preseason</option><option value="regular">{selected.season} regular</option></select><ChevronDown size={14} /></span>
         </label>
       </div>
     </header>

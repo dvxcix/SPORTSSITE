@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { packSidelineBoard } from '@/lib/sidelineWire'
 import { notFound } from 'next/navigation'
-import { parseNflSample } from '@/lib/nflSample'
+import { defaultNflSample, parseNflSample } from '@/lib/nflSample'
 import { createClient } from '@/lib/supabase/server'
 import { SidelineBoardClient } from './SidelineBoardClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
@@ -44,11 +44,9 @@ export default async function SidelinePage({ searchParams }: {
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  const seasonStarted = days.some(day => day.season === selected.season && day.gameType === 'REG' && day.date <= today)
   const sample = requestedSample
     ? parseNflSample(requestedSample)
-    : selected.gameType === 'PRE' ? 'preseason' : seasonStarted ? 'regular' : 'previous'
+    : defaultNflSample(selected)
   const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} />
 
   // Only the board needs Market Story. Its lightweight timestamp index is

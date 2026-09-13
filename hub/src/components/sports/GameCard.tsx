@@ -13,7 +13,7 @@ export function GameCard({ game, sport }: { game: ESPNGame; sport: SportKey }) {
   const comp = game.competitions?.[0]
 
   return (
-    <Link href={`/sports/${sport}/${game.id}`} className="ss-score-card-link" style={{ textDecoration: 'none' }}>
+    <Link href={game.appHref ?? `/sports/${sport}/${game.id}`} className="ss-score-card-link" style={{ textDecoration: 'none' }}>
       <div
         className="ss-score-card"
         onMouseEnter={() => setHovered(true)}
@@ -82,7 +82,7 @@ export function GameCardCompact({ game, sport }: { game: ESPNGame; sport: SportK
   const { label, state } = getGameStatus(game)
 
   return (
-    <Link href={`/sports/${sport}/${game.id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+    <Link href={game.appHref ?? `/sports/${sport}/${game.id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
