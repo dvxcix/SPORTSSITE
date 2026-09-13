@@ -19,13 +19,11 @@ import {
   Eye,
   Highlighter,
   Layers3,
-  LockKeyhole,
   Minus,
   MoveDown,
   MoveUp,
   Plus,
   RotateCcw,
-  Share2,
   Sparkles,
   Star,
   X,
@@ -51,6 +49,9 @@ type PlayerRow = SidelinePlayer & {
   hasTracking: boolean
   teamProfile: SidelineTeamProfile | null
   opponentProfile: SidelineTeamProfile | null
+  sportsbookRank: number | null
+  performanceRank: number | null
+  mm: number | null
 }
 type MarketSpec = {
   key: string
@@ -101,9 +102,8 @@ const VIEW_OPTIONS: { id: BoardView; label: string }[] = [
   { id: 'touchdowns', label: 'TDs' },
   { id: 'props', label: 'Props' },
   { id: 'usage', label: 'Usage' },
-  { id: 'tracking', label: 'NFL Tracking' },
+  { id: 'tracking', label: 'Tracking' },
   { id: 'team', label: 'Team' },
-  { id: 'all', label: 'All' },
   { id: 'custom', label: 'Custom' },
 ]
 const ROLE_OPTIONS: { id: RoleFilter; label: string; positions: string[] }[] = [
@@ -156,8 +156,8 @@ const FIXED_PICK_MARKETS: PublicPickSpec[] = FEATURED_MARKETS
     group: market.group,
     width: Math.max(96, market.width),
   }))
-const GAME_DAY_FOUNDATIONS = new Set(['player', 'index'])
-const COMPACT_GAME_DAY = new Set(['player', 'index', 'picks:first_td', 'fanduel:primary:first_td', 'ftdPct', 'picks:anytime_td', 'fanduel:primary:anytime_td', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio', 'roleMarket', 'atdRoleRatio', 'roleOpps', 'roleShare', 'roleYards', 'touchdowns', 'redZoneLooks', 'breakaway'])
+const GAME_DAY_FOUNDATIONS = new Set(['player', 'index', 'mm'])
+const COMPACT_GAME_DAY = new Set(['player', 'index', 'mm', 'picks:first_td', 'fanduel:primary:first_td', 'ftdPct', 'picks:anytime_td', 'fanduel:primary:anytime_td', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio', 'roleMarket', 'atdRoleRatio', 'roleOpps', 'roleShare', 'roleYards', 'touchdowns', 'redZoneLooks', 'breakaway'])
 const GAME_DAY_ALWAYS_VISIBLE = new Set([
   ...GAME_DAY_FOUNDATIONS,
   'ftdPct', 'atdPct', 'ftdAtdRatio', 'atdTeamMlRatio',
@@ -173,6 +173,23 @@ const PREFS_KEY = 'slipsurge:sideline:columns:v2'
 function normalizedTeam(value: string) {
   const upper = value.toUpperCase()
   return ({ LA: 'LAR', JAC: 'JAX', OAK: 'LV', SD: 'LAC', STL: 'LAR', WAS: 'WSH' } as Record<string, string>)[upper] ?? upper
+}
+
+function addNflMmRanks(rows: PlayerRow[]) {
+  const sportsbook = rows
+    .map(row => ({ row, probability: americanImpliedProbability(primaryMarketOffer(row.market, 'anytime_td')?.odds ?? null) }))
+    .filter((item): item is { row: PlayerRow; probability: number } => item.probability != null)
+    .sort((a, b) => b.probability - a.probability || a.row.name.localeCompare(b.row.name))
+  const performance = rows
+    .filter(row => row.hasTracking)
+    .sort((a, b) => b.index - a.index || a.name.localeCompare(b.name))
+  const sportsbookRanks = new Map(sportsbook.map((item, index) => [item.row.id, index + 1]))
+  const performanceRanks = new Map(performance.map((row, index) => [row.id, index + 1]))
+  return rows.map(row => {
+    const sportsbookRank = sportsbookRanks.get(row.id) ?? null
+    const performanceRank = performanceRanks.get(row.id) ?? null
+    return { ...row, sportsbookRank, performanceRank, mm: sportsbookRank != null && performanceRank != null ? sportsbookRank - performanceRank : null }
+  })
 }
 
 function oddsLabel(value: number | null | undefined) {
@@ -586,6 +603,11 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       },
       { ...metric('index', 'Score', 'SlipSurge Score for the selected NFL window', 'core', 118, row => row.index), brand: true },
       {
+        id: 'mm', label: 'MM', title: 'Sportsbook ATD rank minus selected-window performance rank across both teams', group: 'core', width: 62, heat: 'high',
+        value: row => row.mm,
+        render: row => row.mm == null ? <span className={styles.empty}>-</span> : <b className={row.mm > 0 ? styles.mmPositive : row.mm < 0 ? styles.mmNegative : styles.mmFlat}>{row.mm > 0 ? '+' : ''}{row.mm}</b>,
+      },
+      {
         id: 'lane', label: 'Role', title: 'Primary usage role in the selected window', group: 'core', width: 116,
         value: row => row.lane,
         render: row => <span className={styles.lane}>{row.lane}</span>,
@@ -746,7 +768,7 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
     const propRank = new Map(FEATURED_MARKETS.map((market, index) => [market.prop, index]))
     const bookRank = new Map(PREFERRED_BOOKS.map((book, index) => [book.id, index]))
     const fixedRank = new Map([
-      ['player', 0], ['index', 1], ['lane', 2],
+      ['player', 0], ['index', 1], ['mm', 2], ['lane', 3],
       ['ftdPct', 80], ['atdPct', 180], ['ftdAtdRatio', 190], ['atdTeamMlRatio', 195],
       ['atdRecRatio', 196], ['atdRecYdsRatio', 197], ['atdRushYdsRatio', 198], ['atdScrimYdsRatio', 199],
       ['volume', 9000], ['geometry', 9001], ['redZone', 9002], ['breakaway', 9003],
@@ -1070,7 +1092,6 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [highlightsReady, setHighlightsReady] = useState(false)
   const [matrices, setMatrices] = useState<NflMatrix[]>([])
-  const [momentCopied, setMomentCopied] = useState(false)
   const board = marketStory.board
   const currentBoard = marketStory.current
   const sourceBoards = useMemo(() => currentBoard === board ? [board] : [currentBoard, board], [currentBoard, board])
@@ -1182,7 +1203,7 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
     for (const player of windowData.players) {
       const market = board.players.find(candidate => candidate.gsisId === player.id) ?? findMarketPlayer(board, player)
       const identified = mergePlayerIdentity(player, market)
-      byId.set(player.id, { ...identified, market, hasTracking: true, teamProfile: profileFor(player.team), opponentProfile: opponentFor(player.team) })
+      byId.set(player.id, { ...identified, market, hasTracking: true, teamProfile: profileFor(player.team), opponentProfile: opponentFor(player.team), sportsbookRank: null, performanceRank: null, mm: null })
     }
     for (const market of board.players) {
       if (![selected.away.abbr, selected.home.abbr].map(normalizedTeam).includes(normalizedTeam(market.team))) continue
@@ -1195,9 +1216,9 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
         continue
       }
       const empty = buildEmptyPlayer(market)
-      byId.set(empty.id, { ...empty, market, hasTracking: false, teamProfile: profileFor(empty.team), opponentProfile: opponentFor(empty.team) })
+      byId.set(empty.id, { ...empty, market, hasTracking: false, teamProfile: profileFor(empty.team), opponentProfile: opponentFor(empty.team), sportsbookRank: null, performanceRank: null, mm: null })
     }
-    return Array.from(byId.values())
+    return addNflMmRanks(Array.from(byId.values()))
   }, [board, selected.away.abbr, selected.home.abbr, windowData.players, windowData.teams])
 
   const matrixMatches = useMemo(() => {
@@ -1340,31 +1361,8 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
   const capturedLabel = frameTime ? new Date(frameTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET' : 'Awaiting markets'
   const statusCopy = gameStatusCopy(selected, marketStory.gameState)
   const periodScores = periodScoreCopy(marketStory.gameState)
-  const shareMarketMoment = async () => {
-    const url = new URL(window.location.href)
-    if (frameTime) url.searchParams.set('at', new Date(frameTime).toISOString())
-    else url.searchParams.delete('at')
-    try {
-      if (navigator.share) await navigator.share({ title: selected.away.abbr + ' @ ' + selected.home.abbr + ' Market Story', url: url.toString() })
-      else {
-        await navigator.clipboard.writeText(url.toString())
-        setMomentCopied(true)
-        window.setTimeout(() => setMomentCopied(false), 1600)
-      }
-    } catch { /* Native share dismissal leaves the board unchanged. */ }
-  }
-
   return (
     <div className={`${styles.page} ${view === 'core' ? styles.compactBoard : ''}`}>
-      <header className={styles.brandHeader}>
-        <div className={styles.brandIcon}><Image src="/brand-bolt.png" alt="" width={18} height={28} /></div>
-        <div><h1>The Sideline <span>ULTIMATE</span></h1><p>NFL markets, player roles and matchup intelligence</p></div>
-        <div className={styles.brandActions}>
-          <span className={styles.coverageBadge}>{lens.coverage.label} · {lens.status === 'awaiting-data' ? 'Awaiting data' : 'Stored sample'}</span>
-          <div className={styles.privateBadge}><LockKeyhole size={13} /> Admin preview · private</div>
-        </div>
-      </header>
-
       <section className={styles.controlBar}>
         <div className={styles.matchupMini}><TeamLogo team={selected.away} size={28} /><b>{selected.away.abbr}</b><span>@</span><TeamLogo team={selected.home} size={28} /><b>{selected.home.abbr}</b></div>
         <div className={styles.windowTabs}>{WINDOW_OPTIONS.map(option => <button key={option.id} type="button" className={windowId === option.id ? styles.activeControl : ''} onClick={() => setWindowId(option.id)}>{option.label}</button>)}</div>
@@ -1376,10 +1374,8 @@ export function SidelineBoardClient({ games, selectedId, lens, odds, gameState, 
       <section className={styles.storyGrid}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}><small>STADIUM / CONDITIONS</small><strong>{selected.stadium ?? 'Stadium TBD'}</strong><span>{selected.temp != null ? `${selected.temp}°F` : 'Weather syncing'} · {selected.wind != null ? `${selected.wind} mph wind` : selected.roof ?? 'Roof TBD'} · {selected.surface ?? 'Surface TBD'}</span></article>
         <article><small>GAME STATUS</small><strong>{statusCopy.headline}</strong><span>{periodScores ?? statusCopy.detail}</span></article>
-        <article><small>MATCHUP + DATA</small><strong>{lens.headline}</strong><span>{lens.coverage.label} · {lens.headlineDetail}</span></article>
         <article><small>FANDUEL GAME LINE</small><strong>{selected.away.abbr} {oddsLabel(gameMoneyline(board, 'away'))} · {selected.home.abbr} {oddsLabel(gameMoneyline(board, 'home'))}</strong><span>{board.gameLines.length} sportsbooks captured</span></article>
         <article className={styles.marketStory}>
-          <button type="button" className={styles.marketMoment} onClick={() => void shareMarketMoment()} aria-label="Share this Market Story capture"><Share2 size={12}/>{momentCopied ? 'Copied' : 'Share moment'}</button>
           <div><small>MARKET STORY</small><strong>{frameIndex === 0 ? 'OPENING CAPTURE' : frameIndex === history.length - 1 ? 'CURRENT' : `CAPTURE ${frameIndex + 1}`}</strong></div>
           {marketStory.error ? <span role="alert">{marketStory.error} <button type="button" onClick={marketStory.retry}>Retry</button></span> : null}
           <input aria-label="Market Story capture" type="range" min={0} max={Math.max(0, history.length - 1)} value={frameIndex} disabled={history.length < 2} onChange={event => setFrameIndex(Number(event.target.value))} />

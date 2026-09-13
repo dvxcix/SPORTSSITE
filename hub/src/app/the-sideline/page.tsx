@@ -4,12 +4,11 @@ import { notFound } from 'next/navigation'
 import { parseNflSample } from '@/lib/nflSample'
 import { createClient } from '@/lib/supabase/server'
 import { SidelineBoardClient } from './SidelineBoardClient'
-import { SidelineClient } from './SidelineClient'
 import { SidelineResearchClient } from './SidelineResearchClient'
 import { SidelineNavigation } from './SidelineNavigation'
 import { SidelineMatchupLab } from './SidelineMatchupLab'
 import { SidelineCheatsheets } from './SidelineCheatsheets'
-import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getCachedSidelineLens, getSidelineGames, getSidelineOddsBundle } from './data'
+import { getCachedSidelineBoardLens, getCachedSidelineCheatsheetLens, getSidelineGames, getSidelineOddsBundle } from './data'
 import { CalendarOff } from 'lucide-react'
 import { PageState } from '@/components/layout/PageState'
 import { ProductHero, ProductPageShell } from '@/components/product/ProductPage'
@@ -35,7 +34,8 @@ export default async function SidelinePage({ searchParams }: {
   const requestedSample = Array.isArray(params.sample) ? params.sample[0] : params.sample
   const requestedGame = Array.isArray(params.game) ? params.game[0] : params.game
   const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date
-  const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode
+  const requestedMode = Array.isArray(params.mode) ? params.mode[0] : params.mode
+  const mode = ['cheatsheets', 'public', 'markets', 'research'].includes(requestedMode ?? '') ? requestedMode ?? '' : ''
   const requestedCaptureValue = Array.isArray(params.at) ? params.at[0] : params.at
   const requestedCapture = requestedCaptureValue && Number.isFinite(Date.parse(requestedCaptureValue)) ? new Date(requestedCaptureValue).toISOString() : null
   const { games, date, days } = await getSidelineGames(requestedDate, requestedGame)
@@ -49,11 +49,7 @@ export default async function SidelinePage({ searchParams }: {
   const sample = requestedSample
     ? parseNflSample(requestedSample)
     : selected.gameType === 'PRE' ? 'preseason' : seasonStarted ? 'regular' : 'previous'
-  const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode ?? ''} />
-  if (mode === 'film') {
-    const lens = await getCachedSidelineLens(selected)
-    return <>{navigation}<SidelineClient key={selected.id} games={games} selectedId={selected.id} lens={lens} boardHref={`/the-sideline?date=${date}&game=${encodeURIComponent(selected.id)}&sample=${sample}`} /></>
-  }
+  const navigation = <SidelineNavigation games={games} days={days} selected={selected} sample={sample} mode={mode} />
 
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The

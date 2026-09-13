@@ -1,22 +1,12 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition, type CSSProperties, type ComponentType } from 'react'
-import { ChartNoAxesCombined, ChevronDown, Film, LayoutDashboard, ScanSearch, Shield, UsersRound } from 'lucide-react'
+import { useState, useTransition, type CSSProperties } from 'react'
+import { ChevronDown } from 'lucide-react'
 import type { SidelineGame, SidelineTeam } from './types'
 import styles from './sidelineNavigation.module.css'
 import { scheduleWeekKey, scheduleWeekLabel, type SidelineScheduleDay } from './scheduleNavigation'
-
-const sections: ReadonlyArray<{ key: string; label: string; Icon: ComponentType<{ size?: number }> }> = [
-  { key: '', label: 'The Sideline', Icon: LayoutDashboard },
-  { key: 'cheatsheets', label: 'Cheatsheets', Icon: ScanSearch },
-  { key: 'public', label: 'The Public', Icon: UsersRound },
-  { key: 'markets', label: 'Sportsbooks', Icon: ChartNoAxesCombined },
-  { key: 'research', label: 'Matchup Lab', Icon: Shield },
-  { key: 'film', label: 'Play Explorer', Icon: Film },
-]
 
 function shortDay(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -46,8 +36,8 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
   return <section className={styles.shell} aria-label="NFL workspace" aria-busy={pending}>
     <header className={styles.topBar}>
       <div className={styles.identity}>
-        <span className={styles.nflMark}>NFL</span>
-        <div><strong>Football Intelligence</strong><small>{scheduleWeekLabel(selectedDay)}</small></div>
+        <Image className={styles.nflMark} src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="NFL" width={30} height={30} unoptimized />
+        <div><strong>The Sideline</strong><small>{scheduleWeekLabel(selectedDay)}</small></div>
       </div>
       <div className={styles.contextControls}>
         <label className={styles.selectControl}>
@@ -80,9 +70,6 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
       </div>
     </div>
 
-    <nav className={styles.tabs} aria-label="NFL sections">
-      {sections.map(({ key, label, Icon }) => <Link key={key} prefetch={false} aria-current={mode === key ? 'page' : undefined} href={href(key)}><Icon size={15} /><span>{label}</span></Link>)}
-    </nav>
     {pending ? <span className={styles.progress} aria-hidden="true" /> : null}
   </section>
 }

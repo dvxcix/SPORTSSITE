@@ -39,7 +39,6 @@
 
 .page button { color: inherit; }
 
-.brandHeader,
 .controlBar,
 .storyGrid,
 .toolsPanel,
@@ -56,115 +55,12 @@
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.18);
 }
 
-.brandHeader {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 58px;
-  padding: 9px 14px;
-  margin-bottom: 10px;
-  background: linear-gradient(110deg, rgba(16, 24, 34, 0.98), rgba(8, 14, 20, 0.98));
-}
-
-.brandIcon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border: 1px solid rgba(167, 255, 63, 0.35);
-  border-radius: 12px;
-  background: var(--lime-soft);
-}
-
-.brandIcon img,
 .scoreLogo,
 .compareScore small img {
   width: 17px;
   height: 20px;
   object-fit: contain;
 }
-
-.brandHeader h1 {
-  margin: 0;
-  font-size: clamp(19px, 1.35vw, 24px);
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-}
-
-.brandHeader h1 span {
-  display: inline-flex;
-  padding: 3px 7px;
-  margin-left: 7px;
-  border-radius: 6px;
-  color: #071006;
-  background: var(--lime);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  vertical-align: middle;
-}
-
-.brandHeader p {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.privateBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 189, 69, 0.27);
-  border-radius: 9px;
-  color: #ffd786;
-  background: rgba(255, 189, 69, 0.08);
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.brandActions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.coverageBadge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 11px;
-  border: 1px solid rgba(102, 231, 176, 0.25);
-  border-radius: 9px;
-  color: #90d9bd;
-  background: rgba(61, 220, 151, 0.055);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.045em;
-  white-space: nowrap;
-}
-
-.filmLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 11px;
-  border: 1px solid rgba(53, 215, 255, 0.3);
-  border-radius: 9px;
-  color: #94e8ff;
-  background: rgba(53, 215, 255, 0.07);
-  font-size: 11px;
-  font-weight: 850;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.filmLink:hover { border-color: rgba(167, 255, 63, 0.55); color: var(--lime); }
 
 .teamLogo {
   display: block;
@@ -241,7 +137,7 @@
 
 .storyGrid {
   display: grid;
-  grid-template-columns: minmax(210px, 1.05fr) minmax(140px, 0.7fr) minmax(260px, 1.5fr) minmax(215px, 1fr);
+  grid-template-columns: minmax(200px, .9fr) minmax(140px, .65fr) minmax(210px, .85fr) minmax(360px, 1.6fr);
   margin-bottom: 10px;
   overflow: hidden;
 }
@@ -293,13 +189,13 @@
 }
 
 .marketStory {
-  grid-column: 1 / -1;
+  grid-column: auto;
   display: grid !important;
-  grid-template-columns: 190px minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(120px, auto) minmax(180px, 1fr);
   align-items: center;
   gap: 15px;
   min-height: 70px !important;
-  border-top: 1px solid var(--line);
+  border-top: 0;
   border-right: 0 !important;
   background: linear-gradient(90deg, rgba(53, 215, 255, 0.055), rgba(167, 255, 63, 0.025)) !important;
 }
@@ -307,9 +203,8 @@
 .marketStory div { display: flex; flex-direction: column; order:1; }
 .marketStory input { width: 100%; accent-color: var(--lime); cursor: pointer; order:2; }
 .marketStory input:disabled { cursor: not-allowed; opacity: 0.45; }
-.marketStory > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; order:3; }
-.marketMoment { display:inline-flex; width:max-content; min-height:27px; padding:0 8px; align-items:center; gap:5px; order:4; border:1px solid color-mix(in srgb,var(--lime) 28%,var(--border)); border-radius:8px; color:var(--lime); background:color-mix(in srgb,var(--lime) 6%,var(--surface-2)); font-size:8px; font-weight:850; }
-.marketMoment:hover { border-color:color-mix(in srgb,var(--lime) 52%,var(--border)); background:color-mix(in srgb,var(--lime) 10%,var(--surface-2)); }
+.marketStory > span { grid-column:1 / -1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; order:3; }
+.mmPositive{color:#9eff67}.mmNegative{color:#ff7186}.mmFlat{color:#aab5c4}
 .captureLoading::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 7px; border-radius: 50%; background: var(--lime); animation: capturePulse 800ms ease-in-out infinite alternate; }
 @keyframes capturePulse { to { opacity: .25; } }
 
@@ -969,7 +864,6 @@
   .comparisonGrid { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
   .metricCards { grid-template-columns: repeat(3, minmax(110px, 1fr)); }
   .modalMarkets article > div { grid-template-columns: repeat(3, minmax(115px, 1fr)); }
-  .coverageBadge { display: none; }
 }
 
 /* Foldables and compact tablets still use the mobile app shell. Keep the
@@ -994,13 +888,6 @@
 
 @media (max-width: 720px) {
   .page { padding: 8px 8px 122px; font-size: 13px; }
-  .brandHeader { min-height: 60px; padding: 10px 11px; border-radius: 12px; }
-  .brandIcon { width: 36px; height: 36px; flex-basis: 36px; }
-  .brandHeader h1 { font-size: 20px; }
-  .brandHeader p { max-width: 225px; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .brandActions { margin-left: auto; gap: 5px; }
-  .filmLink { width: 36px; min-height: 36px; justify-content: center; padding: 0; font-size: 0; }
-  .privateBadge { display: none; }
   .controlBar { top: 5px; gap: 5px; min-height: 51px; overflow-x: auto; border-color: rgba(167, 255, 63, 0.28); }
   .controlBar > button,
   .windowTabs button { min-width: 43px; min-height: 38px; padding: 0 9px; white-space: nowrap; }
@@ -1066,7 +953,7 @@
 
 @media (max-width: 430px) {
   .storyGrid { grid-template-columns: 1fr 1fr; }
-  .storyGrid > article:nth-child(3) { grid-column: 1 / -1; }
+  .storyGrid > article:nth-child(3) { grid-column: auto; }
   .storyGrid > article:nth-child(4) { grid-column: 1 / -1; }
   .teamIdentity strong { font-size: 14px; }
   .teamSignals { grid-template-columns: 220px repeat(5, 150px); }
@@ -1084,7 +971,6 @@
   .page *::before,
   .page *::after { scroll-behavior: auto !important; transition: none !important; }
 }
-.brandHeader > div { min-width: 0; }
 .sampleControl { display: flex; flex-direction: column; gap: 4px; color: #b9c5d3; font-size: 10px; font-weight: 700; }
 .sampleControl select { max-width: 100%; min-height: 36px; border: 1px solid #536834; border-radius: 9px; background: #101820; color: #f4f8ee; padding: 6px 10px; font: inherit; font-size: 12px; }
 .compactBoard .boardTable td { height: 58px; padding: 4px; font-size: 11px; }

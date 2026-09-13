@@ -21,6 +21,7 @@ import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '
 // MLB league logo, hotlinked from ESPN's CDN — same pattern the rest of the
 // app already uses for team logos (mlbstatic.com) rather than self-hosting.
 const MLB_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png'
+const NFL_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png'
 
 // Mirrors --sidebar-w / --sidebar-w-collapsed in globals.css — kept as
 // plain numbers here because the collapse toggle transitions this value,
@@ -32,9 +33,9 @@ const SIDEBAR_W_COLLAPSED = 64
 
 type NavLink = {
   href: string; icon: LucideIcon; label: string
-  flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean; ultimateOnly?: boolean
+  flagKey?: string; badge?: string; badgeColor?: string; movingBorder?: boolean; ultimateOnly?: boolean; adminOnly?: boolean
 }
-type NavItem = NavLink | { section: string; logo?: string } | null
+type NavItem = NavLink | { section: string; logo?: string; adminOnly?: boolean } | null
 
 const nav: NavItem[] = [
   { section: 'Community' },
@@ -61,6 +62,13 @@ const nav: NavItem[] = [
   { href: '/spray-charts', icon: Crosshair,     label: 'Spray Charts', badge: 'ULT', ultimateOnly: true },
   { href: '/the-public',  icon: Megaphone,     label: 'The Public', movingBorder: true },
   null,
+  { section: 'NFL Research', logo: NFL_LOGO_URL, adminOnly: true },
+  { href: '/the-sideline', icon: Trophy, label: 'The Sideline', adminOnly: true },
+  { href: '/the-sideline?mode=cheatsheets', icon: Table2, label: 'Cheatsheets', adminOnly: true },
+  { href: '/the-sideline?mode=public', icon: Megaphone, label: 'The Public', adminOnly: true },
+  { href: '/the-sideline?mode=markets', icon: ChartSpline, label: 'Sportsbooks', adminOnly: true },
+  { href: '/the-sideline?mode=research', icon: Crosshair, label: 'Matchup Lab', adminOnly: true },
+  null,
   { section: 'Connect' },
   { href: '/community',   icon: Users,         label: 'Community' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
@@ -80,6 +88,7 @@ const nav: NavItem[] = [
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePathname()
+  const [sidelineMode, setSidelineMode] = useState('')
   const { profile } = useAuth()
   const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
   // The persisted collapse preference is desktop/tablet-only — if it's on
@@ -105,6 +114,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // new page loads underneath a sidebar that's still covering half the
   // screen until you notice and dismiss it yourself.
   useEffect(() => { onClose() }, [path]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const syncMode = () => setSidelineMode(new URLSearchParams(window.location.search).get('mode') ?? '')
+    syncMode()
+    window.addEventListener('popstate', syncMode)
+    return () => window.removeEventListener('popstate', syncMode)
+  }, [path])
 
   // Keep the page behind the mobile drawer stationary while it is open.
   useEffect(() => {
@@ -134,14 +150,21 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const profileTier = effectiveTier((profile?.tier as Tier | undefined) ?? 'free', profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null)
   const hasUltimate = !!profile && (hasFullAccessOverride(profile.account_type, profile.beta_access_active) || hasTierAccess(profileTier, 'ultimate'))
   const visibleNav = nav.filter(item => {
-    if (!item || !('href' in item)) return true
+    if (!item) return true
+    if (item.adminOnly && profile?.account_type !== 'admin') return false
+    if (!('href' in item)) return true
     if (item.ultimateOnly && !hasUltimate) return false
     return !item.flagKey || flags[item.flagKey] !== false
   })
 
   function active(href: string) {
+    const [pathname, query = ''] = href.split('?')
+    if (pathname === '/the-sideline') {
+      const targetMode = new URLSearchParams(query).get('mode') ?? ''
+      return path === pathname && sidelineMode === targetMode
+    }
     if (href === '/feed') return path === '/feed'
-    return path === href || path.startsWith(href + '/')
+    return path === pathname || path.startsWith(pathname + '/')
   }
 
   return (
@@ -281,6 +304,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               textDecoration: 'none',
               userSelect: 'none',
             }}
+            onClick={() => { if (item.href.startsWith('/the-sideline')) setSidelineMode(new URLSearchParams(item.href.split('?')[1] ?? '').get('mode') ?? '') }}
             onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; } }}
             onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = idleBg; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; } }}>
               <Icon size={16} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />

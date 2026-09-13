@@ -1653,16 +1653,36 @@ test('group conversations support durable reactions and owner-managed membership
   assert.match(room, /Reaction not updated\. Try again\./)
 })
 
-test('Sideline Market Moments preserve an exact validated capture deep link', async () => {
+test('Sideline Market Story preserves an exact validated capture deep link without extra board chrome', async () => {
   const page = await read('src/app/the-sideline/page.tsx')
   const board = await read('src/app/the-sideline/SidelineBoardClient.tsx')
   const hook = await read('src/app/the-sideline/useSidelineMarket.ts')
   assert.match(page, /Number\.isFinite\(Date\.parse\(requestedCaptureValue\)\)/)
   assert.match(page, /initialCapture=\{requestedCapture\}/)
   assert.match(hook, /useState<string \| null>\(initialCapture \?\? null\)/)
-  assert.match(board, /url\.searchParams\.set\('at', new Date\(frameTime\)\.toISOString\(\)\)/)
-  assert.match(board, /aria-label="Share this Market Story capture"/)
-  assert.match(board, /navigator\.share/)
+  assert.match(board, /aria-label="Market Story capture"/)
+  assert.match(board, /marketStory\.capturedAt \?\? board\.capturedAt/)
+  assert.doesNotMatch(board, /Share this Market Story capture|navigator\.share/)
+})
+
+test('Sideline uses the Dugout product hierarchy and a real NFL MM rank discrepancy', async () => {
+  const sidebar = await read('src/components/layout/Sidebar.tsx')
+  const page = await read('src/app/the-sideline/page.tsx')
+  const navigation = await read('src/app/the-sideline/SidelineNavigation.tsx')
+  const board = await read('src/app/the-sideline/SidelineBoardClient.tsx')
+  assert.match(sidebar, /section: 'NFL Research', logo: NFL_LOGO_URL, adminOnly: true/)
+  assert.match(sidebar, /item\.adminOnly && profile\?\.account_type !== 'admin'/)
+  assert.match(sidebar, /the-sideline\?mode=cheatsheets/)
+  assert.match(sidebar, /the-sideline\?mode=public/)
+  assert.match(sidebar, /the-sideline\?mode=markets/)
+  assert.match(sidebar, /the-sideline\?mode=research/)
+  assert.doesNotMatch(page, /mode === 'film'|getCachedSidelineLens|SidelineClient/)
+  assert.doesNotMatch(navigation, /Play Explorer|key: 'film'|className=\{styles\.tabs\}/)
+  assert.match(board, /function addNflMmRanks/)
+  assert.match(board, /sportsbookRank - performanceRank/)
+  assert.match(board, /id: 'mm', label: 'MM'/)
+  assert.match(board, /Sportsbook ATD rank minus selected-window performance rank across both teams/)
+  assert.doesNotMatch(board, /className=\{styles\.brandHeader\}|MATCHUP \+ DATA|Admin preview · private/)
 })
 
 test('spoiler controls persist across every social post type and require explicit reveal', async () => {
