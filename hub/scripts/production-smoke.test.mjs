@@ -192,6 +192,8 @@ test('activity and account menus preserve explicit unread state and complete nav
   assert.match(topbar, /ref=\{menuTriggerRef\}/, 'account menu needs a stable trigger anchor')
   assert.ok(!topbar.includes('menuRef.current.contains'), 'a header-scoped outside-click handler must not close a portaled account menu')
   assert.ok(topbar.includes('aria-controls="topbar-account-menu"'))
+  assert.match(topbar, /<FloatingSurface[\s\S]{0,260}open=\{quickOpen && search\.trim\(\)\.length >= 2\}[\s\S]{0,320}className="ss-dropdown ss-topbar-search-results"/, 'global search suggestions must escape the sticky header')
+  assert.ok(!topbar.includes("document.addEventListener('mousedown', handleClick)"), 'header surfaces must share pointer-safe portal dismissal')
   assert.ok(css.includes('.ss-topbar-notification-shell'))
   assert.ok(css.includes(".ss-topbar-notification-row[data-unread='true']"))
   assert.ok(css.includes('.ss-activity-toolbar'))

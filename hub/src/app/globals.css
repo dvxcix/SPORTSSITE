@@ -730,6 +730,7 @@ img { max-width: 100%; }
 .ss-topbar-profile-copy small { margin-top: 3px; color: var(--accent); font: 850 8px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
 .ss-topbar-search-results, .ss-topbar-notifications, .ss-topbar-profile-menu { z-index: var(--layer-popover) !important; border-color: color-mix(in srgb, var(--border-2) 90%, transparent) !important; border-radius: 14px !important; background: color-mix(in srgb, var(--surface-2) 94%, transparent) !important; box-shadow: var(--shadow-overlay), inset 0 1px rgba(255,255,255,.04) !important; backdrop-filter: blur(22px) saturate(135%); animation: ss-topbar-popover-in 150ms var(--ease-standard); transform-origin: top right; }
 .ss-topbar-search-results { transform-origin: top center; }
+.ss-topbar-search-results { max-height: min(420px, calc(100dvh - var(--topbar-h) - var(--banner-h, 0px) - 24px)); overflow-y: auto; overscroll-behavior: contain; }
 @keyframes ss-topbar-popover-in { from { opacity: 0; transform: translateY(-5px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .ss-topbar-panel-heading, .ss-topbar-notification-heading { position: sticky; top: 0; z-index: 3; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface-2) 94%, transparent); backdrop-filter: blur(16px); }
 .ss-topbar-panel-heading { display: flex; align-items: center; gap: 7px; padding: 10px 14px; color: var(--text-2); font-size: 11px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
@@ -1550,7 +1551,7 @@ img { max-width: 100%; }
   .ss-topbar-profile-trigger { padding: 5px !important; justify-content: center; }
   .ss-topbar-profile-trigger > svg { display: none; }
   .ss-topbar-profile-menu .ss-dropdown-item { min-height: 44px; }
-  .ss-topbar-search-results { position: fixed !important; left: 10px !important; right: 10px !important; top: calc(var(--banner-h, 0px) + var(--topbar-h) + 8px) !important; width: auto !important; min-width: 0 !important; max-height: min(68dvh, 560px) !important; border-radius: 18px !important; }
+  .ss-topbar-search-results { max-height: min(68dvh, 560px) !important; border-radius: 18px !important; }
   .ss-topbar-notifications { max-height: min(72dvh, 620px) !important; border-radius: 20px !important; }
   .ss-topbar-notification-feed { flex: 1; }
   .ss-topbar-mobile-close { display: grid !important; }

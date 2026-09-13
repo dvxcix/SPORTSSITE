@@ -334,24 +334,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     })
   }
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setQuickOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return
-      setMenuOpen(false)
-      setNotifOpen(false)
-      setQuickOpen(false)
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
-
   async function deleteNotif(ids: string | string[]) {
     const idList = Array.isArray(ids) ? ids : [ids]
     const prev = notifications
@@ -422,11 +404,17 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
         )}
 
-        {quickOpen && search.trim().length >= 2 && (
-          <div className="ss-dropdown ss-topbar-search-results" role="dialog" aria-label="Search suggestions" style={{
-            position: 'absolute', left: 0, right: 0, top: 'calc(100% + 6px)',
-            maxHeight: 420, overflowY: 'auto',
-          }}>
+        <FloatingSurface
+          open={quickOpen && search.trim().length >= 2}
+          anchorRef={searchRef}
+          onClose={() => setQuickOpen(false)}
+          className="ss-dropdown ss-topbar-search-results"
+          width={500}
+          gap={6}
+          align="start"
+          role="dialog"
+          ariaLabel="Search suggestions"
+        >
             <div className="ss-topbar-panel-heading"><Search size={13} /><span>Search results</span></div>
             {quickLoading && !hasQuickResults ? (
               <div style={{ padding: '16px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-3)' }}>Searching…</div>
@@ -503,8 +491,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 </button>
               </>
             )}
-          </div>
-        )}
+        </FloatingSurface>
       </form>
 
       {/* Right controls */}
