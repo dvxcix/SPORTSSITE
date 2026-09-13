@@ -133,7 +133,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const customEmojis = useCustomEmojis()
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const menuRef = useRef<HTMLDivElement>(null)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const notifTriggerRef = useRef<HTMLButtonElement>(null)
   // Read via the ref in both the notification-bell fetch and the quick-
   // search results below so neither needs to refetch or add this to a
@@ -336,7 +336,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setQuickOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
@@ -597,8 +596,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             </div>
 
             {/* Avatar + menu */}
-            <div ref={menuRef} className="ss-topbar-control-wrap">
-              <button type="button" onClick={() => { setMenuOpen(v => !v); setNotifOpen(false) }} className="ss-topbar-profile-trigger" aria-label="Open account menu" aria-expanded={menuOpen} style={{
+            <div className="ss-topbar-control-wrap">
+              <button ref={menuTriggerRef} type="button" onClick={() => { setMenuOpen(v => !v); setNotifOpen(false) }} className="ss-topbar-profile-trigger" aria-label="Open account menu" aria-haspopup="menu" aria-controls="topbar-account-menu" aria-expanded={menuOpen} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '5px 8px 5px 5px', borderRadius: 8,
                 background: 'transparent', border: '1px solid var(--border)',
@@ -612,8 +611,18 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
               </button>
 
-              {menuOpen && (
-                <div className="ss-dropdown ss-topbar-profile-menu" role="menu" aria-label="Account menu">
+              <FloatingSurface
+                open={menuOpen}
+                anchorRef={menuTriggerRef}
+                onClose={() => setMenuOpen(false)}
+                className="ss-dropdown ss-topbar-profile-menu"
+                width={292}
+                align="end"
+                mobileSheet
+                role="menu"
+                ariaLabel="Account menu"
+              >
+                <div id="topbar-account-menu" className="ss-topbar-profile-menu-shell">
                   <div className="ss-topbar-account-card">
                     <MemberAvatar src={profile?.avatar_url} name={accountName} size={46} tone={avatarTone} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
                     <div className="ss-topbar-account-copy">
@@ -664,7 +673,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <LogOut size={15} /><span>Sign out</span>
                   </button>
                 </div>
-              )}
+              </FloatingSurface>
             </div>
           </>
         ) : (
