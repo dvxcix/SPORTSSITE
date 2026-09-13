@@ -9,6 +9,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import Image from 'next/image'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { AuthAlert, AuthBrand, AuthDivider, AuthExperience, AuthField, AuthHeading, AuthSubmit, ProviderButton, authExperienceStyles as auth } from '@/components/auth/AuthExperience'
+import { normalizeRegistrationEmail, registrationErrorMessage } from '@/lib/authRegistration'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'MMA', 'Soccer', 'Tennis', 'Golf']
 
@@ -85,6 +86,8 @@ export default function RegisterPage() {
     e.preventDefault()
     if (step === 'account') { setStep('profile'); return }
     if (username.length < 2 || username.length > 30 || !/^[a-z0-9._]+$/.test(username)) { setError('Use 2–30 letters, numbers, periods, or underscores for your username.'); return }
+    const normalizedEmail = normalizeRegistrationEmail(email)
+    const normalizedUsername = username.trim().toLowerCase()
     setLoading(true)
     setError('')
     try {
@@ -95,18 +98,27 @@ export default function RegisterPage() {
     // dashboard under Authentication > URL Configuration, since this can
     // only steer the redirect target, not fix a Site URL/allowed-redirects
     // misconfiguration on Supabase's side.
+    const { data: usernameOwner, error: usernameLookupError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', normalizedUsername)
+      .limit(1)
+      .maybeSingle()
+    if (usernameLookupError) console.error('[register] username availability check failed', { code: usernameLookupError.code })
+    if (usernameOwner) { setError('That username is already taken. Choose another one.'); return }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email, password,
+      email: normalizedEmail, password,
       options: {
         emailRedirectTo: `${location.origin}/auth/callback?next=/onboarding`,
         // Also stashed in user metadata (readable with no session, unlike the
         // profile upsert below) so /auth/callback can pull the real chosen
         // values once confirmation completes, instead of falling back to a
         // generic email-derived username/display name.
-        data: { username, display_name: displayName || username, sport_preferences: sports },
+        data: { username: normalizedUsername, display_name: displayName.trim() || normalizedUsername, sport_preferences: sports },
       },
     })
-    if (signUpError) { setError('Could not create your account. Check your details and try again.'); return }
+    if (signUpError) { setError(registrationErrorMessage(signUpError)); return }
     if (data.user && data.session) {
       // The server derives all profile fields from the authenticated Auth
       // user and signup metadata. Browser sessions never receive INSERT
