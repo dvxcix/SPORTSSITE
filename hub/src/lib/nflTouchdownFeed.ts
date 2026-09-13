@@ -34,7 +34,7 @@ function scorerFromText(text: string) {
   return text.match(/^(.+?)\s+-?\d+\s+Yd\b/i)?.[1]?.trim() ?? text.match(/^(.+?)\s+(?:Pass|Rush|Reception|Return)\b/i)?.[1]?.trim() ?? ''
 }
 function passerFromText(text: string) { return text.match(/\bpass from (.+?)(?:\s*\(|$)/i)?.[1]?.trim() ?? null }
-function touchdownKind(slug: string, text: string): NflTouchdownEvent['kind'] {
+export function classifyNflTouchdown(slug: string, text: string): NflTouchdownEvent['kind'] {
   const value = `${slug} ${text}`.toLowerCase()
   if (value.includes('passing-touchdown') || value.includes('pass from')) return 'receiving'
   if (value.includes('rushing-touchdown') || /\byd rush\b/.test(value)) return 'rushing'
@@ -42,8 +42,8 @@ function touchdownKind(slug: string, text: string): NflTouchdownEvent['kind'] {
   if (value.includes('return')) return 'return'
   return 'other'
 }
-function isTouchdown(play: BdlPlay) {
-  return Boolean(play.scoring_play) && /touchdown/i.test(`${play.type_slug ?? ''} ${play.type_text ?? ''} ${play.short_text ?? ''}`)
+export function isNflTouchdownPlay(play: Pick<BdlPlay, 'scoring_play' | 'type_slug' | 'type_text' | 'short_text' | 'text'>) {
+  return Boolean(play.scoring_play) && /touchdown/i.test(`${play.type_slug ?? ''} ${play.type_text ?? ''} ${play.short_text ?? ''} ${play.text ?? ''}`)
 }
 async function getBdlPlays(gameId: number) {
   const plays: BdlPlay[] = []
@@ -95,7 +95,7 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
     try { return { ...value, plays: await getBdlPlays(value.game.id) } }
     catch (error) { console.error('[nfl-touchdowns] BDL plays failed', { date, gameId: value.game.id, error: error instanceof Error ? error.message : String(error) }); return { ...value, plays: [] as BdlPlay[] } }
   }))
-  const touchdownPlays = playResults.flatMap(({ row, game, plays }) => plays.filter(isTouchdown).map(play => ({ row, game, play })))
+  const touchdownPlays = playResults.flatMap(({ row, game, plays }) => plays.filter(isNflTouchdownPlay).map(play => ({ row, game, play })))
   if (!touchdownPlays.length) return []
   const scorerNames = Array.from(new Set(touchdownPlays.map(({ play }) => scorerFromText(play.short_text?.trim() || play.text?.trim() || '')).filter(Boolean)))
   const { data: playerRows, error: playerError } = await admin.from('nfl_players').select('gsis_id,display_name,position,headshot,latest_team').in('display_name', scorerNames).limit(250).abortSignal(AbortSignal.timeout(10_000))
@@ -113,7 +113,7 @@ export async function loadNflTouchdowns(date: string): Promise<NflTouchdownEvent
     const team = canonicalTeam(play.team?.abbreviation ?? '')
     const playerKey = normalizeNflPlayerName(playerName)
     const player = playerByName.get(`${team}:${playerKey}`) ?? playerByName.get(playerKey) ?? null
-    const kind = touchdownKind(play.type_slug ?? '', shortText)
+    const kind = classifyNflTouchdown(play.type_slug ?? '', `${shortText} ${play.text ?? ''}`)
     const scorerRole = kind === 'receiving' ? 'receiver' : kind === 'rushing' ? 'rusher' : 'returner'
     const bdlPlayerId = numberOrNull(play.participants?.find(participant => participant.type === scorerRole)?.player_id ?? play.participants?.find(participant => !String(participant.type).includes('kicker') && participant.type !== 'passer')?.player_id)
     events.push({

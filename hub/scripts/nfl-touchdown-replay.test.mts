@@ -3,6 +3,19 @@ import test from 'node:test'
 import sharp from 'sharp'
 import { renderNflTouchdownReplayGif } from '../src/lib/nflTouchdownReplayGif'
 import type { NflTouchdownEvent } from '../src/lib/nflTouchdownFeed'
+import { classifyNflTouchdown, isNflTouchdownPlay } from '../src/lib/nflTouchdownFeed'
+
+test('defensive touchdowns are detected when TOUCHDOWN only appears in full play text', () => {
+  const play = {
+    scoring_play: true,
+    type_slug: 'sack-opp-fumble-recovery',
+    type_text: 'Sack Opp Fumble Recovery',
+    short_text: 'Demetrius Knight Jr. 27 Yd Fumble Return (Evan McPherson Kick)',
+    text: 'RECOVERED by CIN-D.Knight at TB 27. D.Knight for 27 yards, TOUCHDOWN.',
+  }
+  assert.equal(isNflTouchdownPlay(play), true)
+  assert.equal(classifyNflTouchdown(play.type_slug, `${play.short_text} ${play.text}`), 'defense')
+})
 
 test('NFL touchdown replay renders an animated GIF without an external encoder', async () => {
   const event: NflTouchdownEvent = {
